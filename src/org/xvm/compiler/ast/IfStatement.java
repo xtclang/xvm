@@ -26,15 +26,15 @@ public class IfStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public IfStatement(Token keyword, ConditionalStatement cond, StatementBlock block)
+    public IfStatement(Token keyword, AstNode cond, StatementBlock block)
         {
         this(keyword, cond, block, null);
         }
 
-    public IfStatement(Token keyword, ConditionalStatement cond, StatementBlock stmtThen, Statement stmtElse)
+    public IfStatement(Token keyword, AstNode cond, StatementBlock stmtThen, Statement stmtElse)
         {
-        this.keyword   = keyword;
-        this.cond      = cond;
+        this.keyword  = keyword;
+        this.cond     = cond;
         this.stmtThen = stmtThen;
         this.stmtElse = stmtElse;
         }
@@ -237,10 +237,10 @@ public class IfStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token                keyword;
-    protected ConditionalStatement cond;
-    protected Statement            stmtThen;
-    protected Statement            stmtElse;
+    protected Token     keyword;
+    protected AstNode   cond;
+    protected Statement stmtThen;
+    protected Statement stmtElse;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(IfStatement.class, "cond", "stmtThen", "stmtElse");
     }

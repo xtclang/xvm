@@ -536,7 +536,7 @@ public class AssignmentStatement
 
 
      */
-    protected Expression lvalue;
+    protected AstNode    lvalue;
     protected Token      op;
     protected Expression rvalue;
     protected boolean    cond;

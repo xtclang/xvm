@@ -49,7 +49,7 @@ public class SwitchExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public SwitchExpression(Token keyword, ConditionalStatement cond, List<AstNode> contents, long lEndPos)
+    public SwitchExpression(Token keyword, AstNode cond, List<AstNode> contents, long lEndPos)
         {
         this.keyword  = keyword;
         this.cond     = cond;
@@ -620,10 +620,10 @@ public class SwitchExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token                keyword;
-    protected ConditionalStatement cond;
-    protected List<AstNode>        contents;
-    protected long                 lEndPos;
+    protected Token         keyword;
+    protected AstNode       cond;
+    protected List<AstNode> contents;
+    protected long          lEndPos;
 
     private transient Constant[]    m_aconstCase;
     private transient Label[]       m_alabelCase;

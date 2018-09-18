@@ -1464,7 +1464,7 @@ public class Parser
         {
         Token keyword = current();
 
-        Statement cond = null;
+        AstNode cond = null;
         if (peek().getId() != Id.SEMICOLON)
             {
             cond = parseIfCondition();
@@ -1490,7 +1490,7 @@ public class Parser
         StatementBlock block = parseStatementBlock();
         expect(Id.WHILE);
         expect(Id.L_PAREN);
-        ConditionalStatement cond = parseIfCondition();
+        AstNode cond = parseIfCondition();
         long lEndPos = expect(Id.R_PAREN).getEndPosition();
         expect(Id.SEMICOLON);
         return new WhileStatement(keyword, cond, block, lEndPos);
@@ -1541,43 +1541,69 @@ public class Parser
         // figure out which form of the "for" statement this is:
         // 1) VariableInitializationList-opt ";" Expression-opt ";" VariableModificationList-opt
         // 2) OptionalDeclarationList ":" Expression
-        List<Statement> init;
-        if (peek().getId() == Id.SEMICOLON)
+        List<AstNode> init = new ArrayList<>();
+        if (peek().getId() != Id.SEMICOLON)
             {
-            // definitely the 3-part, because the first (optional) part is missing
-            init = Collections.EMPTY_LIST;
-            }
-        else
-            {
-            init = new ArrayList<>();
-            int cConds = 0;
+            boolean fFirst        = true;
+            boolean fMaybeCStyle  = true;
+            boolean fMaybeForEach = true;
             do
                 {
-                long      lPos = peek().getStartPosition();
-                Statement stmt = parseConditionalDeclaration(true);
-                init.add(stmt);
-
-                if (stmt instanceof AssignmentStatement
-                            && ((AssignmentStatement) stmt).isConditional() ||
-                    stmt instanceof VariableDeclarationStatement
-                            && ((VariableDeclarationStatement) stmt).isConditional())
+                AstNode LVal = fMaybeCStyle ? peekMultiVariableInitializer() : null;
+                if (LVal == null)
                     {
-                    ++cConds;
+                    if (peek().getId() == Id.VAR || peek().getId() == Id.VAL)
+                        {
+                        LVal = new VariableDeclarationStatement(new VariableTypeExpression(current()), expect(Id.IDENTIFIER), false);
+                        }
+                    else
+                        {
+                        Expression expr = parseExpression();
+                        if (peek().getId() == Id.IDENTIFIER)
+                            {
+                            LVal = new VariableDeclarationStatement(expr.toTypeExpression(), expect(Id.IDENTIFIER), false);
+                            }
+                        else
+                            {
+                            // the expression has to be an L-Value
+                            if (!expr.isLValueSyntax())
+                                {
+                                log(Severity.ERROR, NOT_ASSIGNABLE, expr.getStartPosition(), expr.getEndPosition());
+                                }
+                            LVal = expr;
+                            }
+                        }
+                    }
+                else
+                    {
+                    // the parenthesized list of LValues cannot occur within the
+                    // OptionalDeclarationList construct used by the for-each statement
+                    fMaybeForEach = false;
                     }
 
-                // all need to be of the same type: all conditional, or none conditional
-                if (cConds != 0 && cConds != init.size())
+                if (!fMaybeForEach || (fFirst && peek().getId() == Id.ASN))
                     {
-                    log(Severity.ERROR, ALL_OR_NO_CONDS, lPos, peek().getStartPosition());
+                    fMaybeForEach = false;
+                    init.add(new AssignmentStatement(LVal, expect(Id.ASN), parseExpression(), false));
+                    }
+                else
+                    {
+                    fMaybeCStyle = false;
+                    init.add(LVal);
+                    if (peek().getId() != Id.COMMA)
+                        {
+                        if (init.size() > 1)
+                            {
+                            // the LValue for the condition is a list of multiple LValues
+                            LVal = new MultipleLValueStatement(init);
+                            }
+                        AssignmentStatement cond = new AssignmentStatement(LVal, expect(Id.COLON), parseExpression(), false);
+                        expect(Id.R_PAREN);
+                        return new ForEachStatement(keyword, cond, parseStatementBlock());
+                        }
                     }
                 }
             while (match(Id.COMMA) != null);
-
-            if (match(Id.R_PAREN) != null)
-                {
-                // this is the "for (var : iterable) {...}" style
-                return new ForEachStatement(keyword, init, parseStatementBlock());
-                }
             }
 
         // parse the second part
@@ -1595,6 +1621,7 @@ public class Parser
                 }
 
             Expression exprUpdate = parseExpression();
+            Token.Id   op         = Id.ASN;
             switch (peek().getId())
                 {
                 case R_PAREN:
@@ -1617,23 +1644,21 @@ public class Parser
                 case COND_AND_ASN:
                 case COND_OR_ASN:
                 case COND_ELSE_ASN:
-                    update.add(new AssignmentStatement(exprUpdate, current(), parseExpression(), false));
-                    break;
-
+                    op = peek().getId();
+                    // fall through
                 default:
-                    update.add(new AssignmentStatement(exprUpdate, expect(Id.ASN), parseExpression(), false));
+                    // the expression has to be an L-Value
+                    if (!expr.isLValueSyntax())
+                        {
+                        log(Severity.ERROR, NOT_ASSIGNABLE, expr.getStartPosition(), expr.getEndPosition());
+                        }
+                    update.add(new AssignmentStatement(exprUpdate, expect(op), parseExpression(), false));
                     break;
                 }
             }
 
         expect(Id.R_PAREN);
-        return new ForStatement(keyword, init, expr, update, parseStatementBlock());
-        }
-
-    ConditionalStatement parseForCondition()
-        {
-        // TODO
-        return parseConditionalDeclaration(false);
+        return new ForStatement(keyword, (List<Statement>) (List) init, expr, update, parseStatementBlock());
         }
 
     /**
@@ -1654,7 +1679,7 @@ public class Parser
         {
         Token keyword = expect(Id.IF);
         expect(Id.L_PAREN);
-        ConditionalStatement cond = parseIfCondition();
+        AstNode cond = parseIfCondition();
         expect(Id.R_PAREN);
         StatementBlock block = parseStatementBlock();
 
@@ -1698,7 +1723,7 @@ public class Parser
      *
      * @return
      */
-    ConditionalStatement parseIfCondition()
+    AstNode parseIfCondition()
         {
         Expression     exprLVal;
         TypeExpression typeDecl;
@@ -1774,7 +1799,7 @@ public class Parser
                         : new VariableDeclarationStatement(typeDecl, tokName, false)
                 : new MultipleLValueStatement(listLVals);
 
-        return new AssignmentStatement(exprLVal, tokAssign, exprRVal, false);
+        return new AssignmentStatement(LVals, tokAssign, exprRVal, false);
         }
 
     /**
@@ -1953,18 +1978,127 @@ public class Parser
      *     "=" Expression
      * </pre></code>
      *
-     * @return a switch statement
+     * @return a switch condition, or null if there is none
      */
     AstNode parseSwitchCondition()
         {
+        // switch() means that each case statement is a boolean expression (a "ladder" if)
         if (peek().getId() == Id.R_PAREN)
             {
             return null;
             }
 
-        // TODO TODO TODO
+        // there's only one real left-to-right challenge here, which is an expression that begins
+        // with a parenthesized expression, such as "(x+y)*2", because the opening parenthesis are
+        // shared with the list form of the VariableInitializer; after parsing the first expression
+        // inside the parenthesis, it will either (i) start with "var" or "val", or (ii) be followed
+        // by an identifier or a comma if it is a multi VariableInitializer
+        AstNode LVal = peekMultiVariableInitializer();
 
-        return parseConditionalDeclaration(true);
+        // there is either a single (i.e. not the multi-form of the) VariableInitializer, or there
+        // is a single expression that is the entire switch condition
+        if (LVal == null)
+            {
+            if (peek().getId() == Id.VAR || peek().getId() == Id.VAL)
+                {
+                // this has to be a multi VariableInitializer
+                LVal = new VariableDeclarationStatement(new VariableTypeExpression(current()), expect(Id.IDENTIFIER), false);
+                }
+            else
+                {
+                Expression expr = parseExpression();
+                if (peek().getId() == Id.IDENTIFIER)
+                    {
+                    LVal = new VariableDeclarationStatement(expr.toTypeExpression(), expect(Id.IDENTIFIER), false);
+                    }
+                else if (peek().getId() == Id.ASN)
+                    {
+                    // the expression has to be the L-Value
+                    if (!expr.isLValueSyntax())
+                        {
+                        log(Severity.ERROR, NOT_ASSIGNABLE, expr.getStartPosition(), expr.getEndPosition());
+                        }
+                    LVal = expr;
+                    }
+                else
+                    {
+                    // the SwitchCondition is just an expression
+                    return expr;
+                    }
+                }
+            }
+
+        return new AssignmentStatement(LVal, expect(Id.ASN), parseExpression(), false);
+        }
+
+    /**
+     * Parse the multi-form of the VariableInitializer construct, or nothing.
+     *
+     * @return null or a MultipleLValueStatement
+     */
+    MultipleLValueStatement peekMultiVariableInitializer()
+        {
+        if (peek().getId() != Id.L_PAREN)
+            {
+            return null;
+            }
+
+        Mark mark = mark();
+        expect(Id.L_PAREN);
+
+        List<AstNode> listLVals = new ArrayList<>();
+        while (true)
+            {
+            boolean fFirst = listLVals.isEmpty();
+            if (peek().getId() == Id.VAR || peek().getId() == Id.VAL)
+                {
+                // this has to be a multi VariableInitializer
+                listLVals.add(new VariableDeclarationStatement(new VariableTypeExpression(current()), expect(Id.IDENTIFIER), false));
+                }
+            else
+                {
+                // assuming that we haven't already started building a list of declarations,
+                // encountering an expression followed by anything other than an identifier (for
+                // a declaration) or a comma indicates that we're going down the wrong path
+                // REVIEW does this correctly parse @annotated types? should "Annotations" be added to "PrimaryExpression"? (seems logical)
+                Expression expr = parseExpression();
+
+                // next token   meaning
+                // ----------   ----------------------------------------
+                // COMMA        the expression must be an LValue (commit)
+                // IDENTIFIER   expression was the type portion of a declaration (commit)
+                // R_PAREN      list is empty    : oops, it's not a multi VariableInitializer
+                //              list is NOT empty: done parsing the multi VariableInitializer
+                // otherwise    list is empty    : oops, it's not a multi VariableInitializer
+                //              list is NOT empty: it's an error
+                if (peek().getId() == Id.IDENTIFIER)
+                    {
+                    // there is a variable declaration to use as an L-Value
+                    listLVals.add(new VariableDeclarationStatement(expr.toTypeExpression(), expect(Id.IDENTIFIER), false));
+                    }
+                else if (fFirst && peek().getId() != Id.COMMA)
+                    {
+                    restore(mark);
+                    return null;
+                    }
+                else
+                    {
+                    // the expression has to be the L-Value
+                    if (!expr.isLValueSyntax())
+                        {
+                        log(Severity.ERROR, NOT_ASSIGNABLE, expr.getStartPosition(), expr.getEndPosition());
+                        }
+                    listLVals.add(expr);
+                    }
+                }
+
+            if (!fFirst && match(Id.R_PAREN) != null)
+                {
+                return new MultipleLValueStatement(listLVals);
+                }
+
+            expect(Id.COMMA);
+            }
         }
 
     /**
@@ -2008,9 +2142,8 @@ public class Parser
             {
             long lStartPos = getLastMatch().getStartPosition();
             expect(Id.L_PAREN);
-            // TODO parseVariableInitializationList() - and share it with parsing of "for()" ??
             VariableDeclarationStatement var = new VariableDeclarationStatement(
-                    parseTypeExpression(), expect(Id.IDENTIFIER), null, null);
+                    parseTypeExpression(), expect(Id.IDENTIFIER), false);
             expect(Id.R_PAREN);
             catches.add(new CatchStatement(var, parseStatementBlock(), lStartPos));
             }
@@ -2089,7 +2222,7 @@ public class Parser
         {
         Token keyword = expect(Id.WHILE);
         expect(Id.L_PAREN);
-        ConditionalStatement cond = parseIfCondition();
+        AstNode cond = parseIfCondition();
         expect(Id.R_PAREN);
         StatementBlock block = parseStatementBlock();
         return new WhileStatement(keyword, cond, block);
@@ -2168,93 +2301,8 @@ public class Parser
             type = expr.toTypeExpression();
             }
 
-        Token name = expect(Id.IDENTIFIER);
-        return new VariableDeclarationStatement(type, name, expect(Id.ASN), parseExpression());
-        }
-
-    /**
-     * Parse a ConditionalDeclaration, followed by an expression; use VariableDeclarationStatement
-     * or AssignmentStatement to represent the conditional declaration and assignment.
-     * <p/>
-     * If it turns out that there isn't a ConditionalDeclaration, then parse what is found as a
-     * VariableDeclarationStatement, an AssignmentStatement, or an ExpressionStatement, based on
-     * what is found.
-     * <p/> TODO (?) add support for multiple declaration
-     *
-     * <p/><code><pre>
-     * ConditionalDeclaration
-     *     TypeExpression-opt Name ":"
-     * </pre></code>
-     *
-     * @param fAllowAsn  allow assignment operator
-     *
-     * @return
-     */
-    ConditionalStatement parseConditionalDeclaration(boolean fAllowAsn)
-        {
-        TypeExpression type;
-        if (peek().getId() == Id.VAR || peek().getId() == Id.VAL)
-            {
-            type = new VariableTypeExpression(current());
-            }
-        else
-            {
-            // identifier followed by ':' is a conditional assignment; if we don't check for this
-            // up front, the ':' would get gobbled up by parseExpression(), since it will be looking
-            // for a trailing ": expr" (an ElseExpression)
-            Token tokName = match(Id.IDENTIFIER);
-            if (tokName != null)
-                {
-                switch (peek().getId())
-                    {
-                    case ASN:
-                        if (!fAllowAsn)
-                            {
-                            log(Severity.ERROR, NO_ASSIGNMENT, peek().getStartPosition(),
-                                    peek().getEndPosition());
-                            throw new CompilerException("assignment disallowed");
-                            }
-                        // fall through
-                    case COLON:
-                        // it's an assignment or conditional expression, but it doesn't declare a
-                        // new var
-                        return new AssignmentStatement(new NameExpression(tokName), current(), parseExpression(), false);
-
-                    default:
-                        putBack(tokName);
-                        break;
-                    }
-                }
-
-            Expression expr = parseExpression();
-            switch (peek().getId())
-                {
-                case COMMA:
-                case SEMICOLON:
-                case R_PAREN:
-                    // definitely stop if there is ',', ';', or ')'
-                    // it's not a conditional declaration; it's just an expression
-                    return new ExpressionStatement(expr, false);
-
-                default:
-                    break;
-                }
-
-            type = expr.toTypeExpression();
-            }
-
-        // everything up to this point is just the type; now parse for the identifier and the
-        // assignment
-        Token name = expect(Id.IDENTIFIER);
-
-        // could be either ':' or '='
-        Token op = fAllowAsn ? match(Id.ASN) : null;
-        if (op == null)
-            {
-            op = expect(Id.COLON);
-            }
-
-        return new VariableDeclarationStatement(type, name, op, parseExpression());
+        VariableDeclarationStatement var = new VariableDeclarationStatement(type, expect(Id.IDENTIFIER), false);
+        return new AssignmentStatement(var, expect(Id.ASN), parseExpression());
         }
 
     /**
@@ -3338,22 +3386,8 @@ public class Parser
         {
         Token keyword = expect(Id.SWITCH);
         expect(Id.L_PAREN);
-
-        ConditionalStatement cond = null;
-        if (match(Id.R_PAREN) == null)
-            {
-            // while the switch does not allow a conditional declaration, it does allow all of the
-            // other capabilities expressed in a conditional declaration
-            cond = parseConditionalDeclaration(true);
-            if (cond instanceof VariableDeclarationStatement &&
-                    ((VariableDeclarationStatement) cond).isConditional())
-                {
-                log(Severity.ERROR, NO_CONDITIONAL,
-                        keyword.getStartPosition(), peek().getEndPosition());
-                throw new CompilerException("conditional is not allowed");
-                }
-            expect(Id.R_PAREN);
-            }
+        AstNode cond = parseSwitchCondition();
+        expect(Id.R_PAREN);
 
         List<AstNode> contents = new ArrayList<>();
         boolean       fDefault = false;

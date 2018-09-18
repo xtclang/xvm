@@ -26,12 +26,12 @@ public class WhileStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public WhileStatement(Token keyword, ConditionalStatement cond, StatementBlock block)
+    public WhileStatement(Token keyword, AstNode cond, StatementBlock block)
         {
         this(keyword, cond, block, block.getEndPosition());
         }
 
-    public WhileStatement(Token keyword, ConditionalStatement cond, StatementBlock block, long lEndPos)
+    public WhileStatement(Token keyword, AstNode cond, StatementBlock block, long lEndPos)
         {
         this.keyword = keyword;
         this.cond    = cond;
@@ -282,10 +282,10 @@ public class WhileStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token                     keyword;
-    protected ConditionalStatement      cond;
-    protected StatementBlock            block;
-    protected long                      lEndPos;
+    protected Token          keyword;
+    protected AstNode        cond;
+    protected StatementBlock block;
+    protected long           lEndPos;
 
     private static int s_nLabelCounter;
     private Label m_labelContinue;

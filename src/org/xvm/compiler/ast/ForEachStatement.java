@@ -3,8 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.List;
-
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Token;
@@ -20,10 +18,10 @@ public class ForEachStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public ForEachStatement(Token keyword, List<Statement> conds, StatementBlock block)
+    public ForEachStatement(Token keyword, AssignmentStatement cond, StatementBlock block)
         {
         this.keyword = keyword;
-        this.conds   = conds;
+        this.cond = cond;
         this.block   = block;
         }
 
@@ -48,7 +46,7 @@ public class ForEachStatement
         Label label = m_labelContinue;
         if (label == null)
             {
-            m_labelContinue = label = new Label("continue_for2_" + (++s_nLabelCounter));
+            m_labelContinue = label = new Label("continue_foreach_" + (++s_nLabelCounter));
             }
         return label;
         }
@@ -80,24 +78,9 @@ public class ForEachStatement
         StringBuilder sb = new StringBuilder();
 
         sb.append(keyword.getId().TEXT)
-          .append(" (");
-
-        boolean first = true;
-        for (Statement cond : conds)
-            {
-            if (first)
-                {
-                first = false;
-                }
-            else
-                {
-                sb.append(", ");
-                }
-
-            sb.append(cond);
-            }
-
-        sb.append(")\n")
+          .append(" (")
+          .append(cond)
+          .append(")\n")
           .append(indentLines(block.toString(), "    "));
 
         return sb.toString();
@@ -106,13 +89,12 @@ public class ForEachStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token           keyword;
-    protected List<Statement> conds;
-    protected StatementBlock  block;
+    protected Token               keyword;
+    protected AssignmentStatement cond;
+    protected StatementBlock      block;
 
     private static int   s_nLabelCounter;
     private        Label m_labelContinue;
 
-    private static final Field[] CHILD_FIELDS =
-            fieldsForNames(ForEachStatement.class, "conds", "block");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(ForEachStatement.class, "cond", "block");
     }

@@ -14,10 +14,10 @@ public class AssertStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public AssertStatement(Token keyword, Statement stmt)
+    public AssertStatement(Token keyword, AstNode cond)
         {
         this.keyword = keyword;
-        this.stmt    = stmt;
+        this.cond = cond;
         }
 
 
@@ -32,7 +32,7 @@ public class AssertStatement
     @Override
     public long getEndPosition()
         {
-        return stmt == null ? keyword.getEndPosition() : stmt.getEndPosition();
+        return cond == null ? keyword.getEndPosition() : cond.getEndPosition();
         }
 
     @Override
@@ -51,10 +51,10 @@ public class AssertStatement
 
         sb.append(keyword.getId().TEXT);
 
-        if (stmt != null)
+        if (cond != null)
             {
             sb.append(' ')
-              .append(stmt);
+              .append(cond);
             }
 
         return sb.toString();
@@ -69,8 +69,8 @@ public class AssertStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token keyword;
-    protected Statement stmt;
+    protected Token   keyword;
+    protected AstNode cond;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(AssertStatement.class, "stmt");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(AssertStatement.class, "cond");
     }
