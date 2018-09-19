@@ -9,11 +9,13 @@ import java.util.List;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.Register;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
+import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.Expression.Assignable;
 
 import org.xvm.util.Severity;
@@ -171,11 +173,35 @@ public class AssignmentStatement
         }
 
     /**
+     * @return true iff the assignment statement uses the "=" operator
+     */
+    public boolean isSimple()
+        {
+        return op.getId() == Id.ASN;
+        }
+
+    /**
      * @return true iff the assignment statement uses the ":" operator
      */
     public boolean isConditional()
         {
-        return op.getId() == Token.Id.COLON;
+        return op.getId() == Id.COLON;
+        }
+
+    public Register ensureConditionRegister()
+        {
+        Register reg = m_regCond;
+        if (reg == null)
+            {
+            if (!isConditional())
+                {
+                throw new IllegalStateException("op=\"" + op.getValueText() + '\"');
+                }
+
+            reg = new Register(pool().typeBoolean());
+            }
+
+        return reg;
         }
 
     public AstNode getLValue()
@@ -225,65 +251,93 @@ public class AssignmentStatement
         {
         boolean fValid = true;
 
-        // REVIEW does this have to support multiple assignment? (I think that it does...)
-
-        Expression lvalueNew = lvalue.validate(ctx, null, errs);
-        if (lvalueNew != lvalue)
+        // a LValue represented by a statement indicates one or more variable declarations
+        AstNode nodeLeft = lvalue;
+        if (nodeLeft instanceof Statement)
             {
-            fValid &= lvalueNew != null;
-            if (lvalueNew != null)
+            assert nodeLeft instanceof VariableDeclarationStatement || nodeLeft instanceof MultipleLValueStatement;
+            Statement lvalueOld = (Statement) nodeLeft;
+            Statement lvalueNew = lvalueOld.validate(ctx, errs);
+            if (lvalueNew != lvalueOld)
                 {
-                lvalue = lvalueNew;
+                fValid &= lvalueNew != null;
+                if (lvalueNew != null)
+                    {
+                    lvalue = nodeLeft = lvalueNew;
+                    }
                 }
             }
 
-        // provide the l-value's type to the r-value so that it can "infer" its type as necessary,
-        // and can validate that assignment can occur
-        TypeConstant typeLeft = lvalue.getType();
-        boolean      fInfer   = typeLeft != null;
-        if (fInfer)
+        // regardless of whether the LValue is a statement or expression, all L-Values must be able
+        // to provide an expression as a representative form
+        Expression exprLeft = lvalue.getLValueExpression();
+        if (!exprLeft.isValidated())
             {
-            // allow the r-value to resolve names based on the l-value type's contributions
-            ctx = ctx.enterInferring(typeLeft);
+            Expression exprNew = exprLeft.validate(ctx, null, errs);
+            if (exprNew == null)
+                {
+                fValid = false;
+                }
+            else
+                {
+                exprLeft = exprNew;
+                }
+            }
+        lvalueExpr = exprLeft;
+        exprLeft.requireAssignable(ctx, errs);
+
+        Expression rvalueOld = rvalue;
+        Expression rvalueNew;
+        if (isSimple())
+            {
+            if (exprLeft.isSingle())
+                {
+                // LVal = RVal (or some other assignment operator, not ':')
+                TypeConstant typeLeft = exprLeft.getType();
+                boolean      fInfer   = typeLeft != null;
+                if (fInfer)
+                    {
+                    // allow the r-value to resolve names based on the l-value type's contributions
+                    ctx = ctx.enterInferring(typeLeft);
+                    }
+
+                rvalueNew = rvalueOld.validate(ctx, typeLeft, errs);
+
+                if (fInfer)
+                    {
+                    ctx = ctx.exitScope();
+                    }
+                }
+            else
+                {
+                // (LVal0, LVal1, ..., LValN) = RVal
+                rvalueNew = rvalueOld.validateMulti(ctx, exprLeft.getTypes(), errs);
+                }
+            }
+        else if (isConditional())
+            {
+            // (LVal : RVal) or (LVal0, LVal1, ..., LValN : RVal)
+            TypeConstant[] atypeLVals = exprLeft.getTypes();
+            int            cLVals     = atypeLVals.length;
+            int            cReq       = cLVals + 1;
+            TypeConstant[] atypeReq   = new TypeConstant[cReq];
+            atypeReq[0] = pool().typeBoolean();
+            System.arraycopy(atypeLVals, 0, atypeReq, 1, cLVals);
+            rvalueNew = rvalueOld.validateMulti(ctx, atypeReq, errs);
+            }
+        else
+            {
+            // TODO += *= etc.
+            // TODO the LValues must NOT be declarations!!! (they wouldn't be assigned)
+            throw notImplemented();
             }
 
-        Expression rvalueNew = isConditional()
-            ? rvalue.validateMulti(ctx, new TypeConstant[] {pool().typeBoolean(), typeLeft}, errs)
-            : rvalue.validate(ctx, typeLeft, errs);
-        if (rvalueNew != rvalue)
+        if (rvalueNew != rvalueOld)
             {
             fValid &= rvalueNew != null;
             if (rvalueNew != null)
                 {
                 rvalue = rvalueNew;
-                }
-            }
-
-        if (fInfer)
-            {
-            ctx = ctx.exitScope();
-            }
-
-        if (lvalue.isVoid())
-            {
-            lvalue.log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY,
-                    Math.max(1, rvalue.getValueCount()), 0);
-            }
-        else
-            {
-            int cValues = lvalue.getValueCount();
-            if (isConditional())
-                {
-                cValues++;
-                }
-            if (cValues == rvalue.getValueCount())
-                {
-                lvalue.requireAssignable(ctx, errs);
-                }
-            else
-                {
-                rvalue.log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY,
-                    cValues, rvalue.getValueCount());
                 }
             }
 
@@ -293,34 +347,49 @@ public class AssignmentStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        switch (getUsage())
-            {
-            case While:
-            case If:
-            case For:
-            case Switch:
-                // TODO
-                throw notImplemented();
+        boolean fCompletes = fReachable;
 
-            case Standalone:
-               break;
+        // code gen optimization for combined declaration & constant assignment of a single value
+        if (isSimple() && lvalueExpr.isSingle() && rvalue.isConstant() && lvalue instanceof VariableDeclarationStatement)
+            {
+            // TODO see cut and paste in cp.txt
             }
 
-        if (lvalue.isSingle() && op.getId() == Token.Id.ASN)
+        if (isSimple())
             {
-            boolean    fCompletes = fReachable;
-            Assignable asnL       = lvalue.generateAssignable(ctx, code, errs);
-            if (fCompletes &= !lvalue.isAborting())
+            if (lvalue instanceof Statement)
                 {
-                rvalue.generateAssignment(ctx, code, asnL, errs);
-                fCompletes &= !rvalue.isAborting();
+                fCompletes = ((Statement) lvalue).emit(ctx, fCompletes, code, errs);
                 }
 
-            return fCompletes;
+            Assignable[] LVals = lvalueExpr.generateAssignables(ctx, code, errs);
+            if (fCompletes &= !lvalueExpr.isAborting())
+                {
+                rvalue.generateAssignments(ctx, code, LVals, errs);
+                fCompletes &= !rvalue.isAborting();
+                }
+            }
+        else if (isConditional())
+            {
+            Assignable[] LVals    = lvalueExpr.generateAssignables(ctx, code, errs);
+            int          cLVals   = LVals.length;
+            int          cAll     = cLVals + 1;
+            Assignable[] LValsAll = new Assignable[cAll];
+            LValsAll[0] = new Assignable(ensureConditionRegister());
+            System.arraycopy(LVals, 0, LValsAll, 1, cLVals);
+            if (fCompletes &= !lvalueExpr.isAborting())
+                {
+                rvalue.generateAssignments(ctx, code, LVals, errs);
+                fCompletes &= !rvalue.isAborting();
+                }
+            }
+        else
+            {
+            // TODO += *= etc.
+            throw notImplemented();
             }
 
-        // REVIEW what is not implemented? multi-assignment?
-        throw notImplemented();
+        return fCompletes;
         }
 
 
@@ -354,11 +423,13 @@ public class AssignmentStatement
     // ----- fields --------------------------------------------------------------------------------
 
     protected AstNode    lvalue;
+    protected Expression lvalueExpr;
     protected Token      op;
     protected Expression rvalue;
     protected boolean    term;
 
-    private VariableDeclarationStatement[] m_decls;
+    private transient VariableDeclarationStatement[] m_decls;
+    private transient Register                       m_regCond;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(AssignmentStatement.class, "lvalue", "rvalue");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(AssignmentStatement.class, "lvalue", "lvalueExpr", "rvalue");
     }

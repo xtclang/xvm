@@ -424,6 +424,7 @@ public abstract class AstNode
      * can be used as a left side of an assignment, for example, which makes it an L-Value. In a
      * few cases, an expression can be used as both an R-Value and an L-Value, such as with the
      * pre-/post-increment/-decrement operators.
+     * <p/> REVIEW
      *
      * @param exprChild  an expression that is a child of this node
      *

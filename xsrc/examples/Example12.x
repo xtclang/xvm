@@ -1699,3 +1699,17 @@ for ((Int i, Int j) = bar(); i < 100; ++i, ++j)
 
 // stand-alone declaration
 (Int i, Int j) = bar();
+
+//
+
+for ((Int i, Int j) = bar(), String s = foo(), (x, y, z) = p?.coords(), (a[0], a[1]) = bar(); i < 100; ++i, ++j)
+
+//
+
+if (String s : iter.next()) {..}
+
+//
+
+(Int i, Int j) = (5, 7);
+
+(Color c, Flavor f) = (Other, Other);

@@ -138,7 +138,7 @@ public class VariableDeclarationStatement
         TypeExpression exprType = this.type;
         if (exprType instanceof VariableTypeExpression)
             {
-            exprType.resetTypeConstant();
+            exprType.resetTypeConstant(); // REVIEW should reset take type as a param instead? (or get rid of it altogether and just use set?)
             exprType.setTypeConstant(type);
             }
         }

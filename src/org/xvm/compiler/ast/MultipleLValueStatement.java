@@ -343,26 +343,36 @@ public class MultipleLValueStatement
         @Override
         protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
             {
-            Expression exprResult = this;
+            TypeFit fit = TypeFit.Fit;
 
-            Expression[] aExprs = ensureExpressions();
-            int          cExprs = aExprs.length;
-            int          cReq   = atypeRequired == null ? 0 : atypeRequired.length;
-            for (int i = 0; i < cExprs; ++i)
+            Expression[]   aExpressions = ensureExpressions();
+            int            cExpressions = aExpressions.length;
+            TypeConstant[] atypeActual  = new TypeConstant[cExpressions];
+            int            cRequired    = atypeRequired == null ? 0 : atypeRequired.length;
+            for (int i = 0; i < cExpressions; ++i)
                 {
-                Expression exprOld = aExprs[i];
-                Expression exprNew = exprOld.validate(ctx, i < cReq ? atypeRequired[i] : null, errs);
+                Expression exprOld = aExpressions[i];
+                Expression exprNew = exprOld.validate(ctx, i < cRequired ? atypeRequired[i] : null, errs);
                 if (exprNew == null)
                     {
-                    exprResult = null;
+                    atypeActual = null;
+                    fit         = TypeFit.NoFit;
                     }
-                else if (exprNew != exprOld)
+                else
                     {
-                    aExprs[i] = exprNew;
+                    if (exprNew != exprOld)
+                        {
+                        aExpressions[i] = exprNew;
+                        }
+                    if (atypeActual != null)
+                        {
+                        atypeActual[i] = exprNew.getType();
+                        }
+                    fit = fit.combineWith(exprNew.getTypeFit());
                     }
                 }
 
-            return exprResult;
+            return finishValidations(atypeRequired, atypeActual, fit, null, errs);
             }
 
         @Override
@@ -402,25 +412,49 @@ public class MultipleLValueStatement
         @Override
         public void requireAssignable(Context ctx, ErrorListener errs)
             {
-            super.requireAssignable(ctx, errs);
+            for (Expression expr : ensureExpressions())
+                {
+                expr.requireAssignable(ctx, errs);
+                }
             }
 
         @Override
         public boolean isAborting()
             {
-            return super.isAborting();
+            for (Expression expr : ensureExpressions())
+                {
+                if (expr.isAborting())
+                    {
+                    return true;
+                    }
+                }
+            return false;
             }
 
         @Override
         public boolean isShortCircuiting()
             {
-            return super.isShortCircuiting();
+            for (Expression expr : ensureExpressions())
+                {
+                if (expr.isShortCircuiting())
+                    {
+                    return true;
+                    }
+                }
+            return false;
             }
 
         @Override
         public boolean isConstant()
             {
-            return super.isConstant();
+            for (Expression expr : ensureExpressions())
+                {
+                if (!expr.isConstant())
+                    {
+                    return false;
+                    }
+                }
+            return true;
             }
 
         @Override

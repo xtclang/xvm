@@ -652,7 +652,7 @@ public abstract class Expression
         {
         assert fit != null;
         assert atypeRequired == null || checkElementsNonNull(atypeRequired);
-        assert atypeActual == null || checkElementsNonNull(atypeActual);
+        assert atypeActual   == null || checkElementsNonNull(atypeActual);
         assert aconstVal     == null || checkElementsNonNull(aconstVal) && aconstVal.length == atypeActual.length;
 
         checkShortCircuit(errs);
