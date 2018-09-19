@@ -90,6 +90,10 @@ public class Float16Constant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof Float16Constant))
+            {
+            return -1;
+            }
         return Float.compare(this.m_flVal, ((Float16Constant) that).m_flVal);
         }
 

@@ -1275,6 +1275,10 @@ public class LiteralConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof LiteralConstant))
+            {
+            return -1;
+            }
         return this.getValue().compareTo(((LiteralConstant) that).getValue());
         }
 

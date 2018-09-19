@@ -117,6 +117,10 @@ public class VarFPConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof VarFPConstant))
+            {
+            return -1;
+            }
         // note: this is a simple byte-wise comparison; it does not actually determine the floating
         // point values represented by the bytes
 

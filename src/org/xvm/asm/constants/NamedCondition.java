@@ -121,7 +121,11 @@ public class NamedCondition
     @Override
     protected int compareDetails(Constant that)
         {
-        return getName().compareTo(((org.xvm.asm.constants.NamedCondition) that).getName());
+        if (!(that instanceof NamedCondition))
+            {
+            return -1;
+            }
+        return getName().compareTo(((NamedCondition) that).getName());
         }
 
     @Override

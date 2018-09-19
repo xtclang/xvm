@@ -189,6 +189,10 @@ public class CharConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof CharConstant))
+            {
+            return -1;
+            }
         int nThis = this.m_chVal;
         int nThat = ((CharConstant) that).m_chVal;
         return nThis - nThat;

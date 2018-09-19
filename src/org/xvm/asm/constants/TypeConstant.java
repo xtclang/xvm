@@ -757,7 +757,6 @@ public abstract class TypeConstant
         return false;
         }
 
-
     /**
      * Obtain the type of the specified tuple field.
      *
@@ -776,6 +775,10 @@ public abstract class TypeConstant
 
         return atypeParam[i];
         }
+
+
+
+    // ----- TypeInfo support ----------------------------------------------------------------------
 
     /**
      * Obtain all of the information about this type, resolved from its recursive composition.

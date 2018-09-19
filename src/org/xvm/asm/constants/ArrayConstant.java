@@ -229,6 +229,10 @@ public class ArrayConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof ArrayConstant))
+            {
+            return -1;
+            }
         int nResult = this.m_constType.compareTo(((ArrayConstant) that).m_constType);
         if (nResult != 0)
             {

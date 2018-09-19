@@ -257,6 +257,10 @@ public class IntervalConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof IntervalConstant))
+            {
+            return -1;
+            }
         int nResult = this.m_const1.compareTo(((IntervalConstant) that).m_const1);
         if (nResult == 0)
             {

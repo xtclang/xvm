@@ -1431,6 +1431,11 @@ public class TerminalTypeConstant
     @Override
     protected int compareDetails(Constant obj)
         {
+        if (!(obj instanceof TerminalTypeConstant))
+            {
+            return -1;
+            }
+
         TerminalTypeConstant that = (TerminalTypeConstant) obj;
         Constant constThis = this.m_constId;
         if (constThis instanceof ResolvableConstant)

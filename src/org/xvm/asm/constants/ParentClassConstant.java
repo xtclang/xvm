@@ -158,6 +158,10 @@ public class ParentClassConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof ParentClassConstant))
+            {
+            return -1;
+            }
         return this.m_constChild.compareTo(((ParentClassConstant) that).m_constChild);
         }
 

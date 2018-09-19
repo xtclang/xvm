@@ -171,6 +171,10 @@ public class VersionedCondition
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof VersionedCondition))
+            {
+            return -1;
+            }
         VersionedCondition constThat = (VersionedCondition) that;
         return m_constVer.compareTo(constThat.m_constVer);
         }

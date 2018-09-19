@@ -121,6 +121,10 @@ public class ThisClassConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof ThisClassConstant))
+            {
+            return -1;
+            }
         return this.m_constClass.compareTo(((ThisClassConstant) that).m_constClass);
         }
 

@@ -236,6 +236,10 @@ public class UInt8Constant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof UInt8Constant))
+            {
+            return -1;
+            }
         return this.m_nVal - ((UInt8Constant) that).m_nVal;
         }
 
