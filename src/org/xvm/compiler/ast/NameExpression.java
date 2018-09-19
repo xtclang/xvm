@@ -186,6 +186,23 @@ public class NameExpression
         }
 
     /**
+     * This constructor is used to implement a "simple name" expression.
+     *
+     * @param name  the (required) name
+     */
+    NameExpression(Token name, Register reg)
+        {
+        this(name);
+
+        if (reg != null)
+            {
+            m_plan        = Plan.None;
+            m_arg         = reg;
+            m_fAssignable = reg.isWritable();
+            }
+        }
+
+    /**
      * This constructor is used to implement an "initial name" expression.
      *
      * @param amp      the (optional) no-de-reference token "&"
@@ -427,6 +444,26 @@ public class NameExpression
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ----- LValue methods ------------------------------------------------------------------------
+
+    @Override
+    public boolean isLValueSyntax()
+        {
+        return true;
+        }
+
+    @Override
+    public Expression getLValueExpression()
+        {
+        return this;
+        }
+
+    @Override
+    public void updateLValueFromRValueType(TypeConstant type)
+        {
         }
 
 

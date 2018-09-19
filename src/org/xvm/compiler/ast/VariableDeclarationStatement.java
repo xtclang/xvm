@@ -54,6 +54,14 @@ public class VariableDeclarationStatement
         }
 
     /**
+     * @return the token holding the name
+     */
+    public Token getNameToken()
+        {
+        return name;
+        }
+
+    /**
      * @return the type being assigned to
      */
     public TypeConstant getType()
@@ -77,6 +85,15 @@ public class VariableDeclarationStatement
         return m_fInjected;
         }
 
+    /**
+     * @return the Register for this VariableDeclarationStatement, if any has been created by this
+     *         point in the compilation process
+     */
+    Register getRegister()
+        {
+        return m_reg;
+        }
+
     @Override
     public long getStartPosition()
         {
@@ -93,6 +110,37 @@ public class VariableDeclarationStatement
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ----- LValue methods ------------------------------------------------------------------------
+
+    @Override
+    public boolean isLValueSyntax()
+        {
+        return true;
+        }
+
+    @Override
+    public Expression getLValueExpression()
+        {
+        NameExpression exprName = m_exprName;
+        if (exprName == null)
+            {
+            m_exprName = exprName = new NameExpression(name, m_reg);
+            }
+        return exprName;
+        }
+
+    @Override
+    public void updateLValueFromRValueType(TypeConstant type)
+        {
+        TypeExpression exprType = this.type;
+        if (exprType instanceof VariableTypeExpression)
+            {
+            exprType.resetTypeConstant();
+            exprType.setTypeConstant(type);
+            }
         }
 
 
@@ -238,6 +286,8 @@ public class VariableDeclarationStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
+    public static final VariableDeclarationStatement[] NONE = new VariableDeclarationStatement[0];
+
     protected TypeExpression type;
     protected Token          name;
     protected boolean        term;
@@ -246,6 +296,7 @@ public class VariableDeclarationStatement
     private transient boolean          m_fInjected;
     private transient Register         m_reg;
     private transient List<Annotation> m_listRefAnnotations;
+    private transient NameExpression   m_exprName;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(VariableDeclarationStatement.class, "type");
     }

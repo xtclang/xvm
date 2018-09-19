@@ -66,6 +66,26 @@ public class ArrayAccessExpression
         }
 
 
+    // ----- LValue methods ------------------------------------------------------------------------
+
+    @Override
+    public boolean isLValueSyntax()
+        {
+        return true;
+        }
+
+    @Override
+    public Expression getLValueExpression()
+        {
+        return this;
+        }
+
+    @Override
+    public void updateLValueFromRValueType(TypeConstant type)
+        {
+        }
+
+
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override

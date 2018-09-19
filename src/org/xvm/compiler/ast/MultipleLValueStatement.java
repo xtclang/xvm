@@ -29,7 +29,7 @@ public class MultipleLValueStatement
      */
     public MultipleLValueStatement(List<AstNode> LVals)
         {
-        assert LVals.stream().allMatch(node -> node.isLValueSyntax());
+        assert LVals.stream().allMatch(AstNode::isLValueSyntax);
 
         this.LVals = LVals;
         }
@@ -56,7 +56,7 @@ public class MultipleLValueStatement
         }
 
 
-    // ----- LValue methdos ------------------------------------------------------------------------
+    // ----- LValue methods ------------------------------------------------------------------------
 
     @Override
     public boolean isLValueSyntax()
