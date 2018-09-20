@@ -257,7 +257,5 @@ public class TodoExpression
     protected Token      keyword;
     protected Expression message;
 
-    private TypeConstant m_type;
-
     private static final Field[] CHILD_FIELDS = fieldsForNames(TodoExpression.class, "message");
     }

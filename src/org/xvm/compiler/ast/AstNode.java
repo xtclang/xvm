@@ -604,9 +604,13 @@ public abstract class AstNode
         {
         // method children are all deferred up until this stage, so we have to "catch them up" at
         // this point, recreating the various compiler stages here
-        Stage stageOldest = null;
+        Stage         stageOldest  = null;
+        List<AstNode> listChildren = new ArrayList<>();
         for (AstNode node : children())
             {
+            // collect all of the children that may need to be processed
+            listChildren.add(node);
+
             Stage stage = node.getStage();
             if (stageOldest == null)
                 {
@@ -626,7 +630,7 @@ public abstract class AstNode
                 stageCurrent.compareTo(stageThis) < 0;
                 stageCurrent = stageCurrent.nextTarget())
             {
-            StageMgr mgrKids = new StageMgr(this, stageCurrent, errs);
+            StageMgr mgrKids = new StageMgr(listChildren, stageCurrent, errs);
             while (!mgrKids.processComplete())
                 {
                 if (errs.isAbortDesired() || mgrKids.getIterations() > 20)

@@ -15,7 +15,7 @@ import org.xvm.compiler.ast.AstNode.ChildIterator;
 
 
 /**
- * A Stage Manager is used to shepher the AST nodes through their various stages.
+ * A Stage Manager is used to shepherd the AST nodes through their various stages.
  */
 public class StageMgr
     {
@@ -33,6 +33,24 @@ public class StageMgr
         assert stageTarget != null && stageTarget.isTargetable();
 
         m_listRevisit = Collections.singletonList(node);
+        m_target      = stageTarget;
+        m_errs        = errs == null ? ErrorListener.BLACKHOLE : errs;
+        }
+
+    /**
+     * Construct a Stage Manager that will progress the specified nodes (and any under them) to the
+     * specified target stage.
+     *
+     * @param list         the list of nodes to process
+     * @param stageTarget  the target stage
+     * @param errs         the optional error list to log to
+     */
+    public StageMgr(List<AstNode> list, Stage stageTarget, ErrorListener errs)
+        {
+        assert list != null && !list.isEmpty();
+        assert stageTarget != null && stageTarget.isTargetable();
+
+        m_listRevisit = list;
         m_target      = stageTarget;
         m_errs        = errs == null ? ErrorListener.BLACKHOLE : errs;
         }
@@ -188,20 +206,20 @@ public class StageMgr
                     default:
                         throw new IllegalStateException("unsupported target: " + stageTarget);
                     }
-                }
 
-            if (!isChildrenProcessed() && !isChildrenDeferred())
-                {
-                fDone &= processChildren();
-                }
+                if (!isChildrenProcessed() && !isChildrenDeferred())
+                    {
+                    fDone &= processChildren();
+                    }
 
-            if (isRevisitRequested())
-                {
-                fDone = false;
-                }
-            else
-                {
-                markComplete();
+                if (isRevisitRequested())
+                    {
+                    fDone = false;
+                    }
+                else
+                    {
+                    markComplete();
+                    }
                 }
             }
         finally
