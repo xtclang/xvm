@@ -79,11 +79,14 @@ public abstract class OpCallable extends Op
             checkNextRegisters(scope, m_aArgReturn);
 
             // TODO: remove when deprecated construction is removed
-            for (int i = 0, c = m_anRetValue.length; i < c; i++)
+            if (m_anRetValue != null)
                 {
-                if (scope.isNextRegister(m_anRetValue[i]))
+                for (int i = 0, c = m_anRetValue.length; i < c; i++)
                     {
-                    scope.allocVar();
+                    if (scope.isNextRegister(m_anRetValue[i]))
+                        {
+                        scope.allocVar();
+                        }
                     }
                 }
             }
