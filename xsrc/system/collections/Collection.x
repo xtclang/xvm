@@ -315,7 +315,7 @@ interface Collection<ElementType>
             // before the first
             val iter1 = collection1.iterator();
             val iter2 = collection2.iterator();
-            while (val value1 : iter1)
+            for (val value1 : iter1)
                 {
                 assert val value2 : iter2;
                 if (value1 != value2)
