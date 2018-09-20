@@ -162,6 +162,10 @@ public class PresentCondition
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof PresentCondition))
+            {
+            return -1;
+            }
         return m_constStruct.compareTo(((PresentCondition) that).m_constStruct);
         }
 

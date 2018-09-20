@@ -863,6 +863,10 @@ public class IntConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof IntConstant))
+            {
+            return -1;
+            }
         return this.m_pint.compareTo(((IntConstant) that).m_pint);
         }
 

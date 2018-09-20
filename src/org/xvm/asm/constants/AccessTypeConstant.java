@@ -204,6 +204,10 @@ public class AccessTypeConstant
     @Override
     protected int compareDetails(Constant obj)
         {
+        if (!(obj instanceof AccessTypeConstant))
+            {
+            return -1;
+            }
         AccessTypeConstant that = (AccessTypeConstant) obj;
         int n = this.m_constType.compareTo(that.m_constType);
         if (n == 0)

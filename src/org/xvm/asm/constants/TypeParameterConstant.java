@@ -164,6 +164,10 @@ public class TypeParameterConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof TypeParameterConstant))
+            {
+            return -1;
+            }
         TypeParameterConstant regThat = (TypeParameterConstant) that;
         if (!fReEntry)
             {

@@ -257,9 +257,13 @@ public abstract class MultiCondition
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof MultiCondition))
+            {
+            return -1;
+            }
         return this.equals(that)
                 ? 0
-                : Handy.compareArrays(m_aconstCond, ((org.xvm.asm.constants.MultiCondition) that).m_aconstCond);
+                : Handy.compareArrays(m_aconstCond, ((MultiCondition) that).m_aconstCond);
         }
 
 

@@ -269,6 +269,10 @@ public class MapConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof MapConstant))
+            {
+            return -1;
+            }
         int nResult = this.m_constType.compareTo(((MapConstant) that).m_constType);
         if (nResult != 0)
             {

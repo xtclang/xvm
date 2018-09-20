@@ -203,6 +203,10 @@ public class Int8Constant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof Int8Constant))
+            {
+            return -1;
+            }
         return this.m_nVal - ((Int8Constant) that).m_nVal;
         }
 

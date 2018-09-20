@@ -147,6 +147,10 @@ public class ImmutableTypeConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof ImmutableTypeConstant))
+            {
+            return -1;
+            }
         return this.m_constType.compareTo(((ImmutableTypeConstant) that).m_constType);
         }
 

@@ -175,6 +175,10 @@ public class SingletonConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof SingletonConstant))
+            {
+            return -1;
+            }
         return this.getValue().compareTo(((SingletonConstant) that).getValue());
         }
 

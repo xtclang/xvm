@@ -146,6 +146,10 @@ public class StringConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof StringConstant))
+            {
+            return -1;
+            }
         return this.m_sVal.compareTo(((StringConstant) that).m_sVal);
         }
 

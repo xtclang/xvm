@@ -298,6 +298,10 @@ public class AnnotatedTypeConstant
     @Override
     protected int compareDetails(Constant obj)
         {
+        if (!(obj instanceof AnnotatedTypeConstant))
+            {
+            return -1;
+            }
         AnnotatedTypeConstant that = (AnnotatedTypeConstant) obj;
         int n = this.m_annotation.compareTo(that.m_annotation);
 

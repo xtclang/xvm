@@ -423,6 +423,11 @@ public class ParameterizedTypeConstant
     @Override
     protected int compareDetails(Constant obj)
         {
+        if (!(obj instanceof ParameterizedTypeConstant))
+            {
+            return -1;
+            }
+
         ParameterizedTypeConstant that = (ParameterizedTypeConstant) obj;
         int n = this.m_constType.compareTo(that.m_constType);
         if (n == 0)

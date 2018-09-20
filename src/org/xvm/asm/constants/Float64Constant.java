@@ -85,6 +85,10 @@ public class Float64Constant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof Float64Constant))
+            {
+            return -1;
+            }
         return Double.compare(this.m_dflVal, ((Float64Constant) that).m_dflVal);
         }
 

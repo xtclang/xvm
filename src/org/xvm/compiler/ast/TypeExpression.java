@@ -171,7 +171,7 @@ public abstract class TypeExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        TypeConstant type = getTypeConstant();
+        TypeConstant type = ensureTypeConstant();
         if (type == null)
             {
             throw new IllegalStateException("type has not yet been determined for this: " + this);

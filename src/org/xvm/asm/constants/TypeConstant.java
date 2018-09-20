@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
@@ -99,9 +98,9 @@ public abstract class TypeConstant
     // ----- GenericTypeResolver -------------------------------------------------------------------
 
     @Override
-    public TypeConstant resolveGenericType(PropertyConstant constProperty)
+    public TypeConstant resolveGenericType(String sFormalName)
         {
-        return getGenericParamType(constProperty.getName());
+        return getGenericParamType(sFormalName);
         }
 
 
@@ -290,7 +289,7 @@ public abstract class TypeConstant
         }
 
     /**
-     * Find the type of the specified formal parameter for this actual type.
+     * Find the type of the specified formal parameter for this type.
      *
      * @param sName  the formal parameter name
      *
@@ -758,7 +757,6 @@ public abstract class TypeConstant
         return false;
         }
 
-
     /**
      * Obtain the type of the specified tuple field.
      *
@@ -777,6 +775,10 @@ public abstract class TypeConstant
 
         return atypeParam[i];
         }
+
+
+
+    // ----- TypeInfo support ----------------------------------------------------------------------
 
     /**
      * Obtain all of the information about this type, resolved from its recursive composition.

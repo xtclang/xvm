@@ -277,11 +277,15 @@ public class NamedTypeExpression
             return (TypeConstant) constId;
             }
 
-        // constId has been already "auto-narrowed" by resolveNames()
         ConstantPool pool = pool();
-        TypeConstant type = pool.ensureTerminalTypeConstant(constId);
 
-        if (paramTypes != null)
+        // constId has been already "auto-narrowed" by resolveNames()
+        TypeConstant type;
+        if (paramTypes == null)
+            {
+            type = calculateDefaultContextType(constId);
+            }
+        else
             {
             int            cParams      = paramTypes.size();
             TypeConstant[] aconstParams = new TypeConstant[cParams];
@@ -289,7 +293,8 @@ public class NamedTypeExpression
                 {
                 aconstParams[i] = paramTypes.get(i).ensureTypeConstant();
                 }
-            type = pool.ensureParameterizedTypeConstant(type, aconstParams);
+            type = pool.ensureParameterizedTypeConstant(
+                    pool.ensureTerminalTypeConstant(constId), aconstParams);
             }
 
         if (access != null && access != Access.PUBLIC)
@@ -333,9 +338,9 @@ public class NamedTypeExpression
                     ((ResolvableConstant) m_constId).resolve(constId);
                     }
 
-                // store the resolved id
+                // store the resolved id and reset the cached value
                 m_constId = constId;
-                ensureTypeConstant();
+                resetTypeConstant();
             }
         }
 
@@ -346,89 +351,10 @@ public class NamedTypeExpression
 
         boolean fValid = true;
 
-        TypeConstant type = pool.ensureTerminalTypeConstant(m_constId);
+        TypeConstant type;
         if (paramTypes == null)
             {
-            // in a context of "this compilation unit", an absence of type parameters
-            // is treated as "formal types" (but only for instance children).
-            // Consider an example:
-            //
-            //  class Parent<T0>
-            //    {
-            //    void foo()
-            //       {
-            //       Parent p;  // (1) means Parent<T0>
-            //       Child1 c1; // (2) means Child1<Parent<T0>>
-            //       Child3 c2; // (3) means Child2<Parent<T0>, ?>
-            //       Child2 c3; // (3) means naked Child3 type
-            //       }
-            //
-            //    class Child1
-            //      {
-            //      void foo()
-            //         {
-            //         Parent p;  // (4) means Parent<T0>
-            //         Child1 c1; // (5) means Child1<Parent<T0>>
-            //         Child2 c2; // (6) means Child2<Parent<T0>, ?>
-            //         }
-            //      }
-            //
-            //    class Child2<T2>
-            //      {
-            //      void foo()
-            //         {
-            //         Parent p;  // (4) means Parent<T0>
-            //         Child2 c2; // (5) means Child1<Parent<T0>, T2>
-            //         Child1 c1; // (7) means Child1<Parent<T0>>
-            //         }
-            //      }
-            //
-            //    static class Child3<T3>
-            //      {
-            //      void foo()
-            //         {
-            //         Parent p; // (8) means "naked" Parent type
-            //         Child3 c; // (9) means Child3<T3>
-            //         }
-            //      }
-            //    }
-            //
-
-            if (m_constId.getFormat() == Format.Class)
-                {
-                IdentityConstant idTarget  = (IdentityConstant) m_constId;
-                ClassStructure   clzTarget = (ClassStructure) idTarget.getComponent();
-                if (clzTarget.isParameterized())
-                    {
-                    ClassStructure   clzClass   = ctx.getThisClass();
-                    IdentityConstant idClass    = clzClass.getIdentityConstant();
-                    boolean          fUseFormal = false;
-
-                    if (idTarget.equals(idClass))
-                        {
-                        // scenarios (1), (5) and (9)
-                        fUseFormal = true;
-                        }
-                    else if (idTarget.isNestMate(idClass))
-                        {
-                        if (clzClass.isInstanceAscendant(clzTarget))
-                            {
-                            // scenario (2, 3)
-                            fUseFormal = true;
-                            }
-                        else if (clzTarget.isInstanceAscendant(clzClass))
-                            {
-                            // scenario (4)
-                            fUseFormal = true;
-                            }
-                        // TODO: scenarios (6), (7)
-                        }
-                    if (fUseFormal)
-                        {
-                        type = clzTarget.getFormalType();
-                        }
-                    }
-                }
+            type = calculateDefaultContextType(m_constId);
             }
         else
             {
@@ -466,12 +392,104 @@ public class NamedTypeExpression
                         }
                     }
                 }
-            type = pool.ensureParameterizedTypeConstant(type, atypeParams);
+            type = pool.ensureParameterizedTypeConstant(
+                    pool.ensureTerminalTypeConstant(m_constId), atypeParams);
             }
 
         TypeConstant typeType = pool.ensureParameterizedTypeConstant(pool.typeType(), type);
 
         return finishValidation(typeRequired, typeType, fValid ? TypeFit.Fit : TypeFit.NoFit, type, errs);
+        }
+
+    /**
+     * Considering the containing class, calculate a type for the specified target constant in the
+     * absence of explicitly provided type parameters.
+     *
+     * @return a resulting type
+     */
+    protected TypeConstant calculateDefaultContextType(Constant constTarget)
+        {
+        // in a context of "this compilation unit", an absence of type parameters
+        // is treated as "formal types" (but only for instance children).
+        // Consider an example:
+        //
+        //  class Parent<T0>
+        //    {
+        //    void foo()
+        //       {
+        //       Parent p;  // (1) means Parent<T0>
+        //       Child1 c1; // (2) means Child1<Parent<T0>>
+        //       Child3 c2; // (3) means Child2<Parent<T0>, ?>
+        //       Child2 c3; // (3) means naked Child3 type
+        //       }
+        //
+        //    class Child1
+        //      {
+        //      void foo()
+        //         {
+        //         Parent p;  // (4) means Parent<T0>
+        //         Child1 c1; // (5) means Child1<Parent<T0>>
+        //         Child2 c2; // (6) means Child2<Parent<T0>, ?>
+        //         }
+        //      }
+        //
+        //    class Child2<T2>
+        //      {
+        //      void foo()
+        //         {
+        //         Parent p;  // (4) means Parent<T0>
+        //         Child2 c2; // (5) means Child1<Parent<T0>, T2>
+        //         Child1 c1; // (7) means Child1<Parent<T0>>
+        //         }
+        //      }
+        //
+        //    static class Child3<T3>
+        //      {
+        //      void foo()
+        //         {
+        //         Parent p; // (8) means "naked" Parent type
+        //         Child3 c; // (9) means Child3<T3>
+        //         }
+        //      }
+        //    }
+        //
+
+        if (constTarget.getFormat() == Format.Class)
+            {
+            IdentityConstant idTarget  = (IdentityConstant) constTarget;
+            ClassStructure   clzTarget = (ClassStructure) idTarget.getComponent();
+            if (clzTarget.isParameterized())
+                {
+                ClassStructure   clzClass   = getComponent().getContainingClass();
+                IdentityConstant idClass    = clzClass.getIdentityConstant();
+                boolean          fUseFormal = false;
+
+                if (idTarget.equals(idClass))
+                    {
+                    // scenarios (1), (5) and (9)
+                    fUseFormal = true;
+                    }
+                else if (idTarget.isNestMate(idClass))
+                    {
+                    if (clzClass.isInstanceAscendant(clzTarget))
+                        {
+                        // scenario (2, 3)
+                        fUseFormal = true;
+                        }
+                    else if (clzTarget.isInstanceAscendant(clzClass))
+                        {
+                        // scenario (4)
+                        fUseFormal = true;
+                        }
+                    // TODO: scenarios (6), (7)
+                    }
+                if (fUseFormal)
+                    {
+                    return clzTarget.getFormalType();
+                    }
+                }
+            }
+        return pool().ensureTerminalTypeConstant(constTarget);
         }
 
 

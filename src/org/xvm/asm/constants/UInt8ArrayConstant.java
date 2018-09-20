@@ -88,6 +88,10 @@ public class UInt8ArrayConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof UInt8ArrayConstant))
+            {
+            return -1;
+            }
         byte[] abThis = this.m_abVal;
         byte[] abThat = ((UInt8ArrayConstant) that).m_abVal;
 

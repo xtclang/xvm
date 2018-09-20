@@ -1040,22 +1040,24 @@ public class MethodStructure
     // ----- GenericTypeResolver interface ---------------------------------------------------------
 
     @Override
-    public TypeConstant resolveGenericType(PropertyConstant constProperty)
+    public TypeConstant resolveGenericType(String sFormalName)
         {
-        assert isFunction();
-
-        String sName = constProperty.getName();
-        for (int i = 0, c = getParamCount(); i < c; i++)
+        for (int i = 0, c = getTypeParamCount(); i < c; i++)
             {
             Parameter param = getParam(i);
-            if (param.isTypeParameter() && sName.equals(param.getName()))
+
+            if (sFormalName.equals(param.getName()))
                 {
-                return param.getType();
+                TypeConstant typeType = param.getType();
+
+                // type parameter's type is Type<DataType>
+                assert typeType.getParamsCount() == 1;
+
+                return typeType.getParamTypesArray()[0];
                 }
             }
 
-        throw new IllegalArgumentException(
-            "Invalid formal name: " + sName + " for " + this);
+        return null;
         }
 
     // ----- Component methods ---------------------------------------------------------------------

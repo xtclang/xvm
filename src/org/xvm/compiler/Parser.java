@@ -759,7 +759,7 @@ public class Parser
                         }
                     }
 
-                // evaluate modifers looking for an access modifier
+                // evaluate modifiers looking for an access modifier
                 Token tokAccess = null;
                 if (modifiers != null)
                     {
@@ -4400,8 +4400,7 @@ public class Parser
                 return null;
             }
 
-        List<Expression> args = null;
-        args = new ArrayList<>();
+        List<Expression> args = new ArrayList<>();
         boolean first = true;
         while (match(idClose) == null)
             {

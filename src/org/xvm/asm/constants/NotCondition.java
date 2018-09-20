@@ -172,7 +172,11 @@ public class NotCondition
     @Override
     protected int compareDetails(Constant that)
         {
-        return m_constCond.compareTo(((org.xvm.asm.constants.NotCondition) that).m_constCond);
+        if (!(that instanceof NotCondition))
+            {
+            return -1;
+            }
+        return m_constCond.compareTo(((NotCondition) that).m_constCond);
         }
 
     @Override

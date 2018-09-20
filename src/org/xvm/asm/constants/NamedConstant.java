@@ -108,6 +108,10 @@ public abstract class NamedConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof NamedConstant))
+            {
+            return -1;
+            }
         int n = this.m_constParent.compareTo(((NamedConstant) that).m_constParent);
         if (n == 0)
             {

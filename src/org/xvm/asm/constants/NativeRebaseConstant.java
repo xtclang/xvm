@@ -68,6 +68,10 @@ public class NativeRebaseConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof NativeRebaseConstant))
+            {
+            return -1;
+            }
         return m_constIface.compareDetails(((NativeRebaseConstant) that).m_constIface);
         }
 

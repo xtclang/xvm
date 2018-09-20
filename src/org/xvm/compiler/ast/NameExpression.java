@@ -1328,6 +1328,8 @@ public class NameExpression
                     ClassStructure clz = ctx.getThisClass();
                     if (clz != prop.getParent())
                         {
+                        // the property may originate in a contribution
+                        // (e.g. Range.x refers to Interval.upperBound)
                         PropertyInfo infoProp = clz.getFormalType().
                                 ensureTypeInfo().findProperty(id);
                         if (infoProp != null)

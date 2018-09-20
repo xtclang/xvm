@@ -85,6 +85,10 @@ public class Float32Constant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof Float32Constant))
+            {
+            return -1;
+            }
         return Float.compare(this.m_flVal, ((Float32Constant) that).m_flVal);
         }
 

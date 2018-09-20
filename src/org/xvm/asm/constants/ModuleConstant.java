@@ -199,6 +199,10 @@ public class ModuleConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof ModuleConstant))
+            {
+            return -1;
+            }
         return this.m_constName.compareTo(((ModuleConstant) that).m_constName);
         }
 

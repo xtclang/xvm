@@ -94,6 +94,10 @@ public class Float128Constant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof Float128Constant))
+            {
+            return -1;
+            }
         byte[] abThis = this.m_abVal;
         byte[] abThat = ((Float128Constant) that).m_abVal;
 

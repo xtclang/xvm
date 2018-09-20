@@ -152,6 +152,10 @@ public class DecimalConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof DecimalConstant))
+            {
+            return -1;
+            }
         return this.m_dec.compareForObjectOrder(((DecimalConstant) that).m_dec);
         }
 

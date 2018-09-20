@@ -61,6 +61,10 @@ public class VersionConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof VersionConstant))
+            {
+            return -1;
+            }
         return this.m_ver.compareTo(((VersionConstant) that).m_ver);
         }
 

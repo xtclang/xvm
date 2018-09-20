@@ -67,7 +67,8 @@ public class TupleElementsTypeConstant
     @Override
     protected int compareDetails(Constant that)
         {
-        throw new IllegalStateException();
+        // see equals()
+        return -1;
         }
 
     @Override

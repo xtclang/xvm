@@ -544,6 +544,11 @@ public class SignatureConstant
     @Override
     protected int compareDetails(Constant obj)
         {
+        if (!(obj instanceof SignatureConstant))
+            {
+            return -1;
+            }
+
         SignatureConstant that = (SignatureConstant) obj;
         int n = this.m_constName.compareTo(that.m_constName);
         if (n == 0)

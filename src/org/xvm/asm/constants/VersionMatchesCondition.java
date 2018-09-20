@@ -163,6 +163,10 @@ public class VersionMatchesCondition
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof VersionMatchesCondition))
+            {
+            return -1;
+            }
         VersionMatchesCondition constThat = (VersionMatchesCondition) that;
         int nResult = m_constStruct.compareTo(constThat.m_constStruct);
         if (nResult == 0)

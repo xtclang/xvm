@@ -204,6 +204,10 @@ public class ChildClassConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (!(that instanceof ChildClassConstant))
+            {
+            return -1;
+            }
         int nResult = m_constParent.compareTo(((ChildClassConstant) that).m_constParent);
         if (nResult == 0)
             {

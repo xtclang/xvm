@@ -21,9 +21,16 @@ public class UnresolvedNameConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a place-holder constant that will eventually be replaced with a real constant
+     * Construct a place-holder constant that will eventually be replaced with a real constant.
      *
-     * @param pool  the ConstantPool that will contain this Constant
+     * Note, that outside of "equals" and "toString" implementations, the information held by this
+     * constant is not used at all. The resolution logic (see
+     * {@link org.xvm.compiler.ast.NamedTypeExpression#resolveNames) will use its own state to
+     * {@link #resolve(Constant) resolve} it.
+     *
+     * @param pool  the ConstantPool that this Constant should belong to, even though it will never
+     *              contain it while it's unresolved and will immediately replace it as it becomes
+     *              resolved
      */
     public UnresolvedNameConstant(ConstantPool pool, String[] names, boolean fExplicitlyNonNarrowing)
         {
@@ -56,23 +63,6 @@ public class UnresolvedNameConstant
             sb.append(names[i]);
             }
         return sb.toString();
-        }
-
-    /**
-     * @return the number of simple names in the unresolved name
-     */
-    public int getNameCount()
-        {
-        return m_asName.length;
-        }
-
-    /**
-     * @param i  the name index, <tt>0 <= i < getNameCount()</tt>
-     * @return the i-th simple name in the unresolved name
-     */
-    public String getName(int i)
-        {
-        return m_asName[i];
         }
 
     /**

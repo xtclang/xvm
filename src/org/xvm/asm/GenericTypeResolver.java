@@ -1,7 +1,6 @@
 package org.xvm.asm;
 
 
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 
@@ -13,9 +12,9 @@ public interface GenericTypeResolver
     /**
      * Resolve the generic type based on the PropertyConstant representing a formal parameter.
      *
-     * @param constProperty  the PropertyConstant for the formal parameter
+     * @param sFormalName  the formal parameter name
      *
      * @return a resolved type
      */
-    TypeConstant resolveGenericType(PropertyConstant constProperty);
+    TypeConstant resolveGenericType(String sFormalName);
     }
