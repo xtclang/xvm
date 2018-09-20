@@ -136,6 +136,7 @@ public class VariableDeclarationStatement
         if (exprName == null)
             {
             m_exprName = exprName = new NameExpression(name, m_reg);
+            adopt(exprName);
             }
         return exprName;
         }

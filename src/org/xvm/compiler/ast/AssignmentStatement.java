@@ -188,7 +188,10 @@ public class AssignmentStatement
         return op.getId() == Id.COLON;
         }
 
-    public Register ensureConditionRegister()
+    /**
+     * @return the single-use register that the Boolean condition result is stored in
+     */
+    public Register getConditionRegister()
         {
         Register reg = m_regCond;
         if (reg == null)
@@ -383,7 +386,7 @@ public class AssignmentStatement
             int          cLVals   = LVals.length;
             int          cAll     = cLVals + 1;
             Assignable[] LValsAll = new Assignable[cAll];
-            LValsAll[0] = lvalueExpr.new Assignable(ensureConditionRegister());
+            LValsAll[0] = lvalueExpr.new Assignable(getConditionRegister());
             System.arraycopy(LVals, 0, LValsAll, 1, cLVals);
             if (fCompletes &= !lvalueExpr.isAborting())
                 {

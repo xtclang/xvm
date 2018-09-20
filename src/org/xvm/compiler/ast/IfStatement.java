@@ -203,7 +203,7 @@ public class IfStatement
             {
             AssignmentStatement stmtCond = (AssignmentStatement) cond;
             fCompletesCond = stmtCond.completes(ctx, fReachable, code, errs);
-            code.add(new JumpFalse(stmtCond.ensureConditionRegister(), labelElse));
+            code.add(new JumpFalse(stmtCond.getConditionRegister(), labelElse));
             }
         else
             {

@@ -62,5 +62,5 @@ public class LabeledStatement
     protected Token     label;
     protected Statement stmt;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(LabeledStatement.class, "cond");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(LabeledStatement.class, "stmt");
     }

@@ -112,6 +112,14 @@ public class StatementBlock
         }
 
     /**
+     * Indicate that the StatementBlock should explicitly suppress its ENTER/EXIT scope.
+     */
+    public void suppressScope()
+        {
+        m_fSuppressScope = true;
+        }
+
+    /**
      * Register an import statement that occurs within this StatementBlock.
      *
      * @param stmt  the ImportStatement to register
@@ -309,7 +317,7 @@ public class StatementBlock
             AstNode parent         = getParent();
             boolean fMethod        = parent instanceof MethodDeclarationStatement;
             boolean fLambda        = parent instanceof LambdaExpression;
-            boolean fImplicitScope = fMethod | fLambda;
+            boolean fSuppressScope = fMethod | fLambda | m_fSuppressScope;
 
             if (fLambda)
                 {
@@ -326,7 +334,7 @@ public class StatementBlock
                         }
                     }
                 }
-            else if (!fImplicitScope)
+            else if (!fSuppressScope)
                 {
                 code.add(new Enter());
                 }
@@ -343,7 +351,7 @@ public class StatementBlock
                 fCompletable &= stmt.completes(ctx, fReachable, code, errs);
                 }
 
-            if (!fImplicitScope)
+            if (!fSuppressScope)
                 {
                 code.add(new Exit());
                 }
@@ -442,6 +450,8 @@ public class StatementBlock
     protected boolean         containsEnclosed;
 
     protected Map<String, ImportStatement> imports;
+
+    private transient boolean m_fSuppressScope;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(StatementBlock.class, "stmts");
     }

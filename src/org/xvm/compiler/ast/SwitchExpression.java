@@ -139,38 +139,42 @@ public class SwitchExpression
             }
         else
             {
-            // let the conditional statement know that it is indeed being used as a condition
-            cond.markConditional(Usage.Switch, new Label("switch_else"));
+            // TODO short circuit support:
+            // m_labelElse = new Label("switch_else");
 
-            fScope = cond.isScopeRequired();
-            if (fScope)
+            if (cond instanceof AssignmentStatement)
                 {
-                ctx = ctx.enterScope();
-                }
-
-            ConditionalStatement condNew = (ConditionalStatement) cond.validate(ctx, errs);
-            if (condNew == null)
-                {
-                fValid = false;
-                }
-            else
-                {
-                if (condNew.hasExpression())
+                AssignmentStatement stmtCond = (AssignmentStatement) cond;
+                if (stmtCond.hasDeclarations())
                     {
-                    Expression expr = condNew.getExpression();
-                    typeCase = expr.getType();
-                    if (expr.isConstant())
-                        {
-                        constCond = expr.toConstant();
-                        }
+                    ctx    = ctx.enterScope();
+                    fScope = true;
+                    }
+
+                AssignmentStatement stmtNew = (AssignmentStatement) stmtCond.validate(ctx, errs);
+                if (stmtNew == null)
+                    {
+                    fValid = false;
                     }
                 else
                     {
-                    // switch can't use MultipleLValueStatement, for example, and the parser
-                    // should know that
-                    throw new IllegalStateException("cond=" + condNew);
+                    cond     = stmtNew;
+                    typeCase = stmtNew.getLValue().getLValueExpression().getType();
                     }
-                cond = condNew;
+                }
+            else
+                {
+                Expression exprOld = (Expression) cond;
+                Expression exprNew = exprOld.validate(ctx, null, errs);
+                if (exprNew == null)
+                    {
+                    fValid = false;
+                    }
+                else
+                    {
+                    cond     = exprNew;
+                    typeCase = exprNew.getType();
+                    }
                 }
             }
 
@@ -457,14 +461,15 @@ public class SwitchExpression
                 }
             else
                 {
-                if (cond.isScopeRequired())
+                boolean fScope = cond instanceof AssignmentStatement && ((AssignmentStatement) cond).hasDeclarations();
+                if (fScope)
                     {
                     code.add(new Enter());
                     }
 
                 generateJumpSwitch(ctx, code, LVal, errs);
 
-                if (cond.isScopeRequired())
+                if (fScope)
                     {
                     code.add(new Exit());
                     }
@@ -519,7 +524,8 @@ public class SwitchExpression
 
     private void generateJumpSwitch(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
-        Expression exprCond = cond.getExpression();
+        // TODO statement vs. expression
+        Expression exprCond = (Expression) cond;
         if (m_aconstCase == null && (m_pintOffset != null || !exprCond.getType().isA(pool().typeInt())))
             {
             exprCond = new ToIntExpression(exprCond, m_pintOffset, errs);
@@ -554,10 +560,10 @@ public class SwitchExpression
                     {
                     code.add(labelNew);
 
-                    if (labelNew == labelDefault)
+                    if (labelNew == labelDefault && m_labelElse != null)
                         {
                         // short-circuit also goes to the default label
-                        code.add(cond.getLabel());
+                        code.add(m_labelElse);
                         }
 
                     labelCur = labelNew;
@@ -627,6 +633,7 @@ public class SwitchExpression
     private transient Constant[]    m_aconstCase;
     private transient Label[]       m_alabelCase;
     private transient Label         m_labelDefault;
+    private transient Label         m_labelElse;
     private transient PackedInteger m_pintOffset;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchExpression.class, "cond", "contents");

@@ -190,16 +190,20 @@ const Method<TargetType, ParamTypes extends Tuple, ReturnTypes extends Tuple>
             return false;
             }
 
-        for (Type typeR2 : this.ReturnTypes, Type typeR1 : that.ReturnTypes)
+        Iterator<Type> iterR1 = that.ReturnTypes.iterator();
+        for (Type typeR2 : this.ReturnTypes)
              {
+             assert Type typeR1 : iterR1.next();
              if (!typeR2.isA(typeR1))
                  {
                  return false;
                  }
              }
 
-        loop: for (Type typeP2 : this.ParamTypes, Type typeP1 : that.ParamTypes)
+        Iterator<Type> iterP1 = that.ParamTypes.iterator();
+        loop: for (Type typeP2 : this.ParamTypes)
             {
+            assert Type typeP1 : iterP1.next();
             if (typeP1.isA(typeP2))
                 {
                 continue;

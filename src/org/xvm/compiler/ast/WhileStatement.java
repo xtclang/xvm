@@ -9,6 +9,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.Jump;
+import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Token;
@@ -185,9 +186,9 @@ public class WhileStatement
         boolean fDoWhile = isDoWhile();
         if (cond instanceof Expression && ((Expression) cond).isConstantFalse())
             {
-            // while(false) is optimized out altogether.
+            // while(false) {body}      - note: optimized out altogether.
+            // do {body} while(false)
             //
-            // do-while(false) is assembled as:
             //   [body]
             //   Continue:
             //   Break:
@@ -201,7 +202,8 @@ public class WhileStatement
 
         if (cond instanceof Expression && ((Expression) cond).isConstantTrue())
             {
-            // while(true) and do-while(true) are both assembled as:
+            // while(true) {body}
+            // do {body} while(true)
             //
             //   Repeat:
             //   Continue:
@@ -215,65 +217,82 @@ public class WhileStatement
             return false;     // while(true) never completes naturally
             }
 
-        boolean fOwnScope = cond instanceof AssignmentStatement && ((AssignmentStatement) cond).hasDeclarations();
-        if (!fDoWhile && fOwnScope)
+        if (fDoWhile)
             {
-            boolean fCompletes = fReachable;
-            AssignmentStatement stmtCond = (AssignmentStatement) cond;
-
-            // while(declAndOrAssign) is assembled as:
+            // do {body} while(cond);
             //
             //   ENTER
-            //   [decl]
-            //   JMP Continue
             //   Repeat:
-            //   [body]
+            //   [body]                 ; body's scope is explicitly suppressed
             //   Continue:
-            //   [assign]
-            //   JMP_TRUE cond Repeat   // this line or similar would be generated as part of [assign]
-            //   Break:
+            //   [cond]
+            //   JMP_TRUE cond Repeat
             //   EXIT
+            //   Break:
             code.add(new Enter());
-            for (VariableDeclarationStatement stmtDecl : stmtCond.takeDeclarations())
+            code.add(getRepeatLabel());
+            block.suppressScope();
+            boolean fCompletes = block.completes(ctx, fReachable, code, errs);
+            code.add(getContinueLabel());
+            if (cond instanceof AssignmentStatement)
+                {
+                AssignmentStatement stmtCond = (AssignmentStatement) cond;
+                fCompletes &= stmtCond.completes(ctx, fReachable, code, errs);
+                code.add(new JumpTrue(stmtCond.getConditionRegister(), getRepeatLabel()));
+                }
+            else
+                {
+                Expression exprCond = (Expression) cond;
+                exprCond.generateConditionalJump(ctx, code, getRepeatLabel(), true, errs);
+                fCompletes &= !exprCond.isAborting();
+                }
+            code.add(new Exit());
+            return fCompletes;
+            }
+
+        // while(cond) {body}
+        //
+        //   ENTER                  ; omitted if no declarations
+        //   [cond:decl]            ; omitted if no declarations
+        //   JMP Continue
+        //   Repeat:
+        //   [body]
+        //   Continue:
+        //   [cond]
+        //   JMP_TRUE cond Repeat
+        //   EXIT                   ; omitted if no declarations
+        //   Break:
+        boolean fCompletes = fReachable;
+        boolean fOwnScope  = false;
+        if (cond instanceof AssignmentStatement && ((AssignmentStatement) cond).hasDeclarations())
+            {
+            fOwnScope = true;
+            code.add(new Enter());
+            for (VariableDeclarationStatement stmtDecl : ((AssignmentStatement) cond).takeDeclarations())
                 {
                 fCompletes &= stmtDecl.completes(ctx, fReachable, code, errs);
                 }
-            code.add(new Jump(getContinueLabel()));
-            code.add(getRepeatLabel());
-            fCompletes &= block.completes(ctx, fReachable, code, errs);
-            code.add(getContinueLabel());
-            fCompletes &= cond.nonDeclarations(ctx, errs).completes(ctx, fReachable, code, errs);
-            code.add(new Exit());
             }
-
-        // while(cond)              do-while(cond)              do-while(declAndOrAssign)
-        //
-        //   JMP Continue
-        //   Repeat:                  Repeat:                     Repeat:
-        //   [body]                   [body]                      [body]
-        //   Continue:                Continue:                   Continue:
-        //                                                        ENTER
-        //   [cond]                   [cond]                      [declAndOrAssign]
-        //  +JMP_TRUE cond Repeat    +JMP_TRUE cond Repeat        JMP_TRUE cond Repeat
-        //   Break:                   Break:                      Break:
-        //                                                        EXIT
-        if (!fDoWhile)
-            {
-            code.add(new Jump(getContinueLabel()));
-            }
+        code.add(new Jump(getContinueLabel()));
         code.add(getRepeatLabel());
-        boolean fCompletes = block.completes(ctx, fReachable, code, errs);
+        fCompletes &= block.completes(ctx, fReachable, code, errs);
         code.add(getContinueLabel());
-        if (fOwnScope)
+        if (cond instanceof AssignmentStatement)
             {
-            code.add(new Enter());
+            AssignmentStatement stmtCond = (AssignmentStatement) cond;
+            fCompletes &= stmtCond.completes(ctx, fReachable, code, errs);
+            code.add(new JumpTrue(stmtCond.getConditionRegister(), getRepeatLabel()));
             }
-        fCompletes &= cond.completes(ctx, fReachable, code, errs);
+        else
+            {
+            Expression exprCond = (Expression) cond;
+            exprCond.generateConditionalJump(ctx, code, getRepeatLabel(), true, errs);
+            fCompletes &= !exprCond.isAborting();
+            }
         if (fOwnScope)
             {
             code.add(new Exit());
             }
-
         return fCompletes;
         }
 
