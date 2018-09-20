@@ -190,7 +190,7 @@ public class NameExpression
      *
      * @param name  the (required) name
      */
-    NameExpression(Token name, Register reg)
+    NameExpression(AstNode parent, Token name, Register reg)
         {
         this(name);
 
@@ -200,6 +200,9 @@ public class NameExpression
             m_arg         = reg;
             m_fAssignable = reg.isWritable();
             }
+
+        parent.adopt(this);
+        setStage(parent.getStage());
         }
 
     /**

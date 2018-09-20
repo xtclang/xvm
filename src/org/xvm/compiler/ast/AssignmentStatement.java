@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.StringConstant;
@@ -139,7 +140,7 @@ public class AssignmentStatement
         if (LVal instanceof VariableDeclarationStatement)
             {
             VariableDeclarationStatement stmt = (VariableDeclarationStatement) LVal;
-            lvalue = new NameExpression(stmt.getNameToken(), stmt.getRegister());
+            lvalue = new NameExpression(this, stmt.getNameToken(), stmt.getRegister());
             if (aDecls == null)
                 {
                 aDecls = new VariableDeclarationStatement[] {stmt};
@@ -155,7 +156,7 @@ public class AssignmentStatement
                 if (node instanceof VariableDeclarationStatement)
                     {
                     VariableDeclarationStatement stmt = (VariableDeclarationStatement) node;
-                    LVals.set(i, new NameExpression(stmt.getNameToken(), stmt.getRegister()));
+                    LVals.set(i, new NameExpression(this, stmt.getNameToken(), stmt.getRegister()));
                     if (listDecls != null)
                         {
                         listDecls.add(stmt);
@@ -201,7 +202,7 @@ public class AssignmentStatement
                 throw new IllegalStateException("op=\"" + op.getValueText() + '\"');
                 }
 
-            m_regCond = reg = new Register(pool().typeBoolean());
+            m_regCond = reg = new Register(pool().typeBoolean(), Op.A_STACK);
             }
 
         return reg;

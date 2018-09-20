@@ -124,6 +124,12 @@ public class VariableDeclarationStatement
     // ----- LValue methods ------------------------------------------------------------------------
 
     @Override
+    protected boolean isRValue(Expression exprChild)
+        {
+        return exprChild != m_exprName;
+        }
+
+    @Override
     public boolean isLValueSyntax()
         {
         return true;
@@ -135,8 +141,7 @@ public class VariableDeclarationStatement
         NameExpression exprName = m_exprName;
         if (exprName == null)
             {
-            m_exprName = exprName = new NameExpression(name, m_reg);
-            adopt(exprName);
+            m_exprName = exprName = new NameExpression(this, name, m_reg);
             }
         return exprName;
         }

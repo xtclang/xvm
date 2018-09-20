@@ -13,6 +13,8 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Label;
 
+import org.xvm.compiler.Compiler.Stage;
+
 
 /**
  * This represents multiple variable declarations in a list.
@@ -207,6 +209,13 @@ public class MultipleLValueStatement
         {
         StringBuilder sb = new StringBuilder();
 
+        AstNode parent = getParent();
+        boolean fCond  = parent instanceof AssignmentStatement && ((AssignmentStatement) parent).isConditional();
+        if (!fCond)
+            {
+            sb.append('(');
+            }
+
         boolean first = true;
         for (AstNode node : LVals)
             {
@@ -220,6 +229,11 @@ public class MultipleLValueStatement
                 }
 
             sb.append(node);
+            }
+
+        if (!fCond)
+            {
+            sb.append(')');
             }
 
         return sb.toString();
@@ -263,6 +277,18 @@ public class MultipleLValueStatement
         protected Field[] getChildFields()
             {
             return EXPR_FIELDS;
+            }
+
+        @Override
+        public Stage getStage()
+            {
+            return getParent().getStage();
+            }
+
+        @Override
+        protected void setStage(Stage stage)
+            {
+            getParent().setStage(stage);
             }
 
         @Override
