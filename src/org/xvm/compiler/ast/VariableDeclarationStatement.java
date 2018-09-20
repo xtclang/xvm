@@ -70,6 +70,14 @@ public class VariableDeclarationStatement
         }
 
     /**
+     * @return after validate(), this returns true iff the variable has any Ref/Var annotations
+     */
+    public boolean hasRefAnnotations()
+        {
+        return m_listRefAnnotations != null && !m_listRefAnnotations.isEmpty();
+        }
+
+    /**
      * @return true iff the variable is known to be final
      */
     public boolean isFinal()

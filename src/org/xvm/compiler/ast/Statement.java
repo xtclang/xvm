@@ -341,9 +341,11 @@ public abstract class Statement
          * <p/>
          * Note: This can only be used during the validate() stage.
          *
+         * @param fWhenTrue TODO
+         *
          * @return the new (forked) context
          */
-        public Context fork()
+        public Context fork(boolean fWhenTrue)
             {
             checkForkable();
 
@@ -367,18 +369,16 @@ public abstract class Statement
          * <p/>
          * Note: This can only be used during the validate() stage.
          *
-         * @param contexts  the previously forked contexts
+         * @param ctxTrue  the previously forked contexts
+         * @param ctxFalse
          */
-        public void join(Context... contexts)
+        public void join(Context ctxTrue, Context ctxFalse)
             {
             checkForked();
 
-            for (Context ctx : contexts)
+            if (ctxTrue.getOuterContext() != this || ctxFalse.getOuterContext() != this)
                 {
-                if (ctx.getOuterContext() != this)
-                    {
-                    throw new IllegalStateException("not a fork of this context");
-                    }
+                throw new IllegalStateException("not a fork of this context");
                 }
 
             // TODO merge info
@@ -1116,14 +1116,14 @@ public abstract class Statement
             }
 
         @Override
-        public Context fork()
+        public Context fork(boolean fWhenTrue)
             {
             checkValidating();
             throw new IllegalStateException();
             }
 
         @Override
-        public void join(Context... contexts)
+        public void join(Context ctxTrue, Context ctxFalse)
             {
             checkValidating();
             throw new IllegalStateException();

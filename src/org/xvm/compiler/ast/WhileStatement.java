@@ -13,8 +13,6 @@ import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.compiler.ast.ConditionalStatement.Usage;
-
 import static org.xvm.util.Handy.indentLines;
 
 
@@ -68,9 +66,29 @@ public class WhileStatement
         Label label = m_labelContinue;
         if (label == null)
             {
-            m_labelContinue = label = new Label("continue_while_" + (++s_nLabelCounter));
+            m_labelContinue = label = new Label("continue_while_" + getLabelCounter());
             }
         return label;
+        }
+
+    public Label getRepeatLabel()
+        {
+        Label label = m_labelRepeat;
+        if (label == null)
+            {
+            m_labelRepeat = label = new Label("repeat_while_" + getLabelCounter());
+            }
+        return label;
+        }
+
+    private int getLabelCounter()
+        {
+        int n = m_nLabel;
+        if (n == 0)
+            {
+            m_nLabel = n = ++s_nLabelCounter;
+            }
+        return n;
         }
 
     @Override
@@ -98,40 +116,59 @@ public class WhileStatement
     protected Statement validate(Context ctx, ErrorListener errs)
         {
         boolean fValid = true;
+        boolean fScope = cond instanceof AssignmentStatement && ((AssignmentStatement) cond).hasDeclarations();
 
-        // let the conditional statement know that it is indeed being used as a condition
-        cond.markConditional(Usage.While, new Label());
-
-        // a "while" or "do-while" statement has its own scope if it declares a variable, which
-        // it does behind the scenes for a "conditional" invocation
-        boolean fScope = cond.isScopeRequired();
         if (fScope)
             {
             ctx = ctx.enterScope();
             }
 
-        ConditionalStatement condNew = (ConditionalStatement) cond.validate(ctx, errs);
-        if (condNew != cond)
+        // the condition is either a boolean expression or an assignment statement whose R-value is
+        // a multi-value with the first value being a boolean
+        if (cond instanceof AssignmentStatement)
             {
-            fValid &= condNew != null;
-            if (condNew != null)
+            AssignmentStatement stmtOld = (AssignmentStatement) cond;
+            AssignmentStatement stmtNew = (AssignmentStatement) stmtOld.validate(ctx, errs);
+            if (stmtNew == null)
                 {
-                cond = condNew;
+                fValid = false;
+                }
+            else
+                {
+                fScope = stmtNew.hasDeclarations();
+                if (stmtNew != stmtOld)
+                    {
+                    cond = stmtNew;
+                    }
+                }
+            }
+        else
+            {
+            Expression exprOld = (Expression) cond;
+            Expression exprNew = exprOld.validate(ctx, pool().typeBoolean(), errs);
+            if (exprNew == null)
+                {
+                fValid = false;
+                }
+            else  if (exprNew != exprOld)
+                {
+                cond = exprNew;
                 }
             }
 
-        Context        ctxBlock = ctx.fork();
-        StatementBlock blockNew = (StatementBlock) block.validate(ctxBlock, errs);
-        if (blockNew != block)
+        Context   ctxTrue  = ctx.fork(true);
+        Statement blockNew = block.validate(ctxTrue, errs);
+        if (blockNew == null)
             {
-            fValid &= blockNew != null;
-            if (blockNew != null)
-                {
-                block = blockNew;
-                }
+            fValid = false;
             }
-        ctx.join(ctxBlock);
+        else
+            {
+            block = (StatementBlock) blockNew;
+            }
+        ctx.join(ctxTrue, ctx.fork(false));
 
+        // if the condition itself required a scope, then complete that scope
         if (fScope)
             {
             ctx = ctx.exitScope();
@@ -145,15 +182,8 @@ public class WhileStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean    fDoWhile      = isDoWhile();
-        boolean    fOwnScope     = cond.isScopeRequired();
-        boolean    fAlwaysTrue   = cond.isAlwaysTrue();
-        boolean    fAlwaysFalse  = cond.isAlwaysFalse();
-        Label      labelRepeat   = cond.getLabel();
-        Label      labelContinue = m_labelContinue == null ? new Label() : m_labelContinue;
-
-        boolean fCompletes = fReachable;
-        if (fAlwaysFalse)
+        boolean fDoWhile = isDoWhile();
+        if (cond instanceof Expression && ((Expression) cond).isConstantFalse())
             {
             // while(false) is optimized out altogether.
             //
@@ -161,13 +191,15 @@ public class WhileStatement
             //   [body]
             //   Continue:
             //   Break:
-            fCompletes &= block.completes(ctx, fReachable & fDoWhile, code, errs);
+            boolean fCompletes = block.completes(ctx, fReachable & fDoWhile, code, errs);
             if (fDoWhile)
                 {
-                code.add(labelContinue);
+                code.add(getContinueLabel());
                 }
+            return fCompletes;
             }
-        else if (fAlwaysTrue)
+
+        if (cond instanceof Expression && ((Expression) cond).isConstantTrue())
             {
             // while(true) and do-while(true) are both assembled as:
             //
@@ -176,14 +208,19 @@ public class WhileStatement
             //   [body]
             //   JMP Repeat
             //   Break:
-            code.add(labelRepeat);
-            code.add(labelContinue);
+            code.add(getRepeatLabel());
+            code.add(getContinueLabel());
             block.completes(ctx, fReachable, code, errs);
-            code.add(new Jump(labelRepeat));
-            fCompletes = false;     // while true never completes naturally
+            code.add(new Jump(getRepeatLabel()));
+            return false;     // while(true) never completes naturally
             }
-        else if (!fDoWhile && fOwnScope)
+
+        boolean fOwnScope = cond instanceof AssignmentStatement && ((AssignmentStatement) cond).hasDeclarations();
+        if (!fDoWhile && fOwnScope)
             {
+            boolean fCompletes = fReachable;
+            AssignmentStatement stmtCond = (AssignmentStatement) cond;
+
             // while(declAndOrAssign) is assembled as:
             //
             //   ENTER
@@ -197,43 +234,44 @@ public class WhileStatement
             //   Break:
             //   EXIT
             code.add(new Enter());
-            fCompletes &= cond.onlyDeclarations(ctx, errs).completes(ctx, fReachable, code, errs);
-            code.add(new Jump(labelContinue));
-            code.add(labelRepeat);
+            for (VariableDeclarationStatement stmtDecl : stmtCond.takeDeclarations())
+                {
+                fCompletes &= stmtDecl.completes(ctx, fReachable, code, errs);
+                }
+            code.add(new Jump(getContinueLabel()));
+            code.add(getRepeatLabel());
             fCompletes &= block.completes(ctx, fReachable, code, errs);
-            code.add(labelContinue);
+            code.add(getContinueLabel());
             fCompletes &= cond.nonDeclarations(ctx, errs).completes(ctx, fReachable, code, errs);
             code.add(new Exit());
             }
-        else
+
+        // while(cond)              do-while(cond)              do-while(declAndOrAssign)
+        //
+        //   JMP Continue
+        //   Repeat:                  Repeat:                     Repeat:
+        //   [body]                   [body]                      [body]
+        //   Continue:                Continue:                   Continue:
+        //                                                        ENTER
+        //   [cond]                   [cond]                      [declAndOrAssign]
+        //  +JMP_TRUE cond Repeat    +JMP_TRUE cond Repeat        JMP_TRUE cond Repeat
+        //   Break:                   Break:                      Break:
+        //                                                        EXIT
+        if (!fDoWhile)
             {
-            // while(cond)              do-while(cond)              do-while(declAndOrAssign)
-            //
-            //   JMP Continue
-            //   Repeat:                  Repeat:                     Repeat:
-            //   [body]                   [body]                      [body]
-            //   Continue:                Continue:                   Continue:
-            //                                                        ENTER
-            //   [cond]                   [cond]                      [declAndOrAssign]
-            //  +JMP_TRUE cond Repeat    +JMP_TRUE cond Repeat        JMP_TRUE cond Repeat
-            //   Break:                   Break:                      Break:
-            //                                                        EXIT
-            if (!fDoWhile)
-                {
-                code.add(new Jump(labelContinue));
-                }
-            code.add(labelRepeat);
-            fCompletes &= block.completes(ctx, fReachable, code, errs);
-            code.add(labelContinue);
-            if (fOwnScope)
-                {
-                code.add(new Enter());
-                }
-            fCompletes &= cond.completes(ctx, fReachable, code, errs);
-            if (fOwnScope)
-                {
-                code.add(new Exit());
-                }
+            code.add(new Jump(getContinueLabel()));
+            }
+        code.add(getRepeatLabel());
+        boolean fCompletes = block.completes(ctx, fReachable, code, errs);
+        code.add(getContinueLabel());
+        if (fOwnScope)
+            {
+            code.add(new Enter());
+            }
+        fCompletes &= cond.completes(ctx, fReachable, code, errs);
+        if (fOwnScope)
+            {
+            code.add(new Exit());
             }
 
         return fCompletes;
@@ -288,7 +326,9 @@ public class WhileStatement
     protected long           lEndPos;
 
     private static int s_nLabelCounter;
-    private Label m_labelContinue;
+    private transient int   m_nLabel;
+    private transient Label m_labelContinue;
+    private transient Label m_labelRepeat;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(WhileStatement.class, "cond", "block");
     }

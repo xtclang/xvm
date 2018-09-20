@@ -8,17 +8,17 @@ import java.util.List;
 
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-
 import org.xvm.asm.Register;
+
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.Compiler;
+import org.xvm.asm.op.Var_IN;
+
 import org.xvm.compiler.Token;
-
 import org.xvm.compiler.Token.Id;
-import org.xvm.compiler.ast.Expression.Assignable;
 
-import org.xvm.util.Severity;
+import org.xvm.compiler.ast.Expression.Assignable;
 
 
 /**
@@ -198,7 +198,7 @@ public class AssignmentStatement
                 throw new IllegalStateException("op=\"" + op.getValueText() + '\"');
                 }
 
-            reg = new Register(pool().typeBoolean());
+            m_regCond = reg = new Register(pool().typeBoolean());
             }
 
         return reg;
@@ -349,10 +349,18 @@ public class AssignmentStatement
         {
         boolean fCompletes = fReachable;
 
-        // code gen optimization for combined declaration & constant assignment of a single value
-        if (isSimple() && lvalueExpr.isSingle() && rvalue.isConstant() && lvalue instanceof VariableDeclarationStatement)
+        // code gen optimization for the common case of a combined declaration & constant assignment
+        // of a single value
+        if (isSimple()
+                && lvalueExpr.isSingle()
+                && rvalue.isConstant()
+                && lvalue instanceof VariableDeclarationStatement
+                && !((VariableDeclarationStatement) lvalue).hasRefAnnotations())
             {
-            // TODO see cut and paste in cp.txt
+            VariableDeclarationStatement lvalue = (VariableDeclarationStatement) this.lvalue;
+            StringConstant               idName = pool().ensureStringConstant(lvalue.getName());
+            code.add(new Var_IN(lvalue.getRegister(), idName, rvalue.toConstant()));
+            return fCompletes;
             }
 
         if (isSimple())
@@ -375,7 +383,7 @@ public class AssignmentStatement
             int          cLVals   = LVals.length;
             int          cAll     = cLVals + 1;
             Assignable[] LValsAll = new Assignable[cAll];
-            LValsAll[0] = new Assignable(ensureConditionRegister());
+            LValsAll[0] = lvalueExpr.new Assignable(ensureConditionRegister());
             System.arraycopy(LVals, 0, LValsAll, 1, cLVals);
             if (fCompletes &= !lvalueExpr.isAborting())
                 {

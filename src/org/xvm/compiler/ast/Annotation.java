@@ -327,13 +327,13 @@ public class Annotation
             }
 
         @Override
-        public Context fork()
+        public Context fork(boolean fWhenTrue)
             {
             throw new IllegalStateException();
             }
 
         @Override
-        public void join(Context... contexts)
+        public void join(Context ctxTrue, Context ctxFalse)
             {
             throw new IllegalStateException();
             }
