@@ -264,11 +264,11 @@ interface Stream<ElementType>
     conditional ElementType min(Comparator<ElementType>? comparator = null)
         {
         Iterator<ElementType> iter = iterator();
-        if (ElementType minValue : iter)
+        if (ElementType minValue : iter.next())
             {
             if (comparator != null)
                 {
-                while (ElementType el : iter)
+                for (ElementType el : iter)
                     {
                     if (el < minValue)
                         {
@@ -278,7 +278,7 @@ interface Stream<ElementType>
                 }
             else
                 {
-                while (ElementType el : iter)
+                for (ElementType el : iter)
                     {
                     if (comparator.compareForOrder(el, minValue) == Lesser)
                         {
@@ -304,11 +304,11 @@ interface Stream<ElementType>
     conditional ElementType max(Comparator<ElementType>? comparator = null)
         {
         Iterator<ElementType> iter = iterator();
-        if (ElementType maxValue : iter)
+        if (ElementType maxValue : iter.next())
             {
             if (comparator == null)
                 {
-                while (ElementType el : iter)
+                for (ElementType el : iter)
                     {
                     if (el > maxValue)
                         {
@@ -318,7 +318,7 @@ interface Stream<ElementType>
                 }
             else
                 {
-                while (ElementType el : iter)
+                for (ElementType el : iter)
                     {
                     if (comparator.compareForOrder(el, maxValue) == Greater)
                         {
@@ -345,7 +345,7 @@ interface Stream<ElementType>
         // additional metadata (like the "size" property of a Collection) could short-cut the
         // processing
         Int n = 0;
-        while (ElementType el : this)
+        for (ElementType el : this)
             {
             ++n;
             }
@@ -426,7 +426,7 @@ interface Stream<ElementType>
         Iterator<ElementType> iterator = iterator();
         if (ElementType result : iterator.next())
             {
-            while (ElementType element : iterator.next())
+            for (ElementType element : iterator)
                 {
                 result = accumulate(result, element);
                 }
