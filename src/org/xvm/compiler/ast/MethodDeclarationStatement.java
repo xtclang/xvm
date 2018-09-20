@@ -406,7 +406,10 @@ public class MethodDeclarationStatement
         {
         // method children are all deferred up until this stage, so we have to "catch them up" at
         // this point, recreating the various compiler stages here
-        catchUpChildren(errs);
+        if (!catchUpChildren(errs))
+            {
+            mgr.deferChildren();
+            }
         }
 
     @Override
