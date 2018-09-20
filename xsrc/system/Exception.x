@@ -33,7 +33,7 @@ const Exception
     String formatExceptionString(StackFrame? lastFrame)
         {
         // exception name / text
-        // TODO strbuf =
+        String strbuf = "";
 
         (String s, StackFrame firstFrame) = formatStackTrace(stackTrace, lastFrame);
         strbuf += s;
@@ -55,7 +55,7 @@ const Exception
         // TODO
 
         Iterator<StackFrame> frames = stackTrace.iterator();
-        while (StackFrame frame : frames)
+        for (StackFrame frame : frames)
             {
             if (firstFrame == null)
                 {
