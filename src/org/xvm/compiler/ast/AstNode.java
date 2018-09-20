@@ -732,7 +732,21 @@ public abstract class AstNode
                     {
                     listExpr.set(i, exprNew);
                     }
-                atype[i] = exprNew.getType();
+                if (!exprNew.isSingle())
+                    {
+                    if (cExprs == 1)
+                        {
+                        atype = exprNew.getTypes();
+                        }
+                    else
+                        {
+                        fValid = false;
+                        }
+                    }
+                else
+                    {
+                    atype[i] = exprNew.getType();
+                    }
                 }
             }
         return fValid ? atype : null;

@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -116,7 +117,7 @@ public class AssertStatement
             {
             Expression exprCond = (Expression) cond;
             fCompletes = !exprCond.isAborting();
-            exprCond.generateArgument(ctx, code, true, true, errs);
+            code.add(new Assert(exprCond.generateArgument(ctx, code, true, true, errs)));
             }
 
         return fCompletes;

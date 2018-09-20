@@ -119,11 +119,15 @@ public class ReturnStatement
                 fValid      = atypeActual != null;
 
                 // allow the (strange) use of T0D0 or the (strange) return of a void expression
-                if (cExprs != 1 || !listExprs.get(0).isAborting() || !listExprs.get(0).isVoid())
+                if (cExprs == 1)
                     {
-                    // it was supposed to be a void return
-                    log(errs, Severity.ERROR, Compiler.RETURN_VOID);
-                    fValid = false;
+                    Expression expr = listExprs.get(0);
+                    if (!expr.isAborting() && !expr.isVoid())
+                        {
+                        // it was supposed to be a void return
+                        log(errs, Severity.ERROR, Compiler.RETURN_VOID);
+                        fValid = false;
+                        }
                     }
                 }
             else if (cRets > 0)

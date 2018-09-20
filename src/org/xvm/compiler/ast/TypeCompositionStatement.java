@@ -1180,8 +1180,6 @@ public class TypeCompositionStatement
                             param.getType(), param.getNameToken(), null, null, null);
                     prop.setParent(this);
                     prop.registerStructures(mgr, errs);
-                    PropertyStructure struct = (PropertyStructure) mapChildren.get(sParam);
-                    struct.setSynthetic(true);
                     }
                 else if (!(child instanceof PropertyStructure))
                     {
