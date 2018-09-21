@@ -320,7 +320,7 @@ Statement
     AssertStatement
     "break" Name-opt ";"
     "continue" Name-opt ";"
-    "do" StatementBlock "while" "(" IfCondition ")" ";"
+    "do" StatementBlock "while" "(" ConditionList ")" ";"
     ForStatement
     IfStatement
 	ImportStatement
@@ -329,7 +329,7 @@ Statement
     TryStatement
 	TypeDefStatement
     "using" ResourceDeclaration StatementBlock
-    "while" "(" IfCondition ")" StatementBlock
+    "while" "(" ConditionList ")" StatementBlock
     WithStatement
     StatementBlock
 	Expression ";"      // for parsing purposes (compilation will only allow specific expression forms)
@@ -346,7 +346,10 @@ Statements
 
 VariableDeclaration
     VariableTypeExpression Name VariableInitializerFinish-opt
-    "(" OptionalDeclarationList "," OptionalDeclaration ")" VariableInitializerFinish
+    "(" OptionalDeclarationList "," OptionalDeclaration ")" "=" Expression
+
+VariableInitializerFinish
+    "=" Expression
 
 OptionalDeclarationList
     OptionalDeclaration
@@ -401,7 +404,7 @@ LabeledStatement
     Name ":" Statement
 
 AssertStatement
-    AssertInstruction IfCondition-opt ";"
+    AssertInstruction ConditionList-opt ";"
 
 AssertInstruction
     "assert"
@@ -414,19 +417,17 @@ ForStatement
     "for" "(" ForCondition ")" StatementBlock
 
 ForCondition
-    VariableInitializationList-opt ";" Expression-opt ";" VariableModificationList-opt
-    OptionalDeclarationList ":" Expression
+    VariableInitializationList-opt ";" ConditionList-opt ";" VariableModificationList-opt
+    OptionalDeclaration ":" Expression
+    (OptionalDeclarationList, OptionalDeclaration) ":" Expression
 
 VariableInitializationList
     VariableInitializer
     VariableInitializationList "," VariableInitializer
 
 VariableInitializer
-    OptionalDeclaration VariableInitializerFinish
-    "(" OptionalDeclarationList "," OptionalDeclaration ")" VariableInitializerFinish
-
-VariableInitializerFinish
-    "=" Expression
+    OptionalDeclaration "=" Expression
+    "(" OptionalDeclarationList "," OptionalDeclaration ")" "=" Expression
 
 VariableModificationList
     VariableModification
@@ -437,11 +438,16 @@ VariableModification
     Expression    # note: expression must have side-effects (i.e. not a constant)
 
 IfStatement
-    "if" "(" IfCondition ")" StatementBlock ElseStatement-opt
+    "if" "(" ConditionList ")" StatementBlock ElseStatement-opt
 
-IfCondition
+ConditionList
+    Condition
+    ConditionList, Condition
+
+Condition
     TernaryExpression
-    OptionalDeclarationList ":" Expression
+    OptionalDeclaration ":" Expression
+    ( OptionalDeclarationList, OptionalDeclaration ) ":" Expression
 
 ElseStatement
     "else" IfStatement
@@ -509,17 +515,6 @@ Catch
 
 TypeDefStatement
     "typedef" TypeExpression "as"-opt Name ";"
-
-WithStatement
-    "with" "(" WithDeclarationList ")" Statement
-
-WithDeclarationList
-    WithDeclaration
-    WithDeclarationList "," WithDeclaration
-
-WithDeclaration
-    VariableTypeExpression Name VariableInitializerFinish
-
 
 #
 # expressions

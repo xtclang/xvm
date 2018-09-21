@@ -319,8 +319,10 @@ module TestMisc.xqiz.it
     void testAssertDecl()
         {
         console.println("\n** testAssertDecl()");
-        Iterator<Int> iter = [1].iterator();
-        assert Int i : iter.next(); // REVIEW BUGBUG NPE
+        // REVIEW BUGBUG NPE: Iterator<Int> iter = [1].iterator();
+        Int[] array = [1];
+        Iterator<Int> iter = array.iterator();
+        assert Int i : iter.next();
         console.println("i=" + i);
         }
 
