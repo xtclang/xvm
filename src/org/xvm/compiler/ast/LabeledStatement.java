@@ -23,6 +23,14 @@ public class LabeledStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return the label name
+     */
+    public String getName()
+        {
+        return label.getValueText();
+        }
+
     @Override
     public long getStartPosition()
         {

@@ -404,9 +404,9 @@ public abstract class AstNode
     /**
      * (LValue method)
      *
-     * @param type  the type of the RValue
+     * @param aTypes  the type of the RValue
      */
-    public void updateLValueFromRValueType(TypeConstant type)
+    public void updateLValueFromRValueTypes(TypeConstant[] aTypes)
         {
         throw notLValue();
         }

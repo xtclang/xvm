@@ -147,13 +147,15 @@ public class VariableDeclarationStatement
         }
 
     @Override
-    public void updateLValueFromRValueType(TypeConstant type)
+    public void updateLValueFromRValueTypes(TypeConstant[] aTypes)
         {
+        assert aTypes != null && aTypes.length == 1;
+
         TypeExpression exprType = this.type;
         if (exprType instanceof VariableTypeExpression)
             {
             exprType.resetTypeConstant(); // REVIEW should reset take type as a param instead? (or get rid of it altogether and just use set?)
-            exprType.setTypeConstant(type);
+            exprType.setTypeConstant(aTypes[0]);
             }
         }
 

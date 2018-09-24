@@ -208,6 +208,9 @@ public class AssignmentStatement
         return reg;
         }
 
+    /**
+     * @return the LValue that the RValue will be assigned to
+     */
     public AstNode getLValue()
         {
         return lvalue;
@@ -218,6 +221,9 @@ public class AssignmentStatement
         return op;
         }
 
+    /**
+     * @return the RValue expression that will be assigned to the LValue
+     */
     public Expression getRValue()
         {
         return rvalue;
