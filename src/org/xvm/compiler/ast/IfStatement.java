@@ -157,14 +157,14 @@ public class IfStatement
             // "if (true) {stmtThen} else {stmtElse}" is compiled as "{stmtThen}"
             if (((Expression) cond).isConstantTrue())
                 {
-                return stmtThen.emit(ctx, fReachable, code, errs);
+                return stmtThen.completes(ctx, fReachable, code, errs);
                 }
             else
                 {
                 assert ((Expression) cond).isConstantFalse();
                 return stmtElse == null
                         ? fReachable
-                        : stmtElse.emit(ctx, fReachable, code, errs);
+                        : stmtElse.completes(ctx, fReachable, code, errs);
                 }
             }
 

@@ -371,7 +371,7 @@ public class AssignmentStatement
             {
             if (lvalue instanceof Statement)
                 {
-                fCompletes = ((Statement) lvalue).emit(ctx, fCompletes, code, errs);
+                fCompletes = ((Statement) lvalue).completes(ctx, fCompletes, code, errs);
                 }
 
             Assignable[] LVals = lvalueExpr.generateAssignables(ctx, code, errs);

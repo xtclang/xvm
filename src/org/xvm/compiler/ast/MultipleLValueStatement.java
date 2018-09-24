@@ -188,7 +188,7 @@ public class MultipleLValueStatement
             AstNode node = LVals.get(i);
             if (node instanceof Statement)
                 {
-                fCompletes = ((Statement) node).emit(ctx, fCompletes, code, errs);
+                fCompletes = ((Statement) node).completes(ctx, fCompletes, code, errs);
                 }
 
             Label labelGround = peekShortCircuitLabel(i);
