@@ -121,7 +121,7 @@ public class TypeParameterConstant
         fReEntry = true;
         try
             {
-            return fResolved = !m_constMethod.containsUnresolved();
+            return !(fResolved = !m_constMethod.containsUnresolved());
             }
         finally
             {
