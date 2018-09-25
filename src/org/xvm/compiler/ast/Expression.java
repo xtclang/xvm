@@ -60,6 +60,7 @@ import org.xvm.compiler.Compiler;
 
 import org.xvm.compiler.ast.Statement.Context;
 
+import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.checkElementsNonNull;
@@ -1636,7 +1637,7 @@ public abstract class Expression
             TypeConstant  typeTarget,
             String        sMethodName,
             String        sOp,
-            Expression[] aexprArgs,
+            Expression[]  aexprArgs,
             TypeConstant  typeReturn,
             ErrorListener errs)
         {
@@ -1748,7 +1749,7 @@ public abstract class Expression
      * find teh best matching method.
      *
      * @param ctx          the compilation context
-     * @param typeTarget   the type on which to search for the method
+     * @param infoTarget   the type info on which to search for the method
      * @param sMethodName  the method name
      * @param listExprArgs the expressions for arguments (which may not yet be validated)
      * @param atypeReturn  (optional) the array of return types from the method (Type of type)
@@ -1761,7 +1762,7 @@ public abstract class Expression
      */
     protected MethodConstant findMethod(
             Context          ctx,
-            TypeConstant     typeTarget,
+            TypeInfo infoTarget,
             String           sMethodName,
             List<Expression> listExprArgs,
             boolean          fMethod,
@@ -1771,10 +1772,11 @@ public abstract class Expression
         {
         assert sMethodName != null && sMethodName.length() > 0;
 
-        TypeInfo infoTarget = typeTarget.ensureTypeInfo(errs);
-        int      cParams    = listExprArgs == null ? 0 : listExprArgs.size();
+        int cArgs    = listExprArgs == null ? 0 : listExprArgs.size();
+        int cReturns = atypeReturn  == null ? 0 : atypeReturn.length;
 
-        Set<MethodConstant> setMethods = infoTarget.findMethods(sMethodName, cParams);
+        TypeConstant        typeTarget = infoTarget.getType();
+        Set<MethodConstant> setMethods = infoTarget.findMethods(sMethodName, cArgs);
         if (setMethods.isEmpty())
             {
             if (sMethodName.equals("construct"))
@@ -1788,49 +1790,38 @@ public abstract class Expression
             return null;
             }
 
-        TypeConstant[]            atypeParams    = null;
-        Map<String, TypeConstant> mapNamedParams = null;
-        if (cParams > 0)
+        Map<String, Expression> mapNamedExpr = null;
+        int                     cUnnamedArgs = 0;
+        for (int i = 0; i < cArgs; ++i)
             {
-            atypeParams = new TypeConstant[cParams];
+            Expression exprArg = listExprArgs.get(i);
 
-            for (int i = 0; i < cParams; ++i)
+            if (exprArg instanceof LabeledExpression)
                 {
-                Expression   exprParam = listExprArgs.get(i);
-                TypeConstant typeParam = exprParam.isValidated()
-                    ? exprParam.getType()
-                    : exprParam.getImplicitType(ctx);
+                String sName = ((LabeledExpression) exprArg).getName();
 
-                if (exprParam instanceof LabeledExpression)
+                if (mapNamedExpr == null)
                     {
-                    String sName = ((LabeledExpression) exprParam).getName();
-
-                    if (mapNamedParams == null)
-                        {
-                        mapNamedParams = new HashMap<>(cParams-i);
-                        }
-                    else
-                        {
-                        for (int iPrev = 0; iPrev < i; ++iPrev)
-                            {
-                            if (mapNamedParams.containsKey(sName))
-                                {
-                                exprParam.log(errs, Severity.ERROR, Compiler.NAME_COLLISION, sName);
-                                return null;
-                                }
-                            }
-                        }
-                    mapNamedParams.put(sName, typeParam);
+                    mapNamedExpr = new HashMap<>(cArgs - cUnnamedArgs);
                     }
                 else
                     {
-                    if (mapNamedParams != null)
+                    if (mapNamedExpr.containsKey(sName))
                         {
-                        exprParam.log(errs, Severity.ERROR, Compiler.ARG_NAME_REQUIRED, i);
+                        exprArg.log(errs, Severity.ERROR, Compiler.NAME_COLLISION, sName);
                         return null;
                         }
-                    atypeParams[i] = typeParam;
                     }
+                mapNamedExpr.put(sName, exprArg);
+                }
+            else
+                {
+                if (mapNamedExpr != null)
+                    {
+                    exprArg.log(errs, Severity.ERROR, Compiler.ARG_NAME_REQUIRED, i);
+                    return null;
+                    }
+                cUnnamedArgs++;
                 }
             }
 
@@ -1845,52 +1836,60 @@ public abstract class Expression
                 continue NextMethod;
                 }
 
-            TypeConstant[] atypeP = idMethod.getRawParams();
-            if (cParams != atypeP.length)
+            MethodStructure method      = infoMethod.getTopmostMethodStructure(infoTarget);
+            int             cAllParams  = method.getParamCount();
+            int             cTypeParams = method.getTypeParamCount();
+            int             cDefaults   = method.getDefaultParamCount();
+            int             cVisible    = cAllParams - cTypeParams;
+            int             cRequired   = cAllParams - cTypeParams - cDefaults;
+
+            if (cArgs < cRequired || cArgs > cVisible)
                 {
-                // TODO: add support for parameters with default values
                 continue NextMethod;
                 }
 
-            boolean fConvert = false;
-            for (int i = 0; i < cParams; ++i)
+            TypeConstant[] atypeParam = idMethod.getRawParams();
+            TypeConstant[] atypeArg   = new TypeConstant[cArgs];
+            boolean        fConvert   = false;
+            for (int i = 0; i < cArgs; ++i)
                 {
-                TypeConstant typeMethodParam = atypeP[i];
-                TypeConstant typeParam       = atypeParams[i];
-
-                if (typeParam == null)
+                TypeConstant typeMethodParam = atypeParam[cTypeParams + i];
+                if (cTypeParams > 0)
                     {
-                    if (mapNamedParams != null)
-                        {
-                        MethodStructure method = (MethodStructure) idMethod.getComponent();
-                        // TODO: where to go if method is null?
-                        if (method != null)
-                            {
-                            typeParam = mapNamedParams.get(method.getParam(i).getName());
-                            }
-                        }
+                    // resolve the type parameters down to their constraints
+                    typeMethodParam = typeMethodParam.resolveGenerics(pool(), method);
                     }
-                if (typeParam == null)
+
+                Expression exprArg = i < cUnnamedArgs
+                        ? listExprArgs.get(i)
+                        : mapNamedExpr.get(method.getParam(i).getName());
+
+                TypeConstant typeArg = exprArg.isValidated()
+                        ? exprArg.getType()
+                        : exprArg.getImplicitType(ctx);
+
+                if (typeArg == null)
                     {
                     // check if the method's parameter type fits the argument expression
                     TypeFit fit = listExprArgs.get(i).testFit(ctx, typeMethodParam);
-                    if (!fit.isFit())
+                    if (fit.isFit())
                         {
                         if (fit.isConverting())
                             {
                             fConvert = true;
                             }
-                        else
-                            {
-                            continue NextMethod;
-                            }
+                        atypeArg[i] = typeMethodParam;
+                        }
+                    else
+                        {
+                        continue NextMethod;
                         }
                     }
                 else
                     {
-                    if (!typeParam.isA(typeMethodParam))
+                    if (!typeArg.isA(typeMethodParam))
                         {
-                        if (typeParam.getConverterTo(typeMethodParam) != null)
+                        if (typeArg.getConverterTo(typeMethodParam) != null)
                             {
                             fConvert = true;
                             }
@@ -1899,21 +1898,41 @@ public abstract class Expression
                             continue NextMethod;
                             }
                         }
+                    atypeArg[i] = typeArg;
+                    }
+                }
+
+            ListMap<String, TypeConstant> mapTypeParams = null;
+            if (cTypeParams > 0)
+                {
+                mapTypeParams = method.resolveTypeParameters(atypeArg, atypeReturn);
+                if (mapTypeParams == null)
+                    {
+                    // different arguments/returns cause the formal type to resolve into
+                    // incompatible types
+                    // TODO: should we log an error?
+                    continue NextMethod;
                     }
                 }
 
             if (atypeReturn != null)
                 {
                 TypeConstant[] atypeMethodReturn = idMethod.getRawReturns();
-                if (atypeMethodReturn.length < atypeReturn.length)
+                if (atypeMethodReturn.length < cReturns)
                     {
                     // not enough return values
-                    continue;
+                    continue NextMethod;
                     }
-                for (int i = 0, c = atypeReturn.length; i < c; i++)
+
+                for (int i = 0, c = cReturns; i < c; i++)
                     {
                     TypeConstant typeMethodReturn = atypeMethodReturn[i];
-                    TypeConstant typeReturnType   = atypeReturn[i];
+                    if (mapTypeParams != null)
+                        {
+                        // resolve the method return types against the resolved formal types
+                        typeMethodReturn = typeMethodReturn.resolveGenerics(pool(), mapTypeParams::get);
+                        }
+                    TypeConstant typeReturnType = atypeReturn[i];
 
                     assert typeReturnType.isA(pool().typeType()) && typeReturnType.getParamsCount() == 1;
 

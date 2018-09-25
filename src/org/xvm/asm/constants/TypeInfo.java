@@ -1446,7 +1446,7 @@ public class TypeInfo
         }
 
     /**
-     * Obtain all of the matching op methods for the specified name and the number of parameters.
+     * Obtain all of the matching methods for the specified name and the number of parameters.
      *
      * @param sName    the method name
      * @param cParams  the number of parameters
@@ -1461,7 +1461,7 @@ public class TypeInfo
             m_mapMethodsByName = mapMethods = new HashMap<>();
             }
 
-        String sKey = sName + ';' + cParams;
+        String sKey = cParams == 0 ? sName : sName + ';' + cParams;
         Set<MethodConstant> setMethods = mapMethods.get(sKey);
         if (setMethods == null)
             {
@@ -1471,16 +1471,21 @@ public class TypeInfo
 
                 if (sig.getName().equals(sName))
                     {
-                    MethodInfo method = entry.getValue();
+                    MethodInfo      info   = entry.getValue();
+                    MethodStructure method = info.getTopmostMethodStructure(this);
 
-                    // TODO: account for default parameters
-                    if (sig.getRawParams().length == cParams)
+                    int cAllParams  = sig.getRawParams().length;
+                    int cTypeParams = method.getTypeParamCount();
+                    int cDefaults   = method.getDefaultParamCount();
+                    int cRequired   = cAllParams - cTypeParams - cDefaults;
+
+                    if (cParams >= cRequired)
                         {
                         if (setMethods == null)
                             {
                             setMethods = new HashSet<>(7);
                             }
-                        setMethods.add(resolveMethodConstant(method));
+                        setMethods.add(resolveMethodConstant(info));
                         }
                     }
                 }

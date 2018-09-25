@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -39,6 +40,8 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xModule;
 import org.xvm.runtime.template.xNullable;
+
+import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.indentLines;
 import static org.xvm.util.Handy.readMagnitude;
@@ -97,21 +100,23 @@ public class MethodStructure
             setConditionalReturn(true);
             }
 
-        int cTypeParams = 0;
+        int cTypeParams    = 0;
+        int cDefaultParams = 0;
         for (Parameter param : aParams)
             {
             if (param.isTypeParameter())
                 {
                 ++cTypeParams;
                 }
-            else
+            else if (param.hasDefaultValue())
                 {
-                break;
+                ++cDefaultParams;
                 }
             }
-        m_cTypeParams = cTypeParams;
-        m_FHasCode    = fHasCode;
-        m_FUsesSuper  = fUsesSuper;
+        m_cTypeParams    = cTypeParams;
+        m_cDefaultParams = cDefaultParams;
+        m_FHasCode       = fHasCode;
+        m_FUsesSuper     = fUsesSuper;
         }
 
 
@@ -390,6 +395,14 @@ public class MethodStructure
         }
 
     /**
+     * @return the number of parameters with default values
+     */
+    public int getDefaultParamCount()
+        {
+        return m_cDefaultParams;
+        }
+
+    /**
      * Get the Parameter structure that represents the i-th method parameter. The type parameters
      * come first, followed by the ordinary parameters.
      *
@@ -529,6 +542,78 @@ public class MethodStructure
             throw new IllegalStateException(e);
             }
         m_code.ensureAssembled();
+        }
+
+
+    // ----- compiler support ----------------------------------------------------------------------
+
+    /**
+     * Given arrays of actual argument types and return types, resolve and put into the
+     * specified ListMap all the actual type parameters types.
+     *
+     * @param atypeArgs     the actual argument types
+     * @param atypeReturns  (optional) the actual return types (types of types)
+     *
+     * @return a ListMap of the resolved types in the natural order, keyed by the names
+     */
+    public ListMap<String, TypeConstant> resolveTypeParameters(TypeConstant[] atypeArgs,
+                                                               TypeConstant[] atypeReturns)
+        {
+        int                           cTypeParams   = getTypeParamCount();
+        ListMap<String, TypeConstant> mapTypeParams = new ListMap<>(cTypeParams);
+
+        for (int i = 0; i < cTypeParams; i++)
+            {
+            String sFormalName = getParam(i).getName();
+            for (TypeConstant typeArg : atypeArgs)
+                {
+                if (!resolveFormalTypes(typeArg, sFormalName, mapTypeParams))
+                    {
+                    // different arguments cause the formal type to resolve into
+                    // incompatible types
+                    return null;
+                    }
+                }
+            if (atypeReturns != null)
+                {
+                for (TypeConstant typeReturnType : atypeReturns)
+                    {
+                    TypeConstant typeRet = typeReturnType.getParamTypesArray()[0];
+                    if (!resolveFormalTypes(typeRet, sFormalName, mapTypeParams))
+                        {
+                        // different return types cause the formal type to resolve into
+                        // incompatible types
+                        return null;
+                        }
+                    }
+                }
+            }
+        return mapTypeParams;
+        }
+
+    /**
+     * Extract an actual formal type from the specified argument type and put it in the
+     * specified map.
+     */
+    private boolean resolveFormalTypes(TypeConstant typeArg, String sFormalName,
+                                       Map<String, TypeConstant> mapTypeParams)
+        {
+        TypeConstant typeParam = typeArg.getGenericParamType(sFormalName);
+        if (typeParam != null)
+            {
+            TypeConstant typePrev = mapTypeParams.get(sFormalName);
+            if (typePrev != null)
+                {
+                typeParam = Op.selectCommonType(typePrev, typeParam,
+                    ErrorListener.BLACKHOLE);
+                if (typeParam == null)
+                    {
+                    return false;
+                    }
+                }
+            mapTypeParams.put(sFormalName, typeParam);
+            }
+        return true;
         }
 
 
@@ -1853,6 +1938,11 @@ public class MethodStructure
      * The number of type parameters.
      */
     private int m_cTypeParams;
+
+    /**
+     * The number of parameters with default values.
+     */
+    private int m_cDefaultParams;
 
     /**
      * The parameter types.

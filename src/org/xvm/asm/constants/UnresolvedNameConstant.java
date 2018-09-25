@@ -35,8 +35,9 @@ public class UnresolvedNameConstant
     public UnresolvedNameConstant(ConstantPool pool, String[] names, boolean fExplicitlyNonNarrowing)
         {
         super(pool);
-        this.m_asName    = names;
-        this.m_fNoNarrow = fExplicitlyNonNarrowing;
+
+        m_asName    = names;
+        m_fNoNarrow = fExplicitlyNonNarrowing;
         }
 
 
@@ -52,8 +53,8 @@ public class UnresolvedNameConstant
             return ((IdentityConstant) m_constId).getName();
             }
 
-        String[]      names  = this.m_asName;
-        StringBuilder sb     = new StringBuilder();
+        String[]      names = m_asName;
+        StringBuilder sb    = new StringBuilder();
         for (int i = 0, c = names.length; i < c; ++i)
             {
             if (i > 0)
@@ -85,9 +86,9 @@ public class UnresolvedNameConstant
     @Override
     public void resolve(Constant constant)
         {
-        assert this.m_constId == null || this.m_constId == constant || this.m_constId.equals(constant);
+        assert m_constId == null || m_constId == constant || m_constId.equals(constant);
         assert !(constant instanceof TypeConstant);
-        this.m_constId = constant;
+        m_constId = constant;
         }
 
 
@@ -142,7 +143,7 @@ public class UnresolvedNameConstant
     @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
-        if (m_constId != null)
+        if (isNameResolved())
             {
             visitor.accept(m_constId);
             }
@@ -203,7 +204,7 @@ public class UnresolvedNameConstant
 
         if (that instanceof UnresolvedNameConstant)
             {
-            String[] asThis = this.m_asName;
+            String[] asThis = m_asName;
             String[] asThat = ((UnresolvedNameConstant) that).m_asName;
             int      cThis  = asThis.length;
             int      cThat  = asThat.length;
@@ -218,7 +219,7 @@ public class UnresolvedNameConstant
             int n = cThis - cThat;
             if (n == 0)
                 {
-                n = (this.m_fNoNarrow ? 1 : 0) - (((UnresolvedNameConstant) that).m_fNoNarrow ? 1 : 0);
+                n = (m_fNoNarrow ? 1 : 0) - (((UnresolvedNameConstant) that).m_fNoNarrow ? 1 : 0);
                 }
             return n;
             }
@@ -285,8 +286,8 @@ public class UnresolvedNameConstant
             }
         else
             {
-            int      nHash  = 0;
-            String[] names  = this.m_asName;
+            int      nHash = 0;
+            String[] names = m_asName;
             for (int i = 0, c = names.length; i < c; ++i)
                 {
                 nHash ^= names[i].hashCode();

@@ -7,7 +7,6 @@ import java.util.List;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
-import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
@@ -15,8 +14,10 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ResolvableConstant;
+import org.xvm.asm.constants.ThisClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
+import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
@@ -97,22 +98,14 @@ public class NamedTypeExpression
         Constant constId = m_constId;
         if (constId == null)
             {
-            m_constId = constId = new UnresolvedNameConstant(pool(), getNames(), isExplicitlyNonAutoNarrowing());
+            m_constUnresolved = new UnresolvedNameConstant(pool(), getNames(), isExplicitlyNonAutoNarrowing());
+            m_constId = constId = m_constUnresolved;
             }
         else if (constId instanceof ResolvableConstant)
             {
             m_constId = constId = ((ResolvableConstant) constId).unwrap();
             }
         return constId;
-        }
-
-    protected void setIdentityConstant(Constant constId)
-        {
-        if (constId instanceof ResolvableConstant)
-            {
-            constId = ((ResolvableConstant) constId).unwrap();
-            }
-        m_constId = constId;
         }
 
     public List<TypeExpression> getParamTypes()
@@ -258,7 +251,7 @@ public class NamedTypeExpression
         {
         Constant             constId    = getIdentityConstant();
         Access               access     = getExplicitAccess();
-        List<TypeExpression> paramTypes = this.paramTypes;
+        List<TypeExpression> listParams = this.paramTypes;
 
         if (constId instanceof TypeConstant)
             {
@@ -269,7 +262,7 @@ public class NamedTypeExpression
                 }
 
             // must be no type params
-            if (paramTypes != null && !paramTypes.isEmpty())
+            if (listParams != null && !listParams.isEmpty())
                 {
                 throw new IllegalStateException("log error: type params unexpected");
                 }
@@ -281,17 +274,17 @@ public class NamedTypeExpression
 
         // constId has been already "auto-narrowed" by resolveNames()
         TypeConstant type;
-        if (paramTypes == null)
+        if (listParams == null)
             {
             type = calculateDefaultContextType(constId);
             }
         else
             {
-            int            cParams      = paramTypes.size();
+            int            cParams      = listParams.size();
             TypeConstant[] aconstParams = new TypeConstant[cParams];
             for (int i = 0; i < cParams; ++i)
                 {
-                aconstParams[i] = paramTypes.get(i).ensureTypeConstant();
+                aconstParams[i] = listParams.get(i).ensureTypeConstant();
                 }
             type = pool.ensureParameterizedTypeConstant(
                     pool.ensureTerminalTypeConstant(constId), aconstParams);
@@ -324,6 +317,7 @@ public class NamedTypeExpression
                 return;
 
             case RESOLVED:
+                {
                 if (!mgr.processChildren())
                     {
                     mgr.requestRevisit();
@@ -332,36 +326,46 @@ public class NamedTypeExpression
 
                 // now that we have the resolved constId, update the unresolved m_constId to point to
                 // the resolved one (just in case anyone is holding the wrong one
-                Constant constId = inferAutoNarrowing(resolver.getConstant());
-                if (m_constId instanceof ResolvableConstant)
+                Constant constIdNew = m_constId = inferAutoNarrowing(resolver.getConstant());
+
+                if (m_constUnresolved != null)
                     {
-                    ((ResolvableConstant) m_constId).resolve(constId);
+                    m_constUnresolved.resolve(constIdNew);
+                    m_constUnresolved = null;
                     }
 
-                // store the resolved id and reset the cached value
-                m_constId = constId;
+                // update the type constant
+
                 resetTypeConstant();
+                TypeConstant typeNew = ensureTypeConstant();
+
+                if (m_typeUnresolved != null)
+                    {
+                    m_typeUnresolved.resolve(typeNew);
+                    m_typeUnresolved = null;
+                    }
+                }
             }
         }
 
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        ConstantPool pool = pool();
+        ConstantPool         pool       = pool();
+        List<TypeExpression> listParams = this.paramTypes;
+        boolean              fValid     = true;
+        TypeConstant         type;
 
-        boolean fValid = true;
-
-        TypeConstant type;
-        if (paramTypes == null)
+        if (listParams == null)
             {
             type = calculateDefaultContextType(m_constId);
             }
         else
             {
-            TypeConstant[] atypeParams = new TypeConstant[paramTypes.size()];
-            for (int i = 0, c = paramTypes.size(); i < c; ++i)
+            TypeConstant[] atypeParams = new TypeConstant[listParams.size()];
+            for (int i = 0, c = listParams.size(); i < c; ++i)
                 {
-                TypeExpression exprOrig = paramTypes.get(i);
+                TypeExpression exprOrig = listParams.get(i);
                 TypeExpression expr     = (TypeExpression) exprOrig.validate(ctx, null, errs);
                 if (expr == null)
                     {
@@ -372,7 +376,7 @@ public class NamedTypeExpression
                     {
                     if (expr != exprOrig)
                         {
-                        paramTypes.set(i, expr);
+                        listParams.set(i, expr);
                         }
 
                     TypeConstant   typeParam = expr.getType();
@@ -454,22 +458,44 @@ public class NamedTypeExpression
         //    }
         //
 
-        if (constTarget.getFormat() == Format.Class)
+        ConstantPool pool = pool();
+
+        IdentityConstant idFormalTarget;
+        switch (constTarget.getFormat())
             {
-            IdentityConstant idTarget  = (IdentityConstant) constTarget;
-            ClassStructure   clzTarget = (ClassStructure) idTarget.getComponent();
+            case ThisClass:
+                idFormalTarget = ((ThisClassConstant) constTarget).getDeclarationLevelClass();
+                break;
+
+            case Class:
+                idFormalTarget = (IdentityConstant) constTarget;
+                break;
+
+            case UnresolvedName:
+                return m_typeUnresolved =
+                        new UnresolvedTypeConstant(pool, (UnresolvedNameConstant) constTarget);
+
+            default:
+                idFormalTarget = null;
+                break;
+            }
+
+        TypeConstant typeTarget = pool.ensureTerminalTypeConstant(constTarget);
+        if (idFormalTarget != null)
+            {
+            ClassStructure clzTarget = (ClassStructure) idFormalTarget.getComponent();
             if (clzTarget.isParameterized())
                 {
                 ClassStructure   clzClass   = getComponent().getContainingClass();
                 IdentityConstant idClass    = clzClass.getIdentityConstant();
                 boolean          fUseFormal = false;
 
-                if (idTarget.equals(idClass))
+                if (idFormalTarget.equals(idClass))
                     {
                     // scenarios (1), (5) and (9)
                     fUseFormal = true;
                     }
-                else if (idTarget.isNestMate(idClass))
+                else if (idFormalTarget.isNestMate(idClass))
                     {
                     if (clzClass.isInstanceAscendant(clzTarget))
                         {
@@ -485,11 +511,12 @@ public class NamedTypeExpression
                     }
                 if (fUseFormal)
                     {
-                    return clzTarget.getFormalType();
+                    typeTarget = pool.ensureParameterizedTypeConstant(typeTarget,
+                            clzTarget.getFormalType().getParamTypesArray());
                     }
                 }
             }
-        return pool().ensureTerminalTypeConstant(constTarget);
+        return typeTarget;
         }
 
 
@@ -558,6 +585,10 @@ public class NamedTypeExpression
 
     protected transient NameResolver m_resolver;
     protected transient Constant     m_constId;
+
+    // unresolved constant that may have been created by this statement
+    protected transient UnresolvedNameConstant m_constUnresolved;
+    protected transient UnresolvedTypeConstant m_typeUnresolved;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NamedTypeExpression.class, "paramTypes");
     }

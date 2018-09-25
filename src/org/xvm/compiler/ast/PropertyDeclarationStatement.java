@@ -230,7 +230,7 @@ public class PropertyDeclarationStatement
         if (getComponent() == null)
             {
             // create a structure for this type
-            String sName = (String) name.getValueText();
+            String    sName     = name.getValueText();
             Component container = getParent().getComponent();
             if (container.isClassContainer())
                 {
@@ -242,6 +242,8 @@ public class PropertyDeclarationStatement
                 // namespace at this point in the compilation
                 // TODO if (container.getProperty(sName) != null) ...
 
+                // the type constant we get from the type expression may be unresolved,
+                // but it will resolve when the type expression resolves names
                 TypeConstant      constType = type.ensureTypeConstant();
                 PropertyStructure prop      = container.createProperty(
                         isStatic(), getDefaultAccess(), getAccess2(), constType, sName);
@@ -250,10 +252,6 @@ public class PropertyDeclarationStatement
                     prop.indicateInitialValue();
                     }
                 setComponent(prop);
-
-                // introduce the unresolved type constant to the type expression, so that when the
-                // type expression resolves, it can resolve the unresolved type constant
-                type.setTypeConstant(constType);
 
                 // the annotations either have to be registered on the type or on the property, so
                 // register them on the property for now (they'll get sorted out later after we

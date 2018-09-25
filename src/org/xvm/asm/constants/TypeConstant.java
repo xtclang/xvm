@@ -2587,7 +2587,7 @@ public abstract class TypeConstant
             MethodConstant idContrib     = entry.getKey();
             MethodInfo     methodContrib = entry.getValue();
             Object         nidContrib    = idContrib.resolveNestedIdentity(
-                pool, methodContrib.isFunction() ? null : this);
+                                                pool, methodContrib.isFunction() ? null : this);
 
             // the method is not virtual if it is a function, if it is private, or if it is
             // contained inside a method or some other structure (such as a property) that is
@@ -2597,7 +2597,13 @@ public abstract class TypeConstant
                 // TODO check for collision, because a function could theoretically replace a virtual method
                 // TODO (e.g. 2 modules, 1 introduces a virtual method in a new version that collides with a function in the other)
                 // TODO we'll also have to check similar conditions below
-                mapMethods.put((MethodConstant) constId.appendNestedIdentity(pool, nidContrib), methodContrib);
+
+                // skip super constructors
+                if (fSelf || !methodContrib.getSignature().getName().equals("construct"))
+                    {
+                    mapMethods.put((MethodConstant)
+                            constId.appendNestedIdentity(pool, nidContrib), methodContrib);
+                    }
                 continue;
                 }
 
@@ -3499,9 +3505,18 @@ public abstract class TypeConstant
      */
     public Relation calculateRelation(TypeConstant typeLeft)
         {
-        if (this.equals(typeLeft) || typeLeft.equals(getConstantPool().typeObject()))
+        ConstantPool pool = getConstantPool();
+        if (this.equals(typeLeft) || typeLeft.equals(pool.typeObject()))
             {
             return Relation.IS_A;
+            }
+
+        TypeConstant typeRight        = (TypeConstant) pool.register(this);
+        TypeConstant typeLeftResolved = typeLeft.resolveTypedefs();
+
+        if (typeRight != this || typeLeftResolved != typeLeft)
+            {
+            return typeRight.calculateRelation(typeLeftResolved);
             }
 
         // WARNING: thread-unsafe
@@ -3512,17 +3527,6 @@ public abstract class TypeConstant
             {
             // since we're caching the relations on the constant itself, there is no reason to do it
             // unless it's registered
-            TypeConstant typeRight         = this;
-            TypeConstant typeRightResolved = (TypeConstant)
-                    typeRight.getConstantPool().register(typeRight.resolveTypedefs());
-            TypeConstant typeLeftResolved  = (TypeConstant)
-                    typeLeft.getConstantPool().register(typeLeft.resolveTypedefs());
-
-            if (typeLeftResolved != typeLeft || typeRightResolved != typeRight)
-                {
-                return typeRightResolved.calculateRelation(typeLeftResolved);
-                }
-
             // first check immutability modifiers
             if (typeLeft.isImmutabilitySpecified() && !typeRight.isImmutable())
                 {
@@ -4145,7 +4149,7 @@ public abstract class TypeConstant
      */
     public IdentityConstant getSingleUnderlyingClass(boolean fAllowInterface)
         {
-        assert (fAllowInterface || isClassType()) && isSingleUnderlyingClass(fAllowInterface);
+        assert isSingleUnderlyingClass(fAllowInterface);
 
         return getUnderlyingType().getSingleUnderlyingClass(fAllowInterface);
         }
@@ -4467,9 +4471,12 @@ public abstract class TypeConstant
             return false;
             }
 
-        TypeConstant that = (TypeConstant) obj;
+        // TODO: there is a concern that this allows a Typedef to equal its referent
+        TypeConstant typeThis = this.resolveTypedefs();
+        TypeConstant typeThat = ((TypeConstant) obj).resolveTypedefs();
 
-        return this.getFormat() == that.getFormat() && this.compareDetails(that) == 0;
+        return typeThis.getFormat() == typeThat.getFormat()
+            && typeThis.compareDetails(typeThat) == 0;
         }
 
 
