@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.List;
+import java.util.Objects;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -207,11 +208,13 @@ public abstract class RelationalTypeConstant
     @Override
     public TypeConstant getGenericParamType(String sName)
         {
-        TypeConstant typeActual = m_constType1.getGenericParamType(sName);
+        // Intersection and Difference require both sides resolving to the same thing
+        TypeConstant typeActual1 = m_constType1.getGenericParamType(sName);
+        TypeConstant typeActual2 = m_constType2.getGenericParamType(sName);
 
-        return typeActual == null
-                ? m_constType2.getGenericParamType(sName)
-                : typeActual;
+        return Objects.equals(typeActual1, typeActual2)
+                ? typeActual1
+                : null;
         }
 
     @Override

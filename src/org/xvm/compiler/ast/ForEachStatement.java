@@ -182,7 +182,6 @@ public class ForEachStatement
         TypeConstant typeRVal  = null;
         do
             {
-            TypeConstant typeTest;
             switch (++nTypeRval)
                 {
                 default:
@@ -235,7 +234,31 @@ public class ForEachStatement
             if (fValid)
                 {
                 // update "var"/"val" type declarations on the LValues with their actual types
-                TypeConstant[] aTypeLVals = exprRVal.getType().getParamTypesArray();
+                typeRVal = exprRVal.getType();
+
+                TypeConstant[] aTypeLVals;
+                switch (nTypeRval)
+                    {
+                    default:
+                    case T_ITERATOR:
+                    case T_RANGE:
+                    case T_SEQUENCE:
+                    case T_ITERABLE:
+                        aTypeLVals = new TypeConstant[]
+                            {
+                            typeRVal.getGenericParamType("ElementType")
+                            };
+                        break;
+
+                    case T_MAP:
+                        aTypeLVals = new TypeConstant[]
+                            {
+                            typeRVal.getGenericParamType("KeyType"),
+                            typeRVal.getGenericParamType("ValueType")
+                            };
+                        break;
+                    }
+
                 assert aTypeLVals.length >= exprLVal.getValueCount();
                 exprLVal.updateLValueFromRValueTypes(aTypeLVals);
                 }
