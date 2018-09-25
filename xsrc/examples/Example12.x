@@ -1713,3 +1713,38 @@ if (String s : iter.next()) {..}
 (Int i, Int j) = (5, 7);
 
 (Color c, Flavor f) = (Other, Other);
+
+interface List
+    {
+    void add(Object o);
+    void addAll(List l)
+        {
+        // natural implemnetation for each ...
+        }
+
+    List tail(Object o)
+        {
+        // some natural impl
+        }
+    }
+
+class List2 implements List
+    {
+    void add(Object o) {...}
+
+    // implicitly has:
+    // void addAll(List l)
+
+    // does **NOT** implicitly have:
+    // void addAll(List2 l)
+    }
+
+class List3 extends List2
+    {
+    void addAll(List3 l) {..}
+
+    // implicit cap:
+    // void addAll(List1 l) { addAll(l.as(List3)); }
+    }
+
+List2 l = new List3();

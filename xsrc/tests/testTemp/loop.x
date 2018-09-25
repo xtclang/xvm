@@ -8,6 +8,7 @@ module TestLoops.xqiz.it
 
         testWhile();
         testFor();
+        testForEach();
         }
 
     void testWhile()
@@ -29,6 +30,17 @@ module TestLoops.xqiz.it
         for (Int i = 0; i < 10; ++i)
             {
             console.println(i);
+            }
+        }
+
+    void testForEach()
+        {
+        console.println("\n** testForEach()");
+
+        String[] strs = ["hello", "world"];
+        for (String s : strs)
+            {
+            console.println(s);
             }
         }
     }
