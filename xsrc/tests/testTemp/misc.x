@@ -20,6 +20,13 @@ module TestMisc.xqiz.it
         testSwitchExpr3();
         testStmtExpr();
 
+        // testAssert();
+        // testAssertTrue();
+        // testAssertFalse();
+        // testAssertTrueExpr();
+        // testAssertFalseExpr();
+        testAssertDecl();
+
         // REVIEW GG
         // testInterval();
         // testArrays();
@@ -272,6 +279,51 @@ module TestMisc.xqiz.it
         {
         console.println("\n** testStmtExpr()");
         console.println("5+3=" + {return 5.to<Int>() + 3;});
+        }
+
+    void testAssert()
+        {
+        console.println("\n** testAssert()");
+        assert;
+        console.println("(done)");
+        }
+
+    void testAssertTrue()
+        {
+        console.println("\n** testAssertTrue()");
+        assert true;
+        console.println("(done)");
+        }
+
+    void testAssertFalse()
+        {
+        console.println("\n** testAssertFalse()");
+        assert false;
+        console.println("(done)");
+        }
+
+    void testAssertTrueExpr()
+        {
+        console.println("\n** testAssertTrueExpr()");
+        assert True != False;
+        console.println("(done)");
+        }
+
+    void testAssertFalseExpr()
+        {
+        console.println("\n** testAssertFalseExpr()");
+        assert True == False;
+        console.println("(done)");
+        }
+
+    void testAssertDecl()
+        {
+        console.println("\n** testAssertDecl()");
+        // REVIEW BUGBUG NPE: Iterator<Int> iter = [1].iterator();
+        Int[] array = [1];
+        Iterator<Int> iter = array.iterator();
+        assert Int i : iter.next();
+        console.println("i=" + i);
         }
 
     // TODO

@@ -70,10 +70,12 @@ public class TestConnector
                 {
                 out("** code for " + id);
                 out(method.ensureCode().toString());
+                out("");
                 }
             else
                 {
-                out("no code for " + id);
+                out("** no code for " + id);
+                out("");
                 }
             }
 

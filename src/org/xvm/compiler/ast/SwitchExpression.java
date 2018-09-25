@@ -524,7 +524,7 @@ public class SwitchExpression
 
     private void generateJumpSwitch(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
-        // TODO statement vs. expression
+        // TODO statement vs. expression (this is all wrong! doesn't support AssignmentStatement!)
         Expression exprCond = (Expression) cond;
         if (m_aconstCase == null && (m_pintOffset != null || !exprCond.getType().isA(pool().typeInt())))
             {
