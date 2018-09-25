@@ -149,7 +149,11 @@ public class Annotation
         assert anno != null;
 
         Constant constAnno = anno.getAnnotationClass();
-        assert !constAnno.containsUnresolved();
+        if (constAnno.containsUnresolved())
+            {
+            // the type name resolution failed and an error must have been reported
+            return;
+            }
 
         boolean       fValid   = true;
         ClassConstant idAnno   = (ClassConstant) constAnno;

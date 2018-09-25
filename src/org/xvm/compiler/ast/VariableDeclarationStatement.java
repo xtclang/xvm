@@ -163,8 +163,6 @@ public class VariableDeclarationStatement
     @Override
     protected Statement validate(Context ctx, ErrorListener errs)
         {
-        boolean fValid = true;
-
         // before validating the type, disassociate any annotations that do not apply to the
         // underlying type
         ConstantPool   pool      = pool();
@@ -175,9 +173,15 @@ public class VariableDeclarationStatement
             {
             if (typeEach instanceof AnnotatedTypeExpression)
                 {
-                Annotation             annoAst  = ((AnnotatedTypeExpression) typeEach).getAnnotation();
-                org.xvm.asm.Annotation annoAsm  = annoAst.ensureAnnotation(pool());
-                TypeConstant           typeInto = annoAsm.getAnnotationType().getExplicitClassInto();
+                Annotation             annoAst = ((AnnotatedTypeExpression) typeEach).getAnnotation();
+                org.xvm.asm.Annotation annoAsm = annoAst.ensureAnnotation(pool());
+                if (annoAsm.containsUnresolved())
+                    {
+                    // this can only happen if there was an error already reported
+                    return null;
+                    }
+
+                TypeConstant typeInto = annoAsm.getAnnotationType().getExplicitClassInto();
                 if (typeInto.isIntoVariableType())
                     {
                     // steal the annotation from the type held _in_ the variable
@@ -213,17 +217,12 @@ public class VariableDeclarationStatement
             }
 
         TypeExpression typeNew = (TypeExpression) typeOld.validate(ctx, pool.typeType(), errs);
-        if (typeNew != typeOld)
+        if (typeNew == null)
             {
-            if (typeNew == null)
-                {
-                fValid = false;
-                }
-            else
-                {
-                type = typeNew;
-                }
+            return null;
             }
+
+        type = typeNew;
 
         // create the register
         TypeConstant typeVar  = type.ensureTypeConstant();
@@ -249,7 +248,7 @@ public class VariableDeclarationStatement
             m_reg.specifyRegType(typeReg);
             }
 
-        return fValid ? this : null;
+        return this;
         }
 
     @Override

@@ -197,6 +197,31 @@ public abstract class TypeConstant
         }
 
     /**
+     * If this type is an Immutable type, calculate the type without the immutability.
+     *
+     * @param pool  the ConstantPool to place a potentially created new constant into
+     *
+     * @return this TypeConstant without immutability
+     */
+    public TypeConstant removeImmutable(ConstantPool pool)
+        {
+        // replace the TerminalType of the typeActual with the inception type
+        Function<TypeConstant, TypeConstant> transformer =
+                new Function<TypeConstant, TypeConstant>()
+            {
+            public TypeConstant apply(TypeConstant type)
+                {
+                return type instanceof TerminalTypeConstant
+                        ? type
+                        : type instanceof ImmutableTypeConstant
+                            ? type.getUnderlyingType()
+                            : type.replaceUnderlying(pool, this);
+                }
+            };
+        return transformer.apply(this);
+        }
+
+    /**
      * @return true iff the type specifies accessibility
      */
     public boolean isAccessSpecified()
@@ -3511,6 +3536,8 @@ public abstract class TypeConstant
             return Relation.IS_A;
             }
 
+        // since we're caching the relations on the constant itself, there is no reason to do it
+        // unless it's registered
         TypeConstant typeRight        = (TypeConstant) pool.register(this);
         TypeConstant typeLeftResolved = typeLeft.resolveTypedefs();
 
@@ -3525,18 +3552,22 @@ public abstract class TypeConstant
         Relation relation = mapRelations.get(typeLeft);
         if (relation == null)
             {
-            // since we're caching the relations on the constant itself, there is no reason to do it
-            // unless it's registered
             // first check immutability modifiers
-            if (typeLeft.isImmutabilitySpecified() && !typeRight.isImmutable())
+            if (typeLeft.isImmutabilitySpecified())
                 {
-                relation = Relation.INCOMPATIBLE;
-                }
-            else
-                {
-                relation = checkReservedCompatibility(typeLeft, typeRight);
+                if (typeRight.isImmutable())
+                    {
+                    // no need to be concerned with immutability anymore
+                    typeLeft = typeLeft.removeImmutable(pool);
+                    }
+                else
+                    {
+                    mapRelations.put(typeLeft, relation = Relation.INCOMPATIBLE);
+                    return relation;
+                    }
                 }
 
+            relation = checkReservedCompatibility(typeLeft, typeRight);
             if (relation != null)
                 {
                 mapRelations.put(typeLeft, relation);
@@ -3948,7 +3979,7 @@ public abstract class TypeConstant
 
     /**
      * Determine if this type consumes a formal type with the specified name in a context
-     * of the given TypeComposition and access policy.
+     * of the given access policy.
      *
      * @param sTypeName   the formal type name
      * @param access      the access level to limit the check to
@@ -3987,7 +4018,7 @@ public abstract class TypeConstant
 
     /**
      * Calculate the consumption usage for the specified formal type in a context
-     * of the given TypeComposition and access policy.
+     * of the given access policy and actual generic parameters.
      *
      * @param sTypeName   the formal type name
      * @param access      the access level to limit the check to
@@ -4002,7 +4033,7 @@ public abstract class TypeConstant
 
    /**
      * Determine if this type produces a formal type with the specified name in a context
-     * of the given TypeComposition and access policy.
+     * of the given access policy.
      *
      * @param sTypeName   the formal type name
      * @param access      the access level to limit the check to
@@ -4041,7 +4072,7 @@ public abstract class TypeConstant
 
     /**
      * Determine if this type produces a formal type with the specified name in a context
-     * of the given TypeComposition and access policy.
+     * of the given access policy and actual generic parameters.
      *
      * @param sTypeName   the formal type name
      * @param access      the access level to limit the check to

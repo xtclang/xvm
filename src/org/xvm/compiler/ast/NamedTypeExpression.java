@@ -344,7 +344,11 @@ public class NamedTypeExpression
                     m_typeUnresolved.resolve(typeNew);
                     m_typeUnresolved = null;
                     }
+                break;
                 }
+
+            case ERROR:
+                break;
             }
         }
 
@@ -355,6 +359,12 @@ public class NamedTypeExpression
         List<TypeExpression> listParams = this.paramTypes;
         boolean              fValid     = true;
         TypeConstant         type;
+
+        if (m_constId == null)
+            {
+            // this can only mean that the name resolution ended in an error
+            return null;
+            }
 
         if (listParams == null)
             {
