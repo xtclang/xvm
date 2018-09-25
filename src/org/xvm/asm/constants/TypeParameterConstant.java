@@ -121,7 +121,7 @@ public class TypeParameterConstant
         fReEntry = true;
         try
             {
-            return fResolved = m_constMethod.containsUnresolved();
+            return !(fResolved = !m_constMethod.containsUnresolved());
             }
         finally
             {
@@ -191,10 +191,7 @@ public class TypeParameterConstant
     @Override
     public String getValueString()
         {
-        MethodStructure method = (MethodStructure) m_constMethod.getComponent();
-        return method == null
-                ? "#" + m_iReg
-                : method.getParam(m_iReg).getName();
+        return m_constMethod.getName() + "<#" + m_iReg + ">";
         }
 
 

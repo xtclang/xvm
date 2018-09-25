@@ -157,35 +157,14 @@ public class NewExpression
             throw new UnsupportedOperationException("anonymous inner class type");
             }
 
-        TypeConstant typeTarget = getTypeExpression().ensureTypeConstant();
+        TypeConstant typeTarget = type.ensureTypeConstant();
         if (!typeTarget.isSingleUnderlyingClass(false))
             {
-            // not a class; will report an error later
+            // not a class; someone will report an error later
             return null;
             }
 
-        ClassConstant    clzTarget = (ClassConstant) typeTarget.getSingleUnderlyingClass(false);
-        IdentityConstant clzParent;
-        if (left == null)
-            {
-            clzParent = getComponent().getContainingClass().getIdentityConstant();
-            }
-        else
-            {
-            TypeConstant typeParent = left.getImplicitType(ctx);
-            if (!typeParent.isSingleUnderlyingClass(false))
-                {
-                // left must be a class; will report an error later
-                return null;
-                }
-
-            clzParent = typeParent.getSingleUnderlyingClass(false);
-            }
-
-        return clzParent instanceof ClassConstant && !clzParent.equals(clzTarget)
-                ? ((ClassConstant) clzParent).calculateAutoNarrowingConstant(clzTarget).getType()
-                    .adoptParameters(pool(), typeTarget)
-                : typeTarget;
+        return typeTarget;
         }
 
     @Override
@@ -224,10 +203,12 @@ public class NewExpression
                 }
             }
 
+        // we intentionally don't pass the required type to the TypeExpression; instead, let's take
+        // whatever type it produces and later validate the resulting type against the required type
         TypeExpression exprTypeOld = this.type;
-        TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx,
-                                        typeRequired == null ? null : typeRequired.getType(), errs);
-        TypeConstant  typeTarget   = null;
+        TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx, null, errs);
+        TypeConstant   typeTarget  = null;
+        TypeInfo       infoTarget  = null;
         if (exprTypeNew == null)
             {
             fValid = false;
@@ -237,7 +218,6 @@ public class NewExpression
             this.type = exprTypeNew;
 
             typeTarget = exprTypeNew.ensureTypeConstant();
-
             if (typeRequired != null)
                 {
                 TypeConstant typeInferred = inferTypeFromRequired(typeTarget, typeRequired);
@@ -254,7 +234,7 @@ public class NewExpression
                 typeTarget = pool().ensureAccessTypeConstant(typeTarget, Access.PRIVATE);
                 }
 
-            TypeInfo infoTarget = typeTarget.ensureTypeInfo(errs);
+            infoTarget = typeTarget.ensureTypeInfo(errs);
 
             // if the type is not new-able, then it must be an anonymous inner class with a body
             // that makes the type new-able
@@ -309,7 +289,7 @@ public class NewExpression
         if (fValid)
             {
             List<Expression> listArgs = this.args;
-            MethodConstant   idMethod = findMethod(ctx, typeTarget, "construct",
+            MethodConstant   idMethod = findMethod(ctx, infoTarget, "construct",
                                                    listArgs, false, true, null, errs);
             if (idMethod == null)
                 {

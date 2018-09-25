@@ -28,7 +28,6 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
@@ -336,6 +335,8 @@ public class MethodDeclarationStatement
                         ((PropertyDeclarationStatement) getParent().getParent()).annotations; // TODO: replace
 
                     MethodStructure methodSuper = findRefMethod(property, annotations, sName, params, errs);
+                    // TODO: if all annotations and parameters  are resolved, we should
+                    //       report an error rather than exhaust the retry count
                     if (methodSuper == null)
                         {
                         mgr.requestRevisit();
@@ -350,16 +351,16 @@ public class MethodDeclarationStatement
                         org.xvm.asm.Parameter param = methodSuper.getReturn(i);
                         TypeConstant type = param.getType();
 
+                        if (type.containsUnresolved())
+                            {
+                            // not yet resolved; come back later
+                            mgr.requestRevisit();
+                            return;
+                            }
+
                         if (type.getFormat() == Format.TerminalType)
                             {
                             Constant constReturn = type.getDefiningConstant();
-                            if (constReturn.getFormat() == Format.UnresolvedName)
-                                {
-                                // not yet resolved; come back later
-                                mgr.requestRevisit();
-                                return;
-                                }
-
                             if (constReturn.getFormat() == Format.Property
                                     && ((PropertyConstant) constReturn).getName().equals("RefType"))
                                 {
@@ -409,6 +410,32 @@ public class MethodDeclarationStatement
         if (!catchUpChildren(errs))
             {
             mgr.deferChildren();
+            }
+
+        Component component = getComponent();
+        if (component instanceof MethodStructure)
+            {
+            MethodStructure method = (MethodStructure) component;
+
+            int cAllParams = method.getParamCount();
+            int cDefaults  = method.getDefaultParamCount();
+
+            for (int i = cAllParams - cDefaults; i < cAllParams; ++i)
+                {
+                org.xvm.asm.Parameter parameter = method.getParam(i);
+                assert parameter.hasDefaultValue();
+
+                Parameter param = params.get(i);
+
+                Expression value = param.value;
+                assert value != null;
+
+                // TODO: this needs to be wrapped into a statement (see PropertyDeclaration)
+                if (!value.isAborting() && value.isRuntimeConstant())
+                    {
+                    parameter.setDefaultValue(value.toConstant());
+                    }
+                }
             }
         }
 
@@ -534,7 +561,12 @@ public class MethodDeclarationStatement
             {
             Parameter param = params.get(i-cTypes);
             aParams[i] = new org.xvm.asm.Parameter(pool, param.getType().ensureTypeConstant(),
-                    param.getName(), /* TODO how to do value? */ null, false, i, false);
+                    param.getName(), null, false, i, false);
+            if (param.value != null)
+                {
+                // TODO: ensure that all default values are grouped at the end
+                aParams[i].markDefaultValue();
+                }
             }
         return aParams;
         }

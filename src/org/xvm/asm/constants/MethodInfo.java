@@ -367,6 +367,30 @@ public class MethodInfo
         }
 
     /**
+     * @return the first non-null MethodStructure for bodies in the call chain
+     */
+    public MethodStructure getTopmostMethodStructure(TypeInfo infoType)
+        {
+        for (MethodBody body : m_aBody)
+            {
+            if (body.getImplementation() == Implementation.Capped)
+                {
+                SignatureConstant sig = body.getNarrowingNestedIdentity();
+                return infoType.getMethodBySignature(sig).getTopmostMethodStructure(infoType);
+                }
+
+            MethodStructure method = body.getMethodStructure();
+            if (method != null)
+                {
+                return method;
+                }
+            }
+
+        // we must find something real
+        throw new IllegalStateException();
+        }
+
+    /**
      * @return the first MethodBody in the call chain
      */
     public MethodBody getHead()

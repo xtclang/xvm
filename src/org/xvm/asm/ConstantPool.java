@@ -139,7 +139,11 @@ public class ConstantPool
             Object oLocator = constant.getLocator();
             if (oLocator != null)
                 {
-                ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
+                Constant constOld = ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
+                if (constOld != null)
+                    {
+                    throw new IllegalStateException("locator collision: old=" + constOld + ", new=" + constant);
+                    }
                 }
 
             // make sure that the recursively referenced constants are all

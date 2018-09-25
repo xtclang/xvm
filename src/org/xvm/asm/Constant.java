@@ -824,6 +824,7 @@ public abstract class Constant
         /*
          * Types.
          */
+        UnresolvedType,
         TerminalType,
         ImmutableType,
         AccessType,

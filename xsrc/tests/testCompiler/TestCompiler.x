@@ -102,49 +102,57 @@ class TestCompiler<TestType1 extends Number,
         MyClass6<String> mc6s = c6;
         }
 
-    static void test1ExpectedFailure1(MyClass7 c7ExpectedFailure)
+    static void test1ExpectedFailure1(MyClass7 cF1)
         {
-        Consumer<Int> finder7a = c7ExpectedFailure;
+        Consumer<Int> finder7a = cF1;
         }
 
-    static void test1ExpectedFailure2(MyClass9<String, String> c9)
+    static void test1ExpectedFailure2(MyClass9<String, String> cF2)
         {
-        MyConsumer<Int> finder9 = c9; // fail; "Incorporates"
+        MyConsumer<Int> finder9 = cF2; // fail; "Incorporates"
         }
 
-    static void test1ExpectedFailure3(MyClass9<String, String> c9)
+    static void test1ExpectedFailure3(MyClass9<String, String> cF3)
         {
-        Consumer<Int> finder9a = c9; // fail; "Incorporates-Extends"
+        Consumer<Int> finder9a = cF3; // fail; "Incorporates-Extends"
         }
 
-    static void test1ExpectedFailure4(MyClass10<String> c10a)
+    static void test1ExpectedFailure4(MyClass10<String> cF4)
         {
-        MyConsumer<Int> finder10a = c10a; // fail; "Extends-Incorporates"
+        MyConsumer<Int> finder10a = cF4; // fail; "Extends-Incorporates"
         }
 
-    static void test1ExpectedFailure5(MyClass10<Int> c10)
+    static void test1ExpectedFailure5(MyClass10<Int> cF5)
         {
-        immutable MyConsumer<Int> finder10b = c10; // fail; "Extends-Incorporates"
+        immutable MyConsumer<Int> finder10b = cF5; // fail; "Extends-Incorporates"
         }
 
     static class P<T>
         {
+        private T content;
+
         T produce()
             {
-            T t;
+            T t = content;
             return t;
             }
 
         // self-referencing methods don't contribute to consumption/production
-        P<T> self();
-        P!<T> self2();
+        P<T> self()
+            {
+            return this;
+            }
+        P!<T> self2()
+            {
+            return this;
+            }
         }
 
     static class P2<T2>
         {
         P<T2> produce()
             {
-            P<T2> p;
+            P<T2> p = new P<T2>();
             return p;
             }
         }
@@ -161,6 +169,10 @@ class TestCompiler<TestType1 extends Number,
     interface C2<T2>
         {
         C<T2> consume();
+        }
+
+    static class CC<T> implements C<T>
+        {
         }
 
     static class PC<T> extends P<T> implements C<T>
@@ -208,34 +220,34 @@ class TestCompiler<TestType1 extends Number,
         PC<Object> pco = pcs; // ok, but the RT needs to "safe-wrap" the consuming methods
         }
 
-    static void testPCExpectedFailure1(C<String> cs)
+    static void testPCExpectedFailure1(C<String> csF1)
         {
-        C<Object> co = cs;
+        C<Object> co1 = csF1;
         }
 
-    static void testPCExpectedFailure2(PC<String> pcs)
+    static void testPCExpectedFailure2(PC<String> pcsF2)
         {
-        C<Object> x4 = y4;
+        C<Object> co2 = pcsF2;
         }
 
-    static void testPCExpectedFailure3(P<Object> po)
+    static void testPCExpectedFailure3(P<Object> poF3)
         {
-        P<String> ps = po;
+        P<String> ps3 = poF3;
         }
 
-    static void testPCExpectedFailure4(PC<String> pcs)
+    static void testPCExpectedFailure4(PC<String> pcsF4)
         {
-        FakePCofObject fpco = pcs;
+        FakePCofObject fpco4 = pcsF4;
         }
 
-    static void testPCExpectedFailure5(PC<Object> pco)
+    static void testPCExpectedFailure5(PC<Object> pcoF5)
         {
-        PC<String> pcs = pco;
+        PC<String> pcs5 = pcoF5;
         }
 
-    static void testPCExpectedFailure6(C c)
+    static void testPCExpectedFailure6(CC ccF6)
         {
-        C<Object> co = c;
+        CC<Object> cco6 = ccF6;
         }
 
     static Int test2()
@@ -269,9 +281,9 @@ class TestCompiler<TestType1 extends Number,
         PC<TestType1> pct1 = pct3;
         }
 
-    void test3ExpectedFailure1(TestType3 t3)
+    void test3ExpectedFailure1(TestType3 tF3)
         {
-        Int n = t3;
+        Int n = tF3;
         }
 
     static <Type1 extends Number, Type2 extends Type1>
@@ -302,13 +314,12 @@ class TestCompiler<TestType1 extends Number,
         }
 
     static <Type1 extends Number, Type2 extends Type1>
-            void test5ExpectedFailure1(C<Type1> | C<Type2> ct12)
+            void test5ExpectedFailure1(C<Type1> | C<Type2> ctF5)
         {
-        C<Number> cn = ct12;
+        C<Number> cn = ctF5;
         }
 
-    static void testTuple(Tuple t,
-                          Tuple<Int, String> tns)
+    static void testTuple(Tuple t, Tuple<Int, String> tns)
         {
         Tuple t1 = t;
         Tuple t2 = tns;
@@ -316,14 +327,14 @@ class TestCompiler<TestType1 extends Number,
         Tuple<Number> tn = tns;
         }
 
-    static void testTupleExpectedFailure1(Tuple<Number, String> tns)
+    static void testTupleExpectedFailure1(Tuple<Number, String> tnsF1)
         {
-        Tuple<Int, String> tn = tns;
+        Tuple<Int, String> tn = tnsF1;
         }
 
-    static void testTupleExpectedFailure2(Tuple t)
+    static void testTupleExpectedFailure2(Tuple tF2)
         {
-        Tuple<Int> ti = t;
+        Tuple<Int> ti = tF2;
         }
 
     static class PCOfInt
@@ -348,14 +359,14 @@ class TestCompiler<TestType1 extends Number,
         Class c2 = en;
         }
 
-    static void testEnumerationExpectedFailure1(Enumeration<False> en)
+    static void testEnumerationExpectedFailure1(Enumeration<False> enF1)
         {
-        Class<True> c = en;
+        Class<True> c = enF1;
         }
 
-    static void testEnumerationExpectedFailure2(Enumeration en)
+    static void testEnumerationExpectedFailure2(Enumeration enF2)
         {
-        Class<True> c = en;
+        Class<True> c = enF2;
         }
 
     mixin MCI
@@ -428,7 +439,7 @@ class TestCompiler<TestType1 extends Number,
     static class Employee
             extends Person
         {
-        void testAutoNarrow()
+        void testAutoNarrow2()
             {
             List<Employee> emps2 = dependents;
             }

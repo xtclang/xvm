@@ -383,6 +383,11 @@ class ExtHashMap<KeyType, ValueType>
     protected class ProcessableHashEntry
             extends Map.KeyBasedEntry<KeyType, ValueType>
         {
+        construct(KeyType key)
+            {
+            construct Map.KeyBasedEntry(key);
+            }
+
         @Override
         HashEntry reify()
             {
