@@ -465,7 +465,7 @@ public class NameExpression
         }
 
     @Override
-    public void updateLValueFromRValueType(TypeConstant type)
+    public void updateLValueFromRValueTypes(TypeConstant[] aTypes)
         {
         }
 

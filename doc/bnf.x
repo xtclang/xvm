@@ -774,6 +774,7 @@ Literal
     MapLiteral
     VersionLiteral
     CustomLiteral
+    # TODO need an external (file) literal
 
 # TODO unformatted text: $"text"
 # TODO type literal from text: T:$"text" / T:"text"
