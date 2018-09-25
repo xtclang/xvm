@@ -221,7 +221,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
             map.put(param.name, param);
             }
 
-        return map.makeConst();
+        return map.ensureConst();
         }
 
     /**
@@ -370,7 +370,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
                          + methodsByName.size
                          + functionsByName.size;
 
-        return map.makeConst();
+        return map.ensureConst();
         }
 
     /**
@@ -387,7 +387,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
             map.put(class_.name, class_);
             }
 
-        return map.makeConst();
+        return map.ensureConst();
         }
 
     /**
@@ -404,7 +404,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
             map.put(property.name, property);
             }
 
-        return map.makeConst();
+        return map.ensureConst();
         }
 
     /**
@@ -427,7 +427,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
                 }
             }
 
-        return map.makeConst();
+        return map.ensureConst();
         }
 
     /**
@@ -451,7 +451,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
                 }
             }
 
-        return map.makeConst();
+        return map.ensureConst();
         }
 
     // ----- dynamic class manipulation ------------------------------------------------------------

@@ -346,17 +346,17 @@ class TestApp
         print(ri.get());
 
         TestClass tc = new TestClass("before");
-        Var<String> rp = &tc.prop1;
+        Var<String> rp = tc.&prop1;
         print(rp);
         rp.set("after");
         print(tc);
 
         TestService svc = new TestService();
-        ri = &svc.counter;
+        ri = svc.&counter;
         ri.get();
         print(ri);
 
-        AtomicVar<Int> ari = &svc.counter2;
+        AtomicVar<Int> ari = svc.&counter2;
         ari.replace(5, 6);
         print(ari);
         }
@@ -416,8 +416,8 @@ class TestApp
             print(s);
             }
 
-        Tuple<Boolean, String> t = testConditional(-1);
-        print(t);
+        @annotations.ConditionalTuple Tuple<Boolean, String> t3 = testConditional(-1);
+        print(t3);
 
         static conditional String testConditional(Int i)
              {

@@ -28,7 +28,7 @@
  */
 interface Map<KeyType, ValueType>
         extends UniformIndexed<KeyType, ValueType>
-        extends VariablyMutable
+        extends ConstAble
     {
     // ----- Entry interface -----------------------------------------------------------------------
 

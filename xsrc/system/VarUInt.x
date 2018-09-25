@@ -35,7 +35,7 @@ const VarUInt
             // need to allocate a new array of bits of the calculated size, and copy over
             // the least significant bitsUsed number of bits that were passed in
             Bit[] newBits = new Bit[bitsUsed];
-            for (Int i = 0, c = bitsUsed.min(bits.size); i < c; ++i)
+            for (Int i = 0, Int c = bitsUsed.minOf(bits.size); i < c; ++i)
                 {
                 newBits[i] = bits[i];
                 }

@@ -187,7 +187,7 @@ const IntLiteral(String text)
             return 8;
             }
 
-        return (magnitude.leftmostBit.trailingZeroCount * 2 + 1).leftmostBit.max(8).to<Int>();
+        return (magnitude.leftmostBit.trailingZeroCount * 2 + 1).leftmostBit.maxOf(8).to<Int>();
         }
 
     /**

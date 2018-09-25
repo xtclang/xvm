@@ -131,6 +131,6 @@ mixin Enumeration<EnumType extends Enum>
                 }
             }
 
-        return map.makeConst();
+        return map.ensureConst();
         }
     }

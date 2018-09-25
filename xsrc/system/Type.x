@@ -75,7 +75,7 @@ const Type<DataType>
                 }
             }
 
-        return map.makeConst();
+        return map.ensureConst();
         }
 
     /**
@@ -143,7 +143,7 @@ const Type<DataType>
                 }
             }
 
-        return map.makeConst();
+        return map.ensureConst();
         }
 
     /**
@@ -302,13 +302,13 @@ const Type<DataType>
 //        {
 //        return this instanceof immutable Object
 //                ? this
-//                : new Type<DataType>(allMethods, explicitlyImmutable).makeConst();
+//                : new Type<DataType>(allMethods, explicitlyImmutable).ensureConst();
 //        }
 //
 //    @Override
-//    immutable Type<DataType> makeConst()
+//    immutable Type<DataType> ensureConst()
 //        {
-//        allMethods = allMethods.makeConst();
+//        allMethods = allMethods.ensureConst();
 //        meta.immutable_ = true;
 //        return this;
 //        }

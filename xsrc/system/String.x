@@ -178,7 +178,7 @@ const String
             {
             assert:always offset >= 0;
             assert:always length >= 0;
-            assert:always offset + length <= source.length;
+            assert:always offset + length <= source.size;
 
             this.source = source;
             this.offset = offset;
