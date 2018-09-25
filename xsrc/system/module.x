@@ -92,7 +92,7 @@ module Ecstasy.xtclang.org
      * An IllegalArgumentException is raised when an invalid argument is passed to a method or a
      * function.
      */
-    const IllegalArgumentException(String? text, Exception? cause)
+    const IllegalArgumentException(String? text = null, Exception? cause = null)
             extends Exception(text, cause)
         {
         }
@@ -101,7 +101,7 @@ module Ecstasy.xtclang.org
      * An IllegalStateException is raised when a data structure is not in a consistent state
      * to perform a requested operation.
      */
-    const IllegalStateException(String? text, Exception? cause)
+    const IllegalStateException(String? text = null, Exception? cause = null)
             extends Exception(text, cause)
         {
         }
@@ -113,8 +113,6 @@ module Ecstasy.xtclang.org
     const UnsupportedOperationException(String? text = null, Exception? cause = null)
             extends Exception(text, cause)
         {
-        // TODO: remove
-        construct(String? text, Exception? cause) {}
         }
 
     /**
