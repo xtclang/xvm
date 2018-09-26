@@ -208,13 +208,7 @@ public abstract class RelationalTypeConstant
     @Override
     public TypeConstant getGenericParamType(String sName)
         {
-        // Intersection and Difference require both sides resolving to the same thing
-        TypeConstant typeActual1 = m_constType1.getGenericParamType(sName);
-        TypeConstant typeActual2 = m_constType2.getGenericParamType(sName);
-
-        return Objects.equals(typeActual1, typeActual2)
-                ? typeActual1
-                : null;
+        throw new UnsupportedOperationException();
         }
 
     @Override

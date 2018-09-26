@@ -136,8 +136,7 @@ public class UnionTypeConstant
     @Override
     public TypeConstant getGenericParamType(String sName)
         {
-        // for the UnionType to resolve a name, either side needs to find it,
-        // but if both find it, it must be the same
+        // either side needs to find it, but if both do, the results must be identical
         TypeConstant typeActual1 = m_constType1.getGenericParamType(sName);
         TypeConstant typeActual2 = m_constType2.getGenericParamType(sName);
 

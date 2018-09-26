@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.IOException;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import org.xvm.asm.Component.ResolutionCollector;
@@ -140,6 +141,18 @@ public class IntersectionTypeConstant
         {
         assert isSingleUnderlyingClass(fAllowInterface);
         return m_constType1.getSingleUnderlyingClass(fAllowInterface);
+        }
+
+    @Override
+    public TypeConstant getGenericParamType(String sName)
+        {
+        // both sides need to resolve to the same thing
+        TypeConstant typeActual1 = m_constType1.getGenericParamType(sName);
+        TypeConstant typeActual2 = m_constType2.getGenericParamType(sName);
+
+        return Objects.equals(typeActual1, typeActual2)
+                ? typeActual1
+                : null;
         }
 
     @Override

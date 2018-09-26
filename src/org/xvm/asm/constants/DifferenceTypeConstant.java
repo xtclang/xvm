@@ -119,6 +119,13 @@ public class DifferenceTypeConstant
         }
 
     @Override
+    public TypeConstant getGenericParamType(String sName)
+        {
+        // only the left side needs to resolve and it doesn't matter what the right side does
+        return m_constType1.getGenericParamType(sName);
+        }
+
+    @Override
     public ResolutionResult resolveContributedName(String sName, ResolutionCollector collector)
         {
         // for the DifferenceType to contribute a name, the first side needs to find it,
