@@ -485,6 +485,12 @@ public class MethodStructure
         {
         Code code;
 
+        // TODO: remove when compiler is fully operational
+        if (m_code != null)
+            {
+            System.err.println("*** already compiled naturally: " + MethodStructure.this.toString());
+            }
+
         resetRuntimeInfo();
         m_fNative     = false;
         m_aconstLocal = null;

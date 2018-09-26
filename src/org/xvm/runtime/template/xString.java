@@ -13,6 +13,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Utils;
 
 /**
  * TODO:
@@ -65,7 +66,7 @@ public class xString
         StringHandle hThis = (StringHandle) hTarget;
         String       sThis = hThis.m_sValue;
 
-        switch (hArg.getTemplate().buildStringValue(frame, hArg, Op.A_STACK))
+        switch (Utils.callToString(frame, hArg))
             {
             case Op.R_NEXT:
                 return frame.assignValue(iReturn, makeHandle(sThis +

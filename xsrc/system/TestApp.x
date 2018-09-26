@@ -2,14 +2,15 @@ import annotations.AtomicVar;
 
 class TestApp
     {
-    @Inject io.Console console1; // TODO: move inside of print
     static void print(Object o)
         {
-        console1.print(o);
+        println(o);
         }
     static void println(Object o)
         {
-        console1.println(o);
+        @Inject io.Console console;
+
+        console.println(o);
         }
 
     // entry point
@@ -17,11 +18,12 @@ class TestApp
         {
         test2();
         testService();
+        testService2();
         testRef("hi");
         testArray();
         testTuple();
         testConst();
-        testReal1();
+        testMixin();
         }
 
     static Int getIntValue()
@@ -120,7 +122,7 @@ class TestApp
         @Override
         Int method1()
             {
-            console.print("*** In TestClass2.method1");
+            console.println("*** In TestClass2.method1");
             temp = super();
             return temp + prop2;
             }
@@ -263,13 +265,13 @@ class TestApp
             @Override
             Int get()
                 {
-                console.print("*** In counter.get");
+                console.println("*** In counter.get");
                 return super();
                 }
             @Override
             void set(Int c)
                 {
-                console.print("*** In counter.set");
+                console.println("*** In counter.set");
                 // console.print(to<String>()); // TODO: what should that be?
                 super(c);
                 }
@@ -282,14 +284,15 @@ class TestApp
         // pre-increment
         Int increment()
             {
-            console.print("*** In TestService.increment");
+            console.println("*** In TestService.increment");
             return ++counter;
             }
 
         void testConstant()
             {
+            console.println("*** In TestService.testConstant");
             TestApp.Point origin = TestPackage.Origin;
-            console.print("*** Origin=" + origin);
+            console.println("*** Origin=" + origin);
             }
 
         static void lambda_1(Var<Int> iRet, Int cDelay)
@@ -474,26 +477,30 @@ class TestApp
 
     static void testConst()
         {
+        println("*** in TestApp.testConst()");
+
         Point p1 = new Point(0, 1);
         Point p2 = new Point(1, 0);
 
-        print(p1);
-        print(p2);
-        print(p1 == p2);
-        print(p2 > p1);
+        print("p1=" + p1);
+        print("p2=" + p2);
+
+        assert (p1 != p2);
+        print("p1 != p2");
+
+        assert(p2 > p1);
+        print("p2 > p1");
 
         Rectangle r = new Rectangle(p2, p1);
-        print(r);
-        print(r.hash);
-        Int i = 42; print(i.hash); // print(42.hash);
+        print("r=" + r + " @" + r.hash);
+        Int i = 42;
+        print(i.hash); // print(42.hash);
 
         Color c = Blue;
-        print(c);
-        print(c.ordinal);
+        print("c=" + c + " @" + c.ordinal);
 
         c = Green;
-        print(c);
-        print(c.ordinal);
+        print("c=" + c + " @" + c.ordinal);
         }
 
     mixin Formatter(String prefix) into Object
@@ -530,30 +537,16 @@ class TestApp
     static void testMixin()
         {
         PrettyPoint prp = new PrettyPoint(1, 2, "*** ");
-        print(prp);
+        print("*** prp=" + prp);
 
         Point p2 = new Point(2, 1);
         PrettyRectangle prr = new PrettyRectangle(prp, p2, "+++ ");
-        print(prp);
+        print("*** prr=" + prr);
 
         @BlackHole Int zero = 1;
         assert(zero == 0);
 
         @Atomic Int ai = 0;
-        }
-
-    static void testReal1()
-        {
-//        @Inject io.Console console;
-
-        Int i;
-        Int j = 1;
-
-        i = j;
-
-//        Class<Point> clzP = Point;
-
-//        Class<Array<Point>> clzAP = Array<Point>;
         }
 
     mixin BlackHole
