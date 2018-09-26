@@ -1390,7 +1390,6 @@ public class MethodStructure
             }
         }
 
-
     @Override
     public String getDescription()
         {

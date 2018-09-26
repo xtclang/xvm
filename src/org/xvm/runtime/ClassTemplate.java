@@ -560,7 +560,8 @@ public abstract class ClassTemplate
                     }
             }
 
-        throw new IllegalStateException("Unknown method: (" + f_sName + ")." + method);
+        throw new IllegalStateException("Compilation failed for method: " + f_sName + "#"
+                + method.getIdentityConstant().getSignature().getValueString());
         }
 
     /**
