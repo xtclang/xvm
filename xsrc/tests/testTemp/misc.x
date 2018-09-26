@@ -6,26 +6,28 @@ module TestMisc.xqiz.it
         {
         console.println("hello world!");
 
-        testBools();
-        testInts();
-        testIsA();
-        testCast();
-        testTernary();
-        testSpaceship();
-        testElvis();
-        testLoop();
-        testElseExpr();
-        testSwitchExpr();
-        testSwitchExpr2();
-        testSwitchExpr3();
-        testStmtExpr();
+        testSimple();
+//        testBools();
+//        testInts();
+//        testIsA();
+//        testCast();
+//        testTernary();
+//        testSpaceship();
+//        testElvis();
+//        testLoop();
+//        testElseExpr();
+//        testSwitchExpr();
+//        testSwitchExpr2();
+//        testSwitchExpr3();
+//        testStmtExpr();
 
+        // TODO make a new "test asserts" module? something that can tolerate assertions?
         // testAssert();
         // testAssertTrue();
         // testAssertFalse();
         // testAssertTrueExpr();
         // testAssertFalseExpr();
-        testAssertDecl();
+        // testAssertDecl();
 
         // REVIEW GG
         // testInterval();
@@ -33,6 +35,19 @@ module TestMisc.xqiz.it
         // testTupleConv();
         // testMap();
         }
+
+//    void testSimple()
+//        {
+//        console.println("\n** testSimple()");
+//
+//        Tuple t = ("hello", "world", '!', 17);
+//        //for (Int i : 0..3)
+//        for (Int i = 0; i < 4; ++i)
+//            {
+//            console.println("i="+i);
+//            // console.println("tuple[" + i + "]=" + t[i]);
+//            }
+//        }
 
     void testInts()
         {

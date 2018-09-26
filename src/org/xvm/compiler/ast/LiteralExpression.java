@@ -185,6 +185,23 @@ public class LiteralExpression
         return finishValidation(typeRequired, typeActual, fit, constVal, errs);
         }
 
+    @Override
+    public boolean isConstant()
+        {
+        return true;
+        }
+
+    @Override
+    public Constant toConstant()
+        {
+        if (super.isConstant())
+            {
+            super.toConstant();
+            }
+
+        return getLiteralConstant();
+        }
+
 
     // ----- helpers -------------------------------------------------------------------------------
 

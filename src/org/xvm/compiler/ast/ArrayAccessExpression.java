@@ -25,6 +25,8 @@ import org.xvm.compiler.ast.Statement.Context;
 
 /**
  * An array access expression is an expression followed by an array index expression.
+ * <p/> REVIEW for multi-dimensional arrays, are they alternatives to the one-expression-per-dimension indexing?
+ * <p/> REVIEW for a given dimensional index, would it be possible to specify more than one index? consider the example of a range
  */
 public class ArrayAccessExpression
         extends Expression
@@ -97,8 +99,15 @@ public class ArrayAccessExpression
             return null;
             }
 
+        if (typeArray.isParamsSpecified() && typeArray.isTuple())
+            {
+            return indexes.size() == 1 && indexes.get(0).isConstant()
+                    ? determineTupleFieldType(typeArray, indexes.get(0).toConstant())
+                    : null;
+            }
+
         TypeInfo            infoArray  = typeArray.ensureTypeInfo();
-        int                 cIndexes   = indexes.size(); // REVIEW GG - what about supporting a tuple of indexes? (low priority)
+        int                 cIndexes   = indexes.size();
         Set<MethodConstant> setMethods = infoArray.findOpMethods("getElement", "[]", cIndexes);
         for (MethodConstant idMethod : setMethods)
             {
@@ -218,6 +227,24 @@ public class ArrayAccessExpression
             }
 
         return finishValidation(typeRequired, typeElement, fit, constVal, errs);
+        }
+
+    private TypeConstant determineTupleFieldType(TypeConstant typeTuple, Constant index)
+        {
+        int n;
+        try
+            {
+            n = ((IntConstant) index.convertTo(pool().typeInt())).getIntValue().getInt();
+            }
+        catch (RuntimeException e)
+            {
+            return null;
+            }
+
+        TypeConstant[] atypeFields = typeTuple.getParamTypesArray();
+        return n >= 0 && n < atypeFields.length
+                ? atypeFields[n]
+                : null;
         }
 
     @Override
