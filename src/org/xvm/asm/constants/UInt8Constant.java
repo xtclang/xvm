@@ -167,6 +167,7 @@ public class UInt8Constant
             case "UInt8&IntLiteral":
             case "UInt8|IntLiteral":
             case "UInt8^IntLiteral":
+            case "UInt8..IntLiteral":
             case "UInt8==IntLiteral":
             case "UInt8!=IntLiteral":
             case "UInt8<IntLiteral":
@@ -199,6 +200,9 @@ public class UInt8Constant
                 return validate(this.m_nVal | ((UInt8Constant) that).m_nVal);
             case "UInt8^UInt8":
                 return validate(this.m_nVal ^ ((UInt8Constant) that).m_nVal);
+            case "UInt8..UInt8":
+                return ConstantPool.getCurrentPool().ensureIntervalConstant(this, that);
+
 
             case "UInt8<<Int64":
                 return validate(this.m_nVal << ((IntConstant) that).getValue().and(new PackedInteger(7)).getInt());

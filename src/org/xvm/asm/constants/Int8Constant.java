@@ -133,6 +133,7 @@ public class Int8Constant
             case "Int8&IntLiteral":
             case "Int8|IntLiteral":
             case "Int8^IntLiteral":
+            case "Int8..IntLiteral":
             case "Int8==IntLiteral":
             case "Int8!=IntLiteral":
             case "Int8<IntLiteral":
@@ -165,6 +166,8 @@ public class Int8Constant
                 return validate(this.m_nVal | ((Int8Constant) that).m_nVal);
             case "Int8^Int8":
                 return validate(this.m_nVal ^ ((Int8Constant) that).m_nVal);
+            case "Int8..Int8":
+                return ConstantPool.getCurrentPool().ensureIntervalConstant(this, that);
 
             case "Int8<<Int64":
                 return validate(this.m_nVal << ((IntConstant) that).getValue().and(new PackedInteger(7)).getInt());

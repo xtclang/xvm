@@ -6,8 +6,8 @@ module TestLoops.xqiz.it
         {
         console.println("Loop tests:");
 
-        testWhile();
-        testFor();
+//        testWhile();
+//        testFor();
 //        testForEach();
         testForEachRange();
         }
