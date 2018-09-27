@@ -372,9 +372,9 @@ public class MethodBody
     /**
      * @return the ConstantPool
      */
-    ConstantPool pool()
+    private ConstantPool pool()
         {
-        return m_id.getConstantPool();
+        return ConstantPool.getCurrentPool();
         }
 
 

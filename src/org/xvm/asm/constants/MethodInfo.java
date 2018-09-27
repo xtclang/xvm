@@ -824,7 +824,7 @@ public class MethodInfo
      */
     private ConstantPool pool()
         {
-        return getHead().pool();
+        return ConstantPool.getCurrentPool();
         }
 
 
