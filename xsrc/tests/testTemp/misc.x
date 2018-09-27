@@ -6,32 +6,51 @@ module TestMisc.xqiz.it
         {
         console.println("hello world!");
 
-        testBools();
-        testInts();
-        testIsA();
-        testCast();
-        testTernary();
-        testSpaceship();
-        testElvis();
-        testLoop();
-        testElseExpr();
-        testSwitchExpr();
-        testSwitchExpr2();
-        testSwitchExpr3();
-        testStmtExpr();
+        testSimple();
+//        testBools();
+//        testInts();
+//        testIsA();
+//        testCast();
+//        testTernary();
+//        testSpaceship();
+//        testElvis();
+//        testLoop();
+//        testElseExpr();
+//        testSwitchExpr();
+//        testSwitchExpr2();
+//        testSwitchExpr3();
+//        testStmtExpr();
 
+        // TODO make a new "test asserts" module? something that can tolerate assertions?
         // testAssert();
         // testAssertTrue();
         // testAssertFalse();
         // testAssertTrueExpr();
         // testAssertFalseExpr();
-        testAssertDecl();
+        // testAssertDecl();
 
         // REVIEW GG
         // testInterval();
         // testArrays();
         // testTupleConv();
         // testMap();
+        }
+
+    void testSimple()
+        {
+        console.println("\n** testSimple()");
+
+        Tuple<String, String, Int> t = ("hello", "world", 17);
+        console.println("t="+t);
+        for (Int i = 0; i < 3; ++i)
+            {
+            console.println("tuple[" + i + "]=" + t[i]);
+            }
+
+        String s0 = t[0];
+        String s1 = t[1];
+        Int    i2 = t[2];
+        console.println("fields: " + s0 + ", " + s1 + ", " + i2);
         }
 
     void testInts()

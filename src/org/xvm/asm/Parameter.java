@@ -208,7 +208,7 @@ public class Parameter
     public void setDefaultValue(Constant constDefault)
         {
         assert hasDefaultValue();
-        assert constDefault == null;
+        assert constDefault != null;
         m_constDefault = constDefault;
         }
 

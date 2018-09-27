@@ -124,7 +124,7 @@ const Char
         //  21   U+10000   - U+1FFFFF    11110xxx    10xxxxxx      3
         //  26   U+200000  - U+3FFFFFF   111110xx    10xxxxxx      4
         //  31   U+4000000 - U+7FFFFFFF  1111110x    10xxxxxx      5
-        Int cTrail;
+        Int trailing;
         switch (codepoint.highestBit())             // REVIEW method or @RO property?
             {
             case 0b00000000000000000000000010000000:
@@ -132,7 +132,7 @@ const Char
             case 0b00000000000000000000001000000000:
             case 0b00000000000000000000010000000000:
                 out.write(0b11000000 | ch >>> 6);
-                cTrail = 1;
+                trailing = 1;
                 break;
 
             case 0b00000000000000000000100000000000:
@@ -141,49 +141,55 @@ const Char
             case 0b00000000000000000100000000000000:
             case 0b00000000000000001000000000000000:
                 out.write(0b11100000 | ch >>> 12);
-                cTrail = 2;
+                trailing = 2;
                 break;
+
             case 0b00000000000000010000000000000000:
             case 0b00000000000000100000000000000000:
             case 0b00000000000001000000000000000000:
             case 0b00000000000010000000000000000000:
             case 0b00000000000100000000000000000000:
                 out.write(0b11110000 | ch >>> 18);
-                cTrail = 3;
+                trailing = 3;
                 break;
+
             case 0b00000000001000000000000000000000:
             case 0b00000000010000000000000000000000:
             case 0b00000000100000000000000000000000:
             case 0b00000001000000000000000000000000:
             case 0b00000010000000000000000000000000:
                 out.write(0b11111000 | ch >>> 24);
-                cTrail = 4;
+                trailing = 4;
                 break;
+
             case 0b00000100000000000000000000000000:
             case 0b00001000000000000000000000000000:
             case 0b00010000000000000000000000000000:
             case 0b00100000000000000000000000000000:
             case 0b01000000000000000000000000000000:
                 out.write(0b11111100 | ch >>> 30);
-                cTrail = 5;
+                trailing = 5;
                 break;
 
             default:
                 throw new UTFDataFormatException("illegal character: " + intToHexString(ch));
             }
+        Int length = trailing + 1;
 
         // write out trailing bytes; each has the same "10xxxxxx" format with 6
         // bits of data
-        while (cTrail > 0)
+        while (trailing > 0)
             {
-            out.write(0b10_000000 | (ch >>> --cTrail * 6 & 0b00_111111));
+            out.write(0b10_000000 | (ch >>> --trailing * 6 & 0b00_111111));
             }
+
+        return length;
         }
 
     /**
      * A UTFDataFormatException is raised when an illegal character is encountered in a byte stream.
      */
-    const UTFDataFormatException(String? text, Exception? cause)
+    static const UTFDataFormatException(String? text, Exception? cause)
             extends Exception(text, cause)
         {
         }
