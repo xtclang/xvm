@@ -513,29 +513,6 @@ public class xTestApp extends xModule
             .add(new L_Set(adapter.getPropertyConstId("TestApp.Point", "y"), 1))
             .add(new Return_0());
 
-        // Point.to<String>()
-        MethodStructure mtTo = ctPoint.getMethodStructure("to", VOID, STRING);
-        mtTo.createCode()
-            .add(new Var_I(adapter.getClassTypeConstId("String"),
-                adapter.ensureValueConstantId("("))) // #0
-            .add(new L_Get(adapter.getPropertyConstId("TestApp.Point", "x"), 1)) // next register #1
-            .add(new Invoke_01(1, adapter.getMethodConstId("Object", "to", VOID, STRING),
-                2)) // next register #2
-            .add(new GP_Add(0, 2, 0))
-            .add(new GP_Add(0, adapter.ensureValueConstantId(", "), 0))
-            .add(new L_Get(adapter.getPropertyConstId("TestApp.Point", "y"), 1))
-            .add(new Invoke_01(1, adapter.getMethodConstId("Object", "to", VOID, STRING), 2))
-            .add(new GP_Add(0, 2, 0))
-            .add(new GP_Add(0, adapter.ensureValueConstantId(")"), 0))
-            .add(new Return_1(0));
-
-        // Point.hash.get()
-        MethodStructure mtGetHash = ctPoint.ensureGetter("hash");
-        mtGetHash.createCode()
-            .add(new L_Get(adapter.getPropertyConstId("TestApp.Point", "x"), 0)) // next register #0
-            .add(new L_Get(adapter.getPropertyConstId("TestApp.Point", "y"), 1)) // next register #1
-            .add(new GP_Add(0, 1, 0))
-            .add(new Return_1(0));
 
         ClassTemplate ctRectangle = f_templates.getTemplate("TestApp.Rectangle");
         MethodStructure mtRectangle = ctRectangle.getMethodStructure("construct",
@@ -546,132 +523,11 @@ public class xTestApp extends xModule
             .add(new L_Set(adapter.getPropertyConstId("TestApp.Rectangle", "bottomRight"), 1))
             .add(new Return_0());
 
-        MethodStructure ftTestConst = getMethodStructure("testConst", VOID);
-        ftTestConst.createCode()
-            .add(new X_Print(adapter.ensureValueConstantId("\n# in TestApp.testConst() #")))
-            .add(new Var_N(adapter.getClassTypeConstId("TestApp.Point"),
-                adapter.ensureValueConstantId("p1"))) // #0 (p1)
-            .add(new New_N(adapter.getMethodConstId("TestApp.Point", "construct"),
-                new int[]{
-                    adapter.ensureValueConstantId(0),
-                    adapter.ensureValueConstantId(1)
-                },
-                0))
-            .add(new X_Print(0))
-
-            .add(new Var_N(adapter.getClassTypeConstId("TestApp.Point"),
-                adapter.ensureValueConstantId("p2"))) // #1 (p2)
-            .add(new New_N(adapter.getMethodConstId("TestApp.Point", "construct"),
-                new int[]{
-                    adapter.ensureValueConstantId(1),
-                    adapter.ensureValueConstantId(0)
-                },
-                1))
-            .add(new X_Print(1))
-
-            .add(new IsNotEq(0, 1, 2)) // next register #2
-            .add(new AssertM(2, adapter.ensureValueConstantId("p1 == p2")))
-            .add(new X_Print(adapter.ensureValueConstantId("p1 != p2")))
-
-            .add(new IsGt(1, 0, 2))
-            .add(new AssertM(2, adapter.ensureValueConstantId("p2 <= p1")))
-            .add(new X_Print(adapter.ensureValueConstantId("p2 > p1")))
-
-            .add(new Var_N(adapter.getClassTypeConstId("TestApp.Rectangle"),
-                adapter.ensureValueConstantId("r"))) // #3 (r)
-            .add(new New_N(adapter.getMethodConstId("TestApp.Rectangle", "construct"),
-                new int[]{1, 0}, 3))
-            .add(new X_Print(3))
-            .add(new P_Get(adapter.getPropertyConstId("Const", "hash"), 3, 4)) // next register #4
-            .add(new X_Print(4))
-
-            .add(new Var_I(adapter.getClassTypeConstId("Int64"),
-                adapter.ensureValueConstantId(42))) // #5
-            .add(new P_Get(adapter.getPropertyConstId("Const", "hash"), 5, 5))
-            .add(new X_Print(5))
-
-            .add(new Var_IN(adapter.getClassType("TestApp.Color", this),
-                (StringConstant) adapter.ensureValueConstant("c"),
-                adapter.getSingletonConstant("TestApp.Color.Blue"))) // #6
-            .add(new X_Print(6))
-
-            .add(new P_Get(adapter.getPropertyConstId("Enum", "ordinal"), 6, 4))
-            .add(new X_Print(4))
-
-            .add(new Move(adapter.getSingletonConstId("TestApp.Color.Red"), 6))
-            .add(new X_Print(6))
-
-            .add(new P_Get(adapter.getPropertyConstId("Enum", "ordinal"), 6, 4))
-            .add(new X_Print(4))
-
-            .add(new Return_0());
-
         ClassTemplate ctFormatter = f_templates.getTemplate("TestApp.Formatter");
         MethodStructure mtFormatter = ctFormatter.getMethodStructure("construct", STRING);
         mtFormatter.createCode()
             // #0 = prefix
             .add(new L_Set(adapter.getPropertyConstId("TestApp.Formatter", "prefix"), 0))
-            .add(new Return_0());
-
-        MethodStructure mtToString = ctFormatter.getMethodStructure("to", VOID, STRING);
-        mtToString.createCode()
-            .add(new L_Get(adapter.getPropertyConstId("TestApp.Formatter", "prefix"), 0))  // next register #0
-            .add(new Call_01(Op.A_SUPER, 1)) // next register #1
-            .add(new GP_Add(0, 1, 0))
-            .add(new Return_1(0));
-
-        MethodStructure ftTestMixin = getMethodStructure("testMixin", VOID);
-        ftTestMixin.createCode()
-            .add(new X_Print(adapter.ensureValueConstantId("\n# in TestApp.testMixin() #")))
-            .add(new Var_N(adapter.getClassTypeConstId("TestApp.PrettyPoint"),
-                adapter.ensureValueConstantId("prp"))) // #0 (prp)
-            .add(new New_N(adapter.getMethodConstId("TestApp.PrettyPoint", "construct"),
-                new int[]{
-                    adapter.ensureValueConstantId(1),
-                    adapter.ensureValueConstantId(2),
-                    adapter.ensureValueConstantId("*** ")}, 0))
-            .add(new X_Print(0))
-
-            .add(new Var_N(adapter.getClassTypeConstId("TestApp.Point"),
-                adapter.ensureValueConstantId("p2"))) // #1 (p2)
-            .add(new New_N(adapter.getMethodConstId("TestApp.Point", "construct"),
-                new int[]{
-                    adapter.ensureValueConstantId(2),
-                    adapter.ensureValueConstantId(1)}, 1))
-
-            .add(new Var_N(adapter.getClassTypeConstId("TestApp.PrettyRectangle"),
-                adapter.ensureValueConstantId("prr"))) // #2 (prr)
-            .add(new New_N(adapter.getMethodConstId("TestApp.PrettyRectangle", "construct"),
-                new int[]{0, 1, adapter.ensureValueConstantId("+++ ")}, 2))
-            .add(new X_Print(2))
-
-            .add(new Var_DN(adapter.getClassTypeConstId("@TestApp.BlackHole Var<Int64>"),
-                adapter.ensureValueConstantId("zero"))) // #3 (zero)
-            .add(new Move(adapter.ensureValueConstantId(1), 3))
-
-            .add(new IsEq(3, adapter.ensureValueConstantId(0), Op.A_STACK))
-            .add(new AssertM(Op.A_STACK, adapter.ensureValueConstantId("zero == 0")))
-
-            .add(new Var_DN(adapter.getClassTypeConstId("@annotations.AtomicVar Var<Int64>"),
-                adapter.ensureValueConstantId("ai"))) // #4 (ai)
-            .add(new Move(adapter.ensureValueConstantId(0), 4))
-
-            .add(new Return_0());
-
-        // --- run()
-        MethodStructure mtRun = getMethodStructure("run", VOID, VOID);
-        mtRun.createCode()
-            .add(new Call_00(adapter.getMethodConstId("TestApp", "test2")))
-            .add(new Call_00(adapter.getMethodConstId("TestApp", "testService")))
-            .add(new Call_00(adapter.getMethodConstId("TestApp", "testService2")))
-            .add(new Call_10(adapter.getMethodConstId("TestApp", "testRef"),
-                adapter.ensureValueConstantId("hi")))
-            .add(new Call_00(adapter.getMethodConstId("TestApp", "testArray")))
-            .add(new Call_00(adapter.getMethodConstId("TestApp", "testTuple")))
-            .add(new Call_00(adapter.getMethodConstId("TestApp", "testConst")))
-            .add(new Call_00(adapter.getMethodConstId("TestApp", "testMixin")))
-
-            .add(new Call_00(adapter.getMethodConstId("TestApp", "testReal1")))
             .add(new Return_0());
         }
     }

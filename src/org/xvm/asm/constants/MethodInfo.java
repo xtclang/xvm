@@ -82,8 +82,7 @@ public class MethodInfo
                 }
             }
 
-        MethodConstant idCap = ConstantPool.getCurrentPool().
-                ensureMethodConstant(idThat.getParentConstant(), sigThis);
+        MethodConstant idCap = pool().ensureMethodConstant(idThat.getParentConstant(), sigThis);
 
         MethodBody[] aOld = m_aBody;
         int          cOld = aOld.length;
@@ -823,9 +822,9 @@ public class MethodInfo
     /**
      * @return the ConstantPool
      */
-    ConstantPool pool()
+    private ConstantPool pool()
         {
-        return getHead().pool();
+        return ConstantPool.getCurrentPool();
         }
 
 

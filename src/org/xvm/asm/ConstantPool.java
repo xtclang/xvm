@@ -2885,7 +2885,6 @@ public class ConstantPool
      */
     public static void setCurrentPool(ConstantPool pool)
         {
-        assert pool == null || getCurrentPool() == null;
         s_tloPool.set(pool);
         }
 

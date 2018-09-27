@@ -14,6 +14,7 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xString.StringHandle;
@@ -49,8 +50,7 @@ public class xTerminalConsole
             {
             case "print": // Object o
                 {
-                int iResult = hArg.getComposition().getTemplate().
-                    buildStringValue(frame, hArg, Op.A_STACK);
+                int iResult = Utils.callToString(frame, hArg);
                 switch (iResult)
                     {
                     case Op.R_NEXT:
@@ -66,8 +66,7 @@ public class xTerminalConsole
 
             case "println": // Object o
                 {
-                int iResult = hArg.getComposition().getTemplate().
-                    buildStringValue(frame, hArg, Op.A_STACK);
+                int iResult = Utils.callToString(frame, hArg);
                 switch (iResult)
                     {
                     case Op.R_NEXT:
