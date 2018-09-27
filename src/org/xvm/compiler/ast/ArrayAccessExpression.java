@@ -93,17 +93,51 @@ public class ArrayAccessExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
+        if (isValidated())
+            {
+            return getType();
+            }
+
         TypeConstant typeArray = expr.getImplicitType(ctx);
         if (typeArray == null)
             {
             return null;
             }
 
+        // tuples support array index operations, and are type safe, so we can figure out the type
+        // of the resulting field IFF the tuple type specifies its field types AND the index into
+        // the tuple is a constant value. however, since we haven't yet validated the expression,
+        // the value of the index might not yet be determinable
         if (typeArray.isParamsSpecified() && typeArray.isTuple())
             {
-            return indexes.size() == 1 && indexes.get(0).isConstant()
-                    ? determineTupleFieldType(typeArray, indexes.get(0).toConstant())
-                    : null;
+            if (indexes.size() == 1)
+                {
+                Expression exprIndex = indexes.get(0);
+                if (exprIndex.isConstant())
+                    {
+                    return determineTupleFieldType(typeArray, indexes.get(0).toConstant());
+                    }
+
+                if (exprIndex instanceof LiteralExpression)
+                    {
+                    Constant    constIndex = ((LiteralExpression) exprIndex).getLiteralConstant();
+                    IntConstant intIndex   = null;
+                    try
+                        {
+                        intIndex = (IntConstant) constIndex.convertTo(pool().typeInt());
+                        }
+                    catch (ArithmeticException e) {}
+                    if (intIndex != null)
+                        {
+                        return determineTupleFieldType(typeArray, intIndex);
+                        }
+                    }
+                }
+
+            // if the type of the tuple field cannot be determined exactly, then we do not report
+            // back the return type of the Tuple.getElement() method, since that is Object (and
+            // would thus be misleading)
+            return null;
             }
 
         TypeInfo            infoArray  = typeArray.ensureTypeInfo();
@@ -202,15 +236,11 @@ public class ArrayAccessExpression
         // that domain of known field types
         if (typeArray.isTuple() && typeArray.isParamsSpecified() && aexprIndexes[0].isConstant())
             {
-            try
+            TypeConstant typeField = determineTupleFieldType(typeArray, aexprIndexes[0].toConstant());
+            if (typeField != null)
                 {
-                // lots of things can fail here, causing an exception, so if anything goes wrong,
-                // we can correctly assume that we don't know more about the element type than the
-                // "Object" that the Tuple interface suggests
-                int i = ((IntConstant) aexprIndexes[0].toConstant()).getValue().getInt();
-                typeElement = typeArray.getParamTypesArray()[i];
+                typeElement = typeField;
                 }
-            catch (RuntimeException e) {}
             }
 
         // the expression yields a constant value iff the sub-expressions are all constants and the
@@ -229,6 +259,14 @@ public class ArrayAccessExpression
         return finishValidation(typeRequired, typeElement, fit, constVal, errs);
         }
 
+    /**
+     * Determine the field type for a tuple field, if possible.
+     *
+     * @param typeTuple  the type of the tuple
+     * @param index      a constant that holds the field index
+     *
+     * @return the field type, if it can be determined from the passed information, otherwise null
+     */
     private TypeConstant determineTupleFieldType(TypeConstant typeTuple, Constant index)
         {
         int n;
