@@ -830,8 +830,6 @@ public abstract class TypeConstant
             return info;
             }
 
-        // any newly created derivative types should be placed into the same pool where this type
-        // comes from
         ConstantPool pool = getConstantPool();
 
         // validate this TypeConstant (necessary before we build the TypeInfo)
@@ -839,12 +837,18 @@ public abstract class TypeConstant
             {
             validate(errs);
 
-            // - resolve the type to make sure that typedefs etc. are removed from the equation;
+            assert !containsUnresolved();
+
+            // since we're producing a lot of information for the TypeInfo, there is no reason to do
+            // it unless the type is registered (which resolves typedefs)
+            TypeConstant typeResolved = (TypeConstant) pool.register(this);
+
+            // Additionally:
             // - resolve the auto-narrowing;
             // - normalize the type to make sure that all formal parameters are filled in
-            TypeConstant typeResolved = resolveTypedefs().
-                                        resolveAutoNarrowing(pool, null).
-                                        normalizeParameters(pool);
+            typeResolved = typeResolved.
+                                resolveAutoNarrowing(pool, null).
+                                normalizeParameters(pool);
             if (typeResolved != this)
                 {
                 info = typeResolved.ensureTypeInfo(errs);
@@ -878,6 +882,15 @@ public abstract class TypeConstant
                     + this + "; deferred types=" + takeDeferredTypeInfo());
             }
 
+        // any newly created derivative types and various constants should be placed into the same
+        // pool where this type comes from
+        ConstantPool poolCurrent = ConstantPool.getCurrentPool();
+        boolean      fDiffPool   = poolCurrent != pool;
+
+        if (fDiffPool)
+            {
+            ConstantPool.setCurrentPool(pool);
+            }
         try
             {
             // build the TypeInfo for this type
@@ -888,6 +901,13 @@ public abstract class TypeConstant
             // clean up the deferred types
             takeDeferredTypeInfo();
             throw e;
+            }
+        finally
+            {
+            if (fDiffPool)
+                {
+                ConstantPool.setCurrentPool(poolCurrent);
+                }
             }
 
         // info here can't be null, because we should be at the "zero level"; in other words, anyone
@@ -932,7 +952,21 @@ public abstract class TypeConstant
         // now that all those other deferred types are done building, rebuild this if necessary
         if (!isComplete(info))
             {
-            info = buildTypeInfo(errs);
+            if (fDiffPool)
+                {
+                ConstantPool.setCurrentPool(pool);
+                }
+            try
+                {
+                info = buildTypeInfo(errs);
+                }
+            finally
+                {
+                if (fDiffPool)
+                    {
+                    ConstantPool.setCurrentPool(poolCurrent);
+                    }
+                }
             assert isComplete(info);
             setTypeInfo(info);
             }
@@ -3582,9 +3616,19 @@ public abstract class TypeConstant
                 if (relation == Relation.INCOMPATIBLE && typeLeft.isDuckTypeAble())
                     {
                     // left is an interface; check the duck-typing
-                    relation = typeLeft.isInterfaceAssignableFrom(
-                            typeRight, Access.PUBLIC, Collections.EMPTY_LIST).isEmpty()
-                        ? Relation.IS_A : Relation.INCOMPATIBLE;
+                    if (typeRight.equals(pool.typeObject()))
+                        {
+                        // Object requires special treatment here for a number of reasons;
+                        // let's disallow it to be assigned to anything for now
+                        // TODO: allow an "empty" interface to be duck-typed to Object
+                        relation = Relation.INCOMPATIBLE;
+                        }
+                    else
+                        {
+                        relation = typeLeft.isInterfaceAssignableFrom(
+                                typeRight, Access.PUBLIC, Collections.EMPTY_LIST).isEmpty()
+                            ? Relation.IS_A : Relation.INCOMPATIBLE;
+                        }
                     }
 
                 mapRelations.put(typeLeft, relation);
@@ -3606,7 +3650,7 @@ public abstract class TypeConstant
             // C.foo() is assignable to the return value of I.foo(), which causes a recursion
             //
             assert typeLeft.isInterfaceType();
-            mapRelations.put(typeLeft, relation = Relation.IS_A);
+            mapRelations.put(typeLeft, relation = Relation.INCOMPATIBLE);
             }
         return relation;
         }
