@@ -217,7 +217,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
         ListMap<String, TypeParameter> map = new ListMap();
         for (TypeParameter param : typeParams)
             {
-            assert !map.contains(param.name);
+            assert !map.containsKey(param.name);
             map.put(param.name, param);
             }
 
@@ -383,7 +383,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
         ListMap<String, Class> map = new ListMap();
         for (Class class_ : classes)
             {
-            assert !map.contains(class_.name);
+            assert !map.containsKey(class_.name);
             map.put(class_.name, class_);
             }
 
@@ -400,7 +400,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
         ListMap<String, Property> map = new ListMap();
         for (Property property : properties)
             {
-            assert !map.contains(property.name);
+            assert !map.containsKey(property.name);
             map.put(property.name, property);
             }
 
@@ -414,7 +414,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
         {
         assert meta.immutable_;
 
-        ListMap<String, Method> map = new ListMap();
+        ListMap<String, MultiMethod> map = new ListMap();
         for (Method method : methods)
             {
             if (MultiMethod multi : map.get(method.name))
@@ -438,7 +438,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
         {
         assert meta.immutable_;
 
-        ListMap<String, Function> map = new ListMap();
+        ListMap<String, MultiFunction> map = new ListMap();
         for (Function function_ : functions)
             {
             if (MultiFunction multi : map.get(function_.name))
@@ -473,8 +473,8 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
             assert TypeParameter paramOld : mapParams[paramNew.name];
             if (paramNew != paramOld)
                 {
-                assert paramOld.type.isAssignableFrom(paramNew.type);
-                mapParams = mapParams.replace(paramNew.name, paramNew);
+                assert paramOld.type.isA(paramNew.type);
+                mapParams = mapParams.put(paramNew.name, paramNew);
                 different = true;
                 }
             }

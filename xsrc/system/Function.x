@@ -5,6 +5,11 @@
 interface Function<ParamTypes extends Tuple, ReturnTypes extends Tuple>
         extends Hashable
     {
+    /**
+     * The function name (could be empty).
+     */
+    @RO String name;
+
     @RO Parameter[] params;
     @RO Map<String, Parameter> paramsByName;
 

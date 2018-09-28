@@ -1,5 +1,8 @@
 import collections.ListMap;
 
+import types.Method;
+import types.MultiMethod;
+
 /**
  * A Type is an object that represents an Ecstasy data type. The Type class itself is abstract,
  * but it has a number of well-known concrete implementations.
@@ -51,8 +54,6 @@ const Type<DataType>
      */
     Boolean explicitlyImmutable;
 
-    class MultiMethod {} // TODO
-
     // ----- calculated properties -----------------------------------------------------------------
 
     /**
@@ -62,7 +63,7 @@ const Type<DataType>
         {
         assert meta.immutable_;
 
-        ListMap<String, Method> map = new ListMap();
+        ListMap<String, MultiMethod> map = new ListMap();
         for (Method method : allMethods)
             {
             if (MultiMethod multi : map.get(method.name))
@@ -130,7 +131,7 @@ const Type<DataType>
         {
         assert meta.immutable_;
 
-        ListMap<String, Method> map = new ListMap();
+        ListMap<String, Multi`Method> map = new ListMap();
         for (Method method : methods)
             {
             if (MultiMethod multi : map.get(method.name))

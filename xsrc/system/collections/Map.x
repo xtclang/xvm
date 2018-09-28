@@ -229,6 +229,18 @@ interface Map<KeyType, ValueType>
         }
 
     /**
+     * Check if this map contains the specified key.
+     *
+     * @param key      specifies the key that may or may not already be present in the map
+     *
+     * @return the true iff the specified key exists in the map
+     */
+    Boolean containsKey(KeyType key)
+        {
+        return keys.contains(key);
+        }
+
+    /**
      * Obtain the set of all keys in the map.
      *
      * Example usage:
