@@ -558,7 +558,7 @@ public class MethodStructure
      * specified ListMap all the actual type parameters types.
      *
      * @param atypeArgs     the actual argument types
-     * @param atypeReturns  (optional) the actual return types (types of types)
+     * @param atypeReturns  (optional) the actual return types
      *
      * @return a ListMap of the resolved types in the natural order, keyed by the names
      */
@@ -582,10 +582,9 @@ public class MethodStructure
                 }
             if (atypeReturns != null)
                 {
-                for (TypeConstant typeReturnType : atypeReturns)
+                for (TypeConstant typeReturn : atypeReturns)
                     {
-                    TypeConstant typeRet = typeReturnType.getParamTypesArray()[0];
-                    if (!resolveFormalTypes(typeRet, sFormalName, mapTypeParams))
+                    if (!resolveFormalTypes(typeReturn, sFormalName, mapTypeParams))
                         {
                         // different return types cause the formal type to resolve into
                         // incompatible types
@@ -1133,6 +1132,7 @@ public class MethodStructure
     @Override
     public TypeConstant resolveGenericType(String sFormalName)
         {
+        // look for a name match only amongst the method's formal type parameters
         for (int i = 0, c = getTypeParamCount(); i < c; i++)
             {
             Parameter param = getParam(i);
@@ -1141,7 +1141,7 @@ public class MethodStructure
                 {
                 TypeConstant typeType = param.getType();
 
-                // type parameter's type is Type<DataType>
+                // type parameter's type must be of Type<DataType>
                 assert typeType.getParamsCount() == 1;
 
                 return typeType.getParamTypesArray()[0];

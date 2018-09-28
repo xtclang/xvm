@@ -1752,7 +1752,7 @@ public abstract class Expression
      * @param infoTarget   the type info on which to search for the method
      * @param sMethodName  the method name
      * @param listExprArgs the expressions for arguments (which may not yet be validated)
-     * @param atypeReturn  (optional) the array of return types from the method (Type of type)
+     * @param atypeReturn  (optional) the array of return types from the method
      * @param fMethod      true to include methods in the search
      * @param fFunction    true to include functions in the search
      * @param errs         listener to log any errors to
@@ -1926,17 +1926,14 @@ public abstract class Expression
 
                 for (int i = 0, c = cReturns; i < c; i++)
                     {
+                    TypeConstant typeReturn       = atypeReturn[i];
                     TypeConstant typeMethodReturn = atypeMethodReturn[i];
                     if (mapTypeParams != null)
                         {
                         // resolve the method return types against the resolved formal types
                         typeMethodReturn = typeMethodReturn.resolveGenerics(pool(), mapTypeParams::get);
                         }
-                    TypeConstant typeReturnType = atypeReturn[i];
 
-                    assert typeReturnType.isA(pool().typeType()) && typeReturnType.getParamsCount() == 1;
-
-                    TypeConstant typeReturn = typeReturnType.getParamTypesArray()[0];
                     if (!typeMethodReturn.isA(typeReturn))
                         {
                         if (typeMethodReturn.getConverterTo(typeReturn) != null)

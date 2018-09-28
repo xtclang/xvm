@@ -134,20 +134,6 @@ public class UnionTypeConstant
         }
 
     @Override
-    public TypeConstant getGenericParamType(String sName)
-        {
-        // either side needs to find it, but if both do, the results must be identical
-        TypeConstant typeActual1 = m_constType1.getGenericParamType(sName);
-        TypeConstant typeActual2 = m_constType2.getGenericParamType(sName);
-
-        return typeActual1 == null
-                ? typeActual2
-                : typeActual2 == null || typeActual1.equals(typeActual2)
-                    ? typeActual1
-                    : null;
-        }
-
-    @Override
     public ResolutionResult resolveContributedName(String sName, ResolutionCollector collector)
         {
         // for the UnionType to contribute a name, either side needs to find it
