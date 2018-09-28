@@ -208,7 +208,18 @@ public abstract class RelationalTypeConstant
     @Override
     public TypeConstant getGenericParamType(String sName)
         {
-        throw new UnsupportedOperationException();
+        // for both Intersection and Union types, either side needs to find it,
+        // but if both do, the results must be identical;
+        // for example: for an intersection type Array<String>? the formal name "ElementType"
+        // would resolve to the String type
+        TypeConstant typeActual1 = m_constType1.getGenericParamType(sName);
+        TypeConstant typeActual2 = m_constType2.getGenericParamType(sName);
+
+        return typeActual1 == null
+                ? typeActual2
+                : typeActual2 == null || typeActual1.equals(typeActual2)
+                    ? typeActual1
+                    : null;
         }
 
     @Override

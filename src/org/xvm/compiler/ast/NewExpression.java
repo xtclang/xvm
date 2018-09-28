@@ -158,9 +158,9 @@ public class NewExpression
             }
 
         TypeConstant typeTarget = type.ensureTypeConstant();
-        if (!typeTarget.isSingleUnderlyingClass(false))
+        if (typeTarget.containsUnresolved() || !typeTarget.isSingleUnderlyingClass(false))
             {
-            // not a class; someone will report an error later
+            // unknown or not a class; someone will report an error later
             return null;
             }
 

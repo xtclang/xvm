@@ -1825,7 +1825,9 @@ public class ClassStructure
                 sb.append(entry.getKey().getValue());
 
                 TypeConstant constType = entry.getValue();
-                if (!constType.isEcstasy("Object"))
+
+                // if constType is unresolved, we cannot call constType.isEcstasy("Object")
+                if (!constType.getValueString().equals("Ecstasy:Object"))
                     {
                     sb.append(" extends ")
                       .append(constType);

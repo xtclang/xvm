@@ -316,6 +316,12 @@ public abstract class TypeConstant
     /**
      * Find the type of the specified formal parameter for this type.
      *
+     * Note, that this method is used to find a non-contradictory potential compile-time resolution
+     * rather than a guaranteed run time one.
+     *
+     * For example: given a type: String[]? it's natural to decide at compile time that the type
+     * for the "ElementType" formal name is String. However, at run time the answer may differ.
+     *
      * @param sName  the formal parameter name
      *
      * @return the corresponding actual type or null if there is no matching formal type

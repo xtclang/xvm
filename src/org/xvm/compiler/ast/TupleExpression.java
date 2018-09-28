@@ -160,7 +160,7 @@ public class TupleExpression
         {
         ConstantPool pool      = pool();
         TypeConstant typeTuple = type == null ? pool.typeTuple() : type.ensureTypeConstant();
-        if (!typeTuple.isTuple())
+        if (typeTuple.containsUnresolved() || !typeTuple.isTuple())
             {
             // let someone else log an error later, e.g. during validation, if the specified type
             // can't be achieved
@@ -220,34 +220,49 @@ public class TupleExpression
         int              cSpecTypes     = 0;
         TypeConstant[]   aReqTypes      = TypeConstant.NO_TYPES;
         int              cReqTypes      = 0;
+
         if (type != null)
             {
-            // the specified type must be a tuple, since a tuple does not have any @Auto conversions
-            // REVIEW many more checks, e.g. generally should not be relational, immutable actually means something, what annotations are allowed, etc.
-            TypeConstant typeSpecified = type.ensureTypeConstant();
-            if (typeSpecified.isTuple())
-                {
-                // the specified tuple type may have any of the field types specified as well
-                typeResult = typeSpecified;
-                if (typeSpecified.isParamsSpecified())
-                    {
-                    aSpecTypes = typeSpecified.getParamTypesArray();
-                    cSpecTypes = aSpecTypes.length;
+            TypeConstant typeTupleType = pool.ensureParameterizedTypeConstant(
+                    pool.typeType(), pool.typeTuple());
 
-                    // can't have more field types specified than we have fields
-                    if (cSpecTypes > cFields)
-                        {
-                        // log an error and ignore the additional specified fields
-                        type.log(errs, Severity.ERROR, Compiler.TUPLE_TYPE_WRONG_ARITY,
-                                cFields, cSpecTypes);
-                        }
-                    }
+            TypeExpression exprOld = type;
+            TypeExpression exprNew = (TypeExpression) exprOld.validate(ctx, typeTupleType, errs);
+            if (exprNew == null)
+                {
+                fit = TypeFit.NoFit;
                 }
             else
                 {
-                // log an error and ignore the specified type
-                type.log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                        pool.typeTuple(), typeSpecified);
+                type = exprNew;
+
+                // the specified type must be a tuple, since a tuple does not have any @Auto conversions
+                // REVIEW many more checks, e.g. generally should not be relational, immutable actually means something, what annotations are allowed, etc.
+                TypeConstant typeSpecified = exprNew.ensureTypeConstant();
+                if (typeSpecified.isTuple())
+                    {
+                    // the specified tuple type may have any of the field types specified as well
+                    typeResult = typeSpecified;
+                    if (typeSpecified.isParamsSpecified())
+                        {
+                        aSpecTypes = typeSpecified.getParamTypesArray();
+                        cSpecTypes = aSpecTypes.length;
+
+                        // can't have more field types specified than we have fields
+                        if (cSpecTypes > cFields)
+                            {
+                            // log an error and ignore the additional specified fields
+                            type.log(errs, Severity.ERROR, Compiler.TUPLE_TYPE_WRONG_ARITY,
+                                    cFields, cSpecTypes);
+                            }
+                        }
+                    }
+                else
+                    {
+                    // log an error and ignore the specified type
+                    type.log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                            pool.typeTuple(), typeSpecified);
+                    }
                 }
             }
 

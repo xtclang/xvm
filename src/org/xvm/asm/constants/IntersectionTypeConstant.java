@@ -144,18 +144,6 @@ public class IntersectionTypeConstant
         }
 
     @Override
-    public TypeConstant getGenericParamType(String sName)
-        {
-        // both sides need to resolve to the same thing
-        TypeConstant typeActual1 = m_constType1.getGenericParamType(sName);
-        TypeConstant typeActual2 = m_constType2.getGenericParamType(sName);
-
-        return Objects.equals(typeActual1, typeActual2)
-                ? typeActual1
-                : null;
-        }
-
-    @Override
     public ResolutionResult resolveContributedName(String sName, ResolutionCollector collector)
         {
         // for the IntersectionType to contribute a name, both sides need to find exactly

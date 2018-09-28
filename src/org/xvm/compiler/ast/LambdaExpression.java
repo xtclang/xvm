@@ -304,10 +304,12 @@ public class LambdaExpression
         String[]       asParams    = cParams == 0 ? NO_NAMES : new String[cParams];
         TypeConstant[] atypeParams = cParams == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cParams];
 
-        collectParamNamedAndTypes(null, atypeParams, asParams, ErrorListener.BLACKHOLE);
+        if (!collectParamNamedAndTypes(null, atypeParams, asParams, ErrorListener.BLACKHOLE))
+            {
+            return null;
+            }
 
         TypeConstant[] atypeReturns = extractReturnTypes(ctx, atypeParams, asParams, null);
-
         return atypeReturns == null
                 ? null
                 : pool().buildFunctionType(buildParamTypes(), atypeReturns);
@@ -560,7 +562,11 @@ public class LambdaExpression
                     }
 
                 TypeConstant typeParam = atypeParams[i] = param.getType().ensureTypeConstant();
-                if (i < cReqParams)
+                if (typeParam.containsUnresolved())
+                    {
+                    fValid = false;
+                    }
+                else if (i < cReqParams)
                     {
                     // the types don't have to match exactly, but the lambda must not attempt to
                     // narrow the required type for a parameter
