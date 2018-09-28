@@ -1162,12 +1162,9 @@ public class NameExpression
                         Argument arg = ((NameExpression) left).m_arg;
 
                         // "this:target" has private access in this context
-                        // as well as a target of the same class as the context
-                        if (arg instanceof Register && ((Register) arg).isTarget() ||
-                                !typeLeft.isGenericType() &&
-                                typeLeft.isSingleUnderlyingClass(false) &&
-                                typeLeft.getSingleUnderlyingClass(false).isNestMate(
-                                        ctx.getThisClass().getIdentityConstant()))
+                        // as well as a "nest mate" (a class that is collocated with the context class)
+                        if (arg instanceof Register &&
+                                ((Register) arg).isTarget() || isNestMate(ctx, typeLeft))
                             {
                             typeLeft = pool().ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
                             }
@@ -1343,8 +1340,12 @@ public class NameExpression
                     }
                 else
                     {
-                    PropertyInfo infoProp = left.getImplicitType(ctx).
-                            ensureTypeInfo().findProperty(id);
+                    TypeConstant typeLeft = left.getImplicitType(ctx);
+                    if (isNestMate(ctx, typeLeft))
+                        {
+                        typeLeft = pool.ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
+                        }
+                    PropertyInfo infoProp = typeLeft.ensureTypeInfo().findProperty(id);
                     if (infoProp != null)
                         {
                         type = infoProp.getType();
