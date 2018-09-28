@@ -227,9 +227,7 @@ public class NewExpression
                     }
                 }
 
-            if (typeTarget.isSingleUnderlyingClass(false)
-                && typeTarget.getSingleUnderlyingClass(false).isNestMate(
-                    ctx.getThisClass().getIdentityConstant()))
+            if (isNestMate(ctx, typeTarget))
                 {
                 typeTarget = pool().ensureAccessTypeConstant(typeTarget, Access.PRIVATE);
                 }

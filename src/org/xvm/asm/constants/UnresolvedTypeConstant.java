@@ -136,7 +136,7 @@ public class UnresolvedTypeConstant
     @Override
     public boolean isGenericType()
         {
-        return isTypeResolved() && getResolvedType().isSingleDefiningConstant();
+        return isTypeResolved() && getResolvedType().isGenericType();
         }
 
     @Override

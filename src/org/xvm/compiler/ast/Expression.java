@@ -1619,6 +1619,17 @@ public abstract class Expression
         }
 
     /**
+     * Checks whether or not the specified type represents a "nest mate" of the compiling class.
+     */
+    protected boolean isNestMate(Context ctx, TypeConstant type)
+        {
+        return !type.isGenericType() &&
+                type.isSingleUnderlyingClass(false) &&
+                type.getSingleUnderlyingClass(false).
+                    isNestMate(ctx.getThisClass().getIdentityConstant());
+        }
+
+    /**
      * Helper to find an op method.
      *
      * @param ctx          the compilation context
