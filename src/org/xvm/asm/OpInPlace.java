@@ -1,6 +1,7 @@
 package org.xvm.asm;
 
 
+import com.sun.org.apache.xpath.internal.Arg;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -204,6 +205,30 @@ public abstract class OpInPlace
             {
             m_argReturn = registerArgument(m_argReturn, registry);
             }
+        }
+
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(super.toString())
+                .append(' ')
+                .append(getTargetString())
+                .append(", ")
+                .append(getReturnString());
+
+        return sb.toString();
+        }
+
+    protected String getTargetString()
+        {
+        return Argument.toIdString(m_argTarget, m_nTarget);
+        }
+
+    protected String getReturnString()
+        {
+        return Argument.toIdString(m_argReturn, m_nRetValue);
         }
 
     protected int m_nTarget;

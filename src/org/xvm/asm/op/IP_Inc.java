@@ -87,4 +87,16 @@ public class IP_Inc
 
         return hTarget.getTemplate().invokePostInc(frame, hTarget, sProperty, A_IGNORE);
         }
+
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(super.toString())
+                .append(' ')
+                .append(getTargetString());
+
+        return sb.toString();
+        }
     }

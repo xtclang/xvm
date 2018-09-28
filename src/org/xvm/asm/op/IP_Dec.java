@@ -73,4 +73,16 @@ public class IP_Dec
 
         return hTarget.getTemplate().invokePostDec(frame, hTarget, sProperty, A_IGNORE);
         }
+
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(super.toString())
+                .append(' ')
+                .append(getTargetString());
+
+        return sb.toString();
+        }
     }
