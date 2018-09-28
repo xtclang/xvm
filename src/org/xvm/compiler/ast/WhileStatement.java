@@ -167,7 +167,7 @@ public class WhileStatement
             {
             block = (StatementBlock) blockNew;
             }
-        ctx.join(ctxTrue, ctx.fork(false));
+        ctx.join(null, ctxTrue);
 
         // if the condition itself required a scope, then complete that scope
         if (fScope)

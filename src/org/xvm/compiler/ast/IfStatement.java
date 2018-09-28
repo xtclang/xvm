@@ -133,7 +133,7 @@ public class IfStatement
 
         // merge the contexts through the "then" and through the "else" (and note that the "else"
         // context always exists, even if we don't use it)
-        ctx.join(ctxThen, ctxElse);
+        ctx.join(ctxElse, ctxThen);
 
         // if the condition itself required a scope, then complete that scope
         if (fScope)

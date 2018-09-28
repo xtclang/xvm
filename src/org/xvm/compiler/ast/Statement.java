@@ -341,7 +341,8 @@ public abstract class Statement
          * <p/>
          * Note: This can only be used during the validate() stage.
          *
-         * @param fWhenTrue TODO
+         * @param fWhenTrue  false iff the new context is for the "when false" fork (and thus true
+         *                   iff the new context is for the "when true" fork)
          *
          * @return the new (forked) context
          */
@@ -350,7 +351,7 @@ public abstract class Statement
             checkForkable();
 
             setInnerContext(this);
-            return new NestedContext(this);
+            return new NestedContext(this, fWhenTrue);
             }
 
         /**
@@ -369,19 +370,48 @@ public abstract class Statement
          * <p/>
          * Note: This can only be used during the validate() stage.
          *
-         * @param ctxTrue  the previously forked contexts
-         * @param ctxFalse
+         * @param ctxFalse  the (optional) context for the "when false" fork
+         * @param ctxTrue   the (optional) context for the "when true" fork
          */
-        public void join(Context ctxTrue, Context ctxFalse)
+        public void join(Context ctxFalse, Context ctxTrue)
             {
             checkForked();
 
-            if (ctxTrue.getOuterContext() != this || ctxFalse.getOuterContext() != this)
+            if (       ctxFalse != null && ctxFalse.getOuterContext() != this
+                    || ctxTrue  != null && ctxTrue .getOuterContext() != this)
                 {
                 throw new IllegalStateException("not a fork of this context");
                 }
 
-            // TODO merge info
+            if (ctxFalse != null)
+                {
+                for (Entry<String, Assignment> entry : ctxTrue.getDefiniteAssignments().entrySet())
+                    {
+                    String     sVar    = entry.getKey();
+                    Assignment asnThis = getVarAssignment(sVar);
+                    if (asnThis != null)
+                        {
+                        Assignment asnFalse = entry.getValue();
+                        Assignment asnJoin  = asnThis.join(asnFalse, false);
+                        setVarAssignment(sVar, asnJoin);
+                        }
+                    }
+                }
+
+            if (ctxTrue != null)
+                {
+                for (Entry<String, Assignment> entry : ctxTrue.getDefiniteAssignments().entrySet())
+                    {
+                    String     sVar    = entry.getKey();
+                    Assignment asnThis = getVarAssignment(sVar);
+                    if (asnThis != null)
+                        {
+                        Assignment asnTrue = entry.getValue();
+                        Assignment asnJoin = asnThis.join(asnTrue, true);
+                        setVarAssignment(sVar, asnJoin);
+                        }
+                    }
+                }
 
             setInnerContext(null);
             }
@@ -1504,6 +1534,28 @@ public abstract class Statement
             {
             super(ctxOuter);
             }
+
+        public NestedContext(Context ctxOuter, boolean fWhenTrue)
+            {
+            super(ctxOuter);
+
+            m_fForked   = true;
+            m_fWhenTrue = fWhenTrue;
+            }
+
+        public boolean isForked()
+            {
+            return m_fForked;
+            }
+
+        public boolean isWhenTrue()
+            {
+            assert isForked();
+            return m_fWhenTrue;
+            }
+
+        private boolean m_fForked;
+        private boolean m_fWhenTrue;
         }
 
 

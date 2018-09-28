@@ -1,7 +1,6 @@
 package org.xvm.asm;
 
 
-import com.sun.org.apache.xpath.internal.Arg;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
