@@ -147,7 +147,7 @@ public class SwitchExpression
                 AssignmentStatement stmtCond = (AssignmentStatement) cond;
                 if (stmtCond.hasDeclarations())
                     {
-                    ctx    = ctx.enterScope();
+                    ctx    = ctx.enter();
                     fScope = true;
                     }
 
@@ -378,7 +378,7 @@ public class SwitchExpression
 
         if (fScope)
             {
-            ctx = ctx.exitScope();
+            ctx = ctx.exit();
             }
 
         // store the resulting information

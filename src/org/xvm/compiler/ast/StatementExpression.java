@@ -3,9 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -130,7 +127,7 @@ public class StatementExpression
         // the resulting returned types come back in the type collector
         ctx       = ctx.enterCapture(blockTemp, null, null);
         blockTemp = (StatementBlock) blockTemp.validate(ctx, ErrorListener.BLACKHOLE);
-        ctx       = ctx.exitScope();
+        ctx       = ctx.exit();
 
         if (blockTemp == null || m_collector == null)
             {
@@ -170,7 +167,7 @@ public class StatementExpression
         m_atypeRequired = atypeRequired;
         ctx = ctx.enterCapture(body, null, null);
         ((StatementBlock) body.clone()).validate(ctx, ErrorListener.BLACKHOLE);
-        ctx = ctx.exitScope();
+        ctx = ctx.exit();
         m_atypeRequired = null;
 
         // the resulting returned types come back in m_listRetTypes

@@ -121,7 +121,7 @@ public class WhileStatement
 
         if (fScope)
             {
-            ctx = ctx.enterScope();
+            ctx = ctx.enter();
             }
 
         // the condition is either a boolean expression or an assignment statement whose R-value is
@@ -136,11 +136,7 @@ public class WhileStatement
                 }
             else
                 {
-                fScope = stmtNew.hasDeclarations();
-                if (stmtNew != stmtOld)
-                    {
-                    cond = stmtNew;
-                    }
+                cond = stmtNew;
                 }
             }
         else
@@ -157,8 +153,8 @@ public class WhileStatement
                 }
             }
 
-        Context   ctxTrue  = ctx.fork(true);
-        Statement blockNew = block.validate(ctxTrue, errs);
+        ctx = ctx.fork(true);
+        Statement blockNew = block.validate(ctx, errs);
         if (blockNew == null)
             {
             fValid = false;
@@ -167,12 +163,12 @@ public class WhileStatement
             {
             block = (StatementBlock) blockNew;
             }
-        ctx.join(null, ctxTrue);
+        ctx = ctx.exit();
 
         // if the condition itself required a scope, then complete that scope
         if (fScope)
             {
-            ctx = ctx.exitScope();
+            ctx = ctx.exit();
             }
 
         return fValid

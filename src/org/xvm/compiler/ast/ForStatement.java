@@ -21,7 +21,7 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * The traditional "for" statement.
  * <p/>
- * TODO lots of short-circuit support. for expr condition, it goes to the for statement's exit label. for init & update, the short-circuit just advances to next. 
+ * TODO lots of short-circuit support. for expr condition, it goes to the for statement's exit label. for init & update, the short-circuit just advances to next.
  */
 public class ForStatement
         extends Statement
@@ -101,7 +101,7 @@ public class ForStatement
         boolean fValid = true;
 
         // the for() statement will represent its own scope
-        ctx = ctx.enterScope();
+        ctx = ctx.enter();
 
         List<Statement> listInit = init;
         int             cInit    = listInit.size();
@@ -167,7 +167,7 @@ public class ForStatement
             }
 
         // leaving the scope of the for() statement
-        ctx = ctx.exitScope();
+        ctx = ctx.exit();
 
         return fValid
                 ? this
@@ -178,9 +178,9 @@ public class ForStatement
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         boolean fCompletes = fReachable;
-        
+
         code.add(new Enter());
-        
+
         List<Statement> listInit = init;
         int             cInit    = listInit.size();
         for (int i = 0; i < cInit; ++i)

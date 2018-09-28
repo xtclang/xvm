@@ -127,7 +127,7 @@ public class CmpExpression
         TypeConstant type2 = expr2.getImplicitType(ctx);
         if (fInfer)
             {
-            ctx = ctx.exitScope();
+            ctx = ctx.exit();
             }
 
         TypeConstant typeRequest = Op.selectCommonType(type1, type2, errs);
@@ -157,7 +157,7 @@ public class CmpExpression
         Expression expr2New = expr2.validate(ctx, typeRequest, errs);
         if (fInfer)
             {
-            ctx = ctx.exitScope();
+            ctx = ctx.exit();
             }
 
         if (expr2New == null)

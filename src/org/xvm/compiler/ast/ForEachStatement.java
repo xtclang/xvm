@@ -118,7 +118,7 @@ public class ForEachStatement
         boolean fValid = true;
 
         // the for() statement has its own scope
-        ctx = ctx.enterScope();
+        ctx = ctx.enter();
 
         // ultimately, the condition has to be re-written, because it is inevitably short-hand for
         // a measure of syntactic sugar; in order of precedence, the condition can be:
@@ -281,7 +281,7 @@ public class ForEachStatement
             }
 
         // leaving the scope of the for() statement
-        ctx = ctx.exitScope();
+        ctx = ctx.exit();
 
         return fValid
                 ? this

@@ -50,7 +50,7 @@ module TestMisc.xqiz.it
             }
         else
             {
-        //    i = 2;
+            i = 2;
             }
 
         console.println("i=" + i);

@@ -337,13 +337,7 @@ public class Annotation
             }
 
         @Override
-        public void join(Context ctxTrue, Context ctxFalse)
-            {
-            throw new IllegalStateException();
-            }
-
-        @Override
-        public Context enterScope()
+        public Context enter()
             {
             throw new IllegalStateException();
             }
@@ -381,7 +375,7 @@ public class Annotation
             }
 
         @Override
-        public Context exitScope()
+        public Context exit()
             {
             throw new IllegalStateException();
             }

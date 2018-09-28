@@ -325,98 +325,6 @@ public abstract class Statement
             }
 
         /**
-         * Verify that this is a forkable context.
-         */
-        protected void checkForkable()
-            {
-            Context ctxInner = getInnerContext();
-            if (ctxInner != null && ctxInner != this)
-                {
-                throw new IllegalStateException();
-                }
-            }
-
-        /**
-         * Create a nested fork of this context.
-         * <p/>
-         * Note: This can only be used during the validate() stage.
-         *
-         * @param fWhenTrue  false iff the new context is for the "when false" fork (and thus true
-         *                   iff the new context is for the "when true" fork)
-         *
-         * @return the new (forked) context
-         */
-        public Context fork(boolean fWhenTrue)
-            {
-            checkForkable();
-
-            setInnerContext(this);
-            return new NestedContext(this, fWhenTrue);
-            }
-
-        /**
-         * Verify that this is a forked context.
-         */
-        protected void checkForked()
-            {
-            if (getInnerContext() != this)
-                {
-                throw new IllegalStateException();
-                }
-            }
-
-        /**
-         * Join multiple forks of this context back together.
-         * <p/>
-         * Note: This can only be used during the validate() stage.
-         *
-         * @param ctxFalse  the (optional) context for the "when false" fork
-         * @param ctxTrue   the (optional) context for the "when true" fork
-         */
-        public void join(Context ctxFalse, Context ctxTrue)
-            {
-            checkForked();
-
-            if (       ctxFalse != null && ctxFalse.getOuterContext() != this
-                    || ctxTrue  != null && ctxTrue .getOuterContext() != this)
-                {
-                throw new IllegalStateException("not a fork of this context");
-                }
-
-            if (ctxFalse != null)
-                {
-                for (Entry<String, Assignment> entry : ctxTrue.getDefiniteAssignments().entrySet())
-                    {
-                    String     sVar    = entry.getKey();
-                    Assignment asnThis = getVarAssignment(sVar);
-                    if (asnThis != null)
-                        {
-                        Assignment asnFalse = entry.getValue();
-                        Assignment asnJoin  = asnThis.join(asnFalse, false);
-                        setVarAssignment(sVar, asnJoin);
-                        }
-                    }
-                }
-
-            if (ctxTrue != null)
-                {
-                for (Entry<String, Assignment> entry : ctxTrue.getDefiniteAssignments().entrySet())
-                    {
-                    String     sVar    = entry.getKey();
-                    Assignment asnThis = getVarAssignment(sVar);
-                    if (asnThis != null)
-                        {
-                        Assignment asnTrue = entry.getValue();
-                        Assignment asnJoin = asnThis.join(asnTrue, true);
-                        setVarAssignment(sVar, asnJoin);
-                        }
-                    }
-                }
-
-            setInnerContext(null);
-            }
-
-        /**
          * Verify that this is the innermost context.
          */
         protected void checkInnermost()
@@ -432,11 +340,30 @@ public abstract class Statement
          * <p/>
          * Note: This can only be used during the validate() stage.
          */
-        public Context enterScope()
+        public Context enter()
             {
             checkInnermost();
 
             Context ctxInner = new NestedContext(this);
+            setInnerContext(ctxInner);
+            return ctxInner;
+            }
+
+        /**
+         * Create a nested fork of this context.
+         * <p/>
+         * Note: This can only be used during the validate() stage.
+         *
+         * @param fWhenTrue  false iff the new context is for the "when false" fork (and thus true
+         *                   iff the new context is for the "when true" fork)
+         *
+         * @return the new (forked) context
+         */
+        public Context fork(boolean fWhenTrue)
+            {
+            checkInnermost();
+
+            Context ctxInner = new ForkedContext(this, fWhenTrue);
             setInnerContext(ctxInner);
             return ctxInner;
             }
@@ -496,15 +423,15 @@ public abstract class Statement
             }
 
         /**
-         * Exit the scope that was created by calling {@link #enterScope()}. Used in the validation
+         * Exit the scope that was created by calling {@link #enter()}. Used in the validation
          * phase to track scopes.
          * <p/>
          * Note: This can only be used during the validate() stage.
          */
-        public Context exitScope()
+        public Context exit()
             {
-            // note: changes to this method should be carefully evaluated for inclusion in the
-            // CaptureContext.exitScope() sub-class method as well
+            // note: changes to this method should be carefully evaluated for inclusion in any
+            //       sub-class that overrides this method
 
             checkInnermost();
 
@@ -512,35 +439,41 @@ public abstract class Statement
             assert ctxOuter.getInnerContext() == this;
 
             // copy variable assignment information from this scope to outer scope
-            Map<String, Assignment> mapInner = getDefiniteAssignments();
-            if (!mapInner.isEmpty())
+            for (Entry<String, Assignment> entry : getDefiniteAssignments().entrySet())
                 {
-                Map<String, Assignment> mapOuter = ctxOuter.ensureDefiniteAssignments();
-                for (Entry<String, Assignment> entry : mapInner.entrySet())
+                String     sName    = entry.getKey();
+                Assignment asnInner = entry.getValue();
+                if (isVarDeclaredInThisScope(sName))
                     {
-                    String     sName = entry.getKey();
-                    Assignment asn   = entry.getValue();
-                    if (isVarDeclaredInThisScope(sName))
+                    // we have unwound all the way back to the declaration context for the
+                    // variable at this point, so if it is proven to be effectively final, that
+                    // information is stored off, for example so that captures can make use of
+                    // that knowledge (i.e. capturing a value of type T, instead of a Ref<T>)
+                    if (asnInner.isEffectivelyFinal())
                         {
-                        // we have unwound all the way back to the declaration context for the
-                        // variable at this point, so if it is proven to be effectively final, that
-                        // information is stored off, for example so that captures can make use of
-                        // that knowledge (i.e. capturing a value of type T, instead of a Ref<T>)
-                        if (asn.isEffectivelyFinal())
-                            {
-                            ((Register) getVar(sName)).markEffectivelyFinal();
-                            }
+                        ((Register) getVar(sName)).markEffectivelyFinal();
                         }
-                    else
-                        {
-                        mapOuter.put(sName, asn);
-                        }
+                    }
+                else
+                    {
+                    promoteAssignment(sName, asnInner);
                     }
                 }
 
             setOuterContext(null);
             ctxOuter.setInnerContext(null);
             return ctxOuter;
+            }
+
+        /**
+         * Promote assignment information from this context to its enclosing context.
+         *
+         * @param sName     the variable name
+         * @param asnInner  the variable assignment information to promote to the enclosing context
+         */
+        protected void promoteAssignment(String sName, Assignment asnInner)
+            {
+            getOuterContext().setVarAssignment(sName, asnInner);
             }
 
         /**
@@ -1153,14 +1086,7 @@ public abstract class Statement
             }
 
         @Override
-        public void join(Context ctxTrue, Context ctxFalse)
-            {
-            checkValidating();
-            throw new IllegalStateException();
-            }
-
-        @Override
-        public Context enterScope()
+        public Context enter()
             {
             checkValidating();
             throw new IllegalStateException();
@@ -1475,7 +1401,7 @@ public abstract class Statement
             }
 
         @Override
-        public Context exitScope()
+        public Context exit()
             {
             checkValidating();
             throw new IllegalStateException();
@@ -1487,7 +1413,7 @@ public abstract class Statement
         public Context validatingContext()
             {
             checkValidating();
-            return super.enterScope();
+            return super.enter();
             }
 
         /**
@@ -1496,7 +1422,7 @@ public abstract class Statement
         public Context emittingContext()
             {
             checkValidating();
-            getInnerContext().exitScope();
+            getInnerContext().exit();
             m_fEmitting = true;
             return this;
             }
@@ -1534,27 +1460,40 @@ public abstract class Statement
             {
             super(ctxOuter);
             }
+        }
 
-        public NestedContext(Context ctxOuter, boolean fWhenTrue)
+    /**
+     * A nested context for a "when false" or "when true" fork.
+     */
+    public static class ForkedContext
+            extends Context
+        {
+        public ForkedContext(Context ctxOuter, boolean fWhenTrue)
             {
             super(ctxOuter);
-
-            m_fForked   = true;
             m_fWhenTrue = fWhenTrue;
-            }
-
-        public boolean isForked()
-            {
-            return m_fForked;
             }
 
         public boolean isWhenTrue()
             {
-            assert isForked();
             return m_fWhenTrue;
             }
 
-        private boolean m_fForked;
+        @Override
+        protected void promoteAssignment(String sName, Assignment asnInner)
+            {
+            Context    ctxOuter = getOuterContext();
+            Assignment asnOuter = ctxOuter.getVarAssignment(sName);
+            assert asnOuter != null;
+//          if (asnOuter == null)
+//              {
+//              // REVIEW is it possible for it to be null?
+//              asnOuter = Assignment.Unassigned;
+//              }
+
+            ctxOuter.setVarAssignment(sName, asnOuter.join(asnInner, m_fWhenTrue));
+            }
+
         private boolean m_fWhenTrue;
         }
 
@@ -1651,7 +1590,7 @@ public abstract class Statement
             }
 
         @Override
-        public Context exitScope()
+        public Context exit()
             {
             checkInnermost();
 
@@ -1789,7 +1728,7 @@ public abstract class Statement
 
         /**
          * @return a map of variable name to Register for all of variables to capture, built by
-         *         exitScope()
+         *         exit()
          */
         public Map<String, Register> getRegisterMap()
             {
@@ -1859,7 +1798,7 @@ public abstract class Statement
         private Map<String, Boolean> m_mapCapture;
 
         /**
-         * A map from variable name to register, built by exitScope().
+         * A map from variable name to register, built by exit().
          */
         private Map<String, Register> m_mapRegisters;
 

@@ -315,7 +315,7 @@ public class AssignmentStatement
 
                 if (fInfer)
                     {
-                    ctx = ctx.exitScope();
+                    ctx = ctx.exit();
                     }
                 }
             else

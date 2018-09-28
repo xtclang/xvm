@@ -443,7 +443,7 @@ public class LambdaExpression
             }
 
         // collected VAS information from the lambda context
-        ctxLambda.exitScope();
+        ctxLambda.exit();
 
         TypeConstant[] atypeRets;
         if (m_collector == null)
@@ -471,7 +471,7 @@ public class LambdaExpression
         if (fit.isFit())
             {
             // while we have enough info at this point to build a signature, what we lack is the
-            // effectively final data that will only get reported (via exitScope() on the context) as
+            // effectively final data that will only get reported (via exit() on the context) as
             // the variables go out of scope in the method body that contains this lambda, so we need
             // to store off the data from the capture context, and defer the signature creation to the
             // generateAssignment() method
@@ -610,7 +610,7 @@ public class LambdaExpression
         ctx       = new BlackholeContext(ctx);
         ctx       = ctx.enterCapture(blockTemp, atypeParams, asParams);
         blockTemp = (StatementBlock) blockTemp.validate(ctx, ErrorListener.BLACKHOLE);
-        ctx       = ctx.exitScope();
+        ctx       = ctx.exit();
 
         try
             {
@@ -1008,7 +1008,7 @@ public class LambdaExpression
             }
 
         @Override
-        public Context exitScope()
+        public Context exit()
             {
             // no-op (don't push data up to outer scope)
 

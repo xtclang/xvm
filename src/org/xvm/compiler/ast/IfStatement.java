@@ -70,7 +70,7 @@ public class IfStatement
 
         if (fScope)
             {
-            ctx = ctx.enterScope();
+            ctx = ctx.enter();
             }
 
         // the condition is either a boolean expression or an assignment statement whose R-value is
@@ -106,8 +106,9 @@ public class IfStatement
                 }
             }
 
-        Context   ctxThen     = ctx.fork(true);
-        Statement stmtThenNew = stmtThen.validate(ctxThen, errs);
+        ctx = ctx.fork(true);
+        Statement stmtThenNew = stmtThen.validate(ctx, errs);
+        ctx = ctx.exit();
         if (stmtThenNew == null)
             {
             fValid = false;
@@ -117,10 +118,11 @@ public class IfStatement
             stmtThen = stmtThenNew;
             }
 
-        Context ctxElse = ctx.fork(false);
         if (stmtElse != null)
             {
-            Statement stmtElseNew = stmtElse.validate(ctxElse, errs);
+            ctx = ctx.fork(false);
+            Statement stmtElseNew = stmtElse.validate(ctx, errs);
+            ctx = ctx.exit();
             if (stmtElseNew == null)
                 {
                 fValid = false;
@@ -131,14 +133,10 @@ public class IfStatement
                 }
             }
 
-        // merge the contexts through the "then" and through the "else" (and note that the "else"
-        // context always exists, even if we don't use it)
-        ctx.join(ctxElse, ctxThen);
-
         // if the condition itself required a scope, then complete that scope
         if (fScope)
             {
-            ctx = ctx.exitScope();
+            ctx = ctx.exit();
             }
 
         return fValid

@@ -256,7 +256,7 @@ public class StatementBlock
         boolean         fValid = true;
         if (stmts != null && !stmts.isEmpty())
             {
-            ctx = ctx.enterScope();
+            ctx = ctx.enter();
 
             if (getParent() instanceof LambdaExpression)
                 {
@@ -299,7 +299,7 @@ public class StatementBlock
                     break;
                     }
                 }
-            ctx = ctx.exitScope();
+            ctx = ctx.exit();
             }
 
         return fValid ? this : null;
