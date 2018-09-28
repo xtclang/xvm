@@ -77,9 +77,16 @@ public class ListExpression
     public TypeConstant getImplicitType(Context ctx)
         {
         TypeConstant typeExplicit = type == null ? null : type.ensureTypeConstant();
-        if (typeExplicit != null && typeExplicit.getGenericParamType("ElementType") != null)
+        if (typeExplicit != null)
             {
-            return typeExplicit;
+            if (typeExplicit.containsUnresolved())
+                {
+                return null;
+                }
+            if (typeExplicit.getGenericParamType("ElementType") != null)
+                {
+                return typeExplicit;
+                }
             }
 
         // see if there is an implicit element type

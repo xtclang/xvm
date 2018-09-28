@@ -405,7 +405,10 @@ public class InvocationExpression
                 typeArg = argMethod.getType().resolveTypedefs();
                 }
 
-            assert typeArg.isA(pool.typeFunction());
+            if (!typeArg.isA(pool.typeFunction()))
+                {
+                return TypeConstant.NO_TYPES;
+                }
 
             return m_fCall
                     ? typeArg.getParamTypesArray()[F_RETS].getParamTypesArray()
@@ -669,12 +672,19 @@ public class InvocationExpression
                             // TODO markVarRead on argMethod
                             }
 
-                        assert typeFn.isA(pool.typeFunction());
-
-                        TypeConstant[] atypeResult = validateFunction(ctx, typeFn, errs);
-                        if (atypeResult != null)
+                        if (typeFn.isA(pool.typeFunction()))
                             {
-                            return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);
+                            TypeConstant[] atypeResult = validateFunction(ctx, typeFn, errs);
+                            if (atypeResult != null)
+                                {
+                                return finishValidations(atypeRequired, atypeResult,
+                                        TypeFit.Fit, null, errs);
+                                }
+                            }
+                        else
+                            {
+                            log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                                    "Function", typeFn.getValueString());
                             }
                         }
                     }

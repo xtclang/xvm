@@ -69,6 +69,10 @@ public class MapExpression
         TypeConstant typeVal      = null;
         if (typeExplicit != null)
             {
+            if (typeExplicit.containsUnresolved())
+                {
+                return null;
+                }
             typeKey = typeExplicit.getGenericParamType("KeyType");
             typeVal = typeExplicit.getGenericParamType("ValueType");
             if (typeKey != null && typeVal != null)

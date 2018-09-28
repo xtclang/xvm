@@ -47,7 +47,7 @@ public class AsExpression
      */
     private TypeConstant rebaseThisClass(Context ctx, TypeConstant typeAs)
         {
-        if (expr1 instanceof NameExpression
+        if (!typeAs.containsUnresolved() && expr1 instanceof NameExpression
                 && ((NameExpression) expr1).getName().equals("this"))
             {
             ConstantPool pool     = pool();
