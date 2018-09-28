@@ -298,7 +298,7 @@ interface Map<KeyType, ValueType>
      *
      * @return the resultant map, which is the same as {@code this} for a mutable map
      */
-    Map<KeyType, ValueType> putAll(Map<KeyType, ValueType> that)
+    Map<KeyType, ValueType> putAll(Map!<KeyType, ValueType> that)
         {
         Map<KeyType, ValueType> result = this;
         for (Entry<KeyType, ValueType> entry : that.entries)

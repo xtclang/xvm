@@ -131,7 +131,7 @@ const Type<DataType>
         {
         assert meta.immutable_;
 
-        ListMap<String, Multi`Method> map = new ListMap();
+        ListMap<String, MultiMethod> map = new ListMap();
         for (Method method : methods)
             {
             if (MultiMethod multi : map.get(method.name))
