@@ -27,7 +27,7 @@ import org.xvm.util.Severity;
 /**
  * Compiler context for compiling a method body.
  */
-public abstract class Context
+public class Context
     {
     /**
      * Construct a Context.
@@ -53,22 +53,6 @@ public abstract class Context
     protected void setOuterContext(Context ctxOuter)
         {
         m_ctxOuter = ctxOuter;
-        }
-
-    /**
-     * @return the inner context (if any)
-     */
-    protected Context getInnerContext()
-        {
-        return m_ctxInner;
-        }
-
-    /**
-     * @param ctxInner  the Inner context to use
-     */
-    protected void setInnerContext(Context ctxInner)
-        {
-        m_ctxInner = ctxInner;
         }
 
     /**
@@ -149,9 +133,7 @@ public abstract class Context
      */
     public Context enter()
         {
-        Context ctxInner = new NestedContext(this);
-        setInnerContext(ctxInner);
-        return ctxInner;
+        return new Context(this);
         }
 
     /**
@@ -166,9 +148,7 @@ public abstract class Context
      */
     public Context fork(boolean fWhenTrue)
         {
-        Context ctxInner = new ForkedContext(this, fWhenTrue);
-        setInnerContext(ctxInner);
-        return ctxInner;
+        return new ForkedContext(this, fWhenTrue);
         }
 
     /**
@@ -198,9 +178,7 @@ public abstract class Context
      */
     public InferringContext enterInferring(TypeConstant typeLeft)
         {
-        InferringContext ctxInner = new InferringContext(this, typeLeft);
-        setInnerContext(ctxInner);
-        return ctxInner;
+        return new InferringContext(this, typeLeft);
         }
 
     /**
@@ -211,13 +189,6 @@ public abstract class Context
      */
     public Context exit()
         {
-        // TODO REVIEW
-        // note: changes to this method should be carefully evaluated for inclusion in any
-        //       sub-class that overrides this method
-
-        Context ctxOuter = getOuterContext();
-        assert ctxOuter.getInnerContext() == this;
-
         // copy variable assignment information from this scope to outer scope
         for (Entry<String, Assignment> entry : getDefiniteAssignments().entrySet())
             {
@@ -240,9 +211,7 @@ public abstract class Context
                 }
             }
 
-        setOuterContext(null);
-        ctxOuter.setInnerContext(null);
-        return ctxOuter;
+        return getOuterContext();
         }
 
     /**
@@ -788,17 +757,7 @@ public abstract class Context
         }
 
 
-    /**
-     * A nested context, representing a separate scope and/or code path.
-     */
-    public static class NestedContext
-            extends Context
-        {
-        public NestedContext(Context ctxOuter)
-            {
-            super(ctxOuter);
-            }
-        }
+    // ----- inner class: ForkedContext ------------------------------------------------------------
 
     /**
      * A nested context for a "when false" or "when true" fork.
@@ -842,6 +801,8 @@ public abstract class Context
         }
 
 
+    // ----- inner class: InferringContext ------------------------------------------------------------
+
     /**
      * A delegating context that allows an expression to resolve names based on the specified type's
      * contributions.
@@ -864,7 +825,7 @@ public abstract class Context
      * </code></pre>
      */
     public static class InferringContext
-            extends NestedContext
+            extends Context
         {
         /**
          * Construct an InferringContext.
@@ -913,11 +874,6 @@ public abstract class Context
      * context may not have an outer context.
      */
     private Context m_ctxOuter;
-
-    /**
-     * The inner context, if this is not the inner-most context. (Set to "this" when forked.)
-     */
-    private Context m_ctxInner;
 
     /**
      * Each variable declared within this context is registered in this map, along with the

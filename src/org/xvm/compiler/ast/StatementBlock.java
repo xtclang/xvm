@@ -840,7 +840,12 @@ public class StatementBlock
         public Context validatingContext()
             {
             checkValidating();
-            return super.enter();
+            Context ctx = m_ctxValidating;
+            if (ctx == null)
+                {
+                m_ctxValidating = ctx = super.enter();
+                }
+            return ctx;
             }
 
         /**
@@ -849,7 +854,9 @@ public class StatementBlock
         public Context emittingContext()
             {
             checkValidating();
-            getInnerContext().exit();
+            m_ctxValidating.exit();
+            m_ctxValidating = null;
+
             m_fEmitting = true;
             return this;
             }
@@ -871,6 +878,7 @@ public class StatementBlock
             }
 
         private MethodStructure m_method;
+        private Context         m_ctxValidating;
         private boolean         m_fEmitting;
         }
 

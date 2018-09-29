@@ -1034,9 +1034,7 @@ public class LambdaExpression
      */
     protected static CaptureContext enterCapture(Context ctx, StatementBlock body, TypeConstant[] atypeParams, String[] asParams)
         {
-        CaptureContext ctxInner = new CaptureContext(ctx, body, atypeParams, asParams);
-        ctx.setInnerContext(ctxInner);
-        return ctxInner;
+        return new CaptureContext(ctx, body, atypeParams, asParams);
         }
 
     /**
@@ -1069,36 +1067,7 @@ public class LambdaExpression
         @Override
         public Context exit()
             {
-            // TODO review
-
-            Context ctxOuter = getOuterContext();
-            assert ctxOuter.getInnerContext() == this;
-
-            Map<String, Assignment> mapInner = getDefiniteAssignments();
-            if (!mapInner.isEmpty())
-                {
-                Map<String, Assignment> mapOuter = ctxOuter.ensureDefiniteAssignments();
-                for (Entry<String, Assignment> entry : mapInner.entrySet())
-                    {
-                    String     sName = entry.getKey();
-                    Assignment asn   = entry.getValue();
-                    if (isVarDeclaredInThisScope(sName))
-                        {
-                        // we have unwound all the way back to the declaration context for the
-                        // variable at this point, so if it is proven to be effectively final, that
-                        // information is stored off, for example so that captures can make use of
-                        // that knowledge (i.e. capturing a value of type T, instead of a Ref<T>)
-                        if (asn.isEffectivelyFinal())
-                            {
-                            ((Register) getVar(sName)).markEffectivelyFinal();
-                            }
-                        }
-                    else
-                        {
-                        mapOuter.put(sName, asn);
-                        }
-                    }
-                }
+            Context ctxOuter = super.exit();
 
             // apply variable assignment information from the capture scope to the variables
             // captured from the outer scope
@@ -1124,8 +1093,6 @@ public class LambdaExpression
                 }
             m_mapRegisters = mapVars;
 
-            setOuterContext(null);
-            ctxOuter.setInnerContext(null);
             return ctxOuter;
             }
 
