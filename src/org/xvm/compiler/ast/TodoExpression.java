@@ -19,8 +19,6 @@ import org.xvm.asm.op.Throw;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.compiler.ast.Statement.Context;
-
 
 /**
  * A to-do expression raises an exception indicating missing functionality, with an optional

@@ -22,8 +22,6 @@ import org.xvm.asm.constants.UnresolvedTypeConstant;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
-import org.xvm.compiler.ast.Statement.Context;
-
 import org.xvm.util.Severity;
 
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;

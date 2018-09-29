@@ -12,7 +12,6 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.ast.Statement.Context;
 
 
 /**

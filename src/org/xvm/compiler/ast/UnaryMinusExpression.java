@@ -12,8 +12,6 @@ import org.xvm.asm.op.GP_Neg;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.compiler.ast.Statement.Context;
-
 
 /**
  * The "-" that precedes a number.

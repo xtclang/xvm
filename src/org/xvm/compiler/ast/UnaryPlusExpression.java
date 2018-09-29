@@ -7,8 +7,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.compiler.ast.Statement.Context;
-
 import org.xvm.util.Severity;
 
 

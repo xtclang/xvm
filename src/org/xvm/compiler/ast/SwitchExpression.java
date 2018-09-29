@@ -29,8 +29,6 @@ import org.xvm.asm.op.Label;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
-import org.xvm.compiler.ast.Statement.Context;
-
 import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 

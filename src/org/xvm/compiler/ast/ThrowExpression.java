@@ -15,8 +15,6 @@ import org.xvm.asm.op.Throw;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.compiler.ast.Statement.Context;
-
 
 /**
  * A "throw expression" is a non-completing expression that throws an exception.

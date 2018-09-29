@@ -13,8 +13,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.Label;
 
-import org.xvm.compiler.ast.Statement.Context;
-
 
 /**
  * A ternary expression is the "a ? b : c" expression.

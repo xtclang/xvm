@@ -18,8 +18,6 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
-import org.xvm.compiler.ast.Statement.Context;
-
 import org.xvm.type.Decimal32;
 import org.xvm.type.Decimal64;
 import org.xvm.type.Decimal128;

@@ -22,8 +22,6 @@ import org.xvm.asm.op.Var_T;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 
-import org.xvm.compiler.ast.Statement.Context;
-
 import org.xvm.util.Severity;
 
 

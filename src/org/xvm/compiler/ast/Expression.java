@@ -58,8 +58,6 @@ import org.xvm.asm.op.Var;
 
 import org.xvm.compiler.Compiler;
 
-import org.xvm.compiler.ast.Statement.Context;
-
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 

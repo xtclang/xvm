@@ -7,8 +7,6 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.ast.Statement.Context;
-
 
 /**
  * A type expression is used to specify an abstract data type. In its compiled form, there are many

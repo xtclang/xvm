@@ -19,8 +19,6 @@ import org.xvm.asm.op.Var;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
-import org.xvm.compiler.ast.Statement.Context;
-
 import org.xvm.util.Handy;
 
 

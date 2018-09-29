@@ -14,8 +14,6 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
-import org.xvm.compiler.ast.Statement.Context;
-
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 

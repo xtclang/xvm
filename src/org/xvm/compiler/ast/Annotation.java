@@ -24,7 +24,6 @@ import org.xvm.compiler.Constants;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
-import org.xvm.compiler.ast.Statement.Context;
 
 import org.xvm.util.Severity;
 

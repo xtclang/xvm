@@ -11,8 +11,6 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
@@ -26,8 +24,6 @@ import org.xvm.asm.op.New_N;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Constants;
 import org.xvm.compiler.Token;
-
-import org.xvm.compiler.ast.Statement.Context;
 
 import org.xvm.util.Severity;
 

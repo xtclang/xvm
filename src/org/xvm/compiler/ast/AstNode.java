@@ -23,9 +23,8 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.op.Label;
 
-import org.xvm.compiler.ast.Statement.Context;
+import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Source;

@@ -9,8 +9,6 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.ast.Statement.Context;
-
 import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.byteArrayToHexDump;

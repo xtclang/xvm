@@ -3,11 +3,14 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeMap;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
@@ -18,6 +21,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
+import org.xvm.asm.Register.Assignment;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.SignatureConstant;
@@ -33,9 +37,6 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
-
-import org.xvm.compiler.ast.Statement.CaptureContext;
-import org.xvm.compiler.ast.Statement.Context;
 
 import org.xvm.util.Severity;
 
@@ -429,7 +430,7 @@ public class LambdaExpression
             return finishValidation(typeRequired, null, TypeFit.NoFit, null, errs);
             }
 
-        CaptureContext ctxLambda = ctx.enterCapture(blockTemp, atypeParams, asParams);
+        CaptureContext ctxLambda = enterCapture(ctx, blockTemp, atypeParams, asParams);
         StatementBlock blockNew  = (StatementBlock) blockTemp.validate(ctxLambda, errs);
         if (blockNew == null)
             {
@@ -608,7 +609,7 @@ public class LambdaExpression
 
         // use a black-hole context (to avoid damaging the original)
         ctx       = new BlackholeContext(ctx);
-        ctx       = ctx.enterCapture(blockTemp, atypeParams, asParams);
+        ctx       = enterCapture(ctx, blockTemp, atypeParams, asParams);
         blockTemp = (StatementBlock) blockTemp.validate(ctx, ErrorListener.BLACKHOLE);
         ctx       = ctx.exit();
 
@@ -1014,6 +1015,275 @@ public class LambdaExpression
 
             return super.getOuterContext();
             }
+        }
+
+
+    // ----- CaptureContext ------------------------------------------------------------------------
+
+    /**
+     * Create a context that bridges from the current context into a special compilation mode in
+     * which the values (or references / variables) of the outer context can be <i>captured</i>.
+     *
+     * @param ctx          the current (soon to be outer) context
+     * @param body         the StatementBlock of the lambda, anonymous inner class, or statement
+     *                     expression
+     * @param atypeParams  types of the explicit parameters for the context (e.g. for a lambda)
+     * @param asParams     names of the explicit parameters for the context (e.g. for a lambda)
+     *
+     * @return a capturing context
+     */
+    protected static CaptureContext enterCapture(Context ctx, StatementBlock body, TypeConstant[] atypeParams, String[] asParams)
+        {
+        CaptureContext ctxInner = new CaptureContext(ctx, body, atypeParams, asParams);
+        ctx.setInnerContext(ctxInner);
+        return ctxInner;
+        }
+
+    /**
+     * A context for compiling lambda expressions, anonymous inner classes, and any other construct
+     * that "captures" variables from an outer context.
+     * <p/>TODO capture "this" (makes a lambda into a method, or a static anonymous class into an instance anonymous class)
+     */
+    public static class CaptureContext
+            extends Context
+        {
+        /**
+         * Construct a Lambda CaptureContext.
+         *
+         * @param ctxOuter     the context within which this context is nested
+         * @param body         the StatementBlock of the lambda / inner class, whose parent is one
+         *                     of: NewExpression, LambdaExpression, or StatementExpression
+         * @param atypeParams  types of the explicit parameters for the context (e.g. for a lambda)
+         * @param asParams     names of the explicit parameters for the context (e.g. for a lambda)
+         */
+        public CaptureContext(Context ctxOuter, StatementBlock body, TypeConstant[] atypeParams, String[] asParams)
+            {
+            super(ctxOuter);
+
+            assert atypeParams == null && asParams == null
+                    || atypeParams != null && asParams != null && atypeParams.length == asParams.length;
+            m_atypeParams = atypeParams;
+            m_asParams    = asParams;
+            }
+
+        @Override
+        public Context exit()
+            {
+            // TODO review
+
+            Context ctxOuter = getOuterContext();
+            assert ctxOuter.getInnerContext() == this;
+
+            Map<String, Assignment> mapInner = getDefiniteAssignments();
+            if (!mapInner.isEmpty())
+                {
+                Map<String, Assignment> mapOuter = ctxOuter.ensureDefiniteAssignments();
+                for (Entry<String, Assignment> entry : mapInner.entrySet())
+                    {
+                    String     sName = entry.getKey();
+                    Assignment asn   = entry.getValue();
+                    if (isVarDeclaredInThisScope(sName))
+                        {
+                        // we have unwound all the way back to the declaration context for the
+                        // variable at this point, so if it is proven to be effectively final, that
+                        // information is stored off, for example so that captures can make use of
+                        // that knowledge (i.e. capturing a value of type T, instead of a Ref<T>)
+                        if (asn.isEffectivelyFinal())
+                            {
+                            ((Register) getVar(sName)).markEffectivelyFinal();
+                            }
+                        }
+                    else
+                        {
+                        mapOuter.put(sName, asn);
+                        }
+                    }
+                }
+
+            // apply variable assignment information from the capture scope to the variables
+            // captured from the outer scope
+            Map<String, Boolean>  mapCapture = ensureCaptureMap();
+            Map<String, Register> mapVars    = mapCapture.isEmpty() ? Collections.EMPTY_MAP : new HashMap<>();
+            for (Entry<String, Boolean> entry : mapCapture.entrySet())
+                {
+                String sName = entry.getKey();
+                boolean fMod = entry.getValue();
+                if (!fMod && getDefiniteAssignments().containsKey(sName))
+                    {
+                    entry.setValue(true);
+                    fMod = true;
+                    }
+                if (fMod)
+                    {
+                    Assignment asnOld = ctxOuter.getVarAssignment(sName);
+                    Assignment asnNew = asnOld.applyAssignmentFromCapture();
+                    ctxOuter.setVarAssignment(sName, asnNew);
+                    }
+
+                mapVars.put(sName, (Register) getVar(sName));
+                }
+            m_mapRegisters = mapVars;
+
+            setOuterContext(null);
+            ctxOuter.setInnerContext(null);
+            return ctxOuter;
+            }
+
+        @Override
+        protected void markVarRead(boolean fNested, String sName, Token tokName, ErrorListener errs)
+            {
+            // variable capture will create a parameter (a variable in this scope) for the lambda,
+            // so if the variable isn't already declared in this scope but it exists in the outer
+            // scope, then capture it
+            final Context ctxOuter = getOuterContext();
+            if (!isVarDeclaredInThisScope(sName) && ctxOuter.isVarReadable(sName))
+                {
+                boolean fCapture = true;
+                if (isReservedName(sName))
+                    {
+                    switch (sName)
+                        {
+                        case "this":
+                        case "this:target":
+                        case "this:public":
+                        case "this:protected":
+                        case "this:private":
+                        case "this:struct":
+                            // the only names that we capture _without_ a capture parameter are the
+                            // various "this" references that refer to "this" object
+                            if (ctxOuter.isMethod())
+                                {
+                                m_fLambdaIsMethod = true;
+                                return;
+                                }
+                            break;
+
+                        case "this:service":
+                        case "this:module":
+                            // these two are available globally, and are _not_ captured
+                            return;
+                        }
+                    }
+
+                if (fCapture)
+                    {
+                    // capture the variable
+                    Map<String, Boolean> map = ensureCaptureMap();
+                    if (!map.containsKey(sName))
+                        {
+                        map.put(sName, false);
+                        }
+                    }
+                }
+
+            super.markVarRead(fNested, sName, tokName, errs);
+            }
+
+        @Override
+        protected void markVarWrite(String sName, Token tokName, ErrorListener errs)
+            {
+            // names in the name map but not in the capture map are lambda parameters; all other
+            // names become captures
+            if (!getNameMap().containsKey(sName) || getCaptureMap().containsKey(sName))
+                {
+                ensureCaptureMap().put(sName, true);
+                }
+
+            super.markVarWrite(sName, tokName, errs);
+            }
+
+        /**
+         * @return a map of variable name to a Boolean representing if the capture is read-only
+         *         (false) or read/write (true)
+         */
+        public Map<String, Boolean> getCaptureMap()
+            {
+            return m_mapCapture == null
+                    ? Collections.EMPTY_MAP
+                    : m_mapCapture;
+            }
+
+        /**
+         * @return a map of variable name to Register for all of variables to capture, built by
+         *         exit()
+         */
+        public Map<String, Register> getRegisterMap()
+            {
+            return m_mapRegisters;
+            }
+
+        /**
+         * @return true iff the lambda is built as a method (and not as a function) in order to
+         *         capture the "this" object reference
+         */
+        public boolean isLambdaMethod()
+            {
+            return m_fLambdaIsMethod;
+            }
+
+        @Override
+        protected boolean hasInitialNames()
+            {
+            return true;
+            }
+
+        @Override
+        protected void initNameMap(Map<String, Argument> mapByName)
+            {
+            TypeConstant[] atypeParams = m_atypeParams;
+            String[]       asParams    = m_asParams;
+            int            cParams     = atypeParams == null ? 0 : atypeParams.length;
+            for (int i = 0; i < cParams; ++i)
+                {
+                TypeConstant type  = atypeParams[i];
+                String       sName = asParams[i];
+                if (!sName.equals(Id.IGNORED.TEXT) && type != null)
+                    {
+                    mapByName.put(sName, new Register(type));
+
+                    // the variable has been definitely assigned, but not multiple times (i.e. it's
+                    // still effectively final)
+                    ensureDefiniteAssignments().put(sName, Assignment.AssignedOnce);
+                    }
+                }
+            }
+
+        /**
+         * @return a map of variable name to a Boolean representing if the capture is read-only
+         *         (false) or read/write (true)
+         */
+        private Map<String, Boolean> ensureCaptureMap()
+            {
+            Map<String, Boolean> map = m_mapCapture;
+            if (map == null)
+                {
+                // use a tree map, as it will keep the captures in alphabetical order, which will
+                // help to produce the lambdas with a "predictable" signature
+                m_mapCapture = map = new TreeMap<>();
+                }
+
+            return map;
+            }
+
+        private TypeConstant[] m_atypeParams;
+        private String[]       m_asParams;
+
+        /**
+         * A map from variable name to read/write flag (false is read-only, true is read-write) for
+         * the variables to capture.
+         */
+        private Map<String, Boolean> m_mapCapture;
+
+        /**
+         * A map from variable name to register, built by exit().
+         */
+        private Map<String, Register> m_mapRegisters;
+
+        /**
+         * Set to true iff the lambda function has to actually be a method so that it can capture
+         * "this".
+         */
+        private boolean m_fLambdaIsMethod;
         }
 
 

@@ -9,7 +9,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.ast.Statement.Context;
+import org.xvm.compiler.ast.LambdaExpression.CaptureContext;
 
 import org.xvm.util.Severity;
 
@@ -125,7 +125,7 @@ public class StatementExpression
         StatementBlock blockTemp = (StatementBlock) body.clone();
 
         // the resulting returned types come back in the type collector
-        ctx       = ctx.enterCapture(blockTemp, null, null);
+        ctx       = enterCapture(ctx, blockTemp);
         blockTemp = (StatementBlock) blockTemp.validate(ctx, ErrorListener.BLACKHOLE);
         ctx       = ctx.exit();
 
@@ -165,7 +165,7 @@ public class StatementExpression
 
         // clone the body and validate it using the requested type to test if that type will work
         m_atypeRequired = atypeRequired;
-        ctx = ctx.enterCapture(body, null, null);
+        ctx = enterCapture(ctx, body);
         ((StatementBlock) body.clone()).validate(ctx, ErrorListener.BLACKHOLE);
         ctx = ctx.exit();
         m_atypeRequired = null;
@@ -230,9 +230,28 @@ public class StatementExpression
 
     // ----- compilation helpers -------------------------------------------------------------------
 
+    /**
+     * TODO
+     *
+     * @return
+     */
     Assignable[] getAssignables()
         {
         return m_aLVal;
+        }
+
+    /**
+     * Create a context that bridges from the current context into a special compilation mode in
+     * which the values (or references / variables) of the outer context can be <i>captured</i>.
+     *
+     * @param ctx   the current (soon to be outer) context
+     * @param body  the StatementBlock of the lambda, anonymous inner class, or statement expression
+     *
+     * @return a capturing context
+     */
+    protected CaptureContext enterCapture(Context ctx, StatementBlock body)
+        {
+        return LambdaExpression.enterCapture(ctx, body, null, null);
         }
 
 

@@ -20,8 +20,6 @@ import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.I_Get;
 
-import org.xvm.compiler.ast.Statement.Context;
-
 
 /**
  * An array access expression is an expression followed by an array index expression.

@@ -16,8 +16,6 @@ import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.compiler.ast.Statement.Context;
-
 
 /**
  * Expression for "expression is expression" or "expression instanceof type".

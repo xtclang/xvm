@@ -7,10 +7,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.xvm.asm.Argument;
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 import org.xvm.asm.Register.Assignment;
+
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
@@ -21,6 +35,7 @@ import org.xvm.asm.op.Var_C;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
+import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Severity;
 
@@ -219,7 +234,7 @@ public class StatementBlock
      */
     public void compileMethod(Code code, ErrorListener errs)
         {
-        RootContext ctx = new RootContext(code.getMethodStructure(), this);
+        RootContext ctx = new RootContext(code.getMethodStructure());
 
         Statement that = this.validate(ctx.validatingContext(), errs);
         if (that != null && !errs.isAbortDesired())
@@ -437,6 +452,426 @@ public class StatementBlock
         sb.append("\n}");
 
         return sb.toString();
+        }
+
+
+    // ----- inner class: RootContext --------------------------------------------------------------
+
+    /**
+     * The outermost compiler context for compiling a method body. This context maintains a link
+     * with the method body that is being compiled, and represents the parameters to the method and
+     * the global names visible to the method.
+     */
+    public class RootContext
+            extends Context
+        {
+        public RootContext(MethodStructure method)
+            {
+            super(null);
+            m_method = method;
+            }
+
+        @Override
+        public MethodStructure getMethod()
+            {
+            return m_method;
+            }
+
+        public StatementBlock getStatementBlock()
+            {
+            return StatementBlock.this;
+            }
+
+        @Override
+        public Source getSource()
+            {
+            return StatementBlock.this.getSource();
+            }
+
+        @Override
+        public ClassStructure getThisClass()
+            {
+            Component parent = m_method;
+            while (!(parent instanceof ClassStructure))
+                {
+                parent = parent.getParent();
+                }
+            return (ClassStructure) parent;
+            }
+
+        @Override
+        public ConstantPool pool()
+            {
+            return m_method.getConstantPool();
+            }
+
+        @Override
+        public Context fork(boolean fWhenTrue)
+            {
+            checkValidating();
+            throw new IllegalStateException();
+            }
+
+        @Override
+        public Context enter()
+            {
+            checkValidating();
+            throw new IllegalStateException();
+            }
+
+        @Override
+        public void registerVar(Token tokName, Register reg, ErrorListener errs)
+            {
+            checkValidating();
+            throw new IllegalStateException();
+            }
+
+        @Override
+        public boolean isVarDeclaredInThisScope(String sName)
+            {
+            Argument arg = getNameMap().get(sName);
+            if (arg instanceof Register)
+                {
+                Register reg = (Register) arg;
+                return reg.getIndex() >= 0 || reg.isUnknown();
+                }
+
+            return false;
+            }
+
+        @Override
+        public Assignment getVarAssignment(String sName)
+            {
+            if (isReservedName(sName))
+                {
+                return isReservedNameReadable(sName)
+                        ? Assignment.AssignedOnce
+                        : Assignment.Unassigned;
+                }
+
+            return super.getVarAssignment(sName);
+            }
+
+        @Override
+        public boolean isVarReadable(String sName)
+            {
+            Assignment asn = getVarAssignment(sName);
+            if (asn != null)
+                {
+                return asn.isDefinitelyAssigned();
+                }
+
+            // the only other readable variable names are reserved variables
+            return isReservedName(sName) && isReservedNameReadable(sName);
+            }
+
+        /**
+         * Determine if the specified reserved name is available (has a value) in this context.
+         *
+         * @param sName  the reserved name
+         *
+         * @return true iff the reserved name is accessible in this context
+         */
+        public boolean isReservedNameReadable(String sName)
+            {
+            checkValidating();
+
+            switch (sName)
+                {
+                case "this":
+                case "this:struct":
+                    return isMethod() || isConstructor();
+
+                case "this:target":
+                case "this:public":
+                case "this:protected":
+                case "this:private":
+                    return isMethod();
+
+                case "this:module":
+                case "this:service":
+                    return true;
+
+                case "super":
+                {
+                TypeConstant   typePro    = pool().ensureAccessTypeConstant(getThisType(), Access.PROTECTED);
+                TypeInfo       info       = typePro.ensureTypeInfo();
+                MethodConstant idMethod   = getMethod().getIdentityConstant();
+                MethodInfo     infoMethod = info.getMethodById(idMethod);
+                return infoMethod.hasSuper(info);
+                }
+
+                default:
+                    throw new IllegalArgumentException("no such reserved name: " + sName);
+                }
+            }
+
+        @Override
+        public boolean isVarWritable(String sName)
+            {
+            Argument arg = ensureNameMap().get(sName);
+            if (arg instanceof Register)
+                {
+                return ((Register) arg).isWritable();
+                }
+            else if (arg instanceof PropertyConstant)
+                {
+                // the context only answers the question of what the _first_ name is, so
+                // in the case of "a.b.c", this method is called only for "a", so if someone
+                // is asking if it's settable, then obviously there is no ".b.c" following;
+                // it's obviously a local property (since there is no "target." before it),
+                // so the only check to do here is to make sure that it is settable, i.e. not
+                // a calculated property
+                // TODO: check for a calculated property
+                return true;
+                }
+
+            return false;
+            }
+
+        @Override
+        protected Argument resolveRegularName(String sName, Token name, ErrorListener errs)
+            {
+            checkValidating();
+
+            // check if the name is a parameter name, or a global name that has already been looked
+            // up and cached
+            Map<String, Argument> mapByName = ensureNameMap();
+            Argument              arg       = mapByName.get(sName);
+            if (arg == null)
+                {
+                // resolve the name from outside of this statement
+                arg = new NameResolver(StatementBlock.this, sName)
+                        .forceResolve(errs == null ? ErrorListener.BLACKHOLE : errs);
+                if (arg != null)
+                    {
+                    mapByName.put(sName, arg);
+                    }
+                }
+
+            return arg;
+            }
+
+        @Override
+        protected Argument getVar(String sName, Token name, ErrorListener errs)
+            {
+            Argument arg = super.getVar(sName, name, errs);
+            return arg == null
+                    ? resolveReservedName(sName, name, errs)
+                    : arg;
+            }
+
+        @Override
+        protected Argument resolveReservedName(String sName, Token name, ErrorListener errs)
+            {
+            Map<String, Argument> mapByName = ensureNameMap();
+            Argument              arg       = mapByName.get(sName);
+            if (arg instanceof Register && ((Register) arg).isPredefined())
+                {
+                return arg;
+                }
+
+            ConstantPool pool = pool();
+            TypeConstant type;
+            int          nReg;
+            switch (sName)
+                {
+                case "this":
+                    if (isConstructor())
+                        {
+                        type = pool.ensureAccessTypeConstant(getThisType(), Access.STRUCT);
+                        nReg = Op.A_STRUCT;
+                        break;
+                        }
+                    // fall through
+                case "this:target":
+                    type = getThisType();
+                    nReg = Op.A_TARGET;
+                    break;
+
+                case "this:public":
+                    type = getThisType();
+                    assert type.getAccess() == Access.PUBLIC;
+                    nReg = Op.A_PUBLIC;
+                    break;
+
+                case "this:protected":
+                    type = pool.ensureAccessTypeConstant(getThisType(), Access.PROTECTED);
+                    nReg = Op.A_PROTECTED;
+                    break;
+
+                case "this:private":
+                    type = pool.ensureAccessTypeConstant(getThisType(), Access.PRIVATE);
+                    nReg = Op.A_PRIVATE;
+                    break;
+
+                case "this:struct":
+                    type = pool.ensureAccessTypeConstant(getThisType(), Access.STRUCT);
+                    nReg = Op.A_STRUCT;
+                    break;
+
+                case "this:service":
+                    type = pool.typeService();
+                    nReg = Op.A_SERVICE;
+                    break;
+
+                case "super":
+                {
+                type = getMethod().getIdentityConstant().getSignature().asFunctionType();
+                nReg = Op.A_SUPER;
+                break;
+                }
+
+                case "this:module":
+                    // the module can be resolved to the actual module component at compile time
+                    return getModule().getIdentityConstant();
+
+                default:
+                    return null;
+                }
+
+            arg = new Register(type, nReg);
+            mapByName.put(sName, arg);
+            return arg;
+            }
+
+        @Override
+        protected boolean hasInitialNames()
+            {
+            return true;
+            }
+
+        @Override
+        protected void initNameMap(Map<String, Argument> mapByName)
+            {
+            MethodStructure         method      = m_method;
+            Map<String, Assignment> mapAssigned = ensureDefiniteAssignments();
+            for (int i = 0, c = method.getParamCount(); i < c; ++i)
+                {
+                org.xvm.asm.Parameter param = method.getParam(i);
+                String    sName = param.getName();
+                if (!sName.equals(Id.IGNORED.TEXT))
+                    {
+                    Register reg = new Register(param.getType(), i);
+                    mapByName.put(sName, reg);
+
+                    // the variable has been definitely assigned, but not multiple times (i.e. it's
+                    // still effectively final)
+                    mapAssigned.put(sName, Assignment.AssignedOnce);
+                    }
+                }
+            }
+
+        @Override
+        public boolean isMethod()
+            {
+            return !isFunction() && !isConstructor();
+            }
+
+        @Override
+        public boolean isFunction()
+            {
+            if (isConstructor())
+                {
+                return false;
+                }
+
+            Component parent = m_method;
+            while (true)
+                {
+                switch (parent.getFormat())
+                    {
+                    case INTERFACE:
+                    case CLASS:
+                    case CONST:
+                    case ENUM:
+                    case ENUMVALUE:
+                    case MIXIN:
+                    case SERVICE:
+                    case PACKAGE:
+                    case MODULE:
+                        return false;
+
+                    case METHOD:
+                        if (parent.isStatic())
+                            {
+                            return true;
+                            }
+                        break;
+
+                    case PROPERTY:
+                    case MULTIMETHOD:
+                        break;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+
+                parent = parent.getParent();
+                }
+            }
+
+        @Override
+        public boolean isConstructor()
+            {
+            return m_method.isConstructor();
+            }
+
+        ModuleStructure getModule()
+            {
+            Component parent = m_method;
+            while (!(parent instanceof ModuleStructure))
+                {
+                parent = parent.getParent();
+                }
+            return (ModuleStructure) parent;
+            }
+
+        @Override
+        public Context exit()
+            {
+            checkValidating();
+            throw new IllegalStateException();
+            }
+
+        /**
+         * @return a Context that can be used while validating code
+         */
+        public Context validatingContext()
+            {
+            checkValidating();
+            return super.enter();
+            }
+
+        /**
+         * @return a Context that can be used while emitting code
+         */
+        public Context emittingContext()
+            {
+            checkValidating();
+            getInnerContext().exit();
+            m_fEmitting = true;
+            return this;
+            }
+
+        private void checkValidating()
+            {
+            if (m_fEmitting)
+                {
+                throw new IllegalStateException();
+                }
+            }
+
+        private void checkEmitting()
+            {
+            if (!m_fEmitting)
+                {
+                throw new IllegalStateException();
+                }
+            }
+
+        private MethodStructure m_method;
+        private boolean         m_fEmitting;
         }
 
 

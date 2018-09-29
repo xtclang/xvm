@@ -15,8 +15,6 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.ast.Statement.Context;
-
 import org.xvm.util.ListMap;
 
 

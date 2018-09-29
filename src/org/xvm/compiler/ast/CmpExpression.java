@@ -28,8 +28,6 @@ import org.xvm.asm.op.Label;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
-import org.xvm.compiler.ast.Statement.Context;
-
 
 /**
  * Comparison binary expression.

@@ -16,8 +16,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Var_S;
 
-import org.xvm.compiler.ast.Statement.Context;
-
 
 /**
  * A list expression is an expression containing some number (0 or more) expressions of some common
