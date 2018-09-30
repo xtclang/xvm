@@ -117,11 +117,22 @@ public class WhileStatement
     protected Statement validate(Context ctx, ErrorListener errs)
         {
         boolean fValid = true;
-        boolean fScope = cond instanceof AssignmentStatement && ((AssignmentStatement) cond).hasDeclarations();
 
-        if (fScope)
+        ctx = ctx.enterLoop();
+
+        if (isDoWhile())
             {
-            ctx = ctx.enter();
+            // block comes first for "do..while()"
+            block.suppressScope();
+            Statement blockNew = block.validate(ctx, errs);
+            if (blockNew == null)
+                {
+                fValid = false;
+                }
+            else
+                {
+                block = (StatementBlock) blockNew;
+                }
             }
 
         // the condition is either a boolean expression or an assignment statement whose R-value is
@@ -153,23 +164,24 @@ public class WhileStatement
                 }
             }
 
-        ctx = ctx.fork(true);
-        Statement blockNew = block.validate(ctx, errs);
-        if (blockNew == null)
+        if (!isDoWhile())
             {
-            fValid = false;
-            }
-        else
-            {
-            block = (StatementBlock) blockNew;
-            }
-        ctx = ctx.exit();
-
-        // if the condition itself required a scope, then complete that scope
-        if (fScope)
-            {
+            // block comes after for "while()"
+            ctx = ctx.enterFork(true);
+            Statement blockNew = block.validate(ctx, errs);
+            if (blockNew == null)
+                {
+                fValid = false;
+                }
+            else
+                {
+                block = (StatementBlock) blockNew;
+                }
             ctx = ctx.exit();
             }
+
+        // if the condition itself required a scope, then complete that scope
+        ctx = ctx.exit();
 
         return fValid
                 ? this
@@ -191,6 +203,7 @@ public class WhileStatement
             boolean fCompletes = block.completes(ctx, fReachable & fDoWhile, code, errs);
             if (fDoWhile)
                 {
+                // REVIEW does it still have suppress scope on?
                 code.add(getContinueLabel());
                 }
             return fCompletes;
@@ -227,7 +240,6 @@ public class WhileStatement
             //   Break:
             code.add(new Enter());
             code.add(getRepeatLabel());
-            block.suppressScope();
             boolean fCompletes = block.completes(ctx, fReachable, code, errs);
             code.add(getContinueLabel());
             if (cond instanceof AssignmentStatement)

@@ -330,7 +330,7 @@ public class Annotation
             }
 
         @Override
-        public Context fork(boolean fWhenTrue)
+        public Context enterFork(boolean fWhenTrue)
             {
             throw new IllegalStateException();
             }

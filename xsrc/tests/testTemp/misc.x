@@ -41,10 +41,10 @@ module TestMisc.xqiz.it
         console.println("\n** testSimple()");
 
         Int i;
-        Boolean f1 = false;
-        Boolean f2 = true;
+        Boolean f1 = true;
+        Boolean f2 = false;
 
-        if (f1)
+        if (f2)
             {
             i = 1;
             }

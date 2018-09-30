@@ -106,7 +106,7 @@ public class IfStatement
                 }
             }
 
-        ctx = ctx.fork(true);
+        ctx = ctx.enterFork(true);
         Statement stmtThenNew = stmtThen.validate(ctx, errs);
         ctx = ctx.exit();
         if (stmtThenNew == null)
@@ -120,7 +120,7 @@ public class IfStatement
 
         if (stmtElse != null)
             {
-            ctx = ctx.fork(false);
+            ctx = ctx.enterFork(false);
             Statement stmtElseNew = stmtElse.validate(ctx, errs);
             ctx = ctx.exit();
             if (stmtElseNew == null)

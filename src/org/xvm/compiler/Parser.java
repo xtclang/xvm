@@ -4901,10 +4901,10 @@ public class Parser
     protected void restore(Mark mark)
         {
         m_lexer.setPosition(mark.pos);
-        m_token           = mark.token;
-        m_tokenPutBack = mark.putBack;
-        m_doc             = mark.doc;
-        m_fAvoidRecovery  = mark.noRec;
+        m_token          = mark.token;
+        m_tokenPutBack   = mark.putBack;
+        m_doc            = mark.doc;
+        m_fAvoidRecovery = mark.noRec;
         }
 
     /**

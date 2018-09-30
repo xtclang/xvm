@@ -135,6 +135,14 @@ public class StatementBlock
         }
 
     /**
+     * @return true iff the StatementBlock has its own ENTER/EXIT scope
+     */
+    public boolean hasScope()
+        {
+        return !m_fSuppressScope;
+        }
+
+    /**
      * Register an import statement that occurs within this StatementBlock.
      *
      * @param stmt  the ImportStatement to register
@@ -271,7 +279,10 @@ public class StatementBlock
         boolean         fValid = true;
         if (stmts != null && !stmts.isEmpty())
             {
-            ctx = ctx.enter();
+            if (hasScope())
+                {
+                ctx = ctx.enter();
+                }
 
             if (getParent() instanceof LambdaExpression)
                 {
@@ -314,7 +325,11 @@ public class StatementBlock
                     break;
                     }
                 }
-            ctx = ctx.exit();
+
+            if (hasScope())
+                {
+                ctx = ctx.exit();
+                }
             }
 
         return fValid ? this : null;
@@ -506,7 +521,7 @@ public class StatementBlock
             }
 
         @Override
-        public Context fork(boolean fWhenTrue)
+        public Context enterFork(boolean fWhenTrue)
             {
             checkValidating();
             throw new IllegalStateException();

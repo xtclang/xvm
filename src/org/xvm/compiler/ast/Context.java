@@ -146,9 +146,23 @@ public class Context
      *
      * @return the new (forked) context
      */
-    public Context fork(boolean fWhenTrue)
+    public Context enterFork(boolean fWhenTrue)
         {
         return new ForkedContext(this, fWhenTrue);
+        }
+
+    /**
+     * Create a context that tracks variable assignment data within a loop. The assignments within
+     * a loop are assumed to be <i>at least once</i>; entering a forked context before or after
+     * entering the loop context allows a <i>zero or more times</i> loop to be constructed.
+     * <p/>
+     * Note: This can only be used during the validate() stage.
+     *
+     * @return the new (forked) context
+     */
+    public Context enterLoop()
+        {
+        return new LoopingContext(this);
         }
 
     /**
@@ -798,6 +812,30 @@ public class Context
             }
 
         private boolean m_fWhenTrue;
+        }
+
+
+    // ----- inner class: LoopingContext ------------------------------------------------------------
+
+    /**
+     * A nested context for a loop.
+     */
+    public static class LoopingContext
+            extends Context
+        {
+        public LoopingContext(Context ctxOuter)
+            {
+            super(ctxOuter);
+            }
+
+        @Override
+        protected void promoteAssignment(String sName, Assignment asnInner)
+            {
+            Context    ctxOuter = getOuterContext();
+            Assignment asnOuter = ctxOuter.getVarAssignment(sName);
+            Assignment asnJoin  = asnOuter.joinLoop(asnInner);
+            ctxOuter.setVarAssignment(sName, asnJoin);
+            }
         }
 
 

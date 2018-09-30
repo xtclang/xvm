@@ -653,6 +653,59 @@ public class Register
             }
 
         /**
+         * Combine the portions an Assignment from a "when false" or "when true" fork with this Assignment.
+         *
+         * @param whenFalse  the Assignment representing the Assignment status "when false"
+         * @param whenTrue   the Assignment representing the Assignment status "when true"
+         *
+         * @return the Assignment representing the combined Assignment states
+         */
+        public static Assignment join(Assignment whenFalse, Assignment whenTrue)
+            {
+            return forFlags((whenFalse.isDefinitelyUnassigned() ? 0b100000 : 0)
+                        |   (whenFalse.isDefinitelyAssigned()   ? 0b010000 : 0)
+                        |   (whenFalse.isEffectivelyFinal()     ? 0b001000 : 0)
+                        |   (whenTrue .isDefinitelyUnassigned() ? 0b000100 : 0)
+                        |   (whenTrue .isDefinitelyAssigned()   ? 0b000010 : 0)
+                        |   (whenTrue .isEffectivelyFinal()     ? 0b000001 : 0));
+            }
+
+        /**
+         * If this is an assignment at the end of a single iteration of a loop, calculate what the
+         * assignment would be after multiple iterations of the same.
+         *
+         * @param that  the state of the assignment after the loop ran a single time
+         *
+         * @return the Assignment representing the state of this Assignment as if the loop had been
+         *         executed multiple times
+         */
+        public Assignment joinLoop(Assignment that)
+            {
+            if (this == that)
+                {
+                return this;
+                }
+
+            if (this.fSplit || that.fSplit)
+                {
+                return join(this.whenFalse().joinLoop(that.whenFalse()),
+                            this.whenTrue().joinLoop(that.whenTrue()));
+                }
+
+            switch (that)
+                {
+                case UnknownOnce:
+                    return Unknown;
+
+                case AssignedOnce:
+                    return Assigned;
+
+                default:
+                    return that;
+                }
+            }
+
+        /**
          * If an Assignment contains information that differs between "when false" and "when true"
          * states, obtain the Assignment that represents the union of that information into a
          * single, consistent Assignment whose "when false" and "when true" states each represents
