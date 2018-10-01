@@ -3595,18 +3595,15 @@ public abstract class TypeConstant
             // first check immutability modifiers
             if (typeLeft.isImmutabilitySpecified())
                 {
-                if (typeRight.isImmutable())
-                    {
-                    // no need to be concerned with immutability anymore
-                    typeLeft = typeLeft.removeImmutable(pool);
-                    }
-                else
-                    {
-                    mapRelations.put(typeLeft, relation = Relation.INCOMPATIBLE);
-                    return relation;
-                    }
+                relation = typeRight.isImmutable()
+                    ? typeRight.calculateRelation(typeLeft.removeImmutable(pool))
+                    : Relation.INCOMPATIBLE;
+
+                mapRelations.put(typeLeft, relation);
+                return relation;
                 }
 
+            // then check various "reserved" scenarios
             relation = checkReservedCompatibility(typeLeft, typeRight);
             if (relation != null)
                 {
@@ -3614,6 +3611,7 @@ public abstract class TypeConstant
                 return relation;
                 }
 
+            // now -- a long journey
             mapRelations.put(typeLeft, Relation.IN_PROGRESS);
             try
                 {
