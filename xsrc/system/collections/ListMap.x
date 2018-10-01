@@ -5,7 +5,7 @@
 class ListMap<KeyType extends immutable Hashable, ValueType>
          implements Map<KeyType, ValueType>
     {
-    private ListEntry<KeyType, ValueType>[] array;
+    private Entry<KeyType, ValueType>[] array;
 
     // ----- constructors --------------------------------------------------------------------------
 
@@ -13,6 +13,8 @@ class ListMap<KeyType extends immutable Hashable, ValueType>
         {
         array = new Array(initCapacity);
         }
+
+    // ----- Map properties and methods ------------------------------------------------------------
 
     @Override
     Int size.get()
@@ -57,7 +59,7 @@ class ListMap<KeyType extends immutable Hashable, ValueType>
             }
         else
             {
-            array = array.addElement(new ListEntry(key, value));
+            array = array.addElement(new SimpleEntry(key, value));
             }
         return this;
         }
@@ -87,7 +89,7 @@ class ListMap<KeyType extends immutable Hashable, ValueType>
     protected conditional Int indexOf(KeyType key)
         {
         AllEntries:
-        for (ListEntry<KeyType, ValueType> entry : array)
+        for (Entry<KeyType, ValueType> entry : array)
             {
             if (entry[0] == key)
                 {
@@ -95,24 +97,5 @@ class ListMap<KeyType extends immutable Hashable, ValueType>
                 }
             }
         return false;
-        }
-
-    /**
-     * The Entry implementation used to store the ListMap's keys and values.
-     */
-    protected static class ListEntry<KeyType, ValueType>
-            implements Entry<KeyType, ValueType>
-        {
-        construct(KeyType key, ValueType value)
-            {
-            this.key   = key;
-            this.value = value;
-            }
-
-        @Override
-        public/private KeyType key;
-
-        @Override
-        public ValueType value;
         }
     }

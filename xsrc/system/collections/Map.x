@@ -515,6 +515,18 @@ interface Map<KeyType, ValueType>
         assert &map == &newMap;
         }
 
+    // ----- ConstAble -----------------------------------------------------------------------------
+
+    @Override
+    immutable Map<KeyType, ValueType> ensureConst(Boolean inPlace = false)
+        {
+        if (inPlace)
+            {
+            return makeImmutable();
+            }
+        throw new UnsupportedOperationException();
+        }
+
     // ----- equality ------------------------------------------------------------------------------
 
     /**
