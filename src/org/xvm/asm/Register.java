@@ -627,6 +627,17 @@ public class Register
             }
 
         /**
+         * @return the negated form of this Assignment, such that the state for "when false" and
+         *         "when true" are reversed
+         */
+        public Assignment negate()
+            {
+            return fSplit
+                    ? join(whenTrue(), whenFalse())
+                    : this;
+            }
+
+        /**
          * Combine an Assignment from a "when false" or "when true" fork with this Assignment.
          *
          * @param that       the Assignment representing the "when true" or "when false" fork of
@@ -689,7 +700,7 @@ public class Register
             if (this.fSplit || that.fSplit)
                 {
                 return join(this.whenFalse().joinLoop(that.whenFalse()),
-                            this.whenTrue().joinLoop(that.whenTrue()));
+                            this.whenTrue() .joinLoop(that.whenTrue()));
                 }
 
             switch (that)
@@ -738,26 +749,6 @@ public class Register
                     ? AssignedOnce
                     : Assigned;
             }
-
-//        /**
-//         * Apply an assignment, but only to the "when false" portion of this Assignment state.
-//         *
-//         * @return the result of assignment only "when false"
-//         */
-//        public Assignment applyAssignmentWhenFalse()
-//            {
-//            return join(whenFalse().applyAssignment(), whenTrue());
-//            }
-//
-//        /**
-//         * Apply an assignment, but only to the "when true" portion of this Assignment state.
-//         *
-//         * @return the result of assignment only "when true"
-//         */
-//        public Assignment applyAssignmentWhenTrue()
-//            {
-//            return join(whenFalse(), whenTrue().applyAssignment());
-//            }
 
         /**
          * Apply a potentially asynchronous assignment that occurs from a lambda or anonymous inner

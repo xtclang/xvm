@@ -116,9 +116,13 @@ public class CondOpExpression
             const1 = expr1New.toConstant();
             }
 
+        // && -> the second expression is only evaluated if the first expression is true
+        // || -> the second expression is only evaluated if the first expression is false
+        ctx = isAnd() ? ctx.enterAnd() : ctx.enterOr();
         Expression expr2Old = expr2;
         Expression expr2New = expr2Old.validate(ctx, typeBoolean, errs);
         Constant   const2   = null;
+        ctx = ctx.exit();
         if (expr2New == null)
             {
             fit = TypeFit.NoFit;

@@ -482,7 +482,7 @@ public class StatementBlock
         {
         public RootContext(MethodStructure method)
             {
-            super(null);
+            super(null, false);
             m_method = method;
             }
 
