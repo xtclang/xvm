@@ -335,11 +335,29 @@ public class MethodDeclarationStatement
                         ((PropertyDeclarationStatement) getParent().getParent()).annotations; // TODO: replace
 
                     MethodStructure methodSuper = findRefMethod(property, annotations, sName, params, errs);
-                    // TODO: if all annotations and parameters  are resolved, we should
-                    //       report an error rather than exhaust the retry count
                     if (methodSuper == null)
                         {
-                        mgr.requestRevisit();
+                        for (Annotation anno : annotations)
+                            {
+                            TypeConstant type = anno.getType().getTypeConstant();
+                            if (type != null && type.containsUnresolved())
+                                {
+                                mgr.requestRevisit();
+                                return;
+                                }
+                            }
+                        for (Parameter param : params)
+                            {
+                            TypeConstant type = param.getType().getTypeConstant();
+                            if (type != null && type.containsUnresolved())
+                                {
+                                mgr.requestRevisit();
+                                return;
+                                }
+                            }
+
+                        // all annotations and parameters  are resolved, report an error
+                        log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
                         return;
                         }
 
@@ -407,12 +425,14 @@ public class MethodDeclarationStatement
         {
         // method children are all deferred up until this stage, so we have to "catch them up" at
         // this point, recreating the various compiler stages here
-        if (!catchUpChildren(errs))
+        Component component = getComponent();
+        if (component == null || !catchUpChildren(errs))
             {
+            // we are in an error state; we choose not to proceed with compilation
             mgr.deferChildren();
+            return;
             }
 
-        Component component = getComponent();
         if (component instanceof MethodStructure)
             {
             MethodStructure method = (MethodStructure) component;
@@ -443,6 +463,13 @@ public class MethodDeclarationStatement
     public void generateCode(StageMgr mgr, ErrorListener errs)
         {
         MethodStructure method = (MethodStructure) getComponent();
+        if (method == null)
+            {
+            // we are in an error state; we choose not to proceed with compilation
+            mgr.deferChildren();
+            return;
+            }
+
         if (body != null)
             {
             MethodConstant  idMethod = method.getIdentityConstant();
