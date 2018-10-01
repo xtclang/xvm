@@ -116,7 +116,7 @@ public class xVar
             case RefHandle.REF_REF:
                 {
                 RefHandle hDelegate = (RefHandle) hTarget.getValue();
-                return hDelegate.getVarSupport().set(frame, hDelegate, hValue);
+                return hTarget.getVarSupport().set(frame, hDelegate, hValue);
                 }
 
             case RefHandle.REF_PROPERTY:
