@@ -259,7 +259,7 @@ public class xRef
             case RefHandle.REF_REF:
                 {
                 RefHandle hDelegate = (RefHandle) hTarget.getValue();
-                return hDelegate.getVarSupport().get(frame, hDelegate, iReturn);
+                return hTarget.getVarSupport().get(frame, hDelegate, iReturn);
                 }
 
             case RefHandle.REF_PROPERTY:
