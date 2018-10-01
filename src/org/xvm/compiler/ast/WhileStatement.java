@@ -191,21 +191,29 @@ public class WhileStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean fDoWhile = isDoWhile();
+        boolean fCompletes = fReachable;
+        boolean fDoWhile   = isDoWhile();
+
         if (cond instanceof Expression && ((Expression) cond).isConstantFalse())
             {
-            // while(false) {body}      - note: optimized out altogether.
+            if (!fDoWhile)
+                {
+                // while(false) {body} - optimized out completely (unreachable)
+                block.completes(ctx, false, code, errs);
+                return fCompletes;
+                }
+
             // do {body} while(false)
             //
+            //   ENTER
             //   [body]
+            //   EXIT
             //   Continue:
             //   Break:
-            boolean fCompletes = block.completes(ctx, fReachable & fDoWhile, code, errs);
-            if (fDoWhile)
-                {
-                // REVIEW does it still have suppress scope on?
-                code.add(getContinueLabel());
-                }
+            code.add(new Enter());
+            fCompletes = block.completes(ctx, fCompletes, code, errs);
+            code.add(new Exit());
+            code.add(getContinueLabel());
             return fCompletes;
             }
 
@@ -214,15 +222,20 @@ public class WhileStatement
             // while(true) {body}
             // do {body} while(true)
             //
+            //   ENTER
             //   Repeat:
             //   Continue:
             //   [body]
             //   JMP Repeat
+            //   EXIT
             //   Break:
+            code.add(new Enter());
             code.add(getRepeatLabel());
             code.add(getContinueLabel());
-            block.completes(ctx, fReachable, code, errs);
+            block.suppressScope();
+            fCompletes = block.completes(ctx, fCompletes, code, errs);
             code.add(new Jump(getRepeatLabel()));
+            code.add(new Exit());
             return false;     // while(true) never completes naturally
             }
 
@@ -240,12 +253,12 @@ public class WhileStatement
             //   Break:
             code.add(new Enter());
             code.add(getRepeatLabel());
-            boolean fCompletes = block.completes(ctx, fReachable, code, errs);
+            fCompletes = block.completes(ctx, fCompletes, code, errs);
             code.add(getContinueLabel());
             if (cond instanceof AssignmentStatement)
                 {
                 AssignmentStatement stmtCond = (AssignmentStatement) cond;
-                fCompletes &= stmtCond.completes(ctx, fReachable, code, errs);
+                fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
                 code.add(new JumpTrue(stmtCond.getConditionRegister(), getRepeatLabel()));
                 }
             else
@@ -270,7 +283,6 @@ public class WhileStatement
         //   JMP_TRUE cond Repeat
         //   EXIT                   ; omitted if no declarations
         //   Break:
-        boolean fCompletes = fReachable;
         boolean fOwnScope  = false;
         if (cond instanceof AssignmentStatement && ((AssignmentStatement) cond).hasDeclarations())
             {
@@ -278,17 +290,17 @@ public class WhileStatement
             code.add(new Enter());
             for (VariableDeclarationStatement stmtDecl : ((AssignmentStatement) cond).takeDeclarations())
                 {
-                fCompletes &= stmtDecl.completes(ctx, fReachable, code, errs);
+                fCompletes &= stmtDecl.completes(ctx, fCompletes, code, errs);
                 }
             }
         code.add(new Jump(getContinueLabel()));
         code.add(getRepeatLabel());
-        fCompletes &= block.completes(ctx, fReachable, code, errs);
+        fCompletes &= block.completes(ctx, fCompletes, code, errs);
         code.add(getContinueLabel());
         if (cond instanceof AssignmentStatement)
             {
             AssignmentStatement stmtCond = (AssignmentStatement) cond;
-            fCompletes &= stmtCond.completes(ctx, fReachable, code, errs);
+            fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
             code.add(new JumpTrue(stmtCond.getConditionRegister(), getRepeatLabel()));
             }
         else
