@@ -1320,11 +1320,6 @@ public class InvocationExpression
 
                 parent = parent.getParent();
                 }
-
-            if (m_argMethod == null)
-                {
-                log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sName);
-                }
             }
         else // there is a "left" expression for the name
             {

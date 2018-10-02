@@ -371,7 +371,7 @@ public class ClassStructure
                     else
                         {
                         // TODO: create ParameterizedTC(ChildTC(typeParent, clzChild))
-                        //       see PTC.adoptParentTypeParameters()
+                        //       see NamedTypeExpression.calculateDefaultContextType()
                         TypeConstant[] aTypesNew = new TypeConstant[cTypesParent + cTypesThis];
                         System.arraycopy(aTypes, 0, aTypesNew, 0, cTypesParent);
                         aTypes = aTypesNew;

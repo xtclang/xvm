@@ -6,7 +6,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.List;
-import java.util.Objects;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -229,19 +228,6 @@ public abstract class RelationalTypeConstant
         TypeConstant constOriginal2 = m_constType2;
         TypeConstant constResolved1 = constOriginal1.adoptParameters(pool, atypeParams);
         TypeConstant constResolved2 = constOriginal2.adoptParameters(pool, atypeParams);
-
-        return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
-                ? this
-                : cloneRelational(pool, constResolved1, constResolved2);
-        }
-
-    @Override
-    public TypeConstant adoptParentTypeParameters(ConstantPool pool)
-        {
-        TypeConstant constOriginal1 = m_constType1;
-        TypeConstant constOriginal2 = m_constType2;
-        TypeConstant constResolved1 = constOriginal1.adoptParentTypeParameters(pool);
-        TypeConstant constResolved2 = constOriginal2.adoptParentTypeParameters(pool);
 
         return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
                 ? this
