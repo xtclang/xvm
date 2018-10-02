@@ -95,7 +95,7 @@ public class MultipleLValueStatement
         }
 
     @Override
-    protected Label getShortCircuitLabel(Expression exprChild)
+    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
         {
         int iPos = findChild(exprChild);
         if (iPos < 0)
@@ -498,7 +498,7 @@ public class MultipleLValueStatement
             }
 
         @Override
-        protected Label getShortCircuitLabel(Expression exprChild)
+        protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
             {
             int iPos = findChild(exprChild);
             if (iPos < 0)

@@ -99,7 +99,7 @@ public class ExpressionStatement
         }
 
     @Override
-    protected Label getShortCircuitLabel(Expression exprChild)
+    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
         {
         assert exprChild == expr;
         return getEndLabel();

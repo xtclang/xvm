@@ -59,6 +59,43 @@ public class IfStatement
         return CHILD_FIELDS;
         }
 
+    /**
+     * @return the label for the else
+     */
+    public Label getElseLabel()
+        {
+        Label label = m_labelElse;
+        if (label == null)
+            {
+            m_labelElse = label = new Label("else_if_" + getLabelId());
+            }
+        return label;
+        }
+
+    private int getLabelId()
+        {
+        int n = m_nLabel;
+        if (n == 0)
+            {
+            m_nLabel = n = ++s_nLabelCounter;
+            }
+        return n;
+        }
+
+    @Override
+    protected boolean allowsShortCircuit(Expression exprChild)
+        {
+        // only expression is the condition
+        return true;
+        }
+
+    @Override
+    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
+        {
+        // TODO snap-shot the assignment-info-delta
+        return super.getShortCircuitLabel(ctx, exprChild);
+        }
+
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -187,7 +224,7 @@ public class IfStatement
         //   [stmtElse]
         //   Exit:
         //   EXIT                   // iff cond specifies that it needs a scope
-        Label labelElse = new Label();        // TODO make this a field and use as the short circuit label for cond
+        Label labelElse = getElseLabel();
         Label labelExit = new Label();
 
         boolean fScope = cond instanceof AssignmentStatement && ((AssignmentStatement) cond).hasDeclarations();
@@ -267,6 +304,10 @@ public class IfStatement
     protected AstNode   cond;
     protected Statement stmtThen;
     protected Statement stmtElse;
+
+    private static int s_nLabelCounter;
+    private transient int   m_nLabel;
+    private transient Label m_labelElse;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(IfStatement.class, "cond", "stmtThen", "stmtElse");
     }

@@ -11,6 +11,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.JumpNull;
+import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Token;
 
@@ -108,6 +109,8 @@ public class NotNullExpression
                 exprNew.log(errs, Severity.ERROR, org.xvm.compiler.Compiler.ELVIS_NOT_NULLABLE);
                 return replaceThisWith(exprNew);
                 }
+
+            m_labelShort = getParent().getShortCircuitLabel(ctx, this);
             }
 
         return finishValidation(typeRequired, type, fit, null, errs);
@@ -146,7 +149,7 @@ public class NotNullExpression
             }
 
         expr.generateAssignment(ctx, code, LVal, errs);
-        code.add(new JumpNull(LVal.getRegister(), getParent().getShortCircuitLabel(this)));
+        code.add(new JumpNull(LVal.getRegister(), m_labelShort));
         }
 
 
@@ -174,6 +177,8 @@ public class NotNullExpression
 
     protected Expression expr;
     protected Token      operator;
+
+    protected transient Label m_labelShort;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NotNullExpression.class, "expr");
     }
