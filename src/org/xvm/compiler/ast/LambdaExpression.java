@@ -608,7 +608,7 @@ public class LambdaExpression
             }
 
         // use a black-hole context (to avoid damaging the original)
-        ctx       = new BlackholeContext(ctx);
+        ctx       = ctx.enterBlackhole();
         ctx       = enterCapture(ctx, blockTemp, atypeParams, asParams);
         blockTemp = (StatementBlock) blockTemp.validate(ctx, ErrorListener.BLACKHOLE);
         ctx       = ctx.exit();
@@ -989,35 +989,6 @@ public class LambdaExpression
         }
 
 
-    // ----- inner class: ValidatingContext --------------------------------------------------------
-
-    /**
-     * A context that can be used to validate without allowing any mutating operations to leak
-     * through to the underlying context.
-     */
-    protected static class BlackholeContext
-            extends Context
-        {
-        /**
-         * Construct a ValidatingContext around an actual context.
-         *
-         * @param ctxOuter  the actual context
-         */
-        public BlackholeContext(Context ctxOuter)
-            {
-            super(ctxOuter);
-            }
-
-        @Override
-        public Context exit()
-            {
-            // no-op (don't push data up to outer scope)
-
-            return super.getOuterContext();
-            }
-        }
-
-
     // ----- CaptureContext ------------------------------------------------------------------------
 
     /**
@@ -1056,7 +1027,7 @@ public class LambdaExpression
          */
         public CaptureContext(Context ctxOuter, StatementBlock body, TypeConstant[] atypeParams, String[] asParams)
             {
-            super(ctxOuter);
+            super(ctxOuter, true);
 
             assert atypeParams == null && asParams == null
                     || atypeParams != null && asParams != null && atypeParams.length == asParams.length;

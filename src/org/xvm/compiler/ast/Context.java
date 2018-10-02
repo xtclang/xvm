@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import java.util.Set;
+import java.util.TreeSet;
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -34,9 +36,10 @@ public class Context
      *
      * @param ctxOuter  the context that this Context is nested within
      */
-    protected Context(Context ctxOuter)
+    protected Context(Context ctxOuter, boolean fDemuxOnExit)
         {
-        m_ctxOuter = ctxOuter;
+        m_ctxOuter     = ctxOuter;
+        m_fDemuxOnExit = fDemuxOnExit;
         }
 
     /**
@@ -133,7 +136,17 @@ public class Context
      */
     public Context enter()
         {
-        return new Context(this);
+        return new Context(this, true);
+        }
+
+    /**
+     * Used in the validation phase to track scopes.
+     * <p/>
+     * Note: This can only be used during the validate() stage.
+     */
+    public Context enterBlackhole()
+        {
+        return new BlackholeContext(this);
         }
 
     /**
@@ -149,6 +162,42 @@ public class Context
     public Context enterFork(boolean fWhenTrue)
         {
         return new ForkedContext(this, fWhenTrue);
+        }
+
+    /**
+     * Create a short-circuiting "and" context.
+     * <p/>
+     * Note: This can only be used during the validate() stage.
+     *
+     * @return the new "and" context
+     */
+    public Context enterAnd()
+        {
+        return new AndContext(this);
+        }
+
+    /**
+     * Create a short-circuiting "or" context.
+     * <p/>
+     * Note: This can only be used during the validate() stage.
+     *
+     * @return the new "or" context
+     */
+    public Context enterOr()
+        {
+        return new OrContext(this);
+        }
+
+    /**
+     * Create a negated form of this context.
+     * <p/>
+     * Note: This can only be used during the validate() stage.
+     *
+     * @return the new (negating) context
+     */
+    public Context enterNot()
+        {
+        return new NotContext(this);
         }
 
     /**
@@ -221,7 +270,12 @@ public class Context
                 }
             else
                 {
-                promoteAssignment(sName, asnInner);
+                Assignment asnOuter = promote(sName, asnInner);
+                if (m_fDemuxOnExit)
+                    {
+                    asnOuter = asnOuter.demux();
+                    }
+                getOuterContext().setVarAssignment(sName, asnOuter);
                 }
             }
 
@@ -233,10 +287,12 @@ public class Context
      *
      * @param sName     the variable name
      * @param asnInner  the variable assignment information to promote to the enclosing context
+     *
+     * @return the promoted assignment information
      */
-    protected void promoteAssignment(String sName, Assignment asnInner)
+    protected Assignment promote(String sName, Assignment asnInner)
         {
-        getOuterContext().setVarAssignment(sName, asnInner);
+        return asnInner;
         }
 
     /**
@@ -770,6 +826,95 @@ public class Context
         return getOuterContext().resolveReservedName(sName, name, errs);
         }
 
+    protected void collectVariables(Set<String> setVars)
+        {
+        Context ctxOuter = getOuterContext();
+        if (ctxOuter != null)
+            {
+            ctxOuter.collectVariables(setVars);
+            }
+
+        setVars.addAll(getDefiniteAssignments().keySet());
+        }
+
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("Current: ");
+        Map<String, Assignment> mapVars = getDefiniteAssignments();
+        if (mapVars.isEmpty())
+            {
+            sb.append("none");
+            }
+        else
+            {
+            TreeSet<String> setVars = new TreeSet<>(mapVars.keySet());
+            boolean fFirst = true;
+            for (String s : setVars)
+                {
+                if (fFirst)
+                    {
+                    fFirst = false;
+                    }
+                else
+                    {
+                    sb.append(", ");
+                    }
+
+                sb.append(s)
+                  .append("=")
+                  .append(getVarAssignment(s));
+                }
+            }
+
+        TreeSet<String> setVars = new TreeSet<>();
+        collectVariables(setVars);
+        if (setVars.size() > mapVars.size())
+            {
+            sb.append("; all variables:");
+            for (String s : setVars)
+                {
+                sb.append('\n')
+                  .append(s)
+                  .append('=')
+                  .append(getVarAssignment(s));
+                }
+            }
+
+        return sb.toString();
+        }
+
+
+    // ----- inner class: BlackholeContext ---------------------------------------------------------
+
+    /**
+     * A context that can be used to validate without allowing any mutating operations to leak
+     * through to the underlying context.
+     */
+    protected static class BlackholeContext
+            extends Context
+        {
+        /**
+         * Construct a BlackholeContext around an actual context.
+         *
+         * @param ctxOuter  the actual context
+         */
+        public BlackholeContext(Context ctxOuter)
+            {
+            super(ctxOuter, false);
+            }
+
+        @Override
+        public Context exit()
+            {
+            // no-op (don't push data up to outer scope)
+
+            return super.getOuterContext();
+            }
+        }
+
 
     // ----- inner class: ForkedContext ------------------------------------------------------------
 
@@ -781,7 +926,7 @@ public class Context
         {
         public ForkedContext(Context ctxOuter, boolean fWhenTrue)
             {
-            super(ctxOuter);
+            super(ctxOuter, false);
             m_fWhenTrue = fWhenTrue;
             }
 
@@ -803,15 +948,119 @@ public class Context
             }
 
         @Override
-        protected void promoteAssignment(String sName, Assignment asnInner)
+        protected Assignment promote(String sName, Assignment asnInner)
             {
             Context    ctxOuter = getOuterContext();
             Assignment asnOuter = ctxOuter.getVarAssignment(sName);
             Assignment asnJoin  = asnOuter.join(asnInner, isWhenTrue());
-            ctxOuter.setVarAssignment(sName, asnJoin);
+            return asnJoin;
             }
 
         private boolean m_fWhenTrue;
+        }
+
+
+    // ----- inner class: AndContext ------------------------------------------------------------
+
+    /**
+     * A nested context for handling "&&" expressions.
+     */
+    public static class AndContext
+            extends Context
+        {
+        public AndContext(Context ctxOuter)
+            {
+            super(ctxOuter, false);
+            }
+
+        @Override
+        public Assignment getVarAssignment(String sName)
+            {
+            Assignment asn = super.getVarAssignment(sName);
+            return getDefiniteAssignments().containsKey(sName)
+                    ? asn
+                    : asn.whenTrue(); // "&&" only uses the true branch of the left side
+            }
+
+        @Override
+        protected Assignment promote(String sName, Assignment asnInner)
+            {
+            // the "when false" portion of this context is combined with the the "when false"
+            // portion of the outer context;  the "when true" portion of this context replaces the
+            // "when true" portion of the outer context
+            Context    ctxOuter = getOuterContext();
+            Assignment asnOuter = ctxOuter.getVarAssignment(sName);
+            Assignment asnFalse = Assignment.join(asnOuter.whenFalse(), asnInner.whenFalse());
+            Assignment asnJoin  = Assignment.join(asnFalse, asnInner.whenTrue());
+            return asnJoin;
+            }
+        }
+
+
+    // ----- inner class: OrContext ------------------------------------------------------------
+
+    /**
+     * A nested context for handling "||" expressions.
+     */
+    public static class OrContext
+            extends Context
+        {
+        public OrContext(Context ctxOuter)
+            {
+            super(ctxOuter, false);
+            }
+
+        @Override
+        public Assignment getVarAssignment(String sName)
+            {
+            Assignment asn = super.getVarAssignment(sName);
+            return getDefiniteAssignments().containsKey(sName)
+                    ? asn
+                    : asn.whenFalse(); // "||" only uses the false branch of the left side
+            }
+
+        @Override
+        protected Assignment promote(String sName, Assignment asnInner)
+            {
+            // the "when false" portion of this context replaces the "when false" portion of the
+            // outer context;  the "when true" portion of this context is combined with the the
+            // "when true" portion of the outer context
+            Context    ctxOuter = getOuterContext();
+            Assignment asnOuter = ctxOuter.getVarAssignment(sName);
+            Assignment asnTrue  = Assignment.join(asnOuter.whenTrue(), asnInner.whenTrue());
+            Assignment asnJoin  = Assignment.join(asnInner.whenFalse(), asnTrue);
+            return asnJoin;
+            }
+        }
+
+
+    // ----- inner class: NotContext ------------------------------------------------------------
+
+    /**
+     * A nested context for swapping "when false" and "when true".
+     */
+    public static class NotContext
+            extends Context
+        {
+        public NotContext(Context ctxOuter)
+            {
+            super(ctxOuter, false);
+            }
+
+        @Override
+        public Assignment getVarAssignment(String sName)
+            {
+            Assignment asn = super.getVarAssignment(sName);
+            return getDefiniteAssignments().containsKey(sName)
+                    ? asn
+                    : asn.negate(); // the variable assignment came from outside of this negation
+            }
+
+        @Override
+        protected Assignment promote(String sName, Assignment asnInner)
+            {
+            return asnInner.negate();
+            }
         }
 
 
@@ -825,16 +1074,16 @@ public class Context
         {
         public LoopingContext(Context ctxOuter)
             {
-            super(ctxOuter);
+            super(ctxOuter, true);
             }
 
         @Override
-        protected void promoteAssignment(String sName, Assignment asnInner)
+        protected Assignment promote(String sName, Assignment asnInner)
             {
             Context    ctxOuter = getOuterContext();
             Assignment asnOuter = ctxOuter.getVarAssignment(sName);
             Assignment asnJoin  = asnOuter.joinLoop(asnInner);
-            ctxOuter.setVarAssignment(sName, asnJoin);
+            return asnJoin;
             }
         }
 
@@ -874,7 +1123,7 @@ public class Context
          */
         public InferringContext(Context ctxOuter, TypeConstant typeLeft)
             {
-            super(ctxOuter);
+            super(ctxOuter, true);
 
             m_typeLeft = typeLeft;
             }
@@ -912,6 +1161,12 @@ public class Context
      * context may not have an outer context.
      */
     private Context m_ctxOuter;
+
+    /**
+     * True means that this context should demux the assignment information that it pushes
+     * "outwards" on exit.
+     */
+    private boolean m_fDemuxOnExit;
 
     /**
      * Each variable declared within this context is registered in this map, along with the
