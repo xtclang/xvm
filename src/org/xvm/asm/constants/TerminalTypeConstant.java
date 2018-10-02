@@ -559,7 +559,6 @@ public class TerminalTypeConstant
             {
             case Module:
             case Package:
-            case Property:
                 return false;
 
             case Class:
@@ -569,9 +568,11 @@ public class TerminalTypeConstant
                 constant = ((NativeRebaseConstant) constant).getClassConstant();
                 break;
 
+            case Property:
+                return ((PropertyConstant) constant).getReferredToType().isTuple();
+
             case TypeParameter:
-                constant = ((TypeParameterConstant) constant).getReferredToType();
-                break;
+                return ((TypeParameterConstant) constant).getReferredToType().isTuple();
 
             case ThisClass:
             case ParentClass:
