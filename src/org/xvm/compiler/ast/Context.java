@@ -5,9 +5,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-
 import java.util.Set;
 import java.util.TreeSet;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -280,6 +280,45 @@ public class Context
             }
 
         return getOuterContext();
+        }
+
+    // TODO public void shortTo(Context ctxOuter)
+    protected Map<String, Assignment> prepareExit(Context ctxOuter)
+        {
+
+        Map<String, Assignment> mapMods = getDefiniteAssignments();
+        if (mapMods.isEmpty())
+            {
+            return Collections.EMPTY_MAP;
+            }
+
+        Map<String, Assignment> mapPrep = new HashMap<>();
+        for (Entry<String, Assignment> entry : mapMods.entrySet())
+            {
+            String     sName    = entry.getKey();
+            Assignment asnInner = entry.getValue();
+            if (isVarDeclaredInThisScope(sName))
+                {
+                // we have unwound all the way back to the declaration context for the
+                // variable at this point, so if it is proven to be effectively final, that
+                // information is stored off, for example so that captures can make use of
+                // that knowledge (i.e. capturing a value of type T, instead of a Ref<T>)
+                if (asnInner.isEffectivelyFinal())
+                    {
+                    ((Register) getVar(sName)).markEffectivelyFinal();
+                    }
+                }
+            else
+                {
+                Assignment asnOuter = promote(sName, asnInner);
+                //if (fDemux)
+                    {
+                    asnOuter = asnOuter.demux();
+                    }
+                getOuterContext().setVarAssignment(sName, asnOuter);
+                }
+            }
+        return mapPrep;
         }
 
     /**

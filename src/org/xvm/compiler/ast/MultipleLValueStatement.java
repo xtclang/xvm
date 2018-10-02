@@ -445,16 +445,17 @@ public class MultipleLValueStatement
             }
 
         @Override
-        public boolean isAborting()
+        public boolean isCompletable()
             {
             for (Expression expr : ensureExpressions())
                 {
-                if (expr.isAborting())
+                if (!expr.isCompletable())
                     {
-                    return true;
+                    return false;
                     }
                 }
-            return false;
+
+            return true;
             }
 
         @Override
@@ -467,6 +468,7 @@ public class MultipleLValueStatement
                     return true;
                     }
                 }
+
             return false;
             }
 
@@ -480,6 +482,7 @@ public class MultipleLValueStatement
                     return false;
                     }
                 }
+
             return true;
             }
 

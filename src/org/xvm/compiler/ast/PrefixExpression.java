@@ -172,9 +172,9 @@ public class PrefixExpression
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
-    public boolean isAborting()
+    public boolean isCompletable()
         {
-        return expr.isAborting();
+        return expr.isCompletable();
         }
 
     @Override

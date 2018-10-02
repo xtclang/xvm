@@ -115,11 +115,13 @@ public class Register
      */
     public void specifyRegType(TypeConstant typeReg)
         {
+        ConstantPool pool = typeReg.getConstantPool();
+
         assert m_typeReg == null;
-        assert typeReg != null && typeReg.isA(typeReg.getConstantPool().typeRef());
+        assert typeReg.isA(pool.typeRef());
 
         this.m_typeReg = typeReg;
-        if (!typeReg.isA(typeReg.getConstantPool().typeVar()))
+        if (!typeReg.isA(pool.typeVar()))
             {
             m_fRO = true;
             }
@@ -551,7 +553,7 @@ public class Register
         Assigned_Unknown     (Assigned,     Unknown),
         Assigned_Assigned1   (Assigned,     AssignedOnce);
 
-        private Assignment(boolean fUnassigned, boolean fAssigned, boolean fExactlyOnce)
+        Assignment(boolean fUnassigned, boolean fAssigned, boolean fExactlyOnce)
             {
             assert !(fAssigned & fUnassigned);
 
@@ -561,7 +563,7 @@ public class Register
             fExactlyOnceWhenFalse = fExactlyOnceWhenTrue  = fExactlyOnce;
             }
 
-        private Assignment(Assignment whenFalse, Assignment whenTrue)
+        Assignment(Assignment whenFalse, Assignment whenTrue)
             {
             fSplit                = true;
             fUnassignedWhenFalse  = whenFalse.isDefinitelyUnassigned();
@@ -594,6 +596,32 @@ public class Register
         public boolean isEffectivelyFinal()
             {
             return fExactlyOnceWhenFalse & fExactlyOnceWhenTrue;
+            }
+
+        /**
+         * Apply an assignment to this Assignment state.
+         *
+         * @return the result of assignment
+         */
+        public Assignment applyAssignment()
+            {
+            return isDefinitelyUnassigned()
+                    ? AssignedOnce
+                    : Assigned;
+            }
+
+        /**
+         * Apply a potentially asynchronous assignment that occurs from a lambda or anonymous inner
+         * cass via a variable capture. Because the assignment is potentially asynchronous, its
+         * outcome may be indeterminate.
+         *
+         * @return the resulting Assignment state
+         */
+        public Assignment applyAssignmentFromCapture()
+            {
+            return isDefinitelyAssigned()
+                    ? Assigned
+                    : Unknown;
             }
 
         /**
@@ -739,32 +767,6 @@ public class Register
             }
 
         /**
-         * Apply an assignment to this Assignment state.
-         *
-         * @return the result of assignment
-         */
-        public Assignment applyAssignment()
-            {
-            return isDefinitelyUnassigned()
-                    ? AssignedOnce
-                    : Assigned;
-            }
-
-        /**
-         * Apply a potentially asynchronous assignment that occurs from a lambda or anonymous inner
-         * cass via a variable capture. Because the assignment is potentially asynchronous, its
-         * outcome may be indeterminate.
-         *
-         * @return the resulting Assignment state
-         */
-        public Assignment applyAssignmentFromCapture()
-            {
-            return isDefinitelyAssigned()
-                    ? Assigned
-                    : Unknown;
-            }
-
-        /**
          * Look up a Assignment enum by its ordinal.
          *
          * @param i  the ordinal
@@ -823,11 +825,6 @@ public class Register
 
 
     // ----- fields --------------------------------------------------------------------------------
-
-    /**
-     * A singleton "black hole" register.
-     */
-    public static final Register IGNORE = new Register(null, Op.A_IGNORE);
 
     /**
      * Empty array of registers.

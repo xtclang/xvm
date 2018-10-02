@@ -1748,3 +1748,51 @@ class List3 extends List2
     }
 
 List2 l = new List3();
+
+// --- definite assignment challenge
+
+// REVIEW
+// some contexts do not allow declarations, e.g. an expression context, or an inferring context
+// a context that does allow declarations must handle tracking the "effectively final" status of variables (determined when the vars go out of scope)
+// the main thing is that once a context goes into an "unreachable" state, it no longer tracks unassigned/assigned
+// - its information is only used to prove/disprove effectively final
+
+// ctx0
+Int i;
+L1: /*ctx1*/while (/*ctx1.1*/true) // ctx.enterLoop();
+  {
+  L2: /*ctx2*/while (true)
+    {
+    /*ctx3*/if (/*ctx3.1*/foo())
+      {//ctx3.2
+      break L1;
+      }
+    i = 1;
+    } // ctx.exit();
+  // is i assigned? no
+  print i;
+  }
+// is i assigned? yes
+
+// example of nested not interfering with outer context
+{
+Int i;
+if (foo())
+  {
+  i = 1; // at this point, "i" is "AssignedOnce"
+  return i;
+  }
+// what is the Assignment for "i" here? it must be "UnassignedOnce"
+}
+
+//
+{
+Int i = 1; // at this point, "i" is "AssignedOnce"
+if (foo())
+  {
+  i = 2; // at this point, "i" is "Assigned"
+  return i;
+  }
+// what is the Assignment for "i" here? it must be "Assigned" (NOT AssignedOnce, since there are 2 points that assign i, even though not in this "path")
+}
+

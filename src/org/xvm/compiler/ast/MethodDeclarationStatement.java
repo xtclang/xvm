@@ -431,7 +431,8 @@ public class MethodDeclarationStatement
                 assert value != null;
 
                 // TODO: this needs to be wrapped into a statement (see PropertyDeclaration)
-                if (!value.isAborting() && value.isRuntimeConstant())
+                // TODO: if (value.isCompletable() && value.isRuntimeConstant())
+                if (value.isConstant())
                     {
                     parameter.setDefaultValue(value.toConstant());
                     }

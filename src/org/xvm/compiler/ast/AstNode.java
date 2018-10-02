@@ -459,6 +459,19 @@ public abstract class AstNode
         }
 
     /**
+     * (Post-validation) Determine if the statement or expression is able to complete normally.
+     * <p/>
+     * This method must be overridden by any statement or expression that may not complete, either
+     * due to its own implementation or that of another AST node that is delegated to.
+     *
+     * @return true iff the AST node is able to complete
+     */
+    public boolean isCompletable()
+        {
+        return true;
+        }
+
+    /**
      * @return the constant pool
      */
     protected ConstantPool pool()

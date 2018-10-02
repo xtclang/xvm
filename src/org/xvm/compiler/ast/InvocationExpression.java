@@ -720,16 +720,17 @@ public class InvocationExpression
         }
 
     @Override
-    public boolean isAborting()
+    public boolean isCompletable()
         {
         for (Expression arg : args)
             {
-            if (arg.isAborting())
+            if (!arg.isCompletable())
                 {
-                return true;
+                return false;
                 }
             }
-        return expr.isAborting();
+
+        return true;
         }
 
     @Override

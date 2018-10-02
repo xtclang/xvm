@@ -35,9 +35,9 @@ public class BadTypeExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public boolean isAborting()
+    public boolean isCompletable()
         {
-        return true;
+        return false;
         }
 
     @Override

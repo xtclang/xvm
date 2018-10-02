@@ -133,9 +133,9 @@ public class ThrowExpression
         }
 
     @Override
-    public boolean isAborting()
+    public boolean isCompletable()
         {
-        return true;
+        return false;
         }
 
     @Override

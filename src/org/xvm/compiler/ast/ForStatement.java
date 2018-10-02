@@ -194,7 +194,7 @@ public class ForStatement
         if (expr != null)
             {
             expr.generateConditionalJump(ctx, code, getEndLabel(), false, errs);
-            fCompletes &= !expr.isAborting();
+            fCompletes &= expr.isCompletable();
             }
 
         fCompletes = block.completes(ctx, fCompletes, code, errs);

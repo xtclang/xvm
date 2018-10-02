@@ -158,12 +158,11 @@ public class ElvisExpression
         }
 
     @Override
-    public boolean isAborting()
+    public boolean isCompletable()
         {
         // these can complete if the first expression can complete, because the result can
-        // be calculated from the first expression, depending on what its answer is; thus
-        // the expression aborts if the first of the two expressions aborts
-        return expr1.isAborting();
+        // be calculated from the first expression, depending on what its answer is
+        return expr1.isCompletable();
         }
 
     @Override

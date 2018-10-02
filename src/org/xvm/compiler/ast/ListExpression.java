@@ -229,16 +229,17 @@ public class ListExpression
         }
 
     @Override
-    public boolean isAborting()
+    public boolean isCompletable()
         {
         for (Expression expr : exprs)
             {
-            if (expr.isAborting())
+            if (!expr.isCompletable())
                 {
-                return true;
+                return false;
                 }
             }
-        return false;
+
+        return true;
         }
 
     @Override
@@ -251,6 +252,7 @@ public class ListExpression
                 return true;
                 }
             }
+
         return false;
         }
 

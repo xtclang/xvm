@@ -662,9 +662,9 @@ public class NameExpression
         }
 
     @Override
-    public boolean isAborting()
+    public boolean isCompletable()
         {
-        return left != null && left.isAborting();
+        return left == null || left.isCompletable();
         }
 
     @Override
