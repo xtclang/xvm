@@ -126,10 +126,10 @@ public class TodoExpression
         }
 
     @Override
-    public boolean isAborting()
+    public boolean isCompletable()
         {
         // a T0D0 cannot complete; it always throws
-        return true;
+        return false;
         }
 
     @Override

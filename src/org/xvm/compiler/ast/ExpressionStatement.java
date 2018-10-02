@@ -84,7 +84,7 @@ public class ExpressionStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean fCompletes = fReachable & !expr.isAborting();
+        boolean fCompletes = fReachable & expr.isCompletable();
 
         // so an expression is being used as a statement; blackhole the results
         expr.generateAssignments(ctx, code, Expression.NO_LVALUES, errs);

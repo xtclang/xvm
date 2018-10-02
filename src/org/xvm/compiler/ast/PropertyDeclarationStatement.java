@@ -319,7 +319,7 @@ public class PropertyDeclarationStatement
                 // was a constant value, then just take that constant value and discard the
                 // initializer
                 Expression valueNew = stmtInit.getInitializerExpression();
-                if (valueNew != null && !valueNew.isAborting() && valueNew.isRuntimeConstant())
+                if (valueNew != null && valueNew.isConstant()) // REVIEW !valueNew.isCompletable() && valueNew.isRuntimeConstant())
                     {
                     value = adopt(valueNew);
 

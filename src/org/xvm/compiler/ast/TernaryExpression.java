@@ -129,9 +129,9 @@ public class TernaryExpression
         }
 
     @Override
-    public boolean isAborting()
+    public boolean isCompletable()
         {
-        return cond.isAborting() || (exprThen.isAborting() && exprElse.isAborting());
+        return cond.isCompletable() && (exprThen.isCompletable() || exprElse.isCompletable());
         }
 
     @Override

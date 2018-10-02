@@ -995,19 +995,6 @@ public abstract class Expression
         }
 
     /**
-     * (Post-validation) Determine if the expression aborts.
-     * <p/>
-     * This method must be overridden by any expression does not complete, or that contains
-     * another expression that may not be completable.
-     *
-     * @return true iff the expression is capable of completing normally
-     */
-    public boolean isAborting()
-        {
-        return false;
-        }
-
-    /**
      * (Post-validation) Determine if the expression can short-circuit.
      * <p/>
      * This method must be overridden by any expression can short circuit, or any expression that

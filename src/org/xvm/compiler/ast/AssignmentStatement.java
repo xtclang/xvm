@@ -381,10 +381,10 @@ public class AssignmentStatement
                 }
 
             Assignable[] LVals = lvalueExpr.generateAssignables(ctx, code, errs);
-            if (fCompletes &= !lvalueExpr.isAborting())
+            if (fCompletes &= lvalueExpr.isCompletable())
                 {
                 rvalue.generateAssignments(ctx, code, LVals, errs);
-                fCompletes &= !rvalue.isAborting();
+                fCompletes &= rvalue.isCompletable();
                 }
             }
         else if (isConditional())
@@ -395,10 +395,10 @@ public class AssignmentStatement
             Assignable[] LValsAll = new Assignable[cAll];
             LValsAll[0] = lvalueExpr.new Assignable(getConditionRegister());
             System.arraycopy(LVals, 0, LValsAll, 1, cLVals);
-            if (fCompletes &= !lvalueExpr.isAborting())
+            if (fCompletes &= lvalueExpr.isCompletable())
                 {
                 rvalue.generateAssignments(ctx, code, LVals, errs);
-                fCompletes &= !rvalue.isAborting();
+                fCompletes &= rvalue.isCompletable();
                 }
             }
         else

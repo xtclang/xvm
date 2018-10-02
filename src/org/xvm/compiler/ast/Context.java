@@ -5,9 +5,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-
 import java.util.Set;
 import java.util.TreeSet;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -15,7 +15,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Register;
-import org.xvm.asm.Register.Assignment;
+import org.xvm.asm.Assignment;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -127,6 +127,26 @@ public class Context
     public ConstantPool pool()
         {
         return getOuterContext().pool();
+        }
+
+    /**
+     * Associate an AST node with this Context, for example if the node is able to ground a
+     * short-circuit or act as a "break" target.
+     *
+     * @param node  the AST node that this Context corresponds to in terms of scope and completion
+     */
+    public void registerNode(AstNode node)
+        {
+        assert m_node == null;
+        m_node = node;
+        }
+
+    /**
+     * @return the AST node associated with this Context, or null if none is explicitly associated
+     */
+    public AstNode getNode()
+        {
+        return m_node;
         }
 
     /**
@@ -245,6 +265,24 @@ public class Context
         }
 
     /**
+     * Mark the Context as being non-completing from this point forward. This means that the code
+     * for which the context exists has completed abruptly.
+     */
+    public void markNonCompleting()
+        {
+        m_fNonCompleting = true;
+        }
+
+    /**
+     * @return true iff the context has transitioned into an "unreachable" mode due to a
+     *         non-completing or abruptly completing statement or expression
+     */
+    public boolean isCompleting()
+        {
+        return !m_fNonCompleting;
+        }
+
+    /**
      * Exit the scope that was created by calling {@link #enter()}. Used in the validation
      * phase to track scopes.
      * <p/>
@@ -280,6 +318,45 @@ public class Context
             }
 
         return getOuterContext();
+        }
+
+    // TODO public void shortTo(Context ctxOuter)
+    protected Map<String, Assignment> prepareExit(Context ctxOuter)
+        {
+
+        Map<String, Assignment> mapMods = getDefiniteAssignments();
+        if (mapMods.isEmpty())
+            {
+            return Collections.EMPTY_MAP;
+            }
+
+        Map<String, Assignment> mapPrep = new HashMap<>();
+        for (Entry<String, Assignment> entry : mapMods.entrySet())
+            {
+            String     sName    = entry.getKey();
+            Assignment asnInner = entry.getValue();
+            if (isVarDeclaredInThisScope(sName))
+                {
+                // we have unwound all the way back to the declaration context for the
+                // variable at this point, so if it is proven to be effectively final, that
+                // information is stored off, for example so that captures can make use of
+                // that knowledge (i.e. capturing a value of type T, instead of a Ref<T>)
+                if (asnInner.isEffectivelyFinal())
+                    {
+                    ((Register) getVar(sName)).markEffectivelyFinal();
+                    }
+                }
+            else
+                {
+                Assignment asnOuter = promote(sName, asnInner);
+                //if (fDemux)
+                    {
+                    asnOuter = asnOuter.demux();
+                    }
+                getOuterContext().setVarAssignment(sName, asnOuter);
+                }
+            }
+        return mapPrep;
         }
 
     /**
@@ -459,8 +536,6 @@ public class Context
         markVarRead(false, tokName.getValueText(), tokName, errs);
         }
 
-    // TODO need separate "mark var required"
-
     /**
      * Mark the specified variable as being read from within this context.
      *
@@ -472,6 +547,8 @@ public class Context
      */
     protected void markVarRead(boolean fNested, String sName, Token tokName, ErrorListener errs)
         {
+        // TODO if (isCompleting())
+
         if (fNested || isVarReadable(sName))
             {
             if (!isVarDeclaredInThisScope(sName))
@@ -1163,10 +1240,22 @@ public class Context
     private Context m_ctxOuter;
 
     /**
+     * The node (a Statement or Expression) that this context is associated with.
+     */
+    private AstNode m_node;
+
+    /**
      * True means that this context should demux the assignment information that it pushes
      * "outwards" on exit.
      */
     private boolean m_fDemuxOnExit;
+
+    /**
+     * Set to true when the context has passed the point of completion, i.e. passed any "reachable"
+     * code. This could be caused by a "throw", "return", "break" or other abruptly completing
+     * construct.
+     */
+    private boolean m_fNonCompleting;
 
     /**
      * Each variable declared within this context is registered in this map, along with the

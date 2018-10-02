@@ -284,16 +284,17 @@ public class ArrayAccessExpression
         }
 
     @Override
-    public boolean isAborting()
+    public boolean isCompletable()
         {
         for (Expression index : indexes)
             {
-            if (index.isAborting())
+            if (!index.isCompletable())
                 {
-                return true;
+                return false;
                 }
             }
-        return expr.isAborting();
+
+        return true;
         }
 
     @Override

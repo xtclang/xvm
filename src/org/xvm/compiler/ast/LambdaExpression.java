@@ -21,7 +21,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
-import org.xvm.asm.Register.Assignment;
+import org.xvm.asm.Assignment;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.SignatureConstant;

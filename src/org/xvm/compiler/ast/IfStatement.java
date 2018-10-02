@@ -206,7 +206,7 @@ public class IfStatement
         else
             {
             Expression exprCond = (Expression) cond;
-            fCompletesCond = !exprCond.isAborting();
+            fCompletesCond = exprCond.isCompletable();
             exprCond.generateConditionalJump(ctx, code, labelElse, false, errs);
             }
 

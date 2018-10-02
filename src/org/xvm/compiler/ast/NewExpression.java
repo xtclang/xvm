@@ -324,16 +324,17 @@ public class NewExpression
         }
 
     @Override
-    public boolean isAborting()
+    public boolean isCompletable()
         {
         for (Expression expr : args)
             {
-            if (expr.isAborting())
+            if (!expr.isCompletable())
                 {
-                return true;
+                return false;
                 }
             }
-        return false;
+
+        return true;
         }
 
     @Override
@@ -346,6 +347,7 @@ public class NewExpression
                 return true;
                 }
             }
+
         return false;
         }
 

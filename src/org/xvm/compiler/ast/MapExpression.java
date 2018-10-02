@@ -285,23 +285,25 @@ public class MapExpression
         }
 
     @Override
-    public boolean isAborting()
+    public boolean isCompletable()
         {
         for (Expression key : keys)
             {
-            if (key.isAborting())
+            if (!key.isCompletable())
                 {
-                return true;
+                return false;
                 }
             }
+
         for (Expression val : values)
             {
-            if (val.isAborting())
+            if (!val.isCompletable())
                 {
-                return true;
+                return false;
                 }
             }
-        return false;
+
+        return true;
         }
 
     @Override
@@ -314,6 +316,7 @@ public class MapExpression
                 return true;
                 }
             }
+
         for (Expression val : values)
             {
             if (val.isShortCircuiting())
@@ -321,6 +324,7 @@ public class MapExpression
                 return true;
                 }
             }
+
         return false;
         }
 

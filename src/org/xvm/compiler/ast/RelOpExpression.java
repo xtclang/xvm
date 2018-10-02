@@ -704,10 +704,10 @@ public class RelOpExpression
         }
 
     @Override
-    public boolean isAborting()
+    public boolean isCompletable()
         {
         // these can only complete if both sub-expressions can complete
-        return expr1.isAborting() || expr2.isAborting();
+        return expr1.isCompletable() && expr2.isCompletable();
         }
 
     @Override

@@ -265,7 +265,7 @@ public class WhileStatement
                 {
                 Expression exprCond = (Expression) cond;
                 exprCond.generateConditionalJump(ctx, code, getRepeatLabel(), true, errs);
-                fCompletes &= !exprCond.isAborting();
+                fCompletes &= exprCond.isCompletable();
                 }
             code.add(new Exit());
             return fCompletes;
@@ -307,7 +307,7 @@ public class WhileStatement
             {
             Expression exprCond = (Expression) cond;
             exprCond.generateConditionalJump(ctx, code, getRepeatLabel(), true, errs);
-            fCompletes &= !exprCond.isAborting();
+            fCompletes &= exprCond.isCompletable();
             }
         if (fOwnScope)
             {

@@ -94,28 +94,28 @@ public class AssertStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
+        boolean fCompletes = fReachable;
         if (cond instanceof Expression && ((Expression) cond).isConstantTrue())
             {
-            return fReachable;
+            return fCompletes;
             }
 
         if (cond == null || (cond instanceof Expression && ((Expression) cond).isConstantFalse()))
             {
             code.add(new Assert(pool().valFalse()));
-            return fReachable;
+            return fCompletes;
             }
 
-        boolean fCompletes;
         if (cond instanceof AssignmentStatement)
             {
             AssignmentStatement stmtCond = (AssignmentStatement) cond;
-            fCompletes = stmtCond.completes(ctx, fReachable, code, errs);
+            fCompletes = stmtCond.completes(ctx, fCompletes, code, errs);
             code.add(new Assert(stmtCond.getConditionRegister()));
             }
         else
             {
             Expression exprCond = (Expression) cond;
-            fCompletes = !exprCond.isAborting();
+            fCompletes &= exprCond.isCompletable();
             code.add(new Assert(exprCond.generateArgument(ctx, code, true, true, errs)));
             }
 

@@ -82,9 +82,9 @@ public abstract class BiExpression
         }
 
     @Override
-    public boolean isAborting()
+    public boolean isCompletable()
         {
-        return expr1.isAborting() || expr2.isAborting();
+        return expr1.isCompletable() && expr2.isCompletable();
         }
 
 

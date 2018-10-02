@@ -122,7 +122,7 @@ public class ReturnStatement
                 if (cExprs == 1)
                     {
                     Expression expr = listExprs.get(0);
-                    if (!expr.isAborting() && !expr.isVoid())
+                    if (expr.isCompletable() && !expr.isVoid())
                         {
                         // it was supposed to be a void return
                         log(errs, Severity.ERROR, Compiler.RETURN_VOID);
