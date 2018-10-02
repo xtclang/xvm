@@ -469,53 +469,6 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public TypeConstant adoptParentTypeParameters(ConstantPool pool)
-        {
-        if (isTuple())
-            {
-            return this;
-            }
-
-        Constant constId = ensureResolvedConstant();
-
-        IdentityConstant idClz;
-        switch (constId.getFormat())
-            {
-            case Module:
-            case Package:
-            case Property:
-            case TypeParameter:
-            case NativeClass:
-                return this;
-
-            case Class:
-                idClz = (IdentityConstant) constId;
-                break;
-
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                idClz = ((PseudoConstant) constId).getDeclarationLevelClass();
-                break;
-
-            case Typedef:
-                return ((TypedefConstant) constId).getReferredToType().
-                    adoptParentTypeParameters(pool);
-
-            default:
-                throw new IllegalStateException("unexpected defining constant: " + constId);
-            }
-
-        ClassStructure struct = (ClassStructure) idClz.getComponent();
-        ClassStructure parent = struct.getInstanceParent();
-
-        return parent != null && parent.isParameterized()
-            ? pool.ensureParameterizedTypeConstant(this,
-                    parent.getFormalType().getParamTypesArray())
-            : this;
-        }
-
-    @Override
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget)
         {
         if (!isSingleDefiningConstant())
@@ -531,12 +484,19 @@ public class TerminalTypeConstant
             case ThisClass:
                 {
                 IdentityConstant idClass = ((ThisClassConstant) constant).getDeclarationLevelClass();
-                if (typeTarget == null)
+                if (typeTarget == null || !typeTarget.isSingleUnderlyingClass(true))
                     {
                     return idClass.getType();
                     }
 
                 assert typeTarget.isA(idClass.getType());
+
+                // strip the immutability and access modifiers
+                while (typeTarget instanceof ImmutableTypeConstant ||
+                       typeTarget instanceof AccessTypeConstant)
+                    {
+                    typeTarget = typeTarget.getUnderlyingType();
+                    }
                 return typeTarget;
                 }
 

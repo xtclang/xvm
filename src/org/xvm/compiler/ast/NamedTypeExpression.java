@@ -11,6 +11,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.asm.constants.ChildClassConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ResolvableConstant;
@@ -431,8 +432,8 @@ public class NamedTypeExpression
         //       {
         //       Parent p;  // (1) means Parent<T0>
         //       Child1 c1; // (2) means Child1<Parent<T0>>
-        //       Child3 c2; // (3) means Child2<Parent<T0>, ?>
-        //       Child2 c3; // (3) means naked Child3 type
+        //       Child2 c2; // (3) means Child2<Parent<T0>, ?>
+        //       Child3 c3; // (3) means naked Child3 type
         //       }
         //
         //    class Child1
@@ -473,6 +474,10 @@ public class NamedTypeExpression
             {
             case ThisClass:
                 idFormalTarget = ((ThisClassConstant) constTarget).getDeclarationLevelClass();
+                break;
+
+            case ChildClass:
+                idFormalTarget = ((ChildClassConstant) constTarget).getDeclarationLevelClass();
                 break;
 
             case Class:
@@ -519,6 +524,7 @@ public class NamedTypeExpression
                     }
                 if (fUseFormal)
                     {
+                    // TODO: for child classes create ParameterizedTC(ChildTC(typeParent, clzChild))
                     typeTarget = pool.ensureParameterizedTypeConstant(typeTarget,
                             clzTarget.getFormalType().getParamTypesArray());
                     }

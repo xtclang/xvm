@@ -233,60 +233,102 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public TypeConstant adoptParentTypeParameters(ConstantPool pool)
-        {
-        TypeConstant constOriginal = m_constType;
-
-        assert constOriginal instanceof TerminalTypeConstant;
-
-        TypeConstant constResolved = constOriginal.adoptParentTypeParameters(pool);
-        if (constResolved == constOriginal)
-            {
-            return this;
-            }
-
-        // TODO: create ParameterizedTC(ChildTC(typeParent, clzChild))
-        //       see ClassStructure.getFormalType()
-        TypeConstant[] aconstParent   = constResolved.getParamTypesArray();
-        TypeConstant[] aconstThis     = m_atypeParams;
-        TypeConstant[] aconstResolved = new TypeConstant[aconstParent.length + aconstThis.length];
-
-        System.arraycopy(aconstParent, 0, aconstResolved, 0, aconstParent.length);
-        System.arraycopy(aconstThis,   0, aconstResolved, aconstParent.length, aconstThis.length);
-
-        return pool.ensureParameterizedTypeConstant(constOriginal, aconstResolved);
-        }
-
-    @Override
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget)
         {
+        // there are a number of scenarios to consider here;
+        // let's assume there a class C<T>, which has a number of auto-narrowing methods:
+        //  1) C f1(); // same as C<T> f1();
+        //  2) immutable C f2();
+        //  3) C<X> f3();
+        //  4) A<C> f4();
+        //  5) A<C<X>> f4();
+        // and this type represents the return type of that method.
+        //
+        // Let's say that there is a class D<U> that extends (or mixes into) C<U>;
+        // then we are expecting the following results:
+        //
+        //  scenario/this  | target | result
+        // --------------------------------------------------------------
+        //     1a) C       |   D    |   D
+        //     2a) imm C   |   D    |   imm D
+        //     3a) C<X>    |   D    |   D<Y> where Y is resolved against C<X>
+        //     4a) A<C>    |   D    |   A<D>
+        //     5a) A<C<X>> |   D    |   A<D<Y>> where Y is resolved against C<X>
+        //                 |        |
+        //     1b) C       |   D<Z> |   D<Z>
+        //     2b) imm C   |   D<Z> |   imm D<Z>
+        //     3b) C<X>    |   D<Z> |   D<Y> where Y is resolved against C<Z>
+        //     4b) A<C>    |   D<Z> |   A<D<Z>>
+        //     5b) A<C<X>> |   D<Z> |   A<D<Y>> where Y is resolved against C<Z>
+        //
+        // Scenarios 1 and 2 are dealt by the TerminalTypeConstant and ImmutableTypeConstant,
+        // so here we only need to deal with 3, 4 and 5
+
         TypeConstant constOriginal = m_constType;
         TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, typeTarget);
-        boolean      fDiff         = constOriginal != constResolved;
 
-        TypeConstant[] aconstOriginal = m_atypeParams;
-        TypeConstant[] aconstResolved = aconstOriginal;
-        for (int i = 0, c = aconstOriginal.length; i < c; ++i)
+        if (constOriginal == constResolved)
             {
-            TypeConstant constParamOriginal = aconstOriginal[i];
-            TypeConstant constParamResolved = constParamOriginal.resolveAutoNarrowing(pool, typeTarget);
-            if (constParamOriginal != constParamResolved)
+            // scenarios 4, 5
+            boolean        fDiff          = false;
+            TypeConstant[] aconstOriginal = m_atypeParams;
+            TypeConstant[] aconstResolved = aconstOriginal;
+            for (int i = 0, c = aconstOriginal.length; i < c; ++i)
                 {
-                if (aconstResolved == aconstOriginal)
+                TypeConstant constParamOriginal = aconstOriginal[i];
+                TypeConstant constParamResolved = constParamOriginal.resolveAutoNarrowing(pool, typeTarget);
+                if (constParamOriginal != constParamResolved)
                     {
-                    aconstResolved = aconstOriginal.clone();
+                    if (aconstResolved == aconstOriginal)
+                        {
+                        aconstResolved = aconstOriginal.clone();
+                        }
+                    aconstResolved[i] = constParamResolved;
+                    fDiff = true;
                     }
-                aconstResolved[i] = constParamResolved;
-                fDiff = true;
+                }
+
+            return fDiff
+                    ? pool.ensureParameterizedTypeConstant(constOriginal, aconstResolved)
+                    : this;
+            }
+        else
+            {
+            if (constResolved.isParamsSpecified())
+                {
+                // scenario 3b
+                boolean        fDiff          = false;
+                TypeConstant[] aconstOriginal = constResolved.getParamTypesArray();
+                TypeConstant[] aconstResolved = aconstOriginal;
+                for (int i = 0, c = aconstOriginal.length; i < c; ++i)
+                    {
+                    TypeConstant constParamOriginal = aconstOriginal[i];
+                    TypeConstant constParamResolved = constParamOriginal.resolveGenerics(pool, this);
+                    if (constParamOriginal != constParamResolved)
+                        {
+                        if (aconstResolved == aconstOriginal)
+                            {
+                            aconstResolved = aconstOriginal.clone();
+                            }
+                        aconstResolved[i] = constParamResolved;
+                        fDiff = true;
+                        }
+                    }
+
+                return fDiff
+                        ? constResolved.adoptParameters(pool, aconstResolved)
+                        : constResolved;
+                }
+            else
+                {
+                // scenario 3a
+                // TODO: how to figure out a case of the resolved type not being congruent
+                //       to the original type and not parameterizable by our parameters?
+                return pool.ensureParameterizedTypeConstant(constResolved, m_atypeParams);
                 }
             }
-
-        return fDiff
-                ? constResolved.isParamsSpecified()
-                    ? constResolved.adoptParameters(pool, aconstResolved)
-                    : pool.ensureParameterizedTypeConstant(constResolved, aconstResolved)
-                : this;
         }
+
 
     @Override
     public TypeConstant inferAutoNarrowing(ConstantPool pool, IdentityConstant constThisClass)

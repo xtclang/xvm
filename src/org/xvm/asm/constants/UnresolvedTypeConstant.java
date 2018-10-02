@@ -192,16 +192,6 @@ public class UnresolvedTypeConstant
         }
 
     @Override
-    public TypeConstant adoptParentTypeParameters(ConstantPool pool)
-        {
-        if (isTypeResolved())
-            {
-            return getResolvedType().adoptParentTypeParameters(pool);
-            }
-        throw new IllegalStateException();
-        }
-
-    @Override
     public TypeInfo getTypeInfo()
         {
         if (isTypeResolved())

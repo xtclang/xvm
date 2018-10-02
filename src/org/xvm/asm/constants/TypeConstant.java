@@ -599,30 +599,6 @@ public abstract class TypeConstant
         }
 
     /**
-     * If this type represents a child class, create a semantically equivalent type that contains
-     * the parent's formal type parameters.
-     *
-     * Note: for child classes there are two particular effects related to this method:
-     * <ul>
-     *   <li>the resulting type may have different number of type parameters;
-     *   <li>it is not idempotent; calling it twice will cause an assertion or corrupted result type
-     * </ul>
-     *
-     * @param pool  the ConstantPool to place a potentially created new constant into
-     *
-     * @return potentially new type that contains parent's formal type parameters
-     */
-    public TypeConstant adoptParentTypeParameters(ConstantPool pool)
-        {
-        TypeConstant constOriginal = getUnderlyingType();
-        TypeConstant constResolved = constOriginal.adoptParentTypeParameters(pool);
-
-        return constResolved == constOriginal
-            ? this
-            : cloneSingle(pool, constResolved);
-        }
-
-    /**
      * If this type is auto-narrowing (or has any references to auto-narrowing types), replace any
      * auto-narrowing portion with an explicit class identity in the context of the specified target.
      *
@@ -3474,7 +3450,7 @@ public abstract class TypeConstant
             fRO = false;
             }
 
-        TypeConstant typeProp = prop.getType().adoptParentTypeParameters(pool).resolveGenerics(pool, this);
+        TypeConstant typeProp = prop.getType().resolveGenerics(pool, this);
 
         return new PropertyInfo(new PropertyBody(prop, impl, null,
                 typeProp, fRO, fRW, cCustomMethods > 0,
