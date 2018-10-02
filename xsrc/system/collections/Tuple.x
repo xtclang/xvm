@@ -71,7 +71,7 @@ interface Tuple<ElementTypes extends Tuple>
      * compile-time type of the returned tuple is known; otherwise, an explicit cast to a
      * compile-time type is required to regain the compile-time type.
      */
-    @Op Tuple add(Tuple that);
+    @Op Tuple!<> add(Tuple that);
 
     /**
      * Modify the value of the specified element in the tuple, returning the resultant tuple.
@@ -96,7 +96,7 @@ interface Tuple<ElementTypes extends Tuple>
      * value, then the compile-time type of the returned tuple is known; otherwise, an explicit cast
      * to a compile-time type is required to regain the compile-time type.
      */
-    @Op Tuple slice(Range<Int> range);
+    @Op Tuple!<> slice(Range<Int> range);
 
     /**
      * Creates and returns a new tuple that is a copy of this tuple, except with the specified
@@ -110,7 +110,7 @@ interface Tuple<ElementTypes extends Tuple>
      * value, then the compile-time type of the returned tuple is known; otherwise, an explicit cast
      * to a compile-time type is required to regain the compile-time type.
      */
-    Tuple remove(Int index);
+    Tuple!<> remove(Int index);
 
     /**
      * Create and return a new tuple that is a copy of this tuple, except with the specified
@@ -124,7 +124,7 @@ interface Tuple<ElementTypes extends Tuple>
      * value, then the compile-time type of the returned tuple is known; otherwise, an explicit cast
      * to a compile-time type is required to regain the compile-time type.
      */
-    Tuple remove(Range<Int> range);
+    Tuple!<> remove(Range<Int> range);
 
     /**
      * Return a fixed-size tuple (whose values are mutable) of the same type and with the same
