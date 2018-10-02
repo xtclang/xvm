@@ -18,7 +18,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
-import org.xvm.asm.Register.Assignment;
+import org.xvm.asm.Assignment;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -608,13 +608,13 @@ public class StatementBlock
                     return true;
 
                 case "super":
-                {
-                TypeConstant   typePro    = pool().ensureAccessTypeConstant(getThisType(), Access.PROTECTED);
-                TypeInfo       info       = typePro.ensureTypeInfo();
-                MethodConstant idMethod   = getMethod().getIdentityConstant();
-                MethodInfo     infoMethod = info.getMethodById(idMethod);
-                return infoMethod.hasSuper(info);
-                }
+                    {
+                    TypeConstant   typePro    = pool().ensureAccessTypeConstant(getThisType(), Access.PROTECTED);
+                    TypeInfo       info       = typePro.ensureTypeInfo();
+                    MethodConstant idMethod   = getMethod().getIdentityConstant();
+                    MethodInfo     infoMethod = info.getMethodById(idMethod);
+                    return infoMethod.hasSuper(info);
+                    }
 
                 default:
                     throw new IllegalArgumentException("no such reserved name: " + sName);
@@ -731,11 +731,9 @@ public class StatementBlock
                     break;
 
                 case "super":
-                {
-                type = getMethod().getIdentityConstant().getSignature().asFunctionType();
-                nReg = Op.A_SUPER;
-                break;
-                }
+                    type = getMethod().getIdentityConstant().getSignature().asFunctionType();
+                    nReg = Op.A_SUPER;
+                    break;
 
                 case "this:module":
                     // the module can be resolved to the actual module component at compile time
