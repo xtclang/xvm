@@ -1,3 +1,5 @@
+import collections.ListMap;
+
 /**
  * An Enumeration is a class of singleton Enum value objects.
  *
@@ -117,7 +119,7 @@ mixin Enumeration<EnumType extends Enum>
 
         // the Enumeration class contains singleton Enum class/values; collect those values into a
         // Map keyed by name
-//        ListMap<String, EnumType> map = new ListMap();
+        ListMap<String, EnumType> map = new ListMap();
         for (Class clz : classes.values)
             {
             if (clz.extends_(this) && clz.isConst && clz instanceof Class<EnumType>)

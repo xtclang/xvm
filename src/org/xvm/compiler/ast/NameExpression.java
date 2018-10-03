@@ -514,8 +514,6 @@ public class NameExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        boolean fValid = true;
-
         // evaluate the left side first (we'll need it to be done before re-resolving our own raw
         // argument)
         if (left != null)
@@ -523,19 +521,17 @@ public class NameExpression
             Expression leftNew = left.validate(ctx, null, errs);
             if (leftNew == null)
                 {
-                fValid = false;
+                // we couldn't resolve the left side; no reason to continue
+                return finishValidation(typeRequired, typeRequired, TypeFit.NoFit, null, errs);
                 }
-            else
-                {
-                left = leftNew;
-                }
+            left = leftNew;
             }
 
         // resolve the name to a "raw" argument, i.e. what does the name refer to, without
         // consideration to read-only vs. read-write, reference vs. de-reference, static vs.
         // virtual, and so on
         Argument argRaw = resolveRawArgument(ctx, true, errs);
-        fValid &= argRaw != null;
+        boolean  fValid = argRaw != null;
 
         // validate the type parameters
         TypeConstant[] atypeParams = null;

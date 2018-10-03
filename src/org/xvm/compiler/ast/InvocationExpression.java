@@ -389,13 +389,17 @@ public class InvocationExpression
             TypeConstant typeArg;
             if (argMethod instanceof PropertyConstant)
                 {
-                if (typeLeft == null)
+                if (typeLeft == null || isNestMate(ctx, typeLeft))
                     {
-                    typeLeft = ctx.getThisType();
+                    typeLeft = pool.ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE);
                     }
 
-                PropertyConstant idProp = (PropertyConstant) argMethod;
-                typeArg = typeLeft.ensureTypeInfo().findProperty(idProp).getType();
+                PropertyConstant idProp   = (PropertyConstant) argMethod;
+                PropertyInfo     infoProp = typeLeft.ensureTypeInfo().findProperty(idProp);
+
+                typeArg = infoProp == null
+                        ? pool.typeObject()
+                        : infoProp.getType();
                 }
             else
                 {
@@ -403,15 +407,9 @@ public class InvocationExpression
                 typeArg = argMethod.getType().resolveTypedefs();
                 }
 
-            if (!typeArg.isA(pool.typeFunction()))
-                {
-                return TypeConstant.NO_TYPES;
-                }
-
-            return m_fCall
-                    ? typeArg.getParamTypesArray()[F_RETS].getParamTypesArray()
-                    : new TypeConstant[] {typeArg};
-            // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
+            return typeArg.isA(pool.typeFunction())
+                    ? calculateReturnType(typeArg)
+                    : TypeConstant.NO_TYPES;
             }
         else // not a NameExpression
             {
@@ -422,13 +420,9 @@ public class InvocationExpression
                 typeFn = testFunction(ctx, typeFn, null, ErrorListener.BLACKHOLE);
                 if (typeFn != null)
                     {
-                    return m_fCall
-                            ? typeFn.getParamTypesArray()[F_RETS].getParamTypesArray()
-                            : new TypeConstant[] {typeFn};
-                    // TODO calculate resulting function type by partially (or completely) binding the method/function as specified by "args"
+                    return calculateReturnType(typeFn);
                     }
                 }
-
             return TypeConstant.NO_TYPES;
             }
         }
@@ -659,8 +653,14 @@ public class InvocationExpression
                         TypeConstant typeFn;
                         if (argMethod instanceof PropertyConstant)
                             {
-                            PropertyConstant idProp = (PropertyConstant) argMethod;
-                            typeFn = typeLeft.ensureTypeInfo().findProperty(idProp).getType();
+                            if (isNestMate(ctx, typeLeft))
+                                {
+                                typeLeft = pool.ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE);
+                                }
+                            PropertyConstant idProp   = (PropertyConstant) argMethod;
+                            PropertyInfo     infoProp = typeLeft.ensureTypeInfo().findProperty(idProp);
+
+                            typeFn = infoProp == null ? pool.typeObject() : infoProp.getType();
                             // TODO if exprLeft == null then markVarRead on "this"
                             }
                         else
@@ -716,7 +716,7 @@ public class InvocationExpression
             }
 
         return finishValidations(atypeRequired, atypeRequired == null ?
-                TypeConstant.NO_TYPES : atypeRequired, TypeFit.NoFit, null, errs);
+            TypeConstant.NO_TYPES : atypeRequired, TypeFit.NoFit, null, errs);
         }
 
     @Override
@@ -1563,6 +1563,24 @@ public class InvocationExpression
             return new TypeConstant[] {typeFn};
             }
         return null;
+        }
+
+    /**
+     * @return return type for the specified argument type, which is known to be a Function
+     */
+    protected TypeConstant[] calculateReturnType(TypeConstant typeFn)
+        {
+        TypeConstant[] atypeReturn;
+        if (m_fCall)
+            {
+            atypeReturn = pool().extractFunctionReturns(typeFn);
+            return atypeReturn == null ? TypeConstant.NO_TYPES : atypeReturn;
+            }
+        else
+            {
+            return new TypeConstant[] {typeFn};
+            }
+        // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
         }
 
 
