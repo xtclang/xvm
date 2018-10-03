@@ -470,7 +470,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
         Boolean different = false;
         for (TypeParameter paramNew : params)
             {
-            assert TypeParameter paramOld : mapParams[paramNew.name];
+            TypeParameter paramOld = mapParams[paramNew.name];
             if (paramNew != paramOld)
                 {
                 assert paramOld.type.isA(paramNew.type);
@@ -483,10 +483,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
             return this;
             }
 
-        // next, create the class that uses the new type parameters
-        Class that = TODO
-
-        return that;
+        TODO // create the class that uses the new type parameters
         }
 
     /**
