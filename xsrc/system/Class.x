@@ -164,6 +164,11 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     Boolean isSingleton;
 
     /**
+     * Obtain the singleton instance (throws an exception if _isSingleton_ is false).
+     */
+    PublicType singleton;
+
+    /**
      * Determine if the class is an inner class, which must be instantiated virtually.
      *
      * Consider the following example:
@@ -199,11 +204,6 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      * The information that identifies the location of the source code for this class.
      */
     SourceCodeInfo? sourceInfo;
-
-    /**
-     * Determine if the class is a singleton, and obtain the singleton instance.
-     */
-    @Lazy /* TODO prop cannot be conditional */ PublicType singleton;
 
     // ----- calculated properties -----------------------------------------------------------------
 
