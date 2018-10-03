@@ -148,10 +148,9 @@ public class NamedTypeExpression
     /**
      * Auto-narrowing is allowed for a type used in the following scenarios:
      * <ul>
-     * <li>Type of a property;</li>
-     * <li>Type of a method parameter;</li>
-     * <li>Type of a method return value;</li>
-     * <li>TODO</li>
+     *   <li>Type of a property;</li>
+     *   <li>Type of a method parameter;</li>
+     *   <li>Type of a method return value;</li>
      * </ul>
      *
      * @return true iff this type is used as part of a property type, a method return type, a method
@@ -171,7 +170,6 @@ public class NamedTypeExpression
             parent = parent.getParent();
             }
 
-        // REVIEW GG - do you want this or parent.isComponentNode()
         return parent instanceof ComponentStatement
                 && ((ComponentStatement) parent).isAutoNarrowingAllowed(type);
         }
@@ -179,17 +177,16 @@ public class NamedTypeExpression
     /**
      * @return the constant to use
      */
-    public Constant inferAutoNarrowing(Constant constId)
+    public Constant inferAutoNarrowing(Constant constId, ErrorListener errs)
         {
         // check for auto-narrowing
         if (!constId.containsUnresolved() && isAutoNarrowingAllowed() != isExplicitlyNonAutoNarrowing())
             {
             if (isExplicitlyNonAutoNarrowing())
                 {
-                throw new IllegalStateException("log error: auto-narrowing override ('!') unexpected");
+                log(errs, Severity.ERROR, Compiler.AUTO_NARROWING_ILLEGAL);
                 }
-
-            if (constId instanceof ClassConstant) // isAutoNarrowingAllowed()
+            else if (constId instanceof ClassConstant) // isAutoNarrowingAllowed()
                 {
                 ClassStructure struct = getComponent().getContainingClass();
                 if (struct != null)
@@ -325,7 +322,7 @@ public class NamedTypeExpression
 
                 // now that we have the resolved constId, update the unresolved m_constId to point to
                 // the resolved one (just in case anyone is holding the wrong one
-                Constant constIdNew = m_constId = inferAutoNarrowing(resolver.getConstant());
+                Constant constIdNew = m_constId = inferAutoNarrowing(resolver.getConstant(), errs);
 
                 if (m_constUnresolved != null)
                     {

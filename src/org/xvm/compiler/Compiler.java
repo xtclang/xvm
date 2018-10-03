@@ -967,6 +967,10 @@ public class Compiler
      */
     public static final String PARAMETER_TYPES_REQUIRED           = "COMPILER-86";
     /**
+     * Auto-narrowing override ('!') is not allowed.
+     */
+    public static final String AUTO_NARROWING_ILLEGAL             = "COMPILER-87";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";
