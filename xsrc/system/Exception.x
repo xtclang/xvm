@@ -19,15 +19,14 @@ const Exception
         }
 
     String? text;
-    Exception? cause;
+    Exception!? cause;
     Iterable<StackFrame> stackTrace;
 
-//    TODO: temporarily implemented by the native Const to<String>()
-//    @Override
-//    String to<String>()
-//        {
-//        return formatExceptionString(null);
-//        }
+    @Override
+    String to<String>()
+        {
+        return formatExceptionString(null);
+        }
 
     // TODO pass in output stream of text instead of building and returning String
     String formatExceptionString(StackFrame? lastFrame)
