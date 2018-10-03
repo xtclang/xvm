@@ -5,7 +5,9 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
+import java.util.Map;
 import org.xvm.asm.Argument;
+import org.xvm.asm.Assignment;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -375,6 +377,25 @@ public class Annotation
 
         @Override
         public Context exit()
+            {
+            throw new IllegalStateException();
+            }
+
+        @Override
+        public Map<String, Assignment> jumpTo(Context ctxDest)
+            {
+            throw new IllegalStateException();
+            }
+
+        @Override
+        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
+            {
+            throw new IllegalStateException();
+            }
+
+        @Override
+        protected Assignment promoteNonCompleting(String sName, Assignment asnInner,
+                Assignment asnOuter)
             {
             throw new IllegalStateException();
             }

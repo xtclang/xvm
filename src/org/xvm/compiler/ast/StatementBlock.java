@@ -847,6 +847,13 @@ public class StatementBlock
             throw new IllegalStateException();
             }
 
+        @Override
+        public Map<String, Assignment> jumpTo(Context ctxDest)
+            {
+            checkValidating();
+            throw new IllegalStateException();
+            }
+
         /**
          * @return a Context that can be used while validating code
          */

@@ -100,6 +100,12 @@ public enum Assignment
      */
     public Assignment applyAssignment()
         {
+        if (fSplit)
+            {
+            return join(this.whenFalse().applyAssignment(),
+                        this.whenTrue() .applyAssignment());
+            }
+
         return isDefinitelyUnassigned()
                 ? AssignedOnce
                 : Assigned;
@@ -114,9 +120,41 @@ public enum Assignment
      */
     public Assignment applyAssignmentFromCapture()
         {
+        if (fSplit)
+            {
+            return join(this.whenFalse().applyAssignmentFromCapture(),
+                        this.whenTrue() .applyAssignmentFromCapture());
+            }
+
         return isDefinitelyAssigned()
                 ? Assigned
                 : Unknown;
+        }
+
+    /**
+     * Apply assignment information from an Assignment from a non-completing inner context to this
+     * Assignment.
+     *
+     * @param that  the assignment from a non-completing inner context
+     *
+     * @return the resulting Assignment state
+     */
+    public Assignment promoteFromNonCompleting(Assignment that)
+        {
+        if (this == that)
+            {
+            return this;
+            }
+
+        if (this.fSplit || that.fSplit)
+            {
+            return join(this.whenFalse().promoteFromNonCompleting(that.whenFalse()),
+                        this.whenTrue() .promoteFromNonCompleting(that.whenTrue()));
+            }
+
+        return this.isEffectivelyFinal() && !that.isEffectivelyFinal()
+                ? forFlags(getFlags() & 0b110110)   // erase effectively final flags
+                : this;
         }
 
     /**
