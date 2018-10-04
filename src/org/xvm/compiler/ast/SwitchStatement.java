@@ -27,12 +27,6 @@ public class SwitchStatement
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public boolean canBreak()
-        {
-        return true;
-        }
-
-    @Override
     public long getStartPosition()
         {
         return keyword.getStartPosition();

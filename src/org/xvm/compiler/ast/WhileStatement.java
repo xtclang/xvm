@@ -50,18 +50,18 @@ public class WhileStatement
         }
 
     @Override
-    public boolean canBreak()
-        {
-        return true;
-        }
-
-    @Override
     public boolean canContinue()
         {
         return true;
         }
 
     @Override
+    public Label ensureContinueLabel(Context ctxOrigin)
+        {
+        // TODO copy impl from ensureBreakLabel()
+        return getContinueLabel();
+        }
+
     public Label getContinueLabel()
         {
         Label label = m_labelContinue;

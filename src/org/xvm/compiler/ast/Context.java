@@ -144,9 +144,8 @@ public class Context
      *
      * @param node  the AST node that this Context corresponds to in terms of scope and completion
      */
-    public void registerNode(AstNode node)
+    public void associateNode(AstNode node)
         {
-        assert m_node == null;
         m_node = node;
         }
 
@@ -393,7 +392,7 @@ public class Context
                     Assignment asnInner = entry.getValue();
                     Assignment asnOuter = ctxOuter.getVarAssignment(sName);
 
-                    asnOuter = promote(sName, asnInner, asnOuter);
+                    asnOuter = ctxInner.promote(sName, asnInner, asnOuter);
 
                     if (fDemuxing)
                         {
@@ -414,6 +413,23 @@ public class Context
             }
 
         return mapMods;
+        }
+
+    /**
+     * Merge a previously prepared set of variable assignment information into this context.
+     *
+     * @param mapAdd  a result from a previous call to {@link #prepareJump}
+     */
+    public void merge(Map<String, Assignment> mapAdd)
+        {
+        Map<String, Assignment> mapAsn = ensureDefiniteAssignments();
+        for (Entry<String, Assignment> entry : mapAdd.entrySet())
+            {
+            String     sName  = entry.getKey();
+            Assignment asnNew = entry.getValue();
+            Assignment asnOld = getVarAssignment(sName);
+            mapAsn.put(sName, asnOld.join(asnNew));
+            }
         }
 
     /**
