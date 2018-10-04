@@ -403,7 +403,7 @@ public class ForEachStatement
                 Argument argAble = exprRVal.generateArgument(ctx, code, true, true, errs);
 
                 TypeInfo            infoAble = pool.typeIterable().ensureTypeInfo(errs);
-                Set<MethodConstant> setId    = infoAble.findMethods("iterator", 0);
+                Set<MethodConstant> setId    = infoAble.findMethods("iterator", 0, true, false);
                 assert setId.size() == 1;
                 code.add(new Invoke_01(argAble, setId.iterator().next(), regIter));
 
@@ -445,7 +445,7 @@ public class ForEachStatement
                 : lvalElem.getLocalArgument();
 
         TypeInfo            infoIter = pool.typeIterator().ensureTypeInfo(errs);
-        Set<MethodConstant> setId    = infoIter.findMethods("next", 0);
+        Set<MethodConstant> setId    = infoIter.findMethods("next", 0, true, false);
         assert setId.size() == 1;
         code.add(new Invoke_0N(regIter, setId.iterator().next(), new Argument[] {regCond, argElem}));
         code.add(new JumpFalse(regCond, getEndLabel()));

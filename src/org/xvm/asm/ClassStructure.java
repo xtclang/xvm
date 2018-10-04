@@ -318,9 +318,9 @@ public class ClassStructure
         TypeConstant typeConstraintType = pool.ensureClassTypeConstant(
             pool.clzType(), null, typeConstraint);
 
-        // create the property and mark it as synthetic
+        // create the property and mark it as a type parameter
         createProperty(false, Access.PUBLIC, Access.PUBLIC, typeConstraintType, sName)
-            .setSynthetic(true);
+            .markAsTypeParameter();
         markModified();
         }
 

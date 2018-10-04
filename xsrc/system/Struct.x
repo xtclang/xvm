@@ -26,7 +26,8 @@ interface Struct
         {
         for (Ref ref : to<Ref[]>())
             {
-            if (ref.name? == name)
+            // TODO: replace with short circuit when Cam submits: if (ref.refName? == name)
+            if (ref != null && ref.refName == name)
                 {
                 return ref;
                 }

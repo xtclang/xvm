@@ -32,29 +32,7 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
-import org.xvm.asm.op.Call_00;
-import org.xvm.asm.op.Call_01;
-import org.xvm.asm.op.Call_0N;
-import org.xvm.asm.op.Call_10;
-import org.xvm.asm.op.Call_11;
-import org.xvm.asm.op.Call_1N;
-import org.xvm.asm.op.Call_N0;
-import org.xvm.asm.op.Call_N1;
-import org.xvm.asm.op.Call_NN;
-import org.xvm.asm.op.Construct_0;
-import org.xvm.asm.op.Construct_1;
-import org.xvm.asm.op.Construct_N;
-import org.xvm.asm.op.FBind;
-import org.xvm.asm.op.Invoke_00;
-import org.xvm.asm.op.Invoke_01;
-import org.xvm.asm.op.Invoke_0N;
-import org.xvm.asm.op.Invoke_10;
-import org.xvm.asm.op.Invoke_11;
-import org.xvm.asm.op.Invoke_1N;
-import org.xvm.asm.op.Invoke_N0;
-import org.xvm.asm.op.Invoke_N1;
-import org.xvm.asm.op.Invoke_NN;
-import org.xvm.asm.op.MBind;
+import org.xvm.asm.op.*;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
@@ -431,8 +409,8 @@ public class InvocationExpression
     protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         // validate the invocation arguments, some of which may be left unbound (e.g. "?")
-        boolean          fValid   = true;
-        ConstantPool     pool     = pool();
+        boolean      fValid = true;
+        ConstantPool pool   = pool();
 
         // when we have a name expression on our immediate left, we do NOT (!!!) validate it,
         // because the name resolution is the responsibility of this InvocationExpression, and
@@ -586,7 +564,48 @@ public class InvocationExpression
                             atypeArgs = atype;
                             }
 
-                        atypeArgs = validateExpressions(ctx, args, atypeArgs, errs);
+                        // test the "regular fit" first and Tuple afterwards
+                        TypeConstant typeTuple = null;
+                        if (!testExpressions(ctx, args, atypeArgs).isFit())
+                            {
+                            // otherwise, check the tuple based invoke (see Expression.findMethod)
+                            if (args.size() == 1)
+                                {
+                                typeTuple = pool.ensureParameterizedTypeConstant(
+                                        pool.typeTuple(), atypeArgs);
+
+                                if (!args.get(0).testFit(ctx, typeTuple).isFit())
+                                    {
+                                    // the regular "validateExpressions" call will report an error
+                                    typeTuple = null;
+                                    }
+                                }
+                            }
+
+                        if (typeTuple == null)
+                            {
+                            atypeArgs = validateExpressions(ctx, args, atypeArgs, errs);
+                            }
+                        else
+                            {
+                            Expression exprOld = args.get(0);
+                            Expression exprNew = exprOld.validate(ctx, typeTuple, errs);
+                            if (exprNew == null)
+                                {
+                                // validation failed
+                                atypeArgs = null;
+                                }
+                            else
+                                {
+                                if (exprOld != exprNew)
+                                    {
+                                    args.set(0, exprNew);
+                                    }
+                                atypeArgs   = exprNew.getType().getParamTypesArray();
+                                m_fTupleArg = true;
+                                }
+                            }
+
                         if (atypeArgs != null)
                             {
                             Map<String, TypeConstant> mapTypeParams = Collections.EMPTY_MAP;
@@ -874,7 +893,14 @@ public class InvocationExpression
                                     break;
 
                                 case _10:
-                                    code.add(new Invoke_10(argTarget, idMethod, arg));
+                                    if (m_fTupleArg)
+                                        {
+                                        code.add(new Invoke_T0(argTarget, idMethod, arg));
+                                        }
+                                    else
+                                        {
+                                        code.add(new Invoke_10(argTarget, idMethod, arg));
+                                        }
                                     break;
 
                                 case _N0:
@@ -886,7 +912,14 @@ public class InvocationExpression
                                     break;
 
                                 case _11:
-                                    code.add(new Invoke_11(argTarget, idMethod, arg, ret));
+                                    if (m_fTupleArg)
+                                        {
+                                        code.add(new Invoke_T1(argTarget, idMethod, arg, ret));
+                                        }
+                                    else
+                                        {
+                                        code.add(new Invoke_11(argTarget, idMethod, arg, ret));
+                                        }
                                     break;
 
                                 case _N1:
@@ -898,7 +931,14 @@ public class InvocationExpression
                                     break;
 
                                 case _1N:
-                                    code.add(new Invoke_1N(argTarget, idMethod, arg, aRets));
+                                    if (m_fTupleArg)
+                                        {
+                                        code.add(new Invoke_TN(argTarget, idMethod, arg, aRets));
+                                        }
+                                    else
+                                        {
+                                        code.add(new Invoke_1N(argTarget, idMethod, arg, aRets));
+                                        }
                                     break;
 
                                 case _NN:
@@ -1682,6 +1722,7 @@ public class InvocationExpression
     private transient boolean         m_fBindTarget;     // do we require a target
     private transient boolean         m_fBindParams;     // do we need to bind any parameters
     private transient boolean         m_fCall;           // do we need to call/invoke
+    private transient boolean         m_fTupleArg;       // indicates that arguments come from a tuple
     private transient Argument        m_argMethod;
     private transient MethodStructure m_method;          // if m_fArgMethod is a MethodConstant,
                                                          // this holds the corresponding structure

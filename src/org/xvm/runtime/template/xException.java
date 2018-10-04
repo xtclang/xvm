@@ -45,6 +45,8 @@ public class xException
             new L_Set(Op.CONSTANT_OFFSET - getProperty("cause").getIdentityConstant().getPosition(), 1),
             new Return_0(),
             });
+
+        markNativeMethod("to", VOID, STRING);
         }
 
     @Override

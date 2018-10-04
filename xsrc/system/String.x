@@ -13,6 +13,11 @@ const String
         TODO - native
         }
 
+    conditional Int indexOf(String value, Int of = 0)
+        {
+        TODO - native
+        }
+
     conditional Int lastIndexOf(Char separator)
         {
         TODO - native

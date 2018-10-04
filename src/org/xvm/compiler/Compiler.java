@@ -967,6 +967,10 @@ public class Compiler
      */
     public static final String PARAMETER_TYPES_REQUIRED           = "COMPILER-86";
     /**
+     * Auto-narrowing override ('!') is not allowed.
+     */
+    public static final String AUTO_NARROWING_ILLEGAL             = "COMPILER-87";
+    /**
      * Could not find the specified label "{0}".
      */
     public static final String MISSING_GROUND_LABEL               = "COMPILER-87";

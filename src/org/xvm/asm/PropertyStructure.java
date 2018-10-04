@@ -131,13 +131,22 @@ public class PropertyStructure
     /**
      * @return true iff this property is a type parameter
      */
-    public boolean isTypeParameter()
+    public boolean isTypeParameter( )
         {
-        // type parameters are always synthetic
-        return !isStatic()                                                      // never a constant
-            && isSynthetic()                                                    // always synthetic
-            && m_type.isSingleDefiningConstant()
-            && m_type.getDefiningConstant().equals(getConstantPool().clzType());// must be "Type"
+        return isAuxiliary();
+        }
+
+    /**
+     * @return mark this property as a type parameter
+     */
+    public void markAsTypeParameter()
+        {
+        assert !isStatic()                        // never a constant
+            && !isSynthetic()                     // never synthetic
+            && m_type.isSingleDefiningConstant()  // must be "Type"
+            && m_type.getDefiningConstant().equals(getConstantPool().clzType());
+
+        setAuxiliary(true);
         }
 
     /**
@@ -600,7 +609,7 @@ public class PropertyStructure
         StringBuilder sb = new StringBuilder()
                 .append("id=")
                 .append(getIdentityConstant().getValueString())
-                .append(", type=")
+                .append(isTypeParameter() ? ", constraint=" : ", type=")
                 .append(m_type)
                 .append(", ")
                 .append("var-access=")

@@ -1759,7 +1759,7 @@ public abstract class Expression
      */
     protected MethodConstant findMethod(
             Context          ctx,
-            TypeInfo infoTarget,
+            TypeInfo         infoTarget,
             String           sMethodName,
             List<Expression> listExprArgs,
             boolean          fMethod,
@@ -1769,26 +1769,12 @@ public abstract class Expression
         {
         assert sMethodName != null && sMethodName.length() > 0;
 
-        int cArgs    = listExprArgs == null ? 0 : listExprArgs.size();
-        int cReturns = atypeReturn  == null ? 0 : atypeReturn.length;
+        int cArgs = listExprArgs == null ? 0 : listExprArgs.size();
 
-        TypeConstant        typeTarget = infoTarget.getType();
-        Set<MethodConstant> setMethods = infoTarget.findMethods(sMethodName, cArgs);
-        if (setMethods.isEmpty())
-            {
-            if (sMethodName.equals("construct"))
-                {
-                log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, typeTarget.getValueString());
-                }
-            else
-                {
-                log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sMethodName);
-                }
-            return null;
-            }
-
+        // collect available types for unnamed arguments and a map of named expressions
+        TypeConstant[]          atypeArgs    = new TypeConstant[cArgs];
         Map<String, Expression> mapNamedExpr = null;
-        int                     cUnnamedArgs = 0;
+        TypeConstant            typeTupleArg = null; // potential tuple argument
         for (int i = 0; i < cArgs; ++i)
             {
             Expression exprArg = listExprArgs.get(i);
@@ -1799,7 +1785,7 @@ public abstract class Expression
 
                 if (mapNamedExpr == null)
                     {
-                    mapNamedExpr = new HashMap<>(cArgs - cUnnamedArgs);
+                    mapNamedExpr = new HashMap<>(cArgs - i);
                     }
                 else
                     {
@@ -1818,36 +1804,128 @@ public abstract class Expression
                     exprArg.log(errs, Severity.ERROR, Compiler.ARG_NAME_REQUIRED, i);
                     return null;
                     }
-                cUnnamedArgs++;
+
+                TypeConstant typeArg = exprArg.isValidated()
+                        ? exprArg.getType()
+                        : exprArg.getImplicitType(ctx);
+
+                // allow for a Tuple based invocation; for example a method f(String s, Int i)
+                // is invocable via f(t), where t is an argument of type Tuple<String, Int>
+                if (cArgs == 1 && typeArg != null && typeArg.isTuple())
+                    {
+                    typeTupleArg = typeArg;
+                    }
+
+                atypeArgs[i] = typeArg;
                 }
             }
 
-        // first, collect all theoretically matching methods
+        TypeConstant        typeTarget = infoTarget.getType();
+        Set<MethodConstant> setMethods = infoTarget.findMethods(sMethodName, cArgs, fMethod, fFunction);
+        if (setMethods.isEmpty())
+            {
+            if (sMethodName.equals("construct"))
+                {
+                log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, typeTarget.getValueString());
+                }
+            else
+                {
+                log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sMethodName);
+                }
+            return null;
+            }
+
+        // collect all theoretically matching methods
         Set<MethodConstant> setIs      = new HashSet<>();
         Set<MethodConstant> setConvert = new HashSet<>();
-        NextMethod: for (MethodConstant idMethod : setMethods)
+
+        collectMatchingMethods(ctx, infoTarget, setMethods, listExprArgs,
+                atypeArgs, mapNamedExpr, atypeReturn, setIs, setConvert);
+
+        // now choose the best match
+        if (!setIs.isEmpty())
             {
-            MethodInfo infoMethod = infoTarget.getMethodById(idMethod);
-            if (infoMethod.isFunction() ? !fFunction : !fMethod)
+            return chooseBest(setIs, typeTarget, errs);
+            }
+
+        if (!setConvert.isEmpty())
+            {
+            return chooseBest(setConvert, typeTarget, errs);
+            }
+
+        if (typeTupleArg != null)
+            {
+            atypeArgs  = typeTupleArg.getParamTypesArray();
+            setMethods = infoTarget.findMethods(sMethodName, atypeArgs.length, fMethod, fFunction);
+
+            collectMatchingMethods(ctx, infoTarget, setMethods, null,
+                    atypeArgs, mapNamedExpr, atypeReturn, setIs, setConvert);
+
+            if (!setIs.isEmpty())
                 {
-                continue NextMethod;
+                return chooseBest(setIs, typeTarget, errs);
                 }
 
-            MethodStructure method      = infoMethod.getTopmostMethodStructure(infoTarget);
-            int             cAllParams  = method.getParamCount();
-            int             cTypeParams = method.getTypeParamCount();
-            int             cDefaults   = method.getDefaultParamCount();
-            int             cVisible    = cAllParams - cTypeParams;
-            int             cRequired   = cAllParams - cTypeParams - cDefaults;
+            if (!setConvert.isEmpty())
+                {
+                return chooseBest(setConvert, typeTarget, errs);
+                }
+            }
+
+        // report a miss
+        if (sMethodName.equals("construct"))
+            {
+            log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, typeTarget.getValueString());
+            }
+        else
+            {
+            // TODO: create a signature representation of what is known
+            //       for example, if we are looking for "foo" in invocation "a.foo(x-> x.bar())"
+            //       and "bar" is missing - we'll get here complaining about "foo" rather than "bar"
+            log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sMethodName);
+            }
+        return null;
+        }
+
+    /**
+     * Helper method to collect matching methods.
+     */
+    private void collectMatchingMethods(
+            Context                 ctx,
+            TypeInfo                infoTarget,
+            Set<MethodConstant>     setMethods,
+            List<Expression>        listExprArgs,
+            TypeConstant[]          atypeArgs,
+            Map<String, Expression> mapNamedExpr,
+            TypeConstant[]          atypeReturn,
+            Set<MethodConstant>     setIs,
+            Set<MethodConstant>     setConvert)
+        {
+        int cArgs    = atypeArgs.length;
+        int cNamed   = mapNamedExpr == null ? 0 : mapNamedExpr.size();
+        int cUnnamed = cArgs - cNamed;
+
+        NextMethod: for (MethodConstant idMethod : setMethods)
+            {
+            MethodInfo      infoMethod = infoTarget.getMethodById(idMethod);
+            MethodStructure method     = infoMethod.getTopmostMethodStructure(infoTarget);
+
+            int cAllParams  = method.getParamCount();
+            int cTypeParams = method.getTypeParamCount();
+            int cDefaults   = method.getDefaultParamCount();
+            int cVisible    = cAllParams - cTypeParams;
+            int cRequired   = cAllParams - cTypeParams - cDefaults;
 
             if (cArgs < cRequired || cArgs > cVisible)
                 {
                 continue NextMethod;
                 }
 
-            TypeConstant[] atypeParam = idMethod.getRawParams();
-            TypeConstant[] atypeArg   = new TypeConstant[cArgs];
-            boolean        fConvert   = false;
+            // named args could change method to method; we may need to clone the
+            // array of args to prevent its contamination
+            TypeConstant[] atypeAllArgs = atypeArgs;
+            TypeConstant[] atypeParam   = idMethod.getRawParams();
+            boolean        fConvert     = false;
             for (int i = 0; i < cArgs; ++i)
                 {
                 TypeConstant typeMethodParam = atypeParam[cTypeParams + i];
@@ -1857,25 +1935,44 @@ public abstract class Expression
                     typeMethodParam = typeMethodParam.resolveGenerics(pool(), method);
                     }
 
-                Expression exprArg = i < cUnnamedArgs
-                        ? listExprArgs.get(i)
-                        : mapNamedExpr.get(method.getParam(i).getName());
-
-                TypeConstant typeArg = exprArg.isValidated()
-                        ? exprArg.getType()
-                        : exprArg.getImplicitType(ctx);
+                TypeConstant typeArg;
+                Expression   exprArg;
+                if (i < cUnnamed)
+                    {
+                    typeArg = atypeAllArgs[i];
+                    exprArg = listExprArgs == null ? null : listExprArgs.get(i);
+                    }
+                else
+                    {
+                    exprArg = mapNamedExpr.get(method.getParam(i).getName());
+                    typeArg = exprArg.isValidated()
+                            ? exprArg.getType()
+                            : exprArg.getImplicitType(ctx);
+                    if (typeArg != null)
+                        {
+                        if (atypeAllArgs == atypeArgs)
+                            {
+                            atypeAllArgs = atypeAllArgs.clone();
+                            }
+                        atypeAllArgs[i] = typeArg;
+                        }
+                    }
 
                 if (typeArg == null)
                     {
                     // check if the method's parameter type fits the argument expression
-                    TypeFit fit = listExprArgs.get(i).testFit(ctx, typeMethodParam);
+                    TypeFit fit = exprArg.testFit(ctx, typeMethodParam);
                     if (fit.isFit())
                         {
                         if (fit.isConverting())
                             {
                             fConvert = true;
                             }
-                        atypeArg[i] = typeMethodParam;
+                        if (atypeAllArgs == atypeArgs)
+                            {
+                            atypeAllArgs = atypeAllArgs.clone();
+                            }
+                        atypeAllArgs[i] = typeMethodParam;
                         }
                     else
                         {
@@ -1895,14 +1992,13 @@ public abstract class Expression
                             continue NextMethod;
                             }
                         }
-                    atypeArg[i] = typeArg;
                     }
                 }
 
             ListMap<String, TypeConstant> mapTypeParams = null;
             if (cTypeParams > 0)
                 {
-                mapTypeParams = method.resolveTypeParameters(atypeArg, atypeReturn);
+                mapTypeParams = method.resolveTypeParameters(atypeAllArgs, atypeReturn);
                 if (mapTypeParams == null)
                     {
                     // different arguments/returns cause the formal type to resolve into
@@ -1914,7 +2010,9 @@ public abstract class Expression
 
             if (atypeReturn != null)
                 {
+                int            cReturns          = atypeReturn.length;
                 TypeConstant[] atypeMethodReturn = idMethod.getRawReturns();
+
                 if (atypeMethodReturn.length < cReturns)
                     {
                     // not enough return values
@@ -1954,31 +2052,6 @@ public abstract class Expression
                 setIs.add(idMethod);
                 }
             }
-
-        // now choose the best match
-        if (!setIs.isEmpty())
-            {
-            return chooseBest(setIs, typeTarget, errs);
-            }
-
-        if (!setConvert.isEmpty())
-            {
-            return chooseBest(setConvert, typeTarget, errs);
-            }
-
-        // report a miss
-        if (sMethodName.equals("construct"))
-            {
-            log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, typeTarget.getValueString());
-            }
-        else
-            {
-            // TODO: create a signature representation of what is known
-            //       for example, if we are looking for "foo" in invocation "a.foo(x-> x.bar())"
-            //       and "bar" is missing - we'll get here complaining about "foo" rather than "bar"
-            log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sMethodName);
-            }
-        return null;
         }
 
     /**

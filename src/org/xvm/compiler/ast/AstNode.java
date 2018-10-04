@@ -26,6 +26,8 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Label;
 
+import org.xvm.compiler.ast.Expression.TypeFit;
+
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Source;
 
@@ -713,6 +715,27 @@ public abstract class AstNode
 
 
     // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Test fit for the specified expressions against the specified types.
+     *
+     * @param ctx        the compiler context
+     * @param listExpr   the list of expressions
+     * @param atypeTest  the types array to test fit for
+     *
+     * @return the combine fit for all the expressions
+     */
+    protected TypeFit testExpressions(Context ctx, List<Expression> listExpr,
+                                      TypeConstant[] atypeTest)
+        {
+        int     cTypes = atypeTest == null ? 0 : atypeTest.length;
+        TypeFit fit    = TypeFit.Fit;
+        for (int i = 0, c = Math.min(listExpr.size(), cTypes); i < c ; ++i)
+            {
+            fit = fit.combineWith(listExpr.get(i).testFit(ctx, atypeTest[i]));
+            }
+        return fit;
+        }
 
     /**
      * Validate the specified expressions against the required types.
