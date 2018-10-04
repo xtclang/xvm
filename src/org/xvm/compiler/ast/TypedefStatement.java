@@ -10,6 +10,7 @@ import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
@@ -83,7 +84,7 @@ public class TypedefStatement
                 }
             else
                 {
-                log(errs, Severity.ERROR, org.xvm.compiler.Compiler.TYPEDEF_UNEXPECTED, sName, container);
+                log(errs, Severity.ERROR, Compiler.TYPEDEF_UNEXPECTED, sName, container);
                 throw new UnsupportedOperationException("not a typedef container: " + container);
                 }
             }

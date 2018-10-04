@@ -438,7 +438,7 @@ public class Context
         String sName = tokName.getValueText();
         if (isVarDeclaredInThisScope(sName))
             {
-            tokName.log(errs, getSource(), Severity.ERROR, org.xvm.compiler.Compiler.VAR_DEFINED, sName);
+            tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_DEFINED, sName);
             }
 
         ensureNameMap().put(sName, reg);

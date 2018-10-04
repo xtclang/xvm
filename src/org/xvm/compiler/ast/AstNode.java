@@ -26,10 +26,11 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Label;
 
-import org.xvm.compiler.ast.Expression.TypeFit;
-
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Source;
+
+import org.xvm.compiler.ast.Expression.TypeFit;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
@@ -654,7 +655,7 @@ public abstract class AstNode
                     for (AstNode node : mgrKids.takeRevisitList())
                         {
                         // TODO clean up / clarify error logging
-                        node.log(errs, Severity.FATAL, org.xvm.compiler.Compiler.INFINITE_RESOLVE_LOOP,
+                        node.log(errs, Severity.FATAL, Compiler.INFINITE_RESOLVE_LOOP,
                                 node.getComponent().getIdentityConstant().toString());
                         return false;
                         }

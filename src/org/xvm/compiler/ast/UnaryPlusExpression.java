@@ -5,6 +5,7 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
@@ -56,7 +57,7 @@ public class UnaryPlusExpression
             TypeConstant typeRight = exprRight.getType();
             if (!typeRight.isA(pool().typeNumber()))
                 {
-                log(errs, Severity.ERROR, org.xvm.compiler.Compiler.MISSING_OPERATOR,
+                log(errs, Severity.ERROR, Compiler.MISSING_OPERATOR,
                         operator.getValueText(), typeRight.getValueString());
                 }
             }

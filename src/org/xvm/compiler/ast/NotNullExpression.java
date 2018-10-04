@@ -13,6 +13,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.JumpNull;
 import org.xvm.asm.op.Label;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
@@ -106,7 +107,7 @@ public class NotNullExpression
                 }
             else
                 {
-                exprNew.log(errs, Severity.ERROR, org.xvm.compiler.Compiler.ELVIS_NOT_NULLABLE);
+                exprNew.log(errs, Severity.ERROR, Compiler.ELVIS_NOT_NULLABLE);
                 return replaceThisWith(exprNew);
                 }
 

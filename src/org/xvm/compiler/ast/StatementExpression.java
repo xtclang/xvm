@@ -9,6 +9,8 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Compiler;
+
 import org.xvm.compiler.ast.LambdaExpression.CaptureContext;
 
 import org.xvm.util.Severity;
@@ -125,7 +127,7 @@ public class StatementExpression
         StatementBlock blockTemp = (StatementBlock) body.clone();
 
         // the resulting returned types come back in the type collector
-        ctx       = enterCapture(ctx, blockTemp);
+        ctx = enterCapture(ctx, blockTemp);
         blockTemp = (StatementBlock) blockTemp.validate(ctx, ErrorListener.BLACKHOLE);
         ctx       = ctx.exit();
 
@@ -222,7 +224,7 @@ public class StatementExpression
         m_aLVal = aLVal;
         if (body.completes(ctx, true, code, errs))
             {
-            errs.log(Severity.ERROR, org.xvm.compiler.Compiler.RETURN_REQUIRED, null, getSource(),
+            errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED, null, getSource(),
                     getEndPosition(), getEndPosition());
             }
         }

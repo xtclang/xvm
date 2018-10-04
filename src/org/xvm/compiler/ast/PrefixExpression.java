@@ -151,7 +151,7 @@ public class PrefixExpression
                 {
                 if (fAmbiguous)
                     {
-                    log(errs, Severity.ERROR, org.xvm.compiler.Compiler.AMBIGUOUS_OPERATOR_SIGNATURE,
+                    log(errs, Severity.ERROR, Compiler.AMBIGUOUS_OPERATOR_SIGNATURE,
                             operator.getValueText(), typeRight.getValueString());
                     }
                 else
