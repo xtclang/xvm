@@ -158,6 +158,24 @@ public class Context
         return m_node;
         }
 
+    public Context findAstNodeContext(AstNode node)
+        {
+        assert node != null;
+
+        Context ctx = this;
+        while (ctx.getNode() != node)
+            {
+            ctx = ctx.getOuterContext();
+            if (ctx == null)
+                {
+                throw new IllegalStateException("could not find context for node=" + node
+                        + "\n(starting from context=" + this + ")");
+                }
+            }
+
+        return ctx;
+        }
+
     /**
      * Used in the validation phase to track scopes.
      * <p/>
