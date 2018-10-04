@@ -1014,9 +1014,10 @@ public abstract class Expression
         }
 
     @Override
-    protected Label getShortCircuitLabel(Expression exprChild)
+    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
         {
-        return getParent().getShortCircuitLabel(this);
+        // by default, the expression passes the request to its parent AST node
+        return getParent().getShortCircuitLabel(ctx, this);
         }
 
     /**

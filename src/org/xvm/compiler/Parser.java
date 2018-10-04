@@ -1370,12 +1370,19 @@ public class Parser
                 return parseAssertStatement();
 
             case BREAK:
+                {
+                Token keyword = current();
+                Token name    = match(Id.IDENTIFIER);
+                expect(Id.SEMICOLON);
+                return new BreakStatement(keyword, name);
+                }
+
             case CONTINUE:
                 {
                 Token keyword = current();
                 Token name    = match(Id.IDENTIFIER);
                 expect(Id.SEMICOLON);
-                return new ShortCircuitStatement(keyword, name);
+                return new ContinueStatement(keyword, name);
                 }
 
             case DEBUG:
@@ -1877,23 +1884,41 @@ public class Parser
      *
      * <p/><code><pre>
      * SwitchStatement
-     *     switch "(" SwitchCondition-opt ")" "{" SwitchBlocks-opt SwitchLabels-opt "}"
+     *     switch "(" SwitchCondition-opt ")" "{" SwitchBlocks "}"
+     *
+     * SwitchCondition
+     *     VariableInitializer
+     *     Expression
      *
      * SwitchBlocks
      *     SwitchBlock
      *     SwitchBlocks SwitchBlock
      *
+     * # the SwitchBlockFinish is required unless the SwitchBlock does not complete (e.g. from a "throw")
      * SwitchBlock
-     *     SwitchLabels Statements
+     *     SwitchLabels Statements SwitchBlockFinish-opt
      *
      * SwitchLabels
      *     SwitchLabel
      *     SwitchLabels SwitchLabel
      *
-     * # expression must be a "constant expression", i.e. compiler has to be able to determine the value
+     * # 1) for a SwitchStatement with a SwitchCondition, each "case" expression must be a
+     * #    "constant expression", i.e. compiler has to be able to determine the value
+     * # 2) for a SwitchStatement without a SwitchCondition, each "case" expression must be of type Boolean
+     * # 3) parse for TernaryExpression; cannot parse for Expression, because it has a possible trailing ':'
      * SwitchLabel
-     *     "case" Expression ":"
+     *     "case" TernaryExpressionList ":"
      *     "default" ":"
+     *
+     * SwitchBlockFinish:
+     *     BreakStatement
+     *     ContinueStatement
+     *
+     * BreakStatement:
+     *     "break" Name-opt ";"
+     *
+     * ContinueStatement:
+     *     "continue" Name-opt ";"
      * </pre></code>
      *
      * @return a switch statement
@@ -1908,40 +1933,81 @@ public class Parser
         Token           tokLCurly = expect(Id.L_CURLY);
         List<Statement> stmts     = new ArrayList<>();
         boolean         fDefault  = false;
+        do
+            {
+            fDefault |= parseSwitchBlock(stmts, fDefault);
+            }
+        while (match(Id.R_CURLY) == null);
+
+        return new SwitchStatement(keyword, cond, new StatementBlock(stmts,
+                tokLCurly.getStartPosition(), getLastMatch().getEndPosition()));
+        }
+
+    private boolean parseSwitchBlock(List<Statement> stmts, boolean fDefault)
+        {
+        boolean fAnyLabels = false;
+        boolean fAnyStmts  = false;
+
         while (true)
             {
             switch (peek().getId())
                 {
                 case CASE:
+                    if (fAnyStmts)
+                        {
+                        return fDefault;
+                        }
+
                     stmts.add(new CaseStatement(current(), parseTernaryExpressionList(), expect(Id.COLON)));
+                    fAnyLabels = true;
                     break;
 
                 case DEFAULT:
                     {
+                    if (fAnyStmts)
+                        {
+                        return fDefault;
+                        }
+
                     Token tokDefault = current();
                     if (fDefault)
                         {
-                        log(Severity.ERROR, REPEAT_DEFAULT,
-                                tokDefault.getStartPosition(), tokDefault.getEndPosition());
+                        log(Severity.ERROR, REPEAT_DEFAULT, tokDefault.getStartPosition(), tokDefault.getEndPosition());
                         }
+
                     stmts.add(new CaseStatement(tokDefault, null, expect(Id.COLON)));
-                    fDefault = true;
-                    }
+                    fAnyLabels = true;
+                    fDefault   = true;
                     break;
+                    }
 
                 default:
-                    if (stmts.isEmpty())
+                    if (!fAnyLabels)
                         {
                         log(Severity.ERROR, MISSING_CASE, peek().getStartPosition(), peek().getEndPosition());
-                        throw new CompilerException("switch must start with a case");
+                        if (stmts.isEmpty())
+                            {
+                            throw new CompilerException("switch must start with a case");
+                            }
                         }
                     stmts.add(parseStatement());
                     break;
 
+                case BREAK:
+                case CONTINUE:
+                    if (!fAnyLabels)
+                        {
+                        log(Severity.ERROR, MISSING_CASE, peek().getStartPosition(), peek().getEndPosition());
+                        }
+                    stmts.add(parseStatement());
+                    return fDefault;
+
                 case R_CURLY:
-                    Token tokRCurly = expect(Id.R_CURLY);
-                    return new SwitchStatement(keyword, cond, new StatementBlock(stmts,
-                            tokLCurly.getStartPosition(), tokRCurly.getEndPosition()));
+                    if (stmts.isEmpty())
+                        {
+                        log(Severity.ERROR, MISSING_CASE, peek().getStartPosition(), peek().getEndPosition());
+                        }
+                    return fDefault;
                 }
             }
         }

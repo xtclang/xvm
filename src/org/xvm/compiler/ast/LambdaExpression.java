@@ -80,6 +80,12 @@ public class LambdaExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
+    public boolean isComponentNode()
+        {
+        return true;
+        }
+
+    @Override
     public Component getComponent()
         {
         MethodStructure method = m_lambda;
@@ -477,7 +483,7 @@ public class LambdaExpression
             // to store off the data from the capture context, and defer the signature creation to the
             // generateAssignment() method
             m_mapCapture      = ctxLambda.getCaptureMap();
-            m_mapRegisters    = ctxLambda.getRegisterMap();
+            m_mapRegisters    = ctxLambda.ensureRegisterMap();
             m_fLambdaIsMethod = ctxLambda.isLambdaMethod();
 
             typeActual = pool.buildFunctionType(atypeParams, atypeRets);
@@ -1043,16 +1049,17 @@ public class LambdaExpression
             // apply variable assignment information from the capture scope to the variables
             // captured from the outer scope
             Map<String, Boolean>  mapCapture = ensureCaptureMap();
-            Map<String, Register> mapVars    = mapCapture.isEmpty() ? Collections.EMPTY_MAP : new HashMap<>();
+            Map<String, Register> mapVars    = ensureRegisterMap();
             for (Entry<String, Boolean> entry : mapCapture.entrySet())
                 {
-                String sName = entry.getKey();
-                boolean fMod = entry.getValue();
+                String  sName = entry.getKey();
+                boolean fMod  = entry.getValue();
                 if (!fMod && getDefiniteAssignments().containsKey(sName))
                     {
                     entry.setValue(true);
                     fMod = true;
                     }
+
                 if (fMod)
                     {
                     Assignment asnOld = ctxOuter.getVarAssignment(sName);
@@ -1062,7 +1069,6 @@ public class LambdaExpression
 
                 mapVars.put(sName, (Register) getVar(sName));
                 }
-            m_mapRegisters = mapVars;
 
             return ctxOuter;
             }
@@ -1142,12 +1148,27 @@ public class LambdaExpression
             }
 
         /**
-         * @return a map of variable name to Register for all of variables to capture, built by
-         *         exit()
+         * Obtain the map of names to registers, if it has been built.
+         * <p/>
+         * Note: built by exit()
+         *
+         * @return a non-null map of variable name to Register for all of variables to capture
          */
-        public Map<String, Register> getRegisterMap()
+        public Map<String, Register> ensureRegisterMap()
             {
-            return m_mapRegisters;
+            Map<String, Register> map = m_mapRegisters;
+            if (map == null)
+                {
+                if (getCaptureMap().isEmpty())
+                    {
+                    // there are never more capture-registers than there are captures
+                    return Collections.EMPTY_MAP;
+                    }
+
+                m_mapRegisters = map = new HashMap<>();
+                }
+
+            return map;
             }
 
         /**

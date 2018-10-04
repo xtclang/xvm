@@ -163,7 +163,7 @@ public class VariableDeclarationStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Statement validate(Context ctx, ErrorListener errs)
+    protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
         // before validating the type, disassociate any annotations that do not apply to the
         // underlying type

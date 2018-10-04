@@ -27,7 +27,7 @@ public class SwitchStatement
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public boolean canBreak()
+    public boolean isNaturalShortCircuitStatementTarget()
         {
         return true;
         }

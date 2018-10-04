@@ -318,8 +318,8 @@ Statement
 	Assignment ";"
     LabeledStatement
     AssertStatement
-    "break" Name-opt ";"
-    "continue" Name-opt ";"
+    BreakStatement
+    ContinueStatement
     "do" StatementBlock "while" "(" ConditionList ")" ";"
     ForStatement
     IfStatement
@@ -467,7 +467,7 @@ ReturnValue
     ExpressionList
 
 SwitchStatement
-    switch "(" SwitchCondition-opt ")" "{" SwitchBlocks-opt SwitchLabels-opt "}"
+    switch "(" SwitchCondition-opt ")" "{" SwitchBlocks "}"
 
 SwitchCondition
     VariableInitializer
@@ -477,8 +477,9 @@ SwitchBlocks
     SwitchBlock
     SwitchBlocks SwitchBlock
 
+# the SwitchBlockFinish is required unless the SwitchBlock does not complete (e.g. from a "throw")
 SwitchBlock
-    SwitchLabels Statements
+    SwitchLabels Statements SwitchBlockFinish-opt
 
 SwitchLabels
     SwitchLabel
@@ -491,6 +492,16 @@ SwitchLabels
 SwitchLabel
     "case" TernaryExpressionList ":"
     "default" ":"
+
+SwitchBlockFinish:
+    BreakStatement
+    ContinueStatement
+
+BreakStatement:
+    "break" Name-opt ";"
+
+ContinueStatement:
+    "continue" Name-opt ";"
 
 TernaryExpressionList:
     TernaryExpression

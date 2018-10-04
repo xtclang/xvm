@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -48,6 +49,14 @@ public class Context
     protected Context getOuterContext()
         {
         return m_ctxOuter;
+        }
+
+    /**
+     * @return true iff this context demuxes assignment data as it pushes it outwards
+     */
+    protected boolean isDemuxing()
+        {
+        return m_fDemuxOnExit;
         }
 
     /**
@@ -127,26 +136,6 @@ public class Context
     public ConstantPool pool()
         {
         return getOuterContext().pool();
-        }
-
-    /**
-     * Associate an AST node with this Context, for example if the node is able to ground a
-     * short-circuit or act as a "break" target.
-     *
-     * @param node  the AST node that this Context corresponds to in terms of scope and completion
-     */
-    public void registerNode(AstNode node)
-        {
-        assert m_node == null;
-        m_node = node;
-        }
-
-    /**
-     * @return the AST node associated with this Context, or null if none is explicitly associated
-     */
-    public AstNode getNode()
-        {
-        return m_node;
         }
 
     /**
@@ -290,6 +279,10 @@ public class Context
      */
     public Context exit()
         {
+        Context ctxOuter    = getOuterContext();
+        boolean fCompleting = isCompleting();
+        boolean fDemuxing   = isDemuxing();
+
         // copy variable assignment information from this scope to outer scope
         for (Entry<String, Assignment> entry : getDefiniteAssignments().entrySet())
             {
@@ -308,55 +301,98 @@ public class Context
                 }
             else
                 {
-                Assignment asnOuter = promote(sName, asnInner);
-                if (m_fDemuxOnExit)
+                Assignment asnOuter = ctxOuter.getVarAssignment(sName);
+
+                asnOuter = fCompleting
+                        ? promote(sName, asnInner, asnOuter)
+                        : promoteNonCompleting(sName, asnInner, asnOuter);
+
+                if (fDemuxing)
                     {
                     asnOuter = asnOuter.demux();
                     }
-                getOuterContext().setVarAssignment(sName, asnOuter);
+
+                ctxOuter.setVarAssignment(sName, asnOuter);
                 }
             }
 
-        return getOuterContext();
+        return ctxOuter;
         }
 
-    // TODO public void shortTo(Context ctxOuter)
-    protected Map<String, Assignment> prepareExit(Context ctxOuter)
+    /**
+     * Determine the effects of an abrupt exit from this context to the specified context.
+     *
+     * @param ctxDest  the context (somewhere in the context tree at or above this context) that is
+     *                 being transitioned to
+     *
+     * @return the variable assignment contributions that need to be made if the code exits abruptly
+     *         at this point and breaks/continues/short-circuits to the specified context
+     */
+    public Map<String, Assignment> prepareJump(Context ctxDest)
         {
+        // begin with a snap-shot of the current modifications
+        Map<String, Assignment> mapMods = new HashMap<>(getDefiniteAssignments());
 
-        Map<String, Assignment> mapMods = getDefiniteAssignments();
-        if (mapMods.isEmpty())
+        Context ctxInner = this;
+        while (ctxInner != ctxDest)
             {
-            return Collections.EMPTY_MAP;
-            }
+            boolean fDemuxing = ctxInner.isDemuxing();
+            Context ctxOuter  = ctxInner.getOuterContext();
 
-        Map<String, Assignment> mapPrep = new HashMap<>();
-        for (Entry<String, Assignment> entry : mapMods.entrySet())
-            {
-            String     sName    = entry.getKey();
-            Assignment asnInner = entry.getValue();
-            if (isVarDeclaredInThisScope(sName))
+            // calculate impact of the already-accumulated assignment deltas across this context
+            // boundary
+            for (Iterator<Entry<String, Assignment>> iter = mapMods.entrySet().iterator(); iter.hasNext(); )
                 {
-                // we have unwound all the way back to the declaration context for the
-                // variable at this point, so if it is proven to be effectively final, that
-                // information is stored off, for example so that captures can make use of
-                // that knowledge (i.e. capturing a value of type T, instead of a Ref<T>)
-                if (asnInner.isEffectivelyFinal())
+                Entry<String, Assignment> entry    = iter.next();
+                String                    sName    = entry.getKey();
+                if (ctxInner.isVarDeclaredInThisScope(sName))
                     {
-                    ((Register) getVar(sName)).markEffectivelyFinal();
+                    // that variable doesn't exist where we're going
+                    iter.remove();
+                    }
+                else
+                    {
+                    Assignment asnInner = entry.getValue();
+                    Assignment asnOuter = ctxOuter.getVarAssignment(sName);
+
+                    asnOuter = ctxInner.promote(sName, asnInner, asnOuter);
+
+                    if (fDemuxing)
+                        {
+                        asnOuter = asnOuter.demux();
+                        }
+
+                    entry.setValue(asnOuter);
                     }
                 }
-            else
+
+            // collect all of the other pending modifications from the outer context
+            for (Entry<String, Assignment> entry : ctxOuter.getDefiniteAssignments().entrySet())
                 {
-                Assignment asnOuter = promote(sName, asnInner);
-                //if (fDemux)
-                    {
-                    asnOuter = asnOuter.demux();
-                    }
-                getOuterContext().setVarAssignment(sName, asnOuter);
+                mapMods.putIfAbsent(entry.getKey(), entry.getValue());
                 }
+
+            ctxInner = ctxOuter;
             }
-        return mapPrep;
+
+        return mapMods;
+        }
+
+    /**
+     * Merge a previously prepared set of variable assignment information into this context.
+     *
+     * @param mapAdd  a result from a previous call to {@link #prepareJump}
+     */
+    public void merge(Map<String, Assignment> mapAdd)
+        {
+        Map<String, Assignment> mapAsn = ensureDefiniteAssignments();
+        for (Entry<String, Assignment> entry : mapAdd.entrySet())
+            {
+            String     sName  = entry.getKey();
+            Assignment asnNew = entry.getValue();
+            Assignment asnOld = getVarAssignment(sName);
+            mapAsn.put(sName, asnOld.join(asnNew));
+            }
         }
 
     /**
@@ -364,12 +400,28 @@ public class Context
      *
      * @param sName     the variable name
      * @param asnInner  the variable assignment information to promote to the enclosing context
+     * @param asnOuter  the variable assignment information from the enclosing context
      *
      * @return the promoted assignment information
      */
-    protected Assignment promote(String sName, Assignment asnInner)
+    protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
         {
         return asnInner;
+        }
+
+    /**
+     * Promote assignment information from this context to its enclosing context with the explicit
+     * understanding that this context is non-completing.
+     *
+     * @param sName     the variable name
+     * @param asnInner  the variable assignment information to promote to the enclosing context
+     * @param asnOuter  the variable assignment information from the enclosing context
+     *
+     * @return the promoted assignment information
+     */
+    protected Assignment promoteNonCompleting(String sName, Assignment asnInner, Assignment asnOuter)
+        {
+        return asnOuter.promoteFromNonCompleting(asnInner);
         }
 
     /**
@@ -547,8 +599,6 @@ public class Context
      */
     protected void markVarRead(boolean fNested, String sName, Token tokName, ErrorListener errs)
         {
-        // TODO if (isCompleting())
-
         if (fNested || isVarReadable(sName))
             {
             if (!isVarDeclaredInThisScope(sName))
@@ -987,8 +1037,26 @@ public class Context
         public Context exit()
             {
             // no-op (don't push data up to outer scope)
+            return getOuterContext();
+            }
 
-            return super.getOuterContext();
+        @Override
+        public Map<String, Assignment> prepareJump(Context ctxDest)
+            {
+            return Collections.EMPTY_MAP;
+            }
+
+        @Override
+        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
+            {
+            throw new IllegalStateException();
+            }
+
+        @Override
+        protected Assignment promoteNonCompleting(String sName, Assignment asnInner,
+                Assignment asnOuter)
+            {
+            throw new IllegalStateException();
             }
         }
 
@@ -1025,12 +1093,9 @@ public class Context
             }
 
         @Override
-        protected Assignment promote(String sName, Assignment asnInner)
+        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
             {
-            Context    ctxOuter = getOuterContext();
-            Assignment asnOuter = ctxOuter.getVarAssignment(sName);
-            Assignment asnJoin  = asnOuter.join(asnInner, isWhenTrue());
-            return asnJoin;
+            return asnOuter.join(asnInner, isWhenTrue());
             }
 
         private boolean m_fWhenTrue;
@@ -1060,13 +1125,11 @@ public class Context
             }
 
         @Override
-        protected Assignment promote(String sName, Assignment asnInner)
+        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
             {
             // the "when false" portion of this context is combined with the the "when false"
             // portion of the outer context;  the "when true" portion of this context replaces the
             // "when true" portion of the outer context
-            Context    ctxOuter = getOuterContext();
-            Assignment asnOuter = ctxOuter.getVarAssignment(sName);
             Assignment asnFalse = Assignment.join(asnOuter.whenFalse(), asnInner.whenFalse());
             Assignment asnJoin  = Assignment.join(asnFalse, asnInner.whenTrue());
             return asnJoin;
@@ -1097,15 +1160,13 @@ public class Context
             }
 
         @Override
-        protected Assignment promote(String sName, Assignment asnInner)
+        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
             {
             // the "when false" portion of this context replaces the "when false" portion of the
             // outer context;  the "when true" portion of this context is combined with the the
             // "when true" portion of the outer context
-            Context    ctxOuter = getOuterContext();
-            Assignment asnOuter = ctxOuter.getVarAssignment(sName);
-            Assignment asnTrue  = Assignment.join(asnOuter.whenTrue(), asnInner.whenTrue());
-            Assignment asnJoin  = Assignment.join(asnInner.whenFalse(), asnTrue);
+            Assignment asnTrue = Assignment.join(asnOuter.whenTrue(), asnInner.whenTrue());
+            Assignment asnJoin = Assignment.join(asnInner.whenFalse(), asnTrue);
             return asnJoin;
             }
         }
@@ -1134,7 +1195,7 @@ public class Context
             }
 
         @Override
-        protected Assignment promote(String sName, Assignment asnInner)
+        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
             {
             return asnInner.negate();
             }
@@ -1155,11 +1216,9 @@ public class Context
             }
 
         @Override
-        protected Assignment promote(String sName, Assignment asnInner)
+        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
             {
-            Context    ctxOuter = getOuterContext();
-            Assignment asnOuter = ctxOuter.getVarAssignment(sName);
-            Assignment asnJoin  = asnOuter.joinLoop(asnInner);
+            Assignment asnJoin = asnOuter.joinLoop(asnInner);
             return asnJoin;
             }
         }
@@ -1238,11 +1297,6 @@ public class Context
      * context may not have an outer context.
      */
     private Context m_ctxOuter;
-
-    /**
-     * The node (a Statement or Expression) that this context is associated with.
-     */
-    private AstNode m_node;
 
     /**
      * True means that this context should demux the assignment information that it pushes

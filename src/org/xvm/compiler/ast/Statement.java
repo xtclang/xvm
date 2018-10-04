@@ -1,6 +1,11 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -58,45 +63,48 @@ public abstract class Statement
         }
 
     /**
-     * Mark the statement as completing by short-circuiting.
+     * @return true iff a "continue" statement can apply to this statement
      */
-    public void shortCircuit() // TODO re-evaluate (currently not used - why not?)
-        {
-        m_fShortCircuited = true;
-        }
-
-    /**
-     * @return true iff a "break" statement can apply to this statement
-     */
-    public boolean canBreak()
+    public boolean isNaturalShortCircuitStatementTarget()
         {
         return false;
         }
 
     /**
+     * Obtain the label to "break" to.
+     *
+     * @param ctxOrigin  the context from the point under this statement of the "break"
+     *
      * @return the label to jump to when a "break" occurs within (or for) this statement
      */
-    public Label getBreakLabel()
+    public Label ensureBreakLabel(Context ctxOrigin)
         {
-        assert canBreak();
+        Context ctxDest = m_ctx;
+        assert ctxDest != null;
+
+        // generate a delta of assignment information for the long-jump
+        Map<String, Assignment> mapAsn = ctxOrigin.prepareJump(ctxDest);
+
+        // record the long-jump that landed on this statement by recording its assignment impact
+        if (m_listBreaks == null)
+            {
+            m_listBreaks = new ArrayList<>();
+            }
+        m_listBreaks.add(mapAsn);
+
         return getEndLabel();
         }
 
     /**
-     * @return true iff a "continue" statement can apply to this statement
-     */
-    public boolean canContinue()
-        {
-        return false;
-        }
-
-    /**
+     * Obtain the label to "continue" to.
+     *
+     * @param ctxOrigin  the context from the point under this statement of the "continue"
+     *
      * @return the label to jump to when a "continue" occurs within (or for) this statement
      */
-    public Label getContinueLabel()
+    public Label ensureContinueLabel(Context ctxOrigin)
         {
-        assert canContinue();
-        throw notImplemented();
+        throw new IllegalStateException();
         }
 
 
@@ -111,7 +119,27 @@ public abstract class Statement
      *
      * @return true iff the compilation can proceed
      */
-    protected Statement validate(Context ctx, ErrorListener errs) // TODO make abstract
+    protected Statement validate(Context ctx, ErrorListener errs)
+        {
+        // before validating the nested code, associate this statement with the context so that any
+        // "break" or "continue" can find the context to apply assignment data to
+        m_ctx = ctx;
+        Statement stmt = validateImpl(ctx, errs);
+        m_ctx = null;
+
+        List<Map<String, Assignment>> listBreaks = m_listBreaks;
+        if (listBreaks != null)
+            {
+            for (Map<String, Assignment> mapAsn : listBreaks)
+                {
+                ctx.merge(mapAsn);
+                }
+            }
+
+        return stmt;
+        }
+
+    protected Statement validateImpl(Context ctx, ErrorListener errs) // TODO make abstract
         {
         throw notImplemented();
         }
@@ -145,7 +173,7 @@ public abstract class Statement
 
         boolean fCompletes = fReachable & emit(ctx, fReachable, code, errs);
 
-        // a being label should not have been requested during the emit stage unless it had been
+        // a begin label should not have been requested during the emit stage unless it had been
         // requested previously (since it's too late to add it now!)
         assert fBeginLabel == (m_labelBegin != null);
 
@@ -155,7 +183,7 @@ public abstract class Statement
             }
 
         m_fEmitted = true;
-        return fCompletes || fReachable && m_fShortCircuited;
+        return fCompletes || fReachable && m_listBreaks != null;
         }
 
     /**
@@ -178,6 +206,14 @@ public abstract class Statement
 
     private Label   m_labelBegin;
     private Label   m_labelEnd;
-    private boolean m_fShortCircuited;
     private boolean m_fEmitted;
+
+    /**
+     * The Context that contains this statement as it validates.
+     */
+    private transient Context m_ctx;
+    /**
+     * Generally null, unless there is a break that long-jumps to this statement's exit label.
+     */
+    private transient List<Map<String, Assignment>> m_listBreaks;
     }

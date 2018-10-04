@@ -100,6 +100,12 @@ public enum Assignment
      */
     public Assignment applyAssignment()
         {
+        if (fSplit)
+            {
+            return join(this.whenFalse().applyAssignment(),
+                        this.whenTrue() .applyAssignment());
+            }
+
         return isDefinitelyUnassigned()
                 ? AssignedOnce
                 : Assigned;
@@ -114,9 +120,41 @@ public enum Assignment
      */
     public Assignment applyAssignmentFromCapture()
         {
+        if (fSplit)
+            {
+            return join(this.whenFalse().applyAssignmentFromCapture(),
+                        this.whenTrue() .applyAssignmentFromCapture());
+            }
+
         return isDefinitelyAssigned()
                 ? Assigned
                 : Unknown;
+        }
+
+    /**
+     * Apply assignment information from an Assignment from a non-completing inner context to this
+     * Assignment.
+     *
+     * @param that  the assignment from a non-completing inner context
+     *
+     * @return the resulting Assignment state
+     */
+    public Assignment promoteFromNonCompleting(Assignment that)
+        {
+        if (this == that)
+            {
+            return this;
+            }
+
+        if (this.fSplit || that.fSplit)
+            {
+            return join(this.whenFalse().promoteFromNonCompleting(that.whenFalse()),
+                        this.whenTrue() .promoteFromNonCompleting(that.whenTrue()));
+            }
+
+        return this.isEffectivelyFinal() && !that.isEffectivelyFinal()
+                ? forFlags(getFlags() & 0b110110)   // erase effectively final flags
+                : this;
         }
 
     /**
@@ -161,6 +199,24 @@ public enum Assignment
         }
 
     /**
+     * Combine information from this Assignment with information from another in a manner that
+     * equally weighs the information from each.
+     *
+     * @param that  a second Assignment
+     *
+     * @return the resulting Assignment
+     */
+    public Assignment join(Assignment that)
+        {
+        return forFlags((this.fUnassignedWhenFalse  & that.fUnassignedWhenFalse  ? 0b100000 : 0)
+                |       (this.fAssignedWhenFalse    & that.fAssignedWhenFalse    ? 0b010000 : 0)
+                |       (this.fExactlyOnceWhenFalse & that.fExactlyOnceWhenFalse ? 0b001000 : 0)
+                |       (this.fUnassignedWhenTrue   & that.fUnassignedWhenTrue   ? 0b000100 : 0)
+                |       (this.fAssignedWhenTrue     & that.fAssignedWhenTrue     ? 0b000010 : 0)
+                |       (this.fExactlyOnceWhenTrue  & that.fExactlyOnceWhenTrue  ? 0b000001 : 0));
+        }
+
+    /**
      * Combine an Assignment from a "when false" or "when true" fork with this Assignment.
      *
      * @param that       the Assignment representing the "when true" or "when false" fork of
@@ -187,7 +243,8 @@ public enum Assignment
         }
 
     /**
-     * Combine the portions an Assignment from a "when false" or "when true" fork with this Assignment.
+     * Combine the portions an Assignment from a "when false" or "when true" fork with this
+     * Assignment.
      *
      * @param whenFalse  the Assignment representing the Assignment status "when false"
      * @param whenTrue   the Assignment representing the Assignment status "when true"

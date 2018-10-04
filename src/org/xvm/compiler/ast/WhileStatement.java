@@ -50,18 +50,18 @@ public class WhileStatement
         }
 
     @Override
-    public boolean canBreak()
+    public boolean isNaturalShortCircuitStatementTarget()
         {
         return true;
         }
 
     @Override
-    public boolean canContinue()
+    public Label ensureContinueLabel(Context ctxOrigin)
         {
-        return true;
+        // TODO copy impl from ensureBreakLabel()
+        return getContinueLabel();
         }
 
-    @Override
     public Label getContinueLabel()
         {
         Label label = m_labelContinue;
@@ -114,7 +114,7 @@ public class WhileStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Statement validate(Context ctx, ErrorListener errs)
+    protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
         boolean fValid = true;
 

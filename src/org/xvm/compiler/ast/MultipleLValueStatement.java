@@ -95,7 +95,7 @@ public class MultipleLValueStatement
         }
 
     @Override
-    protected Label getShortCircuitLabel(Expression exprChild)
+    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
         {
         int iPos = findChild(exprChild);
         if (iPos < 0)
@@ -158,7 +158,7 @@ public class MultipleLValueStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Statement validate(Context ctx, ErrorListener errs)
+    protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
         for (int i = 0, c = LVals.size(); i < c; ++i)
             {
@@ -498,7 +498,7 @@ public class MultipleLValueStatement
             }
 
         @Override
-        protected Label getShortCircuitLabel(Expression exprChild)
+        protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
             {
             int iPos = findChild(exprChild);
             if (iPos < 0)

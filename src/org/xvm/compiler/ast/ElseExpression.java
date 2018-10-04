@@ -147,11 +147,11 @@ public class ElseExpression
         }
 
     @Override
-    protected Label getShortCircuitLabel(Expression exprChild)
+    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
         {
         if (exprChild != expr1)
             {
-            return super.getShortCircuitLabel(exprChild);
+            return super.getShortCircuitLabel(ctx, exprChild);
             }
 
         // generate a "grounding" target label for the "left side child expression"
@@ -173,14 +173,16 @@ public class ElseExpression
             return;
             }
 
-        Label labelElse = getShortCircuitLabel(expr1);
-        Label labelEnd  = new Label("end_:_" + m_nLabel);
-
         expr1.generateAssignment(ctx, code, LVal, errs);
-        code.add(new Jump(labelEnd));
-        code.add(labelElse);
-        expr2.generateAssignment(ctx, code, LVal, errs);
-        code.add(labelEnd);
+
+        if (m_labelElse != null)
+            {
+            Label labelEnd = new Label("end_:_" + m_nLabel);
+            code.add(new Jump(labelEnd));
+            code.add(m_labelElse);
+            expr2.generateAssignment(ctx, code, LVal, errs);
+            code.add(labelEnd);
+            }
         }
 
 

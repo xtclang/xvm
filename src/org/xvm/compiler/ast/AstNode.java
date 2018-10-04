@@ -449,13 +449,15 @@ public abstract class AstNode
         }
 
     /**
-     * This must be overridden by any AST node that supports short circuiting children.
+     * This must be overridden by any AST node that supports short circuiting children. This is
+     * called during validation by a child that needs a ground.
      *
+     * @param ctx        the validating context
      * @param exprChild  the child that is requesting the label
      *
      * @return the label to jump to when the expression short-circuits.
      */
-    protected Label getShortCircuitLabel(Expression exprChild)
+    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
         {
         throw new IllegalStateException(this.getClass().getName());
         }
