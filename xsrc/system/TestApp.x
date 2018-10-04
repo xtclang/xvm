@@ -411,8 +411,10 @@ class TestApp
         t2[1] = 2;
         print(t2);
 
-        Int of = "the test".indexOf(t2); // same as "the test".indexOf("t", 2);
-        assert(of == 4);
+        if (Int of : "the test".indexOf(t2)) // same as "the test".indexOf("t", 2);
+            {
+            assert(of == 4);
+            }
 
         if (String s : testConditional(1))
             {

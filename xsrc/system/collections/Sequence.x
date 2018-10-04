@@ -76,6 +76,27 @@ interface Sequence<ElementType>
         }
 
     /**
+     * Look for the specified {@code value} starting at the specified index.
+     *
+     * @param value    the value to search for
+     * @param startAt  the first index to search from (optional)
+     *
+     * @return a conditional return of the location of the index of the specified value, or
+     *         false if the value could not be found
+     */
+    conditional Int indexOf(ElementType value, Int startAt = 0)
+        {
+        for (Int i = startAt, Int last = size - 1; i < last; i++)
+            {
+            if (this[i] == value)
+                {
+                return true, i;
+                }
+            }
+        return false;
+        }
+
+    /**
      * Look for the specified {@code value} (in the optional {@code range}, if specified), and
      * return the index of the value if it is found.
      *
