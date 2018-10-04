@@ -1958,28 +1958,7 @@ public abstract class Expression
                         }
                     }
 
-                if (typeArg == null)
-                    {
-                    // check if the method's parameter type fits the argument expression
-                    TypeFit fit = exprArg.testFit(ctx, typeMethodParam);
-                    if (fit.isFit())
-                        {
-                        if (fit.isConverting())
-                            {
-                            fConvert = true;
-                            }
-                        if (atypeAllArgs == atypeArgs)
-                            {
-                            atypeAllArgs = atypeAllArgs.clone();
-                            }
-                        atypeAllArgs[i] = typeMethodParam;
-                        }
-                    else
-                        {
-                        continue NextMethod;
-                        }
-                    }
-                else
+                if (exprArg == null)
                     {
                     if (!typeArg.isA(typeMethodParam))
                         {
@@ -1991,6 +1970,50 @@ public abstract class Expression
                             {
                             continue NextMethod;
                             }
+                        }
+                    }
+                else
+                    {
+                    // check if the method's parameter type fits the argument expression
+                    TypeFit fit = exprArg.testFit(ctx, typeMethodParam);
+                    if (fit.isFit())
+                        {
+                        if (fit.isConverting())
+                            {
+                            fConvert = true;
+                            }
+
+                        // the challenge is that the expression could be more forgiving
+                        // than its implicit type would suggest (e.g. NewExpression);
+                        // for the type parameter resolution below, lets pick the narrowest type
+                        TypeConstant typeExpr = exprArg.isValidated()
+                                ? exprArg.getType()
+                                : exprArg.getImplicitType(ctx);
+                        if (typeArg == null || !typeArg.equals(typeExpr))
+                            {
+                            if (atypeAllArgs == atypeArgs)
+                                {
+                                atypeAllArgs = atypeAllArgs.clone();
+                                }
+
+                            if (typeArg == null)
+                                {
+                                typeArg = typeExpr == null ? typeMethodParam : typeExpr;
+                                }
+                            else if (typeExpr != null)
+                                {
+                                typeArg = typeArg.isA(typeExpr)
+                                        ? typeArg
+                                        : typeExpr.isA(typeArg)
+                                                ? typeExpr
+                                                : typeMethodParam;
+                                }
+                            atypeAllArgs[i] = typeArg;
+                            }
+                        }
+                    else
+                        {
+                        continue NextMethod;
                         }
                     }
                 }
