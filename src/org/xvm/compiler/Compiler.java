@@ -973,11 +973,11 @@ public class Compiler
     /**
      * Could not find the specified label "{0}".
      */
-    public static final String MISSING_GROUND_LABEL               = "COMPILER-87";
+    public static final String MISSING_GROUND_LABEL               = "COMPILER-88";
     /**
      * Could not find an enclosing "for", "do", "while", or "switch" statement.
      */
-    public static final String MISSING_GROUND_STATEMENT           = "COMPILER-88";
+    public static final String MISSING_GROUND_STATEMENT           = "COMPILER-89";
     /**
      * {0} is not yet implemented.
      */
