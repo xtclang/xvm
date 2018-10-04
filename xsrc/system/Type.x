@@ -197,7 +197,7 @@ const Type<DataType>
             }
 
         // this type must have a matching method for each method of that type
-        nextMethod: for (Method thatMethod : that.allMethods)
+        nextMethod: for (Method m1 : that.allMethods)
             {
             // find the corresponding method on this type
             for (Method m2 : this.allMethodsByName[m1.name].methods)

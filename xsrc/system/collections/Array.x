@@ -395,7 +395,9 @@ class Array<ElementType>
             ElementType el = this[i];
             if (el instanceof ConstAble)
                 {
-                el = el == this ? that : el.ensureConst(false);
+                el = el.as(ConstAble) == this.as(ConstAble)
+                    ? that.as(ElementType)
+                    : el.ensureConst(false).as(ElementType);
                 }
             that[i] = el;
             }
