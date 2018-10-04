@@ -382,7 +382,7 @@ public class Annotation
             }
 
         @Override
-        public Map<String, Assignment> jumpTo(Context ctxDest)
+        public Map<String, Assignment> prepareJump(Context ctxDest)
             {
             throw new IllegalStateException();
             }

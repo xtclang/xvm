@@ -848,7 +848,7 @@ public class StatementBlock
             }
 
         @Override
-        public Map<String, Assignment> jumpTo(Context ctxDest)
+        public Map<String, Assignment> prepareJump(Context ctxDest)
             {
             checkValidating();
             throw new IllegalStateException();

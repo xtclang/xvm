@@ -348,7 +348,7 @@ public class Context
      * @return the variable assignment contributions that need to be made if the code exits abruptly
      *         at this point and breaks/continues/short-circuits to the specified context
      */
-    public Map<String, Assignment> jumpTo(Context ctxDest)
+    public Map<String, Assignment> prepareJump(Context ctxDest)
         {
         // begin with a snap-shot of the current modifications
         Map<String, Assignment> mapMods = new HashMap<>(getDefiniteAssignments());
@@ -356,7 +356,8 @@ public class Context
         Context ctxInner = this;
         while (ctxInner != ctxDest)
             {
-            Context ctxOuter = ctxInner.getOuterContext();
+            boolean fDemuxing = ctxInner.isDemuxing();
+            Context ctxOuter  = ctxInner.getOuterContext();
 
             // calculate impact of the already-accumulated assignment deltas across this context
             // boundary
@@ -373,39 +374,15 @@ public class Context
                     {
                     Assignment asnInner = entry.getValue();
                     Assignment asnOuter = ctxOuter.getVarAssignment(sName);
-// TODO TODO TODO
-//                    asnOuter = promote(sName, asnInner, asnOuter);
-//                            : promoteNonCompleting(sName, asnInner, asnOuter);
-//
-//                    if (fDemuxing)
-//                        {
-//                        asnOuter = asnOuter.demux();
-//                        }
-//
-//                    ctxOuter.setVarAssignment(sName, asnOuter);
-//                    }
-//
-//                //Map<String, Assignment> mapPrep = new HashMap<>();
-//                Assignment asnInner = entry.getValue();
-//                if (isVarDeclaredInThisScope(sName))
-//                    {
-//                    // we have unwound all the way back to the declaration context for the
-//                    // variable at this point, so if it is proven to be effectively final, that
-//                    // information is stored off, for example so that captures can make use of
-//                    // that knowledge (i.e. capturing a value of type T, instead of a Ref<T>)
-//                    if (asnInner.isEffectivelyFinal())
-//                        {
-//                        ((Register) getVar(sName)).markEffectivelyFinal();
-//                        }
-//                    }
-//                else
-//                    {
-//                    Assignment asnOuter = promote(sName, asnInner, asnOuter);
-//                    //if (fDemux)
-//                    {
-//                    asnOuter = asnOuter.demux();
-//                    }
-//                    getOuterContext().setVarAssignment(sName, asnOuter);
+
+                    asnOuter = promote(sName, asnInner, asnOuter);
+
+                    if (fDemuxing)
+                        {
+                        asnOuter = asnOuter.demux();
+                        }
+
+                    entry.setValue(asnOuter);
                     }
                 }
 
@@ -625,8 +602,6 @@ public class Context
      */
     protected void markVarRead(boolean fNested, String sName, Token tokName, ErrorListener errs)
         {
-        // TODO if (isCompleting())
-
         if (fNested || isVarReadable(sName))
             {
             if (!isVarDeclaredInThisScope(sName))
@@ -1069,9 +1044,22 @@ public class Context
             }
 
         @Override
-        public Map<String, Assignment> jumpTo(Context ctxDest)
+        public Map<String, Assignment> prepareJump(Context ctxDest)
             {
             return Collections.EMPTY_MAP;
+            }
+
+        @Override
+        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
+            {
+            throw new IllegalStateException();
+            }
+
+        @Override
+        protected Assignment promoteNonCompleting(String sName, Assignment asnInner,
+                Assignment asnOuter)
+            {
+            throw new IllegalStateException();
             }
         }
 
