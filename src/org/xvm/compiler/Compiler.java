@@ -967,6 +967,14 @@ public class Compiler
      */
     public static final String PARAMETER_TYPES_REQUIRED           = "COMPILER-86";
     /**
+     * Could not find the specified label "{0}".
+     */
+    public static final String MISSING_GROUND_LABEL               = "COMPILER-87";
+    /**
+     * Could not find an enclosing "for", "do", "while", or "switch" statement.
+     */
+    public static final String MISSING_GROUND_STATEMENT           = "COMPILER-88";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

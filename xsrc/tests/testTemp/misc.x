@@ -19,7 +19,6 @@ module TestMisc.xqiz.it
         testSwitchExpr2();
         testSwitchExpr3();
         testStmtExpr();
-        testDefAssignment();
 
         // TODO make a new "test asserts" module? something that can tolerate assertions?
         // testAssert();
@@ -281,26 +280,6 @@ module TestMisc.xqiz.it
         {
         console.println("\n** testStmtExpr()");
         console.println("5+3=" + {return 5.to<Int>() + 3;});
-        }
-
-    void testDefAssignment()
-        {
-        console.println("\n** testDefAssignment()");
-
-        Int i;
-        Boolean f1 = false;
-        Boolean f2 = false;
-
-        if (f2 && {i = 3; return f1;})
-            {
-            // i = 1;
-            }
-        else
-            {
-            i = 2;
-            }
-
-        console.println("i=" + i);
         }
 
 // TODO move the asserts to their own module

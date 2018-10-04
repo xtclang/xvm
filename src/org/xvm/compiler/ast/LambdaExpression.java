@@ -80,6 +80,12 @@ public class LambdaExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
+    public boolean isComponentNode()
+        {
+        return true;
+        }
+
+    @Override
     public Component getComponent()
         {
         MethodStructure method = m_lambda;

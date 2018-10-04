@@ -27,6 +27,12 @@ public class SwitchStatement
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
+    public boolean isNaturalShortCircuitStatementTarget()
+        {
+        return true;
+        }
+
+    @Override
     public long getStartPosition()
         {
         return keyword.getStartPosition();

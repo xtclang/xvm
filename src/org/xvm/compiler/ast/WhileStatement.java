@@ -50,7 +50,7 @@ public class WhileStatement
         }
 
     @Override
-    public boolean canContinue()
+    public boolean isNaturalShortCircuitStatementTarget()
         {
         return true;
         }
@@ -114,7 +114,7 @@ public class WhileStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Statement validate(Context ctx, ErrorListener errs)
+    protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
         boolean fValid = true;
 

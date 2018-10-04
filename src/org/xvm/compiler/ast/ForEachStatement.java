@@ -59,7 +59,7 @@ public class ForEachStatement
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public boolean canContinue()
+    public boolean isNaturalShortCircuitStatementTarget()
         {
         return true;
         }
@@ -113,7 +113,7 @@ public class ForEachStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Statement validate(Context ctx, ErrorListener errs)
+    protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
         boolean fValid = true;
 

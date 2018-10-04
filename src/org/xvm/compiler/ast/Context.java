@@ -139,43 +139,6 @@ public class Context
         }
 
     /**
-     * Associate an AST node with this Context, for example if the node is able to ground a
-     * short-circuit or act as a "break" target.
-     *
-     * @param node  the AST node that this Context corresponds to in terms of scope and completion
-     */
-    public void associateNode(AstNode node)
-        {
-        m_node = node;
-        }
-
-    /**
-     * @return the AST node associated with this Context, or null if none is explicitly associated
-     */
-    public AstNode getNode()
-        {
-        return m_node;
-        }
-
-    public Context findAstNodeContext(AstNode node)
-        {
-        assert node != null;
-
-        Context ctx = this;
-        while (ctx.getNode() != node)
-            {
-            ctx = ctx.getOuterContext();
-            if (ctx == null)
-                {
-                throw new IllegalStateException("could not find context for node=" + node
-                        + "\n(starting from context=" + this + ")");
-                }
-            }
-
-        return ctx;
-        }
-
-    /**
      * Used in the validation phase to track scopes.
      * <p/>
      * Note: This can only be used during the validate() stage.
@@ -1334,11 +1297,6 @@ public class Context
      * context may not have an outer context.
      */
     private Context m_ctxOuter;
-
-    /**
-     * The node (a Statement or Expression) that this context is associated with.
-     */
-    private AstNode m_node;
 
     /**
      * True means that this context should demux the assignment information that it pushes

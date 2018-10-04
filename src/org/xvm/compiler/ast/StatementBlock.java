@@ -273,7 +273,7 @@ public class StatementBlock
         }
 
     @Override
-    protected Statement validate(Context ctx, ErrorListener errs)
+    protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
         List<Statement> stmts  = this.stmts;
         boolean         fValid = true;

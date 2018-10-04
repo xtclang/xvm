@@ -1,6 +1,9 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.op.Jump;
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
@@ -47,6 +50,38 @@ public class LabeledStatement
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    protected Statement validateImpl(Context ctx, ErrorListener errs)
+        {
+        // make sure no other statement has this label name
+        // TODO
+
+        // make sure no variable has this label name
+        // TODO
+
+        Statement stmtOld = stmt;
+        Statement stmtNew = stmtOld.validate(ctx, errs);
+        if (stmtNew == null)
+            {
+            return null;
+            }
+        else
+            {
+            stmt = stmtNew;
+            }
+
+        return this;
+        }
+
+    @Override
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+        {
+        return stmt.completes(ctx, fReachable, code, errs);
         }
 
 

@@ -257,7 +257,7 @@ public class AssignmentStatement
         }
 
     @Override
-    protected Statement validate(Context ctx, ErrorListener errs)
+    protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
         boolean fValid = true;
 

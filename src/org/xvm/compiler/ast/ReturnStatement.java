@@ -85,7 +85,7 @@ public class ReturnStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Statement validate(Context ctx, ErrorListener errs)
+    protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
         ConstantPool     pool         = pool();
         boolean          fValid       = true;

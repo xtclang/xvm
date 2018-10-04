@@ -63,7 +63,7 @@ public class ExpressionStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Statement validate(Context ctx, ErrorListener errs)
+    protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
         boolean    fValid  = true;
         Expression exprNew = expr.validate(ctx, null, errs);
