@@ -1448,12 +1448,15 @@ public class TypeInfo
     /**
      * Obtain all of the matching methods for the specified name and the number of parameters.
      *
-     * @param sName    the method name
-     * @param cParams  the number of parameters
+     * @param sName      the method name
+     * @param cParams    the number of parameters
+     * @param fMethod    if true, include methods into the resulting set
+     * @param fFunction  if true, include functions into the resulting set
      *
      * @return a set of zero or more method constants
      */
-    public Set<MethodConstant> findMethods(String sName, int cParams)
+    public Set<MethodConstant> findMethods(String sName, int cParams,
+                                           boolean fMethod, boolean fFunction)
         {
         Map<String, Set<MethodConstant>> mapMethods = m_mapMethodsByName;
         if (mapMethods == null)
@@ -1462,6 +1465,25 @@ public class TypeInfo
             }
 
         String sKey = cParams == 0 ? sName : sName + ';' + cParams;
+        if (fMethod)
+            {
+            if (fFunction)
+                {
+                sKey += "mf"; // both methods and functions are required
+                }
+            }
+        else
+            {
+            if (fFunction)
+                {
+                sKey += "f"; // only functions are required
+                }
+            else
+                {
+                throw new IllegalArgumentException("neither methods nor functions requested");
+                }
+            }
+
         Set<MethodConstant> setMethods = mapMethods.get(sKey);
         if (setMethods == null)
             {
@@ -1473,6 +1495,11 @@ public class TypeInfo
                     {
                     MethodInfo      info   = entry.getValue();
                     MethodStructure method = info.getTopmostMethodStructure(this);
+
+                    if (method.isFunction() ? !fFunction : !fMethod)
+                        {
+                        continue;
+                        }
 
                     int cAllParams  = sig.getRawParams().length;
                     int cTypeParams = method.getTypeParamCount();
