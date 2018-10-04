@@ -1096,6 +1096,7 @@ public class TypeCompositionStatement
                                 composition.keyword,
                                 exprValue,
                                 null, null);
+                        propDefault.markSynthetic();
                         typeDefault.setParent(propDefault);
                         exprValue.setParent(propDefault);
                         ensureBody().addStatement(propDefault);
@@ -1178,6 +1179,7 @@ public class TypeCompositionStatement
                     PropertyDeclarationStatement prop = new PropertyDeclarationStatement(
                             param.getStartPosition(), param.getEndPosition(), null, null, null,
                             param.getType(), param.getNameToken(), null, null, null);
+                    prop.markSynthetic();
                     prop.setParent(this);
                     prop.registerStructures(mgr, errs);
                     }

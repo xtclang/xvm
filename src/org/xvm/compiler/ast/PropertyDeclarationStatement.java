@@ -203,21 +203,11 @@ public class PropertyDeclarationStatement
         }
 
     /**
-     * @param type  the type expression to verify that matches this property's type
-     * @param errs  the error list to log errors to
-     *
-     * @return true if the compilation should proceed
+     * Mark this property declaration as "synthetic".
      */
-    public boolean validateRedundantType(TypeExpression type, ErrorListener errs)
+    public void markSynthetic()
         {
-        if (redundant == null)
-            {
-            redundant = type;
-            return true;
-            }
-
-        // TODO log error
-        throw new IllegalStateException("redundant redundant: " + this);
+        fSynthetic = true;
         }
 
 
@@ -251,6 +241,7 @@ public class PropertyDeclarationStatement
                     {
                     prop.indicateInitialValue();
                     }
+                prop.setSynthetic(fSynthetic);
                 setComponent(prop);
 
                 // the annotations either have to be registered on the type or on the property, so
@@ -440,8 +431,8 @@ public class PropertyDeclarationStatement
     protected Token              doc;
 
     protected transient MethodDeclarationStatement initializer;
-    protected transient TypeExpression             redundant;
+    protected transient boolean                    fSynthetic;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(PropertyDeclarationStatement.class,
-            "condition", "annotations", "type", "value", "body", "initializer", "redundant");
+            "condition", "annotations", "type", "value", "body", "initializer");
     }

@@ -393,6 +393,31 @@ public abstract class Component
         }
 
     /**
+     * @return true iff the auxiliary flag is set
+     */
+    protected boolean isAuxiliary()
+        {
+        return (m_nFlags & AUXILIARY_BIT) != 0;
+        }
+
+    /**
+     * Specify whether or not the auxiliary flag is set. The semantic of this flag depends on the
+     * specific component implementation.
+     *
+     * @param fAux  true to set the auxiliary flag; false otherwise
+     */
+    protected void setAuxiliary(boolean fAux)
+        {
+        int nFlagsOld = m_nFlags;
+        int nFlagsNew = (nFlagsOld & ~AUXILIARY_BIT) | (fAux ? AUXILIARY_BIT : 0);
+        if (nFlagsNew != nFlagsOld)
+            {
+            m_nFlags = (short) nFlagsNew;
+            markModified();
+            }
+        }
+
+    /**
      * Obtain the name of the component. All components have a name, although the purpose of the
      * name varies slightly for several components:
      * <ul>
@@ -3079,7 +3104,8 @@ public abstract class Component
     public static final int ABSTRACT_BIT     = 0x0400, ABSTRACT_SHIFT   = 10;
     public static final int STATIC_BIT       = 0x0800, STATIC_SHIFT     = 11;
     public static final int SYNTHETIC_BIT    = 0x1000, SYNTHETIC_SHIFT  = 12;
-    public static final int COND_RET_BIT     = 0x2000, COND_RET_SHIFT = 13;
+    public static final int COND_RET_BIT     = 0x2000, COND_RET_SHIFT   = 13;
+    public static final int AUXILIARY_BIT    = 0x4000, AUXILIARY_SHIFT  = 14;
 
 
     // ----- fields --------------------------------------------------------------------------------
