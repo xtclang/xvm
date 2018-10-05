@@ -261,12 +261,18 @@ public class ForEachStatement
 
                 assert aTypeLVals.length >= exprLVal.getValueCount();
                 exprLVal.updateLValueFromRValueTypes(aTypeLVals);
+
+                exprLVal.markAssignment(ctx, true, errs);
                 }
             }
 
         // the statement block does not need its own scope (because the for() statement is a scope)
         StatementBlock blockOld = block;
         blockOld.suppressScope();
+
+        // while the block doesn't get its own scope, it only sees the "true" fork of the condition
+        ctx = ctx.enterFork(true);
+
         StatementBlock blockNew = (StatementBlock) blockOld.validate(ctx, errs);
         if (blockNew != blockOld)
             {
@@ -279,6 +285,9 @@ public class ForEachStatement
                 block = blockNew;
                 }
             }
+
+        // leaving the "true" fork of the condition
+        ctx = ctx.exit();
 
         // leaving the scope of the for() statement
         ctx = ctx.exit();

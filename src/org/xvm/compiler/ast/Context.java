@@ -332,47 +332,44 @@ public class Context
         {
         // begin with a snap-shot of the current modifications
         Map<String, Assignment> mapMods = new HashMap<>(getDefiniteAssignments());
+        boolean                 fDemux  = false;
 
         Context ctxInner = this;
         while (ctxInner != ctxDest)
             {
-            boolean fDemuxing = ctxInner.isDemuxing();
-            Context ctxOuter  = ctxInner.getOuterContext();
+            Context ctxOuter = ctxInner.getOuterContext();
 
             // calculate impact of the already-accumulated assignment deltas across this context
             // boundary
-            for (Iterator<Entry<String, Assignment>> iter = mapMods.entrySet().iterator(); iter.hasNext(); )
+            for (Iterator<String> iter = mapMods.keySet().iterator(); iter.hasNext(); )
                 {
-                Entry<String, Assignment> entry    = iter.next();
-                String                    sName    = entry.getKey();
+                String sName = iter.next();
                 if (ctxInner.isVarDeclaredInThisScope(sName))
                     {
                     // that variable doesn't exist where we're going
                     iter.remove();
                     }
-                else
-                    {
-                    Assignment asnInner = entry.getValue();
-                    Assignment asnOuter = ctxOuter.getVarAssignment(sName);
-
-                    asnOuter = ctxInner.promote(sName, asnInner, asnOuter);
-
-                    if (fDemuxing)
-                        {
-                        asnOuter = asnOuter.demux();
-                        }
-
-                    entry.setValue(asnOuter);
-                    }
                 }
 
             // collect all of the other pending modifications from the outer context
-            for (Entry<String, Assignment> entry : ctxOuter.getDefiniteAssignments().entrySet())
+            for (String sName : ctxOuter.getDefiniteAssignments().keySet())
                 {
-                mapMods.putIfAbsent(entry.getKey(), entry.getValue());
+                if (!mapMods.containsKey(sName))
+                    {
+                    mapMods.putIfAbsent(sName, getVarAssignment(sName));
+                    }
                 }
 
+            fDemux  |= ctxInner.isDemuxing();
             ctxInner = ctxOuter;
+            }
+
+        if (fDemux)
+            {
+            for (Entry<String, Assignment> entry : mapMods.entrySet())
+                {
+                entry.setValue(entry.getValue().demux());
+                }
             }
 
         return mapMods;

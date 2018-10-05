@@ -323,6 +323,8 @@ public class AssignmentStatement
                 // (LVal0, LVal1, ..., LValN) = RVal
                 rvalueNew = rvalueOld.validateMulti(ctx, exprLeft.getTypes(), errs);
                 }
+
+            exprLeft.markAssignment(ctx, false, errs);
             }
         else if (isConditional())
             {
@@ -334,6 +336,7 @@ public class AssignmentStatement
             atypeReq[0] = pool().typeBoolean();
             System.arraycopy(atypeLVals, 0, atypeReq, 1, cLVals);
             rvalueNew = rvalueOld.validateMulti(ctx, atypeReq, errs);
+            exprLeft.markAssignment(ctx, true, errs);
             }
         else
             {

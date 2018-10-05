@@ -108,10 +108,18 @@ public class NotNullExpression
             else
                 {
                 exprNew.log(errs, Severity.ERROR, Compiler.ELVIS_NOT_NULLABLE);
-                return replaceThisWith(exprNew);
+                return replaceThisWith(exprNew); // REVIEW
                 }
 
-            m_labelShort = getParent().getShortCircuitLabel(ctx, this);
+            if (getParent().allowsShortCircuit(this))
+                {
+                m_labelShort = getParent().getShortCircuitLabel(ctx, this);
+                }
+            else
+                {
+                exprNew.log(errs, Severity.ERROR, Compiler.SHORT_CIRCUIT_ILLEGAL);
+                return null;
+                }
             }
 
         return finishValidation(typeRequired, type, fit, null, errs);

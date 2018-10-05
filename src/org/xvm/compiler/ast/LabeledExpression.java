@@ -139,6 +139,12 @@ public class LabeledExpression
         }
 
     @Override
+    public void markAssignment(Context ctx, boolean fCond, ErrorListener errs)
+        {
+        expr.markAssignment(ctx, fCond, errs);
+        }
+
+    @Override
     public boolean isCompletable()
         {
         return expr.isCompletable();

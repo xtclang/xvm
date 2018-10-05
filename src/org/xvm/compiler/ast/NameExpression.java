@@ -706,8 +706,8 @@ public class NameExpression
                     {
                     case Reserved:
                     case Variable:
-                        ctx.markVarWrite(getNameToken(), errs);
-                        break;
+                        // this is assignable
+                        return;
 
                     case Property:
                         // "this" is used only if the property is not a constant
@@ -726,6 +726,27 @@ public class NameExpression
         else
             {
             super.requireAssignable(ctx, errs);
+            }
+        }
+
+    @Override
+    public void markAssignment(Context ctx, boolean fCond, ErrorListener errs)
+        {
+        if (isAssignable())
+            {
+            if (left == null)
+                {
+                switch (getMeaning())
+                    {
+                    case Reserved:
+                    case Variable:
+                        ctx.markVarWrite(getNameToken(), errs);
+                        break;
+
+                    case Property:
+                        break;
+                    }
+                }
             }
         }
 

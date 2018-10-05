@@ -445,6 +445,20 @@ public class MultipleLValueStatement
             }
 
         @Override
+        public void markAssignment(Context ctx, boolean fCond, ErrorListener errs)
+            {
+            for (Expression expr : ensureExpressions())
+                {
+                expr.markAssignment(ctx, fCond, errs);
+
+                if (fCond)
+                    {
+                    break;
+                    }
+                }
+            }
+
+        @Override
         public boolean isCompletable()
             {
             for (Expression expr : ensureExpressions())

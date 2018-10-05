@@ -994,6 +994,10 @@ public abstract class Expression
             }
         }
 
+    public void markAssignment(Context ctx, boolean fCond, ErrorListener errs)
+        {
+        }
+
     /**
      * (Post-validation) Determine if the expression can short-circuit.
      * <p/>

@@ -92,6 +92,7 @@ public class SequentialAssignExpression
             type = exprNew.getType();
             exprNew.requireAssignable(ctx, errs);
             // TODO verify that there is a next/prev method that produces the same type
+            exprNew.markAssignment(ctx, false, errs);
             }
 
         return finishValidation(typeRequired, type, fit, null, errs);

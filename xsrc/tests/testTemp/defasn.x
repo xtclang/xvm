@@ -14,14 +14,14 @@ module TestDefAsn.xqiz.it
         console.println("\n** testDefAssignment()");
 
         Int i;
-        Boolean f1 = false;
-        Boolean f2 = false;
+        Boolean f1 = true;
+        Boolean f2 = true;
 
         L1: if (f2)
             {
-            if (f1)
+            if (f1 && {i=3; return true;})
                 {
-                i = 3;
+                //i = 3;
                 break L1;
                 }
 
