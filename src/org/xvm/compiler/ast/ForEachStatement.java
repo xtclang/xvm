@@ -174,6 +174,7 @@ public class ForEachStatement
             }
         m_exprLValue = exprLVal;
         exprLVal.requireAssignable(ctx, errs);
+        exprLVal.markAssignment(ctx, true, errs);
 
         // figure out which category the R-Value should be
         Expression   exprRVal  = cond.getRValue();
