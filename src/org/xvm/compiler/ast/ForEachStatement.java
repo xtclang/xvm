@@ -174,7 +174,6 @@ public class ForEachStatement
             }
         m_exprLValue = exprLVal;
         exprLVal.requireAssignable(ctx, errs);
-        exprLVal.markAssignment(ctx, true, errs);
 
         // figure out which category the R-Value should be
         Expression   exprRVal  = cond.getRValue();
@@ -262,10 +261,11 @@ public class ForEachStatement
 
                 assert aTypeLVals.length >= exprLVal.getValueCount();
                 exprLVal.updateLValueFromRValueTypes(aTypeLVals);
-
-                exprLVal.markAssignment(ctx, true, errs);
                 }
             }
+
+        // regardless of the validity of the R-Value let's mark the L-Value as assigned
+        exprLVal.markAssignment(ctx, true, errs);
 
         // the statement block does not need its own scope (because the for() statement is a scope)
         StatementBlock blockOld = block;
