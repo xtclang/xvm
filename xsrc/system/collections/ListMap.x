@@ -91,7 +91,7 @@ class ListMap<KeyType extends immutable Hashable, ValueType>
         AllEntries:
         for (Entry<KeyType, ValueType> entry : array)
             {
-            if (entry[0] == key)
+            if (entry.key == key)
                 {
                 return true, AllEntries.count;
                 }
