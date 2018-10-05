@@ -152,6 +152,12 @@ public class Var_IN
         m_argValue = registerArgument(m_argValue, registry);
         }
 
+    @Override
+    protected String getName()
+        {
+        return Argument.toIdString(m_constName, m_nNameId);
+        }
+
     private int m_nNameId;
     private int m_nValueId;
 

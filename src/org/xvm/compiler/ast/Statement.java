@@ -79,7 +79,7 @@ public abstract class Statement
      */
     public Label ensureBreakLabel(Context ctxOrigin)
         {
-        Context ctxDest = m_ctx;
+        Context ctxDest = getValidationContext();
         assert ctxDest != null;
 
         // generate a delta of assignment information for the long-jump
@@ -119,7 +119,7 @@ public abstract class Statement
      *
      * @return true iff the compilation can proceed
      */
-    protected Statement validate(Context ctx, ErrorListener errs)
+    protected final Statement validate(Context ctx, ErrorListener errs)
         {
         // before validating the nested code, associate this statement with the context so that any
         // "break" or "continue" can find the context to apply assignment data to
@@ -139,6 +139,24 @@ public abstract class Statement
         return stmt;
         }
 
+    /**
+     * @return the Context being used for validation of this statement, if this statement is
+     *         currently being validated
+     */
+    protected Context getValidationContext()
+        {
+        return m_ctx;
+        }
+
+    /**
+     * Before generating the code for the method body, resolve names and verify definite assignment,
+     * etc.
+     *
+     * @param ctx    the compilation context for the statement
+     * @param errs   the error listener to log to
+     *
+     * @return true iff the compilation can proceed
+     */
     protected Statement validateImpl(Context ctx, ErrorListener errs) // TODO make abstract
         {
         throw notImplemented();
@@ -154,7 +172,7 @@ public abstract class Statement
      *
      * @return true iff the statement completes
      */
-    protected boolean completes(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    protected final boolean completes(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         if (fReachable)
             {

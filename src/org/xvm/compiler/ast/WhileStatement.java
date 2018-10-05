@@ -3,6 +3,11 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -58,16 +63,40 @@ public class WhileStatement
     @Override
     public Label ensureContinueLabel(Context ctxOrigin)
         {
-        // TODO copy impl from ensureBreakLabel()
+        Context ctxDest = getValidationContext();
+        assert ctxDest != null;
+
+        // generate a delta of assignment information for the long-jump
+        Map<String, Assignment> mapAsn = ctxOrigin.prepareJump(ctxDest);
+
+        // record the long-jump that landed on this statement by recording its assignment impact
+        if (m_listContinues == null)
+            {
+            m_listContinues = new ArrayList<>();
+            }
+        m_listContinues.add(mapAsn);
+
         return getContinueLabel();
         }
 
+    /**
+     * @return true iff there is a continue label for this statement, which indicates that it has
+     *         already been requested at least one time
+     */
+    public boolean hasContinueLabel()
+        {
+        return m_labelContinue != null;
+        }
+
+    /**
+     * @return the continue label for this statement
+     */
     public Label getContinueLabel()
         {
         Label label = m_labelContinue;
         if (label == null)
             {
-            m_labelContinue = label = new Label("continue_while_" + getLabelCounter());
+            m_labelContinue = label = new Label("continue_while_" + getLabelId());
             }
         return label;
         }
@@ -77,12 +106,12 @@ public class WhileStatement
         Label label = m_labelRepeat;
         if (label == null)
             {
-            m_labelRepeat = label = new Label("repeat_while_" + getLabelCounter());
+            m_labelRepeat = label = new Label("repeat_while_" + getLabelId());
             }
         return label;
         }
 
-    private int getLabelCounter()
+    private int getLabelId()
         {
         int n = m_nLabel;
         if (n == 0)
@@ -123,16 +152,7 @@ public class WhileStatement
         if (isDoWhile())
             {
             // block comes first for "do..while()"
-            block.suppressScope();
-            Statement blockNew = block.validate(ctx, errs);
-            if (blockNew == null)
-                {
-                fValid = false;
-                }
-            else
-                {
-                block = (StatementBlock) blockNew;
-                }
+            validateBody(ctx, false, errs);
             }
 
         // the condition is either a boolean expression or an assignment statement whose R-value is
@@ -167,17 +187,7 @@ public class WhileStatement
         if (!isDoWhile())
             {
             // block comes after for "while()"
-            ctx = ctx.enterFork(true);
-            Statement blockNew = block.validate(ctx, errs);
-            if (blockNew == null)
-                {
-                fValid = false;
-                }
-            else
-                {
-                block = (StatementBlock) blockNew;
-                }
-            ctx = ctx.exit();
+            validateBody(ctx, true, errs);
             }
 
         // if the condition itself required a scope, then complete that scope
@@ -186,6 +196,54 @@ public class WhileStatement
         return fValid
                 ? this
                 : null;
+        }
+
+    /**
+     * Validate the "body" portion of the while() or do..while() statement.
+     *
+     * @param ctx     the validation context
+     * @param fScope  true if the body gets its own scope
+     * @param errs    the error list to log any errors to
+     *
+     * @return true if the body validated without an error that should cause the validation to abort
+     */
+    protected boolean validateBody(Context ctx, boolean fScope, ErrorListener errs)
+        {
+        boolean fValid = true;
+        if (fScope)
+            {
+            ctx = ctx.enterFork(true);
+            }
+        else
+            {
+            block.suppressScope();
+            }
+
+        Statement blockNew = block.validate(ctx, errs);
+        if (blockNew == null)
+            {
+            fValid = false;
+            }
+        else
+            {
+            block = (StatementBlock) blockNew;
+            }
+
+        if (fScope)
+            {
+            ctx = ctx.exit();
+            }
+
+        List<Map<String, Assignment>> listContinues = m_listContinues;
+        if (listContinues != null)
+            {
+            for (Map<String, Assignment> mapAsn : listContinues)
+                {
+                ctx.merge(mapAsn);
+                }
+            }
+
+        return fValid;
         }
 
     @Override
@@ -364,10 +422,15 @@ public class WhileStatement
     protected StatementBlock block;
     protected long           lEndPos;
 
-    private static int s_nLabelCounter;
+    private static    int   s_nLabelCounter;
     private transient int   m_nLabel;
     private transient Label m_labelContinue;
     private transient Label m_labelRepeat;
+
+    /**
+     * Generally null, unless there is a "continue" that long-jumps to this statement.
+     */
+    private transient List<Map<String, Assignment>> m_listContinues;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(WhileStatement.class, "cond", "block");
     }

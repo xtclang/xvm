@@ -1,9 +1,14 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Map;
+
+import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.Jump;
@@ -50,10 +55,34 @@ public class ForStatement
     @Override
     public Label ensureContinueLabel(Context ctxOrigin)
         {
-        // TODO copy impl from ensureBreakLabel()
+        Context ctxDest = getValidationContext();
+        assert ctxDest != null;
+
+        // generate a delta of assignment information for the long-jump
+        Map<String, Assignment> mapAsn = ctxOrigin.prepareJump(ctxDest);
+
+        // record the long-jump that landed on this statement by recording its assignment impact
+        if (m_listContinues == null)
+            {
+            m_listContinues = new ArrayList<>();
+            }
+        m_listContinues.add(mapAsn);
+
         return getContinueLabel();
         }
 
+    /**
+     * @return true iff there is a continue label for this statement, which indicates that it has
+     *         already been requested at least one time
+     */
+    public boolean hasContinueLabel()
+        {
+        return m_labelContinue != null;
+        }
+
+    /**
+     * @return the continue label for this statement
+     */
     public Label getContinueLabel()
         {
         Label label = m_labelContinue;
@@ -150,6 +179,15 @@ public class ForStatement
                 }
             }
 
+        List<Map<String, Assignment>> listContinues = m_listContinues;
+        if (listContinues != null)
+            {
+            for (Map<String, Assignment> mapAsn : listContinues)
+                {
+                ctx.merge(mapAsn);
+                }
+            }
+
         List<Statement> listUpdate = update;
         int             cUpdate    = listUpdate.size();
         for (int i = 0; i < cUpdate; ++i)
@@ -199,7 +237,10 @@ public class ForStatement
 
         fCompletes = block.completes(ctx, fCompletes, code, errs);
 
-        code.add(getContinueLabel());
+        if (hasContinueLabel())
+            {
+            code.add(getContinueLabel());
+            }
 
         List<Statement> listUpdate = update;
         int             cUpdate    = listUpdate.size();
@@ -287,6 +328,11 @@ public class ForStatement
     private transient int   m_nLabel;
     private transient Label m_labelRepeat;
     private transient Label m_labelContinue;
+
+    /**
+     * Generally null, unless there is a "continue" that long-jumps to this statement.
+     */
+    private transient List<Map<String, Assignment>> m_listContinues;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ForStatement.class, "init", "expr", "update", "block");
     }

@@ -5,6 +5,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.op.Jump;
+import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
@@ -58,7 +59,16 @@ public class ContinueStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        code.add(new Jump(getJumpLabel()));
-        return false;
+        Label label = getJumpLabel();
+        if (label == null)
+            {
+            // for the "no label" situation, it just means (literally) to continue; see switch
+            return true;
+            }
+        else
+            {
+            code.add(new Jump(getJumpLabel()));
+            return false;
+            }
         }
     }
