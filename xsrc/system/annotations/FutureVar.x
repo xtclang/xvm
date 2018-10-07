@@ -720,8 +720,8 @@ mixin FutureVar<RefType>
 // TODO: CP
         public/private function RefType (InputType, Input2Type) combine;
 
-        private /* TODO property cannot be conditional */ InputType  input1;      // REVIEW
-        private /* TODO property cannot be conditional */ Input2Type input2;
+        private /* TODO property cannot be conditional */ InputType?  input1;      // REVIEW
+        private /* TODO property cannot be conditional */ Input2Type? input2;
 
         /**
          * Handle the completion of the first parent.
@@ -739,8 +739,8 @@ mixin FutureVar<RefType>
                     }
                 else
                     {
-                    input1 = (true, input as InputType);
-                    if (input2)
+                    input1 = input;
+                    if (input2 != null)
                         {
                         bothParentsCompleted();
                         }
@@ -763,8 +763,8 @@ mixin FutureVar<RefType>
                     }
                 else
                     {
-                    input2 = (true, input as Input2Type);
-                    if (input1)
+                    input2 = input;
+                    if (input1 != null)
                         {
                         bothParentsCompleted();
                         }
