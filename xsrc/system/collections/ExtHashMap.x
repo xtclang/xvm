@@ -453,7 +453,7 @@ class ExtHashMap<KeyType, ValueType>
                 {
                 // before we change the "next reference", remember which one is next in the old
                 // bucket
-                Entry entryNext = entry.next;
+                Entry? entryNext = entry.next;
 
                 // move the entry to a new hash bucket
                 Int newBucket = entry.keyhash % bucketCount;
