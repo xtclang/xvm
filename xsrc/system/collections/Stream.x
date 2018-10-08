@@ -266,8 +266,10 @@ interface Stream<ElementType>
         Iterator<ElementType> iter = iterator();
         if (ElementType minValue : iter.next())
             {
-            if (comparator != null)
+            if (comparator == null)
                 {
+                assert ElementType instanceof Type<Orderable>;
+
                 for (ElementType el : iter)
                     {
                     if (el < minValue)
@@ -308,6 +310,8 @@ interface Stream<ElementType>
             {
             if (comparator == null)
                 {
+                assert ElementType instanceof Type<Orderable>;
+
                 for (ElementType el : iter)
                     {
                     if (el > maxValue)

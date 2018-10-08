@@ -232,7 +232,17 @@ interface List<ElementType>
             return this;
             }
 
-        function Ordered (ElementType, ElementType) compare = comparator?.compareForOrder : (v1, v2) -> v1 <=> v2;
+        function Ordered (ElementType, ElementType) compare;
+
+        if (comparator == null)
+            {
+            assert ElementType instanceof Type<Orderable>;
+            compare = (v1, v2) -> v1 <=> v2;
+            }
+        else
+            {
+            compare = comparator.compareForOrder;
+            }
 
         do
             {

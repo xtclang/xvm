@@ -4,7 +4,7 @@
  *
  * @param DataType  the _Resolved Declarative Type_ to compare
  */
-const NaturalComparator<DataType>
+const NaturalComparator<DataType extends Orderable>
     {
     /**
      * Obtain the function that can compare two instances of the _Resolved Declarative Type_ for
