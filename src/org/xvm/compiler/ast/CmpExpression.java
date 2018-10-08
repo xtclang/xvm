@@ -170,8 +170,9 @@ public class CmpExpression
             if (typeRequest != null)
                 {
                 fValid &= expr2New.getTypeFit().isFit() & usesEquals()
-                        ? typeRequest.supportsEquals (type2, expr2New.isConstant(), errs)
-                        : typeRequest.supportsCompare(type2, expr2New.isConstant(), errs);
+                        ? typeRequest.supportsEquals (type2, expr2New.isConstant())
+                        : typeRequest.supportsCompare(type2, expr2New.isConstant());
+                // TODO: report an error if not valid
                 }
             }
 
