@@ -320,7 +320,7 @@ public class MethodStructure
         }
 
     /**
-     * Fill in the parameters and returns for a lambda. (They are generally unknonwn when the method
+     * Fill in the parameters and returns for a lambda. (They are generally unknown when the method
      * is first created.)
      *
      * @param aParams   an array of parameter information
