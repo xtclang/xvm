@@ -76,6 +76,17 @@ public class TypeParameterConstant
         }
 
     /**
+     * Bind this {@link TypeParameterConstant} to the specified MethodConstant
+     */
+    public void bindMethod(MethodConstant method)
+        {
+        assert !method.containsUnresolved();
+        assert m_constMethod.equals(method) && method.equals(m_constMethod);
+
+        m_constMethod = method;
+        }
+
+    /**
      * @return the register number (zero based)
      */
     public int getRegister()
@@ -146,11 +157,15 @@ public class TypeParameterConstant
     @Override
     public TypeParameterConstant resolveTypedefs()
         {
-        MethodConstant constOld = m_constMethod;
-        MethodConstant constNew = constOld.resolveTypedefs();
-        return constNew == constOld
-                ? this
-                : getConstantPool().ensureRegisterConstant(constNew, m_iReg);
+        // There is a circular dependency that involves TypeParameterConstant:
+        //
+        // MethodConstant -> SignatureConstant -> TypeConstant -> TypeParameterConstant -> MethodConstant
+        //
+        // To break the circle, TypeParameterConstant is not being responsible for resolving the
+        // corresponding MethodConstant; instead it's the MethodConstant's duty to call bindMethod()
+        // on TypeParameterConstant (via TypeConstant#bindTypeParameters() API) as soon as the
+        // MethodConstant is resolved (see MethodConstant#resolveTypedefs()).
+        return this;
         }
 
     @Override

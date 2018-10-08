@@ -183,6 +183,15 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public void bindTypeParameters(MethodConstant idMethod)
+        {
+        for (TypeConstant typeParam : m_atypeParams)
+            {
+            typeParam.bindTypeParameters(idMethod);
+            }
+        }
+
+    @Override
     public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
         {
         TypeConstant constOriginal = m_constType;

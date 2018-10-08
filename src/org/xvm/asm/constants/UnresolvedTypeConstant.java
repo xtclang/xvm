@@ -154,6 +154,15 @@ public class UnresolvedTypeConstant
         }
 
     @Override
+    public void bindTypeParameters(MethodConstant idMethod)
+        {
+        if (m_type != null)
+            {
+            m_type.bindTypeParameters(idMethod);
+            }
+        }
+
+    @Override
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget)
         {
         if (isTypeResolved())
@@ -279,7 +288,7 @@ public class UnresolvedTypeConstant
 
         if (isTypeResolved())
             {
-            return unwrap().compareTo(that);
+            return getResolvedType().compareDetails(that);
             }
 
         if (that instanceof UnresolvedTypeConstant)

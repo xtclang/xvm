@@ -305,6 +305,8 @@ public class TerminalTypeConstant
                 // with the pool because it was not resolved, so changing the reference to the
                 // underlying constant is still safe at this point
                 m_constId = constId = constResolved;
+
+                assert !constId.containsUnresolved();
                 }
             }
 
@@ -372,6 +374,16 @@ public class TerminalTypeConstant
         return constId.getFormat() == Format.Typedef
                 ? ((TypedefConstant) constId).getReferredToType().resolveTypedefs()
                 : this;
+        }
+
+    @Override
+    public void bindTypeParameters(MethodConstant idMethod)
+        {
+        Constant constId = ensureResolvedConstant();
+        if (constId instanceof TypeParameterConstant)
+            {
+            ((TypeParameterConstant) constId).bindMethod(idMethod);
+            }
         }
 
     @Override

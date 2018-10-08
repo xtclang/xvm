@@ -429,10 +429,23 @@ public class MethodConstant
 
         SignatureConstant sigOld = m_constSig;
         SignatureConstant sigNew = sigOld == null ? null : sigOld.resolveTypedefs();
-        return idOldParent == idNewParent && sigNew == sigOld
-                ? this
-                : (MethodConstant) getConstantPool().register(new MethodConstant(
+        if (idOldParent == idNewParent && sigNew == sigOld)
+            {
+            return this;
+            }
+
+        MethodConstant idNew = (MethodConstant) getConstantPool().register(new MethodConstant(
                         getConstantPool(), idNewParent, sigNew, m_iLambda));
+        if (sigNew != null)
+            {
+            // it's the responsibility of the MethodConstant to bind all the TypeParameters
+            // (see TypeParameterConstant.resolveTypedefs())
+            for (TypeConstant typeParam : sigNew.getRawParams())
+                {
+                typeParam.bindTypeParameters(idNew);
+                }
+            }
+        return idNew;
         }
 
     @Override
