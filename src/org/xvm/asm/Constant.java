@@ -634,9 +634,16 @@ public abstract class Constant
             return cDif;
             }
 
+        Constant constThis = this instanceof ResolvableConstant
+                ? ((ResolvableConstant) this).unwrap()
+                : this;
+        Constant constThat = that instanceof ResolvableConstant
+                ? ((ResolvableConstant) that).unwrap()
+                : that;
+
         // two constants of the same format can be compared by their
         // contents
-        return this.compareDetails(that);
+        return constThis.compareDetails(constThat);
         }
 
 
