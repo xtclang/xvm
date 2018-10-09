@@ -47,7 +47,7 @@ const Exception
         }
 
     // TODO pass in output stream of text instead of building and returning String
-    static (String, StackFrame /* firstFrame */) formatStackTrace(Iterable<StackFrame> frames, StackFrame? lastFrame)
+    (String, StackFrame /* firstFrame */) formatStackTrace(Iterable<StackFrame> frames, StackFrame? lastFrame)
         {
         // stack trace
         StackFrame? firstFrame = null;

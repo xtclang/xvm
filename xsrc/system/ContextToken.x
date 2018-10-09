@@ -46,7 +46,7 @@ const ContextToken<TokenType extends immutable Object>
      */
     Boolean active.get()
         {
-        return current != null && current == this;
+        return current == this;
         }
 
     /**
