@@ -78,6 +78,8 @@ const Timeout
 
         // calculate the duration of this Timeout
         duration = remainingTime;
+
+        Timeout? previousTimeout = this.previousTimeout;
         if (!independent && previousTimeout != null)
             {
             // because the timeout is not independent, it must respect the current outgoing timeout
