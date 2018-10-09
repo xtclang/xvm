@@ -410,6 +410,8 @@ public class Register
 
     /**
      * A register that represents the underlying (base) register, but overrides its type.
+     *
+     * <p/>REVIEW GG - there are a few methods not overridden - perhaps have them throw for now as an assertion?
      */
     private class ShadowRegister
             extends Register

@@ -44,6 +44,7 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
+import org.xvm.compiler.ast.LabeledStatement.LabelVar;
 import org.xvm.util.Severity;
 
 
@@ -654,6 +655,22 @@ public class NameExpression
                 }
             } // TODO else account for ".this"???
 
+        if (left instanceof NameExpression && ((NameExpression) left).getMeaning() == Meaning.Label)
+            {
+            LabelVar labelVar = (LabelVar) ctx.getVar(((NameExpression) left).getNameToken(), errs);
+            String   sVar     = getName();
+            if (labelVar.isPropReadable(sVar))
+                {
+                labelVar.markPropRead(sVar);
+                }
+            else
+                {
+                String sLabel = ((NameExpression) left).getName();
+                log(errs, Severity.ERROR, Compiler.LABEL_VARIABLE_ILLEGAL, sVar, sLabel);
+                return finishValidation(typeRequired, null, TypeFit.NoFit, null, errs);
+                }
+            }
+
         return finishValidation(typeRequired, type, fit, constant, errs);
         }
 
@@ -804,6 +821,7 @@ public class NameExpression
         switch (m_plan)
             {
             case None:
+                assert getMeaning() != Meaning.Label;
                 return argRaw;
 
             case OuterThis:
@@ -873,6 +891,12 @@ public class NameExpression
                     }
 
             case PropertyDeref:
+                if (left instanceof NameExpression && ((NameExpression) left).getMeaning() == Meaning.Label)
+                    {
+                    LabelVar labelVar = (LabelVar) ((NameExpression) left).m_arg;
+                    return labelVar.getPropRegister(getName());
+                    }
+
                 // TODO this is not complete; the "implicit this" covers both nested properties and outer properties
                 boolean fThisProp = left == null; // TODO or left == this
                 if (fThisProp && fLocalPropOk)
@@ -1245,6 +1269,14 @@ public class NameExpression
 
             Register reg            = (Register) argRaw;
             boolean  fSuppressDeref = isSuppressDeref();
+
+            // label variables do not actually exist
+            if (reg.isPredefined() && reg.getIndex() == Op.A_LABEL
+                    && (fSuppressDeref || !(getParent() instanceof NameExpression)))
+                {
+                log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, getName());
+                }
+
             if (fSuppressDeref)
                 {
                 // assert !reg.isPredefined(); // REVIEW GG: see SoftVar.x
@@ -1386,6 +1418,7 @@ public class NameExpression
                     return type;
                     }
                 }
+
             case Typedef:
                 if (aTypeParams != null)
                     {
@@ -1419,7 +1452,9 @@ public class NameExpression
             {
             Register reg = (Register) arg;
             return reg.isPredefined()
-                    ? Meaning.Reserved
+                    ? reg.getIndex() == Op.A_LABEL
+                            ? Meaning.Label
+                            : Meaning.Reserved
                     : Meaning.Variable;
             }
 
@@ -1646,7 +1681,7 @@ public class NameExpression
     /**
      * Represents the category of argument that the expression yields.
      */
-    enum Meaning {Unknown, Reserved, Variable, Property, Class, Typedef}
+    enum Meaning {Unknown, Reserved, Variable, Property, Class, Typedef, Label}
 
     /**
      * Represents the necessary argument/assignable transformation that the expression will have to

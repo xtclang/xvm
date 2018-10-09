@@ -983,6 +983,14 @@ public class Compiler
      */
     public static final String ILLEGAL_CONTINUE_TARGET            = "COMPILER-90";
     /**
+     * A duplicate name is used for a label: "{0}"
+     */
+    public static final String DUPLICATE_LABEL                    = "COMPILER-93";
+    /**
+     * The specified label variable "{0}" is not available for label "{1}".
+     */
+    public static final String LABEL_VARIABLE_ILLEGAL             = "COMPILER-94";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

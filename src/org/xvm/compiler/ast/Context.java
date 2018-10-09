@@ -557,7 +557,13 @@ public class Context
         Assignment asn = getVarAssignment(sName);
         if (asn != null)
             {
-            return asn.isDefinitelyAssigned();
+            if (!asn.isDefinitelyAssigned())
+                {
+                return false;
+                }
+
+            Argument arg = getVar(sName);
+            return !(arg instanceof Register) || ((Register) arg).isReadable();
             }
 
         // the only other readable variable names are reserved variables, and we need to ask

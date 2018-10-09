@@ -79,6 +79,7 @@ module TestLoops.xqiz.it
                 {
                 console.println("frist!");
                 }
+            console.println("(count=" + L1.count + ")");
             }
         }
 
@@ -86,10 +87,12 @@ module TestLoops.xqiz.it
 //        {
 //        console.println("\n** testForEach()");
 //
-//        String[] strs = ["hello", "world"];
-//        for (String s : strs)
+////        String[] strs = ["hello", "world"];
+//        Map<String, String> strs = ["hello"="world", "name"="Mark"];
+//        L1: for (String s1 : strs)
 //            {
-//            console.println(s);
+//            console.println("{s1}={s2}");
+//            L1.entry.value = "+++";
 //            }
 //        }
 //
