@@ -78,6 +78,14 @@ public abstract class OpVar
         }
 
     /**
+     * @return the variable name, iff the variable has a name (otherwise null)
+     */
+    protected String getName()
+        {
+        return null;
+        }
+
+    /**
      * Specifies whether or not this op carries the type information.
      */
     protected boolean isTypeAware()
@@ -133,12 +141,21 @@ public abstract class OpVar
         {
         StringBuilder sb = new StringBuilder(super.toString());
 
+        String sName = getName();
+        if (sName != null)
+            {
+            sb.append(' ')
+              .append(sName)
+              .append(',');
+            }
+
         if (isTypeAware())
             {
             sb.append(' ')
               .append(Argument.toIdString(null, m_nType))
               .append(',');
             }
+
         sb.append(' ')
           .append(m_reg == null ? "" : m_reg.toString());
 

@@ -17,7 +17,7 @@ module TestDefAsn.xqiz.it
         Boolean f1 = true;
         Boolean f2 = true;
 
-        L1: if (f2)
+        L1: while (f2)
             {
             if (f1 && {i=3; return true;})
                 {
@@ -26,11 +26,12 @@ module TestDefAsn.xqiz.it
                 }
 
             i = 1;
+            continue L1;
             }
-        else
-            {
-            i = 2;
-            }
+//        else
+//            {
+//            i = 2;
+//            }
 
         console.println("i=" + i);
         }

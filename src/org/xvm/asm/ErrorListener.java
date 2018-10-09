@@ -157,6 +157,78 @@ public interface ErrorListener
         }
 
 
+    // ----- inner class: SpyingErrorListener ------------------------------------------------------
+
+    /**
+     * A simple implementation of the ErrorListener that watches for serious errors.
+     */
+    public class SevTrackingErrorListener
+            implements ErrorListener
+        {
+        /**
+         * Construct an ErrorListener that will abort if there are any serious errors logged.
+         *
+         * @param listener    the underlying error listener
+         */
+        public SevTrackingErrorListener(ErrorListener listener)
+            {
+            f_listener = listener;
+            }
+
+        @Override
+        public boolean log(Severity severity, String sCode, Object[] aoParam, Source source, long lPosStart, long lPosEnd)
+            {
+            log(severity);
+            return f_listener.log(severity, sCode, aoParam, source, lPosStart, lPosEnd);
+            }
+
+        @Override
+        public boolean log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs)
+            {
+            log(severity);
+            return f_listener.log(severity, sCode, aoParam, xs);
+            }
+
+        @Override
+        public boolean isAbortDesired()
+            {
+            return f_listener.isAbortDesired();
+            }
+
+        /**
+         * @return the worst severity encountered thus far, or null if nothing has been logged
+         */
+        public Severity getMaxSeverity()
+            {
+            return m_sevMax;
+            }
+
+        /**
+         * Compare the max encountered severity with the specified severity to see if we have
+         * encountered an error of at least that severity level.
+         *
+         * @param sev  the severity to check for
+         *
+         * @return true iff an error has been logged with at least the specified severity
+         */
+        public boolean hasEncountered(Severity sev)
+            {
+            return m_sevMax != null && m_sevMax.compareTo(sev) >= 0;
+            }
+
+        private void log(Severity severity)
+            {
+            if (m_sevMax == null || severity.compareTo(m_sevMax) > 0)
+                {
+                m_sevMax = severity;
+                }
+            }
+
+        private final ErrorListener f_listener;
+        private       Severity      m_sevMax;
+        }
+
+
     // ----- constants -----------------------------------------------------------------------------
 
     public static final ErrorListener BLACKHOLE = new BlackholeErrorListener();

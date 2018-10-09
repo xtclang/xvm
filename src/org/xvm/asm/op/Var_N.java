@@ -126,10 +126,9 @@ public class Var_N
         }
 
     @Override
-    public String toString()
+    protected String getName()
         {
-        return super.toString()
-                + ' ' + Argument.toIdString(m_constName, m_nNameId);
+        return Argument.toIdString(m_constName, m_nNameId);
         }
 
     private int m_nNameId;

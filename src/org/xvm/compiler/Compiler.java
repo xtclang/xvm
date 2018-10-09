@@ -979,6 +979,10 @@ public class Compiler
      */
     public static final String MISSING_GROUND_STATEMENT           = "COMPILER-89";
     /**
+     * A "continue" statement can only be applied to a "for", "do", "while", or "switch" statement.
+     */
+    public static final String ILLEGAL_CONTINUE_TARGET            = "COMPILER-90";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

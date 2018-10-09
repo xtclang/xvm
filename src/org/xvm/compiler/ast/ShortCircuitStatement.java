@@ -89,6 +89,12 @@ public abstract class ShortCircuitStatement
                     return (Statement) node;
                     }
 
+                if (nodeParent.isComponentNode())
+                    {
+                    // cannot pass a component boundary
+                    return null;
+                    }
+
                 node = nodeParent;
                 }
             }

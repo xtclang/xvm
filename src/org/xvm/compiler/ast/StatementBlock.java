@@ -13,6 +13,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.ErrorListener.SevTrackingErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.ModuleStructure;
@@ -244,8 +245,9 @@ public class StatementBlock
         {
         RootContext ctx = new RootContext(code.getMethodStructure());
 
-        Statement that = this.validate(ctx.validatingContext(), errs);
-        if (that != null && !errs.isAbortDesired())
+        SevTrackingErrorListener errsValidation = new SevTrackingErrorListener(errs);
+        Statement that = this.validate(ctx.validatingContext(), errsValidation);
+        if (that != null && !errsValidation.hasEncountered(Severity.ERROR) && !errs.isAbortDesired())
             {
             boolean fCompletes = that.completes(ctx.emittingContext(), true, code, errs);
 

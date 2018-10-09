@@ -981,7 +981,8 @@ public abstract class Expression
         }
 
     /**
-     * Check to make sure that the expression can be assigned to, and log an error if it cannot.
+     * Check to make sure that the expression can be assigned to at this point in the validation
+     * process, and log an error if it cannot.
      *
      * @param ctx   the validation context
      * @param errs  the error list to log to
@@ -994,6 +995,14 @@ public abstract class Expression
             }
         }
 
+    /**
+     * Mark the LValue as being assigned to at this point in the validation process.
+     *
+     * @param ctx    the validation context
+     * @param fCond  true if the assignment is a conditional assignment (such that only the first
+     *               value is definitely assigned if it is false)
+     * @param errs   the error list to log to
+     */
     public void markAssignment(Context ctx, boolean fCond, ErrorListener errs)
         {
         }

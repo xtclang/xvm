@@ -8,8 +8,9 @@ module TestLoops.xqiz.it
 
         testWhile();
         testFor();
-        testForEach();
-        testForEachRange();
+        testDo();
+        //testForEach();
+        //testForEachRange();
         }
 
     void testWhile()
@@ -30,28 +31,60 @@ module TestLoops.xqiz.it
 
         for (Int i = 0; i < 10; ++i)
             {
+            if (i == 4)
+                {
+                continue;
+                }
             console.println(i);
             }
         }
 
-    void testForEach()
+    void testDo()
         {
-        console.println("\n** testForEach()");
+        console.println("\n** testDo()");
 
-        String[] strs = ["hello", "world"];
-        for (String s : strs)
+        Boolean f = false;
+        Int j = 0;
+        Int i;
+        do
             {
-            console.println(s);
+            if (j == 4)
+                {
+                continue;
+                }
+
+            i = ++j;
+
+            if (i == 4)
+                {
+                continue;
+                }
+
+            console.println("(in loop) i=" + i + ", j=" + j);
             }
+        while (i < 10);
+
+        console.println("(after loop) i=" + i + ", j=" + j);
         }
 
-    void testForEachRange()
-        {
-        console.println("\n** testForEachRange()");
-
-        for (Int i : 1..3)
-            {
-            console.println("i=" + i);
-            }
-        }
+//    void testForEach()
+//        {
+//        console.println("\n** testForEach()");
+//
+//        String[] strs = ["hello", "world"];
+//        for (String s : strs)
+//            {
+//            console.println(s);
+//            }
+//        }
+//
+//    void testForEachRange()
+//        {
+//        console.println("\n** testForEachRange()");
+//
+//        for (Int i : 1..3)
+//            {
+//            console.println("i=" + i);
+//            }
+//        }
     }
