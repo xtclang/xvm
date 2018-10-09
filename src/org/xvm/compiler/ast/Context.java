@@ -433,13 +433,14 @@ public class Context
     public void registerVar(Token tokName, Register reg, ErrorListener errs)
         {
         String sName = tokName.getValueText();
-        if (isVarDeclaredInThisScope(sName))
+        if (isVarDeclaredInThisScope(sName)) // REVIEW (allows shadowing?)
             {
             tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_DEFINED, sName);
             }
 
         ensureNameMap().put(sName, reg);
-        ensureDefiniteAssignments().put(sName, Assignment.Unassigned);
+        ensureDefiniteAssignments().put(sName, reg.isPredefined() ? Assignment.Unassigned
+                                                                  : Assignment.AssignedOnce);
         }
 
     /**
@@ -556,7 +557,13 @@ public class Context
         Assignment asn = getVarAssignment(sName);
         if (asn != null)
             {
-            return asn.isDefinitelyAssigned();
+            if (!asn.isDefinitelyAssigned())
+                {
+                return false;
+                }
+
+            Argument arg = getVar(sName);
+            return !(arg instanceof Register) || ((Register) arg).isReadable();
             }
 
         // the only other readable variable names are reserved variables, and we need to ask

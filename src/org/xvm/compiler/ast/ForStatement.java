@@ -1,24 +1,30 @@
 package org.xvm.compiler.ast;
 
 
+import java.lang.reflect.Field;
+
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Register;
+
+import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
+import org.xvm.asm.op.IP_Inc;
 import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.Label;
+import org.xvm.asm.op.Move;
+import org.xvm.asm.op.Var_IN;
 
 import org.xvm.compiler.Token;
-
-import java.lang.reflect.Field;
-
-import java.util.List;
+import org.xvm.compiler.Token.Id;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -27,9 +33,11 @@ import static org.xvm.util.Handy.indentLines;
  * The traditional "for" statement.
  * <p/>
  * TODO lots of short-circuit support. for expr condition, it goes to the for statement's exit label. for init & update, the short-circuit just advances to next.
+ * TODO add multi condition to bnf
  */
 public class ForStatement
         extends Statement
+        implements LabelAble
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -122,6 +130,47 @@ public class ForStatement
         }
 
 
+    // ----- LabelAble methods ---------------------------------------------------------------------
+
+    @Override
+    public boolean hasLabelVar(String sName)
+        {
+        return sName.equals("first") || sName.equals("count");
+        }
+
+    @Override
+    public Register getLabelVar(String sName)
+        {
+        assert hasLabelVar(sName);
+
+        boolean fFirst = sName.equals("first");
+
+        Register reg = fFirst ? m_regFirst : m_regCount;
+        if (reg == null)
+            {
+            // this occurs only during validate()
+            assert m_ctxLabelVars != null;
+
+            String sLabel = ((LabeledStatement) getParent()).getName();
+            Token  tok    = new Token(keyword.getStartPosition(), keyword.getEndPosition(), Id.IDENTIFIER, sLabel + '.' + sName);
+
+            reg = new Register(fFirst ? pool().typeBoolean() : pool().typeInt());
+            m_ctxLabelVars.registerVar(tok, reg, m_errsLabelVars);
+
+            if (fFirst)
+                {
+                m_regFirst = reg;
+                }
+            else
+                {
+                m_regCount = reg;
+                }
+            }
+
+        return reg;
+        }
+
+
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
@@ -131,6 +180,10 @@ public class ForStatement
 
         // the for() statement will represent its own scope
         ctx = ctx.enter();
+
+        // save off the current context and errors, in case we have to lazily create some loop vars
+        m_ctxLabelVars  = ctx;
+        m_errsLabelVars = errs;
 
         List<Statement> listInit = init;
         int             cInit    = listInit.size();
@@ -207,6 +260,10 @@ public class ForStatement
         // leaving the scope of the for() statement
         ctx = ctx.exit();
 
+        // lazily created loop vars are only created inside the validation of this statement
+        m_ctxLabelVars  = null;
+        m_errsLabelVars = null;
+
         return fValid
                 ? this
                 : null;
@@ -218,6 +275,20 @@ public class ForStatement
         boolean fCompletes = fReachable;
 
         code.add(new Enter());
+
+        Register regFirst = m_regFirst;
+        if (regFirst != null)
+            {
+            StringConstant name = pool().ensureStringConstant(((LabeledStatement) getParent()).getName() + ".first");
+            code.add(new Var_IN(m_regFirst, name, pool().valTrue()));
+            }
+
+        Register regCount = m_regCount;
+        if (regCount != null)
+            {
+            StringConstant name = pool().ensureStringConstant(((LabeledStatement) getParent()).getName() + ".count");
+            code.add(new Var_IN(m_regCount, name, pool().val0()));
+            }
 
         List<Statement> listInit = init;
         int             cInit    = listInit.size();
@@ -247,6 +318,16 @@ public class ForStatement
         for (int i = 0; i < cUpdate; ++i)
             {
             fCompletes = listUpdate.get(i).completes(ctx, fCompletes, code, errs);
+            }
+
+        if (regFirst != null)
+            {
+            code.add(new Move(pool().valFalse(), regFirst));
+            }
+
+        if (regCount != null)
+            {
+            code.add(new IP_Inc(regCount));
             }
 
         code.add(new Jump(labelRepeat));
@@ -328,6 +409,11 @@ public class ForStatement
     private transient int   m_nLabel;
     private transient Label m_labelRepeat;
     private transient Label m_labelContinue;
+
+    private transient Context       m_ctxLabelVars;
+    private transient ErrorListener m_errsLabelVars;
+    private transient Register      m_regFirst;
+    private transient Register      m_regCount;
 
     /**
      * Generally null, unless there is a "continue" that long-jumps to this statement.

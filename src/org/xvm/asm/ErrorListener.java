@@ -91,6 +91,12 @@ public interface ErrorListener
             {
             return isAbortDesired();
             }
+
+        @Override
+        public String toString()
+            {
+            return "(Blackhole)";
+            }
         }
 
 
@@ -116,6 +122,12 @@ public interface ErrorListener
                 System.out.println(s);
                 return false;
                 }
+            }
+
+        @Override
+        public String toString()
+            {
+            return "(Runtime error listener)";
             }
         };
 
@@ -151,7 +163,13 @@ public interface ErrorListener
             return super.log(err);
             }
 
-        // TODO toString() to show the first error (if one occurred) for when in the debugger
+        @Override
+        public String toString()
+            {
+            return m_err == null
+                    ? "(no errors)"
+                    : "first error: " + m_err;
+            }
 
         private ErrorList.ErrorInfo m_err;
         }
@@ -222,6 +240,13 @@ public interface ErrorListener
                 {
                 m_sevMax = severity;
                 }
+            }
+
+        @Override
+        public String toString()
+            {
+            return (m_sevMax == null ? "(no errors)" : "(max-sev=" + m_sevMax + ')')
+                    + ' ' + f_listener.toString();
             }
 
         private final ErrorListener f_listener;

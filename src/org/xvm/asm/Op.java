@@ -1439,6 +1439,10 @@ public abstract class Op
      * Pre-defined argument: an indicator for a "tuple return" (internal)
      */
     public final static int A_TUPLE = -15;
+    /**
+     * Pre-defined and compile-time only argument: A label.
+     */
+    public final static int A_LABEL = -16;
 
 
 

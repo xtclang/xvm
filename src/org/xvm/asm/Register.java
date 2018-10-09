@@ -204,6 +204,7 @@ public class Register
             case Op.A_TYPE:
             case Op.A_SUPER:
             case Op.A_THIS:
+            case Op.A_LABEL:
                 return true;
 
             default:
@@ -236,6 +237,7 @@ public class Register
             case Op.A_TYPE:
             case Op.A_SUPER:
             case Op.A_THIS:
+            case Op.A_LABEL:
                 return true;
 
             default:
@@ -280,7 +282,7 @@ public class Register
      */
     public boolean isReadable()
         {
-        return m_iArg != Op.A_IGNORE;
+        return m_iArg != Op.A_IGNORE && m_iArg != Op.A_LABEL;
         }
 
     /**
@@ -392,6 +394,9 @@ public class Register
             case Op.A_SUPER:
                 return "super";
 
+            case Op.A_LABEL:
+                return "<label>";
+
             case UNKNOWN:
                 return "#???";
 
@@ -405,6 +410,8 @@ public class Register
 
     /**
      * A register that represents the underlying (base) register, but overrides its type.
+     *
+     * <p/>REVIEW GG - there are a few methods not overridden - perhaps have them throw for now as an assertion?
      */
     private class ShadowRegister
             extends Register

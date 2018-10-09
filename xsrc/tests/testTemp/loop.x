@@ -8,7 +8,8 @@ module TestLoops.xqiz.it
 
         testWhile();
         testFor();
-        testDo();
+        //testDo();
+        testLabel();
         //testForEach();
         //testForEachRange();
         }
@@ -67,14 +68,31 @@ module TestLoops.xqiz.it
         console.println("(after loop) i=" + i + ", j=" + j);
         }
 
+    void testLabel()
+        {
+        console.println("\n** testFor()");
+
+        L1: for (Int i = 0; i < 10; ++i)
+            {
+            console.println(i);
+            if (L1.first)
+                {
+                console.println("frist!");
+                }
+            console.println("(count=" + L1.count + ")");
+            }
+        }
+
 //    void testForEach()
 //        {
 //        console.println("\n** testForEach()");
 //
-//        String[] strs = ["hello", "world"];
-//        for (String s : strs)
+////        String[] strs = ["hello", "world"];
+//        Map<String, String> strs = ["hello"="world", "name"="Mark"];
+//        L1: for (String s1 : strs)
 //            {
-//            console.println(s);
+//            console.println("{s1}={s2}");
+//            L1.entry.value = "+++";
 //            }
 //        }
 //
