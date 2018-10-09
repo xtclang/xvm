@@ -1,8 +1,13 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op.ConstantRegistry;
+import org.xvm.asm.Register;
+
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Token;
 
@@ -99,6 +104,38 @@ public class LabeledStatement
         return label.getValue() + ":";
         }
 
+
+    // ----- inner class: LabelVar -----------------------------------------------------------------
+
+    class LabelVar
+            extends Register
+        {
+        public LabelVar()
+            {
+            super();
+            }
+
+        @Override
+        public TypeConstant getType()
+            {
+            // TODO
+            return pool().ensureEcstasyTypeConstant("types.Label");
+            }
+
+        @Override
+        public boolean isStack()
+            {
+            // TODO
+            return false;
+            }
+
+        @Override
+        public Argument registerConstants(ConstantRegistry registry)
+            {
+            // TODO
+            return null;
+            }
+        }
 
     // ----- fields --------------------------------------------------------------------------------
 

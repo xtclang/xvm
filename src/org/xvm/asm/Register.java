@@ -204,6 +204,7 @@ public class Register
             case Op.A_TYPE:
             case Op.A_SUPER:
             case Op.A_THIS:
+            case Op.A_LABEL:
                 return true;
 
             default:
@@ -236,6 +237,7 @@ public class Register
             case Op.A_TYPE:
             case Op.A_SUPER:
             case Op.A_THIS:
+            case Op.A_LABEL:
                 return true;
 
             default:
@@ -280,7 +282,7 @@ public class Register
      */
     public boolean isReadable()
         {
-        return m_iArg != Op.A_IGNORE;
+        return m_iArg != Op.A_IGNORE && m_iArg != Op.A_LABEL;
         }
 
     /**
@@ -391,6 +393,9 @@ public class Register
 
             case Op.A_SUPER:
                 return "super";
+
+            case Op.A_LABEL:
+                return "<label>";
 
             case UNKNOWN:
                 return "#???";

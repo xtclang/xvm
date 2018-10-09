@@ -433,13 +433,14 @@ public class Context
     public void registerVar(Token tokName, Register reg, ErrorListener errs)
         {
         String sName = tokName.getValueText();
-        if (isVarDeclaredInThisScope(sName))
+        if (isVarDeclaredInThisScope(sName)) // REVIEW (allows shadowing?)
             {
             tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_DEFINED, sName);
             }
 
         ensureNameMap().put(sName, reg);
-        ensureDefiniteAssignments().put(sName, Assignment.Unassigned);
+        ensureDefiniteAssignments().put(sName, reg.isPredefined() ? Assignment.Unassigned
+                                                                  : Assignment.AssignedOnce);
         }
 
     /**

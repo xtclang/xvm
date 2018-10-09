@@ -8,7 +8,8 @@ module TestLoops.xqiz.it
 
         testWhile();
         testFor();
-        testDo();
+        //testDo();
+        testLabel();
         //testForEach();
         //testForEachRange();
         }
@@ -65,6 +66,20 @@ module TestLoops.xqiz.it
         while (i < 10);
 
         console.println("(after loop) i=" + i + ", j=" + j);
+        }
+
+    void testLabel()
+        {
+        console.println("\n** testFor()");
+
+        L1: for (Int i = 0; i < 10; ++i)
+            {
+            console.println(i);
+            if (L1.first)
+                {
+                console.println("frist!");
+                }
+            }
         }
 
 //    void testForEach()

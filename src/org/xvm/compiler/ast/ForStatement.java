@@ -27,6 +27,7 @@ import static org.xvm.util.Handy.indentLines;
  * The traditional "for" statement.
  * <p/>
  * TODO lots of short-circuit support. for expr condition, it goes to the for statement's exit label. for init & update, the short-circuit just advances to next.
+ * TODO add multi condition to bnf
  */
 public class ForStatement
         extends Statement
