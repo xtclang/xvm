@@ -8,9 +8,9 @@ module TestLoops.xqiz.it
 
         testWhile();
         testFor();
-        //testDo();
         testLabel();
-        //testForEach();
+        testForEach();
+        testDo();
         //testForEachRange();
         }
 
@@ -45,34 +45,6 @@ module TestLoops.xqiz.it
             }
         }
 
-    void testDo()
-        {
-        console.println("\n** testDo()");
-
-        Boolean f = false;
-        Int j = 0;
-        Int i;
-        do
-            {
-            if (j == 4)
-                {
-                continue;
-                }
-
-            i = ++j;
-
-            if (i == 4)
-                {
-                continue;
-                }
-
-            console.println("(in loop) i=" + i + ", j=" + j);
-            }
-        while (i < 10);
-
-        console.println("(after loop) i=" + i + ", j=" + j);
-        }
-
     void testLabel()
         {
         console.println("\n** testFor()");
@@ -88,19 +60,45 @@ module TestLoops.xqiz.it
             }
         }
 
-//    void testForEach()
-//        {
-//        console.println("\n** testForEach()");
-//
-////        String[] strs = ["hello", "world"];
-//        Map<String, String> strs = ["hello"="world", "name"="Mark"];
-//        L1: for (String s1 : strs)
-//            {
-//            console.println("{s1}={s2}");
-//            L1.entry.value = "+++";
-//            }
-//        }
-//
+    void testForEach()
+        {
+        console.println("\n** testForEach()");
+
+        String[] strs = ["hello", "world"];
+        L1: for (String s : strs)
+            {
+            console.println("s=" + s);
+            }
+        }
+
+    void testDo()
+        {
+        console.println("\n** testDo()");
+
+        Boolean f = false;
+        Int j = 0;
+        Int i;
+        do
+            {
+            if (j == 4)                 // i is not def asn at this point ...
+                {
+                continue;               // ... so i is still not def asn at this point
+                }
+
+            i = ++j;
+
+            if (i == 4)
+                {
+                continue;
+                }
+
+            console.println("(in loop) i=" + i + ", j=" + j);
+            }
+        while (i < 10);                 // should be an error here (i is not def asn)
+
+        console.println("(after loop) i=" + i + ", j=" + j);
+        }
+
 //    void testForEachRange()
 //        {
 //        console.println("\n** testForEachRange()");

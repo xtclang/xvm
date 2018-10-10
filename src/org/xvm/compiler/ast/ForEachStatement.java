@@ -37,9 +37,12 @@ import org.xvm.asm.op.Var_I;
 import org.xvm.asm.op.Var_IN;
 import org.xvm.asm.op.Var_N;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
+import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.Expression.Assignable;
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -49,6 +52,7 @@ import static org.xvm.util.Handy.indentLines;
  */
 public class ForEachStatement
         extends Statement
+        implements LabelAble
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -119,6 +123,53 @@ public class ForEachStatement
         return n;
         }
 
+    /**
+     * @return the type of the ElementType type parameter if the plan is not "Map"
+     */
+    private TypeConstant getElementType()
+        {
+        assert m_plan != Plan.MAP;
+        assert m_exprRValue != null;
+
+        TypeConstant type = m_exprRValue.getType().getGenericParamType("ElementType");
+        return type == null ? pool().typeObject() : type;
+        }
+
+    /**
+     * @return the type of the KeyType type parameter if the plan is "Map"
+     */
+    private TypeConstant getKeyType()
+        {
+        assert m_plan == Plan.MAP;
+        assert m_exprRValue != null;
+        assert m_exprRValue.getType().isA(pool().typeMap());
+
+        TypeConstant type = m_exprRValue.getType().getGenericParamType("KeyType");
+        return type == null ? pool().typeObject() : type;
+        }
+
+    /**
+     * @return the type of the ValueType type parameter if the plan is "Map"
+     */
+    private TypeConstant getValueType()
+        {
+        assert m_plan == Plan.MAP;
+        assert m_exprRValue != null;
+        assert m_exprRValue.getType().isA(pool().typeMap());
+
+        TypeConstant type = m_exprRValue.getType().getGenericParamType("ValueType");
+        return type == null ? pool().typeObject() : type;
+        }
+
+    /**
+     * @return the type of the Entry if the plan is "Map"
+     */
+    private TypeConstant getEntryType()
+        {
+        ConstantPool pool = pool();
+        return pool.ensureParameterizedTypeConstant(pool.typeEntry(), getKeyType(), getValueType());
+        }
+
     @Override
     public long getStartPosition()
         {
@@ -138,6 +189,90 @@ public class ForEachStatement
         }
 
 
+    // ----- LabelAble methods ---------------------------------------------------------------------
+
+    @Override
+    public boolean hasLabelVar(String sName)
+        {
+        switch (sName)
+            {
+            case "first":
+            case "count":
+                return true;
+
+            case "last":
+                return m_plan == Plan.RANGE || m_plan == Plan.SEQUENCE;
+
+            case "entry":
+            case "KeyType":
+            case "ValueType":
+                return m_plan == Plan.MAP;
+
+            default:
+                return false;
+            }
+        }
+
+    @Override
+    public Register getLabelVar(String sName)
+        {
+        assert hasLabelVar(sName);
+
+        Register reg;
+        switch (sName)
+            {
+            case "first"    : reg = m_regFirst  ; break;
+            case "last"     : reg = m_regLast   ; break;
+            case "count"    : reg = m_regCount  ; break;
+            case "entry"    : reg = m_regEntry  ; break;
+            case "KeyType"  : reg = m_regKeyType; break;
+            case "ValueType": reg = m_regValType; break;
+            default:
+                throw new IllegalStateException();
+            }
+
+        if (reg == null)
+            {
+            // this occurs only during validate()
+            assert m_ctxLabelVars != null;
+
+            String       sLabel = ((LabeledStatement) getParent()).getName();
+            Token        tok    = new Token(keyword.getStartPosition(), keyword.getEndPosition(), Id.IDENTIFIER, sLabel + '.' + sName);
+            ConstantPool pool   = pool();
+
+            TypeConstant type;
+            switch (sName)
+                {
+                case "first"    : type = pool.typeBoolean()      ; break;
+                case "last"     : type = pool.typeBoolean()      ; break;
+                case "count"    : type = pool.typeInt()          ; break;
+                case "entry"    : type = getEntryType()          ; break;
+                case "KeyType"  : type = getKeyType().getType()  ; break;
+                case "ValueType": type = getValueType().getType(); break;
+                default:
+                    throw new IllegalStateException();
+                }
+
+            reg = new Register(type);
+            m_ctxLabelVars.registerVar(tok, reg, m_errsLabelVars);
+
+            switch (sName)
+                {
+                case "first"    : m_regFirst   = reg; break;
+                case "last"     : m_regLast    = reg; break;
+                case "count"    : m_regCount   = reg; break;
+                case "entry"    : m_regEntry   = reg; break;
+                case "KeyType"  : m_regKeyType = reg; break;
+                case "ValueType": m_regValType = reg; break;
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+
+        return reg;
+        }
+
+
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
@@ -147,6 +282,10 @@ public class ForEachStatement
 
         // the for() statement has its own scope
         ctx = ctx.enter();
+
+        // save off the current context and errors, in case we have to lazily create some loop vars
+        m_ctxLabelVars  = ctx;
+        m_errsLabelVars = errs;
 
         // ultimately, the condition has to be re-written, because it is inevitably short-hand for
         // a measure of syntactic sugar; in order of precedence, the condition can be:
@@ -206,47 +345,46 @@ public class ForEachStatement
         // figure out which category the R-Value should be
         Expression   exprRVal  = cond.getRValue();
         ConstantPool pool      = pool();
-        int          nTypeRval = 0;
+        Plan         plan      = null;
         TypeConstant typeRVal  = null;
-        do
+        for (int i = Plan.ITERATOR.ordinal(); i <= Plan.ITERABLE.ordinal(); ++i)
             {
-            switch (++nTypeRval)
+            plan = Plan.valueOf(i);
+            switch (plan)
                 {
+                case ITERATOR: typeRVal = pool.typeIterator(); break;
+                case RANGE   : typeRVal = pool.typeRange();    break;
+                case SEQUENCE: typeRVal = pool.typeSequence(); break;
+                case MAP     : typeRVal = pool.typeMap();      break;
+                case ITERABLE: typeRVal = pool.typeIterable(); break;
                 default:
-                case T_ITERATOR: typeRVal = pool.typeIterator(); break;
-                case T_RANGE   : typeRVal = pool.typeRange();    break;
-                case T_SEQUENCE: typeRVal = pool.typeSequence(); break;
-                case T_MAP     : typeRVal = pool.typeMap();      break;
-                case T_ITERABLE: typeRVal = pool.typeIterable(); break;
+                    throw new IllegalStateException();
+                }
+
+            if (exprRVal.testFit(ctx, typeRVal).isFit())
+                {
+                // found something that fits!
+                break;
                 }
             }
-        while (!exprRVal.testFit(ctx, typeRVal).isFit() && nTypeRval < T_ITERABLE);
         // if none of the above matched, we leave it on Iterable, so that the expression will fail
         // to validate with that required type (i.e. treat Iterable as the default required type)
-        m_nPlan = nTypeRval;
+        m_plan = plan;
 
         if (fValid)
             {
             // get as specific as possible with the required type for the R-Value
             TypeConstant[] atypeLVals = exprLVal.getTypes();
             int            cLVals     = atypeLVals.length;
-            int            cMaxLVals  = nTypeRval == T_MAP ? 2 : 1;
-            if (cLVals > cMaxLVals)
+            int            cMaxLVals  = plan == Plan.MAP ? 2 : 1;
+            if (cLVals < 1 || cLVals > cMaxLVals)
                 {
-                // TODO log error
-                throw new IllegalStateException();
-                }
-            else if (cLVals < 1)
-                {
-                // TODO log error
-                throw new IllegalStateException();
+                condLVal.log(errs, Severity.ERROR, Compiler.INVALID_LVALUE_COUNT, 1, cMaxLVals);
+                fValid = false;
                 }
             else
                 {
                 typeRVal = pool.ensureParameterizedTypeConstant(typeRVal, atypeLVals);
-
-                // TODO need to figure out if L.entry is ever referenced (also need the same for first, last, count)
-                m_fUsesEntry = cLVals == 2;
                 }
             }
 
@@ -265,25 +403,18 @@ public class ForEachStatement
                 typeRVal = exprRVal.getType();
 
                 TypeConstant[] aTypeLVals;
-                switch (nTypeRval)
+                switch (plan)
                     {
                     default:
-                    case T_ITERATOR:
-                    case T_RANGE:
-                    case T_SEQUENCE:
-                    case T_ITERABLE:
-                        aTypeLVals = new TypeConstant[]
-                            {
-                            typeRVal.getGenericParamType("ElementType")
-                            };
+                    case ITERATOR:
+                    case RANGE:
+                    case SEQUENCE:
+                    case ITERABLE:
+                        aTypeLVals = new TypeConstant[] { getElementType() };
                         break;
 
-                    case T_MAP:
-                        aTypeLVals = new TypeConstant[]
-                            {
-                            typeRVal.getGenericParamType("KeyType"),
-                            typeRVal.getGenericParamType("ValueType")
-                            };
+                    case MAP:
+                        aTypeLVals = new TypeConstant[] { getKeyType(), getValueType() };
                         break;
                     }
 
@@ -330,10 +461,16 @@ public class ForEachStatement
         // leaving the scope of the for() statement
         ctx = ctx.exit();
 
+        // lazily created loop vars are only created inside the validation of this statement
+        m_ctxLabelVars  = null;
+        m_errsLabelVars = null;
+
         return fValid
                 ? this
                 : null;
         }
+
+    // TODO TODO TODO
 
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
@@ -350,7 +487,7 @@ public class ForEachStatement
 
         // code simplification for intrinsic sequential types
         boolean fEmitted = false;
-        if (m_nPlan == T_RANGE && m_exprRValue.isConstant())
+        if (m_plan == T_RANGE && m_exprRValue.isConstant())
             {
             switch (m_exprRValue.getType().getParamTypesArray()[0].getEcstasyClassName())
                 {
@@ -415,7 +552,7 @@ public class ForEachStatement
 
         Register   regIter  = null;
         Assignable lvalElem = null;
-        switch (m_nPlan)
+        switch (m_plan)
             {
             case T_ITERATOR:
                 {
@@ -624,32 +761,59 @@ public class ForEachStatement
         }
 
 
-    // ----- fields --------------------------------------------------------------------------------
+    // ----- inner class: Plan ---------------------------------------------------------------------
 
-    public static final int T_ITERATOR = 1;
-    public static final int T_RANGE    = 2;
-    public static final int T_SEQUENCE = 3;
-    public static final int T_MAP      = 4;
-    public static final int T_ITERABLE = 5;
+    enum Plan
+        {
+        ITERATOR, RANGE, SEQUENCE, MAP, ITERABLE;
+
+        /**
+         * Look up a Plan enum by its ordinal.
+         *
+         * @param i  the ordinal
+         *
+         * @return the Plan enum for the specified ordinal
+         */
+        public static Plan valueOf(int i)
+            {
+            return BY_ORDINAL[i];
+            }
+
+        /**
+         * All of the Plan enums, by ordinal.
+         */
+        private static final Plan[] BY_ORDINAL = Plan.values();
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
 
     protected Token               keyword;
     protected AssignmentStatement cond;
     protected StatementBlock      block;
 
-    private static    int   s_nLabelCounter;
-    private transient int   m_nLabel;
-    private transient Label m_labelContinue;
+    private static    int           s_nLabelCounter;
+    private transient int           m_nLabel;
+    private transient Label         m_labelContinue;
 
-    private transient Expression m_exprLValue;
-    private transient Expression m_exprRValue;
-    private transient int        m_nPlan;
-    private transient boolean    m_fUsesEntry;
-    // TODO also need L.first, L.last, L.count
+    private transient Expression    m_exprLValue;
+    private transient Expression    m_exprRValue;
+    private transient Plan          m_plan;
+
+    private transient Context       m_ctxLabelVars;
+    private transient ErrorListener m_errsLabelVars;
+    private transient Register      m_regFirst;
+    private transient Register      m_regLast;
+    private transient Register      m_regCount;
+    private transient Register      m_regEntry;
+    private transient Register      m_regKeyType;
+    private transient Register      m_regValType;
 
     /**
      * Generally null, unless there is a "continue" that long-jumps to this statement.
      */
     private transient List<Map<String, Assignment>> m_listContinues;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(ForEachStatement.class, "cond", "block");
+    private static final Field[] CHILD_FIELDS =
+            fieldsForNames(ForEachStatement.class, "cond", "block");
     }

@@ -6,61 +6,81 @@ mixin Range<ElementType extends Sequential>
         into Interval<ElementType>
         implements Iterable<ElementType>
     {
+    interface RangeIterator<ElementType>
+            extends Iterator<ElementType>
+        {
+        @RO Boolean hasNext;
+        }
+
     /**
      * Obtain an iterator over all of the values in the range. Note that the values are iterated
      * in the order that the range was specified, so if the range was specified with a higher
      * value first, then the values from the iterator will be in descending order.
      */
     @Override
-    Iterator<ElementType> iterator()
+    RangeIterator<ElementType> iterator()
         {
         if (reversed)
             {
-            return new Iterator<ElementType>()
+            return new RangeIterator<ElementType>()
                 {
                 private ElementType nextValue = upperBound;
-                private Boolean done = false;
+
+                @Override
+                public/private Boolean hasNext = true;
 
                 @Override
                 conditional ElementType next()
                     {
-                    if (done)
+                    if (hasNext)
+                        {
+                        ElementType value = nextValue;
+                        if (value == lowerBound)
+                            {
+                            hasNext = false;
+                            }
+                        else
+                            {
+                            nextValue = value.prevValue();
+                            }
+                        return true, value;
+                        }
+                    else
                         {
                         return false;
                         }
-
-                    ElementType value = nextValue;
-                    if (value == lowerBound || !(nextValue : value.prev()))
-                        {
-                        done = true;
-                        }
-
-                    return true, value;
                     }
                 };
             }
         else
             {
-            return new Iterator<ElementType>()
+            return new RangeIterator<ElementType>()
                 {
                 private ElementType nextValue = lowerBound;
-                private Boolean done = false;
+
+                @Override
+                public/private Boolean hasNext = true;
 
                 @Override
                 conditional ElementType next()
                     {
-                    if (done)
+                    if (hasNext)
+                        {
+                        ElementType value = nextValue;
+                        if (value == upperBound)
+                            {
+                            hasNext = false;
+                            }
+                        else
+                            {
+                            nextValue = value.nextValue();
+                            }
+                        return true, value;
+                        }
+                    else
                         {
                         return false;
                         }
-
-                    ElementType value = nextValue;
-                    if (value == upperBound || !(nextValue : value.next()))
-                        {
-                        done = true;
-                        }
-
-                    return true, value;
                     }
                 };
             }
