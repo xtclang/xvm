@@ -159,7 +159,7 @@ public class TypeParameterConstant
         {
         // There is a circular dependency that involves TypeParameterConstant:
         //
-        // MethodConstant -> SignatureConstant -> TypeConstant -> TypeParameterConstant -> MethodConstant
+        // MethodConstant -> SignatureConstant -> TerminalTypeConstant -> TypeParameterConstant -> MethodConstant
         //
         // To break the circle, TypeParameterConstant is not being responsible for resolving the
         // corresponding MethodConstant; instead it's the MethodConstant's duty to call bindMethod()

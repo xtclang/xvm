@@ -18,6 +18,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.Assignment;
 
+import org.xvm.asm.constants.RelationalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
@@ -57,14 +58,6 @@ public class Context
     protected boolean isDemuxing()
         {
         return m_fDemuxOnExit;
-        }
-
-    /**
-     * @param ctxOuter  the outer context to use
-     */
-    protected void setOuterContext(Context ctxOuter)
-        {
-        m_ctxOuter = ctxOuter;
         }
 
     /**
@@ -316,6 +309,14 @@ public class Context
                 }
             }
 
+        for (Entry<String, Register> entry : getNarrowingMap(true).entrySet())
+            {
+            promoteNarrowingType(entry.getKey(), entry.getValue(), true);
+            }
+        for (Entry<String, Register> entry : getNarrowingMap(false).entrySet())
+            {
+            promoteNarrowingType(entry.getKey(), entry.getValue(), false);
+            }
         return ctxOuter;
         }
 
@@ -422,6 +423,17 @@ public class Context
         }
 
     /**
+     * Promote narrowing type information from this context to its enclosing context.
+     *
+     * @param sName      the variable name
+     * @param register   the corresponding narrowed register
+     * @param fWhenTrue  true if the register comes from the WhenTrue branch; false for WhenFalse
+     */
+    protected void promoteNarrowingType(String sName, Register register, boolean fWhenTrue)
+        {
+        }
+
+    /**
      * Register the specified variable name in this context.
      * <p/>
      * Note: This can only be used during the validate() stage.
@@ -452,7 +464,7 @@ public class Context
      */
     public final Argument getVar(String sName)
         {
-        return getVar(sName, null, null);
+        return getVar(sName, null, Branch.Always, null);
         }
 
     /**
@@ -465,7 +477,7 @@ public class Context
      */
     public final Argument getVar(Token name, ErrorListener errs)
         {
-        return getVar(name.getValueText(), name, errs);
+        return getVar(name.getValueText(), name, Branch.Always, errs);
         }
 
     /**
@@ -474,13 +486,14 @@ public class Context
      *
      * @param sName  the name to look up
      * @param name   the token to use for error reporting (optional)
+     * @param branch the branch to look at
      * @param errs   the error list to use for error reporting (optional)
      *
      * @return the argument for the variable, or null
      */
-    protected Argument getVar(String sName, Token name, ErrorListener errs)
+    protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs)
         {
-        Argument arg = getNameMap().get(sName);
+        Argument arg = getLocalVar(sName, branch);
         if (arg instanceof Register)
             {
             return arg;
@@ -489,7 +502,36 @@ public class Context
         Context ctxOuter = getOuterContext();
         return ctxOuter == null
                 ? null
-                : ctxOuter.getVar(sName, name, errs);
+                : ctxOuter.getVar(sName, name, Branch.Always, errs);
+        }
+
+    /**
+     * Check for the variable definition in this context.
+     *
+     * @param sName  the name to look up
+     * @param branch the branch to look at
+     *
+     * @return the argument for the variable, or null
+     */
+    protected Argument getLocalVar(String sName, Branch branch)
+        {
+        Register reg;
+        switch (branch)
+            {
+            case WhenTrue:
+                reg = getNarrowingMap(true).get(sName);
+                break;
+
+            case WhenFalse:
+                reg = getNarrowingMap(false).get(sName);
+                break;
+
+            default:
+                reg = null;
+                break;
+            }
+
+        return reg == null ? getNameMap().get(sName) : reg;
         }
 
     /**
@@ -626,7 +668,8 @@ public class Context
                     tokName.log(errs, getSource(), Severity.ERROR,
                             sName.startsWith("this") ? Compiler.NO_THIS     :
                             sName.equals("super")    ? Compiler.NO_SUPER    :
-                                                       Compiler.NAME_MISSING, sName);
+                                                       Compiler.NAME_MISSING,
+                            sName, getMethod().getIdentityConstant().getValueString());
 
                     // add the variable to the reserved names that are allowed, to avoid
                     // repeating the same error logging
@@ -791,7 +834,11 @@ public class Context
         Argument arg = resolveReservedName(sName, name, errs);
         if (arg == null)
             {
-            arg = resolveRegularName(sName, name, errs);
+            arg = getVar(sName, name, Branch.Always, errs);
+            if (arg == null)
+                {
+                arg = resolveRegularName(sName, name, errs);
+                }
             }
         return arg;
         }
@@ -881,13 +928,7 @@ public class Context
      */
     protected Argument resolveRegularName(String sName, Token name, ErrorListener errs)
         {
-        Argument arg = getNameMap().get(sName);
-        if (arg != null)
-            {
-            return arg;
-            }
-
-        return getOuterContext().resolveRegularName(name, errs);
+        return getOuterContext().resolveRegularName(sName, name, errs);
         }
 
     /**
@@ -957,6 +998,87 @@ public class Context
         return getOuterContext().resolveReservedName(sName, name, errs);
         }
 
+    /**
+     * Narrow the type of the specified variable name in this context.
+     * <p/>
+     * Note: This can only be used during the validate() stage.
+     *
+     * @param tokName        the token from the source code for the variable
+     * @param typeWhenTrue   the narrowing type to be used by the "when true" branch;
+     * @param typeWhenFalse  the narrowing type to be used by the "when true" branch;
+     */
+    public void narrowType(Token tokName, TypeConstant typeWhenTrue, TypeConstant typeWhenFalse)
+        {
+        String   sName = tokName.getValueText();
+        Argument arg   = getVar(sName);
+
+        // we are only concerned with registers; properties and constants are ignored
+        if (arg instanceof Register)
+            {
+            narrowLocalRegister(sName, (Register) arg, typeWhenTrue, typeWhenFalse);
+            }
+        }
+
+    /**
+     * Narrow the type of the specified variable in this context.
+     */
+    protected void narrowLocalRegister(String sName, Register reg,
+                                       TypeConstant typeWhenTrue, TypeConstant typeWhenFalse)
+        {
+        if (typeWhenTrue != null)
+            {
+            Register regTrue = reg.narrowType(typeWhenTrue);
+            if (regTrue != null && regTrue != reg)
+                {
+                ensureNarrowingMap(true).put(sName, regTrue);
+                }
+            }
+
+        if (typeWhenFalse != null)
+            {
+            Register regFalse = reg.narrowType(typeWhenFalse);
+            if (regFalse != null && regFalse != reg)
+                {
+                ensureNarrowingMap(false).put(sName, regFalse);
+                }
+            }
+        }
+
+    /**
+     * @return the read-only map that provides a name-to-narrowed type lookup
+     */
+    protected Map<String, Register> getNarrowingMap(boolean fWhenTrue)
+        {
+        Map<String, Register> map = fWhenTrue ? m_mapWhenTrue : m_mapWhenFalse;
+        return map == null ? Collections.EMPTY_MAP : map;
+        }
+
+    /**
+     * @return the map that provides a name-to-argument lookup
+     */
+    protected Map<String, Register> ensureNarrowingMap(boolean fWhenTrue)
+        {
+        Map<String, Register> map = fWhenTrue ? m_mapWhenTrue : m_mapWhenFalse;
+
+        if (map == null)
+            {
+            map = new HashMap<>();
+            if (fWhenTrue)
+                {
+                m_mapWhenTrue = map;
+                }
+            else
+                {
+                m_mapWhenFalse = map;
+                }
+            }
+
+        return map;
+        }
+
+    /**
+     * Collect all the variable names that are "visible" in this context.
+     */
     protected void collectVariables(Set<String> setVars)
         {
         Context ctxOuter = getOuterContext();
@@ -1085,6 +1207,18 @@ public class Context
             }
 
         @Override
+        protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs)
+            {
+            Argument arg = getLocalVar(sName, branch);
+            if (arg instanceof Register)
+                {
+                return arg;
+                }
+
+            return getOuterContext().getVar(sName, name, Branch.of(m_fWhenTrue), errs);
+            }
+
+        @Override
         public Assignment getVarAssignment(String sName)
             {
             Assignment asn = super.getVarAssignment(sName);
@@ -1138,6 +1272,66 @@ public class Context
             Assignment asnJoin  = Assignment.join(asnFalse, asnInner.whenTrue());
             return asnJoin;
             }
+
+        @Override
+        public void narrowType(Token tokName, TypeConstant typeWhenTrue, TypeConstant typeWhenFalse)
+            {
+            String   sName    = tokName.getValueText();
+            Argument argLocal = getLocalVar(sName, Branch.Always);
+
+            if (argLocal != null)
+                {
+                narrowLocalRegister(sName, (Register) argLocal, typeWhenTrue, typeWhenFalse);
+                return;
+                }
+
+            Context  ctxOuter = getOuterContext();
+            Argument argTrue  = ctxOuter.getVar(sName, tokName, Branch.WhenTrue, null);
+            Argument argFalse = ctxOuter.getVar(sName, tokName, Branch.WhenFalse, null);
+
+            if (argTrue != null || argFalse != null)
+                {
+                if (argTrue == argFalse)
+                    {
+                    if (argTrue instanceof Register)
+                        {
+                        narrowLocalRegister(sName, (Register) argTrue, typeWhenTrue, typeWhenFalse);
+                        }
+                    }
+                else
+                    {
+                    // for now only narrow the "true" branch
+                    if (argTrue instanceof Register)
+                        {
+                        TypeConstant typeTrue = RelationalTypeConstant.combineWith(
+                                pool(), argTrue.getType(), typeWhenTrue);
+                        narrowLocalRegister(sName, (Register) argTrue, typeTrue, null);
+                        }
+                    }
+                }
+            }
+
+        @Override
+        protected void promoteNarrowingType(String sName, Register register, boolean fWhenTrue)
+            {
+            Context  ctxOuter = getOuterContext();
+            Register regOuter = (Register) ctxOuter.getLocalVar(sName, Branch.of(fWhenTrue));
+
+            if (regOuter == null)
+                {
+                ctxOuter.ensureNarrowingMap(fWhenTrue).put(sName, register);
+                }
+            else
+                {
+                // only promote the "true" branch
+                if (fWhenTrue)
+                    {
+                    TypeConstant typeTrue = RelationalTypeConstant.combineWith(pool(),
+                            regOuter.getType(), register.getType());
+                    ctxOuter.narrowLocalRegister(sName, register, typeTrue, null);
+                    }
+                }
+            }
         }
 
 
@@ -1173,6 +1367,66 @@ public class Context
             Assignment asnJoin = Assignment.join(asnInner.whenFalse(), asnTrue);
             return asnJoin;
             }
+
+        @Override
+        public void narrowType(Token tokName, TypeConstant typeWhenTrue, TypeConstant typeWhenFalse)
+            {
+            String   sName    = tokName.getValueText();
+            Argument argLocal = getLocalVar(sName, Branch.Always);
+
+            if (argLocal != null)
+                {
+                narrowLocalRegister(sName, (Register) argLocal, typeWhenTrue, typeWhenFalse);
+                return;
+                }
+
+            Context  ctxOuter = getOuterContext();
+            Argument argTrue  = ctxOuter.getVar(sName, tokName, Branch.WhenTrue, null);
+            Argument argFalse = ctxOuter.getVar(sName, tokName, Branch.WhenFalse, null);
+
+            if (argTrue != null || argFalse != null)
+                {
+                if (argTrue == argFalse)
+                    {
+                    if (argTrue instanceof Register)
+                        {
+                        narrowLocalRegister(sName, (Register) argTrue, typeWhenTrue, typeWhenFalse);
+                        }
+                    }
+                else
+                    {
+                    // for now only narrow the "false" branch
+                    if (argFalse instanceof Register)
+                        {
+                        TypeConstant typeFalse = RelationalTypeConstant.combineWithout(
+                            pool(), argFalse.getType(), typeWhenFalse);
+                        narrowLocalRegister(sName, (Register) argTrue, typeFalse, null);
+                        }
+                    }
+                }
+            }
+
+        @Override
+        protected void promoteNarrowingType(String sName, Register register, boolean fWhenTrue)
+            {
+            Context  ctxOuter = getOuterContext();
+            Register regOuter = (Register) ctxOuter.getLocalVar(sName, Branch.of(fWhenTrue));
+
+            if (regOuter == null)
+                {
+                ctxOuter.ensureNarrowingMap(fWhenTrue).put(sName, register);
+                }
+            else
+                {
+                // only promote the "false" branch
+                if (!fWhenTrue)
+                    {
+                    TypeConstant typeFalse = RelationalTypeConstant.combineWith(pool(),
+                            regOuter.getType(), register.getType());
+                    ctxOuter.narrowLocalRegister(sName, register, null, typeFalse);
+                    }
+                }
+            }
         }
 
 
@@ -1202,6 +1456,34 @@ public class Context
         protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
             {
             return asnInner.negate();
+            }
+
+        @Override
+        protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs)
+            {
+            Argument arg = getLocalVar(sName, branch);
+            if (arg instanceof Register)
+                {
+                return arg;
+                }
+
+            return getOuterContext().getVar(sName, name, branch.complement(), errs);
+            }
+
+        @Override
+        protected void promoteNarrowingType(String sName, Register register, boolean fWhenTrue)
+            {
+            Context  ctxOuter = getOuterContext();
+            Register regOuter = (Register) ctxOuter.getLocalVar(sName, Branch.of(fWhenTrue));
+
+            if (regOuter == null)
+                {
+                ctxOuter.ensureNarrowingMap(!fWhenTrue).put(sName, register);
+                }
+            else
+                {
+                // TODO: can there ever be a local narrow register?
+                }
             }
         }
 
@@ -1296,6 +1578,40 @@ public class Context
 
     // ----- data members --------------------------------------------------------------------------
 
+    protected enum Branch
+        {
+        Always, WhenTrue, WhenFalse;
+
+        /**
+         * @return a complementary branch for this branch
+         */
+        public Branch complement()
+            {
+            switch (this)
+                {
+                case Always:
+                    return Always;
+
+                case WhenTrue:
+                    return WhenFalse;
+
+                case WhenFalse:
+                    return WhenTrue;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+
+        /**
+         * @return a branch for a boolean value
+         */
+        public static Branch of(boolean f)
+            {
+            return f ? WhenTrue : WhenFalse;
+            }
+        }
+
     /**
      * The outer context. The root context will not have an outer context, and an artificial
      * context may not have an outer context.
@@ -1320,6 +1636,18 @@ public class Context
      * Argument that represents it.
      */
     private Map<String, Argument> m_mapByName;
+
+    /**
+     * Each register declared within a parent context, may narrow its type in a child context
+     * for a "true" branch.
+     */
+    private Map<String, Register> m_mapWhenTrue;
+
+    /**
+     * Each register declared within a parent context, may narrow its type in a child context
+     * for a "false" branch.
+     */
+    private Map<String, Register> m_mapWhenFalse;
 
     /**
      * Each variable assigned within this context is registered in this map. The boolean value

@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -15,7 +16,6 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
-import org.xvm.asm.Argument;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
@@ -1005,6 +1005,21 @@ public abstract class Expression
      */
     public void markAssignment(Context ctx, boolean fCond, ErrorListener errs)
         {
+        }
+
+    /**
+     * Test if this expression is used as an R-Value, which is something that yields a value.
+     * <p/>
+     * In most cases, an expression is used as an R-Value (i.e. it has a value), but an expression
+     * can be used as a left side of an assignment, for example, which makes it an L-Value. In a
+     * few cases, an expression can be used as both an R-Value and an L-Value, such as with the
+     * pre-/post-increment/-decrement operators.
+     *
+\    * @return true iff this expression is used as an R-Value
+     */
+    protected boolean isRValue()
+        {
+        return getParent().isRValue(this);
         }
 
     /**
@@ -2322,7 +2337,7 @@ public abstract class Expression
          */
         public Assignable()
             {
-            m_nForm = BlackHole;
+            m_form = AssignForm.BlackHole;
             }
 
         /**
@@ -2332,21 +2347,39 @@ public abstract class Expression
          */
         public Assignable(Register regVar)
             {
-            m_nForm = LocalVar;
-            m_arg   = regVar;
+            m_form = AssignForm.LocalVar;
+            m_arg  = regVar;
             }
 
         /**
          * Construct an Assignable based on a property (either local or "this").
          *
-         * @param regTarget  the register, representing the property target
+         * @param argTarget  the argument representing the property target
          * @param constProp  the PropertyConstant
          */
-        public Assignable(Register regTarget, PropertyConstant constProp)
+        public Assignable(Argument argTarget, PropertyConstant constProp)
             {
-            m_nForm = regTarget.getIndex() == Op.A_TARGET ? LocalProp : TargetProp;
-            m_arg   = regTarget;
-            m_prop  = constProp;
+            if (argTarget instanceof Register)
+                {
+                Register reg = (Register) argTarget;
+                if (reg.isPredefined())
+                    {
+                    int index = ((Register) argTarget).getIndex();
+                    m_form = index == Op.A_TARGET || index == Op.A_STRUCT
+                            ? AssignForm.LocalProp
+                            : AssignForm.TargetProp;
+                    }
+                else
+                    {
+                    m_form = AssignForm.TargetProp;
+                    }
+                }
+            else
+                {
+                m_form = AssignForm.TargetProp;
+                }
+            m_arg  = argTarget;
+            m_prop = constProp;
             }
 
         /**
@@ -2357,7 +2390,7 @@ public abstract class Expression
          */
         public Assignable(Argument argArray, Argument index)
             {
-            m_nForm  = Indexed;
+            m_form   = AssignForm.Indexed;
             m_arg    = argArray;
             m_oIndex = index;
             }
@@ -2372,7 +2405,7 @@ public abstract class Expression
             {
             assert indexes != null && indexes.length > 0;
 
-            m_nForm  = indexes.length == 1 ? Indexed : IndexedN;
+            m_form   = indexes.length == 1 ? AssignForm.Indexed : AssignForm.IndexedN;
             m_arg    = regArray;
             m_oIndex = indexes.length == 1 ? indexes[0] : indexes;
             }
@@ -2385,7 +2418,7 @@ public abstract class Expression
          */
         public Assignable(PropertyConstant constProp, Argument index)
             {
-            m_nForm  = IndexedProp;
+            m_form   = AssignForm.IndexedProp;
             m_prop   = constProp;
             m_oIndex = index;
             }
@@ -2400,7 +2433,7 @@ public abstract class Expression
             {
             assert indexes != null && indexes.length > 0;
 
-            m_nForm  = indexes.length == 1 ? IndexedProp : IndexedNProp;
+            m_form   = indexes.length == 1 ? AssignForm.IndexedProp : AssignForm.IndexedNProp;
             m_prop   = constProp;
             m_oIndex = indexes.length == 1 ? indexes[0] : indexes;
             }
@@ -2412,7 +2445,7 @@ public abstract class Expression
          */
         public TypeConstant getType()
             {
-            switch (m_nForm)
+            switch (m_form)
                 {
                 case BlackHole:
                     return pool().typeObject();
@@ -2439,26 +2472,11 @@ public abstract class Expression
             }
 
         /**
-         * Determine the type of assignability:
-         * <ul>
-         * <li>{@link #BlackHole} - a write-only register that anyone can assign to, resulting in
-         *     the value being discarded</li>
-         * <li>{@link #LocalVar} - a local variable of a method that can be assigned</li>
-         * <li>{@link #LocalProp} - a local (this:private) property that can be assigned</li>
-         * <li>{@link #TargetProp} - a property of a specified reference that can be assigned</li>
-         * <li>{@link #Indexed} - an index into a single-dimensioned array</li>
-         * <li>{@link #IndexedN} - an index into a multi-dimensioned array</li>
-         * <li>{@link #IndexedProp} - an index into a single-dimensioned array property</li>
-         * <li>{@link #IndexedNProp} - an index into a multi-dimensioned array property</li>
-         * </ul>
-         *
-         * @return the form of the Assignable, one of: {@link #BlackHole}, {@link #LocalVar},
-         *         {@link #LocalProp}, {@link #TargetProp}, {@link #Indexed}, {@link #IndexedN},
-         *         or {@link #IndexedNProp}
+         * @return the form of the Assignable
          */
-        public int getForm()
+        public AssignForm getForm()
             {
-            return m_nForm;
+            return m_form;
             }
 
         /**
@@ -2466,7 +2484,7 @@ public abstract class Expression
          */
         public boolean isBlackhole()
             {
-            return m_nForm == BlackHole;
+            return m_form == AssignForm.BlackHole;
             }
 
         /**
@@ -2474,7 +2492,7 @@ public abstract class Expression
          */
         public Register getRegister()
             {
-            if (m_nForm != LocalVar)
+            if (m_form != AssignForm.LocalVar)
                 {
                 throw new IllegalStateException();
                 }
@@ -2486,7 +2504,7 @@ public abstract class Expression
          */
         public boolean isNormalVariable()
             {
-            return m_nForm == LocalVar && ((Register) m_arg).isNormal();
+            return m_form == AssignForm.LocalVar && ((Register) m_arg).isNormal();
             }
 
         /**
@@ -2495,7 +2513,7 @@ public abstract class Expression
          */
         public boolean isLocalArgument()
             {
-            switch (m_nForm)
+            switch (m_form)
                 {
                 case BlackHole:
                 case LocalVar:
@@ -2513,7 +2531,7 @@ public abstract class Expression
          */
         public Argument getLocalArgument()
             {
-            switch (m_nForm)
+            switch (m_form)
                 {
                 case BlackHole:
                     return new Register(pool().typeObject(), Op.A_IGNORE);
@@ -2534,7 +2552,7 @@ public abstract class Expression
          */
         public Argument getTarget()
             {
-            if (m_nForm != LocalProp && m_nForm != TargetProp)
+            if (m_form != AssignForm.LocalProp && m_form != AssignForm.TargetProp)
                 {
                 throw new IllegalStateException();
                 }
@@ -2546,7 +2564,8 @@ public abstract class Expression
          */
         public PropertyConstant getProperty()
             {
-            if (m_nForm != LocalProp && m_nForm != TargetProp && m_nForm != IndexedProp && m_nForm != IndexedNProp)
+            if (m_form != AssignForm.LocalProp && m_form != AssignForm.TargetProp &&
+                m_form != AssignForm.IndexedProp && m_form != AssignForm.IndexedNProp)
                 {
                 throw new IllegalStateException();
                 }
@@ -2558,7 +2577,7 @@ public abstract class Expression
          */
         public Argument getArray()
             {
-            if (m_nForm != Indexed && m_nForm != IndexedN)
+            if (m_form != AssignForm.Indexed && m_form != AssignForm.IndexedN)
                 {
                 throw new IllegalStateException();
                 }
@@ -2570,7 +2589,7 @@ public abstract class Expression
          */
         public Argument getIndex()
             {
-            if (m_nForm == Indexed || m_nForm == IndexedProp)
+            if (m_form == AssignForm.Indexed || m_form == AssignForm.IndexedProp)
                 {
                 return (Argument) m_oIndex;
                 }
@@ -2583,12 +2602,12 @@ public abstract class Expression
          */
         public Argument[] getIndexes()
             {
-            if (m_nForm == Indexed || m_nForm == IndexedProp)
+            if (m_form == AssignForm.Indexed || m_form == AssignForm.IndexedProp)
                 {
                 return new Argument[] {(Argument) m_oIndex};
                 }
 
-            if (m_nForm == IndexedN || m_nForm == IndexedNProp)
+            if (m_form == AssignForm.IndexedN || m_form == AssignForm.IndexedNProp)
                 {
                 return (Argument[]) m_oIndex;
                 }
@@ -2628,7 +2647,7 @@ public abstract class Expression
         public Argument getValue(Assignable LValResult, boolean fLocalPropOk, boolean fUsedOnce,
                 Code code, ErrorListener errs)
             {
-            switch (m_nForm)
+            switch (m_form)
                 {
                 case BlackHole:
                     // blackhole has no value
@@ -2677,7 +2696,7 @@ public abstract class Expression
                     Assignable LValTemp = LValResult == null || !LValResult.isLocalArgument()
                             ? createTempVar(code, getType(), fUsedOnce, errs)
                             : LValResult;
-                    Argument argTarget = m_nForm == Indexed
+                    Argument argTarget = m_form == AssignForm.Indexed
                             ? getArray()
                             : getProperty();
                     code.add(new I_Get(argTarget, getIndex(), LValTemp.getLocalArgument()));
@@ -2714,7 +2733,7 @@ public abstract class Expression
          */
         public void assign(Argument arg, Code code, ErrorListener errs)
             {
-            switch (m_nForm)
+            switch (m_form)
                 {
                 case BlackHole:
                     break;
@@ -2779,7 +2798,7 @@ public abstract class Expression
                 LValResult = null;
                 }
 
-            switch (m_nForm)
+            switch (m_form)
                 {
                 case LocalVar:
                 case LocalProp:
@@ -2896,7 +2915,7 @@ public abstract class Expression
                 case Indexed:
                 case IndexedProp:
                     {
-                    Argument argArray = m_nForm == Indexed
+                    Argument argArray = m_form == AssignForm.Indexed
                             ? getArray()
                             : getProperty();
                     Argument argIndex = getIndex();
@@ -3026,21 +3045,29 @@ public abstract class Expression
 
         // ----- fields ------------------------------------------------------------------------
 
-        public static final byte BlackHole    = 0;
-        public static final byte LocalVar     = 1;
-        public static final byte LocalProp    = 2;
-        public static final byte TargetProp   = 3;
-        public static final byte Indexed      = 4;
-        public static final byte IndexedN     = 5;
-        public static final byte IndexedProp  = 6;
-        public static final byte IndexedNProp = 7;
-
-        private byte             m_nForm;
+        private AssignForm m_form;
         private Argument         m_arg;
         private PropertyConstant m_prop;
         private Object           m_oIndex;
         }
 
+    /**
+     * The form of Assignable.
+     *
+     * <ul>
+     *   <li>{@link #BlackHole} - a write-only register that anyone can assign to, resulting in
+     *       the value being discarded</li>
+     *   <li>{@link #LocalVar} - a local variable of a method that can be assigned</li>
+     *   <li>{@link #LocalProp} - a local (this:private) property that can be assigned</li>
+     *   <li>{@link #TargetProp} - a property of a specified reference that can be assigned</li>
+     *   <li>{@link #Indexed} - an index into a single-dimensioned array</li>
+     *   <li>{@link #IndexedN} - an index into a multi-dimensioned array</li>
+     *   <li>{@link #IndexedProp} - an index into a single-dimensioned array property</li>
+     *   <li>{@link #IndexedNProp} - an index into a multi-dimensioned array property</li>
+     * </ul>
+     */
+    public enum AssignForm {BlackHole, LocalVar, LocalProp, TargetProp,
+                            Indexed, IndexedN, IndexedProp, IndexedNProp}
 
     // ----- Sequential enumeration ----------------------------------------------------------------
 

@@ -104,7 +104,7 @@ public class SequentialAssignExpression
         if (LVal == null)
             {
             m_LValTarget = LVal = expr.generateAssignable(ctx, code, errs);
-            assert LVal.getForm() != Assignable.BlackHole;
+            assert LVal.getForm() != AssignForm.BlackHole;
             }
         return LVal;
         }

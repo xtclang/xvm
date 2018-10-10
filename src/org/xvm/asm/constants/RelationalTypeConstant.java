@@ -79,6 +79,27 @@ public abstract class RelationalTypeConstant
                                                     TypeConstant type1, TypeConstant type2);
 
 
+    // ----- type algebra methods ------------------------------------------------------------------
+
+    /**
+     * TODO  Combine and reduce
+     * @return
+     */
+    public static TypeConstant combineWith(ConstantPool pool, TypeConstant type1, TypeConstant type2)
+        {
+        return pool.ensureUnionTypeConstant(type1, type2);
+        }
+
+    /**
+     * TODO Combine and omit
+     * @return
+     */
+    public static TypeConstant combineWithout(ConstantPool pool, TypeConstant type1, TypeConstant type2)
+        {
+        return type1;
+        }
+
+
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override

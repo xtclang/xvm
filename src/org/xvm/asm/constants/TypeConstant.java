@@ -529,7 +529,7 @@ public abstract class TypeConstant
         }
 
     /**
-     * Bind any {@link TypeParameterConstant? that happens to be referred by this TypeConstant
+     * Bind any {@link TypeParameterConstant} that happens to be referred by this TypeConstant
      * to the specified {@link MethodConstant}.
      *
      * This method is used to resolve a circular dependency between the MethodConstant and
@@ -737,18 +737,42 @@ public abstract class TypeConstant
     /**
      * Determine compatibility for purposes of comparing equality.
      *
+     *
+     * @param pool            the ConstantPool to place a potentially created new constant into
      * @param that             another type
      * @param fThatIsConstant  if the value of the other type is a constant
      *
      * @return true iff a value of this type can be compared with a value of the other type for
      *         equality
      */
-    public boolean supportsEquals(TypeConstant that, boolean fThatIsConstant)
+    public boolean supportsEquals(ConstantPool pool, TypeConstant that, boolean fThatIsConstant)
         {
         assert that != null;
-        if (this.equals(that) || fThatIsConstant && that.isA(this))
+
+        TypeConstant typeThis = this.resolveAutoNarrowing(pool, null);
+        TypeConstant typeThat = that.resolveAutoNarrowing(pool, null);
+
+        if (typeThis.equals(typeThat) || fThatIsConstant && typeThat.isA(typeThis))
             {
             return true;
+            }
+
+        // we also allow a comparison of a nullable type to the base type; for example:
+        // String? s1 = ...
+        // String  s2 = ...
+        // if (s1 == s2) // is allowed despite the types are not equal
+        // TODO: consider allowing this for any IntersectionType: (T1 | T2) == T1
+
+        if (typeThis.isNullable())
+            {
+            typeThis = typeThis.removeNullable(pool);
+            return typeThis.equals(typeThat);
+            }
+
+        if (typeThat.isNullable())
+            {
+            typeThat = typeThat.removeNullable(pool);
+            return typeThis.equals(typeThat);
             }
 
         return false;
@@ -757,16 +781,21 @@ public abstract class TypeConstant
     /**
      * Determine compatibility for purposes of comparing order.
      *
+     * @param pool            the ConstantPool to place a potentially created new constant into
      * @param that             another type
      * @param fThatIsConstant  if the value of the other type is a constant
      *
      * @return true iff a value of this type can be compared with a value of the other type for
      *         order
      */
-    public boolean supportsCompare(TypeConstant that, boolean fThatIsConstant)
+    public boolean supportsCompare(ConstantPool pool, TypeConstant that, boolean fThatIsConstant)
         {
         assert that != null;
-        if (this.equals(that) || fThatIsConstant && that.isA(this))
+
+        TypeConstant typeThis = this.resolveAutoNarrowing(pool, null);
+        TypeConstant typeThat = that.resolveAutoNarrowing(pool, null);
+
+        if (typeThis.equals(typeThat) || fThatIsConstant && typeThat.isA(typeThis))
             {
             return ensureTypeInfo(ErrorListener.BLACKHOLE).findCompareFunction() != null;
             }

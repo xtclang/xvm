@@ -103,12 +103,8 @@ public class IfStatement
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
         boolean fValid = true;
-        boolean fScope = cond instanceof AssignmentStatement && ((AssignmentStatement) cond).hasDeclarations();
 
-        if (fScope)
-            {
-            ctx = ctx.enter();
-            }
+        ctx = ctx.enter();
 
         // the condition is either a boolean expression or an assignment statement whose R-value is
         // a multi-value with the first value being a boolean
@@ -122,7 +118,6 @@ public class IfStatement
                 }
             else
                 {
-                fScope = stmtNew.hasDeclarations();
                 if (stmtNew != stmtOld)
                     {
                     cond = stmtNew;
@@ -170,11 +165,7 @@ public class IfStatement
                 }
             }
 
-        // if the condition itself required a scope, then complete that scope
-        if (fScope)
-            {
-            ctx = ctx.exit();
-            }
+        ctx = ctx.exit();
 
         return fValid
                 ? this

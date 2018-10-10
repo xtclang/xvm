@@ -7,6 +7,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.constants.RelationalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.IsType;
@@ -66,9 +67,22 @@ public class IsExpression
             }
 
         Constant constVal = null;
-        if (expr1.isConstant())
+        if (fit.isFit())
             {
-            // TODO calculate constant isA -> true or false
+            if (exprTarget.isConstant())
+                {
+                // TODO calculate constant isA -> true or false
+                }
+            else if (exprTarget instanceof NameExpression)
+                {
+                NameExpression exprName   = (NameExpression) exprTarget;
+                TypeConstant   typeTarget = exprTarget.getType();
+                TypeConstant   typeTest   = exprType.ensureTypeConstant();
+                TypeConstant   typeTrue   = RelationalTypeConstant.combineWith(pool, typeTarget, typeTest);
+                TypeConstant   typeFalse  = RelationalTypeConstant.combineWithout(pool, typeTarget, typeTest);
+
+                ctx.narrowType(exprName.name, typeTrue, typeFalse);
+                }
             }
 
         return finishValidation(typeRequired, pool.typeBoolean(), fit, constVal, errs);
