@@ -1796,3 +1796,28 @@ if (foo())
 // what is the Assignment for "i" here? it must be "Assigned" (NOT AssignedOnce, since there are 2 points that assign i, even though not in this "path")
 }
 
+
+
+// example changes
+String s = ╔═════════════════════╗
+           ║This could be any    ║
+           ║freeform {xyz} that  ║
+           ║{{for (Person p : people) { $.append(./persontemplate.jsp); } return ""; }}}║
+           ║Ecstasy source file  ║
+           ╚═════════════════════╝ + '.';
+String s2 = ./template.jsp;     // same dir as this source file
+String s3 = /template.jsp;      // same dir as the module source file
+String s4 = /util/template.jsp; // relative to the module source file
+String s4 = $./Example12.x;     // this file
+
+
+// case "match" expressions
+switch (a,b,c)
+    {
+    case ("hello", 2, false), ("bye", 7, true):
+        foo();
+        break;
+
+    case ("ugh", 3..5, ?):
+
+    }
