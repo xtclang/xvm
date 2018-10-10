@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
@@ -25,8 +26,11 @@ import org.xvm.asm.op.JumpLte;
 import org.xvm.asm.op.JumpNotEq;
 import org.xvm.asm.op.Label;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -138,7 +142,6 @@ public class CmpExpression
             {
             expr1 = expr1New;
             type1 = expr1New.getType();
-            fValid &= expr1New.getTypeFit().isFit();
 
             // if we weren't previously able to determine a "target" type to use, then try again now
             // that the first expression is validated
@@ -169,30 +172,85 @@ public class CmpExpression
 
             if (typeRequest != null)
                 {
-                fValid &= expr2New.getTypeFit().isFit() & usesEquals()
-                        ? typeRequest.supportsEquals (type2, expr2New.isConstant())
-                        : typeRequest.supportsCompare(type2, expr2New.isConstant());
-                // TODO: report an error if not valid
+                boolean fConstant = expr2New.isConstant();
+                if (usesEquals())
+                    {
+                    if (!typeRequest.supportsEquals(pool(), type2, fConstant))
+                        {
+                        log(errs, Severity.ERROR, Compiler.TYPES_NOT_COMPARABLE,
+                            type1.getValueString(), type2.getValueString());
+                        fValid = false;
+                        }
+                    }
+                else
+                    {
+                    if (!typeRequest.supportsCompare(pool(), type2, fConstant))
+                        {
+                        log(errs, Severity.ERROR, Compiler.TYPES_NOT_COMPARABLE,
+                            type1.getValueString(), type2.getValueString());
+                        fValid = false;
+                        }
+                    }
                 }
-            }
-
-        if (!fValid)
-            {
-            return finishValidation(typeRequired, getImplicitType(ctx), TypeFit.NoFit, null, errs);
             }
 
         TypeConstant typeResult = getImplicitType(ctx);
         Constant     constVal   = null;
-        if (expr1New.isConstant() && expr2.isConstant())
+        if (fValid)
             {
-            try
+            if (expr1New.isConstant() && expr2New.isConstant())
                 {
-                constVal = expr1New.toConstant().apply(operator.getId(), expr2New.toConstant());
+                try
+                    {
+                    constVal = expr1New.toConstant().apply(operator.getId(), expr2New.toConstant());
+                    }
+                catch (RuntimeException e) {}
                 }
-            catch (RuntimeException e) {}
+
+            if (expr1New instanceof NameExpression && type2.equals(pool().typeNull()))
+                {
+                checkNullComparison(ctx, (NameExpression) expr1New, errs);
+                }
+
+            if (expr2New instanceof NameExpression && type1.equals(pool().typeNull()))
+                {
+                checkNullComparison(ctx, (NameExpression) expr2New, errs);
+                }
             }
 
-        return finishValidation(typeRequired, typeResult, TypeFit.Fit, constVal, errs);
+        return finishValidation(typeRequired, typeResult,
+                fValid ? TypeFit.Fit : TypeFit.NoFit, constVal, errs);
+        }
+
+    private void checkNullComparison(Context ctx, NameExpression exprTarget, ErrorListener errs)
+        {
+        ConstantPool pool       = pool();
+        TypeConstant typeTarget = exprTarget.getType();
+        TypeConstant typeNull   = pool.typeNull();
+        TypeConstant typeTrue   = null;
+        TypeConstant typeFalse  = null;
+
+        if (!typeTarget.isNullable())
+            {
+            exprTarget.log(errs, Severity.ERROR, Compiler.EXPRESSION_NOT_NULLABLE,
+                    typeTarget.getValueString());
+            return;
+            }
+
+        switch (operator.getId())
+            {
+            case COMP_EQ:
+                typeTrue  = typeNull;
+                typeFalse = typeTarget.removeNullable(pool);
+                break;
+
+            case COMP_NEQ:
+                typeTrue  = typeTarget.removeNullable(pool);
+                typeFalse = typeNull;
+                break;
+            }
+
+        ctx.narrowType(exprTarget.name, typeTrue, typeFalse);
         }
 
     @Override

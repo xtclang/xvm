@@ -138,6 +138,15 @@ public class Register
         }
 
     /**
+     * @return the original type, which could be different from {@link #getType} for narrowed
+     *         registers
+     */
+    public TypeConstant getOriginalType()
+        {
+        return getType();
+        }
+
+    /**
      * @return the argument index for the Register
      */
     public int getIndex()
@@ -164,56 +173,6 @@ public class Register
 
         validateIndex(iArg);
         return m_iArg = iArg;
-        }
-
-    /**
-     * Verify that the specified argument index is valid.
-     *
-     * @param iReg  the argument index
-     *
-     * @throws IllegalArgumentException if the index is invalid
-     */
-    protected static void validateIndex(int iReg)
-        {
-        if (!(iReg >= 0 || iReg == UNKNOWN || isPredefinedRegister(iReg)))
-            {
-            throw new IllegalArgumentException("invalid register ID: " + iReg);
-            }
-        }
-
-    /**
-     * Determine if the specified argument index is for a pre-defined register.
-     *
-     * @param iArg  the argument index
-     *
-     * @return true iff the index specifies a pre-defined argument
-     */
-    protected static boolean isPredefinedRegister(int iArg)
-        {
-        switch (iArg)
-            {
-            case Op.A_STACK:
-            case Op.A_IGNORE:
-            case Op.A_PUBLIC:
-            case Op.A_PROTECTED:
-            case Op.A_PRIVATE:
-            case Op.A_TARGET:
-            case Op.A_STRUCT:
-            case Op.A_SERVICE:
-            case Op.A_MODULE:
-            case Op.A_TYPE:
-            case Op.A_SUPER:
-            case Op.A_THIS:
-            case Op.A_LABEL:
-                return true;
-
-            default:
-                if (iArg < 0)
-                    {
-                    throw new IllegalArgumentException("illegal argument index: " + iArg);
-                    }
-                return false;
-            }
         }
 
     /**
@@ -356,6 +315,59 @@ public class Register
                 : getIdString(m_iArg);
         }
 
+
+    // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * Verify that the specified argument index is valid.
+     *
+     * @param iReg  the argument index
+     *
+     * @throws IllegalArgumentException if the index is invalid
+     */
+    protected static void validateIndex(int iReg)
+        {
+        if (!(iReg >= 0 || iReg == UNKNOWN || isPredefinedRegister(iReg)))
+            {
+            throw new IllegalArgumentException("invalid register ID: " + iReg);
+            }
+        }
+
+    /**
+     * Determine if the specified argument index is for a pre-defined register.
+     *
+     * @param iArg  the argument index
+     *
+     * @return true iff the index specifies a pre-defined argument
+     */
+    protected static boolean isPredefinedRegister(int iArg)
+        {
+        switch (iArg)
+            {
+            case Op.A_STACK:
+            case Op.A_IGNORE:
+            case Op.A_PUBLIC:
+            case Op.A_PROTECTED:
+            case Op.A_PRIVATE:
+            case Op.A_TARGET:
+            case Op.A_STRUCT:
+            case Op.A_SERVICE:
+            case Op.A_MODULE:
+            case Op.A_TYPE:
+            case Op.A_SUPER:
+            case Op.A_THIS:
+            case Op.A_LABEL:
+                return true;
+
+            default:
+                if (iArg < 0)
+                    {
+                    throw new IllegalArgumentException("illegal argument index: " + iArg);
+                    }
+                return false;
+            }
+        }
+
     /**
      * Format the register identifier into a String
      *
@@ -451,6 +463,12 @@ public class Register
             }
 
         @Override
+        public TypeConstant getOriginalType()
+            {
+            return Register.this.getOriginalType();
+            }
+
+        @Override
         public int getIndex()
             {
             return Register.this.getIndex();
@@ -507,7 +525,7 @@ public class Register
         @Override
         public String getIdString()
             {
-            return " shadow of " + Register.this.toString();
+            return "shadow of " + Register.this.toString();
             }
         }
 

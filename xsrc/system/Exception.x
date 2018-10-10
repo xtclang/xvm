@@ -47,11 +47,10 @@ const Exception
         }
 
     // TODO pass in output stream of text instead of building and returning String
-    static (String, StackFrame /* firstFrame */) formatStackTrace(Iterable<StackFrame> frames, StackFrame? lastFrame)
+    (String, StackFrame /* firstFrame */) formatStackTrace(Iterable<StackFrame> frames, StackFrame? lastFrame)
         {
         // stack trace
         StackFrame? firstFrame = null;
-        // TODO
 
         Iterator<StackFrame> frames = stackTrace.iterator();
         for (StackFrame frame : frames)
@@ -66,7 +65,7 @@ const Exception
             if (frame.opaque || frame.containingCode == null)
                 {
                 TODO("(unknown)");
-                continue;
+                // continue;
                 }
 
             // TODO path-to-code
@@ -74,16 +73,17 @@ const Exception
             Int? lineNumber = frame.lineNumber;
             if (lineNumber != null)
                 {
-                TODO("[" + line + "]");
+                TODO("[" + lineNumber + "]");
                 }
 
-            if (lastFrame? && frame == lastFrame)
+            if (frame == lastFrame)
                 {
                 break;
                 }
             }
 
-        return s, firstFrame;
+        assert firstFrame != null;
+        return TODO, firstFrame;
         }
 
     static const StackFrame

@@ -991,6 +991,14 @@ public class Compiler
      */
     public static final String LABEL_VARIABLE_ILLEGAL             = "COMPILER-94";
     /**
+     * The expression type is not nullable: "{0}".
+     */
+    public static final String EXPRESSION_NOT_NULLABLE            = "COMPILER-91";
+    /**
+     * The types "{0}" and "{1}" are not comparable.
+     */
+    public static final String TYPES_NOT_COMPARABLE               = "COMPILER-92";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

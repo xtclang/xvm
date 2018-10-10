@@ -328,8 +328,8 @@ public class ArrayAccessExpression
             {
             // I_GET  rvalue-target, rvalue-ix, lvalue        ; T = T[ix]
             // M_GET  rvalue-target, #:(rvalue-ix), lvalue    ; T = T[ix*]
-            Register         regResult      = LVal.isLocalArgument()
-                                            ? LVal.getRegister()
+            Argument         argResult      = LVal.isLocalArgument()
+                                            ? LVal.getLocalArgument()
                                             : createTempVar(code, getType(), true, errs).getRegister();
             Argument         argArray       = expr.generateArgument(ctx, code, true, true, errs);
             List<Expression> listIndexExprs = indexes;
@@ -337,7 +337,7 @@ public class ArrayAccessExpression
             if (cIndexes == 1)
                 {
                 Argument argIndex = listIndexExprs.get(0).generateArgument(ctx, code, true, true, errs);
-                code.add(new I_Get(argArray, argIndex, regResult));
+                code.add(new I_Get(argArray, argIndex, argResult));
                 }
             else
                 {
@@ -354,7 +354,7 @@ public class ArrayAccessExpression
             // the result from that temporary to the specified LVal
             if (!LVal.isLocalArgument())
                 {
-                LVal.assign(regResult, code, errs);
+                LVal.assign(argResult, code, errs);
                 }
             }
         }

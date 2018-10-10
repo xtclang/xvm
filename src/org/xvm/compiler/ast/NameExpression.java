@@ -632,7 +632,7 @@ public class NameExpression
 
         // TODO the "no deref" thing is very awkward here, because we still need to force a capture,
         //      even if we are not de-referencing the variable (i.e. the markVarRead() API is wrong)
-        if (left == null && !isSuppressDeref() && getParent().isRValue(this))
+        if (left == null && !isSuppressDeref() && isRValue())
             {
             switch (getMeaning())
                 {
@@ -948,8 +948,12 @@ public class NameExpression
                 }
             else if (arg instanceof PropertyConstant)
                 {
-                // TODO: use getThisClass().toTypeConstant() for a type
-                return new Assignable(new Register(pool().typeObject(), Op.A_TARGET), (PropertyConstant) arg);
+                PropertyConstant idProp = (PropertyConstant) arg;
+                Argument         argTarget = left == null
+                    ? new Register(ctx.getThisType(), Op.A_TARGET)
+                    : left.generateArgument(ctx, code, true, true, errs);
+
+                return new Assignable(argTarget, idProp);
                 }
             else
                 {
@@ -1288,7 +1292,7 @@ public class NameExpression
                 {
                 // use the register itself (the "T" column in the table above)
                 m_plan = Plan.None;
-                return reg.getType();
+                return isRValue() ? reg.getType() : reg.getOriginalType();
                 }
             }
 
