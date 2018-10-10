@@ -19,9 +19,14 @@ module TestLoops.xqiz.it
         console.println("\n** testWhile()");
 
         Int i = 10;
-        while (i > 0)
+        WhileLabel: while (i > 0)
             {
             console.println(i--);
+            if (WhileLabel.first)
+                {
+                console.println("frist!");
+                }
+            console.println("(count=" + WhileLabel.count + ")");
             }
         console.println("We Have Lift-Off!!!");
         }
