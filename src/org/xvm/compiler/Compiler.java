@@ -983,14 +983,6 @@ public class Compiler
      */
     public static final String ILLEGAL_CONTINUE_TARGET            = "COMPILER-90";
     /**
-     * A duplicate name is used for a label: "{0}"
-     */
-    public static final String DUPLICATE_LABEL                    = "COMPILER-93";
-    /**
-     * The specified label variable "{0}" is not available for label "{1}".
-     */
-    public static final String LABEL_VARIABLE_ILLEGAL             = "COMPILER-94";
-    /**
      * The expression type is not nullable: "{0}".
      */
     public static final String EXPRESSION_NOT_NULLABLE            = "COMPILER-91";
@@ -998,6 +990,14 @@ public class Compiler
      * The types "{0}" and "{1}" are not comparable.
      */
     public static final String TYPES_NOT_COMPARABLE               = "COMPILER-92";
+    /**
+     * A duplicate name is used for a label: "{0}"
+     */
+    public static final String DUPLICATE_LABEL                    = "COMPILER-93";
+    /**
+     * The specified label variable "{0}" is not available for label "{1}".
+     */
+    public static final String LABEL_VARIABLE_ILLEGAL             = "COMPILER-94";
     /**
      * {0} is not yet implemented.
      */
