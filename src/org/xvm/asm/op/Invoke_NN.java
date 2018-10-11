@@ -18,6 +18,8 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
+import static org.xvm.util.Handy.checkElementsNonNull;
+
 
 /**
  *NVOK_NN rvalue-target, CONST-METHOD, #params:(rvalue), #returns:(lvalue)
@@ -57,7 +59,10 @@ public class Invoke_NN
         {
         super(argTarget, constMethod);
 
-        m_aArgValue = aArgValue;
+        checkElementsNonNull(aArgValue);
+        checkElementsNonNull(aArgReturn);
+
+        m_aArgValue  = aArgValue;
         m_aArgReturn = aArgReturn;
         }
 

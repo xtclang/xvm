@@ -18,32 +18,34 @@ const String
         TODO - native
         }
 
-    conditional Int indexOf(Char ch, Int of = 0)
+//    conditional Int indexOf(Char ch, Int of = 0)
+//        {
+//        if (of < 0)
+//            {
+//            of = 0;
+//            }
+//
+//        while (of < size)
+//            {
+//            if (chars[of] == ch)
+//                {
+//                return true, of;
+//                }
+//
+//            ++of;
+//            }
+//
+//        return false;
+//        }
+
+    conditional Int lastIndexOf(Char ch) // TODO, Int of = Int.maxvalue)
         {
-        if (of < 0)
-            {
-            of = 0;
-            }
-
-        while (of < size)
-            {
-            if (chars[of] == ch)
-                {
-                return true, of;
-                }
-
-            ++of;
-            }
-
-        return false;
-        }
-
-    conditional Int lastIndexOf(Char ch, Int of = Int.maxvalue)
-        {
-        if (of >= size)
-            {
-            of = size - 1;
-            }
+        // TODO
+//        if (of >= size)
+//            {
+//            of = size - 1;
+//            }
+        Int of = size;
 
         while (of >= 0)
             {
