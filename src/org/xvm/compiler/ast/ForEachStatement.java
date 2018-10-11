@@ -17,6 +17,7 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.IntervalConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -25,14 +26,17 @@ import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.IP_Dec;
 import org.xvm.asm.op.IP_Inc;
+import org.xvm.asm.op.I_Get;
 import org.xvm.asm.op.Invoke_01;
 import org.xvm.asm.op.Invoke_0N;
 import org.xvm.asm.op.IsEq;
 import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.JumpFalse;
+import org.xvm.asm.op.JumpGte;
 import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Move;
+import org.xvm.asm.op.P_Get;
 import org.xvm.asm.op.Var;
 import org.xvm.asm.op.Var_I;
 import org.xvm.asm.op.Var_IN;
@@ -730,6 +734,12 @@ public class ForEachStatement
         {
         boolean fCompletes = fReachable;
 
+        ConstantPool     pool     = pool();
+        TypeConstant     typeElem = getElementType();
+        TypeConstant     typeSeq  = pool.ensureParameterizedTypeConstant(pool.typeSequence(), typeElem);
+        TypeInfo         infoSeq  = typeSeq.ensureTypeInfo(errs);
+        PropertyConstant idSize   = infoSeq.findProperty("size").getIdentity();
+
         // VAR_I   "count" Int 0            ; (optional) if no label.count exists, create a temp for it
         // P_GET   seq.size -> "end" Int    ; get the size of the sequence
         // JMP_GTE count end -> Exit        ; skip everything if the sequence is empty
@@ -746,8 +756,62 @@ public class ForEachStatement
         // JMP Repeat                       ; loop
         // Exit:
 
-        // TODO
-        notImplemented();
+        Register regCount = m_regCount;
+        if (regCount == null)
+            {
+            code.add(new Var_I(pool.typeInt(), pool.val0()));
+            regCount = code.lastRegister();
+            }
+        
+        code.add((new Var(pool.typeInt())));
+        Register regEnd = code.lastRegister();
+        
+        code.add(new Var(typeSeq));
+        Register regSeq = code.lastRegister();
+        m_exprRValue.generateAssignment(ctx, code, m_exprRValue.new Assignable(regSeq), errs);
+        
+        code.add(new P_Get(idSize, regSeq, regEnd));
+        code.add(new JumpGte(regCount, regEnd, getEndLabel()));
+        code.add(new IP_Dec(regEnd));
+
+        Assignable lvalVal  = m_exprLValue.generateAssignable(ctx, code, errs);
+        boolean    fTempVal = !lvalVal.isLocalArgument();
+        Argument   argVal;
+        if (fTempVal)
+            {
+            argVal = m_exprLValue.createTempVar(code, typeElem, true, errs).getLocalArgument();
+            }
+        else
+            {
+            argVal = lvalVal.getLocalArgument();
+            }
+
+        Register regLast = m_regLast;
+        if (regLast == null)
+            {
+            code.add(new Var(pool.typeBoolean()));
+            regLast = code.lastRegister();
+            }
+
+        Label lblRepeat = new Label("repeat_foreach_" + getLabelId());
+        code.add(lblRepeat);
+        code.add(new IsEq(regCount, regEnd, regLast));
+
+        code.add(new I_Get(regSeq, regCount, argVal));
+        if (fTempVal)
+            {
+            lvalVal.assign(argVal, code, errs);
+            }
+
+        fCompletes = block.completes(ctx, fCompletes, code, errs);
+        code.add(getContinueLabel());
+        code.add(new JumpTrue(regLast, getEndLabel()));
+        code.add(new IP_Inc(regCount));
+        if (m_regFirst != null)
+            {
+            code.add(new Move(pool.valFalse(), m_regFirst));
+            }
+        code.add(new Jump(lblRepeat));
 
         return fCompletes;
         }

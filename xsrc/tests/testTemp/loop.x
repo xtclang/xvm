@@ -6,12 +6,13 @@ module TestLoops.xqiz.it
         {
         console.println("Loop tests:");
 
-        //testWhile();
-        //testFor();
-        //testLabel();
+        testWhile();
+        testFor();
+        testLabel();
         testForEachConstRange();
-        testForEachCollection();
-        testForEachIterator();
+        testForEachSequence();
+        //testForEachCollection();
+        //testForEachIterator();
         //testDo();
         //testForEachRange();
         }
