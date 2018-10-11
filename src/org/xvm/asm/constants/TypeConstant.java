@@ -3444,39 +3444,49 @@ public abstract class TypeConstant
 
             if (fNative)
                 {
+                // native property;
+                // for now we don't have native setters, and if there is a natural getter, it never
+                // calls super;
+                // also, the natural code may pretend there is a field, in which case there is no
+                // natural getter;
                 fGetSupers      = false;
                 fGetBlocksSuper = true;
+                fField          = methodGet == null && !fHasRO;
+                fRO             = fHasRO;
+                fRW             = !fHasRO;
                 }
-
-            if (fHasRO && (fSetSupers || fHasVarAnno))
+            else
                 {
-                // the @RO conflicts with the annotations that require a Var
-                log(errs, Severity.ERROR, VE_PROPERTY_READONLY_NOT_VAR,
-                        getValueString(), sName);
+                if (fHasRO && (fSetSupers || fHasVarAnno))
+                    {
+                    // the @RO conflicts with the annotations that require a Var
+                    log(errs, Severity.ERROR, VE_PROPERTY_READONLY_NOT_VAR,
+                            getValueString(), sName);
+                    }
+
+                if (fHasRO && !(fHasAbstract || fHasOverride || fHasInject || methodGet != null))
+                    {
+                    log(errs, Severity.ERROR, VE_PROPERTY_READONLY_NO_SPEC,
+                            getValueString(), sName);
+                    }
+
+                // @Inject should not have ANY other Ref/Var annotations, and shouldn't override get/set
+                if (fHasInject && (methodGet != null || methodSet != null || fHasRefAnno))
+                    {
+                    log(errs, Severity.ERROR, VE_PROPERTY_INJECT_NOT_OVERRIDEABLE,
+                            getValueString(), sName);
+                    }
+
+                // we assume a field if @Inject is not specified, @RO is not specified,
+                // @Override is not specified, and get() doesn't block going to its super
+                fField = !fHasInject & !fHasRO & !fHasAbstract & !fHasOverride & !fGetBlocksSuper;
+
+                // we assume Ref-not-Var if @RO is specified, or if there is a get() with no
+                // super and no set() (or Var-implying annotations)
+                fRO |= !fHasVarAnno && (fHasRO || (fGetBlocksSuper && methodSet == null));
+
+                fRW |= fHasVarAnno | accessVar != null | methodSet != null;
                 }
-
-            if (fHasRO && !(fHasAbstract || fHasOverride || fHasInject || methodGet != null || fNative))
-                {
-                log(errs, Severity.ERROR, VE_PROPERTY_READONLY_NO_SPEC,
-                        getValueString(), sName);
-                }
-
-            // @Inject should not have ANY other Ref/Var annotations, and shouldn't override get/set
-            if (fHasInject && (methodGet != null || methodSet != null || fHasRefAnno))
-                {
-                log(errs, Severity.ERROR, VE_PROPERTY_INJECT_NOT_OVERRIDEABLE,
-                        getValueString(), sName);
-                }
-
-            // we assume a field if @Inject is not specified, @RO is not specified,
-            // @Override is not specified, and get() doesn't block going to its super
-            fField = !fHasInject & !fHasRO & !fHasAbstract & !fHasOverride & !fGetBlocksSuper & !fNative;
-
-            // we assume Ref-not-Var if @RO is specified, or if there is a get() with no
-            // super and no set() (or Var-implying annotations)
-            fRO |= !fHasVarAnno && (fHasRO || (fGetBlocksSuper && methodSet == null));
-
-            fRW |= fHasVarAnno | accessVar != null | methodSet != null;
 
             effectGet = effectOf(fGetSupers, fGetBlocksSuper);
             effectSet = effectOf(fSetSupers, fSetBlocksSuper);
