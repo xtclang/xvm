@@ -869,7 +869,11 @@ FreeformLines
     FreeformLines FreeformLine
 
 FreeformLine
-    Whitespace-opt FreeformVertical FreeformChars FreeformVertical Whitespace-opt LineTerminator
+    Whitespace-opt FreeformVertical FreeformChars FreeformLineEnd
+
+FreeformLineEnd
+    FreeformVertical Whitespace-opt LineTerminator
+    "\" NoWhitespace LineTerminator
 
 FreeformChars
     FreeformChar
