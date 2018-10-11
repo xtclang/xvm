@@ -3444,10 +3444,14 @@ public abstract class TypeConstant
 
             if (fNative)
                 {
-                // native property; let's assume we know what we're doing in the natural code
+                // native property;
+                // for now we don't have native setters, and if there is a natural getter, it never
+                // calls super;
+                // also, the natural code may pretend there is a field, in which case there is no
+                // natural getter;
                 fGetSupers      = false;
                 fGetBlocksSuper = true;
-                fField          = !fHasRO;
+                fField          = methodGet == null && !fHasRO;
                 fRO             = fHasRO;
                 fRW             = !fHasRO;
                 }
@@ -3460,7 +3464,7 @@ public abstract class TypeConstant
                             getValueString(), sName);
                     }
 
-                if (fHasRO && !(fHasAbstract || fHasOverride || fHasInject || methodGet != null || fNative))
+                if (fHasRO && !(fHasAbstract || fHasOverride || fHasInject || methodGet != null))
                     {
                     log(errs, Severity.ERROR, VE_PROPERTY_READONLY_NO_SPEC,
                             getValueString(), sName);
@@ -3475,7 +3479,7 @@ public abstract class TypeConstant
 
                 // we assume a field if @Inject is not specified, @RO is not specified,
                 // @Override is not specified, and get() doesn't block going to its super
-                fField = !fHasInject & !fHasRO & !fHasAbstract & !fHasOverride & !fGetBlocksSuper & !fNative;
+                fField = !fHasInject & !fHasRO & !fHasAbstract & !fHasOverride & !fGetBlocksSuper;
 
                 // we assume Ref-not-Var if @RO is specified, or if there is a get() with no
                 // super and no set() (or Var-implying annotations)
