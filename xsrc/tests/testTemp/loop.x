@@ -10,6 +10,7 @@ module TestLoops.xqiz.it
         //testFor();
         //testLabel();
         testForEachConstRange();
+        testForEachCollection();
         testForEachIterator();
         //testDo();
         //testForEachRange();
@@ -58,6 +59,17 @@ module TestLoops.xqiz.it
                 console.println("frist!");
                 }
             console.println("(count=" + L1.count + ")");
+            }
+        }
+
+    void testForEachCollection()
+        {
+        console.println("\n** testForEachCollection()");
+
+        X.collections.Collection<String> strs = ["hello", "world"];
+        L1: for (String s : strs)
+            {
+            console.println("s=" + s);
             }
         }
 

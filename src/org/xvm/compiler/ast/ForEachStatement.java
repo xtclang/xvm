@@ -25,6 +25,7 @@ import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.IP_Dec;
 import org.xvm.asm.op.IP_Inc;
+import org.xvm.asm.op.Invoke_01;
 import org.xvm.asm.op.Invoke_0N;
 import org.xvm.asm.op.IsEq;
 import org.xvm.asm.op.Jump;
@@ -542,19 +543,32 @@ public class ForEachStatement
         return fCompletes;
         }
 
+    /**
+     * Handle code generation for the Iterator type.
+     */
     private boolean emitIterator(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
+        ConstantPool pool     = pool();
+        TypeConstant typeIter = pool.ensureParameterizedTypeConstant(pool.typeIterator(), getElementType());
+
+        code.add(new Var(typeIter));
+        Register regIter = code.lastRegister();
+        m_exprRValue.generateAssignment(ctx, code, m_exprRValue.new Assignable(regIter), errs);
+
+        return emitAnyIterator(regIter, ctx, fReachable, code, errs);
+        }
+
+    /**
+     * Helper that generates code using the passed Iterator register.
+     */
+    private boolean emitAnyIterator(Register regIter, Context ctx, boolean fReachable, Code code, ErrorListener errs)
+        {
         boolean      fCompletes = fReachable;
-
         ConstantPool pool       = pool();
-        Expression   exprLVal   = m_exprLValue;
-        Expression   exprRVal   = m_exprRValue;
 
-        TypeConstant typeElem = getElementType();
-        TypeConstant typeIter = pool.ensureParameterizedTypeConstant(pool.typeIterator(), typeElem);
-
-        // VAR_I   iter Iterator<T>         ; hidden variable that holds the Iterator
-        // MOV     xxx iter                 ; however the iterator expression assigns an iterator
+        // VAR_I   iter Iterator<T>         ; (passed in) hidden variable that holds the Iterator
+        // MOV     xxx iter                 ; (passed in) however the iterator got assigned
+        //
         // VAR     cond Boolean             ; hidden variable that holds the conditional result
         // Repeat:
         // NVOK_0N iter Iterator.next() -> cond, val   ; assign the conditional result and the value
@@ -566,17 +580,13 @@ public class ForEachStatement
         // JMP Repeat                       ; loop
         // Exit:
 
-        code.add(new Var(typeIter));
-        Register regIter = code.lastRegister();
-        exprRVal.generateAssignment(ctx, code, exprRVal.new Assignable(regIter), errs);
-
         code.add(new Var(pool.typeBoolean()));
         Register regCond = code.lastRegister();
 
-        Assignable lvalVal  = exprLVal.generateAssignable(ctx, code, errs);
+        Assignable lvalVal  = m_exprLValue.generateAssignable(ctx, code, errs);
         boolean    fValTemp = !lvalVal.isLocalArgument();
         Argument   argVal   = fValTemp
-                ? exprLVal.createTempVar(code, lvalVal.getType(), true, errs).getLocalArgument()
+                ? m_exprLValue.createTempVar(code, lvalVal.getType(), true, errs).getLocalArgument()
                 : lvalVal.getLocalArgument();
 
         Label labelRepeat = new Label("repeat_foreach_" + getLabelId());
@@ -638,10 +648,27 @@ public class ForEachStatement
                 }
             }
 
-        notImplemented(); // TODO
-        return fCompletes;
+        ConstantPool pool        = pool();
+        TypeConstant typeElement = getElementType();
+        TypeConstant typeRange   = pool.ensureParameterizedTypeConstant(pool.typeRange(), typeElement);
+        TypeConstant typeRawIter = pool.clzRange().getComponent().getChild("RangeIterator").getIdentityConstant().getType();
+        TypeConstant typeIter    = pool.ensureParameterizedTypeConstant(typeRawIter, typeElement);
+
+        code.add(new Var(typeIter));
+        Register regIter = code.lastRegister();
+
+        Argument            argAble  = m_exprRValue.generateArgument(ctx, code, true, true, errs);
+        TypeInfo            infoAble = typeRange.ensureTypeInfo(errs);
+        Set<MethodConstant> setId    = infoAble.findMethods("iterator", 0, true, false);
+        assert setId.size() == 1;
+        code.add(new Invoke_01(argAble, setId.iterator().next(), regIter));
+
+        return emitAnyIterator(regIter, ctx, fReachable, code, errs);
         }
 
+    /**
+     * Handle optimized code generation for the Range type when the range is a constant value.
+     */
     private boolean emitConstantRange(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         boolean fCompletes = fReachable;
@@ -696,45 +723,68 @@ public class ForEachStatement
         return fCompletes;
         }
 
+    /**
+     * Handle code generation for the Sequence type.
+     */
     private boolean emitSequence(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         boolean fCompletes = fReachable;
-        notImplemented(); // TODO
+
+        // VAR_I   "count" Int 0            ; (optional) if no label.count exists, create a temp for it
+        // P_GET   seq.size -> "end" Int    ; get the size of the sequence
+        // JMP_GTE count end -> Exit        ; skip everything if the sequence is empty
+        // IP_DEC  end                      ; now "end" is the last index to iterate
+        // VAR     "last" Boolean           ; (optional) if no label.last exists, create a temp for it
+        // Repeat:
+        // IS_EQ   count end -> last        ; compare current index to end index
+        // I_GET   seq [count] -> lval      ; whatever code Assignable generates for "lval=seq[count]"
+        // {...}                            ; body
+        // Continue:
+        // JMP_T last Exit                  ; exit after last iteration
+        // IP_INC count                     ; increment the current index
+        // MOV False first                  ; (optional) no longer the L.first
+        // JMP Repeat                       ; loop
+        // Exit:
+
+        // TODO
+        notImplemented();
+
         return fCompletes;
         }
 
+    /**
+     * Handle code generation for the Map type.
+     */
     private boolean emitMap(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         boolean fCompletes = fReachable;
-        notImplemented(); // TODO
+
+        // TODO
+        notImplemented();
+
         return fCompletes;
         }
 
+    /**
+     * Handle code generation for the Iterable type.
+     */
     private boolean emitIterable(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean fCompletes = fReachable;
-        // TODO
-//            case T_ITERABLE:
-//                {
-//                // the type on the right is Iterable<LValType> (or can be assigned to it)
-//                // the type of the iterator is Iterator<LValType>
-//                TypeConstant typeElem = exprLVal.getType();
-//                TypeConstant typeIter = pool.ensureParameterizedTypeConstant(pool.typeIterator(), typeElem);
-//                code.add(new Var(typeIter));
-//                regIter = code.lastRegister();
-//                Argument argAble = exprRVal.generateArgument(ctx, code, true, true, errs);
-//
-//                TypeInfo            infoAble = pool.typeIterable().ensureTypeInfo(errs);
-//                Set<MethodConstant> setId    = infoAble.findMethods("iterator", 0, true, false);
-//                assert setId.size() == 1;
-//                code.add(new Invoke_01(argAble, setId.iterator().next(), regIter));
-//
-//                lvalElem = exprLVal.generateAssignable(ctx, code, errs);
-//                break;
-//                }
-        notImplemented(); // TODO
+        ConstantPool pool        = pool();
+        TypeConstant typeElement = getElementType();
+        TypeConstant typeAble    = pool.ensureParameterizedTypeConstant(pool.typeIterable(), typeElement);
+        TypeConstant typeIter    = pool.ensureParameterizedTypeConstant(pool.typeIterator(), getElementType());
 
-        return fCompletes;
+        code.add(new Var(typeIter));
+        Register regIter = code.lastRegister();
+
+        Argument            argAble  = m_exprRValue.generateArgument(ctx, code, true, true, errs);
+        TypeInfo            infoAble = typeAble.ensureTypeInfo(errs);
+        Set<MethodConstant> setId    = infoAble.findMethods("iterator", 0, true, false);
+        assert setId.size() == 1;
+        code.add(new Invoke_01(argAble, setId.iterator().next(), regIter));
+
+        return emitAnyIterator(regIter, ctx, fReachable, code, errs);
         }
 
 
@@ -757,6 +807,9 @@ public class ForEachStatement
 
     // ----- inner class: Plan ---------------------------------------------------------------------
 
+    /**
+     * Compilation plan for the for-each statement.
+     */
     enum Plan
         {
         ITERATOR, RANGE, SEQUENCE, MAP, ITERABLE;
