@@ -3045,7 +3045,7 @@ public abstract class Expression
 
         // ----- fields ------------------------------------------------------------------------
 
-        private AssignForm m_form;
+        private AssignForm       m_form;
         private Argument         m_arg;
         private PropertyConstant m_prop;
         private Object           m_oIndex;
