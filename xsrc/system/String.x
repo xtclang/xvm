@@ -18,9 +18,44 @@ const String
         TODO - native
         }
 
-    conditional Int lastIndexOf(Char separator)
+    conditional Int indexOf(Char ch, Int of = 0)
         {
-        TODO - native
+        if (of < 0)
+            {
+            of = 0;
+            }
+
+        while (of < size)
+            {
+            if (chars[of] == ch)
+                {
+                return true, of;
+                }
+
+            ++of;
+            }
+
+        return false;
+        }
+
+    conditional Int lastIndexOf(Char ch, Int of = Int.maxvalue)
+        {
+        if (of >= size)
+            {
+            of = size - 1;
+            }
+
+        while (of >= 0)
+            {
+            if (ch == chars[of])
+                {
+                return true, of;
+                }
+
+            --of;
+            }
+
+        return false;
         }
 
     String substring(Int position)
