@@ -26,7 +26,7 @@ mixin Range<ElementType extends Sequential>
                 {
                 private ElementType nextValue = upperBound;
 
-                @Override
+                // REVIEW GG: why this complains when I add "@Override"
                 public/private Boolean hasNext = true;
 
                 @Override
@@ -58,7 +58,7 @@ mixin Range<ElementType extends Sequential>
                 {
                 private ElementType nextValue = lowerBound;
 
-                @Override
+                // REVIEW GG: why this complains when I add "@Override"
                 public/private Boolean hasNext = true;
 
                 @Override

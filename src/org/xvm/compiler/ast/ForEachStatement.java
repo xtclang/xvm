@@ -17,6 +17,7 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.IntervalConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -24,7 +25,6 @@ import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.IP_Dec;
 import org.xvm.asm.op.IP_Inc;
-import org.xvm.asm.op.Invoke_01;
 import org.xvm.asm.op.Invoke_0N;
 import org.xvm.asm.op.IsEq;
 import org.xvm.asm.op.Jump;
@@ -42,6 +42,7 @@ import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.Expression.Assignable;
+
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
@@ -170,6 +171,22 @@ public class ForEachStatement
         return pool.ensureParameterizedTypeConstant(pool.typeEntry(), getKeyType(), getValueType());
         }
 
+    /**
+     * @return the name of the label that labels this "for" statement
+     */
+    private String getLabelName()
+        {
+        return ((LabeledStatement) getParent()).getName();
+        }
+    
+    /**
+     * @return the StringConstant for the passed string
+     */
+    private StringConstant toConst(String s)
+        {
+        return pool().ensureStringConstant(s);
+        }
+
     @Override
     public long getStartPosition()
         {
@@ -290,12 +307,12 @@ public class ForEachStatement
         // ultimately, the condition has to be re-written, because it is inevitably short-hand for
         // a measure of syntactic sugar; in order of precedence, the condition can be:
         //
-        //   1) iterator   :  L: for (T value : container.as(Iterator<T>)) {...}
-        //   2) range      :  L: for (T value : container.as(Range<T>)) {...}
-        //   3) sequence   :  L: for (T value : container.as(Sequence<T>)) {...}
-        //   4) map keys   :  L: for (K key : container.as(Map<K,T>)) {...}
-        //   5) map entries:  L: for ((K key, T value) : container.as(Map<K,T>)) {...}
-        //   6) iterable   :  L: for (T value : container.as(Iterator<T>)) {...}
+        //   1) iterator   :  L: for (T value          : container.as(Iterator<T>)) {...}
+        //   2) range      :  L: for (T value          : container.as(Range<T>   )) {...}
+        //   3) sequence   :  L: for (T value          : container.as(Sequence<T>)) {...}
+        //   4) map keys   :  L: for (K key            : container.as(Map<K,T>   )) {...}
+        //   5) map entries:  L: for ((K key, T value) : container.as(Map<K,T>   )) {...}
+        //   6) iterable   :  L: for (T value          : container.as(Iterator<T>)) {...}
         assert cond.isConditional();
 
         // validate the LValue declarations and any LValue sub-expressions
@@ -470,8 +487,6 @@ public class ForEachStatement
                 : null;
         }
 
-    // TODO TODO TODO
-
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
@@ -484,16 +499,128 @@ public class ForEachStatement
             {
             fCompletes = stmt.completes(ctx, fCompletes, code, errs);
             }
+        
+        ConstantPool pool = pool();
+        if (m_regFirst != null)
+            {
+            code.add(new Var_IN(m_regFirst, toConst(getLabelName() + ".first"), pool.valTrue()));
+            }
+        if (m_regCount != null)
+            {
+            code.add(new Var_IN(m_regCount, toConst(getLabelName() + ".count"), pool.val0()));
+            }
+        if (m_regLast != null)
+            {
+            code.add(new Var_N(m_regLast, toConst(getLabelName() + ".last")));
+            }
+        if (m_regEntry != null)
+            {
+            code.add(new Var_N(m_regEntry, toConst(getLabelName() + ".entry")));
+            }
+        if (m_regKeyType != null)
+            {
+            code.add(new Var_N(m_regKeyType, toConst(getLabelName() + ".KeyType")));
+            }
+        if (m_regValType != null)
+            {
+            code.add(new Var_N(m_regValType, toConst(getLabelName() + ".ValueType")));
+            }
+
+        switch (m_plan)
+            {
+            case ITERATOR: fCompletes = emitIterator(ctx, fCompletes, code, errs); break;
+            case RANGE   : fCompletes = emitRange   (ctx, fCompletes, code, errs); break;
+            case SEQUENCE: fCompletes = emitSequence(ctx, fCompletes, code, errs); break;
+            case MAP     : fCompletes = emitMap     (ctx, fCompletes, code, errs); break;
+            case ITERABLE: fCompletes = emitIterable(ctx, fCompletes, code, errs); break;
+            default:
+                throw new IllegalStateException();
+            }
+
+        code.add(new Exit());
+
+        return fCompletes;
+        }
+
+    private boolean emitIterator(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+        {
+        boolean      fCompletes = fReachable;
+
+        ConstantPool pool       = pool();
+        Expression   exprLVal   = m_exprLValue;
+        Expression   exprRVal   = m_exprRValue;
+
+        TypeConstant typeElem = getElementType();
+        TypeConstant typeIter = pool.ensureParameterizedTypeConstant(pool.typeIterator(), typeElem);
+
+        // VAR_I   iter Iterator<T>         ; hidden variable that holds the Iterator
+        // MOV     xxx iter                 ; however the iterator expression assigns an iterator
+        // VAR     cond Boolean             ; hidden variable that holds the conditional result
+        // Repeat:
+        // NVOK_0N iter Iterator.next() -> cond, val   ; assign the conditional result and the value
+        // JMP_F   cond, Exit               ; exit when the conditional result is false
+        // {...}                            ; body
+        // Continue:
+        // MOV False first                  ; (optional) no longer the L.first
+        // IP_INC count                     ; (optional) increment the L.count
+        // JMP Repeat                       ; loop
+        // Exit:
+
+        code.add(new Var(typeIter));
+        Register regIter = code.lastRegister();
+        exprRVal.generateAssignment(ctx, code, exprRVal.new Assignable(regIter), errs);
+
+        code.add(new Var(pool.typeBoolean()));
+        Register regCond = code.lastRegister();
+
+        Assignable lvalVal  = exprLVal.generateAssignable(ctx, code, errs);
+        boolean    fValTemp = !lvalVal.isLocalArgument();
+        Argument   argVal   = fValTemp
+                ? exprLVal.createTempVar(code, lvalVal.getType(), true, errs).getLocalArgument()
+                : lvalVal.getLocalArgument();
+
+        Label labelRepeat = new Label("repeat_foreach_" + getLabelId());
+        code.add(labelRepeat);
+
+        TypeInfo            infoIter = pool.typeIterator().ensureTypeInfo(errs);
+        Set<MethodConstant> setId    = infoIter.findMethods("next", 0, true, false);
+        assert setId.size() == 1;
+        code.add(new Invoke_0N(regIter, setId.iterator().next(), new Argument[] {regCond, argVal}));
+        code.add(new JumpFalse(regCond, getEndLabel()));
+
+        fCompletes = block.completes(ctx, fCompletes, code, errs);
+
+        if (hasContinueLabel())
+            {
+            code.add(getContinueLabel());
+            }
+        if (m_regFirst != null)
+            {
+            code.add(new Move(pool.valFalse(), m_regFirst));
+            }
+        if (m_regCount != null)
+            {
+            code.add(new IP_Inc(m_regCount));
+            }
+        code.add(new Jump(labelRepeat));
+
+        return fCompletes;
+        }
+
+    /**
+     * Handle code generation for the Range type.
+     */
+    private boolean emitRange(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+        {
+        boolean fCompletes = fReachable;
 
         // code simplification for intrinsic sequential types
-        boolean fEmitted = false;
-        if (m_plan == T_RANGE && m_exprRValue.isConstant())
+        if (m_exprRValue.isConstant())
             {
             switch (m_exprRValue.getType().getParamTypesArray()[0].getEcstasyClassName())
                 {
-                // TODO
-                // case "Bit":
-                // case "Nibble":
+                case "Bit":     // TODO requires additional functionality on Bit.x?
+                case "Nibble":  // TODO requires additional functionality on Nibble.x?
                 case "Char":
                 case "Int8":
                 case "Int16":
@@ -507,238 +634,105 @@ public class ForEachStatement
                 case "UInt64":
                 case "UInt128":
                 case "VarUInt":
-                    fCompletes = emitConstantRangeLoop(ctx, fReachable, code, errs);
-                    fEmitted   = true;
-                    break;
+                    return emitConstantRange(ctx, fCompletes, code, errs);
                 }
             }
 
-        if (!fEmitted)
-            {
-            fCompletes = m_fUsesEntry
-                    ? emitMapKVIterator(ctx, fReachable, code, errs)
-                    : emitGenericIterator(ctx, fReachable, code, errs);
-            }
-
-        code.add(new Exit());
-
+        notImplemented(); // TODO
         return fCompletes;
         }
 
-    private boolean emitGenericIterator(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    private boolean emitConstantRange(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean      fCompletes = fReachable;
+        boolean fCompletes = fReachable;
 
-        ConstantPool pool       = pool();
-        Expression   exprLVal   = m_exprLValue;
-        Expression   exprRVal   = m_exprRValue;
-        String       sLabel     = getParent() instanceof LabeledStatement ?
-                                  ((LabeledStatement) getParent()).getName() : null;
+        ConstantPool     pool    = pool();
+        TypeConstant     typeSeq = getElementType();
+        IntervalConstant range   = (IntervalConstant) m_exprRValue.toConstant();
 
-        //      VAR_I  #0 Iterator<T> ...       ; hidden variable that holds the Iterator
-        //      VAR    #1 Boolean               ; hidden variable that holds the conditional result
-        //      VAR_N  #2 T value;              ; the value
-        //      VAR_IN #3 Boolean L.first True  ; optional label variable
-        //      VAR_IN #4 Int L.count 0         ; optional label variable
-        //      Repeat:
-        //      Iterator.next() #0 -> #1 #2     ; assign the conditional result and the value
-        //      JMP_F #1 Exit                   ; exit when the conditional result is false
-        //      {...}
-        //      Continue:
-        //      MOV False #3                    ; no longer the L.first
-        //      IP_INC #4                       ; increment the L.count
-        //      JMP Repeat                      ; loop
-        //      Exit:
-
-        Register   regIter  = null;
-        Assignable lvalElem = null;
-        switch (m_plan)
-            {
-            case T_ITERATOR:
-                {
-                // the type of the iterator is Iterator<LValType>
-                TypeConstant typeElem = exprLVal.getType();
-                TypeConstant typeIter = pool.ensureParameterizedTypeConstant(pool.typeIterator(), typeElem);
-                code.add(new Var(typeIter));
-                regIter = code.lastRegister();
-                exprRVal.generateAssignment(ctx, code, exprRVal.new Assignable(regIter), errs);
-                lvalElem = exprLVal.generateAssignable(ctx, code, errs);
-                break;
-                }
-
-            case T_RANGE:
-                // TODO .iterator()
-                notImplemented();
-                break;
-
-            case T_SEQUENCE:
-                // TODO .iterator()
-//                notImplemented();
-//                break;
-//
-            case T_ITERABLE:
-                {
-                // the type on the right is Iterable<LValType> (or can be assigned to it)
-                // the type of the iterator is Iterator<LValType>
-                TypeConstant typeElem = exprLVal.getType();
-                TypeConstant typeIter = pool.ensureParameterizedTypeConstant(pool.typeIterator(), typeElem);
-                code.add(new Var(typeIter));
-                regIter = code.lastRegister();
-                Argument argAble = exprRVal.generateArgument(ctx, code, true, true, errs);
-
-                TypeInfo            infoAble = pool.typeIterable().ensureTypeInfo(errs);
-                Set<MethodConstant> setId    = infoAble.findMethods("iterator", 0, true, false);
-                assert setId.size() == 1;
-                code.add(new Invoke_01(argAble, setId.iterator().next(), regIter));
-
-                lvalElem = exprLVal.generateAssignable(ctx, code, errs);
-                break;
-                }
-
-            case T_MAP:
-                // the type of the iterator is Iterator<LValType> (key iterator)
-                assert !m_fUsesEntry;
-                // TODO Map.keys.iterator()
-                notImplemented();
-                break;
-
-            default:
-                throw new IllegalStateException();
-            }
-
-        code.add(new Var(pool.typeBoolean()));
-        Register regCond = code.lastRegister();
-
-        Register regFirst = null;
-        Register regCount = null;
-        if (sLabel != null)
-            {
-            code.add(new Var_IN(pool.typeBoolean(), pool.ensureStringConstant(sLabel + ".first"), pool.valTrue()));
-            regFirst = code.lastRegister();
-
-            code.add(new Var_IN(pool.typeInt(), pool.ensureStringConstant(sLabel + ".count"), pool.val0()));
-            regCount = code.lastRegister();
-            }
-
-        Label labelRepeat = new Label("repeat_foreach_" + getLabelId());
-        code.add(labelRepeat);
-
-        boolean  fElemTemp = !lvalElem.isLocalArgument();
-        Argument argElem   = fElemTemp
-                ? exprLVal.createTempVar(code, lvalElem.getType(), true, errs).getLocalArgument()
-                : lvalElem.getLocalArgument();
-
-        TypeInfo            infoIter = pool.typeIterator().ensureTypeInfo(errs);
-        Set<MethodConstant> setId    = infoIter.findMethods("next", 0, true, false);
-        assert setId.size() == 1;
-        code.add(new Invoke_0N(regIter, setId.iterator().next(), new Argument[] {regCond, argElem}));
-        code.add(new JumpFalse(regCond, getEndLabel()));
-
-        fCompletes = block.completes(ctx, fCompletes, code, errs);
-
-        if (hasContinueLabel())
-            {
-            code.add(getContinueLabel());
-            }
-        if (regFirst != null)
-            {
-            code.add(new Move(pool.valFalse(), regFirst));
-            }
-        if (regCount != null)
-            {
-            code.add(new IP_Inc(regCount));
-            }
-        code.add(new Jump(labelRepeat));
-
-        return fCompletes;
-        }
-
-    private boolean emitMapKVIterator(Context ctx, boolean fReachable, Code code, ErrorListener errs)
-        {
-        // TODO
-        throw notImplemented();
-        }
-
-    private boolean emitConstantRangeLoop(Context ctx, boolean fReachable, Code code, ErrorListener errs)
-        {
-        boolean      fCompletes = fReachable;
-
-        ConstantPool pool       = pool();
-        Expression   exprLVal   = m_exprLValue;
-        Expression   exprRVal   = m_exprRValue;
-        TypeConstant typeSeq    = exprRVal.getType().getParamTypesArray()[0];
-
-        LabeledStatement stmtLabel = getParent() instanceof LabeledStatement
-                ? (LabeledStatement) getParent()
-                : null;
-
-        // VAR_I #0 T _start_;             ; initialize the current value to the Range "start"
-        // VAR_IN #1 Boolean L.first True  ; (optional) label variable
-        // VAR(_N) #2 Boolean (L.last)     ; (optionally named if a label exists)
-        // VAR_IN #3 Int L.count 0         ; (optional) label variable
+        // VAR_I "cur"  T _start_           ; initialize the current value to the Range "start"
+        // VAR   "last" Boolean             ; (optional) if no label.last exists, create a temp for it
         // Repeat:
-        // IS_EQ #0 _end_ -> #2            ; compare current value to last value
-        // {...}
+        // IS_EQ cur _end_ -> last          ; compare current value to last value
+        // MOV cur lval                     ; whatever code Assignable generates for "lval=cur"
+        // {...}                            ; body
         // Continue:
-        // JMP_T #2 Exit                   ; exit after the L.last
-        // IP_INC/IP_DEC #0                ; increment (or decrement) the current value
-        // MOV False #1                    ; (optional) no longer the L.first
-        // IP_INC #3                       ; (optional) increment the L.count
-        // JMP Repeat                      ; loop
+        // JMP_T last Exit                  ; exit after last iteration
+        // IP_INC/IP_DEC cur                ; increment (or decrement) the current value
+        // MOV False first                  ; (optional) no longer the L.first
+        // IP_INC count                     ; (optional) increment the L.count
+        // JMP Repeat                       ; loop
         // Exit:
-        IntervalConstant range  = (IntervalConstant) exprRVal.toConstant();
-        Assignable       asnV   = exprLVal.generateAssignable(ctx, code, errs);
-        boolean          fTempV = !asnV.isNormalVariable();
-        Register         regV;
-        if (fTempV)
-            {
-            code.add(new Var_I(typeSeq, range.getFirst()));
-            regV = code.lastRegister();
-            }
-        else
-            {
-            asnV.assign(range.getFirst(), code, errs);
-            regV = asnV.getRegister();
-            }
 
-        Register regFirst = null;
-        Register regLast  = null;
-        Register regCount = null;
-        if (stmtLabel == null)
+        Assignable LVal = m_exprLValue.generateAssignable(ctx, code, errs);
+        code.add(new Var_I(typeSeq, range.getFirst()));
+        Register regVal = code.lastRegister();
+
+        Register regLast = m_regLast;
+        if (regLast == null)
             {
             code.add(new Var(pool.typeBoolean()));
             regLast = code.lastRegister();
             }
-        else
-            {
-            // TODO get rid of any of the following unused registers
-            code.add(new Var_IN(pool.typeBoolean(), pool.ensureStringConstant(stmtLabel.getName() + ".first"), pool.valTrue()));
-            regFirst = code.lastRegister();
-
-            code.add(new Var_N(pool.typeBoolean(), pool.ensureStringConstant(stmtLabel.getName() + ".last")));
-            regLast = code.lastRegister();
-
-            code.add(new Var_N(pool.typeInt(), pool.ensureStringConstant(stmtLabel.getName() + ".count")));
-            regCount = code.lastRegister();
-            }
 
         Label lblRepeat = new Label("repeat_foreach_" + getLabelId());
         code.add(lblRepeat);
-
-        code.add(new IsEq(regV, range.getLast(), regLast));
+        code.add(new IsEq(regVal, range.getLast(), regLast));
+        LVal.assign(regVal, code, errs);
         fCompletes = block.completes(ctx, fCompletes, code, errs);
         code.add(getContinueLabel());
         code.add(new JumpTrue(regLast, getEndLabel()));
-        code.add(range.isReverse() ? new IP_Dec(regV) : new IP_Inc(regV));
-        if (regFirst != null)
+        code.add(range.isReverse() ? new IP_Dec(regVal) : new IP_Inc(regVal));
+        if (m_regFirst != null)
             {
-            code.add(new Move(pool.valFalse(), regFirst));
+            code.add(new Move(pool.valFalse(), m_regFirst));
             }
-        if (regCount != null)
+        if (m_regCount != null)
             {
-            code.add(new IP_Inc(regCount));
+            code.add(new IP_Inc(m_regCount));
             }
         code.add(new Jump(lblRepeat));
+
+        return fCompletes;
+        }
+
+    private boolean emitSequence(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+        {
+        boolean fCompletes = fReachable;
+        notImplemented(); // TODO
+        return fCompletes;
+        }
+
+    private boolean emitMap(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+        {
+        boolean fCompletes = fReachable;
+        notImplemented(); // TODO
+        return fCompletes;
+        }
+
+    private boolean emitIterable(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+        {
+        boolean fCompletes = fReachable;
+        // TODO
+//            case T_ITERABLE:
+//                {
+//                // the type on the right is Iterable<LValType> (or can be assigned to it)
+//                // the type of the iterator is Iterator<LValType>
+//                TypeConstant typeElem = exprLVal.getType();
+//                TypeConstant typeIter = pool.ensureParameterizedTypeConstant(pool.typeIterator(), typeElem);
+//                code.add(new Var(typeIter));
+//                regIter = code.lastRegister();
+//                Argument argAble = exprRVal.generateArgument(ctx, code, true, true, errs);
+//
+//                TypeInfo            infoAble = pool.typeIterable().ensureTypeInfo(errs);
+//                Set<MethodConstant> setId    = infoAble.findMethods("iterator", 0, true, false);
+//                assert setId.size() == 1;
+//                code.add(new Invoke_01(argAble, setId.iterator().next(), regIter));
+//
+//                lvalElem = exprLVal.generateAssignable(ctx, code, errs);
+//                break;
+//                }
+        notImplemented(); // TODO
 
         return fCompletes;
         }
@@ -814,6 +808,5 @@ public class ForEachStatement
      */
     private transient List<Map<String, Assignment>> m_listContinues;
 
-    private static final Field[] CHILD_FIELDS =
-            fieldsForNames(ForEachStatement.class, "cond", "block");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(ForEachStatement.class, "cond", "block");
     }

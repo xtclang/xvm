@@ -6,11 +6,12 @@ module TestLoops.xqiz.it
         {
         console.println("Loop tests:");
 
-        testWhile();
-        testFor();
-        testLabel();
-        testForEach();
-        testDo();
+        //testWhile();
+        //testFor();
+        //testLabel();
+        testForEachConstRange();
+        testForEachIterator();
+        //testDo();
         //testForEachRange();
         }
 
@@ -47,7 +48,7 @@ module TestLoops.xqiz.it
 
     void testLabel()
         {
-        console.println("\n** testFor()");
+        console.println("\n** testLabel()");
 
         L1: for (Int i = 0; i < 10; ++i)
             {
@@ -60,14 +61,35 @@ module TestLoops.xqiz.it
             }
         }
 
-    void testForEach()
+    void testForEachIterator()
         {
-        console.println("\n** testForEach()");
+        console.println("\n** testForEachIterator()");
+
+        String[] strs = ["hello", "world"];
+        L1: for (String s : strs.iterator())
+            {
+            console.println("s=" + s);
+            }
+        }
+
+    void testForEachSequence()
+        {
+        console.println("\n** testForEachSequence()");
 
         String[] strs = ["hello", "world"];
         L1: for (String s : strs)
             {
             console.println("s=" + s);
+            }
+        }
+
+    void testForEachConstRange()
+        {
+        console.println("\n** testForEachConstRange()");
+
+        L1: for (Int i : 9..7)
+            {
+            console.println("i=" + i + ", first=" + L1.first + ", last=" + L1.last + ", count=" + L1.count);
             }
         }
 
