@@ -738,7 +738,7 @@ public abstract class TypeConstant
      * Determine compatibility for purposes of comparing equality.
      *
      *
-     * @param pool            the ConstantPool to place a potentially created new constant into
+     * @param pool             the ConstantPool to place a potentially created new constant into
      * @param that             another type
      * @param fThatIsConstant  if the value of the other type is a constant
      *
