@@ -797,6 +797,14 @@ public class PropertyInfo
         }
 
     /**
+     * @return true iff this property is marked as native
+     */
+    public boolean isNative()
+        {
+        return getHead().getImplementation() == Implementation.Native;
+        }
+
+    /**
      * @return true iff this property has a field, whether or not that field is reachable
      */
     public boolean hasField()
@@ -1097,7 +1105,15 @@ public class PropertyInfo
         {
         if (chain == null || chain.length == 0)
             {
-            if (hasField())
+            if (isNative())
+                {
+                chain = new MethodBody[]
+                    {
+                    new MethodBody(constId, constId.getSignature(),
+                            Implementation.Native, null)
+                    };
+                }
+            else if (hasField())
                 {
                 chain = new MethodBody[]
                     {

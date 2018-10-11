@@ -59,6 +59,7 @@ public class xArray
         TypeConstant type = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeInt());
         f_templates.registerNativeTemplate(type, template); // Array<Int>
 
+        markNativeGetter("size");
         markNativeMethod("construct", INT);
         markNativeMethod("construct", new String[]{"Int64", "Function"});
         markNativeMethod("elementAt", INT, new String[] {"Var<ElementType>"});
@@ -182,6 +183,21 @@ public class xArray
             }
 
         return frame.assignValue(iReturn, hArray);
+        }
+
+    @Override
+    protected int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
+        {
+        ArrayHandle hArray = (ArrayHandle) hTarget;
+
+        switch (sPropName)
+            {
+            case "size":
+                return frame.assignValue(iReturn, xInt64.makeHandle(hArray.m_cSize));
+
+            }
+
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     @Override
