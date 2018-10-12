@@ -88,8 +88,21 @@ const String
         return results;
         }
 
+    /**
+     * Look for the specified {@code substring} starting at the specified index.
+     *
+     * @param substring  the substring to search for
+     * @param startAt    the first index to search from (optional)
+     *
+     * @return a conditional return of the location of the index of the specified substring, or
+     *         false if the substring could not be found
+     */
+     conditional Int indexOf(String! substring, Int startAt = 0)
+         {
+         TODO
+         }
+
     // TODO String versions of the various Char methods, including:
-    // indexOf(String!)
     // lastIndexOf(String!)
     // count(String!)
     // String![] split(String! separator)

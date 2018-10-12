@@ -84,7 +84,7 @@ class TestApp
         Int method1()
             {
             String s = prop1;
-            (Boolean f, Int of) = s.indexOf("World", null);
+            (Boolean f, Int of) = s.indexOf("World", 0);
             return of + s.size;
             }
 
