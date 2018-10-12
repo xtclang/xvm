@@ -6,19 +6,34 @@ interface Sequential
         extends Orderable
     {
     /**
-     * Obtain the value that precedes this value, if there is one.
+     * @return the value that precedes this value, if there is one.
      */
     conditional Sequential prev();
 
     /**
-     * Obtain the value that follows this value, if there is one.
+     * @return the value that follows this value, if there is one.
      */
     conditional Sequential next();
 
     /**
-     * Obtain the value that precedes this value.
+     * Determine the distance between this value and that value.
      *
-     * @exception BoundsException  if there is no previous value
+     * Consider these examples:
+     * * The span from 'a' to 'a' is 0
+     * * The span from 'a' to 'z' is 25
+     * * The span from 'z' to 'a' is -25
+     *
+     * @return the number of times that next() (or prev(), if negative) would need to be called to
+     *         sequentially transition from _this_ to _that_
+     *
+     * @throws BoundsException  if the span cannot be represented in a 64-bit integer value
+     */
+    Int stepsTo(Sequential that);
+
+    /**
+     * @return the value that precedes this value.
+     *
+     * @throws BoundsException  if there is no previous value
      */
     Sequential prevValue()
         {
@@ -31,9 +46,9 @@ interface Sequential
         }
 
     /**
-     * Obtain the value that follows this value.
+     * @return the value that follows this value.
      *
-     * @exception BoundsException  if there is no next value
+     * @throws BoundsException  if there is no next value
      */
     Sequential nextValue()
         {

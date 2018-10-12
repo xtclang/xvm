@@ -7,12 +7,14 @@ interface UniformIndexed<IndexType, ElementType>
     /**
      * Obtain the value of the specified element.
      */
-    @Op ElementType getElement(IndexType index);
+    @Op("[]")
+    ElementType getElement(IndexType index);
 
     /**
      * Modify the value in the specified element.
      */
-    @Op void setElement(IndexType index, ElementType value)
+    @Op("[]=")
+    void setElement(IndexType index, ElementType value)
         {
         throw new ReadOnlyException();
         }

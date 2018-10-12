@@ -27,7 +27,7 @@ interface Sequence<ElementType>
      * @throws BoundsException if the specified range exceeds either the lower or upper bounds of
      *         this sequence
      */
-    @Op Sequence<ElementType> slice(Range<Int> range);
+    @Op("[..]") Sequence<ElementType> slice(Range<Int> range);
 
     /**
      * Obtain a Sequence of the same length and that contains the same values as this Sequence, but
@@ -86,7 +86,7 @@ interface Sequence<ElementType>
      */
     conditional Int indexOf(ElementType value, Int startAt = 0)
         {
-        for (Int i = startAt, Int last = size - 1; i < last; i++)
+        for (Int i = 0.maxOf(startAt), Int last = size - 1; i < last; ++i)
             {
             if (this[i] == value)
                 {
@@ -97,70 +97,91 @@ interface Sequence<ElementType>
         }
 
     /**
-     * Look for the specified {@code value} (in the optional {@code range}, if specified), and
-     * return the index of the value if it is found.
+     * Look for the specified {@code value} starting at the specified index.
      *
-     * To search backwards for the "last index" of a value, use the optional range parameter to
-     * indicate the search direction, for example:
-     *
-     *   if (sequence.size > 0 && (Int index : sequence.indexOf(value, sequence.size-1 .. 0)))
-     *       {
-     *       // found the last occurrence of "value" at location "index"
-     *       }
-     *
-     *
-     * @param value  the value to search for
-     * @param range  the range (inclusive) of the sequence to search within (optional)
+     * @param value    the value to search for
+     * @param startAt  the first index to search from (optional)
      *
      * @return a conditional return of the location of the index of the specified value, or
      *         false if the value could not be found
      */
-    conditional Int indexOf(ElementType value, Range<Int>? range = null)
+    conditional Int lastIndexOf(ElementType value, Int startAt = Int.maxvalue)
         {
-        Int size = this.size;
-        Int first;
-        Int last;
-        Int increment = 1;
-        if (range == null)
-            {
-            if (size == 0)
-                {
-                return false;
-                }
-
-            first = 0;
-            last  = size - 1;
-            }
-        else
-            {
-            first = range.lowerBound;
-            last  = range.upperBound;
-            if (first < 0 || last >= size)
-                {
-                throw new BoundsException();
-                }
-
-            if (range.reversed)
-                {
-                Int temp  = first;
-                first     = last;
-                last      = temp;
-                increment = -1;
-                }
-            }
-
-        Int i = first;
-        while (true)
+        for (Int i = (size-1).minOf(startAt); i >= 0; --i)
             {
             if (this[i] == value)
                 {
                 return true, i;
                 }
-            if (i == last)
-                {
-                return false;
-                }
-            i += increment;
             }
+        return false;
         }
+
+// REVIEW this is beautiful, but unfortunately it will have a collision with the other indexOf because of the default range value
+//    /**
+//     * Look for the specified {@code value} (in the optional {@code range}, if specified), and
+//     * return the index of the value if it is found.
+//     *
+//     * To search backwards for the "last index" of a value, use the optional range parameter to
+//     * indicate the search direction, for example:
+//     *
+//     *   if (sequence.size > 0 && (Int index : sequence.indexOf(value, sequence.size-1 .. 0)))
+//     *       {
+//     *       // found the last occurrence of "value" at location "index"
+//     *       }
+//     *
+//     * @param value  the value to search for
+//     * @param range  the range (inclusive) of the sequence to search within (optional)
+//     *
+//     * @return a conditional return of the location of the index of the specified value, or
+//     *         false if the value could not be found
+//     */
+//    conditional Int indexOf(ElementType value, Range<Int>? range = null)
+//        {
+//        Int size = this.size;
+//        Int first;
+//        Int last;
+//        Int increment = 1;
+//        if (range == null)
+//            {
+//            if (size == 0)
+//                {
+//                return false;
+//                }
+//
+//            first = 0;
+//            last  = size - 1;
+//            }
+//        else
+//            {
+//            first = range.lowerBound;
+//            last  = range.upperBound;
+//            if (first < 0 || last >= size)
+//                {
+//                throw new BoundsException();
+//                }
+//
+//            if (range.reversed)
+//                {
+//                Int temp  = first;
+//                first     = last;
+//                last      = temp;
+//                increment = -1;
+//                }
+//            }
+//
+//        Int i = first;
+//        while (true)
+//            {
+//            if (this[i] == value)
+//                {
+//                return true, i;
+//                }
+//            if (i == last)
+//                {
+//                return false;
+//                }
+//            i += increment;
+//            }
+//        }
     }

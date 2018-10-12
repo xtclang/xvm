@@ -6,10 +6,26 @@ mixin Range<ElementType extends Sequential>
         into Interval<ElementType>
         implements Iterable<ElementType>
     {
+    /**
+     * A RangeIterator is an Iterator that knows when it is reaching the end of its range.
+     */
     interface RangeIterator<ElementType>
             extends Iterator<ElementType>
         {
         @RO Boolean hasNext;
+        }
+
+    /**
+     * The size of a Range is defined as the number of Sequential elements represented by the range.
+     *
+     * Consider these examples:
+     * * The size of ['a'..'a'] is 1
+     * * The size of ['a'..'z'] is 26
+     * * The size of ['z'..'a'] is 26
+     */
+    Int size.get()
+        {
+        return lowerBound.stepsTo(upperBound) + 1;
         }
 
     /**

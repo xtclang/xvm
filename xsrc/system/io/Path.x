@@ -41,7 +41,7 @@ const Path
     // ----- properties ----------------------------------------------------------------------------
 
     static Char separatorChar = '/';
-    static String separator = "/";
+    static String root = "/";
 
     /**
      * A normalized (canonical) pathName.
@@ -50,7 +50,7 @@ const Path
 
     @Lazy String[] pathSegments.calc()
         {
-        return pathName.split(separator);
+        return pathName.split(separatorChar);
         }
 
     /**
@@ -66,7 +66,7 @@ const Path
      */
     Boolean isRoot.get()
         {
-        return pathName == separator;
+        return pathName == root;
         }
 
     /**
@@ -125,8 +125,8 @@ const Path
             }
 
         return isRoot
-            ? new Path(separator + path.pathName)
-            : new Path(separator + separatorChar + path.pathName);
+            ? new Path(root + path.pathName)
+            : new Path(root + separatorChar + path.pathName); // REVIEW GG ???
         }
 
     /**

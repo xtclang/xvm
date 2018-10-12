@@ -1821,3 +1821,19 @@ switch (a,b,c)
     case ("ugh", 3..5, ?):
 
     }
+
+console.println(╔═════════════════════════════════╗
+                ║This is a report                 ║
+                ║There are {list.size} items:     ║
+                ║{{                               ║
+                ║Each: for (var v : list)         ║
+                ║    {                            ║
+                ║    $.add("#{Each.count}={v}");  ║
+                ║    }                            ║
+                ║}}                               ║
+                ║This is the end of the report.   ║
+                ╚═════════════════════════════════╝);
+
+console.println(
+
+“list={{L: for (var v : list) {$.add(“{L.count}={v}”);} return “”; }}”)

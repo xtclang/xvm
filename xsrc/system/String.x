@@ -1,145 +1,166 @@
+/**
+ * String is a well-known, immutable data type for holding textual information.
+ */
 const String
         implements Sequence<Char>
+        implements Stringable
     {
-    private construct(Char[] chars)
+    /**
+     * Construct a String from an array of characters.
+     *
+     * @param chars  an array of characters to include in the String
+     */
+    construct(Char[] chars)
         {
         this.chars = chars;
         }
 
+    /**
+     * The array of characters that form the content of the String.
+     */
     private Char[] chars;
 
-    conditional Int indexOf(String value, Range<Int>? range = null)
+
+    // ----- String API ----------------------------------------------------------------------------
+
+    /**
+     * Obtain a portion of this String, beginning with at specified character index.
+     *
+     * @param startAt  the index of the first character of the new string
+     *
+     * @return the specified sub-string
+     */
+    String! substring(Int startAt)
         {
-        TODO - native
-        }
-
-    conditional Int indexOf(String value, Int of = 0)
-        {
-        TODO - native
-        }
-
-//    conditional Int indexOf(Char ch, Int of = 0)
-//        {
-//        if (of < 0)
-//            {
-//            of = 0;
-//            }
-//
-//        while (of < size)
-//            {
-//            if (chars[of] == ch)
-//                {
-//                return true, of;
-//                }
-//
-//            ++of;
-//            }
-//
-//        return false;
-//        }
-
-    conditional Int lastIndexOf(Char ch) // TODO, Int of = Int.maxvalue)
-        {
-        // TODO
-//        if (of >= size)
-//            {
-//            of = size - 1;
-//            }
-        Int of = size;
-
-        while (of >= 0)
+        return switch(startAt)
             {
-            if (ch == chars[of])
-                {
-                return true, of;
-                }
-
-            --of;
-            }
-
-        return false;
+            case startAt <= 0:   this;
+            case startAt < size: this[startAt..size-1];
+            default: "";
+            };
         }
 
-    String substring(Int position)
+// REVIEW do we even need this method?
+    /**
+     * Obtain a portion of this String, beginning with at specified character index.
+     *
+     * @param range  the range (starting through ending, inclusive) of character indexes of the
+     *               characters to include in the new string
+     *
+     * @return the specified sub-string
+     */
+    String! substring(Range<Int> range)
         {
-        TODO
+        return this[range];
         }
 
-    String substring(Interval<Int> range)
+    /**
+     * Obtain this String, but with its contents reversed.
+     *
+     * @return the reversed form of this String
+     */
+    String! reverse()
         {
-        TODO
+        return size <= 1
+                ? this
+                : this[size-1..0];
         }
 
-    Int count(Char char)
+    /**
+     * Count the number of occurrences of the specified character in this String.
+     *
+     * @param value  the character to search for
+     *
+     * @return the number of times that the specified character occurs in this String
+     */
+    Int count(Char value)
         {
         Int count = 0;
         for (Char ch : chars)
             {
-            if (ch == char)
+            if (ch == value)
                 {
-                count++;
+                ++count;
                 }
             }
         return count;
         }
 
-    Char get(Int index)
+    /**
+     * Count the number of occurrences of the specified character in this String.
+     *
+     * @param value  the character to search for
+     *
+     * @return the number of times that the specified character occurs in this String
+     */
+    String![] split(Char separator)
         {
-        return chars[index];
+        String[] results = new String[];
+
+        return results;
         }
 
-    String[] split(Char separator)
-        {
-        TODO -- native
-        }
-
-    String[] split(String separator)
-        {
-        TODO -- native
-        }
+    // TODO String versions of the various Char methods, including:
+    // indexOf(String!)
+    // lastIndexOf(String!)
+    // count(String!)
+    // String![] split(String! separator)
 
     @Override
-    Iterator<Char> iterator()
+    String! to<String!>()
         {
-        TODO -- native
+        return this;
         }
 
-    @Override
-    String! reify()
+    /**
+     * @return the characters of this String as an array
+     */
+    Char[] to<Char[]>()
         {
-        if (this instanceof StringSub)
+        return chars;
+        }
+
+    /**
+     * Duplicate this String the specified number of times.
+     *
+     * @param n  the number of times to duplicate this String
+     *
+     * @return a String that is the result of duplicating this String the specified number of times
+     */
+    @Op("*")
+    String! dup(Int n)
+        {
+        if (n <= 1)
             {
-
+            return n == 1
+                    ? this
+                    : "";
             }
 
-        return this;
+        StringBuffer buf = new StringBuffer(size*n);
+        for (Int i = 0; i < n; ++i)
+            {
+            appendTo(buf);
+            }
         }
 
-    StringAscii to<StringAscii>()
+    /**
+     * Add the String form of the passed object to this String, returning the result.
+     *
+     * @param o  the object to render as a String and append to this String
+     *
+     * @return the concatenation of the String form of the passed object onto this String
+     */
+    @Op("+")
+    String! append(Object o)
         {
-        TODO -- native
+        Int          add = o.is(Stringable) ? o.estimateStringLength() : 0x0F;
+        StringBuffer buf = new StringBuffer(size + add);
+        return (buf + this + o).to<String>();
         }
 
-    StringUtf8 to<StringUtf8>()
-        {
-        TODO -- native
-        }
-    StringUtf16 to<StringUtf16>()
-        {
-        TODO -- native
-        }
-    StringUtf32 to<StringUtf32>()
-        {
-        TODO -- native
-        }
 
-    @Override
-    String to<String>()
-        {
-        return this;
-        }
-
-    // TODO Sequence<Char>
+    // ----- Sequence methods ----------------------------------------------------------------------
 
     @Override
     Int size.get()
@@ -147,84 +168,103 @@ const String
         return chars.size;
         }
 
-    Char[] to<Char[]>()
+    @Override
+    @Op("[]")
+    @Op Char getElement(IndexType index)
         {
-        return chars;
+        return chars[index];
         }
 
-    @Op("*") String! dup(Int n)
+    @Override
+    @Op("[..]")
+    String slice(Range<Int> range)
         {
-        TODO
+        return new String(chars[range]);
         }
 
-    @Op("+") String append(Object o)
+    @Override
+    Iterator<Char> iterator()
         {
-        TODO
+        return chars.iterator;
         }
 
-    //
-    const StringAscii(Byte[] bytes)
+    @Override
+    conditional Int indexOf(Char value, Int startAt = 0)
         {
-        construct(Byte[] bytes)
-            {
-            for (Byte b : bytes)
-                {
-                assert:always b <= 0x7F;
-                }
-
-            this.bytes = bytes.reify();
-            }
-
-        construct(Sequence<Char> seq)
-            {
-            Byte[] bytes  = new Byte[seq.size];
-            Int    offset = 0;
-            for (Char ch : seq)
-                {
-                Int n = ch.codepoint;
-                assert:always n >= 0 && n <= 0x7F;
-                bytes[offset++] = n.to<Byte>();
-                }
-
-            this.bytes = bytes;
-            }
-
-        Char get(Int index)
-            {
-            return bytes[index].to<Char>();
-            }
+        return chars.indexOf(value, startAt);
         }
 
-    const StringUtf8(Byte[] bytes)
+    @Override
+    conditional Int lastIndexOf(Char value, Int startAt = Int.maxvalue)
         {
-        // TODO
+        return chars.lastIndexOf(value, startAt);
         }
 
-    const StringUtf16(UInt16[] int16s)
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
         {
-        // TODO
+        return size;
         }
 
-    const StringUtf32(UInt32[] int32s)
+    @Override
+    void appendTo(Appender<Char> appender, String? format = null)
         {
-        // TODO
+        appender.add(chars);
         }
 
-    const StringSub
-        {
-        private String source;
-        private Int offset;
-        private Int length;
 
-        private construct(String source, Int offset, Int length)
-            {
-            assert:always offset >= 0;
-            assert:always length >= 0;
-            assert:always offset + length <= source.size;
+// TODO GG we need char[] to do this automatically (native)
+//    const StringAscii(Byte[] bytes)
+//        {
+//        construct(Byte[] bytes)
+//            {
+//            for (Byte b : bytes)
+//                {
+//                assert:always b <= 0x7F;
+//                }
+//
+//            this.bytes = bytes.reify();
+//            }
+//
+//        construct(Sequence<Char> seq)
+//            {
+//            Byte[] bytes  = new Byte[seq.size];
+//            Int    offset = 0;
+//            for (Char ch : seq)
+//                {
+//                Int n = ch.codepoint;
+//                assert:always n >= 0 && n <= 0x7F;
+//                bytes[offset++] = n.to<Byte>();
+//                }
+//
+//            this.bytes = bytes;
+//            }
+//
+//        Char get(Int index)
+//            {
+//            return bytes[index].to<Char>();
+//            }
+//        }
 
-            this.source = source;
-            this.offset = offset;
-            this.length = length;
-            }
-        }
+// TODO consider?
+//    const StringSub
+//        {
+//        private String source;
+//        private Int offset;
+//        private Int length;
+//
+//        private construct(String source, Int offset, Int length)
+//            {
+//            assert:always offset >= 0;
+//            assert:always length >= 0;
+//            assert:always offset + length <= source.size;
+//
+//            this.source = source;
+//            this.offset = offset;
+//            this.length = length;
+//            }
+//        }
     }
