@@ -18,7 +18,6 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
-import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
 import org.xvm.asm.Version;
 
@@ -550,9 +549,9 @@ public class InvocationExpression
                         }
                     if (argMethod instanceof MethodConstant)
                         {
-                        MethodConstant  constMethod = (MethodConstant) argMethod;
+                        MethodConstant  idMethod    = (MethodConstant) argMethod;
                         MethodStructure method      = m_method;
-                        TypeConstant[]  atypeArgs   = constMethod.getRawParams();
+                        TypeConstant[]  atypeArgs   = idMethod.getRawParams();
                         int             cTypeParams = method.getTypeParamCount();
 
                         if (cTypeParams > 0)
@@ -573,7 +572,6 @@ public class InvocationExpression
                                 {
                                 typeTuple = pool.ensureParameterizedTypeConstant(
                                         pool.typeTuple(), atypeArgs);
-
                                 if (!args.get(0).testFit(ctx, typeTuple).isFit())
                                     {
                                     // the regular "validateExpressions" call will report an error
@@ -588,22 +586,8 @@ public class InvocationExpression
                             }
                         else
                             {
-                            Expression exprOld = args.get(0);
-                            Expression exprNew = exprOld.validate(ctx, typeTuple, errs);
-                            if (exprNew == null)
-                                {
-                                // validation failed
-                                atypeArgs = null;
-                                }
-                            else
-                                {
-                                if (exprOld != exprNew)
-                                    {
-                                    args.set(0, exprNew);
-                                    }
-                                atypeArgs   = exprNew.getType().getParamTypesArray();
-                                m_fTupleArg = true;
-                                }
+                            atypeArgs   = validateExpressionsFromTuple(ctx, args, typeTuple, errs);
+                            m_fTupleArg = true;
                             }
 
                         if (atypeArgs != null)
@@ -624,27 +608,14 @@ public class InvocationExpression
                                 m_atypeTypeParams = atypeTypeParam;
                                 }
 
-                            int cParamsAll = method.getParamCount();
-                            int cArgs      = atypeArgs.length;
-                            int cDefault   = cParamsAll - cTypeParams - cArgs;
-                            if (cDefault > 0)
-                                {
-                                Constant[] aconstDefault = new Constant[cDefault];
-                                for (int i = 0; i < cDefault; i++)
-                                    {
-                                    Parameter param = method.getParam(cTypeParams + cArgs + i);
-                                    assert param.hasDefaultValue();
-                                    aconstDefault[i] = pool.valNull(); // TODO GG: param.getDefaultValue();
-                                    }
-                                m_aconstDefault = aconstDefault;
-                                }
+                            m_aconstDefault = collectDefaultArgs(method, atypeArgs.length);
 
                             TypeConstant[] atypeResult;
                             if (m_fCall)
                                 {
                                 SignatureConstant sigRet = m_method.isFunction()
-                                        ? constMethod.getSignature()
-                                        : constMethod.resolveAutoNarrowing(pool, typeLeft);
+                                        ? idMethod.getSignature()
+                                        : idMethod.resolveAutoNarrowing(pool, typeLeft);
                                 if (!mapTypeParams.isEmpty())
                                     {
                                     sigRet = sigRet.resolveGenericTypes(pool, mapTypeParams::get);
@@ -653,11 +624,11 @@ public class InvocationExpression
                                 }
                             else if (m_fBindTarget)
                                 {
-                                atypeResult = new TypeConstant[] {constMethod.getType()};
+                                atypeResult = new TypeConstant[] {idMethod.getType()};
                                 }
                             else
                                 {
-                                atypeResult = new TypeConstant[] {constMethod.getRefType(typeLeft)};
+                                atypeResult = new TypeConstant[] {idMethod.getRefType(typeLeft)};
                                 }
 
                             // TODO if exprLeft == null then markVarRead on "this"
@@ -812,10 +783,9 @@ public class InvocationExpression
                             {
                             // it's a method, and we need to generate the necessary code that calls it;
                             // generate the arguments
-                            TypeConstant[] atypeParams     = idMethod.getRawParams();
                             TypeConstant[] atypeTypeParams = m_atypeTypeParams;
                             Constant[]     aconstDefault   = m_aconstDefault;
-                            int            cAll            = atypeParams.length;
+                            int            cAll            = idMethod.getRawParams().length;
                             int            cTypeParams     = atypeTypeParams == null ? 0 : atypeTypeParams.length;
                             int            cArgs           = args.size();
                             int            cDefaults       = aconstDefault == null ? 0 : aconstDefault.length;
@@ -1727,7 +1697,7 @@ public class InvocationExpression
     private transient MethodStructure m_method;          // if m_fArgMethod is a MethodConstant,
                                                          // this holds the corresponding structure
     private transient TypeConstant[]  m_atypeTypeParams; // "hidden" type parameters
-    private transient Constant[]      m_aconstDefault;   // redundant return types
+    private transient Constant[]      m_aconstDefault;   // default arguments
     private transient MethodConstant  m_idConvert;       // conversion method
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(InvocationExpression.class, "expr", "args");

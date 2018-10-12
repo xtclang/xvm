@@ -790,6 +790,35 @@ public abstract class AstNode
         return fValid ? atype : null;
         }
 
+    /**
+     * Validate the specified expressions against the required types.
+     *
+     * @param ctx         the compiler context
+     * @param listExpr    the list of expressions (may be modified)
+     * @param typeTuple   the required tuple type
+     * @param errs        the error listener
+     *
+     * @return an array of TypeConstants describing the actual expression types or null
+     *         if the validation fails, in which case an error has been reported
+     */
+    protected TypeConstant[] validateExpressionsFromTuple(Context ctx, List<Expression> listExpr,
+                                                          TypeConstant typeTuple, ErrorListener errs)
+        {
+        Expression exprOld = listExpr.get(0);
+        Expression exprNew = exprOld.validate(ctx, typeTuple, errs);
+        if (exprNew == null)
+            {
+            // validation failed
+            return null;
+            }
+
+        if (exprOld != exprNew)
+            {
+            listExpr.set(0, exprNew);
+            }
+        return exprNew.getType().getParamTypesArray();
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 

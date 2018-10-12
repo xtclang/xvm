@@ -20,6 +20,7 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
+import static org.xvm.util.Handy.checkElementsNonNull;
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -58,6 +59,8 @@ public class New_N
     public New_N(MethodConstant constMethod, Argument[] aArgValue, Argument argReturn)
         {
         super(constMethod);
+
+        checkElementsNonNull(aArgValue);
 
         m_aArgValue = aArgValue;
         m_argReturn = argReturn;

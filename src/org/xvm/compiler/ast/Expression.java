@@ -2156,6 +2156,58 @@ public abstract class Expression
         }
 
     /**
+     * Collect the default arguments for the specified method.
+     *
+     * @param method  the method
+     * @param cArgs   the number of explicitly specified arguments
+     *
+     * @return the array of constants or null if no defaults are needed
+     */
+    protected Constant[] collectDefaultArgs(MethodStructure method, int cArgs)
+        {
+        int cParamsAll  = method.getParamCount();
+        int cTypeParams = method.getTypeParamCount();
+        int cDefault    = cParamsAll - cTypeParams - cArgs;
+        if (cDefault == 0)
+            {
+            return null;
+            }
+
+        ConstantPool pool          = pool();
+        Constant[]   aconstDefault = new Constant[cDefault];
+        for (int i = 0; i < cDefault; i++)
+            {
+            org.xvm.asm.Parameter param = method.getParam(cTypeParams + cArgs + i);
+            assert param.hasDefaultValue();
+
+            Constant constValue = param.getDefaultValue();
+            if (constValue == null)
+                {
+                // TODO: GG do it correctly
+                TypeConstant type = param.getType();
+                if (type.equals(pool.typeInt()))
+                    {
+                    constValue = pool.val0();
+                    }
+                else if (type.equals(pool.typeBoolean()))
+                    {
+                    constValue = pool.valFalse();
+                    }
+                else if (pool.typeNullable().isA(type))
+                    {
+                    constValue = pool.valNull();
+                    }
+                else
+                    {
+                    throw new UnsupportedOperationException();
+                    }
+                }
+            aconstDefault[i] = constValue;
+            }
+        return aconstDefault;
+        }
+
+    /**
      * Generate a "this" or some other reserved register.
      *
      * @param nReg  the register identifier

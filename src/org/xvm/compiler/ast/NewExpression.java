@@ -6,6 +6,8 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
@@ -311,23 +313,37 @@ public class NewExpression
                     return finishValidation(typeRequired, null, TypeFit.NoFit, null, errs);
                     }
 
-                TypeConstant[] atypeParams = idMethod.getRawParams();
-                for (int i = 0, c = listArgs.size(); i < c; ++i)
+                ConstantPool   pool      = pool();
+                TypeConstant[] atypeArgs = idMethod.getRawParams();
+
+                // test the "regular fit" first and Tuple afterwards
+                TypeConstant typeTuple = null;
+                if (!testExpressions(ctx, listArgs, atypeArgs).isFit())
                     {
-                    Expression exprArgOld = listArgs.get(i);
-                    Expression exprArgNew = exprArgOld.validate(ctx, atypeParams[i], errs);
-                    if (exprArgNew == null)
+                    // otherwise, check the tuple based invoke (see Expression.findMethod)
+                    if (args.size() == 1)
                         {
-                        fValid = false;
-                        }
-                    else
-                        {
-                        if (exprArgNew != exprArgOld)
+                        typeTuple = pool.ensureParameterizedTypeConstant(
+                                pool.typeTuple(), atypeArgs);
+                        if (!args.get(0).testFit(ctx, typeTuple).isFit())
                             {
-                            listArgs.set(i, exprArgNew);
+                            // the regular "validateExpressions" call will report an error
+                            typeTuple = null;
                             }
                         }
                     }
+
+                if (typeTuple == null)
+                    {
+                    fValid = validateExpressions(ctx, listArgs, atypeArgs, errs) != null;
+                    }
+                else
+                    {
+                    fValid = validateExpressionsFromTuple(ctx, listArgs, typeTuple, errs) != null;
+                    m_fTupleArg = true;
+                    }
+
+                m_aconstDefault = collectDefaultArgs(m_constructor, listArgs.size());
                 }
             }
 
@@ -380,7 +396,7 @@ public class NewExpression
 
         Argument argResult = new Register(getType());
 
-        generateNew(code, cArgs, aArgs, argResult);
+        generateNew(code, aArgs, argResult);
 
         return argResult;
         }
@@ -404,7 +420,7 @@ public class NewExpression
                 ? LVal.getLocalArgument()
                 : new Register(LVal.getType());
 
-        generateNew(code, cArgs, aArgs, argResult);
+        generateNew(code, aArgs, argResult);
 
         if (!LVal.isLocalArgument())
             {
@@ -415,44 +431,71 @@ public class NewExpression
     /**
      * Generate the NEW_* op-code
      */
-    private void generateNew(Code code, int cArgs, Argument[] aArgs, Argument argResult)
+    private void generateNew(Code code, Argument[] aArgs, Argument argResult)
         {
-        MethodConstant idConstruct = m_constructor.getIdentityConstant();
-        TypeConstant   typeTarget  = argResult.getType();
+        MethodConstant idConstruct   = m_constructor.getIdentityConstant();
+        TypeConstant   typeTarget    = argResult.getType();
+        Constant[]     aconstDefault = m_aconstDefault;
+        int            cAll          = idConstruct.getRawParams().length;
+        int            cArgs         = aArgs.length;
+        int            cDefaults     = aconstDefault == null ? 0 : aconstDefault.length;
 
-        if (typeTarget.isParamsSpecified())
+        if (m_fTupleArg)
             {
-            switch (cArgs)
-                {
-                case 0:
-                    code.add(new NewG_0(idConstruct, typeTarget, argResult));
-                    break;
-
-                case 1:
-                    code.add(new NewG_1(idConstruct, typeTarget, aArgs[0], argResult));
-                    break;
-
-                default:
-                    code.add(new NewG_N(idConstruct, typeTarget, aArgs, argResult));
-                    break;
-                }
+            notImplemented();
             }
         else
             {
-            assert idConstruct.getNamespace().equals(typeTarget.getDefiningConstant());
-            switch (cArgs)
+            assert cArgs + cDefaults == cAll;
+            if (cDefaults > 0)
                 {
-                case 0:
-                    code.add(new New_0(idConstruct, argResult));
-                    break;
+                if (cArgs == 0)
+                    {
+                    aArgs = aconstDefault;
+                    }
+                else
+                    {
+                    Argument[] aArgAll = new Argument[cAll];
+                    System.arraycopy(aArgs, 0, aArgAll, 0, cArgs);
+                    System.arraycopy(aconstDefault, 0, aArgAll, cArgs, cDefaults);
+                    aArgs = aArgAll;
+                    }
+                }
 
-                case 1:
-                    code.add(new New_1(idConstruct, aArgs[0], argResult));
-                    break;
+            if (typeTarget.isParamsSpecified())
+                {
+                switch (cAll)
+                    {
+                    case 0:
+                        code.add(new NewG_0(idConstruct, typeTarget, argResult));
+                        break;
 
-                default:
-                    code.add(new New_N(idConstruct, aArgs, argResult));
-                    break;
+                    case 1:
+                        code.add(new NewG_1(idConstruct, typeTarget, aArgs[0], argResult));
+                        break;
+
+                    default:
+                        code.add(new NewG_N(idConstruct, typeTarget, aArgs, argResult));
+                        break;
+                    }
+                }
+            else
+                {
+                assert idConstruct.getNamespace().equals(typeTarget.getDefiningConstant());
+                switch (cAll)
+                    {
+                    case 0:
+                        code.add(new New_0(idConstruct, argResult));
+                        break;
+
+                    case 1:
+                        code.add(new New_1(idConstruct, aArgs[0], argResult));
+                        break;
+
+                    default:
+                        code.add(new New_N(idConstruct, aArgs, argResult));
+                        break;
+                    }
                 }
             }
         }
@@ -536,6 +579,8 @@ public class NewExpression
     protected long             lEndPos;
 
     private transient MethodStructure m_constructor;
+    private transient boolean         m_fTupleArg;     // indicates that arguments come from a tuple
+    private transient Constant[]      m_aconstDefault; // default arguments
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NewExpression.class, "left", "type", "args", "body");
     }
