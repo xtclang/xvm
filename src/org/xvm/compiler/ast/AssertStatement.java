@@ -1,8 +1,10 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.op.Assert;
 
@@ -74,6 +76,9 @@ public class AssertStatement
             }
         else if (cond instanceof Expression)
             {
+            // if (keyword.getId() == Token.Id.ASSERT_ALL)
+            ctx = new AssertContext(ctx);
+
             Expression exprOld = (Expression) cond;
             Expression exprNew = exprOld.validate(ctx, pool().typeBoolean(), errs);
             if (exprNew == null)
@@ -84,6 +89,8 @@ public class AssertStatement
                 {
                 cond = exprNew;
                 }
+
+            ctx = ctx.exit();
             }
 
         return fValid
@@ -122,6 +129,34 @@ public class AssertStatement
         return fCompletes;
         }
 
+
+    static class AssertContext
+            extends Context
+        {
+        public AssertContext(Context outer)
+            {
+            super(outer, true);
+            }
+
+        @Override
+        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
+            {
+            return asnInner.whenTrue();
+            }
+
+        @Override
+        protected void promoteNarrowingType(String sName, Register register, boolean fWhenTrue)
+            {
+            if (fWhenTrue)
+                {
+                if (getOuterContext().ensureNameMap().put(sName, register) != null)
+                    {
+                    // the narrowing register has replaced a local register; remember that fact
+                    register.markInPlace();
+                    }
+                }
+            }
+        }
 
     // ----- debugging assistance ------------------------------------------------------------------
 

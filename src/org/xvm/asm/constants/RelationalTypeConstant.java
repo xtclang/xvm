@@ -82,17 +82,29 @@ public abstract class RelationalTypeConstant
     // ----- type algebra methods ------------------------------------------------------------------
 
     /**
-     * TODO  Combine and reduce
-     * @return
+     * Combine the specified types and attempt to produce a minimal representation of the
+     * type that is known to be assignable to both specified types.
+     *
+     * @return a reduction for the union of the specified types
      */
     public static TypeConstant combineWith(ConstantPool pool, TypeConstant type1, TypeConstant type2)
         {
+        if (type1.isA(type2))
+            {
+            return type1;
+            }
+        if (type2.isA(type1))
+            {
+            return type2;
+            }
         return pool.ensureUnionTypeConstant(type1, type2);
         }
 
     /**
-     * TODO Combine and omit
-     * @return
+     * Produce a minimal representation the type that is known to be assignable to the first but
+     * is also known not to be the second.
+     *
+     * @return a reduction for the difference between the first and second types
      */
     public static TypeConstant combineWithout(ConstantPool pool, TypeConstant type1, TypeConstant type2)
         {

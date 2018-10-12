@@ -672,7 +672,7 @@ public class StatementBlock
         @Override
         protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs)
             {
-            Argument arg = super.getVar(sName, name, branch, errs);
+            Argument arg = getLocalVar(sName, branch);
             return arg == null
                     ? resolveReservedName(sName, name, errs)
                     : arg;

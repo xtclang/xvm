@@ -17,6 +17,7 @@ import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Token;
 
+import org.xvm.compiler.ast.Context.Branch;
 
 /**
  * Expression for "expression is expression" or "expression instanceof type".
@@ -78,10 +79,11 @@ public class IsExpression
                 NameExpression exprName   = (NameExpression) exprTarget;
                 TypeConstant   typeTarget = exprTarget.getType();
                 TypeConstant   typeTest   = exprType.ensureTypeConstant();
-                TypeConstant   typeTrue   = RelationalTypeConstant.combineWith(pool, typeTarget, typeTest);
-                TypeConstant   typeFalse  = RelationalTypeConstant.combineWithout(pool, typeTarget, typeTest);
 
-                ctx.narrowType(exprName.name, typeTrue, typeFalse);
+                ctx.narrowType(exprName.name, Branch.WhenTrue,
+                        RelationalTypeConstant.combineWith(pool, typeTarget, typeTest));
+                ctx.narrowType(exprName.name, Branch.WhenFalse,
+                        RelationalTypeConstant.combineWithout(pool, typeTarget, typeTest));
                 }
             }
 
