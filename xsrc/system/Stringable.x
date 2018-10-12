@@ -14,9 +14,6 @@ interface Stringable
      * Append the String form of this Stringable object to the provided character Appender.
      *
      * @param appender  the Appender to append the String form of this object to
-     * @param format    for types that have the ability to format themselves, such as a date or a
-     *                  decimal value, this parameter may optionally specify a format string;
-     *                  otherwise this value is ignored
      */
-    void appendTo(Appender<Char> appender, String? format = null);
+    void appendTo(Appender<Char> appender);
     }

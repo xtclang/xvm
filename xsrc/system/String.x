@@ -32,26 +32,12 @@ const String
      */
     String! substring(Int startAt)
         {
-        return switch(startAt)
+        return switch()
             {
             case startAt <= 0:   this;
             case startAt < size: this[startAt..size-1];
             default: "";
             };
-        }
-
-// REVIEW do we even need this method?
-    /**
-     * Obtain a portion of this String, beginning with at specified character index.
-     *
-     * @param range  the range (starting through ending, inclusive) of character indexes of the
-     *               characters to include in the new string
-     *
-     * @return the specified sub-string
-     */
-    String! substring(Range<Int> range)
-        {
-        return this[range];
         }
 
     /**
@@ -96,6 +82,8 @@ const String
     String![] split(Char separator)
         {
         String[] results = new String[];
+
+        // TODO
 
         return results;
         }
@@ -142,6 +130,7 @@ const String
             {
             appendTo(buf);
             }
+        return buf.to<String>();
         }
 
     /**
@@ -170,7 +159,7 @@ const String
 
     @Override
     @Op("[]")
-    @Op Char getElement(IndexType index)
+    @Op Char getElement(Int index)
         {
         return chars[index];
         }
@@ -185,7 +174,7 @@ const String
     @Override
     Iterator<Char> iterator()
         {
-        return chars.iterator;
+        return chars.iterator();
         }
 
     @Override
@@ -210,61 +199,8 @@ const String
         }
 
     @Override
-    void appendTo(Appender<Char> appender, String? format = null)
+    void appendTo(Appender<Char> appender)
         {
         appender.add(chars);
         }
-
-
-// TODO GG we need char[] to do this automatically (native)
-//    const StringAscii(Byte[] bytes)
-//        {
-//        construct(Byte[] bytes)
-//            {
-//            for (Byte b : bytes)
-//                {
-//                assert:always b <= 0x7F;
-//                }
-//
-//            this.bytes = bytes.reify();
-//            }
-//
-//        construct(Sequence<Char> seq)
-//            {
-//            Byte[] bytes  = new Byte[seq.size];
-//            Int    offset = 0;
-//            for (Char ch : seq)
-//                {
-//                Int n = ch.codepoint;
-//                assert:always n >= 0 && n <= 0x7F;
-//                bytes[offset++] = n.to<Byte>();
-//                }
-//
-//            this.bytes = bytes;
-//            }
-//
-//        Char get(Int index)
-//            {
-//            return bytes[index].to<Char>();
-//            }
-//        }
-
-// TODO consider?
-//    const StringSub
-//        {
-//        private String source;
-//        private Int offset;
-//        private Int length;
-//
-//        private construct(String source, Int offset, Int length)
-//            {
-//            assert:always offset >= 0;
-//            assert:always length >= 0;
-//            assert:always offset + length <= source.size;
-//
-//            this.source = source;
-//            this.offset = offset;
-//            this.length = length;
-//            }
-//        }
     }

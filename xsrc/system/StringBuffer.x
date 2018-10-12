@@ -5,6 +5,7 @@
 class StringBuffer
         implements Appender<Char>
         implements Sequence<Char>
+        implements Stringable
     {
     /**
      * Construct a StringBuffer.
@@ -17,7 +18,7 @@ class StringBuffer
         }
 
     /**
-     * The underlying representation of a StringBuffer is a mutable array of char.
+     * The underlying representation of a StringBuffer is a mutable array of characters.
      */
     private Char[] chars;
 
@@ -60,7 +61,7 @@ class StringBuffer
         }
 
     @Override
-    void appendTo(Appender<Char> appender, String? format = null)
+    void appendTo(Appender<Char> appender)
         {
         appender.add(chars);
         }
@@ -69,10 +70,12 @@ class StringBuffer
     // ----- Appender methods ----------------------------------------------------------------------
 
     @Override
-    Appender add(Char v)
+    StringBuffer add(Char v)
         {
         chars[size] = v;
+        return this;
         }
+
 
     // ----- Sequence methods ----------------------------------------------------------------------
 
@@ -84,21 +87,21 @@ class StringBuffer
 
     @Override
     @Op("[]")
-    @Op Char getElement(IndexType index)
+    @Op Char getElement(Int index)
         {
         return chars[index];
         }
 
     @Override
     @Op("[]=")
-    void setElement(IndexType index, Char value)
+    void setElement(Int index, Char value)
         {
         chars[index] = value;
         }
 
     @Override
     @Op("[..]")
-    StringBuffer slice(Range<Int> range)
+    StringBuffer! slice(Range<Int> range)
         {
         StringBuffer that = new StringBuffer(range.size);
         that.add(chars[range]);
@@ -108,7 +111,7 @@ class StringBuffer
     @Override
     Iterator<Char> iterator()
         {
-        return chars.iterator;
+        return chars.iterator();
         }
 
     @Override
