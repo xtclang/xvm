@@ -43,7 +43,7 @@ interface Appender<ElementType>
     /**
      * Add the items from the passed Iterator to this structure.
      *
-     * @param iter  the Iterator of values ot add
+     * @param iter  the Iterator of values to add
      */
     void add(Iterator<ElementType> iter)
         {
