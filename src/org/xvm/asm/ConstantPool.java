@@ -963,6 +963,7 @@ public class ConstantPool
             case "X":
                 break;
 
+            case "Appender":
             case "Bit":
             case "Boolean":
             case "Char":
@@ -986,6 +987,8 @@ public class ConstantPool
             case "Ref":
             case "Service":
             case "String":
+            case "Stringable":
+            case "StringBuffer":
             case "Struct":
             case "Type":
             case "Orderable":
