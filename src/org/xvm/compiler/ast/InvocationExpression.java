@@ -634,7 +634,7 @@ public class InvocationExpression
                                     {
                                     Parameter param = method.getParam(cTypeParams + cArgs + i);
                                     assert param.hasDefaultValue();
-                                    aconstDefault[i] = param.getDefaultValue();
+                                    aconstDefault[i] = pool.valNull(); // TODO GG: param.getDefaultValue();
                                     }
                                 m_aconstDefault = aconstDefault;
                                 }

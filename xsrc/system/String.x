@@ -81,31 +81,79 @@ const String
      */
     String![] split(Char separator)
         {
+        if (size == 0)
+            {
+            return [""];
+            }
+
         String[] results = new String[];
 
-        // TODO
+        Int start = 0;
+        while (Int next : indexOf(separator, start))
+            {
+            results += start == next ? "" : this[start..next-1];
+            start    = next + 1;
+            }
+
+        // whatever remains after the last separator (or the entire String, if there were no
+        // separators found)
+        results += substring(start);
 
         return results;
         }
 
     /**
-     * Look for the specified {@code substring} starting at the specified index.
+     * Look for the specified {@code that} starting at the specified index.
      *
-     * @param substring  the substring to search for
-     * @param startAt    the first index to search from (optional)
+     * @param that     the substring to search for
+     * @param startAt  the first index to search from (optional)
      *
      * @return a conditional return of the location of the index of the specified substring, or
      *         false if the substring could not be found
      */
-     conditional Int indexOf(String! substring, Int startAt = 0)
+     conditional Int indexOf(String! that, Int startAt = 0)
          {
-         TODO
-         }
+         // if we've already run out of space for that string to fit, then it can't be found
+         Int thisLen = this.size;
+         Int thatLen = that.size;
+         if (startAt > thisLen - thatLen)
+             {
+             return false;
+             }
 
-    // TODO String versions of the various Char methods, including:
-    // lastIndexOf(String!)
-    // count(String!)
-    // String![] split(String! separator)
+         // can't start before the start of the string (at zero)
+         startAt = startAt.maxOf(0);
+
+         // break out the special conditions (for small search strings)
+         if (thatLen <= 1)
+             {
+             // assume that we can find the empty string wherever we look
+             if (thatLen == 0)
+                {
+                return true, startAt;
+                }
+
+             // for single-character strings, use the more efficient single-character search
+             return indexOf(that[0], startAt);
+             }
+
+         // otherwise, brute force
+         Char first = that[0];
+         NextTry: while (Int next : indexOf(first, startAt))
+             {
+             for (Int of = 1; of < thatLen; ++of)
+                 {
+                 if (this[next+of] != that[of])
+                     {
+                     startAt = next + 1;
+                     continue NextTry;
+                     }
+                 }
+             return true, next;
+             }
+
+         return false;
+         }
 
     @Override
     String! to<String!>()
