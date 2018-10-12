@@ -134,11 +134,11 @@ const String
                 }
 
              // for single-character strings, use the more efficient single-character search
-             return indexOf(substring[0], startAt);
+             return indexOf(that[0], startAt);
              }
 
          // otherwise, brute force
-         Char first = substring[0];
+         Char first = that[0];
          NextTry: while (Int next : indexOf(first, startAt))
              {
              for (Int of = 1; of < thatLen; ++of)
