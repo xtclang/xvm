@@ -321,7 +321,7 @@ public abstract class ObjectHandle
     public abstract static class ArrayHandle
             extends ObjectHandle
         {
-        public boolean m_fFixed;
+        public MutabilityConstraint m_mutability;
         public int m_cSize;
 
         protected ArrayHandle(TypeComposition clzArray)
@@ -353,6 +353,8 @@ public abstract class ObjectHandle
             }
         }
 
+    public enum MutabilityConstraint
+        {Mutable, FixedSize, Persistent, Constant}
 
     // ----- DEFERRED ----
 

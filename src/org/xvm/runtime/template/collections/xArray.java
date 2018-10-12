@@ -17,6 +17,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.ObjectHandle.MutabilityConstraint;
 import org.xvm.runtime.ObjectHeap;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.ClassTemplate;
@@ -63,7 +64,8 @@ public class xArray
         markNativeMethod("construct", INT);
         markNativeMethod("construct", new String[]{"Int64", "Function"});
         markNativeMethod("elementAt", INT, new String[] {"Var<ElementType>"});
-        markNativeMethod("reify", VOID, new String[]{"collections.Array<ElementType>"});
+        markNativeMethod("reify", VOID, ARRAY);
+        markNativeMethod("addElement", ELEMENT_TYPE, ARRAY);
         }
 
     @Override
@@ -159,7 +161,8 @@ public class xArray
                          TypeComposition clzArray, ObjectHandle[] ahVar, int iReturn)
         {
         // this is a native constructor
-        long cCapacity = ((JavaLong) ahVar[0]).getValue();
+        JavaLong hCapacity = (JavaLong) ahVar[0];
+        long     cCapacity = hCapacity == null ? 0 : hCapacity.getValue();
 
         if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
             {
@@ -170,15 +173,20 @@ public class xArray
         xArray      template = (xArray) clzArray.getTemplate();
         ArrayHandle hArray   = template.createArrayHandle(frame, clzArray, cCapacity);
 
-        if (cCapacity > 0)
+        if (ahVar.length == 1)
             {
-            hArray.m_fFixed = true;
+            hArray.m_mutability = MutabilityConstraint.Mutable;
+            }
+        else
+            {
+            hArray.m_mutability = MutabilityConstraint.FixedSize;
 
-            if (ahVar.length == 2)
+            long cSize = cCapacity;
+            if (cSize > 0)
                 {
                 FunctionHandle hSupplier = (FunctionHandle) ahVar[1];
 
-                return new Fill(this, hArray, cCapacity, hSupplier, iReturn).doNext(frame);
+                return new Fill(this, hArray, cSize, hSupplier, iReturn).doNext(frame);
                 }
             }
 
@@ -194,10 +202,25 @@ public class xArray
             {
             case "size":
                 return frame.assignValue(iReturn, xInt64.makeHandle(hArray.m_cSize));
-
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
+        }
+
+    @Override
+    public int invokeNative1(Frame frame, MethodStructure method,
+                             ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        switch (method.getName())
+            {
+            case "addElement":
+                return addElement(frame, hTarget, hArg, iReturn);
+
+            case "elementAt":
+                return makeRef(frame, hTarget, ((JavaLong) hArg).getValue(), false, iReturn);
+            }
+
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
     @Override
@@ -258,6 +281,38 @@ public class xArray
         return true;
         }
 
+    /**
+     * addElement() implementation
+     */
+    protected int addElement(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
+        {
+        GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
+        int                ixNext = hArray.m_cSize;
+
+        switch (hArray.m_mutability)
+            {
+            case Constant:
+                return frame.raiseException(xException.immutableObject());
+
+            case FixedSize:
+                return frame.raiseException(xException.illegalOperation());
+
+            case Persistent:
+                // TODO: implement
+                return frame.raiseException(xException.unsupportedOperation());
+            }
+
+        ObjectHandle[] ahValue = hArray.m_ahValue;
+        if (ixNext == ahValue.length)
+            {
+            ahValue = hArray.m_ahValue = grow(ahValue, ixNext);
+            }
+        hArray.m_cSize++;
+
+        ahValue[ixNext] = hValue;
+        return frame.assignValue(iReturn, hArray); // return this
+        }
+
 
     // ----- IndexSupport methods -----
 
@@ -278,37 +333,39 @@ public class xArray
     public int assignArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
         {
         GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
-
-        int cSize = hArray.m_cSize;
+        int                cSize  = hArray.m_cSize;
 
         if (lIndex < 0 || lIndex > cSize)
             {
             return frame.raiseException(IndexSupport.outOfRange(lIndex, cSize));
             }
 
+        switch (hArray.m_mutability)
+            {
+            case Constant:
+                return frame.raiseException(xException.immutableObject());
+
+            case Persistent:
+                return frame.raiseException(xException.illegalOperation());
+            }
+
+        ObjectHandle[] ahValue = hArray.m_ahValue;
         if (lIndex == cSize)
             {
             // an array can only grow without any "holes"
-            int cCapacity = hArray.m_ahValue.length;
-            if (cSize == cCapacity)
+            if (cSize == ahValue.length)
                 {
-                if (hArray.m_fFixed)
+                if (hArray.m_mutability == MutabilityConstraint.FixedSize)
                     {
-                    return frame.raiseException(IndexSupport.outOfRange(lIndex, cSize));
+                    return frame.raiseException(xException.illegalOperation());
                     }
 
-                // resize (TODO: we should be much smarter here)
-                cCapacity = cCapacity + Math.max(cCapacity >> 2, 16);
-
-                ObjectHandle[] ahNew = new ObjectHandle[cCapacity];
-                System.arraycopy(hArray.m_ahValue, 0, ahNew, 0, cSize);
-                hArray.m_ahValue = ahNew;
+                ahValue = hArray.m_ahValue = grow(ahValue, cSize);
                 }
-
             hArray.m_cSize++;
             }
 
-        hArray.m_ahValue[(int) lIndex] = hValue;
+        ahValue[(int) lIndex] = hValue;
         return Op.R_NEXT;
         }
 
@@ -324,6 +381,21 @@ public class xArray
         ArrayHandle hArray = (ArrayHandle) hTarget;
 
         return hArray.m_cSize;
+        }
+
+    // ----- helper methods -----
+
+    private ObjectHandle[] grow(ObjectHandle[] ahValue, int cSize)
+        {
+        // an array can only grow without any "holes"
+        int cCapacity = ahValue.length;
+
+        // resize (TODO: we should be much smarter here)
+        cCapacity = cCapacity + Math.max(cCapacity >> 2, 16);
+
+        ObjectHandle[] ahNew = new ObjectHandle[cCapacity];
+        System.arraycopy(ahValue, 0, ahNew, 0, cSize);
+        return ahNew;
         }
 
     // ----- helper classes -----
@@ -492,8 +564,10 @@ public class xArray
         @Override
         public String toString()
             {
-            return super.toString() + (m_fFixed ? "fixed" : "capacity=" + m_ahValue.length)
-                    + ", size=" + m_cSize;
+            return super.toString() + m_mutability + ", size=" + m_cSize;
             }
         }
+
+    protected static final String[] ELEMENT_TYPE = new String[] {"ElementType"};
+    protected static final String[] ARRAY = new String[]{"collections.Array!<ElementType>"};
     }

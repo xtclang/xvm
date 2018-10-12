@@ -364,13 +364,10 @@ class TestApp
         print(ari);
         }
 
-    static String lambda_2(Var<Int> i)
-        {
-        TODO // TODO remove
-        }
-
     static void testArray()
         {
+        print("*** In TestApp.testArray");
+
         Int[] ai = new Int[]; // mutable Array<Int>
         ai[0] = 1;
         ai[1] = 2;
@@ -383,12 +380,12 @@ class TestApp
         print(as1);
         print(as1[4]);
 
-        Var<String> rs = as1.elementAt(0);
+        Var<String> rs = as1.elementAt(0); // &as1[0]
         print(rs.get());
         rs.set("zero");
         print(as1[0]);
 
-        Int[] ai2 = [1, 2, 3]; // constant
+        Int[] ai2 = [40, 41, 42]; // constant
         print(ai2[2]);
         }
 

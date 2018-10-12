@@ -791,8 +791,7 @@ public abstract class ClassTemplate
 
         if (!hTarget.isMutable())
             {
-            return frame.raiseException(
-                xException.makeHandle("Immutable object: " + hTarget));
+            return frame.raiseException(xException.immutableObject());
             }
 
         CallChain chain = hTarget.getComposition().getPropertySetterChain(sPropName);

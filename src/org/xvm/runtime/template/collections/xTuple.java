@@ -206,7 +206,7 @@ public class xTuple
 
         if (!hTuple.isMutable())
             {
-            return frame.raiseException(xException.makeHandle("Immutable object"));
+            return frame.raiseException(xException.immutableObject());
             }
 
         hTuple.m_ahValue[(int) lIndex] = hValue;

@@ -30,7 +30,7 @@ module TestMisc.xqiz.it
 
         // REVIEW GG
         // testInterval();
-        // testArrays();
+        testArrays();
         // testTupleConv();
         // testMap();
         }
@@ -348,7 +348,7 @@ module TestMisc.xqiz.it
         // ArrayList
         Int[] list = new Int[]; // Array<Int> list = new Array<Int>();
 
-        Int[] array = new Int[10]; // just like Java
+        Int[] array = new Int[10]; // like Java ArrayList(10): size == 0; capacity == 10
         }
 
     // TODO

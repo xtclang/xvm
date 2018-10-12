@@ -55,12 +55,24 @@ public class xException
         return makeMutableStruct(clazz, null, null);
         }
 
-    // ---- ObjectHandle helpers -----
+    // stock exception: TODO: use the actual exceptions
 
-    public static ExceptionHandle immutable()
+    public static ExceptionHandle immutableObject()
         {
         return xException.makeHandle("Immutable object");
         }
+
+    public static ExceptionHandle illegalOperation()
+        {
+        return xException.makeHandle("IllegalOperation");
+        }
+
+    public static ExceptionHandle unsupportedOperation()
+        {
+        return xException.makeHandle("UnsupportedOperation");
+        }
+
+    // ---- ObjectHandle helpers -----
 
     public static ExceptionHandle makeHandle(String sMessage)
         {

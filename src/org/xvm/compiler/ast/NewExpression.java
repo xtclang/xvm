@@ -8,6 +8,7 @@ import java.util.List;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
@@ -17,6 +18,9 @@ import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.asm.op.NewG_0;
+import org.xvm.asm.op.NewG_1;
+import org.xvm.asm.op.NewG_N;
 import org.xvm.asm.op.New_0;
 import org.xvm.asm.op.New_1;
 import org.xvm.asm.op.New_N;
@@ -291,7 +295,14 @@ public class NewExpression
                 }
             else
                 {
-                m_idConstructor = idMethod;
+                m_constructor = (MethodStructure) idMethod.getComponent();
+                if (m_constructor == null)
+                    {
+                    MethodInfo info = infoTarget.getMethodById(idMethod);
+
+                    m_constructor = info.getTopmostMethodStructure(infoTarget);
+                    assert m_constructor != null;
+                    }
 
                 if (body != null)
                     {
@@ -355,7 +366,7 @@ public class NewExpression
     public Argument generateArgument(
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        assert m_idConstructor != null;
+        assert m_constructor != null;
         assert left == null; // TODO construct child class
         assert body == null; // TODO anonymous inner class
 
@@ -368,27 +379,16 @@ public class NewExpression
             }
 
         Argument argResult = new Register(getType());
-        switch (cArgs)
-            {
-            case 0:
-                code.add(new New_0(m_idConstructor, argResult));
-                break;
 
-            case 1:
-                code.add(new New_1(m_idConstructor, aArgs[0], argResult));
-                break;
+        generateNew(code, cArgs, aArgs, argResult);
 
-            default:
-                code.add(new New_N(m_idConstructor, aArgs, argResult));
-                break;
-            }
         return argResult;
         }
 
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
-        assert m_idConstructor != null;
+        assert m_constructor != null;
         assert left == null; // TODO construct child class
         assert body == null; // TODO anonymous inner class
 
@@ -404,24 +404,56 @@ public class NewExpression
                 ? LVal.getLocalArgument()
                 : new Register(LVal.getType());
 
-        switch (cArgs)
-            {
-            case 0:
-                code.add(new New_0(m_idConstructor, argResult));
-                break;
-
-            case 1:
-                code.add(new New_1(m_idConstructor, aArgs[0], argResult));
-                break;
-
-            default:
-                code.add(new New_N(m_idConstructor, aArgs, argResult));
-                break;
-            }
+        generateNew(code, cArgs, aArgs, argResult);
 
         if (!LVal.isLocalArgument())
             {
             LVal.assign(argResult, code, errs);
+            }
+        }
+
+    /**
+     * Generate the NEW_* op-code
+     */
+    private void generateNew(Code code, int cArgs, Argument[] aArgs, Argument argResult)
+        {
+        MethodConstant idConstruct = m_constructor.getIdentityConstant();
+        TypeConstant   typeTarget  = argResult.getType();
+
+        if (typeTarget.isParamsSpecified())
+            {
+            switch (cArgs)
+                {
+                case 0:
+                    code.add(new NewG_0(idConstruct, typeTarget, argResult));
+                    break;
+
+                case 1:
+                    code.add(new NewG_1(idConstruct, typeTarget, aArgs[0], argResult));
+                    break;
+
+                default:
+                    code.add(new NewG_N(idConstruct, typeTarget, aArgs, argResult));
+                    break;
+                }
+            }
+        else
+            {
+            assert idConstruct.getNamespace().equals(typeTarget.getDefiningConstant());
+            switch (cArgs)
+                {
+                case 0:
+                    code.add(new New_0(idConstruct, argResult));
+                    break;
+
+                case 1:
+                    code.add(new New_1(idConstruct, aArgs[0], argResult));
+                    break;
+
+                default:
+                    code.add(new New_N(idConstruct, aArgs, argResult));
+                    break;
+                }
             }
         }
 
@@ -503,7 +535,7 @@ public class NewExpression
     protected StatementBlock   body;
     protected long             lEndPos;
 
-    private transient MethodConstant m_idConstructor;
+    private transient MethodStructure m_constructor;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NewExpression.class, "left", "type", "args", "body");
     }
