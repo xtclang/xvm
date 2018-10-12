@@ -96,7 +96,7 @@ const Path
         {
         if (Int of : pathName.lastIndexOf(separatorChar))
             {
-            return new Path(pathName.substring(0..of));
+            return new Path(pathName[0..of-1]);
             }
         return null;
         }
