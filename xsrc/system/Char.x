@@ -32,7 +32,7 @@ const Char
     // ----- Sequential ----------------------------------------------------------------------------
 
     @Override
-    conditional Sequential prev()
+    conditional Char prev()
         {
         if (codepoint > 0)
             {
@@ -42,13 +42,19 @@ const Char
         }
 
     @Override
-    conditional Sequential next()
+    conditional Char next()
         {
         if (codepoint < UInt32.maxvalue)
             {
             return true, new Char(codepoint + 1);
             }
         return false;
+        }
+
+    @Override
+    Int stepsTo(Char that)
+        {
+        return that.codepoint.as(Int) - this.codepoint.as(Int);
         }
 
     /**

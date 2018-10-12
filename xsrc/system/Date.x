@@ -36,6 +36,12 @@ const Date(Int year, Int month, Int day)
         TODO
         }
 
+    @Override
+    Int stepsTo(Date that)
+        {
+        TODO
+        }
+
     // ----- conversions ---------------------------------------------------------------------------
 
     DateTime to<DateTime>()
