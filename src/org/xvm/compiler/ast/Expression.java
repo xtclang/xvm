@@ -2930,16 +2930,16 @@ public abstract class Expression
                         {
                         Assignable LValTemp = LValResult != null && LValResult.isLocalArgument()
                                 ? LValResult
-                                : createTempVar(code, getType(), fUsedOnce, errs);
+                                : createTempVar(code, getType().getGenericParamType("ElementType"), fUsedOnce, errs);
 
                         Argument argReturn = LValTemp.getLocalArgument();
                         code.add(seq.isPre()
                                 ? seq.isInc()
-                                ? new IIP_PreInc(argArray, argIndex, argReturn)
-                                : new IIP_PreDec(argArray, argIndex, argReturn)
+                                    ? new IIP_PreInc(argArray, argIndex, argReturn)
+                                    : new IIP_PreDec(argArray, argIndex, argReturn)
                                 : seq.isInc()
-                                ? new IIP_PostInc(argArray, argIndex, argReturn)
-                                : new IIP_PostDec(argArray, argIndex, argReturn));
+                                    ? new IIP_PostInc(argArray, argIndex, argReturn)
+                                    : new IIP_PostDec(argArray, argIndex, argReturn));
                         if (LValResult == null)
                             {
                             return argReturn;
