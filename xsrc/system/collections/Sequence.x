@@ -86,7 +86,7 @@ interface Sequence<ElementType>
      */
     conditional Int indexOf(ElementType value, Int startAt = 0)
         {
-        for (Int i = 0.maxOf(startAt), Int last = size - 1; i < last; ++i)
+        for (Int i = startAt.maxOf(0), Int last = size - 1; i < last; ++i)
             {
             if (this[i] == value)
                 {

@@ -43,6 +43,22 @@ public class Register
         m_fRO  = isPredefinedReadonly(iArg);
         }
 
+    /**
+     * Mark this register as an in-place replacement of the original.
+     */
+    public void markInPlace()
+        {
+        throw new IllegalStateException();
+        }
+
+    /**
+     * @return true iff this register is an in-place replacement of the original
+     */
+    public boolean isInPlace()
+        {
+        return true;
+        }
+
 
     // ----- Argument methods ----------------------------------------------------------------------
 
@@ -439,6 +455,18 @@ public class Register
             }
 
         @Override
+        public void markInPlace()
+            {
+            m_fInPlace = true;
+            }
+
+        @Override
+        public boolean isInPlace()
+            {
+            return m_fInPlace;
+            }
+
+        @Override
         public boolean isStack()
             {
             return Register.this.isStack();
@@ -527,6 +555,11 @@ public class Register
             {
             return "shadow of " + Register.this.toString();
             }
+
+        /**
+         * Indicates that this register is a replacement of the original.
+         */
+        protected boolean m_fInPlace;
         }
 
 

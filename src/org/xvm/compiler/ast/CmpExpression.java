@@ -30,6 +30,8 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
+import org.xvm.compiler.ast.Context.Branch;
+
 import org.xvm.util.Severity;
 
 
@@ -250,7 +252,8 @@ public class CmpExpression
                 break;
             }
 
-        ctx.narrowType(exprTarget.name, typeTrue, typeFalse);
+        ctx.narrowType(exprTarget.name, Branch.WhenTrue,  typeTrue);
+        ctx.narrowType(exprTarget.name, Branch.WhenFalse, typeFalse);
         }
 
     @Override

@@ -528,6 +528,12 @@ const IntLiteral(String text)
         return true, this + 1;
         }
 
+    @Override
+    Int stepsTo(IntLiteral that)
+        {
+        return that - this;
+        }
+
     // ----- conversions ---------------------------------------------------------------------------
 
     /**

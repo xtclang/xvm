@@ -66,6 +66,9 @@ public class TernaryExpression
         {
         TypeFit      fit         = TypeFit.Fit;
         ConstantPool pool        = pool();
+
+        ctx = ctx.enter();
+
         Expression   exprNewCond = cond.validate(ctx, pool.typeBoolean(), errs);
         if (exprNewCond == null)
             {
@@ -80,8 +83,12 @@ public class TernaryExpression
         TypeConstant typeRequest = typeRequired == null
                 ? getImplicitType(ctx)
                 : typeRequired;
-        Expression   exprNewThen = exprThen.validate(ctx, typeRequest, errs);
-        TypeConstant typeThen    = null;
+
+        ctx = ctx.enterFork(true);
+        Expression exprNewThen = exprThen.validate(ctx, typeRequest, errs);
+        ctx = ctx.exit();
+
+        TypeConstant typeThen = null;
         if (exprNewThen == null)
             {
             fit = TypeFit.NoFit;
@@ -98,8 +105,11 @@ public class TernaryExpression
                 }
             }
 
+        ctx = ctx.enterFork(false);
         Expression   exprNewElse = exprElse.validate(ctx, typeRequest, errs);
-        TypeConstant typeElse    = null;
+        ctx = ctx.exit();
+
+        TypeConstant typeElse = null;
         if (exprNewElse == null)
             {
             fit = TypeFit.NoFit;
@@ -110,6 +120,8 @@ public class TernaryExpression
             typeElse = exprNewElse.getType();
             // TODO check if it is short circuiting
             }
+
+        ctx.exit();
 
         if (fit.isFit() && exprNewCond.isConstant())
             {
