@@ -7,8 +7,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.StringConstant;
-
 import org.xvm.asm.op.*;
 
 import org.xvm.runtime.Adapter;
@@ -358,70 +356,6 @@ public class xTestApp extends xModule
             .add(new Invoke_N0(9, adapter.getMethodConstId("annotations.AtomicVar", "replace"),
                 new int[] {adapter.ensureValueConstantId(5), adapter.ensureValueConstantId(6)}))
             .add(new X_Print(9))
-
-            .add(new Return_0());
-
-        // --- testArray()
-
-        MethodStructure ftLambda$2 = getMethodStructure("lambda_2",
-            new String[]{"Var<Int64>"}, STRING);
-        ftLambda$2.createCode()
-            // #0 = i
-            .add(new Var_I(adapter.getClassTypeConstId("String"),
-                adapter.ensureValueConstantId("value "))) // #1
-            .add(new Invoke_01(0, adapter.getMethodConstId("Object", "to", VOID, STRING),
-                2)) // next register #
-            .add(new GP_Add(1, 2, 1))
-            .add(new Return_1(1));
-
-        MethodStructure ftTestArray = getMethodStructure("testArray", VOID);
-        ftTestArray.createCode()
-            .add(new X_Print(adapter.ensureValueConstantId("\n# in TestApp.testArray() #")))
-
-            .add(new Var_N(adapter.getClassTypeConstId("collections.Array<Int64>"),
-                adapter.ensureValueConstantId("ai")))   // #0 (ai)
-            .add(new NewG_1(adapter.getMethodConstId("collections.Array", "construct"),
-                adapter.getClassTypeConstId("collections.Array<Int64>"),
-                adapter.ensureValueConstantId(0), 0))
-            .add(new I_Set(0, adapter.ensureValueConstantId(0),
-                adapter.ensureValueConstantId(1)))
-            .add(new I_Set(0, adapter.ensureValueConstantId(1),
-                adapter.ensureValueConstantId(2)))
-            .add(new X_Print(0))
-
-            .add(new I_Get(0, adapter.ensureValueConstantId(0), 1)) // next register #1
-            .add(new X_Print(1))
-
-            .add(new IIP_PreInc(0, adapter.ensureValueConstantId(1), 1))
-            .add(new X_Print(1))
-
-            .add(new Var_N(adapter.getClassTypeConstId("collections.Array<String>"),
-                adapter.ensureValueConstantId("as1")))   // #2 (as1)
-            .add(new NewG_N(adapter.getMethodConstId("collections.Array", "construct",
-                new String[]{"Int64", "Function"}, VOID),
-                adapter.getClassTypeConstId("collections.Array<String>"),
-                new int[]{
-                    adapter.ensureValueConstantId(5),
-                    adapter.getMethodConstId("TestApp", "lambda_2")
-                }, 2))
-            .add(new X_Print(2))
-
-            .add(new I_Get(2, adapter.ensureValueConstantId(4), 3)) // next register #3
-            .add(new X_Print(3))
-
-            .add(new I_Var(2, adapter.ensureValueConstantId(0), 4)) // next register #4
-            .add(new Invoke_01(4, adapter.getMethodConstId("Ref", "get"), 3))
-            .add(new X_Print(3))
-            .add(new Invoke_10(4, adapter.getMethodConstId("Var", "set"),
-                adapter.ensureValueConstantId("zero")))
-            .add(new I_Get(2, adapter.ensureValueConstantId(0), 3))
-            .add(new X_Print(3))
-
-            .add(new Var_IN(adapter.getClassTypeConstId("collections.Array<Int64>"),
-                adapter.ensureValueConstantId("ai"),
-                adapter.ensureValueConstantId(new Object[]{40, 41, 42}))) // #5
-            .add(new I_Get(5, adapter.ensureValueConstantId(2), 6)) // next register #6
-            .add(new X_Print(6))
 
             .add(new Return_0());
 

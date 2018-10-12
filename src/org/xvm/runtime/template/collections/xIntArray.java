@@ -12,11 +12,13 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.ObjectHandle.MutabilityConstraint;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.IndexSupport;
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xInt64;
 
 
@@ -93,29 +95,33 @@ public class xIntArray
             return frame.raiseException(IndexSupport.outOfRange(lIndex, cSize));
             }
 
+        switch (hArray.m_mutability)
+            {
+            case Constant:
+                return frame.raiseException(xException.immutableObject());
+
+            case Persistent:
+                return frame.raiseException(xException.unsupportedOperation());
+            }
+
+        long[] alValue = hArray.m_alValue;
         if (lIndex == cSize)
             {
-            // an array can only grow without any "holes"
-            int cCapacity = hArray.m_alValue.length;
-            if (cSize == cCapacity)
+            if (hArray.m_mutability == MutabilityConstraint.FixedSize)
                 {
-                if (hArray.m_fFixed)
-                    {
-                    return frame.raiseException(IndexSupport.outOfRange(lIndex, cSize));
-                    }
+                return frame.raiseException(xException.illegalOperation());
+                }
 
-                // resize (TODO: we should be much smarter here)
-                cCapacity = cCapacity + Math.max(cCapacity >> 2, 16);
-
-                long[] alNew = new long[cCapacity];
-                System.arraycopy(hArray.m_alValue, 0, alNew, 0, cSize);
-                hArray.m_alValue = alNew;
+            // an array can only grow without any "holes"
+            if (cSize == alValue.length)
+                {
+                alValue = hArray.m_alValue = grow(alValue, cSize);
                 }
 
             hArray.m_cSize++;
             }
 
-        ((IntArrayHandle) hTarget).m_alValue[(int) lIndex] = ((JavaLong) hValue).getValue();
+        alValue[(int) lIndex] = ((JavaLong) hValue).getValue();
         return Op.R_NEXT;
         }
 
@@ -158,6 +164,51 @@ public class xIntArray
         return Arrays.equals(hArray1.m_alValue, hArray2.m_alValue);
         }
 
+    @Override
+    protected int addElement(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
+        {
+        IntArrayHandle hArray = (IntArrayHandle) hTarget;
+        int            ixNext = hArray.m_cSize;
+
+        switch (hArray.m_mutability)
+            {
+            case Constant:
+                return frame.raiseException(xException.immutableObject());
+
+            case FixedSize:
+                return frame.raiseException(xException.illegalOperation());
+
+            case Persistent:
+                // TODO: implement
+                return frame.raiseException(xException.unsupportedOperation());
+            }
+
+        long[] alValue = hArray.m_alValue;
+        if (ixNext == alValue.length)
+            {
+            alValue = hArray.m_alValue = grow(hArray.m_alValue, ixNext);
+            }
+        hArray.m_cSize++;
+
+        alValue[ixNext] = ((JavaLong) hValue).getValue();
+        return frame.assignValue(iReturn, hArray); // return this
+        }
+
+    // ----- helper methods -----
+
+    private long[] grow(long[] alValue, int cSize)
+        {
+        // an array can only grow without any "holes"
+        int cCapacity = alValue.length;
+
+        // resize (TODO: we should be much smarter here)
+        cCapacity = cCapacity + Math.max(cCapacity >> 2, 16);
+
+        long[] alNew = new long[cCapacity];
+        System.arraycopy(alValue, 0, alNew, 0, cSize);
+        return alNew;
+        }
+
     public static class IntArrayHandle
             extends ArrayHandle
         {
@@ -193,8 +244,7 @@ public class xIntArray
         @Override
         public String toString()
             {
-            return super.toString() + (m_fFixed ? "fixed" : "capacity=" + m_alValue.length)
-                    + ", size=" + m_cSize;
+            return super.toString() + m_mutability + ", size=" + m_cSize;
             }
         }
     }
