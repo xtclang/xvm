@@ -59,17 +59,24 @@ public class xException
 
     public static ExceptionHandle immutableObject()
         {
-        return xException.makeHandle("Immutable object");
+        return makeHandle("Immutable object");
         }
 
     public static ExceptionHandle illegalOperation()
         {
-        return xException.makeHandle("IllegalOperation");
+        return makeHandle("IllegalOperation");
         }
 
     public static ExceptionHandle unsupportedOperation()
         {
-        return xException.makeHandle("UnsupportedOperation");
+        return makeHandle("UnsupportedOperation");
+        }
+
+    public static ExceptionHandle outOfRange(long lIndex, long cSize)
+        {
+        return makeHandle(lIndex < 0 ?
+                "Negative index: " + lIndex :
+                "Array index " + lIndex + " out of range 0.." + cSize);
         }
 
     // ---- ObjectHandle helpers -----

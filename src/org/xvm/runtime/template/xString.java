@@ -140,6 +140,11 @@ public class xString
 
                     return frame.assignValue(iReturn, xInt64.makeHandle(nOf));
                     }
+                else
+                    {
+                    // TODO: indexOf(Range)
+                    }
+                break;
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
