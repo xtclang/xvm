@@ -687,7 +687,7 @@ public class Frame
             return Op.R_NEXT;
             }
 
-        if (c == 1)
+        if (c == 1 || hValue2 == null)
             {
             return assignValue(anVar[0], hValue1, false);
             }
