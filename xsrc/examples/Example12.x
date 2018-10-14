@@ -1837,3 +1837,56 @@ console.println(╔════════════════════�
 console.println(
 
 “list={{L: for (var v : list) {$.add(“{L.count}={v}”);} return “”; }}”)
+
+// functions
+
+String s = "hello";
+Function f = s.reverse;
+
+String s = "hello";
+Function<<>, <String>> f = s.reverse;
+
+String s = "hello";
+function String() f = s.reverse;
+
+while (i < 19)
+    {
+    }
+foo();
+
+// kotlin
+val x: type = initializer
+
+// this variable object (&x) is a Var<MyType>, which means that it is read/write holder
+// of a value that must be an instance of MyType; if it is determined to be effectively
+// final, then (&x) is a Ref<MyType>, which is a read-only holder of a MyType value
+MyType x = initializer;
+
+
+// this variable object (&y) is a Ref<MyType>, which is a read-only holder of a MyType
+// value (inferred from the initializer)
+val y = initializer;
+
+// this variable object (&z) is a Var<MyType>, which means that it is read/write holder
+// of a value that must be an instance of MyType (inferred from the initializer)
+var z = initializer;
+
+Int x = foo();
+Int y = bar();
+val z = (() -> x * y)();
+
+// kotlin
+fun foo(arg1: type1, arg2: type2): returnType {}
+
+// ecstasy
+static returnType foo(Type1 arg1, Type2 arg2) {}
+
+// ecstasy
+// ecstasy - 5 parameters, including 2 (hidden, i.e. auto)
+// type params, 1 required param, and 2 optional params,
+// returning 3 values
+static <TP1 extends Map<Int, String>, TP2 extends TP1.KeyType> (TP1, TP2, TP1.ValueType) bar(TP1 map, TP2 key = 0, Boolean opt = true) {}
+
+Map<Int, String> m = ...;
+Int x;
+(m, x, String s) = bar(m, opt=false);

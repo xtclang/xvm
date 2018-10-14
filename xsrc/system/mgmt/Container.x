@@ -93,7 +93,7 @@ service Container
     interface ApplicationControl
         {
         /**
-         * Add a constrain for the specified name. The names are conventionally well known, for
+         * Add a constraint for the specified name. The names are conventionally well known, for
          * example `memory`, `time interval`, `cpu cycles` `network bandwidth`.
          * TODO: there has to be a full section on the names and valid ranges
          */
