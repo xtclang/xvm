@@ -16,6 +16,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHandle.MutabilityConstraint;
 import org.xvm.runtime.ObjectHeap;
@@ -64,8 +65,8 @@ public class xArray
         markNativeMethod("construct", INT);
         markNativeMethod("construct", new String[]{"Int64", "Function"});
         markNativeMethod("elementAt", INT, new String[] {"Var<ElementType>"});
-        markNativeMethod("reify", VOID, ARRAY);
         markNativeMethod("addElement", ELEMENT_TYPE, ARRAY);
+        markNativeMethod("slice", new String[]{"Range<Int64>"}, ARRAY);
         }
 
     @Override
@@ -90,6 +91,26 @@ public class xArray
             }
 
         return super.ensureParameterizedClass(pool, typeParams);
+        }
+
+    @Override
+    public ClassTemplate getTemplate(TypeConstant type)
+        {
+        TypeConstant[] atypeParams = type.getParamTypesArray();
+        if (atypeParams.length > 0)
+            {
+            ConstantPool pool      = f_struct.getConstantPool();
+            TypeConstant typeParam = atypeParams[0];
+            if (typeParam.equals(pool.typeInt()))
+                {
+                return xIntArray.INSTANCE;
+                }
+            if (typeParam.equals(pool.typeChar()))
+                {
+                return xCharArray.INSTANCE;
+                }
+            }
+        return this;
         }
 
     @Override
@@ -218,6 +239,15 @@ public class xArray
 
             case "elementAt":
                 return makeRef(frame, hTarget, ((JavaLong) hArg).getValue(), false, iReturn);
+
+            case "slice":
+                {
+                GenericHandle hRange = (GenericHandle) hArg;
+                long ixFrom = ((JavaLong) hRange.getField("lowerBound")).getValue();
+                long ixTo   = ((JavaLong) hRange.getField("upperBound")).getValue();
+
+                return slice(frame, hTarget, ixFrom, ixTo, iReturn);
+                }
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -282,7 +312,7 @@ public class xArray
         }
 
     /**
-     * addElement() implementation
+     * addElement(TypeElement) implementation
      */
     protected int addElement(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
         {
@@ -313,6 +343,30 @@ public class xArray
         return frame.assignValue(iReturn, hArray); // return this
         }
 
+    /**
+     * slice(Range<Int>) implementation
+     */
+    protected int slice(Frame frame, ObjectHandle hTarget, long ixFrom, long ixTo, int iReturn)
+        {
+        GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
+
+        ObjectHandle[] ahValue = hArray.m_ahValue;
+        try
+            {
+            ObjectHandle[] ahNew     = Arrays.copyOfRange(ahValue, (int) ixFrom, (int) ixTo);
+            ArrayHandle    hArrayNew = new GenericArrayHandle(hTarget.getComposition(), ahNew);
+            hArrayNew.m_mutability = MutabilityConstraint.Mutable;
+
+            return frame.assignValue(iReturn, hArrayNew);
+            }
+        catch (ArrayIndexOutOfBoundsException e)
+            {
+            long c = ahValue.length;
+            return frame.raiseException(
+                xException.outOfRange(ixFrom < 0 || ixFrom >= c ? ixFrom : ixTo, c));
+            }
+        }
+
 
     // ----- IndexSupport methods -----
 
@@ -323,7 +377,7 @@ public class xArray
 
         if (lIndex < 0 || lIndex >= hArray.m_cSize)
             {
-            return frame.raiseException(IndexSupport.outOfRange(lIndex, hArray.m_cSize));
+            return frame.raiseException(xException.outOfRange(lIndex, hArray.m_cSize));
             }
 
         return frame.assignValue(iReturn, hArray.m_ahValue[(int) lIndex]);
@@ -337,7 +391,7 @@ public class xArray
 
         if (lIndex < 0 || lIndex > cSize)
             {
-            return frame.raiseException(IndexSupport.outOfRange(lIndex, cSize));
+            return frame.raiseException(xException.outOfRange(lIndex, cSize));
             }
 
         switch (hArray.m_mutability)
@@ -559,12 +613,6 @@ public class xArray
         public boolean equals(Object obj)
             {
             return Arrays.equals(m_ahValue, ((GenericArrayHandle) obj).m_ahValue);
-            }
-
-        @Override
-        public String toString()
-            {
-            return super.toString() + m_mutability + ", size=" + m_cSize;
             }
         }
 

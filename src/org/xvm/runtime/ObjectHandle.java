@@ -330,6 +330,12 @@ public abstract class ObjectHandle
 
             m_fMutable = true;
             }
+
+        @Override
+        public String toString()
+            {
+            return super.toString() + m_mutability + ", size=" + m_cSize;
+            }
         }
 
     // a handle representing a deferred action, such as a property access or a method call;

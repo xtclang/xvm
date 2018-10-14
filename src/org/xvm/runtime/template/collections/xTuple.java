@@ -186,7 +186,7 @@ public class xTuple
 
         if (lIndex < 0 || lIndex >= cElements)
             {
-            return frame.raiseException(IndexSupport.outOfRange(lIndex, cElements));
+            return frame.raiseException(xException.outOfRange(lIndex, cElements));
             }
 
         return frame.assignValue(iReturn, hTuple.m_ahValue[(int) lIndex]);
@@ -201,7 +201,7 @@ public class xTuple
 
         if (lIndex < 0 || lIndex >= cElements)
             {
-            return frame.raiseException(IndexSupport.outOfRange(lIndex, cElements));
+            return frame.raiseException(xException.outOfRange(lIndex, cElements));
             }
 
         if (!hTuple.isMutable())
@@ -223,7 +223,7 @@ public class xTuple
 
         if (lIndex < 0 || lIndex >= cElements)
             {
-            throw IndexSupport.outOfRange(lIndex, cElements).getException();
+            throw xException.outOfRange(lIndex, cElements).getException();
             }
 
         return hTuple.m_aType[(int) lIndex];

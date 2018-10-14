@@ -337,13 +337,4 @@ public interface IndexSupport
                 }
             }
         }
-
-    // ----- helpers -----
-
-    static ExceptionHandle outOfRange(long lIndex, long cSize)
-        {
-        return xException.makeHandle(lIndex < 0 ?
-                "Negative index: " + lIndex :
-                "Array index " + lIndex + " out of range 0.." + cSize);
-        }
     }

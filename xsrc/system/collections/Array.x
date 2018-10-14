@@ -116,7 +116,6 @@ class Array<ElementType>
         return this;
         }
 
-
     @Op("+") Array!<ElementType> addElement(ElementType element)
         {
         switch (mutability)
