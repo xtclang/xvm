@@ -859,6 +859,31 @@ public abstract class Constant
             }
 
         /**
+         * @return true if a corresponding Constant could be used as a terminal type
+         */
+        public boolean isTypable()
+            {
+            switch (this)
+                {
+                case Module:
+                case Package:
+                case Class:
+                case Typedef:
+                case Property:
+                case TypeParameter:
+                case ThisClass:
+                case ParentClass:
+                case ChildClass:
+                case NativeClass:
+                case UnresolvedName:
+                    return true;
+
+                default:
+                    return false;
+                }
+            }
+
+        /**
          * Look up a Format enum by its ordinal.
          *
          * @param i  the ordinal

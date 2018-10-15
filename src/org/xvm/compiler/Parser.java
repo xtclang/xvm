@@ -1655,9 +1655,10 @@ public class Parser
                     // fall through
                 default:
                     // the expression has to be an L-Value
-                    if (!expr.isLValueSyntax())
+                    if (!exprUpdate.isLValueSyntax())
                         {
-                        log(Severity.ERROR, NOT_ASSIGNABLE, expr.getStartPosition(), expr.getEndPosition());
+                        log(Severity.ERROR, NOT_ASSIGNABLE,
+                                exprUpdate.getStartPosition(), exprUpdate.getEndPosition());
                         }
                     update.add(new AssignmentStatement(exprUpdate, expect(op), parseExpression(), false));
                     break;
