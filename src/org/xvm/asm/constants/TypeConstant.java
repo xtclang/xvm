@@ -38,6 +38,8 @@ import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.PropertyBody.Effect;
 import org.xvm.asm.constants.TypeInfo.Progress;
 
+import org.xvm.compiler.Compiler;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.OpSupport;
@@ -858,7 +860,11 @@ public abstract class TypeConstant
             {
             validate(errs);
 
-            assert !containsUnresolved();
+            if (containsUnresolved())
+                {
+                log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, getValueString());
+                return pool.typeObject().ensureTypeInfo(errs);
+                }
 
             // since we're producing a lot of information for the TypeInfo, there is no reason to do
             // it unless the type is registered (which resolves typedefs)
