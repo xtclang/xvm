@@ -89,26 +89,10 @@ public class TerminalTypeConstant
         {
         super(pool);
 
-        assert !(constId instanceof TypeConstant);
-
-        switch (constId.getFormat())
+        if (!constId.getFormat().isTypable())
             {
-            case Module:
-            case Package:
-            case Class:
-            case Typedef:
-            case Property:
-            case TypeParameter:
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-            case NativeClass:
-            case UnresolvedName:
-                break;
-
-            default:
-                throw new IllegalArgumentException("constant " + constId.getFormat()
-                        + " is not a Module, Package, Class, Typedef, or formal type parameter");
+            throw new IllegalArgumentException("constant " + constId.getFormat()
+                    + " is not a Module, Package, Class, Typedef, or formal type parameter");
             }
 
         m_constId = constId;

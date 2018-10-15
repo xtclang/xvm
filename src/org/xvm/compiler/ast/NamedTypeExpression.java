@@ -320,9 +320,18 @@ public class NamedTypeExpression
                     return;
                     }
 
+                Constant constId = resolver.getConstant();
+                if (!constId.getFormat().isTypable())
+                    {
+                    log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE, constId.getValueString());
+                    // cannot proceed
+                    mgr.deferChildren();
+                    return;
+                    }
+
                 // now that we have the resolved constId, update the unresolved m_constId to point to
                 // the resolved one (just in case anyone is holding the wrong one
-                Constant constIdNew = m_constId = inferAutoNarrowing(resolver.getConstant(), errs);
+                Constant constIdNew = m_constId = inferAutoNarrowing(constId, errs);
 
                 if (m_constUnresolved != null)
                     {
