@@ -716,6 +716,7 @@ public class RelOpExpression
         if (!LVal.isLocalArgument())
             {
             super.generateAssignment(ctx, code, LVal, errs);
+            return;
             }
 
         // evaluate the sub-expressions

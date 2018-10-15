@@ -79,7 +79,7 @@ public class xIntLiteral
                 if (method.getReturnTypes()[0].equals(method.getConstantPool().typeInt()))
                     {
                     StringHandle hText = (StringHandle) hLiteral.getField("text");
-                    String       sText = hText.getValue();
+                    String       sText = hText.getStringValue();
                     try
                         {
                         return frame.assignValue(iReturn, xInt64.makeHandle(Long.valueOf(sText)));

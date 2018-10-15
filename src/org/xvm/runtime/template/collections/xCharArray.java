@@ -262,4 +262,9 @@ public class xCharArray
             return Arrays.equals(m_achValue, ((CharArrayHandle) obj).m_achValue);
             }
         }
+
+    public static CharArrayHandle makeHandle(char[] ach)
+        {
+        return new CharArrayHandle(INSTANCE.getCanonicalClass(), ach);
+        }
     }

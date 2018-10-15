@@ -59,8 +59,11 @@ public class xTestClass extends xObject
             new L_Get(adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 0),
             new Var_N(adapter.getClassTypeConstId("Int64"),
                     adapter.ensureValueConstantId("of")), // #1 (of)
-            new Invoke_11(0, adapter.getMethodConstId("String", "indexOf"),
-                adapter.ensureValueConstantId("world"), 1),
+            new Invoke_N1(0, adapter.getMethodConstId("String", "indexOf"),
+                new int[] {
+                          adapter.ensureValueConstantId("World"),
+                          adapter.ensureValueConstantId(0),
+                          }, 1),
             new P_Get(adapter.getPropertyConstId("String", "size"), 0, 2), // next register #3
             new GP_Add(2, 1, 2),
             new Return_1(2),
