@@ -10,7 +10,6 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IntConstant;
@@ -23,8 +22,8 @@ import org.xvm.asm.op.I_Get;
 
 /**
  * An array access expression is an expression followed by an array index expression.
- * <p/> REVIEW for multi-dimensional arrays, are they alternatives to the one-expression-per-dimension indexing?
- * <p/> REVIEW for a given dimensional index, would it be possible to specify more than one index? consider the example of a range
+ * <p/> TODO support tuple of indexes, particularly for multi-dimensional arrays
+ * <p/> TODO for multi-dimensional arrays, support partial binding? @Op("[?,_]") / @Op("[_,?]") etc.
  */
 public class ArrayAccessExpression
         extends Expression
@@ -96,9 +95,13 @@ public class ArrayAccessExpression
             return getType();
             }
 
-        TypeConstant typeArray = expr.getImplicitType(ctx);
+        TypeConstant typeArray = expr.isValidated() ? expr.getType() : expr.getImplicitType(ctx);
         if (typeArray == null)
             {
+            // while we could test the expression to find out if it could be UniformIndexed, or
+            // Array, or whatever, the information that we truly need is not the form (Array, Tuple,
+            // etc.) but rather the content, e.g. the ElementType, and it is simply not conceivable
+            // to test for that
             return null;
             }
 
@@ -108,6 +111,8 @@ public class ArrayAccessExpression
         // the value of the index might not yet be determinable
         if (typeArray.isParamsSpecified() && typeArray.isTuple())
             {
+            // TODO support tuple slice
+
             if (indexes.size() == 1)
                 {
                 Expression exprIndex = indexes.get(0);
@@ -141,6 +146,7 @@ public class ArrayAccessExpression
         TypeInfo            infoArray  = typeArray.ensureTypeInfo();
         int                 cIndexes   = indexes.size();
         Set<MethodConstant> setMethods = infoArray.findOpMethods("getElement", "[]", cIndexes);
+        // TODO could be a slice
         for (MethodConstant idMethod : setMethods)
             {
             TypeConstant[] atypeRet = idMethod.getRawReturns();
@@ -151,6 +157,28 @@ public class ArrayAccessExpression
             }
 
         return null;
+        }
+
+    // TODO remove or move into validate()
+    /**
+     * @return the type of the container (typically an array) that is being accessed
+     */
+    private TypeConstant getImplicitIndexedType(Context ctx)
+        {
+        TypeConstant typeArray = expr.isValidated() ? expr.getType() : expr.getImplicitType(ctx);
+        if (typeArray == null)
+            {
+            return null;
+            }
+
+        if (typeArray.isTuple())
+            {
+            return typeArray;
+            }
+
+        return typeArray.ensureTypeInfo().findOpMethods("getElement", "[]", -1).isEmpty()
+                ? null
+                : typeArray;
         }
 
     @Override
@@ -164,8 +192,9 @@ public class ArrayAccessExpression
 
         // first, validate the array expression; there is no way to say "required type is something
         // that has an operator for indexed look-up", since that could be Tuple, or List, or Array,
-        // or UniformIndexed, or Matrix, or ...
-        // REVIEW we could eventually explore possibilities starting with the implicit type and evaluating each @Auto conversion
+        // or UniformIndexed, or Matrix, or any custom class; however, the most common case is
+        // some sub-class of Sequence (such as Array, List, etc.), and we can test for that
+        // TODO if (exprArray.testFit(ctx, ))
         TypeConstant   typeArray    = null;
         TypeConstant[] aIndexTypes  = null;
         Expression     exprArrayNew = exprArray.validate(ctx, null, errs);
