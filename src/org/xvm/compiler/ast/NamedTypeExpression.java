@@ -344,6 +344,8 @@ public class NamedTypeExpression
                 }
 
             case ERROR:
+                // cannot proceed
+                mgr.deferChildren();
                 break;
             }
         }
@@ -356,7 +358,7 @@ public class NamedTypeExpression
         boolean              fValid     = true;
         TypeConstant         type;
 
-        if (m_constId == null)
+        if (m_constId == null || m_constId.containsUnresolved())
             {
             // this can only mean that the name resolution ended in an error
             return null;

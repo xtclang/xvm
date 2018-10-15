@@ -250,7 +250,13 @@ public class NameResolver
                 // name has to be relative to that component
                 while (m_sName != null)
                     {
-                    switch (ensurePartiallyResolvedComponent().resolveName(m_sName, this))
+                    Component component = ensurePartiallyResolvedComponent();
+                    if (component == null)
+                        {
+                        return getResult();
+                        }
+
+                    switch (component.resolveName(m_sName, this))
                         {
                         case UNKNOWN:
                             // the component didn't know the name
@@ -319,7 +325,8 @@ public class NameResolver
         }
 
     /**
-     * @return the component that is responsible for resolving the next name
+     * @return the component that is responsible for resolving the next name or null if an error
+     *         has been reported
      */
     private Component ensurePartiallyResolvedComponent()
         {
@@ -372,6 +379,15 @@ public class NameResolver
                             throw new IllegalStateException("property id=" + constProp
                                     + ", property struct=" + structProp);
                             }
+
+                        if (!constType.isA(getPool().typeType()))
+                            {
+                            m_errs.log(Severity.ERROR, Compiler.NOT_CLASS_TYPE,
+                                new Object[] {constProp.getValueString()}, m_component);
+                            m_status = Status.ERROR;
+                            return null;
+                            }
+
                         break;
                         }
 

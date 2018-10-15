@@ -747,7 +747,7 @@ public class Compiler
      */
     public static final String NAME_COLLISION                     = "COMPILER-31";
     /**
-     * Not a class type.
+     * Not a class type: "{0}".
      */
     public static final String NOT_CLASS_TYPE                     = "COMPILER-32";
     /**

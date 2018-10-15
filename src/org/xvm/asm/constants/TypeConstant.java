@@ -691,9 +691,9 @@ public abstract class TypeConstant
      */
     public TypeConstant getTypeParameterType()
         {
-        if (!isEcstasy("Type"))
+        if (!isA(getConstantPool().typeType()))
             {
-            throw new IllegalStateException("not a type parameter type: " + this);
+            throw new IllegalStateException("not a type parameter type: " + getValueString());
             }
 
         return isParamsSpecified()
