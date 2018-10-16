@@ -1294,7 +1294,7 @@ public class Frame
             // "local property" or a literal constant
             TypeConstant type = getConstant(nVarFrom).getType();
 
-            f_aInfo[nVar] = new VarInfo(type.getPosition(), 0, VAR_STANDARD);
+            f_aInfo[nVar] = new VarInfo(type, VAR_STANDARD);
             }
         }
 
@@ -1661,7 +1661,7 @@ public class Frame
         private int m_nTargetId; // an id of the target used to resolve this VarInfo's type
 
         /**
-         * Construct a VarInfo based on the resolved type.
+         * Construct an unnamed VarInfo based on the resolved type.
          */
         public VarInfo(TypeConstant type, int nStyle)
             {
@@ -1671,7 +1671,7 @@ public class Frame
             }
 
         /**
-         * Construct an unresolved VarIfo.
+         * Construct a named VarIfo with unresolved type.
          */
         public VarInfo(int nTypeId, int nNameId, int nStyle)
             {
@@ -1870,15 +1870,16 @@ public class Frame
         @Override
         public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
             {
-            ConstantPool pool = frame.poolContext();
+            ConstantPool poolCode = frame.poolCode();
+            ConstantPool poolCtx  = frame.poolContext();
 
-            PropertyConstant constProperty = (PropertyConstant) pool.getConstant(iAuxId);
+            PropertyConstant constProperty = (PropertyConstant) poolCode.getConstant(iAuxId);
             TypeConstant typeTarget = frame.getLocalType(nTargetReg);
 
             return typeTarget.containsGenericParam(constProperty.getName())
-                ? pool.ensureParameterizedTypeConstant(pool.typeType(),
-                    constProperty.getFormalType().resolveGenerics(pool, typeTarget))
-                : constProperty.getType().resolveGenerics(pool, typeTarget);
+                ? poolCtx.ensureParameterizedTypeConstant(poolCtx.typeType(),
+                    constProperty.getFormalType().resolveGenerics(poolCtx, typeTarget))
+                : constProperty.getType().resolveGenerics(poolCtx, typeTarget);
             }
         };
 
