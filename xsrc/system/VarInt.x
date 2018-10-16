@@ -53,4 +53,10 @@ const VarInt
             }
         return new VarUInt(this.to<Bit[]>());
         }
+
+    @Override
+    VarInt abs()
+        {
+        return this < 0 ? -this : this;
+        }
     }

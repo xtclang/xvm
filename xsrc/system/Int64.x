@@ -1,26 +1,33 @@
-/**
- * An Int64 is a 64-bit signed integer.
- */
 const Int64
         implements IntNumber
         default(0)
     {
+    /**
+     * The minimum value for an Int64.
+     */
+    static IntLiteral minvalue = -0x8000000000000000;
+
+    /**
+     * The maximum value for an Int64.
+     */
+    static IntLiteral maxvalue =  0x7FFFFFFFFFFFFFFF;
+
+    private Bit[] bits;
+
     construct(Bit[] bits)
         {
         assert bits.size == 64;
         this.bits = bits;
         }
 
-    private Bit[] bits;
-
     @Override
-    Int64 bitLength.get()
+    Int bitLength.get()
         {
         return 64;
         }
 
     @Override
-    Int64 byteLength.get()
+    Int byteLength.get()
         {
         return 8;
         }
@@ -28,7 +35,7 @@ const Int64
     @Override
     Signum sign.get()
         {
-        if (bits[0x3F] == 1)
+        if (this < 0)
             {
             return Negative;
             }
@@ -41,177 +48,185 @@ const Int64
         return Positive;
         }
 
-    /**
-     * The minimum value for an Int64.
-     */
-    static IntLiteral minvalue = -0x8000000000000000;
-
-    /**
-     * The maximum value for an Int64.
-     */
-    static IntLiteral maxvalue = 0x7FFFFFFFFFFFFFFF;
-
     @RO UInt64 magnitude.get()
         {
         return to<Int128>().abs().to<UInt64>();
         }
 
-// TODO
     @Override
-    @Op Int64 add(Int64 n);
-
-// TODO
-    @Override
-    @Op Int64 sub(Int64 n);
-
-// TODO
-    @Override
-    @Op Int64 mul(Int64 n);
-
-// TODO
-    @Override
-    @Op Int64 div(Int64 n);
-
-// TODO
-    @Override
-    @Op Int64 mod(Int64 n);
-
-// TODO
-    @Override
-    Int64 abs();
-
-// TODO
-    @Override
-    @Op Int64 neg();
-
-// TODO
-    @Override
-    Int64 pow(Int64 n);
-
-    @Override
-    @Op Int64 shiftLeft(Int64 count)
+    @Auto Int8 to<Int8>()
         {
-        Bit[] bits = to<Bit[]>();
-        for (Int64 i = 0x3F; i > 0; --i)
-            {
-            bits[i] = bits[i-1];
-            }
-        bits[0] = 0;
-        return new Int(bits);
+        return this;
         }
 
     @Override
-    @Op Int64 shiftRight(Int64 count)
+    @Auto Int16 to<Int16>()
         {
-        Bit[] bits = to<Bit[]>();
-        for (Int64 i = 0; i < 0x3F; ++i)
-            {
-            bits[i] = bits[i+1];
-            }
-        return new Int(bits);
+        return this;
         }
 
     @Override
-    @Op Int64 shiftAllRight(Int64 count)
+    @Auto Int32 to<Int32>()
         {
-        Bit[] bits = to<Bit[]>();
-        for (Int64 i = 0; i < 0x3F; ++i)
-            {
-            bits[i] = bits[i+1];
-            }
-        bits[0x3F] = 0;
-        return new Int(bits);
+        return this;
         }
 
     @Override
-    Int64 rotateLeft(Int64 count)
+    @Auto Int64 to<Int64>()
         {
-        Bit[] bits  = to<Bit[]>();
-        Int64   rolls = count & 0x3F;
-        while (rolls-- > 0)
-            {
-            Bit carry = bits[0x3F];
-            for (Int64 i = 0x3F; i > 0; --i)
-                {
-                bits[i] = bits[i-1];
-                }
-            bits[0] = carry;
-            }
-        return new Int(bits);
+        return this;
         }
 
     @Override
-    Int64 rotateRight(Int64 count)
+    @Auto UInt8 to<UInt8>()
         {
-        Bit[] bits = to<Bit[]>();
-        Int64   rolls = count & 0x3F;
-        while (rolls-- > 0)
-            {
-            Bit carry = bits[0];
-            for (Int64 i = 0; i < 0x3F; ++i)
-                {
-                bits[i] = bits[i+1];
-                }
-            bits[0x3F] = carry;
-            }
-        return new Int(bits);
+        return this;
+        }
+
+    @Override
+    @Auto UInt16 to<UInt16>()
+        {
+        return this;
+        }
+
+    @Override
+    @Auto UInt32 to<UInt32>()
+        {
+        return this;
+        }
+
+    @Override
+    @Auto UInt64 to<UInt64>()
+        {
+        return this;
+        }
+
+    @Override
+    @Auto VarUInt to<VarUInt>()
+        {
+        return this;
+        }
+
+    @Override
+    @Auto VarFloat to<VarFloat>()
+        {
+        return this;
+        }
+
+    @Override
+    @Auto VarDec to<VarDec>()
+        {
+        return this;
+        }
+
+    @Override
+    @Auto VarInt to<VarInt>()
+        {
+        return this;
         }
 
     @Override
     Boolean[] to<Boolean[]>()
         {
-        Boolean[] bools = new Boolean[0x40];
-        for (Int64 i = 0; i < 0x40; ++i)
-            {
-            bools[i] = bits[i].to<Boolean>();
-            }
-        return bools;
+        return bitBooleans(bits);
         }
 
     @Override
     Bit[] to<Bit[]>()
         {
-        Bit[] copy = new Bit[0x40];
-        for (Int64 i = 0; i < 0x40; ++i)
+        return bits.clone();
+        }
+
+    @Override
+    @Op Int64 shiftLeft(Int count)
+        {
+        return new Int64(bitShiftLeft(bits, count));
+        }
+
+    @Override
+    Int64 rotateLeft(Int count)
+        {
+        return new Int64(bitRotateLeft(bits, count));
+        }
+
+    @Override
+    @Op Int64 shiftRight(Int count)
+        {
+        return new Int64(bitShiftRight(bits, count));
+        }
+
+    @Override
+    @Op Int64 rotateRight(Int count)
+        {
+        return new Int64(bitRotateRight(bits, count));
+        }
+
+    @Override
+    @Op Int64 shiftAllRight(Int count)
+        {
+        return new Int64(bitShiftAllRight(bits, count));
+        }
+
+    @Override
+    Int64 truncate(Int count)
+        {
+        return new Int64(bitTruncate(bits, count));
+        }
+
+    @Override
+    Int64 reverseBits()
+        {
+        return new Int64(bitReverse(bits));
+        }
+
+    @Override
+    Int64 reverseBytes()
+        {
+        Int64 result = 0;
+
+        for (Int i = 0; i < bitLength; i += 8)
             {
-            copy[i] = bits[i];
+            result |= ((this >>> i) & 0xFF) << (bitLength - i - 8);
             }
-        return copy;
+
+        return result;
         }
 
-    // TODO Nibble[] to<Nibble[]>()
-
-    // TODO Byte[] to<Byte[]>()
-
-    // TODO to...
-
-    // ----- Sequential interface ------------------------------------------------------------------
-
-    /**
-     * Integer increment.
-     *
-     * @throws BoundsException if _this_ is the maximum value
-     */
     @Override
-    IntNumber nextValue()
+    @Op Int64 neg()
         {
-        return this + 1;
+        if (this == minvalue)
+            {
+            // TODO: where should the OverflowException be placed?
+            // throw new OverflowException();
+            }
+        return ~this + 1;
         }
 
-    /**
-     * Integer decrement.
-     *
-     * @throws BoundsException if _this_ is the minimum value
-     */
     @Override
-    IntNumber prevValue()
+    @Op Int64 or(Int64 n)
         {
-        return this - 1;
+        return new Int64(bitOr(bits, n.bits));
         }
 
-    /**
-     * Checked integer increment.
-     */
+    @Override
+    @Op Int64 and(Int64 n)
+        {
+        return new Int64(bitAnd(bits, n.bits));
+        }
+
+    @Override
+    @Op Int64 xor(Int64 n)
+        {
+        return new Int64(bitXor(bits, n.bits));
+        }
+
+    @Override
+    @Op Int64 not()
+        {
+        return new Int64(bitNot(bits));
+        }
+
     @Override
     conditional IntNumber next()
         {
@@ -223,9 +238,6 @@ const Int64
         return false;
         }
 
-    /**
-     * Checked integer decrement.
-     */
     @Override
     conditional IntNumber prev()
         {
@@ -235,5 +247,54 @@ const Int64
             }
 
         return false;
+        }
+
+    @Override
+    @Op Int64 add(Int64 n)
+        {
+        return new Int64(bitAdd(bits, n.bits));
+        }
+
+    @Override
+    @Op Int64 sub(Int64 n)
+        {
+        return this + ~n + 1;
+        }
+
+    @Override
+    @Op Int64 mul(Int64 n)
+        {
+        return this * n;
+        }
+
+    @Override
+    @Op Int64 div(Int64 n)
+        {
+        return this / n;
+        }
+
+    @Override
+    @Op Int64 mod(Int64 n)
+        {
+        return this % n;
+        }
+
+    @Override
+    Int64 abs()
+        {
+        return this < 0 ? -this : this;
+        }
+
+    @Override
+    Int64 pow(Int64 n)
+        {
+        Int64 result = 1;
+
+        while (n-- > 0)
+            {
+            result *= this;
+            }
+
+        return result;
         }
     }

@@ -3,28 +3,34 @@ package org.xvm.runtime.template;
 
 import org.xvm.asm.ClassStructure;
 
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
 
 
 /**
- * TODO:
+ * Native UInt64 support.
  */
 public class xUInt64
-        extends xConst
+        extends xUnsignedConstrainedInt
     {
+    public static xUInt64 INSTANCE;
+
     public xUInt64(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(templates, structure, 0, -1, 64,  true);
+
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
-    public void initDeclared()
+    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        }
+        long l = ((ObjectHandle.JavaLong) hTarget).getValue();
 
-    @Override
-    public boolean isGenericHandle()
-        {
-        return false;
+        return frame.assignValue(iReturn, xString.makeHandle(xUnsignedConstrainedInt.unsignedLongToString(l)));
         }
     }
