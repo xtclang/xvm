@@ -54,6 +54,30 @@ public abstract class BiExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return the first sub-expression of the bi-expression
+     */
+    public Expression getExpression1()
+        {
+        return expr1;
+        }
+
+    /**
+     * @return the operator for the bi-expression
+     */
+    public Token getOperator()
+        {
+        return operator;
+        }
+
+    /**
+     * @return the second sub-expression of the bi-expression
+     */
+    public Expression getExpression2()
+        {
+        return expr2;
+        }
+
     @Override
     public long getStartPosition()
         {

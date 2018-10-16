@@ -27,7 +27,8 @@ interface Sequence<ElementType>
      * @throws BoundsException if the specified range exceeds either the lower or upper bounds of
      *         this sequence
      */
-    @Op("[..]") Sequence<ElementType> slice(Range<Int> range);
+    @Op("[..]")
+    Sequence<ElementType> slice(Range<Int> range);
 
     /**
      * Obtain a Sequence of the same length and that contains the same values as this Sequence, but

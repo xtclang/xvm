@@ -1015,13 +1015,14 @@ public class ConstantPool
                 sClz = "UInt64";
                 break;
 
-            case "Tuple":
-            case "Map":
-            case "Set":
-            case "Sequence":
             case "Array":
-            case "List":
             case "Hashable":
+            case "List":
+            case "Map":
+            case "Matrix":
+            case "Sequence":
+            case "Set":
+            case "Tuple":
             case "UniformIndexed":
                 sPkg = "collections";
                 sClz = sName;
@@ -1841,6 +1842,7 @@ public class ConstantPool
     public ClassConstant     clzInt()           {ClassConstant     c = m_clzInt;          if (c == null) {m_clzInt          = c = (ClassConstant) getImplicitlyImportedIdentity("Int"        );} return c;}
     public ClassConstant     clzIndexed()       {ClassConstant     c = m_clzIndexed;      if (c == null) {m_clzIndexed      = c = (ClassConstant) getImplicitlyImportedIdentity("UniformIndexed");} return c;}
     public ClassConstant     clzArray()         {ClassConstant     c = m_clzArray;        if (c == null) {m_clzArray        = c = (ClassConstant) getImplicitlyImportedIdentity("Array"      );} return c;}
+    public ClassConstant     clzMatrix()        {ClassConstant     c = m_clzMatrix;       if (c == null) {m_clzMatrix       = c = (ClassConstant) getImplicitlyImportedIdentity("Matrix"     );} return c;}
     public ClassConstant     clzList()          {ClassConstant     c = m_clzList;         if (c == null) {m_clzList         = c = (ClassConstant) getImplicitlyImportedIdentity("List"       );} return c;}
     public ClassConstant     clzMap()           {ClassConstant     c = m_clzMap;          if (c == null) {m_clzMap          = c = (ClassConstant) getImplicitlyImportedIdentity("Map"        );} return c;}
     public ClassConstant     clzEntry()         {ClassConstant     c = m_clzEntry;        if (c == null) {m_clzEntry        = c = (ClassConstant) getImplicitlyImportedIdentity("Entry"      );} return c;}
@@ -1904,6 +1906,7 @@ public class ConstantPool
     public TypeConstant      typeInt()          {TypeConstant      c = m_typeInt;         if (c == null) {m_typeInt         = c = ensureTerminalTypeConstant(clzInt()                        );} return c;}
     public TypeConstant      typeIndexed()      {TypeConstant      c = m_typeIndexed;     if (c == null) {m_typeIndexed     = c = ensureTerminalTypeConstant(clzIndexed()                    );} return c;}
     public TypeConstant      typeArray()        {TypeConstant      c = m_typeArray;       if (c == null) {m_typeArray       = c = ensureTerminalTypeConstant(clzArray()                      );} return c;}
+    public TypeConstant      typeMatrix()       {TypeConstant      c = m_typeMatrix;      if (c == null) {m_typeMatrix      = c = ensureTerminalTypeConstant(clzMatrix()                     );} return c;}
     public TypeConstant      typeList()         {TypeConstant      c = m_typeList;        if (c == null) {m_typeList        = c = ensureTerminalTypeConstant(clzList()                       );} return c;}
     public TypeConstant      typeMap()          {TypeConstant      c = m_typeMap;         if (c == null) {m_typeMap         = c = ensureTerminalTypeConstant(clzMap()                        );} return c;}
     public TypeConstant      typeEntry()        {TypeConstant      c = m_typeEntry;       if (c == null) {m_typeEntry       = c = ensureTerminalTypeConstant(clzEntry()                      );} return c;}
@@ -2552,6 +2555,7 @@ public class ConstantPool
         m_clzInt          = null;
         m_clzIndexed      = null;
         m_clzArray        = null;
+        m_clzMatrix       = null;
         m_clzList         = null;
         m_clzMap          = null;
         m_clzEntry        = null;
@@ -2618,6 +2622,7 @@ public class ConstantPool
         m_typeInt         = null;
         m_typeIndexed     = null;
         m_typeArray       = null;
+        m_typeMatrix      = null;
         m_typeList        = null;
         m_typeMap         = null;
         m_typeEntry       = null;
@@ -2979,6 +2984,7 @@ public class ConstantPool
     private transient ClassConstant     m_clzInt;
     private transient ClassConstant     m_clzIndexed;
     private transient ClassConstant     m_clzArray;
+    private transient ClassConstant     m_clzMatrix;
     private transient ClassConstant     m_clzList;
     private transient ClassConstant     m_clzMap;
     private transient ClassConstant     m_clzEntry;
@@ -3045,6 +3051,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeInt;
     private transient TypeConstant      m_typeIndexed;
     private transient TypeConstant      m_typeArray;
+    private transient TypeConstant      m_typeMatrix;
     private transient TypeConstant      m_typeList;
     private transient TypeConstant      m_typeMap;
     private transient TypeConstant      m_typeEntry;

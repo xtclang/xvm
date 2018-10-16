@@ -8,20 +8,26 @@ import java.util.Set;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.IntervalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.I_Get;
 
+import org.xvm.compiler.Token.Id;
+
 
 /**
  * An array access expression is an expression followed by an array index expression.
+ *
+ * <p/> TODO implement testFit() - the element type (that we can't guess in getImplicitType()) gets passed in!
  * <p/> TODO support tuple of indexes, particularly for multi-dimensional arrays
  * <p/> TODO for multi-dimensional arrays, support partial binding? @Op("[?,_]") / @Op("[_,?]") etc.
  */
@@ -111,8 +117,6 @@ public class ArrayAccessExpression
         // the value of the index might not yet be determinable
         if (typeArray.isParamsSpecified() && typeArray.isTuple())
             {
-            // TODO support tuple slice
-
             if (indexes.size() == 1)
                 {
                 Expression exprIndex = indexes.get(0);
@@ -121,19 +125,29 @@ public class ArrayAccessExpression
                     return determineTupleFieldType(typeArray, indexes.get(0).toConstant());
                     }
 
+                Constant constIndex = null;
                 if (exprIndex instanceof LiteralExpression)
                     {
-                    Constant    constIndex = ((LiteralExpression) exprIndex).getLiteralConstant();
-                    IntConstant intIndex   = null;
-                    try
+                    constIndex = fromLiteral(exprIndex);
+                    }
+                else if (exprIndex instanceof RelOpExpression)
+                    {
+                    RelOpExpression exprInterval = (RelOpExpression) exprIndex;
+                    if (exprInterval.getOperator().getId() == Id.DOTDOT)
                         {
-                        intIndex = (IntConstant) constIndex.convertTo(pool().typeInt());
+                        // need both the left & right expressions, and they must both be constant or
+                        // of the LiteralExpression form
+                        Constant constLo = fromLiteral(exprInterval.getExpression1());
+                        Constant constHi = fromLiteral(exprInterval.getExpression2());
+                        if (constLo != null && constHi != null)
+                            {
+                            constIndex = pool().ensureIntervalConstant(constLo, constHi);
+                            }
                         }
-                    catch (ArithmeticException e) {}
-                    if (intIndex != null)
-                        {
-                        return determineTupleFieldType(typeArray, intIndex);
-                        }
+                    }
+                if (constIndex != null)
+                    {
+                    return determineTupleFieldType(typeArray, constIndex);
                     }
                 }
 
@@ -143,42 +157,125 @@ public class ArrayAccessExpression
             return null;
             }
 
+        // look for an operator that supports [x] indexing
         TypeInfo            infoArray  = typeArray.ensureTypeInfo();
         int                 cIndexes   = indexes.size();
         Set<MethodConstant> setMethods = infoArray.findOpMethods("getElement", "[]", cIndexes);
-        // TODO could be a slice
         for (MethodConstant idMethod : setMethods)
             {
-            TypeConstant[] atypeRet = idMethod.getRawReturns();
-            if (atypeRet.length > 0)
+            if (indexesFit(ctx, idMethod))
                 {
-                return atypeRet[0];
+                return idMethod.getRawReturns()[0];
+                }
+            }
+
+        // we couldn't find a simple [x] form, but there could be an [x..y] form
+        setMethods = infoArray.findOpMethods("slice", "[..]", cIndexes);
+        for (MethodConstant idMethod : setMethods)
+            {
+            if (indexesFit(ctx, idMethod))
+                {
+                return idMethod.getRawReturns()[0];
                 }
             }
 
         return null;
         }
 
-    // TODO remove or move into validate()
-    /**
-     * @return the type of the container (typically an array) that is being accessed
-     */
-    private TypeConstant getImplicitIndexedType(Context ctx)
+    @Override
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
         {
-        TypeConstant typeArray = expr.isValidated() ? expr.getType() : expr.getImplicitType(ctx);
-        if (typeArray == null)
+        // check if we can figure out the answer on our own
+        TypeConstant typeImplicit = getImplicitType(ctx);
+        if (typeImplicit != null && typeRequired.isA(typeImplicit))
             {
-            return null;
+            return TypeFit.Fit;
             }
 
-        if (typeArray.isTuple())
+        // test to see if the "array" expression is a tuple; this is easy to test for, just by
+        // asking for a "naked" Tuple, but ignore anything that needs packing/unpacking/conversion
+        ConstantPool pool      = pool();
+        int          cIndexes  = indexes.size();
+        TypeConstant typeArray = expr.getImplicitType(ctx);
+        if (typeArray.isTuple() || typeArray == null && expr.testFit(ctx, pool.typeTuple()) == TypeFit.Fit)
             {
-            return typeArray;
+            TypeConstant typeTest = null;
+            if (cIndexes == 1)
+                {
+                Expression   exprIndex  = indexes.get(0);
+                if (exprIndex.isConstant())
+                    {
+                    typeTest = determineTupleTestType(indexes.get(0).toConstant(), typeRequired);
+                    }
+                else
+                    {
+                    Constant constIndex = null;
+                    if (exprIndex instanceof LiteralExpression)
+                        {
+                        constIndex = fromLiteral(exprIndex);
+                        }
+                    else if (exprIndex instanceof RelOpExpression)
+                        {
+                        RelOpExpression exprInterval = (RelOpExpression) exprIndex;
+                        if (exprInterval.getOperator().getId() == Id.DOTDOT)
+                            {
+                            // need both the left & right expressions, and they must both be
+                            // constant or of the LiteralExpression form
+                            Constant constLo = fromLiteral(exprInterval.getExpression1());
+                            Constant constHi = fromLiteral(exprInterval.getExpression2());
+                            if (constLo != null && constHi != null)
+                                {
+                                constIndex = pool().ensureIntervalConstant(constLo, constHi);
+                                }
+                            }
+                        }
+                    if (constIndex != null)
+                        {
+                        typeTest = determineTupleTestType(constIndex, typeRequired);
+                        }
+                    }
+                }
+
+            if (typeTest == null)
+                {
+                // the only thing that we can say for sure at this point is that the return
+                // value is an object
+                return pool.typeObject().isA(typeRequired) ? TypeFit.Fit : TypeFit.NoFit;
+                }
+            else
+                {
+                return expr.testFit(ctx, typeTest);
+                }
             }
 
-        return typeArray.ensureTypeInfo().findOpMethods("getElement", "[]", -1).isEmpty()
-                ? null
-                : typeArray;
+        if (typeArray != null)
+            {
+            typeArray.ensureTypeInfo().findOpMethods()
+            }
+
+        if (cIndexes == 1)
+            {
+            // test for sequence[] and sequence[..]
+            Expression exprIndex = indexes.get(0);
+            if (typeArray != null && typeArray.isA(pool.typeSequence() || expr.testFit(ctx, pool.typeSequence()) exprIndex.testFit(ctx, ))
+
+            // test for UniformIndexed
+            // TODO
+            }
+        else if (cIndexes == 2)
+            {
+            // test for matrix
+            // TODO
+            }
+
+        if (typeArray != null)
+            {
+            }
+
+        // we're going to have to probe for UniformIndexed, and Matrix
+        // TODO
+
+        return super.testFit(ctx, typeRequired);
         }
 
     @Override
@@ -286,32 +383,6 @@ public class ArrayAccessExpression
         return finishValidation(typeRequired, typeElement, fit, constVal, errs);
         }
 
-    /**
-     * Determine the field type for a tuple field, if possible.
-     *
-     * @param typeTuple  the type of the tuple
-     * @param index      a constant that holds the field index
-     *
-     * @return the field type, if it can be determined from the passed information, otherwise null
-     */
-    private TypeConstant determineTupleFieldType(TypeConstant typeTuple, Constant index)
-        {
-        int n;
-        try
-            {
-            n = ((IntConstant) index.convertTo(pool().typeInt())).getIntValue().getInt();
-            }
-        catch (RuntimeException e)
-            {
-            return null;
-            }
-
-        TypeConstant[] atypeFields = typeTuple.getParamTypesArray();
-        return n >= 0 && n < atypeFields.length
-                ? atypeFields[n]
-                : null;
-        }
-
     @Override
     public boolean isCompletable()
         {
@@ -408,6 +479,197 @@ public class ArrayAccessExpression
                 }
             return new Assignable(argArray, aArgIndexes);
             }
+        }
+
+
+    // ----- compilation helpers -------------------------------------------------------------------
+
+    /**
+     * Helper to obtain an IntConstant from an expression.
+     *
+     * @param expr  an expression
+     *
+     * @return an IntConstant, or null if the expression did not yield an IntConstant
+     */
+    private IntConstant fromLiteral(Expression expr)
+        {
+        if (expr instanceof LiteralExpression)
+            {
+            Constant constLit = ((LiteralExpression) expr).getLiteralConstant();
+            try
+                {
+                return (IntConstant) constLit.convertTo(pool().typeInt());
+                }
+            catch (ArithmeticException e) {}
+            }
+
+        return null;
+        }
+
+    /**
+     * Helper to determine if the indexes of this expression can be used with the specified method.
+     *
+     * @param method  the method constant
+     *
+     * @return true iff the method takes a matching number of indexes of types matching those from
+     *         {@link #indexes}, and returns a value
+     */
+    private boolean indexesFit(Context ctx, MethodConstant method)
+        {
+        if (method.getRawReturns().length > 0)
+            {
+            TypeConstant[] atypes = method.getRawParams();
+            int            ctypes = atypes.length;
+            if (ctypes == indexes.size())
+                {
+                for (int i = 0; i < ctypes; ++i)
+                    {
+                    if (!indexes.get(i).testFit(ctx, atypes[i]).isFit())
+                        {
+                        return false;
+                        }
+                    }
+                return true;
+                }
+            }
+
+        return false;
+        }
+
+    /**
+     * Determine the field type for a tuple field, if possible.
+     *
+     * @param typeTuple  the type of the tuple
+     * @param index      a constant that holds the field index (or a range, for a slice)
+     *
+     * @return the field type, if it can be determined from the passed information, otherwise null
+     */
+    private TypeConstant determineTupleFieldType(TypeConstant typeTuple, Constant index)
+        {
+        TypeConstant[] atypeFields = typeTuple.getParamTypesArray();
+        int            cFields     = atypeFields.length;
+        ConstantPool   pool        = pool();
+
+        // type of "tup[n]" is a field type
+        int     n   = 0;
+        boolean fOk;
+        try
+            {
+            n   = index.convertTo(pool.typeInt()).getIntValue().getInt();
+            fOk = true;
+            }
+        catch (RuntimeException e)
+            {
+            fOk = false;
+            }
+
+        if (fOk)
+            {
+            return n >= 0 && n < cFields ? atypeFields[n] : null;
+            }
+
+        // type of "tup[lo..hi]" is a tuple of field types
+        int nLo = 0;
+        int nHi = 0;
+        try
+            {
+            IntervalConstant interval = (IntervalConstant) index.convertTo(pool.typeInterval());
+            nLo = interval.getFirst().convertTo(pool.typeInt()).getIntValue().getInt();
+            nHi = interval.getLast().convertTo(pool.typeInt()).getIntValue().getInt();
+            }
+        catch (RuntimeException e2)
+            {
+            return null;
+            }
+
+        if (nLo < 0 || nLo >= cFields ||
+            nHi < 0 || nHi >= cFields)
+            {
+            return null;
+            }
+
+        int            cSlice     = Math.abs(nHi - nLo) + 1;
+        TypeConstant[] atypeSlice = new TypeConstant[cSlice];
+        int            cStep      = nHi >= nLo ? +1 : -1;
+        for (int iSrc = nLo, iDest = 0; iDest < cSlice; ++iDest, iSrc += cStep)
+            {
+            atypeSlice[iDest] = atypeFields[iSrc];
+            }
+        return pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeSlice);
+        }
+
+    /**
+     * Determine the field type for a tuple field or slice.
+     *
+     * @param index         a constant that holds the field index (or a range, for a slice)
+     * @param typeRequired  the field type(s) being tested for
+     *
+     * @return a tuple type with the test field(s), or null if the test type cannot be formed
+     */
+    private TypeConstant determineTupleTestType(Constant index, TypeConstant typeRequired)
+        {
+        ConstantPool pool = pool();
+
+        int nLo, nHi;
+        boolean fSlice;
+        try
+            {
+            nLo = nHi = index.convertTo(pool.typeInt()).getIntValue().getInt();
+            fSlice    = false;
+            }
+        catch (RuntimeException e)
+            {
+            // type of "tup[lo..hi]" is a tuple
+            try
+                {
+                IntervalConstant interval = (IntervalConstant) index.convertTo(pool.typeInterval());
+                nLo    = interval.getFirst().convertTo(pool.typeInt()).getIntValue().getInt();
+                nHi    = interval.getLast().convertTo(pool.typeInt()).getIntValue().getInt();
+                fSlice = true;
+                }
+            catch (RuntimeException e2)
+                {
+                return null;
+                }
+            }
+
+        // note: 0xFF used as an *arbitrary* limit on tuple size here, just to avoid stupidity
+        if (nLo < 0 || nHi < 0 || nLo > 0xFF || nHi > 0xFF || (fSlice && !typeRequired.isTuple()))
+            {
+            return null;
+            }
+
+        // create a nominally-sized array of field types that are all "Object", since Tuple<T1, Tn>
+        // is by definition a Tuple<Object, Object>, which is in turn a Tuple<Object>
+        int            cTestFields = Math.max(nLo, nHi) + 1;
+        TypeConstant[] atypeFields = new TypeConstant[cTestFields];
+        TypeConstant   typeObject  = pool.typeObject();
+        for (int i = 0; i < cTestFields; ++i)
+            {
+            atypeFields[i] = typeObject;
+            }
+
+        if (fSlice)
+            {
+            TypeConstant[] atypeReq = typeRequired.getParamTypesArray();
+            int            cReq     = atypeReq.length;
+            if (cReq > (Math.abs(nHi - nLo) + 1))
+                {
+                return null;
+                }
+
+            int cStep = nHi >= nLo ? +1 : -1;
+            for (int iSrc = 0, iDest = nLo; iSrc < cReq; ++iSrc, iDest += cStep)
+                {
+                atypeFields[iDest] = atypeReq[iSrc];
+                }
+            }
+        else
+            {
+            atypeFields[nLo] = typeRequired;
+            }
+
+        return pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeFields);
         }
 
 
