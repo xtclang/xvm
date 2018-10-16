@@ -23,12 +23,14 @@ import org.xvm.runtime.ObjectHeap;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.IndexSupport;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xInt64;
+import org.xvm.runtime.template.xString;
 
 
 /**
@@ -53,20 +55,23 @@ public class xArray
     @Override
     public void initDeclared()
         {
-        xIntArray template = new xIntArray(f_templates, f_struct, true);
-        template.initDeclared();
-
-        ConstantPool pool = f_struct.getConstantPool();
-
-        TypeConstant type = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeInt());
-        f_templates.registerNativeTemplate(type, template); // Array<Int>
+        registerNative(new xIntArray(f_templates, f_struct, true));
+        registerNative(new xCharArray(f_templates, f_struct, true));
 
         markNativeGetter("size");
         markNativeMethod("construct", INT);
         markNativeMethod("construct", new String[]{"Int64", "Function"});
         markNativeMethod("elementAt", INT, new String[] {"Var<ElementType>"});
         markNativeMethod("addElement", ELEMENT_TYPE, ARRAY);
+        markNativeMethod("addElements", ARRAY, ARRAY);
         markNativeMethod("slice", new String[]{"Range<Int64>"}, ARRAY);
+        markNativeMethod("to", VOID, STRING);
+        }
+
+    private void registerNative(xArray template)
+        {
+        template.initDeclared();
+        f_templates.registerNativeTemplate(template.getCanonicalType(), template);
         }
 
     @Override
@@ -145,6 +150,7 @@ public class xArray
         ArrayHandle hArray = template.createArrayHandle(frame, clzArray, ahValue);
 
         hArray.makeImmutable();
+
         frame.pushStack(hArray);
         return Op.R_NEXT;
         }
@@ -215,6 +221,16 @@ public class xArray
         }
 
     @Override
+    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        if (hArg.getTemplate() instanceof xArray)
+            {
+            return addElements(frame, hTarget, hArg, iReturn);
+            }
+        return addElement(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
     protected int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         ArrayHandle hArray = (ArrayHandle) hTarget;
@@ -236,6 +252,9 @@ public class xArray
             {
             case "addElement":
                 return addElement(frame, hTarget, hArg, iReturn);
+
+            case "addElements":
+                return addElements(frame, hTarget, hArg, iReturn);
 
             case "elementAt":
                 return makeRef(frame, hTarget, ((JavaLong) hArg).getValue(), false, iReturn);
@@ -311,6 +330,23 @@ public class xArray
         return true;
         }
 
+    @Override
+    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
+        int                c      = hArray.m_cSize;
+
+        if (c == 0)
+            {
+            return frame.assignValue(iReturn, xString.EMPTY_ARRAY);
+            }
+
+        StringBuilder sb = new StringBuilder(c*7); // a wild guess
+        sb.append('[');
+
+        return new ToString(hArray, new StringBuilder("["), iReturn).doNext(frame);
+        }
+
     /**
      * addElement(TypeElement) implementation
      */
@@ -335,12 +371,50 @@ public class xArray
         ObjectHandle[] ahValue = hArray.m_ahValue;
         if (ixNext == ahValue.length)
             {
-            ahValue = hArray.m_ahValue = grow(ahValue, ixNext);
+            ahValue = hArray.m_ahValue = grow(ahValue, ixNext + 1);
             }
         hArray.m_cSize++;
 
         ahValue[ixNext] = hValue;
         return frame.assignValue(iReturn, hArray); // return this
+        }
+
+    /**
+     * addElements(Element[]) implementation
+     */
+    protected int addElements(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
+        {
+        GenericArrayHandle hThis = (GenericArrayHandle) hTarget;
+
+        switch (hThis.m_mutability)
+            {
+            case Constant:
+                return frame.raiseException(xException.immutableObject());
+
+            case FixedSize:
+                return frame.raiseException(xException.illegalOperation());
+
+            case Persistent:
+                // TODO: implement
+                return frame.raiseException(xException.unsupportedOperation());
+            }
+
+        GenericArrayHandle hThat = (GenericArrayHandle) hValue;
+
+        int cThat = hThat.m_cSize;
+        if (cThat > 0)
+            {
+            ObjectHandle[] ahThis = hThis.m_ahValue;
+            int            cThis  = hThis.m_cSize;
+
+            if (cThis + cThat > ahThis.length)
+                {
+                ahThis = hThis.m_ahValue = grow(ahThis, cThis + cThat);
+                }
+            hThis.m_cSize += cThat;
+            System.arraycopy(hThat.m_ahValue, 0, ahThis, cThis, cThat);
+            }
+        return frame.assignValue(iReturn, hThis); // return this
         }
 
     /**
@@ -414,7 +488,7 @@ public class xArray
                     return frame.raiseException(xException.illegalOperation());
                     }
 
-                ahValue = hArray.m_ahValue = grow(ahValue, cSize);
+                ahValue = hArray.m_ahValue = grow(ahValue, cSize + 1);
                 }
             hArray.m_cSize++;
             }
@@ -441,15 +515,24 @@ public class xArray
 
     private ObjectHandle[] grow(ObjectHandle[] ahValue, int cSize)
         {
-        // an array can only grow without any "holes"
-        int cCapacity = ahValue.length;
-
-        // resize (TODO: we should be much smarter here)
-        cCapacity = cCapacity + Math.max(cCapacity >> 2, 16);
+        int cCapacity = calculateCapacity(ahValue.length, cSize);
 
         ObjectHandle[] ahNew = new ObjectHandle[cCapacity];
-        System.arraycopy(ahValue, 0, ahNew, 0, cSize);
+        System.arraycopy(ahValue, 0, ahNew, 0, ahValue.length);
         return ahNew;
+        }
+
+    /**
+     * Calculate a new capacity based on the current and desired size of an array.
+     *
+     * @return a new capacity
+     */
+    protected int calculateCapacity(int cOld, int cDesired)
+        {
+        assert cDesired > cOld;
+
+        // resize (TODO: we should be much smarter here)
+        return cDesired + Math.max(cDesired >> 2, 16);
         }
 
     // ----- helper classes -----
@@ -579,6 +662,89 @@ public class xArray
             return frameCaller.assignValue(iReturn, xBoolean.TRUE);
             }
         }
+
+    /**
+     * Helper class for buildStringValue() implementation.
+     */
+    protected static class ToString
+            implements Frame.Continuation
+        {
+        final private GenericArrayHandle hArray;
+        final private StringBuilder sb;
+        final private int iReturn;
+        private int index = -1;
+
+        public ToString(GenericArrayHandle hArray, StringBuilder sb, int iReturn)
+            {
+            this.hArray = hArray;
+            this.sb = sb;
+            this.iReturn = iReturn;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            updateResult(frameCaller);
+
+            return doNext(frameCaller);
+            }
+
+        protected void updateResult(Frame frameCaller)
+            {
+            sb.append(((xString.StringHandle) frameCaller.popStack()).getValue())
+              .append(", ");
+            }
+
+        protected int doNext(Frame frameCaller)
+            {
+            ObjectHandle[] ahValue = hArray.m_ahValue;
+            int            cValues = hArray.m_cSize;
+            while (++index < cValues)
+                {
+                ObjectHandle hValue = ahValue[index];
+
+                if (hValue == null)
+                    {
+                    // be tolerant here, but this shouldn't happen
+                    sb.append("<unassigned>, ");
+                    continue;
+                    }
+
+                if (sb.length() > 1_000_000)
+                    {
+                    // cut it off
+                    sb.append("...");
+                    break;
+                    }
+
+                switch (Utils.callToString(frameCaller, hValue))
+                    {
+                    case Op.R_NEXT:
+                        updateResult(frameCaller);
+                        continue;
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.setContinuation(this);
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+
+            if (index > 0)
+                {
+                sb.setLength(sb.length() - 2); // remove the trailing ", "
+                }
+            sb.append(']');
+
+            return frameCaller.assignValue(iReturn, xString.makeHandle(sb.toString()));
+            }
+        }
+
 
     // ----- ObjectHandle helpers -----
 

@@ -106,6 +106,18 @@ interface IntNumber
      */
     IntNumber reverseBytes();
 
+
+    // ----- Sequential ----------------------------------------------------------------------------
+
+    @Override
+    Int stepsTo(IntNumber that)
+        {
+        return (that - this).to<Int>();
+        }
+
+
+    // ----- conversions ---------------------------------------------------------------------------
+
     /**
      * Convert the number to a Char. Any additional magnitude is discarded.
      */
@@ -118,22 +130,215 @@ interface IntNumber
      * Obtain the number as an array of boolean values.
      */
     @Override
-    Boolean[] to<Boolean[]>()
+    Boolean[] to<Boolean[]>();
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * @return a new bit array that is a "shiftLeft" of the specified bit array.
+     */
+    static Bit[] bitShiftLeft(Bit[] bits, Int count)
         {
-        class SequenceImpl
-                implements Sequence<Boolean>
+        Int bitLength = bits.size;
+
+        Bit[] bitsNew = new Bit[bitLength];
+        for (Int i = 0; i < bitLength; ++i)
             {
-            @Override @RO Int size.get()
-                {
-                return IntNumber.this.bitCount;
-                }
-
-            @Override Boolean get(Int index)
-                {
-                return IntNumber.this.to<Bit[]>()[index].to<Boolean>();
-                }
+            bitsNew[i] = i < count ? 0 : bits[i - count];
             }
+        return bitsNew;
+        }
 
-        return new SequenceImpl();
+    /**
+     * @return a new bit array that is a "rotateLeft" of the specified bit array.
+     */
+    static Bit[] bitRotateLeft(Bit[] bits, Int count)
+        {
+        Int bitLength = bits.size;
+
+        Bit[] bitsNew = new Bit[bitLength];
+        for (Int i = 0; i < bitLength; ++i)
+            {
+            bitsNew[i] = i < count ? bits[bitLength - i + count] : bits[i - count];
+            }
+        return bitsNew;
+        }
+
+    /**
+     * @return a new bit array that is a "shiftRight" of the specified bit array
+     * (the sign bit is carried).
+     */
+    static Bit[] bitShiftRight(Bit[] bits, Int count)
+        {
+        Int bitLength = bits.size;
+        Bit bitSign   = bits[bitLength - 1];
+
+        Bit[] bitsNew = new Bit[bitLength];
+        for (Int i = 0; i < bitLength; ++i)
+            {
+            bitsNew[i] = i < bitLength - count ? bits[i + count] : bitSign;
+            }
+        return bitsNew;
+        }
+
+    /**
+     * @return a new bit array that is a "shiftAllRight" of the specified bit array
+     * (the sign bit is not carried).
+     */
+    static Bit[] bitShiftAllRight(Bit[] bits, Int count)
+        {
+        Int bitLength = bits.size;
+
+        Bit[] bitsNew = new Bit[bitLength];
+        for (Int i = 0; i < bitLength; ++i)
+            {
+            bitsNew[i] = i < bitLength - count ? bits[i + count] : 0;
+            }
+        return bitsNew;
+        }
+
+    /**
+     * @return a new bit array that is a "rotateRight" of the specified bit array.
+     */
+    static Bit[] bitRotateRight(Bit[] bits, Int count)
+        {
+        Int bitLength = bits.size;
+
+        Bit[] bitsNew = new Bit[bitLength];
+        for (Int i = 0; i < bitLength; ++i)
+            {
+            bitsNew[i] = i < bitLength - count ? bits[i + count] : bits[i + count - bitLength];
+            }
+        return bitsNew;
+        }
+
+    /**
+     * @return a new bit array that is an "and" of the specified bit arrays.
+     */
+    static Bit[] bitAnd(Bit[] bits1, Bit[] bits2)
+        {
+        Int bitLength = bits1.size;
+        assert bits2.size == bitLength;
+
+        Bit[] bitsNew = new Bit[bitLength];
+        for (Int i = 0; i < bitLength; ++i)
+            {
+            bitsNew[i] = bits1[i] & bits2[i];
+            }
+        return bitsNew;
+        }
+
+    /**
+     * @return a new bit array that is an "or" of the specified bit arrays.
+     */
+    static Bit[] bitOr(Bit[] bits1, Bit[] bits2)
+        {
+        Int bitLength = bits1.size;
+        assert bits2.size == bitLength;
+
+        Bit[] bitsNew = new Bit[bitLength];
+        for (Int i = 0; i < bitLength; ++i)
+            {
+            bitsNew[i] = bits1[i] | bits2[i];
+            }
+        return bitsNew;
+        }
+
+    /**
+     * @return a new bit array that is a "xor" of the specified bit arrays.
+     */
+    static Bit[] bitXor(Bit[] bits1, Bit[] bits2)
+        {
+        Int bitLength = bits1.size;
+        assert bits2.size == bitLength;
+
+        Bit[] bitsNew = new Bit[bitLength];
+        for (Int i = 0; i < bitLength; ++i)
+            {
+            bitsNew[i] = bits1[i] ^ bits2[i];
+            }
+        return bitsNew;
+        }
+
+    /**
+     * @return a new bit array that is a "not" of the specified bit array.
+     */
+    static Bit[] bitNot(Bit[] bits)
+        {
+        Int bitLength = bits.size;
+
+        Bit[] bitsNew = new Bit[bitLength];
+        for (Int i = 0; i < bitLength; ++i)
+            {
+            bitsNew[i] = ~bits[i];
+            }
+        return bitsNew;
+        }
+
+    /**
+     * @return a new bit array that is an "add" of the specified bit arrays.
+     */
+    static Bit[] bitAdd(Bit[] bits1, Bit[] bits2)
+        {
+        Int bitLength = bits1.size;
+        assert bits2.size == bitLength;
+
+        Bit[] bitsNew = new Bit[bitLength];
+        Bit carry = 0;
+        for (Int i = 0; i < bitLength; ++i)
+            {
+            Bit aXorB = bits1[i] ^ bits2[i];
+            Bit aAndB = bits1[i] & bits2[i];
+
+            bitsNew[i] = aXorB ^ carry;
+            carry = (aXorB & carry) | aAndB;
+            }
+        return bitsNew;
+        }
+
+    /**
+     * @return a new bit array that is a "truncate" of the specified bit array.
+     */
+    static Bit[] bitTruncate(Bit[] bits, Int count)
+        {
+        Int bitLength = bits.size;
+
+        Bit[] bitsNew = new Bit[bitLength];
+        for (Int i = 0; i < bitLength; ++i)
+            {
+            bitsNew[i] = i < count ? bits[i] : 0;
+            }
+        return bitsNew;
+        }
+
+    /**
+     * @return a new bit array that is a "reverse" of the specified bit array.
+     */
+    static Bit[] bitReverse(Bit[] bits)
+        {
+        Int bitLength = bits.size;
+
+        Bit[] bitsNew = new Bit[bitLength];
+        for (Int i = 0; i < bitLength; ++i)
+            {
+            bitsNew[i] = bits[bitLength - i];
+            }
+        return bitsNew;
+        }
+
+    /**
+     * @return a new Boolean array for this bit array.
+     */
+    static Boolean[] bitBooleans(Bit[] bits)
+        {
+        Int bitLength = bits.size;
+
+        Boolean[] bools = new Boolean[bitLength];
+        for (Int i = 0; i < bitLength; ++i)
+            {
+            bools[i] = bits[i] == 1;
+            }
+        return bools;
         }
     }

@@ -174,6 +174,22 @@ public abstract class ObjectHandle
             m_mapFields.put(sName, hValue);
             }
 
+        @Override
+        public void makeImmutable()
+            {
+            if (isMutable())
+                {
+                if (m_mapFields != null)
+                    {
+                    for (ObjectHandle hValue : m_mapFields.values())
+                        {
+                        hValue.makeImmutable();
+                        }
+                    }
+                super.makeImmutable();
+                }
+            }
+
         public static boolean compareIdentity(GenericHandle h1, GenericHandle h2)
             {
             if (h1 == h2)
@@ -329,6 +345,14 @@ public abstract class ObjectHandle
             super(clzArray);
 
             m_fMutable = true;
+            }
+
+        @Override
+        public void makeImmutable()
+            {
+            super.makeImmutable();
+
+            m_mutability = MutabilityConstraint.Constant;
             }
 
         @Override

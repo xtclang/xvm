@@ -246,6 +246,12 @@ const VarUInt
         TODO
         }
 
+    @Override
+    Boolean[] to<Boolean[]>()
+        {
+        return bitBooleans(bits);
+        }
+
     // ----- Sequential interface ------------------------------------------------------------------
 
     /**

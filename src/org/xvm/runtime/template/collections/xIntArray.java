@@ -19,6 +19,7 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xInt64;
+import org.xvm.runtime.template.xString;
 
 
 /**
@@ -113,7 +114,7 @@ public class xIntArray
             // an array can only grow without any "holes"
             if (cSize == alValue.length)
                 {
-                alValue = hArray.m_alValue = grow(alValue, cSize);
+                alValue = hArray.m_alValue = grow(alValue, cSize + 1);
                 }
 
             hArray.m_cSize++;
@@ -183,12 +184,48 @@ public class xIntArray
         long[] alValue = hArray.m_alValue;
         if (ixNext == alValue.length)
             {
-            alValue = hArray.m_alValue = grow(hArray.m_alValue, ixNext);
+            alValue = hArray.m_alValue = grow(hArray.m_alValue, ixNext + 1);
             }
         hArray.m_cSize++;
 
         alValue[ixNext] = ((JavaLong) hValue).getValue();
         return frame.assignValue(iReturn, hArray); // return this
+        }
+
+    @Override
+    protected int addElements(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
+        {
+        IntArrayHandle hThis = (IntArrayHandle) hTarget;
+
+        switch (hThis.m_mutability)
+            {
+            case Constant:
+                return frame.raiseException(xException.immutableObject());
+
+            case FixedSize:
+                return frame.raiseException(xException.illegalOperation());
+
+            case Persistent:
+                // TODO: implement
+                return frame.raiseException(xException.unsupportedOperation());
+            }
+
+        IntArrayHandle hThat = (IntArrayHandle) hValue;
+
+        int cThat = hThat.m_cSize;
+        if (cThat > 0)
+            {
+            long[] alThis = hThis.m_alValue;
+            int    cThis  = hThis.m_cSize;
+
+            if (cThis + cThat > alThis.length)
+                {
+                alThis = hThis.m_alValue = grow(alThis, cThis + cThat);
+                }
+            hThis.m_cSize += cThat;
+            System.arraycopy(hThat.m_alValue, 0, alThis, cThis, cThat);
+            }
+        return frame.assignValue(iReturn, hThis);
         }
 
     @Override
@@ -213,18 +250,41 @@ public class xIntArray
             }
         }
 
+    @Override
+    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        IntArrayHandle hArray = (IntArrayHandle) hTarget;
+        int            c      = hArray.m_cSize;
+
+        if (c == 0)
+            {
+            return frame.assignValue(iReturn, xString.EMPTY_ARRAY);
+            }
+
+        long[]        al = hArray.m_alValue;
+        StringBuilder sb = new StringBuilder(c*7); // on average 5-digit long values
+        sb.append('[');
+        for (int i = 0; i < c; i++)
+            {
+            if (i > 0)
+                {
+                sb.append(", ");
+                }
+            sb.append(al[i]);
+            }
+        sb.append(']');
+        return frame.assignValue(iReturn, xString.makeHandle(sb.toString()));
+        }
+
+
     // ----- helper methods -----
 
     private long[] grow(long[] alValue, int cSize)
         {
-        // an array can only grow without any "holes"
-        int cCapacity = alValue.length;
-
-        // resize (TODO: we should be much smarter here)
-        cCapacity = cCapacity + Math.max(cCapacity >> 2, 16);
+        int cCapacity = calculateCapacity(alValue.length, cSize);
 
         long[] alNew = new long[cCapacity];
-        System.arraycopy(alValue, 0, alNew, 0, cSize);
+        System.arraycopy(alValue, 0, alNew, 0, alValue.length);
         return alNew;
         }
 

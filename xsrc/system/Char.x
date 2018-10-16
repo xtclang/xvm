@@ -1,5 +1,6 @@
 const Char
         implements Sequential
+        implements Stringable
     {
     construct(UInt32 codepoint)
         {
@@ -87,13 +88,31 @@ const Char
     @Override
     @Auto String to<String>()
         {
-        TODO
+        return new String(to<Char[]>());
         }
 
     @Op("*") String dup(Int n)
         {
         TODO
         }
+
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        return 1;
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        appender.add(this);
+        }
+
+
+    // ----- helper methods ------------------------------------------------------------------------
 
     Int calcUtf8Length()
         {

@@ -4524,6 +4524,16 @@ public abstract class TypeConstant
         }
 
     @Override
+    protected void setPosition(int iPos)
+        {
+        super.setPosition(iPos);
+
+        // clear any cached constants
+        m_typeinfo     = null;
+        m_mapRelations = null;
+        }
+
+    @Override
     protected abstract int compareDetails(Constant that);
 
 
@@ -4551,6 +4561,9 @@ public abstract class TypeConstant
         return fHalt;
         }
 
+    /**
+     * @return true iff this type constant has been validated
+     */
     protected boolean isValidated()
         {
         return m_fValidated;
@@ -4733,7 +4746,7 @@ public abstract class TypeConstant
     /**
      * Keeps track of whether the TypeConstant has been validated.
      */
-    private boolean m_fValidated;
+    private transient boolean m_fValidated;
 
     /**
      * The resolved information about the type, its properties, and its methods.
@@ -4746,20 +4759,20 @@ public abstract class TypeConstant
     /**
      * A cache of "isA" responses.
      */
-    private Map<TypeConstant, Relation> m_mapRelations;
+    private transient Map<TypeConstant, Relation> m_mapRelations;
 
     /**
      * A cache of "consumes" responses.
      */
-    private Map<String, Usage> m_mapConsumes;
+    private transient Map<String, Usage> m_mapConsumes;
 
     /**
      * A cache of "produces" responses.
      */
-    private Map<String, Usage> m_mapProduces;
+    private transient Map<String, Usage> m_mapProduces;
 
     /**
      * Cached TypeHandle.
      */
-    private xType.TypeHandle m_handle;
+    private transient xType.TypeHandle m_handle;
     }

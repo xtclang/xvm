@@ -21,6 +21,7 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xChar;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xInt64;
+import org.xvm.runtime.template.xString;
 
 
 /**
@@ -115,7 +116,7 @@ public class xCharArray
             // an array can only grow without any "holes"
             if (cSize == achValue.length)
                 {
-                achValue = hArray.m_achValue = grow(achValue, cSize);
+                achValue = hArray.m_achValue = grow(achValue, cSize + 1);
                 }
 
             hArray.m_cSize++;
@@ -185,12 +186,48 @@ public class xCharArray
         char[] achValue = hArray.m_achValue;
         if (ixNext == achValue.length)
             {
-            achValue = hArray.m_achValue = grow(hArray.m_achValue, ixNext);
+            achValue = hArray.m_achValue = grow(hArray.m_achValue, ixNext + 1);
             }
         hArray.m_cSize++;
 
         achValue[ixNext] = (char) ((JavaLong) hValue).getValue();
         return frame.assignValue(iReturn, hArray); // return this
+        }
+
+    @Override
+    protected int addElements(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
+        {
+        CharArrayHandle hThis = (CharArrayHandle) hTarget;
+
+        switch (hThis.m_mutability)
+            {
+            case Constant:
+                return frame.raiseException(xException.immutableObject());
+
+            case FixedSize:
+                return frame.raiseException(xException.illegalOperation());
+
+            case Persistent:
+                // TODO: implement
+                return frame.raiseException(xException.unsupportedOperation());
+            }
+
+        CharArrayHandle hThat = (CharArrayHandle) hValue;
+
+        int cThat = hThat.m_cSize;
+        if (cThat > 0)
+            {
+            char[] achThis = hThis.m_achValue;
+            int    cThis   = hThis.m_cSize;
+
+            if (cThis + cThat > achThis.length)
+                {
+                achThis = hThis.m_achValue = grow(achThis, cThis + cThat);
+                }
+            hThis.m_cSize += cThat;
+            System.arraycopy(hThat.m_achValue, 0, achThis, cThis, cThat);
+            }
+        return frame.assignValue(iReturn, hThis);
         }
 
     @Override
@@ -215,18 +252,42 @@ public class xCharArray
             }
         }
 
+    @Override
+    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        CharArrayHandle hArray = (CharArrayHandle) hTarget;
+        int             c      = hArray.m_cSize;
+
+        if (c == 0)
+            {
+            return frame.assignValue(iReturn, xString.EMPTY_ARRAY);
+            }
+
+        char[]        ach = hArray.m_achValue;
+        StringBuilder sb  = new StringBuilder(c*3);
+        sb.append('[');
+        for (int i = 0; i < c; i++)
+            {
+            if (i > 0)
+                {
+                sb.append(", ");
+                }
+            sb.append(ach[i]);
+            }
+        sb.append(']');
+
+        return frame.assignValue(iReturn, xString.makeHandle(sb.toString()));
+        }
+
+
     // ----- helper methods -----
 
     private char[] grow(char[] achValue, int cSize)
         {
-        // an array can only grow without any "holes"
-        int cCapacity = achValue.length;
-
-        // resize (TODO: we should be much smarter here)
-        cCapacity = cCapacity + Math.max(cCapacity >> 2, 16);
+        int cCapacity = calculateCapacity(achValue.length, cSize);
 
         char[] achNew = new char[cCapacity];
-        System.arraycopy(achValue, 0, achNew, 0, cSize);
+        System.arraycopy(achValue, 0, achNew, 0, achValue.length);
         return achNew;
         }
 
@@ -248,6 +309,24 @@ public class xCharArray
             super(clzArray);
 
             m_achValue = new char[(int) cCapacity];
+            }
+
+        @Override
+        public void makeImmutable()
+            {
+            if (isMutable())
+                {
+                // purge the unused space
+                char[] ach = m_achValue;
+                int    c   = m_cSize;
+                if (ach.length != c)
+                    {
+                    char[] achNew = new char[c];
+                    System.arraycopy(ach, 0, achNew, 0, c);
+                    m_achValue = achNew;
+                    }
+                super.makeImmutable();
+                }
             }
 
         @Override
