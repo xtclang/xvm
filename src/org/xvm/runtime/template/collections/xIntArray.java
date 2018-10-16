@@ -114,7 +114,7 @@ public class xIntArray
             // an array can only grow without any "holes"
             if (cSize == alValue.length)
                 {
-                alValue = hArray.m_alValue = grow(alValue, cSize);
+                alValue = hArray.m_alValue = grow(alValue, cSize + 1);
                 }
 
             hArray.m_cSize++;
@@ -184,7 +184,7 @@ public class xIntArray
         long[] alValue = hArray.m_alValue;
         if (ixNext == alValue.length)
             {
-            alValue = hArray.m_alValue = grow(hArray.m_alValue, ixNext);
+            alValue = hArray.m_alValue = grow(hArray.m_alValue, ixNext + 1);
             }
         hArray.m_cSize++;
 
@@ -284,7 +284,7 @@ public class xIntArray
         int cCapacity = calculateCapacity(alValue.length, cSize);
 
         long[] alNew = new long[cCapacity];
-        System.arraycopy(alValue, 0, alNew, 0, cSize);
+        System.arraycopy(alValue, 0, alNew, 0, alValue.length);
         return alNew;
         }
 

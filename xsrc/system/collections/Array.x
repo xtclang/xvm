@@ -245,6 +245,25 @@ class Array<ElementType>
         return true;
         }
 
+    @Override
+    String to<String>()
+        {
+        StringBuffer buffer = new StringBuffer(7*size); // a wild guess
+        buffer.append('[');
+
+        loop:
+        for (ElementType v : this)
+            {
+            if (!loop.first)
+                {
+                buffer.append(", ");
+                }
+            buffer.append(v);
+            }
+        buffer.append(']');
+        return buffer.to<String>();
+        }
+
     // ----- internal implementation details -------------------------------------------------------
 
     private Element? head;

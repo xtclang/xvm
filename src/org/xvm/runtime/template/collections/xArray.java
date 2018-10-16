@@ -65,6 +65,7 @@ public class xArray
         markNativeMethod("addElement", ELEMENT_TYPE, ARRAY);
         markNativeMethod("addElements", ARRAY, ARRAY);
         markNativeMethod("slice", new String[]{"Range<Int64>"}, ARRAY);
+        markNativeMethod("to", VOID, STRING);
         }
 
     private void registerNative(xArray template)
@@ -333,10 +334,17 @@ public class xArray
     public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
+        int                c      = hArray.m_cSize;
 
-        return hArray.m_cSize == 0
-            ? frame.assignValue(iReturn, xString.EMPTY_ARRAY)
-            : new ToString(hArray, new StringBuilder("["), iReturn).doNext(frame);
+        if (c == 0)
+            {
+            return frame.assignValue(iReturn, xString.EMPTY_ARRAY);
+            }
+
+        StringBuilder sb = new StringBuilder(c*7); // a wild guess
+        sb.append('[');
+
+        return new ToString(hArray, new StringBuilder("["), iReturn).doNext(frame);
         }
 
     /**
@@ -363,7 +371,7 @@ public class xArray
         ObjectHandle[] ahValue = hArray.m_ahValue;
         if (ixNext == ahValue.length)
             {
-            ahValue = hArray.m_ahValue = grow(ahValue, ixNext);
+            ahValue = hArray.m_ahValue = grow(ahValue, ixNext + 1);
             }
         hArray.m_cSize++;
 
@@ -480,7 +488,7 @@ public class xArray
                     return frame.raiseException(xException.illegalOperation());
                     }
 
-                ahValue = hArray.m_ahValue = grow(ahValue, cSize);
+                ahValue = hArray.m_ahValue = grow(ahValue, cSize + 1);
                 }
             hArray.m_cSize++;
             }
@@ -510,7 +518,7 @@ public class xArray
         int cCapacity = calculateCapacity(ahValue.length, cSize);
 
         ObjectHandle[] ahNew = new ObjectHandle[cCapacity];
-        System.arraycopy(ahValue, 0, ahNew, 0, cSize);
+        System.arraycopy(ahValue, 0, ahNew, 0, ahValue.length);
         return ahNew;
         }
 
@@ -691,9 +699,9 @@ public class xArray
             {
             ObjectHandle[] ahValue = hArray.m_ahValue;
             int            cValues = hArray.m_cSize;
-            while (index++ < cValues)
+            while (++index < cValues)
                 {
-                ObjectHandle hValue = hArray.m_ahValue[index];
+                ObjectHandle hValue = ahValue[index];
 
                 if (hValue == null)
                     {

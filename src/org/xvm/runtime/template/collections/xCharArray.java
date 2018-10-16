@@ -116,7 +116,7 @@ public class xCharArray
             // an array can only grow without any "holes"
             if (cSize == achValue.length)
                 {
-                achValue = hArray.m_achValue = grow(achValue, cSize);
+                achValue = hArray.m_achValue = grow(achValue, cSize + 1);
                 }
 
             hArray.m_cSize++;
@@ -186,7 +186,7 @@ public class xCharArray
         char[] achValue = hArray.m_achValue;
         if (ixNext == achValue.length)
             {
-            achValue = hArray.m_achValue = grow(hArray.m_achValue, ixNext);
+            achValue = hArray.m_achValue = grow(hArray.m_achValue, ixNext + 1);
             }
         hArray.m_cSize++;
 
