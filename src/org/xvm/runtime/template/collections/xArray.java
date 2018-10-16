@@ -53,13 +53,8 @@ public class xArray
     @Override
     public void initDeclared()
         {
-        xIntArray template = new xIntArray(f_templates, f_struct, true);
-        template.initDeclared();
-
-        ConstantPool pool = f_struct.getConstantPool();
-
-        TypeConstant type = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeInt());
-        f_templates.registerNativeTemplate(type, template); // Array<Int>
+        registerNative(new xIntArray(f_templates, f_struct, true));
+        registerNative(new xCharArray(f_templates, f_struct, true));
 
         markNativeGetter("size");
         markNativeMethod("construct", INT);
@@ -67,6 +62,12 @@ public class xArray
         markNativeMethod("elementAt", INT, new String[] {"Var<ElementType>"});
         markNativeMethod("addElement", ELEMENT_TYPE, ARRAY);
         markNativeMethod("slice", new String[]{"Range<Int64>"}, ARRAY);
+        }
+
+    private void registerNative(xArray template)
+        {
+        template.initDeclared();
+        f_templates.registerNativeTemplate(template.getCanonicalType(), template);
         }
 
     @Override
