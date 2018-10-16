@@ -133,7 +133,7 @@ public class ObjectHeap
                 throw new UnsupportedOperationException("TODO: " + constValue);
 
             case Char:
-                throw new UnsupportedOperationException("TODO: " + constValue);
+                return f_poolRoot.typeChar();
 
             case String:
                 return f_poolRoot.typeString();

@@ -76,6 +76,13 @@ class StringBuffer
         return this;
         }
 
+    @Override
+    StringBuffer add(Char[] array)
+        {
+        chars.addElements(array); // TODO: chars += array;
+        return this;
+        }
+
 
     // ----- Sequence methods ----------------------------------------------------------------------
 

@@ -36,6 +36,7 @@ public class xString
             {
             INSTANCE = this;
             EMPTY_STRING = makeHandle(new char[0]);
+            EMPTY_ARRAY = makeHandle(new char[] {'[', ']'});
             }
         }
 
@@ -61,7 +62,7 @@ public class xString
         if (constant instanceof StringConstant)
             {
             frame.pushStack(new StringHandle(getCanonicalClass(),
-                ((StringConstant) constant).getValue()));
+                ((StringConstant) constant).getValue().toCharArray()));
             return Op.R_NEXT;
             }
 
@@ -73,6 +74,7 @@ public class xString
                          TypeComposition clazz, ObjectHandle[] ahVar, int iReturn)
         {
         CharArrayHandle hCharArray = (CharArrayHandle) ahVar[0];
+        hCharArray.makeImmutable();
 
         return frame.assignValue(iReturn, makeHandle(hCharArray.m_achValue));
         }
@@ -162,14 +164,15 @@ public class xString
                     return frame.assignValue(iReturn, hThis);
                     }
 
-                if (ofStart < cch)
+                if (ofStart >= cch)
                     {
-                    int    cchNew = cch - ofStart - 1;
-                    char[] achNew = new char[cchNew];
-                    System.arraycopy(ach, ofStart, achNew, 0, cchNew);
-                    return frame.assignValue(iReturn, makeHandle(achNew));
+                    return frame.assignValue(iReturn, EMPTY_STRING);
                     }
-                return frame.assignValue(iReturn, EMPTY_STRING);
+
+                int    cchNew = cch - ofStart - 1;
+                char[] achNew = new char[cchNew];
+                System.arraycopy(ach, ofStart, achNew, 0, cchNew);
+                return frame.assignValue(iReturn, makeHandle(achNew));
                 }
             }
 
@@ -384,13 +387,7 @@ public class xString
             super(clazz);
 
             m_achValue = achValue;
-            }
-
-        protected StringHandle(TypeComposition clazz, String sValue)
-            {
-            super(clazz);
-
-            m_achValue = sValue.toCharArray();
+            m_fMutable = false;
             }
 
         public char[] getValue()
@@ -422,7 +419,7 @@ public class xString
 
     public static StringHandle makeHandle(String sValue)
         {
-        return new StringHandle(INSTANCE.getCanonicalClass(), sValue);
+        return makeHandle(sValue.toCharArray());
         }
     public static StringHandle makeHandle(char[] achValue)
         {
@@ -430,5 +427,7 @@ public class xString
             ? EMPTY_STRING
             : new StringHandle(INSTANCE.getCanonicalClass(), achValue);
         }
+
     public static StringHandle EMPTY_STRING;
+    public static StringHandle EMPTY_ARRAY;
     }
