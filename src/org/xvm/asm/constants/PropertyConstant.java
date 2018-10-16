@@ -195,14 +195,13 @@ public class PropertyConstant
     protected void disassemble(DataInput in) throws IOException
         {
         super.disassemble(in);
-
-        m_type = null;
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_type = null;
+        m_type     = null;
+        m_constSig = null;
 
         super.registerConstants(pool);
         }
@@ -212,7 +211,8 @@ public class PropertyConstant
         {
         super.assemble(out);
 
-        m_type = null;
+        m_type     = null;
+        m_constSig = null;
         }
 
     @Override

@@ -514,7 +514,10 @@ public class MethodConstant
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        // TODO - since we go ahead and build everything even after we hit otherwise-fatal errors, this assertion is currently invalid
+        m_type = null;
+
+        // TODO - since we go ahead and build everything even after we hit otherwise-fatal errors,
+        // this assertion is currently invalid:
         // assert !isNascent();
 
         m_constParent = (MultiMethodConstant) pool.register(m_constParent);
@@ -525,7 +528,10 @@ public class MethodConstant
     protected void assemble(DataOutput out)
             throws IOException
         {
-        // TODO - since we go ahead and build everything even after we hit otherwise-fatal errors, this assertion is currently invalid
+        m_type = null;
+
+        // TODO - since we go ahead and build everything even after we hit otherwise-fatal errors,
+        // this assertion is currently invalid:
         // assert !isNascent();
 
         out.writeByte(getFormat().ordinal());
