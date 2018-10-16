@@ -12,6 +12,7 @@ import java.util.Set;
 
 import java.util.function.Consumer;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -331,6 +332,15 @@ public class ParameterizedTypeConstant
             else
                 {
                 // scenario 3a
+                if (constResolved.isSingleUnderlyingClass(true))
+                    {
+                    IdentityConstant idClz = constResolved.getSingleUnderlyingClass(true);
+                    ClassStructure   clz   = (ClassStructure) idClz.getComponent();
+                    if (!clz.isParameterized())
+                        {
+                        return constResolved;
+                        }
+                    }
                 // TODO: how to figure out a case of the resolved type not being congruent
                 //       to the original type and not parameterizable by our parameters?
                 return pool.ensureParameterizedTypeConstant(constResolved, m_atypeParams);
