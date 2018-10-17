@@ -584,7 +584,7 @@ public class RelOpExpression
         }
 
     /**
-     * Find the method to use to implement the op.
+     * Find the method to use to implement the op. TODO: use Expression.findOpMethod()
      *
      * @param type1         the type of the first expression
      * @param type2         the type of the second expression
