@@ -909,15 +909,6 @@ public abstract class TypeConstant
                     + this + "; deferred types=" + takeDeferredTypeInfo());
             }
 
-        // any newly created derivative types and various constants should be placed into the same
-        // pool where this type comes from
-        ConstantPool poolCurrent = ConstantPool.getCurrentPool();
-        boolean      fDiffPool   = poolCurrent != pool;
-
-        if (fDiffPool)
-            {
-            ConstantPool.setCurrentPool(pool);
-            }
         try
             {
             // build the TypeInfo for this type
@@ -928,13 +919,6 @@ public abstract class TypeConstant
             // clean up the deferred types
             takeDeferredTypeInfo();
             throw e;
-            }
-        finally
-            {
-            if (fDiffPool)
-                {
-                ConstantPool.setCurrentPool(poolCurrent);
-                }
             }
 
         // info here can't be null, because we should be at the "zero level"; in other words, anyone
@@ -979,21 +963,7 @@ public abstract class TypeConstant
         // now that all those other deferred types are done building, rebuild this if necessary
         if (!isComplete(info))
             {
-            if (fDiffPool)
-                {
-                ConstantPool.setCurrentPool(pool);
-                }
-            try
-                {
-                info = buildTypeInfo(errs);
-                }
-            finally
-                {
-                if (fDiffPool)
-                    {
-                    ConstantPool.setCurrentPool(poolCurrent);
-                    }
-                }
+            info = buildTypeInfo(errs);
             assert isComplete(info);
             setTypeInfo(info);
             }
@@ -1115,6 +1085,34 @@ public abstract class TypeConstant
      *         already in the process of being built
      */
     protected TypeInfo buildTypeInfo(ErrorListener errs)
+        {
+        // any newly created derivative types and various constants should be placed into the same
+        // pool where this type comes from
+        ConstantPool pool        = getConstantPool();
+        ConstantPool poolCurrent = ConstantPool.getCurrentPool();
+        boolean      fDiffPool   = poolCurrent != pool;
+
+        if (fDiffPool)
+            {
+            ConstantPool.setCurrentPool(pool);
+            }
+        try
+            {
+            return buildTypeInfoImpl(errs);
+            }
+        finally
+            {
+            if (fDiffPool)
+                {
+                ConstantPool.setCurrentPool(poolCurrent);
+                }
+            }
+        }
+
+    /**
+     * Actual buildTypeInfo implementation.
+     */
+    private TypeInfo buildTypeInfoImpl(ErrorListener errs)
         {
         // the raw type-info has to be built as either ":private" or ":struct", so delegate the
         // building for ":public" to ":private", and then strip out the non-accessible members
