@@ -1437,6 +1437,8 @@ public class ConstantPool
             throw new IllegalArgumentException("type already has parameters specified");
             }
 
+        checkElementsNonNull(constTypes);
+
         return (TypeConstant) register(new ParameterizedTypeConstant(this, constType, constTypes));
         }
 

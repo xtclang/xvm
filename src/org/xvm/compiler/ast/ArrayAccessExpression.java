@@ -15,6 +15,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.IntervalConstant;
+import org.xvm.asm.constants.MapConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.TypeConstant;
@@ -22,6 +23,7 @@ import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.I_Get;
 
+import org.xvm.asm.op.Invoke_11;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token.Id;
 import org.xvm.util.PackedInteger;
@@ -379,6 +381,7 @@ public class ArrayAccessExpression
         boolean        fValid       = true;
         TypeConstant[] aIndexTypes  = null;
         TypeConstant   typeElement  = null;
+        boolean        fSlice       = false;
         Expression     exprArrayNew = exprArray.validate(ctx, typeArrayReq, errs);
         if (exprArrayNew == null)
             {
@@ -395,7 +398,6 @@ public class ArrayAccessExpression
             typeArray = exprArray.getType();
             MethodConstant idGet = findOpMethod(ctx, typeArray, "getElement", "[]", aexprIndexes,
                                                 typeArray.isTuple() ? null : typeRequired, errs);
-            boolean fSlice = false;
             if (idGet == null)
                 {
                 idGet  = findOpMethod(ctx, typeArray, "slice", "[..]", aexprIndexes,
@@ -442,12 +444,16 @@ public class ArrayAccessExpression
             return finishValidation(typeRequired, typeElement, TypeFit.NoFit, null, errs);
             }
 
-        // check for a matching setter
-        Expression[] aExprSet = new Expression[cIndexes + 1];
-        System.arraycopy(aexprIndexes, 0, aExprSet, 0, cIndexes);
-        // note: cannot fill in the expression that represents the value being set because it hasn't
-        //       yet been validated (for example, if our parent is an AssignmentStatement)
-        m_idSet = findOpMethod(ctx, typeArray, "setElement", "[]=", aExprSet, null, ErrorListener.BLACKHOLE);
+        if (!fSlice)
+            {
+            // check for a matching setter
+            Expression[] aExprSet = new Expression[cIndexes + 1];
+            System.arraycopy(aexprIndexes, 0, aExprSet, 0, cIndexes);
+            // note: cannot fill in the expression that represents the value being set because it
+            // hasn't yet been validated (for example, if our parent is an AssignmentStatement)
+            m_idSet = findOpMethod(ctx, typeArray, "setElement", "[]=", aExprSet, null,
+                    ErrorListener.BLACKHOLE);
+            }
 
         // the type of a tuple access expression is determinable iff the type is a tuple, it has
         // a known number of field types, and the index is a constant that specifies a field within
@@ -468,50 +474,37 @@ public class ArrayAccessExpression
         if (exprArray.isConstant() && aexprIndexes[0].isConstant() &&
                 (cIndexes == 1 || aexprIndexes[1].isConstant()))
             {
-            if (typeArray.isTuple() && cIndexes == 1)
+            if ((typeArray.isTuple() || typeArray.isA(pool.typeSequence()) && cIndexes == 1))
                 {
-                if (m_fSlice)
+                if (fSlice)
                     {
-                    // TODO
+                    constVal = evalConst((ArrayConstant) exprArray.toConstant(),
+                            (IntervalConstant) aexprIndexes[0].toConstant(), typeElement, errs);
                     }
                 else
                     {
-                    // similar to above, lots of things can fail here, causing an exception, so if anything
-                    // goes wrong, we can correctly assume that we can't determine the compile-time constant
-                    // value of the expression
-                    // REVIEW GG we could issue a compile-time error though, e.g. index out of bounds!!!
-                    int i = ((IntConstant) aexprIndexes[0].toConstant()).getValue().getInt();
-                    constVal = ((ArrayConstant) exprArray.toConstant()).getValue()[i];
-                    // TODO
-                    }
-                }
-            else if (typeArray.isA(pool.typeSequence()))
-                {
-                if (m_fSlice)
-                    {
-                    // TODO
-                    }
-                else
-                    {
-                    // TODO
+                    constVal = evalConst((ArrayConstant) exprArray.toConstant(), (IntConstant)
+                            convertConstant(aexprIndexes[0].toConstant(), pool.typeInt()), errs);
                     }
                 }
             else if (typeArray.isA(pool.typeIndexed()))
                 {
-                if (!m_fSlice && typeArray.isA(pool.typeMap()))
+                if (!fSlice && typeArray.isA(pool.typeMap()))
                     {
-                    // TODO map lookup by key
+                    MapConstant constMap = (MapConstant) exprArray.toConstant();
+                    Constant    constKey = aexprIndexes[0].toConstant();
+                                constVal = constMap.getValue().get(constKey);
                     }
                 }
             else if (typeArray.isA(pool.typeMatrix()))
                 {
-                if (m_fSlice)
+                if (fSlice)
                     {
-                    // TODO
+                    // TODO sub-matrix result (note: we still need a matrix syntax & constant)
                     }
                 else
                     {
-                    // TODO
+                    // TODO array result (note: we still need a matrix syntax & constant)
                     }
                 }
             }
@@ -530,7 +523,7 @@ public class ArrayAccessExpression
                 }
             }
 
-        return true;
+        return expr.isCompletable();
         }
 
     @Override
@@ -543,6 +536,7 @@ public class ArrayAccessExpression
                 return true;
                 }
             }
+
         return expr.isShortCircuiting();
         }
 
@@ -573,7 +567,14 @@ public class ArrayAccessExpression
             if (cIndexes == 1)
                 {
                 Argument argIndex = listIndexExprs.get(0).generateArgument(ctx, code, true, true, errs);
-                code.add(new I_Get(argArray, argIndex, argResult));
+                if (m_fSlice)
+                    {
+                    code.add(new Invoke_11(argArray, m_idGet, argIndex, argResult));
+                    }
+                else
+                    {
+                    code.add(new I_Get(argArray, argIndex, argResult));
+                    }
                 }
             else
                 {
@@ -824,7 +825,7 @@ public class ArrayAccessExpression
                 atypeFields[iDest] = atypeReq[iSrc];
                 }
             }
-        else
+        else if (typeRequired != null)
             {
             atypeFields[nLo] = typeRequired;
             }
@@ -1005,7 +1006,7 @@ public class ArrayAccessExpression
         int           cOldVals = aOldVals.length;
         PackedInteger piIndex1 = constIndex.getFirst().getIntValue();
         PackedInteger piIndex2 = constIndex.getLast() .getIntValue();
-        if (piIndex1.checkRange(0, cOldVals-1) && piIndex2.checkRange(0, cOldVals-1))
+        if (piIndex1.checkRange(0, cOldVals - 1) && piIndex2.checkRange(0, cOldVals-1))
             {
             int        nFirst   = piIndex1.getInt();
             int        nLast    = piIndex2.getInt();
