@@ -162,9 +162,17 @@ public class ArrayAccessExpression
         {
         // check if we can figure out the answer on our own
         TypeConstant typeImplicit = getImplicitType(ctx);
-        if (typeImplicit != null && typeRequired.isA(typeImplicit))
+        if (typeImplicit != null)
             {
-            return TypeFit.Fit;
+            if (typeImplicit.isA(typeRequired))
+                {
+                return TypeFit.Fit;
+                }
+
+            if (typeImplicit.getConverterTo(typeRequired) != null)
+                {
+                return TypeFit.Conv;
+                }
             }
 
         // test to see if the "array" expression is a tuple; this is easy to test for, just by
@@ -414,10 +422,10 @@ public class ArrayAccessExpression
                     m_fSlice = fSlice = true;
                     }
 
-                MethodConstant idGet = infoGet.getIdentity();
-                aIndexTypes = idGet.getRawParams();
-                typeElement = idGet.getRawReturns()[0];
-                m_idGet     = idGet;
+                SignatureConstant sigGet = infoGet.getSignature();
+                aIndexTypes = sigGet.getRawParams();
+                typeElement = sigGet.getRawReturns()[0];
+                m_idGet     = infoGet.getIdentity();
                 }
             }
 
@@ -699,7 +707,7 @@ public class ArrayAccessExpression
 
         if (listMatch.size() == 1)
             {
-            return listMatch.iterator().next();
+            return listMatch.get(0);
             }
 
         // TODO disambiguate (pick the best choice)
