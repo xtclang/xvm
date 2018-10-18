@@ -1003,6 +1003,10 @@ public class Compiler
      */
     public static final String INVALID_LVALUE_COUNT               = "COMPILER-95";
     /**
+     * Index value {0} out-of-range; must be between {1} and {2} (inclusive).
+     */
+    public static final String INVALID_INDEX                      = "COMPILER-95";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

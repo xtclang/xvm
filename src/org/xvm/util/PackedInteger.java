@@ -148,6 +148,24 @@ public class PackedInteger
         }
 
     /**
+     * Range check the PackedInteger.
+     *
+     * @param nLo  the low end of the range (inclusive)
+     * @param nHi  the high end of the range (inclusive)
+     *
+     * @return true iff the PackedInteger is in the specified range
+     */
+    public boolean checkRange(long nLo, long nHi)
+        {
+        if (isBig())
+            {
+            return false;
+            }
+
+        return m_lValue >= nLo && m_lValue <= nHi;
+        }
+
+    /**
      * @return true iff the value is less than zero
      */
     public boolean isNegative()
