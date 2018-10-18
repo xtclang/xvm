@@ -8,6 +8,8 @@ module TestArray.xqiz.it
 
         testSimple();
         testStrBuf();
+        testConstElement();
+        testConstSlice();
         }
 
     void testSimple()
@@ -32,5 +34,36 @@ module TestArray.xqiz.it
           .append('!');
 
         console.println("sb=" + sb);
+        }
+
+    void testConstElement()
+        {
+        console.println("\n** testConstElement()");
+
+        String cruel = ["hello", "cruel", "world", "!"] [1];
+        console.println("array[1]=" + cruel);
+
+        String blind = (3, "blind", "mice", "!") [1];
+        console.println("tuple(1)=" + blind);
+
+        Int num = (3, "blind", "mice", "!") [0];
+        console.println("tuple(0)=" + num);
+        }
+
+    void testConstSlice()
+        {
+        console.println("\n** testConstSlice()");
+
+        String[] cruel = ["hello", "cruel", "world", "!"] [1..2];
+        console.println("array[1..2]=" + cruel);
+
+//        String[] cruel2 = ["hello", "cruel", "world", "!"] [2..1];
+//        console.println("array[2..1]=" + cruel2);
+//
+//        Tuple<Int, String> blind = (3, "blind", "mice", "!") [0..1];
+//        console.println("tuple[0..1]=" + blind);
+//
+//        Tuple<String, Int> blind2 = (3, "blind", "mice", "!") [1..0];
+//        console.println("tuple[1..0]=" + blind2);
         }
     }
