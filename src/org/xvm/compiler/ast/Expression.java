@@ -2132,8 +2132,8 @@ public abstract class Expression
                 }
             else
                 {
-                boolean fOldBetter = sigMethod.isSubstitutableFor(sigBest, typeTarget);
-                boolean fNewBetter = sigBest.isSubstitutableFor(sigMethod, typeTarget);
+                boolean fNewBetter = sigMethod.isSubstitutableFor(sigBest, typeTarget);
+                boolean fOldBetter = sigBest.isSubstitutableFor(sigMethod, typeTarget);
                 if (fOldBetter ^ fNewBetter)
                     {
                     if (fNewBetter)
