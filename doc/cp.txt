@@ -1,3 +1,5 @@
+getComponent().getIdentityConstant().getModuleConstant().getName().contains("Test")
+
 - expressions
   - Statement expression
   - Lambda (needs captures)

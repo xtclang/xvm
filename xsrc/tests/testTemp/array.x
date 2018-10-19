@@ -10,6 +10,10 @@ module TestArray.xqiz.it
         testStrBuf();
         testConstElement();
         testConstSlice();
+
+        testArrayList();
+        testArrayListAdd();
+        testFixedArray();
         }
 
     void testSimple()
@@ -79,4 +83,38 @@ module TestArray.xqiz.it
         {
         Object test = ["hello", "cruel", "world", "!"] [1..-1];
         }
+
+    void testArrayList()
+        {
+        console.println("\n** testArrayList()");
+
+        String[] list = new String[];
+        list[0] = "one";
+        list[1] = "two";
+        list[2] = "three";
+
+        console.println("list=" + list);
+        }
+
+    void testArrayListAdd()
+        {
+        console.println("\n** testArrayListAdd()");
+
+        String[] list = new String[];
+        list = list + "one";
+        list = list + ["two", "three"];
+//        list += "one";
+//        list += ["two", "three"];
+
+        console.println("list=" + list);
+        }
+
+    void testFixedArray()
+        {
+        console.println("\n** testFixedArray()");
+
+        String[] list = new Array<String>(3, (i) -> ["one","two","three"][i]);
+        console.println("list=" + list);
+        }
+
     }
