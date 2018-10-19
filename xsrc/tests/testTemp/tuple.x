@@ -15,17 +15,17 @@ module TestTuples.xqiz.it
         {
         console.println("\n** testSimple()");
 
-//        Tuple<String, String, Int> t = ("hello", "world", 17);
-//        console.println("t="+t);
-//        for (Int i = 0; i < 3; ++i)
-//            {
-//            console.println("tuple[" + i + "]=" + t[i]);
-//            }
-//
-//        String s0 = t[0];
-//        String s1 = t[1];
-//        Int    i2 = t[2];
-//        console.println("fields: " + s0 + ", " + s1 + ", " + i2);
+        Tuple<String, String, Int> t = ("hello", "world", 17);
+        console.println("t="+t);
+        for (Int i = 0; i < 3; ++i)
+            {
+            console.println("tuple[" + i + "]=" + t[i]);
+            }
+
+        String s0 = t[0];
+        String s1 = t[1];
+        Int    i2 = t[2];
+        console.println("fields: " + s0 + ", " + s1 + ", " + i2);
         }
 
     void testConstElement()
@@ -48,5 +48,30 @@ module TestTuples.xqiz.it
 
         Tuple<String, Int> blind2 = (3, "blind", "mice", "!") [1..0];
         console.println("tuple[1..0]=" + blind2);
+        }
+
+    void testOOB1()
+        {
+        Tuple test = (3, "blind", "mice", "!") [-1..1];
+        }
+    void testOOB2()
+        {
+        Tuple test = (3, "blind", "mice", "!") [1..4];
+        }
+    void testOOB3()
+        {
+        Tuple test = (3, "blind", "mice", "!") [4..1];
+        }
+    void testOOB4()
+        {
+        Tuple test = (3, "blind", "mice", "!") [1..-1];
+        }
+    void testOOB5()
+        {
+        Object test = (3, "blind", "mice", "!") [-1];
+        }
+    void testOOB6()
+        {
+        Object test = (3, "blind", "mice", "!") [4];
         }
     }

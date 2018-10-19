@@ -4,7 +4,6 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -12,7 +11,6 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.ArrayConstant;
@@ -128,7 +126,7 @@ public class ArrayAccessExpression
         if (typeArray.isTuple())
             {
             return typeArray.isParamsSpecified()
-                    ? determineTupleFieldType(typeArray)
+                    ? determineTupleResultType(typeArray)
                     : null;
             }
 
@@ -471,7 +469,7 @@ public class ArrayAccessExpression
         // that domain of known field types
         if (typeArray.isTuple() && typeArray.isParamsSpecified() && aexprIndexes[0].isConstant())
             {
-            TypeConstant typeField = determineTupleFieldType(typeArray);
+            TypeConstant typeField = determineTupleResultType(typeArray);
             if (typeField != null)
                 {
                 typeElement = typeField;
@@ -648,6 +646,7 @@ public class ArrayAccessExpression
             }
 
         TypeInfo         infoTarget = typeTarget.ensureTypeInfo();
+        boolean          fTuple     = typeTarget.isTuple();
         Set<MethodInfo>  setAll     = infoTarget.getOpMethodInfos();
         List<MethodInfo> listMatch  = new ArrayList<>();
         NextOp: for (MethodInfo info : setAll)
@@ -661,7 +660,7 @@ public class ArrayAccessExpression
                 }
 
             SignatureConstant sig = info.getSignature();
-            if (typeReturn != null && (sig.getRawReturns().length < 1
+            if (!fTuple && typeReturn != null && (sig.getRawReturns().length < 1
                     || !sig.getRawReturns()[0].isAssignableTo(typeReturn)))
                 {
                 continue NextOp;
@@ -878,7 +877,7 @@ public class ArrayAccessExpression
      *
      * @return the field type, if it can be determined from the passed information, otherwise null
      */
-    private TypeConstant determineTupleFieldType(TypeConstant typeTuple)
+    private TypeConstant determineTupleResultType(TypeConstant typeTuple)
         {
         Constant index = extractArrayIndex(indexes.get(0));
         if (typeTuple == null || index == null)
@@ -922,8 +921,8 @@ public class ArrayAccessExpression
             return null;
             }
 
-        if (nLo < 0 || nLo >= cFields ||
-                nHi < 0 || nHi >= cFields)
+        if (    nLo < 0 || nLo >= cFields ||
+                nHi < 0 || nHi >= cFields   )
             {
             return null;
             }
@@ -1030,7 +1029,13 @@ public class ArrayAccessExpression
         {
         if (exprIndex.isConstant())
             {
-            return convertConstant(exprIndex.toConstant(), pool().typeInt());
+            ConstantPool pool       = pool();
+            Constant     constRaw   = exprIndex.toConstant();
+            Constant     constIndex = convertConstant(constRaw, pool.typeInt());
+            return constIndex == null
+                    ? convertConstant(constRaw, pool.ensureParameterizedTypeConstant(
+                                      pool.typeInterval(), pool.typeInt()))
+                    : constIndex;
             }
         else
             {
@@ -1203,7 +1208,10 @@ public class ArrayAccessExpression
                 {
                 aNewVals[iNew] = aOldVals[iOld];
                 }
-            return pool().ensureArrayConstant(typeResult, aNewVals);
+            ConstantPool pool = pool();
+            return typeResult.isTuple()
+                    ? pool.ensureTupleConstant(typeResult, aNewVals)
+                    : pool.ensureArrayConstant(typeResult, aNewVals);
             }
         else
             {
