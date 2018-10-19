@@ -138,7 +138,10 @@ public class ListExpression
             // if there is a required element type, then we'll use that to force the expressions to
             // convert to that type if necessary
             typeElement = typeRequired.getGenericParamType("ElementType");
-            typeActual  = pool.ensureParameterizedTypeConstant(typeActual, typeElement);
+            if (typeElement != null)
+                {
+                typeActual = pool.ensureParameterizedTypeConstant(typeActual, typeElement);
+                }
             }
 
         TypeExpression exprOldType = type;

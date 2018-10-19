@@ -112,7 +112,13 @@ public class MethodStructure
                 {
                 ++cDefaultParams;
                 }
+            else
+                {
+                // default parameters should (must) be trailing in order to be used as defaults
+                cDefaultParams = 0;
+                }
             }
+
         m_cTypeParams    = cTypeParams;
         m_cDefaultParams = cDefaultParams;
         m_FHasCode       = fHasCode;
