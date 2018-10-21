@@ -236,7 +236,7 @@ interface List<ElementType>
 
         if (comparator == null)
             {
-            assert ElementType instanceof Type<Orderable>;
+            assert ElementType.is(Type<Orderable>);
             compare = (v1, v2) -> v1 <=> v2;
             }
         else
@@ -267,6 +267,8 @@ interface List<ElementType>
             --extent;
             }
         while (!sorted);
+
+        return this;
         }
 
     // ----- Cursor implementation -----------------------------------------------------------------

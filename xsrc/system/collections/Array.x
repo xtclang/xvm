@@ -205,7 +205,7 @@ class Array<ElementType>
     @Override
     Iterator<ElementType> iterator()
         {
-        super.iterator();
+        TODO;
         }
 
     @Override
