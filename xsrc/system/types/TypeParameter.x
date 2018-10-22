@@ -19,7 +19,7 @@ const TypeParameter(String name, Type type = Object)
     construct(TypeParameter param, Type type)
         {
         // this type parameter has to be a narrower type than the template that it is based on
-        assert param.type.isAssignableFrom(type);
+        assert param.type.isA(type);
 
         this.name = param.name;
         this.type = type;
