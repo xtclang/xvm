@@ -268,7 +268,7 @@ interface Stream<ElementType>
             {
             if (comparator == null)
                 {
-                assert ElementType instanceof Type<Orderable>;
+                assert ElementType.is(Type<Orderable>);
 
                 for (ElementType el : iter)
                     {
@@ -310,7 +310,7 @@ interface Stream<ElementType>
             {
             if (comparator == null)
                 {
-                assert ElementType instanceof Type<Orderable>;
+                assert ElementType.is(Type<Orderable>);
 
                 for (ElementType el : iter)
                     {
