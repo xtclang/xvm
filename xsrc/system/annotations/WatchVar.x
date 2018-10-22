@@ -62,6 +62,6 @@ mixin WatchVar<RefType>
      */
     static function void (RefType) normalize(function void () | function void (RefType) notify)
         {
-        return (notify instanceof function void ()) ? v -> notify() : notify;
+        return notify.is(function void ()) ? v -> notify() : notify;
         }
     }

@@ -3,7 +3,7 @@ class HashSet<ElementType>
     {
     construct()
         {
-        assert(ElementType instanceof Type<Hashable>); // same as assert(ElementType.isA(Hashable));
+        assert(ElementType.is(Type<Hashable>));
 
         this.hasher = new NaturalHasher<Hashable+ElementType>();
         }

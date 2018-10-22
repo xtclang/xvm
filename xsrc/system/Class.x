@@ -125,7 +125,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     /**
      * If the class is a mixin, this is the class to which it can be applied.
      */
-    Class? appliesTo;
+    Class!? appliesTo;
 
     /**
      * The ordered steps of composition of this class.
@@ -135,7 +135,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     /**
      * The child classes of this class.
      */
-    Class[] classes;
+    Class![] classes;
 
     /**
      * The child properties of this class.
@@ -234,7 +234,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      * * A Mixin _may_ have a super-class, which must be a {@code mixin}.
      * * An Interface will *never* have a super-class.
      */
-    @Lazy Class? superClass.calc()
+    @Lazy Class!? superClass.calc()
         {
         if (category == Interface)
             {
@@ -257,7 +257,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      * it (or something it derives from) extends the specified class, incorporates the specified
      * mixin, or implements the specified interface.
      */
-    Boolean derivesFrom(Class that)
+    Boolean derivesFrom(Class! that)
         {
         if (this == that)
             {
@@ -278,7 +278,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     /**
      * Determine if the class extends (or is) the specified class.
      */
-    Boolean extends_(Class that)
+    Boolean extends_(Class! that)
         {
         assert that.category != Interface;
 
@@ -302,7 +302,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     /**
      * Determine if the class implements the specified interface.
      */
-    Boolean implements_(Class that)
+    Boolean implements_(Class! that)
         {
         assert that.category == Interface;
 
@@ -326,7 +326,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     /**
      * Determine if the class incorporates the specified mixin.
      */
-    Boolean incorporates_(Class that)
+    Boolean incorporates_(Class! that)
         {
         assert that.category == Mixin;
 
@@ -376,7 +376,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     /**
      * The child classes, by name. This is a sub-set of the contents of {@link childrenByName}.
      */
-    @Lazy Map<String, Class> classesByName.calc()
+    @Lazy Map<String, Class!> classesByName.calc()
         {
         assert meta.immutable_;
 
@@ -463,7 +463,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      * compile-time type of the returned class is known; otherwise, an explicit cast to a
      * compile-time type is required to regain the compile-time type.
      */
-    Class narrow(TypeParameter... params)
+    Class! narrow(TypeParameter... params)
         {
         // first, verify that there is something that is being modified
         Map<String, TypeParameter> mapParams = typeParamsByName;
@@ -494,7 +494,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      * compile-time type of the returned class is known; otherwise, an explicit cast to a
      * compile-time type is required to regain the compile-time type.
      */
-    Class incorporate(Class that);
+    Class! incorporate(Class! that);
 
     /**
      * Obtain a public type for this Class instance.

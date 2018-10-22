@@ -532,7 +532,10 @@ public abstract class Expression
         {
         assert fit != null;
 
-        checkShortCircuit(errs);
+        if (fit.isFit())
+            {
+            checkShortCircuit(errs);
+            }
 
         // a null actual type indicates a fairly dramatic (i.e. halt required) validation failure
         if (typeActual == null)

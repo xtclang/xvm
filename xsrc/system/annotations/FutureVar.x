@@ -108,7 +108,7 @@ mixin FutureVar<RefType>
 
         if (completion == Error)
             {
-            throw failure as Exception;
+            throw failure.as(Exception);
             }
 
         return super();
@@ -402,7 +402,7 @@ mixin FutureVar<RefType>
         {
         if (completion == Error)
             {
-            return true, failure as Exception;
+            return true, failure.as(Exception);
             }
 
         return false;
@@ -486,11 +486,11 @@ mixin FutureVar<RefType>
                     // this default implementation assumes that the InputType is the same as the
                     // RefType, i.e. the value is an as-is "pass through"; any sub-class that has a
                     // different RefType from the InputType must override this behavior
-                    complete(input as RefType);
+                    complete(input.as(RefType));
                     }
                 else
                     {
-                    completeExceptionally(e as Exception);
+                    completeExceptionally(e.as(Exception));
                     }
                 }
             }
@@ -594,7 +594,7 @@ mixin FutureVar<RefType>
                 {
                 try
                     {
-                    consume(input as RefType);
+                    consume(input.as(RefType));
                     }
                 catch (Exception e2)
                     {
@@ -629,7 +629,7 @@ mixin FutureVar<RefType>
                 {
                 try
                     {
-                    complete(convert(e as Exception));
+                    complete(convert(e.as(Exception)));
                     }
                 catch (Exception e2)
                     {
@@ -735,7 +735,7 @@ mixin FutureVar<RefType>
 
                 if (completion == Error)
                     {
-                    completeExceptionally(e as Exception);
+                    completeExceptionally(e.as(Exception));
                     }
                 else
                     {
@@ -759,7 +759,7 @@ mixin FutureVar<RefType>
 
                 if (completion == Error)
                     {
-                    completeExceptionally(e as Exception);
+                    completeExceptionally(e.as(Exception));
                     }
                 else
                     {
@@ -808,7 +808,7 @@ mixin FutureVar<RefType>
                 {
                 try
                     {
-                    complete(convert(input as InputType));
+                    complete(convert(input.as(InputType)));
                     }
                 catch (Exception e2)
                     {
@@ -881,7 +881,8 @@ mixin FutureVar<RefType>
                     // thus forming a "continuation". note that the function may execute
                     // synchronously, at the whim of the runtime, but even if it does, the result
                     // (including exceptional result) will be captured in the future
-                    asyncResult = &invokeAsync(input as InputType);
+                    @Future RefType async = invokeAsync(input.as(InputType));
+                    asyncResult = &async;
                     asyncResult.chain(asyncCompleted);
                     }
                 }
@@ -896,11 +897,11 @@ mixin FutureVar<RefType>
             assert completion != Pending;
             if (completion == Result)
                 {
-                complete(result as RefType);
+                complete(result.as(RefType));
                 }
             else
                 {
-                completeExceptionally(e as Exception);
+                completeExceptionally(e.as(Exception));
                 }
             }
         }
