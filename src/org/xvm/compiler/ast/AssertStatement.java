@@ -6,6 +6,8 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.asm.op.Assert;
 
 import org.xvm.compiler.Token;
@@ -145,7 +147,7 @@ public class AssertStatement
             }
 
         @Override
-        protected void promoteNarrowingType(String sName, Register register, boolean fWhenTrue)
+        protected void promoteNarrowedType(String sName, Register register, boolean fWhenTrue)
             {
             if (fWhenTrue)
                 {
@@ -154,6 +156,16 @@ public class AssertStatement
                     // the narrowing register has replaced a local register; remember that fact
                     register.markInPlace();
                     }
+                }
+            }
+
+        @Override
+        protected void promoteNarrowedFormalType(String sName, TypeConstant typeNarrowed, Branch branch)
+            {
+            // we only promote our "true" into the parent's "true" branch
+            if (branch == Branch.WhenTrue)
+                {
+                getOuterContext().ensureFormalTypeMap(Branch.Always).put(sName, typeNarrowed);
                 }
             }
         }

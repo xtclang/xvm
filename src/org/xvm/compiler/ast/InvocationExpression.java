@@ -339,18 +339,19 @@ public class InvocationExpression
             if (argMethod instanceof MethodConstant)
                 {
                 MethodConstant constMethod = (MethodConstant) argMethod;
-                if (typeLeft == null)
-                    {
-                    typeLeft = ctx.getThisType();
-                    }
-
                 if (m_fCall)
                     {
-                    return (m_method.isFunction()
-                                ? constMethod.getSignature()
-                                : constMethod.resolveAutoNarrowing(pool, typeLeft)
-                            ).getRawReturns();
+                    if (m_method.isFunction())
+                        {
+                        return constMethod.getSignature().getRawReturns();
+                        }
+                    if (typeLeft == null)
+                        {
+                        typeLeft = ctx.getVar("this").getType(); // "this" could be narrowed
+                        }
+                    return constMethod.resolveAutoNarrowing(pool, typeLeft).getRawReturns();
                     }
+
                 if (m_fBindTarget)
                     {
                     return new TypeConstant[] {constMethod.getType()};
@@ -510,7 +511,8 @@ public class InvocationExpression
                             {
                             ctx.markVarRead(exprName.getNameToken(), errs);
                             }
-                        else if (argMethod instanceof MethodConstant || argMethod instanceof PropertyConstant)
+                        else if (argMethod instanceof MethodConstant ||
+                                 argMethod instanceof PropertyConstant)
                             {
                             // note that the identity for a "capped" method has no body, so assume
                             // that a missing body indicates virtual, and hence requires "this"
@@ -543,10 +545,6 @@ public class InvocationExpression
                         }
 
                     // handle method or function
-                    if (typeLeft == null)
-                        {
-                        typeLeft = ctx.getThisType();
-                        }
                     if (argMethod instanceof MethodConstant)
                         {
                         MethodConstant  idMethod    = (MethodConstant) argMethod;
@@ -590,6 +588,11 @@ public class InvocationExpression
                             m_fTupleArg = true;
                             }
 
+                        if (typeLeft == null && !m_method.isFunction())
+                            {
+                            typeLeft = ctx.getVar("this").getType(); // "this" could be narrowed
+                            }
+
                         if (atypeArgs != null)
                             {
                             Map<String, TypeConstant> mapTypeParams = Collections.EMPTY_MAP;
@@ -631,7 +634,6 @@ public class InvocationExpression
                                 atypeResult = new TypeConstant[] {idMethod.getRefType(typeLeft)};
                                 }
 
-                            // TODO if exprLeft == null then markVarRead on "this"
                             return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);
                             }
                         }
@@ -643,7 +645,7 @@ public class InvocationExpression
                         TypeConstant typeFn;
                         if (argMethod instanceof PropertyConstant)
                             {
-                            if (isNestMate(ctx, typeLeft))
+                            if (typeLeft == null  || isNestMate(ctx, typeLeft))
                                 {
                                 typeLeft = pool.ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE);
                                 }
@@ -651,22 +653,26 @@ public class InvocationExpression
                             PropertyInfo     infoProp = typeLeft.ensureTypeInfo().findProperty(idProp);
 
                             typeFn = infoProp == null ? pool.typeObject() : infoProp.getType();
-                            // TODO if exprLeft == null then markVarRead on "this"
                             }
                         else
                             {
                             assert argMethod instanceof Register;
                             typeFn = argMethod.getType().resolveTypedefs();
-                            // TODO markVarRead on argMethod
                             }
 
                         if (typeFn.isA(pool.typeFunction()))
                             {
-                            TypeConstant[] atypeResult = validateFunction(ctx, typeFn, errs);
-                            if (atypeResult != null)
+                            Expression exprNew = expr.validate(ctx, typeFn, errs);
+                            if (exprNew != null)
                                 {
-                                return finishValidations(atypeRequired, atypeResult,
-                                        TypeFit.Fit, null, errs);
+                                expr = exprNew;
+
+                                TypeConstant[] atypeResult = validateFunction(ctx, typeFn, errs);
+                                if (atypeResult != null)
+                                    {
+                                    return finishValidations(atypeRequired, atypeResult,
+                                            TypeFit.Fit, null, errs);
+                                    }
                                 }
                             }
                         else
@@ -939,9 +945,17 @@ public class InvocationExpression
                 }
             else // it is a NameExpression but _NOT_ a MethodConstant
                 {
-                // take the argument (e.g. "super") & drop through to the function handling
-                assert !m_fBindTarget && (exprLeft == null || !exprLeft.hasSideEffects());
-                argFn = m_argMethod;
+                assert !m_fBindTarget;
+                if (exprLeft == null || !exprLeft.hasSideEffects())
+                    {
+                    // take the argument (e.g. "super") & drop through to the function handling
+                    argFn = m_argMethod;
+                    }
+                else
+                    {
+                    // evaluate to find the argument (e.g. "var.prop", where prop holds a function)
+                    argFn = expr.generateArgument(ctx, code, true, true, errs);
+                    }
                 }
             }
         else // _NOT_ an InvocationExpression of a NameExpression (i.e. it's just a function)
@@ -1195,7 +1209,7 @@ public class InvocationExpression
      */
     protected Argument resolveName(
             Context        ctx,
-            boolean        fForce,
+             boolean        fForce,
             TypeConstant   typeLeft,
             TypeConstant[] atypeReturn,
             ErrorListener  errs)
@@ -1252,6 +1266,28 @@ public class InvocationExpression
             // from the search; we do not venture past the top level class barrier in the search
             Component parent   = getComponent();
             boolean   fHasThis = ctx.isMethod();
+
+            if (fHasThis)
+                {
+                // before we go through the scopes, check if "this" has been narrowed
+                Register     argThis  = (Register) ctx.getVar("this");
+                TypeConstant typeThis = argThis.getType();
+                if (!typeThis.equals(ctx.getThisType()))
+                    {
+                    // the type has been indeed narrowed
+                    TypeInfo         infoType   = typeThis.ensureTypeInfo(errs);
+                    IdentityConstant idCallable = findCallable(ctx, infoType, sName,
+                                                        true, false, atypeReturn, errs);
+                    if (idCallable != null)
+                        {
+                        m_argMethod   = idCallable;
+                        m_method      = getMethod(infoType, idCallable);
+                        m_fBindTarget = m_method != null && !m_method.isFunction();
+                        return idCallable;
+                        }
+                    }
+                }
+
             NextParent: while (parent != null)
                 {
                 IdentityConstant idParent = parent.getIdentityConstant();
@@ -1270,16 +1306,10 @@ public class InvocationExpression
                                 (fNoCall && fNoFBind) || fHasThis, true, atypeReturn, errs);
                         if (idCallable != null)
                             {
-                            m_argMethod = idCallable;
-                            if (idCallable instanceof MethodConstant)
-                                {
-                                MethodInfo infoMethod = infoType.getMethodById((MethodConstant) idCallable);
-                                assert infoMethod != null;
-
-                                m_method      = infoMethod.getTopmostMethodStructure(infoType);
-                                m_fBindTarget = !m_method.isFunction();
-                                }
-                            break NextParent;
+                            m_argMethod   = idCallable;
+                            m_method      = getMethod(infoType, idCallable);
+                            m_fBindTarget = m_method != null && !m_method.isFunction();
+                            return idCallable;
                             }
 
                         // we're done once we have searched the top-level class
@@ -1342,51 +1372,57 @@ public class InvocationExpression
             // the left expression provides the scope to search for a matching method/function;
             // if the left expression is itself a NameExpression, and it's in identity mode (i.e. a
             // possible identity), then check the identity first
-            Argument arg = null;
-            if (exprLeft instanceof NameExpression && ((NameExpression) exprLeft).isIdentityMode(ctx, false))
+            if (exprLeft instanceof NameExpression &&
+                        ((NameExpression) exprLeft).isIdentityMode(ctx, false))
                 {
                 // the left identity
                 // - methods are included because there is a left, but since it is to obtain a
                 //   method reference, there must not be any arg binding or actual invocation
                 // - functions are included because the left is identity-mode
                 TypeInfo infoLeft = ((NameExpression) exprLeft).getIdentity(ctx).ensureTypeInfo(errs);
-                arg = findCallable(ctx, infoLeft, sName, fNoFBind && fNoCall, true, atypeReturn, errs);
-
-                if (arg instanceof MethodConstant)
-                    {
-                    MethodInfo infoMethod = infoLeft.getMethodById((MethodConstant) arg);
-
-                    m_method = infoMethod.getTopmostMethodStructure(infoLeft);
-                    }
-                }
-
-            if (arg == null)
-                {
-                // use the type of the left expression to get the TypeInfo that must contain the
-                // method/function to call
-                // - methods are included because there is a left and it is NOT identity-mode
-                // - functions are NOT included because the left is NOT identity-mode
-                TypeInfo infoLeft = typeLeft.ensureTypeInfo(errs);
-                arg = findCallable(ctx, infoLeft, sName, true, false, atypeReturn, errs);
+                Argument arg      = findCallable(ctx, infoLeft, sName, fNoFBind && fNoCall, true, atypeReturn, errs);
 
                 if (arg != null)
                     {
-                    m_fBindTarget = true;
-
-                    if (arg instanceof MethodConstant)
-                        {
-                        MethodInfo infoMethod = infoLeft.getMethodById((MethodConstant) arg);
-
-                        m_method = infoMethod.getTopmostMethodStructure(infoLeft);
-                        assert !m_method.isFunction();
-                        }
+                    m_argMethod = arg;
+                    m_method    = getMethod(infoLeft, arg);
+                    return arg;
                     }
                 }
 
-            m_argMethod = arg;
+            // use the type of the left expression to get the TypeInfo that must contain the
+            // method/function to call
+            // - methods are included because there is a left and it is NOT identity-mode
+            // - functions are NOT included because the left is NOT identity-mode
+            TypeInfo infoLeft = typeLeft.ensureTypeInfo(errs);
+            Argument arg      = findCallable(ctx, infoLeft, sName, true, false, atypeReturn, errs);
+
+            if (arg != null)
+                {
+                m_argMethod   = arg;
+                m_method      = getMethod(infoLeft, arg);
+                assert m_method == null || !m_method.isFunction();
+                m_fBindTarget = m_method != null;
+                return arg;
+                }
             }
 
-        return m_argMethod;
+        return null;
+        }
+
+    /**
+     * @return a method structure for the specified argument; null if not a method constant
+     */
+    private MethodStructure getMethod(TypeInfo infoType, Argument arg)
+        {
+        if (arg instanceof MethodConstant)
+            {
+            MethodInfo infoMethod = infoType.getMethodById((MethodConstant) arg);
+            assert infoMethod != null;
+
+            return infoMethod.getTopmostMethodStructure(infoType);
+            }
+        return null;
         }
 
     /**

@@ -69,7 +69,7 @@ const Method<TargetType, ParamTypes extends Tuple, ReturnTypes extends Tuple>
         {
         paramLoop: for (Type paramType : ParamTypes)
             {
-            if (String[] names : formalParamName(paramLoop.counter))
+            if (String[] names : formalParamNames(paramLoop.count))
                 {
                 if (!ignoreImmediateProduction && names.contains(typeName))
                     {
@@ -87,7 +87,7 @@ const Method<TargetType, ParamTypes extends Tuple, ReturnTypes extends Tuple>
 
         returnLoop: for (Type returnType : ReturnTypes)
             {
-            if (String[] names : formalReturnName(returnLoop.counter))
+            if (String[] names : formalReturnNames(returnLoop.count))
                 {
                 // may produce, but doesn't consume
                 }
@@ -118,7 +118,7 @@ const Method<TargetType, ParamTypes extends Tuple, ReturnTypes extends Tuple>
         {
         returnLoop: for (Type returnType : ReturnTypes)
             {
-            if (String[] names : formalReturnName(returnLoop.counter))
+            if (String[] names : formalReturnNames(returnLoop.count))
                 {
                 if (names.contains(typeName))
                     {
@@ -136,7 +136,7 @@ const Method<TargetType, ParamTypes extends Tuple, ReturnTypes extends Tuple>
 
         paramLoop: for (Type paramType : ParamTypes)
             {
-            if (String[] names : formalParamName(paramLoop.counter))
+            if (String[] names : formalParamNames(paramLoop.count))
                 {
                 // may produce, but doesn't consume
                 }
@@ -220,7 +220,7 @@ const Method<TargetType, ParamTypes extends Tuple, ReturnTypes extends Tuple>
                 {
                 if (String[] namesThat : that.formalParamNames(loop.count))
                     {
-                    for (String name : nameThis.intersection(namesThat))
+                    for (String name : namesThis.intersection(namesThat))
                         {
                         if (that.TargetType.producesFormalType(name))
                             {

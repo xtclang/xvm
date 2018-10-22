@@ -217,6 +217,8 @@ public class LambdaExpression
     @Override
     protected void registerStructures(StageMgr mgr, ErrorListener errs)
         {
+        m_errs = errs;
+
         // just like the MethodDeclarationStatement, lambda expressions are considered to be
         // completely opaque, and so a lambda defers the processing of its children at this point,
         // because it wants everything around its children to be set up by the time those children
@@ -230,6 +232,8 @@ public class LambdaExpression
     @Override
     public void resolveNames(StageMgr mgr, ErrorListener errs)
         {
+        m_errs = errs;
+
         // see note above
         if (m_lambda == null)
             {
@@ -240,6 +244,8 @@ public class LambdaExpression
     @Override
     public void validateContent(StageMgr mgr, ErrorListener errs)
         {
+        m_errs = errs;
+
         // see note above
         if (m_lambda == null)
             {
@@ -289,6 +295,11 @@ public class LambdaExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
+        if (!ensurePrepared(m_errs))
+            {
+            return null;
+            }
+
         if (isValidated())
             {
             return getType();
@@ -325,6 +336,11 @@ public class LambdaExpression
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired)
         {
+        if (!ensurePrepared(m_errs))
+            {
+            return TypeFit.NoFit;
+            }
+
         if (isValidated())
             {
             return calcFit(ctx, getType(), typeRequired);
@@ -383,6 +399,11 @@ public class LambdaExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
+        if (!ensurePrepared(errs))
+            {
+            return finishValidation(typeRequired, null, TypeFit.NoFit, null, errs);
+            }
+
         // validation only occurs once, but we'll put some extra checks in up front, because we do
         // weird stuff on lambdas like cloning the AST so that we can pass over it once for the
         // expression validation, but use another copy of the body for the lambda method/function
@@ -417,7 +438,7 @@ public class LambdaExpression
         String[]       asParams    = cParams == 0 ? NO_NAMES : new String[cParams];
         TypeConstant[] atypeParams = cParams == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cParams];
 
-        fValid |= collectParamNamedAndTypes(atypeReqParams, atypeParams, asParams, errs);
+        fValid &= collectParamNamedAndTypes(atypeReqParams, atypeParams, asParams, errs);
 
         if (!fValid)
             {
@@ -571,6 +592,7 @@ public class LambdaExpression
                 TypeConstant typeParam = atypeParams[i] = param.getType().ensureTypeConstant();
                 if (typeParam.containsUnresolved())
                     {
+                    log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, typeParam.getValueString());
                     fValid = false;
                     }
                 else if (i < cReqParams)
@@ -709,6 +731,31 @@ public class LambdaExpression
 
 
     // ----- compilation helpers -------------------------------------------------------------------
+
+    /**
+     * This is used to catch up the parts of the lambda expression that are necessary to work with
+     * the lambda within its containing method, such that it can be asked questions about type
+     * information, etc.
+     *
+     * @param errs  the error list to log to
+     *
+     * @return true if the lambda expression was able to prepare (catch up)
+     */
+    protected boolean ensurePrepared(ErrorListener errs)
+        {
+        if (m_fPrepared || params == null || params.isEmpty())
+            {
+            return m_fPrepared = true;
+            }
+
+        boolean fPrepared = true;
+        for (AstNode param : params)
+            {
+            fPrepared &= new StageMgr(param, Stage.Validated, errs).fastForward(20);
+            }
+
+        return m_fPrepared = fPrepared;
+        }
 
     /**
      * For lambdas that do NOT use the "names only" form of parameter declaration, determine the
@@ -1258,6 +1305,16 @@ public class LambdaExpression
     protected StatementBlock   body;
     protected long             lStartPos;
 
+    /**
+     * This is only used to provide a destination for errors when we're called out of the blue to
+     * evaluate lambda type information before we validate (since validate gets passed an error
+     * listener to use). Do not use this for anything else other than ensurePrepared().
+     */
+    private transient ErrorListener        m_errs;
+    /**
+     * Set to true after the expression prepares.
+     */
+    private transient boolean              m_fPrepared;
     /**
      * The required type (stored here so that it can be picked up by other nodes below this node in
      * the AST).

@@ -20,6 +20,7 @@ import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.Expression.Assignable;
+import org.xvm.compiler.ast.Expression.TypeFit;
 
 
 /**
@@ -190,105 +191,6 @@ public class AssignmentStatement
         }
 
     /**
-     * @return true iff the assignment statement uses the "?=" operator, which only assigns if the
-     *         r-value is non-null
-     */
-    public boolean isNonNull()
-        {
-        return op.getId() == Id.COND;
-        }
-
-    /**
-     * @return true iff this AssignmentStatement uess an "op-equals" op, such as "+="
-     */
-    public boolean isOpAssign()
-        {
-        switch (op.getId())
-            {
-            case ADD_ASN:
-            case SUB_ASN:
-            case MUL_ASN:
-            case DIV_ASN:
-            case MOD_ASN:
-            case SHL_ASN:
-            case SHR_ASN:
-            case USHR_ASN:
-            case BIT_AND_ASN:
-            case BIT_OR_ASN:
-            case BIT_XOR_ASN:
-            case COND_AND_ASN:
-            case COND_OR_ASN:
-            case COND_ELSE_ASN:
-                return true;
-
-            default:
-                assert isSimple() | isConditional() | isNonNull();
-                return false;
-            }
-        }
-
-    /**
-     * @return a non-assignment equivalent to the assignment op of this statement
-     */
-    private Token createNonAssigningOp()
-        {
-        Token.Id id;
-        switch (op.getId())
-            {
-            case ADD_ASN      : id = Id.ADD      ; break;
-            case SUB_ASN      : id = Id.SUB      ; break;
-            case MUL_ASN      : id = Id.MUL      ; break;
-            case DIV_ASN      : id = Id.DIV      ; break;
-            case MOD_ASN      : id = Id.MOD      ; break;
-            case SHL_ASN      : id = Id.SHL      ; break;
-            case SHR_ASN      : id = Id.SHR      ; break;
-            case USHR_ASN     : id = Id.USHR     ; break;
-            case BIT_AND_ASN  : id = Id.BIT_AND  ; break;
-            case BIT_OR_ASN   : id = Id.BIT_OR   ; break;
-            case BIT_XOR_ASN  : id = Id.BIT_XOR  ; break;
-            case COND_AND_ASN : id = Id.COND_AND ; break;
-            case COND_OR_ASN  : id = Id.COND_OR  ; break;
-            case COND_ELSE_ASN: id = Id.COND_ELSE; break;
-
-            default:
-                throw new IllegalStateException("op=" + op.getId().TEXT);
-            }
-
-        return new Token(op.getStartPosition(), op.getEndPosition(), id);
-        }
-
-    private BiExpression createBiExpression(Expression exprLeft, Token op, Expression exprRight)
-        {
-        switch (op.getId())
-            {
-            case ADD:
-            case SUB:
-            case MUL:
-            case DIV:
-            case MOD:
-            case SHL:
-            case SHR:
-            case USHR:
-            case BIT_AND:
-            case BIT_OR:
-            case BIT_XOR:
-                return new RelOpExpression(exprLeft, op, exprRight);
-
-            case COND_AND:
-            case COND_OR:
-                return new CondOpExpression(exprLeft, op, exprRight);
-
-            case COND_ELSE:
-                return new ElvisExpression(exprLeft, op, exprRight);
-
-            default:
-                throw new IllegalStateException("op=" + op.getId().TEXT);
-            }
-
-        Token op
-        }
-
-    /**
      * @return the single-use register that the Boolean condition result is stored in
      */
     public Register getConditionRegister()
@@ -352,7 +254,7 @@ public class AssignmentStatement
     @Override
     protected boolean isRValue(Expression exprChild)
         {
-        return exprChild != lvalue;
+        return m_fSuppressLValue || exprChild != lvalue;
         }
 
     @Override
@@ -364,7 +266,8 @@ public class AssignmentStatement
         AstNode nodeLeft = lvalue;
         if (nodeLeft instanceof Statement)
             {
-            assert nodeLeft instanceof VariableDeclarationStatement || nodeLeft instanceof MultipleLValueStatement;
+            assert nodeLeft instanceof VariableDeclarationStatement ||
+                   nodeLeft instanceof MultipleLValueStatement;
             Statement lvalueOld = (Statement) nodeLeft;
             Statement lvalueNew = lvalueOld.validate(ctx, errs);
             if (lvalueNew != lvalueOld)
@@ -379,11 +282,59 @@ public class AssignmentStatement
 
         // regardless of whether the LValue is a statement or expression, all L-Values must be able
         // to provide an expression as a representative form
-        Expression exprLeft     = lvalue.getLValueExpression();
-        Expression exprLeftCopy = isOpAssign() ? (Expression) exprLeft.clone() : null;
+        Expression exprLeft = nodeLeft.getLValueExpression();
         if (!exprLeft.isValidated())
             {
-            Expression exprNew = exprLeft.validate(ctx, null, errs);
+            // the type of l-value may have been narrowed in the current context, so let's try
+            // to extract it and test the r-value with it;
+            // to prevent the lvalue from dropping that narrowed information, we temporarily
+            // need to forget it's an lvalue
+            TypeConstant[] atypeLeft = null;
+            m_fSuppressLValue = true;
+            try
+                {
+                atypeLeft = exprLeft.getImplicitTypes(ctx);
+                }
+            finally
+                {
+                m_fSuppressLValue = false;
+                }
+
+            if (atypeLeft != TypeConstant.NO_TYPES)
+                {
+                TypeFit fit;
+                if (isSimple())
+                    {
+                    // see comment below during the validation path
+                    ctx = ctx.enterInferring(atypeLeft[0]);
+
+                    fit = rvalue.testFitMulti(ctx, atypeLeft);
+
+                    ctx = ctx.exit();
+                    }
+                else if (isConditional())
+                    {
+                    int            cLeft     = atypeLeft.length;
+                    TypeConstant[] atypeTest = new TypeConstant[cLeft + 1];
+                    atypeTest[0] = pool().typeBoolean();
+                    System.arraycopy(atypeLeft, 0, atypeTest, 1, cLeft);
+
+                    fit = rvalue.testFitMulti(ctx, atypeTest);
+                    }
+                else
+                    {
+                    // TODO += *= etc.
+                    throw notImplemented();
+                    }
+
+                if (!fit.isFit())
+                    {
+                    // that didn't work; use the regular path
+                    atypeLeft = TypeConstant.NO_TYPES;
+                    }
+                }
+
+            Expression exprNew = exprLeft.validateMulti(ctx, atypeLeft, errs);
             if (exprNew == null)
                 {
                 fValid = false;
@@ -440,8 +391,6 @@ public class AssignmentStatement
             }
         else
             {
-            assert isOpAssign();
-            Expression rValueFake = new
             // TODO += *= etc.
             // TODO the LValues must NOT be declarations!!! (they wouldn't be assigned)
             throw notImplemented();
@@ -553,6 +502,7 @@ public class AssignmentStatement
 
     private transient VariableDeclarationStatement[] m_decls;
     private transient Register                       m_regCond;
+    private transient boolean                        m_fSuppressLValue;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AssignmentStatement.class, "lvalue", "lvalueExpr", "rvalue");
     }

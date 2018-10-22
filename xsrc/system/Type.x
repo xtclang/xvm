@@ -222,7 +222,7 @@ const Type<DataType>
      */
     Boolean consumesFormalType(String typeName)
         {
-        return methods.iterator().untilAny(method -> method.consumesFormal(typeName, false));
+        return methods.iterator().untilAny(method -> method.consumesFormalType(typeName, false));
         }
 
     /**
