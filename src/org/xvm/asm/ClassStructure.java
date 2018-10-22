@@ -1060,7 +1060,9 @@ public class ClassStructure
                 case Annotation:
                 case Delegates:
                 case Implements:
-                    typeContrib = typeContrib.resolveGenerics(pool, new SimpleTypeResolver(listRight));
+                    // the contribution must be normalized before resolving
+                    typeContrib = typeContrib.normalizeParameters(pool)
+                                             .resolveGenerics(pool, new SimpleTypeResolver(listRight));
                     if (typeContrib != null)
                         {
                         relation = relation.bestOf(typeContrib.calculateRelation(typeLeft));

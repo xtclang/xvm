@@ -1228,11 +1228,31 @@ public class InvocationExpression
         m_fBindParams = !fNoFBind;
         m_fCall       = !fNoCall;
 
+        ConstantPool pool = pool();
+        if (atypeReturn != null && fNoCall)
+            {
+            // "no call" means that we are expected to produce a function, but the code below
+            // treats atypeReturn as function return types
+            if (atypeReturn.length != 1)
+                {
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, 1, atypeReturn.length);
+                return null;
+                }
+
+            TypeConstant typeFn = atypeReturn[0];
+
+            atypeReturn = pool.extractFunctionReturns(typeFn);
+            if (atypeReturn == null)
+                {
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, "Function", typeFn.getValueString());
+                return null;
+                }
+            }
+
         // if the name does not have a left expression, then walk up the AST parent node chain
         // looking for a registered name, i.e. a local variable of that name, stopping once the
         // containing method/function (but <b>not</b> a lambda, since it has a permeable barrier to
         // enable local variable capture) is reached
-        ConstantPool   pool      = pool();
         NameExpression exprName  = (NameExpression) expr;
         Token          tokName   = exprName.getNameToken();
         String         sName     = exprName.getName();

@@ -411,7 +411,7 @@ class Array<ElementType>
         for (Int i : 0..size-1)
             {
             ElementType el = this[i];
-            if (el instanceof ConstAble)
+            if (el.is(ConstAble))
                 {
                 el = el.as(ConstAble) == this.as(ConstAble)
                     ? that.as(ElementType)

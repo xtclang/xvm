@@ -115,14 +115,14 @@ mixin Enumeration<EnumType extends Enum>
      */
     @Lazy Map<String, EnumType> byName.calc()
         {
-        assert !(parent.instanceof(Class+Enumeration) && this.extends_(parent));
+        assert !(parent.is(Class+Enumeration) && this.extends_(parent.as(Class+Enumeration)));
 
         // the Enumeration class contains singleton Enum class/values; collect those values into a
         // Map keyed by name
         ListMap<String, EnumType> map = new ListMap();
         for (Class clz : classesByName.values)
             {
-            if (clz.extends_(this) && clz.category == Const && clz instanceof Class<EnumType>)
+            if (clz.extends_(this) && clz.category == Const && clz.is(Class<EnumType>))
                 {
                 assert clz.isSingleton;
 

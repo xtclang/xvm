@@ -191,8 +191,15 @@ public class PrefixExpression
         {
         StringBuilder sb = new StringBuilder();
 
-        sb.append(operator.getId().TEXT)
-          .append(expr);
+        sb.append(operator.getId().TEXT);
+        if (expr instanceof NameExpression)
+            {
+            sb.append(expr);
+            }
+        else
+            {
+            sb.append('(').append(expr).append(')');
+            }
 
         return sb.toString();
         }

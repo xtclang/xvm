@@ -102,7 +102,7 @@ const Type<DataType>
         {
         assert meta.immutable_;
 
-        Map<String, Property> map = new ListMap<>();
+        Map<String, Property> map = new ListMap();
         for (Property prop : properties)
             {
             map[prop.name] = prop;
@@ -220,9 +220,10 @@ const Type<DataType>
      *
      * @see Method.consumesFormalType
      */
-    Boolean consumesFormalType(String typeName)
+    Boolean consumesFormalType(String typeName, Boolean ignoreImmediateProduction = false)
         {
-        return methods.iterator().untilAny(method -> method.consumesFormalType(typeName, false));
+        return methods.iterator().untilAny(
+                method -> method.consumesFormalType(typeName, ignoreImmediateProduction));
         }
 
     /**

@@ -1182,12 +1182,7 @@ public class ConstantPool
             return null;
             }
 
-        Component component = constId.getComponent();
-        if (component == null)
-            {
-            throw new IllegalStateException("missing Ecstasy component: " + constId);
-            }
-        return component;
+        return constId.getComponent();
         }
 
     /**
