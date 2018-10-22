@@ -478,7 +478,6 @@ public class Token
         VAR          ("var"            ),
         VOID         ("void"           ),
         WHILE        ("while"          ),
-        WITH         ("with"           ),
         IDENTIFIER   (null             ),
         EOL_COMMENT  (null             ),
         ENC_COMMENT  (null             ),

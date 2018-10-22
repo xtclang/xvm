@@ -46,6 +46,7 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
+import org.xvm.compiler.ast.AssignmentStatement.Category;
 import org.xvm.compiler.ast.Expression.Assignable;
 
 import org.xvm.util.Severity;
@@ -183,7 +184,7 @@ public class ForEachStatement
         {
         return ((LabeledStatement) getParent()).getName();
         }
-    
+
     /**
      * @return the StringConstant for the passed string
      */
@@ -318,7 +319,7 @@ public class ForEachStatement
         //   4) map keys   :  L: for (K key            : container.as(Map<K,T>   )) {...}
         //   5) map entries:  L: for ((K key, T value) : container.as(Map<K,T>   )) {...}
         //   6) iterable   :  L: for (T value          : container.as(Iterator<T>)) {...}
-        assert cond.isConditional();
+        assert cond.getCategory() == Category.CondExpr;
 
         // validate the LValue declarations and any LValue sub-expressions
         AstNode condLVal = cond.getLValue();
@@ -504,7 +505,7 @@ public class ForEachStatement
             {
             fCompletes = stmt.completes(ctx, fCompletes, code, errs);
             }
-        
+
         ConstantPool pool = pool();
         if (m_regFirst != null)
             {
@@ -762,14 +763,14 @@ public class ForEachStatement
             code.add(new Var_I(pool.typeInt(), pool.val0()));
             regCount = code.lastRegister();
             }
-        
+
         code.add((new Var(pool.typeInt())));
         Register regEnd = code.lastRegister();
-        
+
         code.add(new Var(typeSeq));
         Register regSeq = code.lastRegister();
         m_exprRValue.generateAssignment(ctx, code, m_exprRValue.new Assignable(regSeq), errs);
-        
+
         code.add(new P_Get(idSize, regSeq, regEnd));
         code.add(new JumpGte(regCount, regEnd, getEndLabel()));
         code.add(new IP_Dec(regEnd));
