@@ -177,35 +177,16 @@ public class AssignmentStatement
     /**
      * @return true iff the assignment statement uses the "=" operator
      */
-    public boolean isSimple()
-        {
-        return op.getId() == Id.ASN;
-        }
-
-    /**
-     * @return true iff the assignment statement uses the ":" operator
-     */
-    public boolean isConditional()
-        {
-        return op.getId() == Id.COLON;
-        }
-
-    /**
-     * @return true iff the assignment statement uses the "?=" operator, which only assigns if the
-     *         r-value is non-null
-     */
-    public boolean isNonNull()
-        {
-        return op.getId() == Id.COND;
-        }
-
-    /**
-     * @return true iff this AssignmentStatement uess an "op-equals" op, such as "+="
-     */
-    public boolean isOpAssign()
+    public Category getCategory()
         {
         switch (op.getId())
             {
+            case ASN:
+                return Category.Assign;
+
+            case COLON:
+                return Category.CondExpr;
+
             case ADD_ASN:
             case SUB_ASN:
             case MUL_ASN:
@@ -217,50 +198,50 @@ public class AssignmentStatement
             case BIT_AND_ASN:
             case BIT_OR_ASN:
             case BIT_XOR_ASN:
+                return Category.InPlace;
+
             case COND_AND_ASN:
             case COND_OR_ASN:
             case COND_ELSE_ASN:
-                return true;
+                return Category.CondLeft;
+
+            case COND_ASN:
+                return Category.CondRight;
 
             default:
-                assert isSimple() | isConditional() | isNonNull();
-                return false;
+                throw new IllegalStateException("op=" + op);
             }
         }
 
-    /**
-     * @return a non-assignment equivalent to the assignment op of this statement
-     */
-    private Token createNonAssigningOp()
+    private BiExpression createBiExpression(Expression exprLeft, Token opIP, Expression exprRight)
         {
-        Token.Id id;
-        switch (op.getId())
+        Token.Id idBi;
+        switch (opIP.getId())
             {
-            case ADD_ASN      : id = Id.ADD      ; break;
-            case SUB_ASN      : id = Id.SUB      ; break;
-            case MUL_ASN      : id = Id.MUL      ; break;
-            case DIV_ASN      : id = Id.DIV      ; break;
-            case MOD_ASN      : id = Id.MOD      ; break;
-            case SHL_ASN      : id = Id.SHL      ; break;
-            case SHR_ASN      : id = Id.SHR      ; break;
-            case USHR_ASN     : id = Id.USHR     ; break;
-            case BIT_AND_ASN  : id = Id.BIT_AND  ; break;
-            case BIT_OR_ASN   : id = Id.BIT_OR   ; break;
-            case BIT_XOR_ASN  : id = Id.BIT_XOR  ; break;
-            case COND_AND_ASN : id = Id.COND_AND ; break;
-            case COND_OR_ASN  : id = Id.COND_OR  ; break;
-            case COND_ELSE_ASN: id = Id.COND_ELSE; break;
+            case ADD_ASN      : idBi = Id.ADD      ; break;
+            case SUB_ASN      : idBi = Id.SUB      ; break;
+            case MUL_ASN      : idBi = Id.MUL      ; break;
+            case DIV_ASN      : idBi = Id.DIV      ; break;
+            case MOD_ASN      : idBi = Id.MOD      ; break;
+            case SHL_ASN      : idBi = Id.SHL      ; break;
+            case SHR_ASN      : idBi = Id.SHR      ; break;
+            case USHR_ASN     : idBi = Id.USHR     ; break;
+            case BIT_AND_ASN  : idBi = Id.BIT_AND  ; break;
+            case BIT_OR_ASN   : idBi = Id.BIT_OR   ; break;
+            case BIT_XOR_ASN  : idBi = Id.BIT_XOR  ; break;
+            case COND_AND_ASN : idBi = Id.COND_AND ; break;
+            case COND_OR_ASN  : idBi = Id.COND_OR  ; break;
+            case COND_ELSE_ASN: idBi = Id.COND_ELSE; break;
 
+            case ASN:
+            case COLON:
+            case COND_ASN:
             default:
-                throw new IllegalStateException("op=" + op.getId().TEXT);
+                throw new IllegalStateException("op=" + opIP.getId().TEXT);
             }
 
-        return new Token(op.getStartPosition(), op.getEndPosition(), id);
-        }
-
-    private BiExpression createBiExpression(Expression exprLeft, Token op, Expression exprRight)
-        {
-        switch (op.getId())
+        Token opBi = new Token(opIP.getStartPosition(), opIP.getEndPosition(), idBi);
+        switch (idBi)
             {
             case ADD:
             case SUB:
@@ -273,20 +254,18 @@ public class AssignmentStatement
             case BIT_AND:
             case BIT_OR:
             case BIT_XOR:
-                return new RelOpExpression(exprLeft, op, exprRight);
+                return new RelOpExpression(exprLeft, opBi, exprRight);
 
             case COND_AND:
             case COND_OR:
-                return new CondOpExpression(exprLeft, op, exprRight);
+                return new CondOpExpression(exprLeft, opBi, exprRight);
 
             case COND_ELSE:
-                return new ElvisExpression(exprLeft, op, exprRight);
+                return new ElvisExpression(exprLeft, opBi, exprRight);
 
             default:
-                throw new IllegalStateException("op=" + op.getId().TEXT);
+                throw new IllegalStateException("op=" + opBi.getId().TEXT);
             }
-
-        Token op
         }
 
     /**
@@ -297,7 +276,7 @@ public class AssignmentStatement
         Register reg = m_regCond;
         if (reg == null)
             {
-            if (!isConditional())
+            if (getCategory() != Category.CondExpr)
                 {
                 throw new IllegalStateException("op=\"" + op.getValueText() + '\"');
                 }
@@ -381,9 +360,8 @@ public class AssignmentStatement
 
         // regardless of whether the LValue is a statement or expression, all L-Values must be able
         // to provide an expression as a representative form
-        Expression exprLeft     = lvalue.getLValueExpression();
-        Expression exprLeftCopy = isOpAssign() ? (Expression) exprLeft.clone() : null;
-        Expression exprLeft = nodeLeft.getLValueExpression();
+        Expression exprLeft     = nodeLeft.getLValueExpression();
+        Expression exprLeftCopy = (Expression) exprLeft.clone();    // REVIEW some paths won't need this
         if (!exprLeft.isValidated())
             {
             // the type of l-value may have been narrowed in the current context, so let's try
@@ -403,29 +381,41 @@ public class AssignmentStatement
 
             if (atypeLeft != TypeConstant.NO_TYPES)
                 {
-                TypeFit fit;
-                if (isSimple())
+                TypeFit fit = TypeFit.NoFit;
+                switch (getCategory())
                     {
-                    // see comment below during the validation path
-                    ctx = ctx.enterInferring(atypeLeft[0]);
+                    case Assign:
+                        // see comment below during the validation path
+                        ctx = ctx.enterInferring(atypeLeft[0]);
+                        fit = rvalue.testFitMulti(ctx, atypeLeft);
+                        ctx = ctx.exit();
+                        break;
 
-                    fit = rvalue.testFitMulti(ctx, atypeLeft);
+                    case CondExpr:
+                        {
+                        int            cLeft     = atypeLeft.length;
+                        TypeConstant[] atypeTest = new TypeConstant[cLeft + 1];
+                        atypeTest[0] = pool().typeBoolean();
+                        System.arraycopy(atypeLeft, 0, atypeTest, 1, cLeft);
 
-                    ctx = ctx.exit();
-                    }
-                else if (isConditional())
-                    {
-                    int            cLeft     = atypeLeft.length;
-                    TypeConstant[] atypeTest = new TypeConstant[cLeft + 1];
-                    atypeTest[0] = pool().typeBoolean();
-                    System.arraycopy(atypeLeft, 0, atypeTest, 1, cLeft);
+                        fit = rvalue.testFitMulti(ctx, atypeTest);
+                        break;
+                        }
 
-                    fit = rvalue.testFitMulti(ctx, atypeTest);
-                    }
-                else
-                    {
-                    // TODO += *= etc.
-                    throw notImplemented();
+                    case CondLeft:
+                        // TODO &&= ||= ?:=
+                        notImplemented();
+                        break;
+
+                    case CondRight:
+                        // TODO :=
+                        notImplemented();
+                        break;
+
+                    case InPlace:
+                        // TODO += *= etc.
+                        notImplemented();
+                        break;
                     }
 
                 if (!fit.isFit())
@@ -449,54 +439,68 @@ public class AssignmentStatement
         exprLeft.requireAssignable(ctx, errs);
 
         Expression rvalueOld = rvalue;
-        Expression rvalueNew;
-        if (isSimple())
+        Expression rvalueNew = null;
+        switch (getCategory())
             {
-            if (exprLeft.isSingle())
-                {
-                // LVal = RVal (or some other assignment operator, not ':')
-                TypeConstant typeLeft = exprLeft.getType();
-                boolean      fInfer   = typeLeft != null;
-                if (fInfer)
+            case Assign:
+                if (exprLeft.isSingle())
                     {
-                    // allow the r-value to resolve names based on the l-value type's contributions
-                    ctx = ctx.enterInferring(typeLeft);
+                    // LVal = RVal (or some other assignment operator, not ':')
+                    TypeConstant typeLeft = exprLeft.getType();
+                    boolean      fInfer   = typeLeft != null;
+                    if (fInfer)
+                        {
+                        // allow the r-value to resolve names based on the l-value type's contributions
+                        ctx = ctx.enterInferring(typeLeft);
+                        }
+
+                    rvalueNew = rvalueOld.validate(ctx, typeLeft, errs);
+
+                    if (fInfer)
+                        {
+                        ctx = ctx.exit();
+                        }
+                    }
+                else
+                    {
+                    // (LVal0, LVal1, ..., LValN) = RVal
+                    rvalueNew = rvalueOld.validateMulti(ctx, exprLeft.getTypes(), errs);
                     }
 
-                rvalueNew = rvalueOld.validate(ctx, typeLeft, errs);
+                exprLeft.markAssignment(ctx, false, errs);
+                break;
 
-                if (fInfer)
-                    {
-                    ctx = ctx.exit();
-                    }
-                }
-            else
+            case CondExpr:
                 {
-                // (LVal0, LVal1, ..., LValN) = RVal
-                rvalueNew = rvalueOld.validateMulti(ctx, exprLeft.getTypes(), errs);
+                // (LVal : RVal) or (LVal0, LVal1, ..., LValN : RVal)
+                TypeConstant[] atypeLVals = exprLeft.getTypes();
+                int            cLVals     = atypeLVals.length;
+                int            cReq       = cLVals + 1;
+                TypeConstant[] atypeReq   = new TypeConstant[cReq];
+                atypeReq[0] = pool().typeBoolean();
+                System.arraycopy(atypeLVals, 0, atypeReq, 1, cLVals);
+                rvalueNew = rvalueOld.validateMulti(ctx, atypeReq, errs);
+                exprLeft.markAssignment(ctx, true, errs);
+                break;
                 }
 
-            exprLeft.markAssignment(ctx, false, errs);
-            }
-        else if (isConditional())
-            {
-            // (LVal : RVal) or (LVal0, LVal1, ..., LValN : RVal)
-            TypeConstant[] atypeLVals = exprLeft.getTypes();
-            int            cLVals     = atypeLVals.length;
-            int            cReq       = cLVals + 1;
-            TypeConstant[] atypeReq   = new TypeConstant[cReq];
-            atypeReq[0] = pool().typeBoolean();
-            System.arraycopy(atypeLVals, 0, atypeReq, 1, cLVals);
-            rvalueNew = rvalueOld.validateMulti(ctx, atypeReq, errs);
-            exprLeft.markAssignment(ctx, true, errs);
-            }
-        else
-            {
-            assert isOpAssign();
-            Expression rValueFake = new
-            // TODO += *= etc.
-            // TODO the LValues must NOT be declarations!!! (they wouldn't be assigned)
-            throw notImplemented();
+            case CondLeft:
+                // TODO the LValues must NOT be declarations!!! (they wouldn't be assigned)
+                // TODO &&= ||= ?:=
+                notImplemented();
+                break;
+
+            case CondRight:
+                // TODO the LValues must NOT be declarations!!! (they wouldn't be assigned)
+                // TODO :=
+                notImplemented();
+                break;
+
+            case InPlace:
+                // TODO the LValues must NOT be declarations!!! (they wouldn't be assigned)
+                // TODO += *= etc.
+                notImplemented();
+                break;
             }
 
         if (rvalueNew != rvalueOld)
@@ -516,52 +520,67 @@ public class AssignmentStatement
         {
         boolean fCompletes = fReachable;
 
-        // code gen optimization for the common case of a combined declaration & constant assignment
-        // of a single value
-        if (isSimple()
-                && lvalueExpr.isSingle()
-                && rvalue.isConstant()
-                && lvalue instanceof VariableDeclarationStatement
-                && !((VariableDeclarationStatement) lvalue).hasRefAnnotations())
+        switch (getCategory())
             {
-            VariableDeclarationStatement lvalue = (VariableDeclarationStatement) this.lvalue;
-            StringConstant               idName = pool().ensureStringConstant(lvalue.getName());
-            code.add(new Var_IN(lvalue.getRegister(), idName, rvalue.toConstant()));
-            return fCompletes;
-            }
+            case Assign:
+                {
+                // code gen optimization for the common case of a combined declaration & constant assignment
+                // of a single value
+                if (lvalueExpr.isSingle()
+                        && rvalue.isConstant()
+                        && lvalue instanceof VariableDeclarationStatement
+                        && !((VariableDeclarationStatement) lvalue).hasRefAnnotations())
+                    {
+                    VariableDeclarationStatement lvalue = (VariableDeclarationStatement) this.lvalue;
+                    StringConstant               idName = pool().ensureStringConstant(lvalue.getName());
+                    code.add(new Var_IN(lvalue.getRegister(), idName, rvalue.toConstant()));
+                    break;
+                    }
 
-        if (isSimple())
-            {
-            if (lvalue instanceof Statement)
-                {
-                fCompletes = ((Statement) lvalue).completes(ctx, fCompletes, code, errs);
+                if (lvalue instanceof Statement)
+                    {
+                    fCompletes = ((Statement) lvalue).completes(ctx, fCompletes, code, errs);
+                    }
+
+                Assignable[] LVals = lvalueExpr.generateAssignables(ctx, code, errs);
+                if (fCompletes &= lvalueExpr.isCompletable())
+                    {
+                    rvalue.generateAssignments(ctx, code, LVals, errs);
+                    fCompletes &= rvalue.isCompletable();
+                    }
+                break;
                 }
 
-            Assignable[] LVals = lvalueExpr.generateAssignables(ctx, code, errs);
-            if (fCompletes &= lvalueExpr.isCompletable())
+            case CondExpr:
                 {
-                rvalue.generateAssignments(ctx, code, LVals, errs);
-                fCompletes &= rvalue.isCompletable();
+                Assignable[] LVals    = lvalueExpr.generateAssignables(ctx, code, errs);
+                int          cLVals   = LVals.length;
+                int          cAll     = cLVals + 1;
+                Assignable[] LValsAll = new Assignable[cAll];
+                LValsAll[0] = lvalueExpr.new Assignable(getConditionRegister());
+                System.arraycopy(LVals, 0, LValsAll, 1, cLVals);
+                if (fCompletes &= lvalueExpr.isCompletable())
+                    {
+                    rvalue.generateAssignments(ctx, code, LVals, errs);
+                    fCompletes &= rvalue.isCompletable();
+                    }
+                break;
                 }
-            }
-        else if (isConditional())
-            {
-            Assignable[] LVals    = lvalueExpr.generateAssignables(ctx, code, errs);
-            int          cLVals   = LVals.length;
-            int          cAll     = cLVals + 1;
-            Assignable[] LValsAll = new Assignable[cAll];
-            LValsAll[0] = lvalueExpr.new Assignable(getConditionRegister());
-            System.arraycopy(LVals, 0, LValsAll, 1, cLVals);
-            if (fCompletes &= lvalueExpr.isCompletable())
-                {
-                rvalue.generateAssignments(ctx, code, LVals, errs);
-                fCompletes &= rvalue.isCompletable();
-                }
-            }
-        else
-            {
-            // TODO += *= etc.
-            throw notImplemented();
+
+            case CondLeft:
+                // TODO &&= ||= ?:=
+                notImplemented();
+                break;
+
+            case CondRight:
+                // TODO :=
+                notImplemented();
+                break;
+
+            case InPlace:
+                // TODO += *= etc.
+                notImplemented();
+                break;
             }
 
         return fCompletes;
@@ -596,6 +615,8 @@ public class AssignmentStatement
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    public enum Category {Assign, CondExpr, CondLeft, CondRight, InPlace}
 
     protected AstNode    lvalue;
     protected Expression lvalueExpr;

@@ -15,6 +15,8 @@ import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler.Stage;
 
+import org.xvm.compiler.ast.AssignmentStatement.Category;
+
 
 /**
  * This represents multiple variable declarations in a list.
@@ -210,7 +212,8 @@ public class MultipleLValueStatement
         StringBuilder sb = new StringBuilder();
 
         AstNode parent = getParent();
-        boolean fCond  = parent instanceof AssignmentStatement && ((AssignmentStatement) parent).isConditional();
+        boolean fCond  = parent instanceof AssignmentStatement
+                && ((AssignmentStatement) parent).getCategory() == Category.CondExpr;
         if (!fCond)
             {
             sb.append('(');
