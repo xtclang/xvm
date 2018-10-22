@@ -1449,7 +1449,7 @@ public class TypeInfo
      * Obtain all of the matching methods for the specified name and the number of parameters.
      *
      * @param sName      the method name
-     * @param cParams    the number of parameters
+     * @param cParams    the number of parameters (-1 for any)
      * @param fMethod    if true, include methods into the resulting set
      * @param fFunction  if true, include functions into the resulting set
      *
@@ -1487,6 +1487,11 @@ public class TypeInfo
         Set<MethodConstant> setMethods = mapMethods.get(sKey);
         if (setMethods == null)
             {
+            if (cParams == -1)
+                {
+                // any number of parameters goes
+                cParams = Integer.MAX_VALUE;
+                }
             for (Map.Entry<SignatureConstant, MethodInfo> entry : ensureMethodsBySignature().entrySet())
                 {
                 SignatureConstant sig = entry.getKey();

@@ -166,10 +166,23 @@ public class UnionTypeConstant
     @Override
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
-        // we've been asked to resolve some type defined as "T1 + T2";  first, resolve T1 and T2
-        TypeInfo info1 = getUnderlyingType().ensureTypeInfo(errs);
-        TypeInfo info2 = getUnderlyingType2().ensureTypeInfo(errs);
-        // TODO CP
+        TypeConstant type1 = getUnderlyingType();
+        TypeConstant type2 = getUnderlyingType2();
+
+        TypeInfo info1 = type1.ensureTypeInfo(errs);
+        TypeInfo info2 = type2.ensureTypeInfo(errs);
+
+        // +++ hack begin (this code is correct only if the formal type's constraint is Object)
+        if (type1.isFormalType())
+            {
+            return info2;
+            }
+        if (type2.isFormalType())
+            {
+            return info1;
+            }
+        // --- hack end
+        // TODO CP remove the hack above
         return info1;
         }
 

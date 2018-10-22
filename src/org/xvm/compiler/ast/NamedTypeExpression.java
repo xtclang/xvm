@@ -5,15 +5,18 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ChildClassConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.ThisClassConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -272,7 +275,7 @@ public class NamedTypeExpression
         TypeConstant type;
         if (listParams == null)
             {
-            type = calculateDefaultContextType(constId);
+            type = calculateDefaultType(null, constId);
             }
         else
             {
@@ -375,7 +378,7 @@ public class NamedTypeExpression
 
         if (listParams == null)
             {
-            type = calculateDefaultContextType(m_constId);
+            type = calculateDefaultType(ctx, m_constId);
             }
         else
             {
@@ -428,7 +431,7 @@ public class NamedTypeExpression
      *
      * @return a resulting type
      */
-    protected TypeConstant calculateDefaultContextType(Constant constTarget)
+    protected TypeConstant calculateDefaultType(Context ctx, Constant constTarget)
         {
         // in a context of "this compilation unit", an absence of type parameters
         // is treated as "formal types" (but only for instance children).
@@ -490,6 +493,25 @@ public class NamedTypeExpression
 
             case Class:
                 idFormalTarget = (IdentityConstant) constTarget;
+                break;
+
+            case Property:
+                if (ctx != null)
+                    {
+                    PropertyConstant idProp = (PropertyConstant) constTarget;
+
+                    // see if the FormalType was narrowed
+                    Argument arg = ctx.getVar(idProp.getName());
+                    if (arg instanceof Register)
+                        {
+                        return arg.getType();
+                        }
+                    }
+                idFormalTarget = null;
+                break;
+
+            case TypeParameter:
+                idFormalTarget = null;
                 break;
 
             case UnresolvedName:

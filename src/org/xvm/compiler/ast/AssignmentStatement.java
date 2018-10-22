@@ -20,6 +20,7 @@ import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.Expression.Assignable;
+import org.xvm.compiler.ast.Expression.TypeFit;
 
 
 /**
@@ -253,7 +254,7 @@ public class AssignmentStatement
     @Override
     protected boolean isRValue(Expression exprChild)
         {
-        return exprChild != lvalue;
+        return m_fSuppressLValue || exprChild != lvalue;
         }
 
     @Override
@@ -265,7 +266,8 @@ public class AssignmentStatement
         AstNode nodeLeft = lvalue;
         if (nodeLeft instanceof Statement)
             {
-            assert nodeLeft instanceof VariableDeclarationStatement || nodeLeft instanceof MultipleLValueStatement;
+            assert nodeLeft instanceof VariableDeclarationStatement ||
+                   nodeLeft instanceof MultipleLValueStatement;
             Statement lvalueOld = (Statement) nodeLeft;
             Statement lvalueNew = lvalueOld.validate(ctx, errs);
             if (lvalueNew != lvalueOld)
@@ -280,10 +282,59 @@ public class AssignmentStatement
 
         // regardless of whether the LValue is a statement or expression, all L-Values must be able
         // to provide an expression as a representative form
-        Expression exprLeft = lvalue.getLValueExpression();
+        Expression exprLeft = nodeLeft.getLValueExpression();
         if (!exprLeft.isValidated())
             {
-            Expression exprNew = exprLeft.validate(ctx, null, errs);
+            // the type of l-value may have been narrowed in the current context, so let's try
+            // to extract it and test the r-value with it;
+            // to prevent the lvalue from dropping that narrowed information, we temporarily
+            // need to forget it's an lvalue
+            TypeConstant[] atypeLeft = null;
+            m_fSuppressLValue = true;
+            try
+                {
+                atypeLeft = exprLeft.getImplicitTypes(ctx);
+                }
+            finally
+                {
+                m_fSuppressLValue = false;
+                }
+
+            if (atypeLeft != TypeConstant.NO_TYPES)
+                {
+                TypeFit fit;
+                if (isSimple())
+                    {
+                    // see comment below during the validation path
+                    ctx = ctx.enterInferring(atypeLeft[0]);
+
+                    fit = rvalue.testFitMulti(ctx, atypeLeft);
+
+                    ctx = ctx.exit();
+                    }
+                else if (isConditional())
+                    {
+                    int            cLeft     = atypeLeft.length;
+                    TypeConstant[] atypeTest = new TypeConstant[cLeft + 1];
+                    atypeTest[0] = pool().typeBoolean();
+                    System.arraycopy(atypeLeft, 0, atypeTest, 1, cLeft);
+
+                    fit = rvalue.testFitMulti(ctx, atypeTest);
+                    }
+                else
+                    {
+                    // TODO += *= etc.
+                    throw notImplemented();
+                    }
+
+                if (!fit.isFit())
+                    {
+                    // that didn't work; use the regular path
+                    atypeLeft = TypeConstant.NO_TYPES;
+                    }
+                }
+
+            Expression exprNew = exprLeft.validateMulti(ctx, atypeLeft, errs);
             if (exprNew == null)
                 {
                 fValid = false;
@@ -451,6 +502,7 @@ public class AssignmentStatement
 
     private transient VariableDeclarationStatement[] m_decls;
     private transient Register                       m_regCond;
+    private transient boolean                        m_fSuppressLValue;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AssignmentStatement.class, "lvalue", "lvalueExpr", "rvalue");
     }
