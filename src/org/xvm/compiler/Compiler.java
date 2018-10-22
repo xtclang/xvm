@@ -767,7 +767,7 @@ public class Compiler
      */
     public static final String NAME_MISSING                       = "COMPILER-36";
     /**
-     * Found name within context, but name is ambiguous.
+     * Name "{0}" is ambiguous.
      */
     public static final String NAME_AMBIGUOUS                     = "COMPILER-37";
     /**

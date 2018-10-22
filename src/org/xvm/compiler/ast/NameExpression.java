@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import org.xvm.asm.ClassStructure;
@@ -22,7 +23,9 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.ParentClassConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -1038,6 +1041,32 @@ public class NameExpression
                         m_arg = arg;
                         break;
 
+                    case MultiMethod:
+                        {
+                        MultiMethodConstant idMM   = (MultiMethodConstant) constant;
+                        ClassStructure      clzTop = (ClassStructure) idMM.getNamespace().getComponent();
+
+                        // we will use the private access info here since the access restrictions
+                        // must have been already checked by the "resolveName"
+                        TypeInfo     infoClz = pool().ensureAccessTypeConstant(clzTop.getFormalType(),
+                            Access.PRIVATE).ensureTypeInfo(errs);
+
+                        // only include methods if this context is a method
+                        Collection<MethodConstant> colMethods =
+                                infoClz.findMethods(sName, -1, !ctx.isFunction(), true);
+                        assert !colMethods.isEmpty();
+
+                        if (colMethods.size() == 1)
+                            {
+                            m_arg = colMethods.iterator().next();
+                            }
+                        else
+                            {
+                            log(errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, sName);
+                            }
+                        break;
+                        }
+
                     default:
                         throw new IllegalStateException("format=" + constant.getFormat()
                                 + ", constant=" + constant);
@@ -1292,7 +1321,13 @@ public class NameExpression
                 {
                 // use the register itself (the "T" column in the table above)
                 m_plan = Plan.None;
-                return isRValue() ? reg.getType() : reg.getOriginalType();
+
+                // there is a possibility that the register type in this context is narrower than
+                // its original type; we can return it only if it fits the desired type
+                TypeConstant typeLocal = reg.getType();
+                return isRValue() || typeDesired != null && typeLocal.isA(typeDesired)
+                        ? typeLocal
+                        : reg.getOriginalType();
                 }
             }
 
@@ -1424,6 +1459,7 @@ public class NameExpression
                 }
 
             case Typedef:
+                {
                 if (aTypeParams != null)
                     {
                     // TODO have to incorporate type params
@@ -1434,6 +1470,12 @@ public class NameExpression
                 TypeConstant typeRef = ((TypedefConstant) constant).getReferredToType();
                 return pool.ensureParameterizedTypeConstant(
                         pool.typeType(), typeRef.adoptParameters(pool, ctx.getThisType()));
+                }
+
+            case Method:
+                // the constant refers to a method or function
+                m_plan = Plan.None;
+                return constant.getType();
 
             default:
                 throw new IllegalStateException("constant=" + constant);

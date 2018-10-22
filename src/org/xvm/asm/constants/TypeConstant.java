@@ -3682,6 +3682,11 @@ public abstract class TypeConstant
             // the check on whether C is assignable to I depends on whether the return value of
             // C.foo() is assignable to the return value of I.foo(), which causes a recursion
             //
+            // The assertion below assumes that a recursion for a given type always involves the
+            // same ConstantPool. However, there is a possibility that we cycled in to the same
+            // interface type on a different pool and called isInterfaceAssignableFrom again,
+            // checking all the methods and circled back for a non-interface comparison.
+            // Leaving assert in for now, but no matter what, the answer should be negative.
             assert typeLeft.isInterfaceType();
             mapRelations.put(typeLeft, relation = Relation.INCOMPATIBLE);
             }
@@ -4228,6 +4233,16 @@ public abstract class TypeConstant
     public boolean isFormalType()
         {
         return getCategory() == Category.FORMAL;
+        }
+
+    /**
+     * @return true iff the TypeConstant represents a type of "formal type"
+     */
+    public boolean isFormalTypeType()
+        {
+        return isTypeOfType()
+                && getParamsCount() == 1
+                && getParamTypesArray()[0].isFormalType();
         }
 
     /**

@@ -14,12 +14,15 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.Assignment;
 
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Source;
@@ -311,11 +314,20 @@ public class Context
 
         for (Entry<String, Register> entry : getNarrowingMap(true).entrySet())
             {
-            promoteNarrowingType(entry.getKey(), entry.getValue(), true);
+            promoteNarrowedType(entry.getKey(), entry.getValue(), true);
             }
         for (Entry<String, Register> entry : getNarrowingMap(false).entrySet())
             {
-            promoteNarrowingType(entry.getKey(), entry.getValue(), false);
+            promoteNarrowedType(entry.getKey(), entry.getValue(), false);
+            }
+
+        for (Entry<String, TypeConstant> entry : getFormalTypeMap(Branch.WhenTrue).entrySet())
+            {
+            promoteNarrowedFormalType(entry.getKey(), entry.getValue(), Branch.WhenTrue);
+            }
+        for (Entry<String, TypeConstant> entry : getFormalTypeMap(Branch.WhenFalse).entrySet())
+            {
+            promoteNarrowedFormalType(entry.getKey(), entry.getValue(), Branch.WhenFalse);
             }
         return ctxOuter;
         }
@@ -423,13 +435,26 @@ public class Context
         }
 
     /**
-     * Promote narrowing type information from this context to its enclosing context.
+     * Promote narrowing type information for the specified register from this context to its
+     * enclosing context.
      *
      * @param sName      the variable name
      * @param register   the corresponding narrowed register
      * @param fWhenTrue  true if the register comes from the WhenTrue branch; false for WhenFalse
      */
-    protected void promoteNarrowingType(String sName, Register register, boolean fWhenTrue)
+    protected void promoteNarrowedType(String sName, Register register, boolean fWhenTrue)
+        {
+        }
+
+    /**
+     * Promote narrowing type information for the specified formal type from this context to its
+     * enclosing context.
+     *
+     * @param sName       the formal type name
+     * @param typeNarrow  the corresponding narrowed type
+     * @param branch      the branch this narrowing comes from (never Always)
+     */
+    protected void promoteNarrowedFormalType(String sName, TypeConstant typeNarrow, Branch branch)
         {
         }
 
@@ -495,9 +520,15 @@ public class Context
     protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs)
         {
         Argument arg = getLocalVar(sName, branch);
-        return arg == null
-                ? getOuterContext().getVar(sName, name, Branch.Always, errs)
-                : arg;
+        if (arg == null)
+            {
+            arg = getOuterContext().getVar(sName, name, Branch.Always, errs);
+            if (arg instanceof Register)
+                {
+                arg = resolveRegisterType(branch, (Register) arg);
+                }
+            }
+        return arg;
         }
 
     /**
@@ -527,6 +558,29 @@ public class Context
             }
 
         return reg == null ? getNameMap().get(sName) : reg;
+        }
+
+    /**
+     * Place the variable definition into this context.
+     *
+     * @param sName  the name to look up
+     * @param branch the branch to look at
+     *
+     * @return the old argument for the variable, or null if the local var didn't exist
+     */
+    protected Argument putLocalVar(String sName, Branch branch, Argument arg)
+        {
+        switch (branch)
+            {
+            case WhenTrue:
+                return ensureNarrowingMap(true).put(sName, (Register) arg);
+
+            case WhenFalse:
+                return ensureNarrowingMap(false).put(sName, (Register) arg);
+
+            default:
+                return ensureNameMap().put(sName, arg);
+            }
         }
 
     /**
@@ -827,10 +881,10 @@ public class Context
      */
     protected Argument resolveName(String sName, Token name, ErrorListener errs)
         {
-        Argument arg = resolveReservedName(sName, name, errs);
+        Argument arg = getVar(sName, name, Branch.Always, errs);
         if (arg == null)
             {
-            arg = getVar(sName, name, Branch.Always, errs);
+            arg = resolveReservedName(sName, name, errs);
             if (arg == null)
                 {
                 arg = resolveRegularName(sName, name, errs);
@@ -1007,7 +1061,18 @@ public class Context
             else if (arg instanceof PropertyConstant
                     && ((PropertyConstant) arg).isTypeParameter())
                 {
-                narrowTypeParameter(sName, (PropertyConstant) arg, branch, typeNarrow);
+                assert sName.equals(((PropertyConstant) arg).getName());
+
+                narrowFormalType(sName, (PropertyConstant) arg, branch, typeNarrow);
+                }
+            else if (arg instanceof TypeParameterConstant)
+                {
+                TypeParameterConstant contParam = (TypeParameterConstant) arg;
+                MethodConstant        idMethod  = contParam.getMethod();
+                int                   nParam    = contParam.getRegister();
+                MethodStructure       method    = (MethodStructure) idMethod.getComponent();
+
+                // narrowTypeParameter(sName, branch, typeNarrow);
                 }
             }
         }
@@ -1018,6 +1083,8 @@ public class Context
     protected void narrowLocalRegister(String sName, Register reg,
                                        Branch branch, TypeConstant typeNarrow)
         {
+        assert typeNarrow.isA(reg.getType());
+
         Register regNarrow = reg.narrowType(typeNarrow);
         if (branch == Branch.Always)
             {
@@ -1034,22 +1101,16 @@ public class Context
         }
 
     /**
-     * Narrow the type parameter's type in this context.
+     * Narrow the formal parameter's type in this context.
      */
-    protected void narrowTypeParameter(String sName, PropertyConstant prop,
-                                       Branch branch, TypeConstant typeNarrow)
+    protected void narrowFormalType(String sName, PropertyConstant prop,
+                                    Branch branch, TypeConstant typeNarrow)
         {
-// TODO: GG
-//        if (branch == Branch.Always)
-//            {
-//            if (ensureNameMap().put(sName, typeNarrow) != null)
-//                {
-//                }
-//            }
-//        else
-//            {
-//            ensureNarrowingMap(branch == Branch.WhenTrue).put(sName, typeNarrow);
-//            }
+        // place a pseudo register with the narrowed formal type (used by NamedTypeExpression)
+        putLocalVar(sName, branch, new Register(typeNarrow));
+
+        // keep the narrow type to resolve parameterized types coming from outer scopes
+        ensureFormalTypeMap(branch).put(sName, typeNarrow);
         }
 
     /**
@@ -1062,7 +1123,7 @@ public class Context
         }
 
     /**
-     * @return the map that provides a name-to-argument lookup
+     * @return the map that provides a name-to-narrowed type lookup
      */
     protected Map<String, Register> ensureNarrowingMap(boolean fWhenTrue)
         {
@@ -1082,6 +1143,86 @@ public class Context
             }
 
         return map;
+        }
+
+    /**
+     * @return the read-only map that provides a name-to-narrowed formal type lookup
+     */
+    protected Map<String, TypeConstant> getFormalTypeMap(Branch branch)
+        {
+        Map<String, TypeConstant> map;
+        switch (branch)
+            {
+            case WhenTrue:
+                map = m_mapFormalWhenTrue;
+                break;
+
+            case WhenFalse:
+                map = m_mapFormalWhenFalse;
+                break;
+
+            default:
+                map = m_mapFormal;
+                break;
+            }
+        return map == null ? Collections.EMPTY_MAP : map;
+        }
+
+    /**
+     * @return the map that provides a name-to-narrowed formal type lookup
+     */
+    protected Map<String, TypeConstant> ensureFormalTypeMap(Branch branch)
+        {
+        Map<String, TypeConstant> map = getFormalTypeMap(branch);
+
+        if (map == Collections.EMPTY_MAP)
+            {
+            switch (branch)
+                {
+                case WhenTrue:
+                    return m_mapFormalWhenTrue = new HashMap<>();
+
+                case WhenFalse:
+                    return m_mapFormalWhenFalse = new HashMap<>();
+
+                default:
+                    return m_mapFormal = new HashMap<>();
+                }
+            }
+        return map;
+        }
+
+    /**
+     * @return a generic type resolver for a given branch; null if no narrowing info exists
+     */
+    protected GenericTypeResolver getLocalResolver(Branch branch)
+        {
+        Map<String, TypeConstant> map = getFormalTypeMap(branch);
+
+        return map == Collections.EMPTY_MAP
+                ? null
+                : map::get;
+        }
+
+    /**
+     * Resolve the specified register's type on the specified branch.
+     *
+     * @return a potentially narrowed register
+     */
+    protected Argument resolveRegisterType(Branch branch, Register reg)
+        {
+        GenericTypeResolver resolver = getLocalResolver(branch);
+        if (resolver != null)
+            {
+            TypeConstant typeOriginal = reg.getType();
+            TypeConstant typeResolved = typeOriginal.resolveGenerics(pool(), resolver);
+
+            if (typeResolved != typeOriginal)
+                {
+                return reg.narrowType(typeResolved);
+                }
+            }
+        return reg;
         }
 
     /**
@@ -1218,9 +1359,16 @@ public class Context
         protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs)
             {
             Argument arg = getLocalVar(sName, branch);
-            return arg == null
-                    ? getOuterContext().getVar(sName, name, Branch.of(m_fWhenTrue), errs)
-                    : arg;
+            if (arg == null)
+                {
+                // we only use the parent's "true" branch
+                arg = getOuterContext().getVar(sName, name, Branch.of(m_fWhenTrue), errs);
+                if (arg instanceof Register)
+                    {
+                    arg = resolveRegisterType(branch, (Register) arg);
+                    }
+                }
+            return arg;
             }
 
         @Override
@@ -1282,19 +1430,35 @@ public class Context
         protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs)
             {
             Argument arg = getLocalVar(sName, branch);
-            return arg == null
-                    // we only use the parent's "true" branch
-                    ? getOuterContext().getVar(sName, name, Branch.WhenTrue, errs)
-                    : arg;
+            if (arg == null)
+                {
+                // we only use the parent's "true" branch
+                arg = getOuterContext().getVar(sName, name, Branch.WhenTrue, errs);
+                if (arg instanceof Register)
+                    {
+                    arg = resolveRegisterType(branch, (Register) arg);
+                    }
+                }
+            return arg;
             }
 
         @Override
-        protected void promoteNarrowingType(String sName, Register register, boolean fWhenTrue)
+        protected void promoteNarrowedType(String sName, Register register, boolean fWhenTrue)
             {
             // we only promote our "true" into the parent's "true" branch
             if (fWhenTrue)
                 {
                 getOuterContext().ensureNarrowingMap(true).put(sName, register);
+                }
+            }
+
+        @Override
+        protected void promoteNarrowedFormalType(String sName, TypeConstant typeNarrowed, Branch branch)
+            {
+            // we only promote our "true" into the parent's "true" branch
+            if (branch == Branch.WhenTrue)
+                {
+                getOuterContext().ensureFormalTypeMap(branch).put(sName, typeNarrowed);
                 }
             }
         }
@@ -1337,19 +1501,35 @@ public class Context
         protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs)
             {
             Argument arg = getLocalVar(sName, branch);
-            return arg == null
-                    // we only use the parent's "false" branch (logical short-circuit)
-                    ? getOuterContext().getVar(sName, name, Branch.WhenFalse, errs)
-                    : arg;
+            if (arg == null)
+                {
+                // we only use the parent's "false" branch (logical short-circuit)
+                arg = getOuterContext().getVar(sName, name, Branch.WhenFalse, errs);
+                if (arg instanceof Register)
+                    {
+                    arg = resolveRegisterType(branch, (Register) arg);
+                    }
+                }
+            return arg;
             }
 
         @Override
-        protected void promoteNarrowingType(String sName, Register register, boolean fWhenTrue)
+        protected void promoteNarrowedType(String sName, Register register, boolean fWhenTrue)
             {
             // we only promote our "false" into the parent's "false" branch
             if (!fWhenTrue)
                 {
                 getOuterContext().ensureNarrowingMap(false).put(sName, register);
+                }
+            }
+
+        @Override
+        protected void promoteNarrowedFormalType(String sName, TypeConstant typeNarrowed, Branch branch)
+            {
+            // we only promote our "false" into the parent's "false" branch
+            if (branch == Branch.WhenFalse)
+                {
+                getOuterContext().ensureFormalTypeMap(branch).put(sName, typeNarrowed);
                 }
             }
         }
@@ -1387,18 +1567,27 @@ public class Context
         protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs)
             {
             Argument arg = getLocalVar(sName, branch);
-            if (arg instanceof Register)
+            if (arg == null)
                 {
-                return arg;
+                arg = getOuterContext().getVar(sName, name, branch.complement(), errs);
+                if (arg instanceof Register)
+                    {
+                    arg = resolveRegisterType(branch, (Register) arg);
+                    }
                 }
-
-            return getOuterContext().getVar(sName, name, branch.complement(), errs);
+            return arg;
             }
 
         @Override
-        protected void promoteNarrowingType(String sName, Register register, boolean fWhenTrue)
+        protected void promoteNarrowedType(String sName, Register register, boolean fWhenTrue)
             {
             getOuterContext().ensureNarrowingMap(!fWhenTrue).put(sName, register);
+            }
+
+        @Override
+        protected void promoteNarrowedFormalType(String sName, TypeConstant typeNarrowed, Branch branch)
+            {
+            getOuterContext().ensureFormalTypeMap(branch.complement()).put(sName, typeNarrowed);
             }
         }
 
@@ -1563,6 +1752,24 @@ public class Context
      * for a "false" branch.
      */
     private Map<String, Register> m_mapWhenFalse;
+
+    /**
+     * Each formal type narrowed within this context is registered in this map, along with the
+     * narrowing TypeConstant.
+     */
+    private Map<String, TypeConstant> m_mapFormal;
+
+    /**
+     * Each formal type declared within a parent context, may narrow its type in a child context
+     * for a "true" branch.
+     */
+    private Map<String, TypeConstant> m_mapFormalWhenTrue;
+
+    /**
+     * Each formal type declared within a parent context, may narrow its type in a child context
+     * for a "false" branch.
+     */
+    private Map<String, TypeConstant> m_mapFormalWhenFalse;
 
     /**
      * Each variable assigned within this context is registered in this map. The boolean value
