@@ -176,7 +176,7 @@ interface Collection<ElementType>
         Boolean                 modified = false;
         for (ElementType value : values)
             {
-            if (result : add(value))
+            if (result : result.add(value))
                 {
                 modified = true;
                 }
@@ -220,7 +220,7 @@ interface Collection<ElementType>
         Boolean                 modified = false;
         for (ElementType value : values)
             {
-            if (result : remove(value))
+            if (result : result.remove(value))
                 {
                 modified = true;
                 }
@@ -251,7 +251,7 @@ interface Collection<ElementType>
             {
             if (shouldRemove(value))
                 {
-                if (result : remove(value))
+                if (result : result.remove(value))
                     {
                     modified = true;
                     }
