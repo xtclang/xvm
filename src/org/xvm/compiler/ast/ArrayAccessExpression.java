@@ -464,10 +464,10 @@ public class ArrayAccessExpression
                     ErrorListener.BLACKHOLE);
             }
 
-        // the type of a tuple access expression is determinable iff the type is a tuple, it has
-        // a known number of field types, and the index is a constant that specifies a field within
-        // that domain of known field types
-        if (typeArray.isTuple() && typeArray.isParamsSpecified() && aexprIndexes[0].isConstant())
+        // tuple is different from other container types (like array) in that every field in the
+        // tuple may have a different type, so if we have enough compile-time information, we can
+        // determine the compile-time type of the field being accessed
+        if (typeArray.isTuple() && aexprIndexes[0].isConstant())
             {
             TypeConstant typeField = determineTupleResultType(typeArray);
             if (typeField != null)
@@ -885,42 +885,34 @@ public class ArrayAccessExpression
             return null;
             }
 
-        TypeConstant[] atypeFields = typeTuple.getParamTypesArray();
-        int            cFields     = atypeFields.length;
-        ConstantPool   pool        = pool();
-
-        // type of "tup[n]" is a field type
-        int     n   = 0;
-        boolean fOk;
+        ConstantPool       pool       = pool();
+        List<TypeConstant> listFields = typeTuple.getTupleParamTypes();
         try
             {
-            n   = index.convertTo(pool.typeInt()).getIntValue().getInt();
-            fOk = true;
+            int nIndex = index.convertTo(pool.typeInt()).getIntValue().getInt();
+
+            // type of "tup[n]" is a field type
+            return nIndex >= 0 ? listFields.get(nIndex) : null;
             }
         catch (RuntimeException e)
             {
-            fOk = false;
-            }
-
-        if (fOk)
-            {
-            return n >= 0 && n < cFields ? atypeFields[n] : null;
             }
 
         // type of "tup[lo..hi]" is a tuple of field types
-        int nLo = 0;
-        int nHi = 0;
+        int nLo;
+        int nHi;
         try
             {
             IntervalConstant interval = (IntervalConstant) index.convertTo(pool.typeInterval());
             nLo = interval.getFirst().convertTo(pool.typeInt()).getIntValue().getInt();
             nHi = interval.getLast().convertTo(pool.typeInt()).getIntValue().getInt();
             }
-        catch (RuntimeException e2)
+        catch (RuntimeException e)
             {
             return null;
             }
 
+        int cFields = listFields.size();
         if (    nLo < 0 || nLo >= cFields ||
                 nHi < 0 || nHi >= cFields   )
             {
@@ -932,7 +924,7 @@ public class ArrayAccessExpression
         int            cStep      = nHi >= nLo ? +1 : -1;
         for (int iSrc = nLo, iDest = 0; iDest < cSlice; ++iDest, iSrc += cStep)
             {
-            atypeSlice[iDest] = atypeFields[iSrc];
+            atypeSlice[iDest] = listFields.get(iSrc);
             }
         return pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeSlice);
         }

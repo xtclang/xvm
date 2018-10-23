@@ -28,7 +28,7 @@ public class IIP_Div
      * @param argIndex   the index Argument
      * @param argValue   the value Argument
      */
-    protected IIP_Div(Argument argTarget, Argument argIndex, Argument argValue)
+    public IIP_Div(Argument argTarget, Argument argIndex, Argument argValue)
         {
         super(argTarget, argIndex, argValue);
         }
