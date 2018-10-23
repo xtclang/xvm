@@ -27,15 +27,22 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.IIP_Add;
+import org.xvm.asm.op.IIP_And;
 import org.xvm.asm.op.IIP_Dec;
 import org.xvm.asm.op.IIP_Div;
 import org.xvm.asm.op.IIP_Inc;
+import org.xvm.asm.op.IIP_Mod;
 import org.xvm.asm.op.IIP_Mul;
+import org.xvm.asm.op.IIP_Or;
 import org.xvm.asm.op.IIP_PostDec;
 import org.xvm.asm.op.IIP_PostInc;
 import org.xvm.asm.op.IIP_PreDec;
 import org.xvm.asm.op.IIP_PreInc;
+import org.xvm.asm.op.IIP_Shl;
+import org.xvm.asm.op.IIP_Shr;
+import org.xvm.asm.op.IIP_ShrAll;
 import org.xvm.asm.op.IIP_Sub;
+import org.xvm.asm.op.IIP_Xor;
 import org.xvm.asm.op.IP_Add;
 import org.xvm.asm.op.IP_Dec;
 import org.xvm.asm.op.IP_Div;
@@ -58,7 +65,10 @@ import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Move;
 import org.xvm.asm.op.PIP_Add;
 import org.xvm.asm.op.PIP_Dec;
+import org.xvm.asm.op.PIP_Div;
 import org.xvm.asm.op.PIP_Inc;
+import org.xvm.asm.op.PIP_Mod;
+import org.xvm.asm.op.PIP_Mul;
 import org.xvm.asm.op.PIP_PostDec;
 import org.xvm.asm.op.PIP_PostInc;
 import org.xvm.asm.op.PIP_PreDec;
@@ -67,12 +77,11 @@ import org.xvm.asm.op.PIP_Sub;
 import org.xvm.asm.op.P_Get;
 import org.xvm.asm.op.P_Set;
 import org.xvm.asm.op.Var;
-
 import org.xvm.asm.op.Var_I;
-import org.xvm.compiler.Compiler;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
-import org.xvm.compiler.Token.Id;
+
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
@@ -3129,9 +3138,9 @@ public abstract class Expression
                         {
                         case ADD_ASN      : op = new PIP_Add(prop, argTarget, arg); break;
                         case SUB_ASN      : op = new PIP_Sub(prop, argTarget, arg); break;
-                        case MUL_ASN      : // op = new PIP_Mul(prop, argTarget, arg); break;
-                        case DIV_ASN      : // op = new PIP_Div(prop, argTarget, arg); break;
-                        case MOD_ASN      : // op = new PIP_Mod(prop, argTarget, arg); break;
+                        case MUL_ASN      : op = new PIP_Mul(prop, argTarget, arg); break;
+                        case DIV_ASN      : op = new PIP_Div(prop, argTarget, arg); break;
+                        case MOD_ASN      : op = new PIP_Mod(prop, argTarget, arg); break;
                         case SHL_ASN      : // op = new PIP_???(prop, argTarget, arg); break;
                         case SHR_ASN      : // op = new PIP_???(prop, argTarget, arg); break;
                         case USHR_ASN     : // op = new PIP_???(prop, argTarget, arg); break;
@@ -3156,19 +3165,17 @@ public abstract class Expression
                     Argument argIndex = getIndex();
                     switch (tokOp.getId())
                         {
-                        case ADD_ASN      : op = new IIP_Add(argArray, argIndex, arg); break;
-                        case SUB_ASN      : op = new IIP_Sub(argArray, argIndex, arg); break;
-                        case MUL_ASN      : op = new IIP_Mul(argArray, argIndex, arg); break;
-                        case DIV_ASN      : op = new IIP_Div(argArray, argIndex, arg); break;
-                        case MOD_ASN      : // op = new IIP_Mod(argArray, argIndex, arg); break;
-                        case SHL_ASN      : // op = new IIP_???(argArray, argIndex, arg); break;
-                        case SHR_ASN      : // op = new IIP_???(argArray, argIndex, arg); break;
-                        case USHR_ASN     : // op = new IIP_???(argArray, argIndex, arg); break;
-                        case BIT_AND_ASN  : // op = new IIP_???(argArray, argIndex, arg); break;
-                        case BIT_OR_ASN   : // op = new IIP_???(argArray, argIndex, arg); break;
-                        case BIT_XOR_ASN  : // op = new IIP_???(argArray, argIndex, arg); break;
-                            // TODO
-                            throw notImplemented();
+                        case ADD_ASN      : op = new IIP_Add   (argArray, argIndex, arg); break;
+                        case SUB_ASN      : op = new IIP_Sub   (argArray, argIndex, arg); break;
+                        case MUL_ASN      : op = new IIP_Mul   (argArray, argIndex, arg); break;
+                        case DIV_ASN      : op = new IIP_Div   (argArray, argIndex, arg); break;
+                        case MOD_ASN      : op = new IIP_Mod   (argArray, argIndex, arg); break;
+                        case SHL_ASN      : op = new IIP_Shl   (argArray, argIndex, arg); break;
+                        case SHR_ASN      : op = new IIP_Shr   (argArray, argIndex, arg); break;
+                        case USHR_ASN     : op = new IIP_ShrAll(argArray, argIndex, arg); break;
+                        case BIT_AND_ASN  : op = new IIP_And   (argArray, argIndex, arg); break;
+                        case BIT_OR_ASN   : op = new IIP_Or    (argArray, argIndex, arg); break;
+                        case BIT_XOR_ASN  : op = new IIP_Xor   (argArray, argIndex, arg); break;
 
                         default:
                             throw new IllegalStateException("op=" + tokOp.getId().TEXT);
