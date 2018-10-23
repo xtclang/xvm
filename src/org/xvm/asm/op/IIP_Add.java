@@ -46,7 +46,7 @@ public class IIP_Add
      * @param argIndex   the index Argument
      * @param argValue   the value Argument
      */
-    protected IIP_Add(Argument argTarget, Argument argIndex, Argument argValue)
+    public IIP_Add(Argument argTarget, Argument argIndex, Argument argValue)
         {
         super(argTarget, argIndex, argValue);
         }

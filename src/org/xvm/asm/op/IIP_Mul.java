@@ -28,7 +28,7 @@ public class IIP_Mul
      * @param argIndex   the index Argument
      * @param argValue   the value Argument
      */
-    protected IIP_Mul(Argument argTarget, Argument argIndex, Argument argValue)
+    public IIP_Mul(Argument argTarget, Argument argIndex, Argument argValue)
         {
         super(argTarget, argIndex, argValue);
         }
