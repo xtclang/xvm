@@ -30,7 +30,6 @@ module TestMisc.xqiz.it
 
         // REVIEW GG
         // testInterval();
-        testArrays();
         // testTupleConv();
         // testMap();
         }
@@ -338,17 +337,6 @@ module TestMisc.xqiz.it
         Object c = a..b;
         // Range<Int> c = a..b;
         console.println("range=" + c);
-        }
-
-    // TODO
-    void testArrays()
-        {
-        console.println("\n** testArrays()");
-
-        // ArrayList
-        Int[] list = new Int[]; // Array<Int> list = new Array<Int>();
-
-        Int[] array = new Int[10]; // like Java ArrayList(10): size == 0; capacity == 10
         }
 
     // TODO

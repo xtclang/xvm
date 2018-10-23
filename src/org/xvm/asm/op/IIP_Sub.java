@@ -28,7 +28,7 @@ public class IIP_Sub
      * @param argIndex   the index Argument
      * @param argValue   the value Argument
      */
-    protected IIP_Sub(Argument argTarget, Argument argIndex, Argument argValue)
+    public IIP_Sub(Argument argTarget, Argument argIndex, Argument argValue)
         {
         super(argTarget, argIndex, argValue);
         }
@@ -75,11 +75,11 @@ public class IIP_Sub
         switch (hCurrent.getOpSupport().invokeSub(frame, hCurrent, hValue, A_STACK))
             {
             case R_NEXT:
-                return template.assignArrayValue(frame, hTarget, lIndex, hValue);
+                return template.assignArrayValue(frame, hTarget, lIndex, frame.popStack());
 
             case R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->
-                     template.assignArrayValue(frame, hTarget, lIndex, hValue));
+                     template.assignArrayValue(frame, hTarget, lIndex, frame.popStack()));
                 return R_CALL;
 
             case R_EXCEPTION:

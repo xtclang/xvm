@@ -26,37 +26,61 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.asm.op.IIP_Add;
+import org.xvm.asm.op.IIP_And;
 import org.xvm.asm.op.IIP_Dec;
+import org.xvm.asm.op.IIP_Div;
 import org.xvm.asm.op.IIP_Inc;
+import org.xvm.asm.op.IIP_Mod;
+import org.xvm.asm.op.IIP_Mul;
+import org.xvm.asm.op.IIP_Or;
 import org.xvm.asm.op.IIP_PostDec;
 import org.xvm.asm.op.IIP_PostInc;
 import org.xvm.asm.op.IIP_PreDec;
 import org.xvm.asm.op.IIP_PreInc;
+import org.xvm.asm.op.IIP_Shl;
+import org.xvm.asm.op.IIP_Shr;
+import org.xvm.asm.op.IIP_ShrAll;
+import org.xvm.asm.op.IIP_Sub;
+import org.xvm.asm.op.IIP_Xor;
+import org.xvm.asm.op.IP_Add;
 import org.xvm.asm.op.IP_Dec;
+import org.xvm.asm.op.IP_Div;
 import org.xvm.asm.op.IP_Inc;
+import org.xvm.asm.op.IP_Mod;
+import org.xvm.asm.op.IP_Mul;
 import org.xvm.asm.op.IP_PostDec;
 import org.xvm.asm.op.IP_PostInc;
 import org.xvm.asm.op.IP_PreDec;
 import org.xvm.asm.op.IP_PreInc;
+import org.xvm.asm.op.IP_Sub;
 import org.xvm.asm.op.I_Get;
 import org.xvm.asm.op.I_Set;
 import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpTrue;
+import org.xvm.asm.op.L_Get;
 import org.xvm.asm.op.L_Set;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Move;
+import org.xvm.asm.op.PIP_Add;
 import org.xvm.asm.op.PIP_Dec;
+import org.xvm.asm.op.PIP_Div;
 import org.xvm.asm.op.PIP_Inc;
+import org.xvm.asm.op.PIP_Mod;
+import org.xvm.asm.op.PIP_Mul;
 import org.xvm.asm.op.PIP_PostDec;
 import org.xvm.asm.op.PIP_PostInc;
 import org.xvm.asm.op.PIP_PreDec;
 import org.xvm.asm.op.PIP_PreInc;
+import org.xvm.asm.op.PIP_Sub;
 import org.xvm.asm.op.P_Get;
 import org.xvm.asm.op.P_Set;
 import org.xvm.asm.op.Var;
+import org.xvm.asm.op.Var_I;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Token;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
@@ -2657,6 +2681,96 @@ public abstract class Expression
             }
 
         /**
+         * Generate an argument that represents the result of this LValue. This method exists to
+         * support language constructs that require an LValue to provide a value, such as the
+         * bi-expressions for the "&&=", "||=", and "?:=" operators. The primary difference between
+         * this method and the expression's own generateArgument() method is that using this method
+         * prevents a duplicate side-effect of generating the L-Value; for example, the side-effect
+         * of the post-increment in the following statement must only occur one time:
+         * <code><pre>
+         * a[i++] &&= foo();
+         * </pre></code>
+         *
+         * @param ctx           the compilation context for the statement
+         * @param code          the code block
+         * @param fLocalPropOk  true if the resulting arguments can be expressed as property
+         *                      constants if the argument values are local properties
+         * @param fUsedOnce     enables use of the "frame-local stack"
+         * @param errs          the error list to log any errors to
+         *
+         * @return a resulting argument of the validated type
+         */
+        public Argument generateArgument(
+                Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+            {
+            switch (m_form)
+                {
+                case LocalVar:
+                    return getRegister();
+
+                case LocalProp:
+                    {
+                    if (fLocalPropOk)
+                        {
+                        return getProperty();
+                        }
+
+                    if (fUsedOnce)
+                        {
+                        Register reg = new Register(getType(), Op.A_STACK);
+                        code.add(new L_Get(getProperty(), reg));
+                        return reg;
+                        }
+
+                    code.add(new Var_I(getType(), getProperty()));
+                    return code.lastRegister();
+                    }
+
+                case TargetProp:
+                    {
+                    Register reg;
+                    if (fUsedOnce)
+                        {
+                        reg = new Register(getType(), Op.A_STACK);
+                        }
+                    else
+                        {
+                        code.add(new Var(getType()));
+                        reg = code.lastRegister();
+                        }
+                    code.add(new P_Get(getProperty(), getTarget(), reg));
+                    return reg;
+                    }
+
+                case Indexed:
+                    {
+                    Register reg;
+                    if (fUsedOnce)
+                        {
+                        reg = new Register(getType(), Op.A_STACK);
+                        }
+                    else
+                        {
+                        code.add(new Var(getType()));
+                        reg = code.lastRegister();
+                        }
+                    code.add(new I_Get(getArray(), getIndex(), reg));
+                    return reg;
+                    }
+
+                case IndexedN:
+                    // TODO
+                case IndexedProp:       // REVIEW - is this even legal? (side effects)
+                case IndexedNProp:      // REVIEW - is this even legal? (side effects)
+                    throw notImplemented();
+
+                case BlackHole:
+                default:
+                    throw new IllegalStateException("form=" + m_form);
+                }
+            }
+
+        /**
          * Generate the assignment-specific assembly code.
          *
          * @param arg   the Argument, representing the R-value
@@ -2888,6 +3002,7 @@ public abstract class Expression
                 case IndexedN:
                 case IndexedNProp:
                     // TODO
+                    notImplemented();
                     break;
 
                 default:
@@ -2973,6 +3088,111 @@ public abstract class Expression
                 default:
                     throw new IllegalStateException();
                 }
+            }
+
+        /**
+         * Generate the assignment-specific assembly code for the specified "in place" operator,
+         * such as "+=" or "*=".
+         *
+         * @param tokOp  the "in place" operator
+         * @param arg    the Argument, representing the R-value
+         * @param code   the code object to which the assembly is added
+         * @param errs   the error listener to log to
+         */
+        public void assignInPlaceResult(Token tokOp, Argument arg, Code code, ErrorListener errs)
+            {
+            Op op;
+            switch (m_form)
+                {
+                case LocalVar:
+                case LocalProp:
+                    {
+                    Argument argTarget = getLocalArgument();
+                    switch (tokOp.getId())
+                        {
+                        case ADD_ASN      : op = new IP_Add(argTarget, arg); break;
+                        case SUB_ASN      : op = new IP_Sub(argTarget, arg); break;
+                        case MUL_ASN      : op = new IP_Mul(argTarget, arg); break;
+                        case DIV_ASN      : op = new IP_Div(argTarget, arg); break;
+                        case MOD_ASN      : op = new IP_Mod(argTarget, arg); break;
+                        case SHL_ASN      : // op = new IP_???(argTarget, arg); break;
+                        case SHR_ASN      : // op = new IP_???(argTarget, arg); break;
+                        case USHR_ASN     : // op = new IP_???(argTarget, arg); break;
+                        case BIT_AND_ASN  : // op = new IP_???(argTarget, arg); break;
+                        case BIT_OR_ASN   : // op = new IP_???(argTarget, arg); break;
+                        case BIT_XOR_ASN  : // op = new IP_???(argTarget, arg); break;
+                            // TODO
+                            throw notImplemented();
+
+                        default:
+                            throw new IllegalStateException("op=" + tokOp.getId().TEXT);
+                        }
+                    break;
+                    }
+
+                case TargetProp:
+                    {
+                    PropertyConstant prop      = getProperty();
+                    Argument         argTarget = getTarget();
+                    switch (tokOp.getId())
+                        {
+                        case ADD_ASN      : op = new PIP_Add(prop, argTarget, arg); break;
+                        case SUB_ASN      : op = new PIP_Sub(prop, argTarget, arg); break;
+                        case MUL_ASN      : op = new PIP_Mul(prop, argTarget, arg); break;
+                        case DIV_ASN      : op = new PIP_Div(prop, argTarget, arg); break;
+                        case MOD_ASN      : op = new PIP_Mod(prop, argTarget, arg); break;
+                        case SHL_ASN      : // op = new PIP_???(prop, argTarget, arg); break;
+                        case SHR_ASN      : // op = new PIP_???(prop, argTarget, arg); break;
+                        case USHR_ASN     : // op = new PIP_???(prop, argTarget, arg); break;
+                        case BIT_AND_ASN  : // op = new PIP_???(prop, argTarget, arg); break;
+                        case BIT_OR_ASN   : // op = new PIP_???(prop, argTarget, arg); break;
+                        case BIT_XOR_ASN  : // op = new PIP_???(prop, argTarget, arg); break;
+                            // TODO
+                            throw notImplemented();
+
+                        default:
+                            throw new IllegalStateException("op=" + tokOp.getId().TEXT);
+                        }
+                    break;
+                    }
+
+                case Indexed:
+                case IndexedProp:
+                    {
+                    Argument argArray = m_form == AssignForm.Indexed
+                            ? getArray()
+                            : getProperty();
+                    Argument argIndex = getIndex();
+                    switch (tokOp.getId())
+                        {
+                        case ADD_ASN      : op = new IIP_Add   (argArray, argIndex, arg); break;
+                        case SUB_ASN      : op = new IIP_Sub   (argArray, argIndex, arg); break;
+                        case MUL_ASN      : op = new IIP_Mul   (argArray, argIndex, arg); break;
+                        case DIV_ASN      : op = new IIP_Div   (argArray, argIndex, arg); break;
+                        case MOD_ASN      : op = new IIP_Mod   (argArray, argIndex, arg); break;
+                        case SHL_ASN      : op = new IIP_Shl   (argArray, argIndex, arg); break;
+                        case SHR_ASN      : op = new IIP_Shr   (argArray, argIndex, arg); break;
+                        case USHR_ASN     : op = new IIP_ShrAll(argArray, argIndex, arg); break;
+                        case BIT_AND_ASN  : op = new IIP_And   (argArray, argIndex, arg); break;
+                        case BIT_OR_ASN   : op = new IIP_Or    (argArray, argIndex, arg); break;
+                        case BIT_XOR_ASN  : op = new IIP_Xor   (argArray, argIndex, arg); break;
+
+                        default:
+                            throw new IllegalStateException("op=" + tokOp.getId().TEXT);
+                        }
+                    break;
+                    }
+
+                case IndexedN:
+                case IndexedNProp:
+                    // TODO
+                    throw notImplemented();
+
+                default:
+                    throw new IllegalStateException();
+                }
+
+            code.add(op);
             }
 
         // ----- fields ------------------------------------------------------------------------

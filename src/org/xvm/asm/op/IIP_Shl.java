@@ -7,8 +7,8 @@ import java.io.IOException;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpIndexInPlace;
-import org.xvm.runtime.Frame;
 
+import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
@@ -16,19 +16,19 @@ import org.xvm.runtime.template.IndexSupport;
 
 
 /**
- * IIP_MUL rvalue-target, rvalue-ix, rvalue2 ; T[ix] *= T
+ * IIP_SHL rvalue-target, rvalue-ix, rvalue2 ; T[ix] <<= T
  */
-public class IIP_Mul
+public class IIP_Shl
         extends OpIndexInPlace
     {
     /**
-     * Construct an IIP_MUL op for the passed target.
+     * Construct an IIP_SHL op for the passed target.
      *
      * @param argTarget  the target Argument
      * @param argIndex   the index Argument
      * @param argValue   the value Argument
      */
-    public IIP_Mul(Argument argTarget, Argument argIndex, Argument argValue)
+    public IIP_Shl(Argument argTarget, Argument argIndex, Argument argValue)
         {
         super(argTarget, argIndex, argValue);
         }
@@ -39,7 +39,7 @@ public class IIP_Mul
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public IIP_Mul(DataInput in, Constant[] aconst)
+    public IIP_Shl(DataInput in, Constant[] aconst)
             throws IOException
         {
         super(in, aconst);
@@ -48,7 +48,7 @@ public class IIP_Mul
     @Override
     public int getOpCode()
         {
-        return OP_IIP_MUL;
+        return OP_IIP_SHL;
         }
 
     @Override
@@ -72,14 +72,14 @@ public class IIP_Mul
                 throw new IllegalStateException();
             }
 
-        switch (hCurrent.getOpSupport().invokeMul(frame, hCurrent, hValue, A_STACK))
+        switch (hCurrent.getOpSupport().invokeShl(frame, hCurrent, hValue, A_STACK))
             {
             case R_NEXT:
                 return template.assignArrayValue(frame, hTarget, lIndex, frame.popStack());
 
             case R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->
-                     template.assignArrayValue(frame, hTarget, lIndex, frame.popStack()));
+                        template.assignArrayValue(frame, hTarget, lIndex, frame.popStack()));
                 return R_CALL;
 
             case R_EXCEPTION:
