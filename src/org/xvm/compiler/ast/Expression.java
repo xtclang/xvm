@@ -672,7 +672,10 @@ public abstract class Expression
         assert atypeActual   == null || checkElementsNonNull(atypeActual);
         assert aconstVal     == null || checkElementsNonNull(aconstVal) && aconstVal.length == atypeActual.length;
 
-        checkShortCircuit(errs);
+        if (fit.isFit())
+            {
+            checkShortCircuit(errs);
+            }
 
         // a null actual type indicates a fairly dramatic (i.e. halt required) validation failure
         if (atypeActual == null)
