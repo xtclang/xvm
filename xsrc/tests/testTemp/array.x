@@ -7,13 +7,15 @@ module TestArray.xqiz.it
         console.println("hello world! (Array tests)");
 
         testSimple();
-        testStrBuf();
+        // testStrBuf();
         testConstElement();
         testConstSlice();
 
         testArrayList();
         testArrayListAdd();
         testFixedArray();
+
+        testAssignSideEffects();
         }
 
     void testSimple()
@@ -101,10 +103,10 @@ module TestArray.xqiz.it
         console.println("\n** testArrayListAdd()");
 
         String[] list = new String[];
-        list = list + "one";
-        list = list + ["two", "three"];
-//        list += "one";
-//        list += ["two", "three"];
+//        list = list + "one";
+//        list = list + ["two", "three"];
+        list += "one";
+        list += ["two", "three"];
 
         console.println("list=" + list);
         }
@@ -117,4 +119,27 @@ module TestArray.xqiz.it
         console.println("list=" + list);
         }
 
+    void testAssignSideEffects()
+        {
+        console.println("\n** testAssignSideEffects()");
+
+        Int n = 5;
+        n += 7;
+        console.println("n=" + n);
+
+        Int[] nums = new Int[];
+        Int   i    = 0;
+        nums[i] = 5;
+        console.println("nums=" + nums + ", i=" + i);
+
+        nums[i] += 7;   // TODO does not work (does assign instead of add-assign)
+        console.println("nums=" + nums + ", i=" + i);
+
+        // original test
+        nums[i++] = 5;
+        console.println("nums=" + nums + ", i=" + i);
+
+        nums[--i] += 7;
+        console.println("nums=" + nums + ", i=" + i);
+        }
     }
