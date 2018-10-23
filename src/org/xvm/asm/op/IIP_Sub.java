@@ -75,11 +75,11 @@ public class IIP_Sub
         switch (hCurrent.getOpSupport().invokeSub(frame, hCurrent, hValue, A_STACK))
             {
             case R_NEXT:
-                return template.assignArrayValue(frame, hTarget, lIndex, hValue);
+                return template.assignArrayValue(frame, hTarget, lIndex, frame.popStack());
 
             case R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->
-                     template.assignArrayValue(frame, hTarget, lIndex, hValue));
+                     template.assignArrayValue(frame, hTarget, lIndex, frame.popStack()));
                 return R_CALL;
 
             case R_EXCEPTION:

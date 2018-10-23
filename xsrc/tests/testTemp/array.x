@@ -129,13 +129,6 @@ module TestArray.xqiz.it
 
         Int[] nums = new Int[];
         Int   i    = 0;
-        nums[i] = 5;
-        console.println("nums=" + nums + ", i=" + i);
-
-        nums[i] += 7;   // TODO does not work (does assign instead of add-assign)
-        console.println("nums=" + nums + ", i=" + i);
-
-        // original test
         nums[i++] = 5;
         console.println("nums=" + nums + ", i=" + i);
 

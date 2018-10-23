@@ -22,24 +22,6 @@ public class IIP_Add
         extends OpIndexInPlace
     {
     /**
-     * Construct an IIP_ADD op.
-     *
-     * @param nTarget  the target indexed object
-     * @param nIndex   the index
-     * @param nValue   the value to store
-     *
-     * @deprecated
-     */
-    public IIP_Add(int nTarget, int nIndex, int nValue)
-        {
-        super(null, null, null);
-
-        m_nTarget = nTarget;
-        m_nIndex  = nIndex;
-        m_nValue  = nValue;
-        }
-
-    /**
      * Construct an IIP_ADD op for the passed target.
      *
      * @param argTarget  the target Argument
@@ -93,11 +75,11 @@ public class IIP_Add
         switch (hCurrent.getOpSupport().invokeAdd(frame, hCurrent, hValue, A_STACK))
             {
             case R_NEXT:
-                return template.assignArrayValue(frame, hTarget, lIndex, hValue);
+                return template.assignArrayValue(frame, hTarget, lIndex, frame.popStack());
 
             case R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->
-                     template.assignArrayValue(frame, hTarget, lIndex, hValue));
+                     template.assignArrayValue(frame, hTarget, lIndex, frame.popStack()));
                 return R_CALL;
 
             case R_EXCEPTION:
