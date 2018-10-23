@@ -646,7 +646,8 @@ public class AssignmentStatement
                 throw new IllegalStateException("op=" + opIP.getId().TEXT);
             }
 
-        Token opBi = new Token(opIP.getStartPosition(), opIP.getEndPosition(), idBi);
+        Token        opBi = new Token(opIP.getStartPosition(), opIP.getEndPosition(), idBi);
+        BiExpression exprResult;
         switch (idBi)
             {
             case ADD:
@@ -660,18 +661,24 @@ public class AssignmentStatement
             case BIT_AND:
             case BIT_OR:
             case BIT_XOR:
-                return new RelOpExpression(exprLeft, opBi, exprRight);
+                exprResult = new RelOpExpression(exprLeft, opBi, exprRight);
+                break;
 
             case COND_AND:
             case COND_OR:
-                return new CondOpExpression(exprLeft, opBi, exprRight);
+                exprResult = new CondOpExpression(exprLeft, opBi, exprRight);
+                break;
 
             case COND_ELSE:
-                return new ElvisExpression(exprLeft, opBi, exprRight);
+                exprResult = new ElvisExpression(exprLeft, opBi, exprRight);
+                break;
 
             default:
                 throw new IllegalStateException("op=" + opBi.getId().TEXT);
             }
+
+        exprResult.setParent(this);
+        return exprResult;
         }
 
 

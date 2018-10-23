@@ -19,6 +19,7 @@ module TestMisc.xqiz.it
         testSwitchExpr2();
         testSwitchExpr3();
         testStmtExpr();
+        testAssignOps();
 
         // TODO make a new "test asserts" module? something that can tolerate assertions?
         // testAssert();
@@ -360,5 +361,15 @@ module TestMisc.xqiz.it
         console.println("\n** testMap()");
 
         console.println("Map:{1=one, 2=two}=" + Map:{1="one", 2="two"});
+        }
+
+    void testAssignOps()
+        {
+        console.println("\n** testAssignOps()");
+
+        Int? n = null;
+        n ?:= 4;
+        console.println("n=" + n + " (should be 4)");
+
         }
     }
