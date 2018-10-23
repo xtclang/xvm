@@ -492,6 +492,97 @@ public class ClassStructure
         }
 
 
+    // ----- Tuple support -------------------------------------------------------------------------
+
+    /**
+     * @return true iff this class is a Tuple or a Tuple mixin
+     */
+    public boolean isTuple()
+        {
+        if (getIdentityConstant().equals(getConstantPool().clzTuple()))
+            {
+            return true;
+            }
+
+        for (Contribution contrib : getContributionsAsList())
+            {
+            if (contrib.getComposition() == Composition.Into)
+                {
+                if (contrib.getTypeConstant().isTuple())
+                    {
+                    return true;
+                    }
+                }
+            }
+        return false;
+        }
+
+    /**
+     * When this class represents an R-Value Tuple or a Tuple mixin, find a contribution that is
+     * assignable to the specified L-Value Tuple type.
+     *
+     * @param tupleLeft  the L-Value Tuple type
+     * @param listRight  the list of actual generic parameters for this class
+     *
+     * @return the relation
+     */
+    public Relation findTupleContribution(TypeConstant tupleLeft, List<TypeConstant> listRight)
+        {
+        if (getIdentityConstant().equals(tupleLeft.getSingleUnderlyingClass(true)))
+            {
+            return calculateAssignability(tupleLeft.getParamTypes(), Access.PUBLIC, listRight);
+            }
+
+        for (Contribution contrib : getContributionsAsList())
+            {
+            if (contrib.getComposition() == Composition.Into)
+                {
+                ConstantPool pool        = ConstantPool.getCurrentPool();
+                TypeConstant typeContrib = contrib.resolveGenerics(pool, new SimpleTypeResolver(listRight));
+
+                if (typeContrib != null && typeContrib.isTuple())
+                    {
+                    IdentityConstant idContrib  = typeContrib.getSingleUnderlyingClass(true);
+                    ClassStructure   clzContrib = (ClassStructure) idContrib.getComponent();
+
+                    return clzContrib.findTupleContribution(tupleLeft, typeContrib.getParamTypes());
+                    }
+                }
+            }
+        return Relation.INCOMPATIBLE;
+        }
+
+    /**
+     * When this class represents a Tuple or a Tuple mixin, get the resulting Tuple type parameters
+     *
+     * @param listParams  the list of actual generic parameters for this class
+     *
+     * @return the list of types
+     */
+    public List<TypeConstant> getTupleParamTypes(List<TypeConstant> listParams)
+        {
+        ConstantPool pool = ConstantPool.getCurrentPool();
+
+        if (getIdentityConstant().equals(pool.clzTuple()))
+            {
+            return listParams;
+            }
+
+        for (Contribution contrib : getContributionsAsList())
+            {
+            if (contrib.getComposition() == Composition.Into)
+                {
+                TypeConstant typeContrib = contrib.resolveGenerics(pool, new SimpleTypeResolver(listParams));
+                if (typeContrib != null && typeContrib.isTuple())
+                    {
+                    return typeContrib.getTupleParamTypes();
+                    }
+                }
+            }
+        return Collections.EMPTY_LIST;
+        }
+
+
     // ----- component methods ---------------------------------------------------------------------
 
     @Override
@@ -871,7 +962,7 @@ public class ClassStructure
 
         int cParamsLeft  = listLeft.size();
         int cParamsRight = listRight.size();
-        boolean fTuple   = getIdentityConstant().equals(pool.clzTuple());
+        boolean fTuple   = isTuple();
 
         // we only have to check all the parameters on the left side,
         // since if an assignment C<L1> = C<R1> is allowed, then
@@ -975,7 +1066,7 @@ public class ClassStructure
         }
 
     /**
-     * For this class structure representing the R-Value find a contribution assignable to the
+     * For this class structure representing an R-Value, find a contribution assignable to the
      * specified L-Value type.
      *
      * @param typeLeft    the L-Value type
@@ -1111,7 +1202,7 @@ public class ClassStructure
         }
 
     /**
-     * For this class structure representing the R-Value find a contribution assignable to the
+     * For this class structure representing an R-Value, find a contribution assignable to the
      * specified L-Value type.
      *
      * @param typeLeft    the L-Value type

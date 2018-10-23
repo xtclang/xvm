@@ -710,6 +710,19 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return the list of type parameters for this Tuple type
+     */
+    public List<TypeConstant> getTupleParamTypes()
+        {
+        assert isTuple();
+
+        IdentityConstant idTuple  = getSingleUnderlyingClass(true);
+        ClassStructure   clzTuple = (ClassStructure) idTuple.getComponent();
+
+        return clzTuple.getTupleParamTypes(getParamTypes());
+        }
+
+    /**
      * @return true iff the type is an Array type
      */
     public boolean isArray()
@@ -804,26 +817,6 @@ public abstract class TypeConstant
 
         return false;
         }
-
-    /**
-     * Obtain the type of the specified tuple field.
-     *
-     * @param i  the 0-based tuple field index
-     *
-     * @return the type of the specified field
-     */
-    public TypeConstant getTupleFieldType(int i)
-        {
-        assert isTuple();
-        TypeConstant[] atypeParam = getParamTypesArray();
-        if (i < 0 || i >= atypeParam.length)
-            {
-            throw new IllegalArgumentException("i=" + i + ", size=" + atypeParam.length);
-            }
-
-        return atypeParam[i];
-        }
-
 
 
     // ----- TypeInfo support ----------------------------------------------------------------------
@@ -3927,14 +3920,13 @@ public abstract class TypeConstant
 
         if (idLeft.equals(pool.clzTuple()))
             {
-            if (!idRight.equals(pool.clzTuple()))
+            if (!typeRight.isTuple())
                 {
-                // nothing is assignable to a Tuple
+                // nothing is assignable to a Tuple except another Tuple
                 return Relation.INCOMPATIBLE;
                 }
-            // TODO: does it make sense to short-circuit?
-            //  Tuple<R1, R2, ...> is assignable to Tuple<L1, L2, ...>
-            return null;
+            ClassStructure clzTuple = (ClassStructure) idRight.getComponent();
+            return clzTuple.findTupleContribution(typeLeft, typeRight.getParamTypes());
             }
 
         if (idLeft.equals(pool.clzFunction()))

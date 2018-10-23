@@ -550,7 +550,8 @@ public class TerminalTypeConstant
             return constId.getReferredToType().isTuple();
             }
 
-        Constant constant = getDefiningConstant();
+        Constant         constant = getDefiningConstant();
+        IdentityConstant idClz;
         switch (constant.getFormat())
             {
             case Module:
@@ -558,10 +559,11 @@ public class TerminalTypeConstant
                 return false;
 
             case Class:
+                idClz = (ClassConstant) constant;
                 break;
 
             case NativeClass:
-                constant = ((NativeRebaseConstant) constant).getClassConstant();
+                idClz = ((NativeRebaseConstant) constant).getClassConstant();
                 break;
 
             case Property:
@@ -573,14 +575,16 @@ public class TerminalTypeConstant
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                constant = ((PseudoConstant) constant).getDeclarationLevelClass();
+                idClz = ((PseudoConstant) constant).getDeclarationLevelClass();
                 break;
 
             default:
                 // let's be tolerant to unresolved constants
                 return false;
             }
-        return constant.equals(getConstantPool().clzTuple());
+
+        return idClz.equals(getConstantPool().clzTuple()) ||
+                ((ClassStructure) idClz.getComponent()).isTuple();
         }
 
     @Override

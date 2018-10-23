@@ -6,11 +6,10 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Argument;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -246,11 +245,8 @@ public class ReturnStatement
 
         // first determine what the method declaration indicates the return value is (none, one,
         // or multi)
-        MethodStructure  structMethod = ctx.getMethod();
-        TypeConstant[]   aRetTypes    = structMethod.getReturnTypes();
-        int              cRets        = aRetTypes.length;
-        List<Expression> listExprs    = this.exprs;
-        int              cExprs       = listExprs == null ? 0 : listExprs.size();
+        List<Expression> listExprs = this.exprs;
+        int              cExprs    = listExprs == null ? 0 : listExprs.size();
 
         if (m_fTupleReturn) // REVIEW
             {
@@ -268,9 +264,19 @@ public class ReturnStatement
                     break;
 
                 case 1:
-                    Argument arg = listExprs.get(0).generateArgument(ctx, code, true, true, errs);
-                    code.add(new Return_1(arg));
+                    {
+                    Expression expr = listExprs.get(0);
+                    if (expr.isVoid())
+                        {
+                        code.add(new Return_0());
+                        }
+                    else
+                        {
+                        Argument arg = expr.generateArgument(ctx, code, true, true, errs);
+                        code.add(new Return_1(arg));
+                        }
                     break;
+                    }
 
                 default:
                     Argument[] args = new Argument[cExprs];
