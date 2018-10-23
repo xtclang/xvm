@@ -541,11 +541,11 @@ interface Map<KeyType, ValueType>
             return false;
             }
 
-        for (Map.Entry<CompileType.KeyType, CompileType.ValueType> entry : map1)
+        for (CompileType.KeyType key1, CompileType.ValueType value1 : map1)
             {
-            if (ValueType value : map2.get(entry.key))
+            if (ValueType value2 : map2.get(key1))
                 {
-                if (entry.value != value)
+                if (value2 != value1)
                     {
                     return false;
                     }

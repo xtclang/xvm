@@ -42,18 +42,18 @@ interface Function<ParamTypes extends Tuple, ReturnTypes extends Tuple>
      * Binds any number of parameters of the Function, resulting in a new Function that does not
      * contain any of those parameters.
      */
-    Function bind(Map<Parameter, Object> params)
+    Function<> bind(Map<Parameter, Object> params)
         {
         if (params.empty)
             {
             return this;
             }
 
-        for (Map.Entry<Parameter, Object> entry : params)
+        for (Parameter param, Object value : params)
             {
 
             }
-        return new PartiallyBound();
+        return new PartiallyBound(this, params);
         }
 
     /**
