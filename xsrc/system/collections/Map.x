@@ -545,15 +545,12 @@ interface Map<KeyType, ValueType>
             {
             if (ValueType value2 : map2.get(key1))
                 {
-                if (value2 != value1)
+                if (value2 == value1)
                     {
-                    return false;
+                    continue;
                     }
                 }
-            else
-                {
-                return false;
-                }
+            return false;
             }
 
         return true;

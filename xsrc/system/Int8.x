@@ -204,14 +204,7 @@ const Int8
     @Override
     Int8 reverseBytes()
         {
-        Int8 result = 0;
-
-        for (Int i = 0; i < bitLength; i += 8)
-            {
-            result |= ((this >>> i) & 0xFF) << (bitLength - i - 8);
-            }
-
-        return result;
+        return this;
         }
 
     @Override

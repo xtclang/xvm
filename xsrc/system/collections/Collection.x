@@ -313,11 +313,11 @@ interface Collection<ElementType>
             // if either is sorted, then both must be of the same order;
             // the collections were of the same arity, so the second iterator shouldn't run out
             // before the first
-            val iter1 = collection1.iterator();
-            val iter2 = collection2.iterator();
+            Iterator iter1 = collection1.iterator();
+            Iterator iter2 = collection2.iterator();
             for (val value1 : iter1)
                 {
-                assert val value2 : iter2;
+                assert val value2 : iter2.next();
                 if (value1 != value2)
                     {
                     return false;

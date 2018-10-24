@@ -268,7 +268,7 @@ class ExtHashMap<KeyType, ValueType>
             HashEntry?   currEntry = buckets[bucketId];
             HashEntry?   prevEntry = null;
 
-          loop:
+            loop:
             while (currEntry != null)
                 {
                 // check if we found the entry that we're looking for
@@ -284,7 +284,7 @@ class ExtHashMap<KeyType, ValueType>
                             }
                         else
                             {
-                            buckets[loop.counter] = currEntry.next;
+                            buckets[loop.count] = currEntry.next;
                             }
 
                         ++ExtHashMap.this.removeCount;
