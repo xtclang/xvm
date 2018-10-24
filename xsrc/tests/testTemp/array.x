@@ -16,6 +16,7 @@ module TestArray.xqiz.it
         testFixedArray();
 
         testAssignSideEffects();
+        testNew();
         }
 
     void testSimple()
@@ -134,5 +135,19 @@ module TestArray.xqiz.it
 
         nums[--i] += 7;
         console.println("nums=" + nums + ", i=" + i);
+        }
+
+    void testNew()
+        {
+        console.println("\n** testNew()");
+
+        String[] array = new String[10];
+        console.println("array=" + array + ", size=" + array.size);
+
+        for (Int i : 1..10)
+            {
+            array += "#" + i;
+            }
+        console.println("array=" + array + ", size=" + array.size);
         }
     }

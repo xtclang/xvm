@@ -4,8 +4,11 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.List;
+import java.util.Map;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -94,6 +97,21 @@ public class NewExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    public boolean isComponentNode()
+        {
+        return body != null;
+        }
+
+    @Override
+    public Component getComponent()
+        {
+        ClassStructure structClz = m_structClz;
+        return structClz == null
+                ? super.getComponent()
+                : structClz;
+        }
+
     /**
      * @return the parent of the object being new'd, for example "parent.new Child()", or null if
      *         the object being new'd is of a top level class
@@ -148,7 +166,68 @@ public class NewExpression
         }
 
 
-    // ----- compilation ---------------------------------------------------------------------------
+    // ----- compilation (inner class) -------------------------------------------------------------
+
+    @Override
+    protected void registerStructures(StageMgr mgr, ErrorListener errs)
+        {
+        m_errs = errs;
+
+        // just like the MethodDeclarationStatement, lambda expressions are considered to be
+        // completely opaque, and so a lambda defers the processing of its children at this point,
+        // because it wants everything around its children to be set up by the time those children
+        // need to be able to answer all of the questions about names and types and so on
+        if (m_structClz == null)
+            {
+            mgr.deferChildren();
+            }
+        }
+
+    @Override
+    public void resolveNames(StageMgr mgr, ErrorListener errs)
+        {
+        m_errs = errs;
+
+        // see note above
+        if (m_structClz == null)
+            {
+            mgr.deferChildren();
+            }
+        }
+
+    @Override
+    public void validateContent(StageMgr mgr, ErrorListener errs)
+        {
+        m_errs = errs;
+
+        // see note above
+        if (m_structClz == null)
+            {
+            mgr.deferChildren();
+            }
+        }
+
+    @Override
+    public void generateCode(StageMgr mgr, ErrorListener errs)
+        {
+        ClassStructure method = m_structClz;
+
+        // the method body containing this must validate the new expression, which then will create
+        // the anonymous inner class structure, and that has to happen before we try to spit out any
+        // code
+        if (method == null)
+            {
+            mgr.requestRevisit();
+            mgr.deferChildren();
+            }
+        else
+            {
+            catchUpChildren(errs);
+            }
+        }
+
+
+    // ----- compilation (Expression) --------------------------------------------------------------
 
     @Override
     public TypeConstant getImplicitType(Context ctx)
@@ -428,6 +507,32 @@ public class NewExpression
             }
         }
 
+
+    // ----- compilation helpers -------------------------------------------------------------------
+
+    /**
+     * This is used to catch up the parts of the new expression (for an anonymous inner class) that
+     * are necessary to work with the anonymous inner class within its containing method, such that
+     * it can be asked questions about type information, etc.
+     *
+     * @param errs  the error list to log to
+     *
+     * @return true if the new expression for an anonymous inner class was able to prepare
+     */
+    protected boolean ensurePrepared(ErrorListener errs)
+        {
+        boolean fPrepared = m_fPrepared;
+
+        if (!fPrepared)
+            {
+            // TODO do we need to make sure that the type expression (the type being new'd) has been resolved?
+
+            fPrepared = true;
+            }
+
+        return m_fPrepared = fPrepared;
+        }
+
     /**
      * Generate the NEW_* op-code
      */
@@ -581,6 +686,34 @@ public class NewExpression
     private transient MethodStructure m_constructor;
     private transient boolean         m_fTupleArg;     // indicates that arguments come from a tuple
     private transient Constant[]      m_aconstDefault; // default arguments
+
+    /**
+     * This is only used to provide a destination for errors when we're called out of the blue to
+     * evaluate inner class type information before we validate (since validate gets passed an error
+     * listener to use). Do not use this for anything else other than ensurePrepared().
+     */
+    private transient ErrorListener         m_errs;
+    /**
+     * Set to true after the expression prepares by ensurePrepared().
+     */
+    private transient boolean               m_fPrepared;
+    /**
+     * The anonymous inner class structure (created if body is not null).
+     */
+    private transient ClassStructure        m_structClz;
+    /**
+     * The variables captured by the anonymous inner class, with an associated "true" flag if the
+     * inner class needs to capture the variable in a read/write mode.
+     */
+    private transient Map<String, Boolean>  m_mapCapture;
+    /**
+     * A map from variable name to register, built by the anonymous inner class context.
+     */
+    private transient Map<String, Register> m_mapRegisters;
+    /**
+     * True if the inner class captures "this" (i.e. not static).
+     */
+    private transient boolean               m_fInstanceChild;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NewExpression.class, "left", "type", "args", "body");
     }
