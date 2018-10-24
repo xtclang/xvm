@@ -44,16 +44,22 @@ import org.xvm.asm.op.IIP_ShrAll;
 import org.xvm.asm.op.IIP_Sub;
 import org.xvm.asm.op.IIP_Xor;
 import org.xvm.asm.op.IP_Add;
+import org.xvm.asm.op.IP_And;
 import org.xvm.asm.op.IP_Dec;
 import org.xvm.asm.op.IP_Div;
 import org.xvm.asm.op.IP_Inc;
 import org.xvm.asm.op.IP_Mod;
 import org.xvm.asm.op.IP_Mul;
+import org.xvm.asm.op.IP_Or;
 import org.xvm.asm.op.IP_PostDec;
 import org.xvm.asm.op.IP_PostInc;
 import org.xvm.asm.op.IP_PreDec;
 import org.xvm.asm.op.IP_PreInc;
+import org.xvm.asm.op.IP_Shl;
+import org.xvm.asm.op.IP_Shr;
+import org.xvm.asm.op.IP_ShrAll;
 import org.xvm.asm.op.IP_Sub;
+import org.xvm.asm.op.IP_Xor;
 import org.xvm.asm.op.I_Get;
 import org.xvm.asm.op.I_Set;
 import org.xvm.asm.op.Jump;
@@ -64,16 +70,22 @@ import org.xvm.asm.op.L_Set;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Move;
 import org.xvm.asm.op.PIP_Add;
+import org.xvm.asm.op.PIP_And;
 import org.xvm.asm.op.PIP_Dec;
 import org.xvm.asm.op.PIP_Div;
 import org.xvm.asm.op.PIP_Inc;
 import org.xvm.asm.op.PIP_Mod;
 import org.xvm.asm.op.PIP_Mul;
+import org.xvm.asm.op.PIP_Or;
 import org.xvm.asm.op.PIP_PostDec;
 import org.xvm.asm.op.PIP_PostInc;
 import org.xvm.asm.op.PIP_PreDec;
 import org.xvm.asm.op.PIP_PreInc;
+import org.xvm.asm.op.PIP_Shl;
+import org.xvm.asm.op.PIP_Shr;
+import org.xvm.asm.op.PIP_ShrAll;
 import org.xvm.asm.op.PIP_Sub;
+import org.xvm.asm.op.PIP_Xor;
 import org.xvm.asm.op.P_Get;
 import org.xvm.asm.op.P_Set;
 import org.xvm.asm.op.Var;
@@ -3110,19 +3122,17 @@ public abstract class Expression
                     Argument argTarget = getLocalArgument();
                     switch (tokOp.getId())
                         {
-                        case ADD_ASN      : op = new IP_Add(argTarget, arg); break;
-                        case SUB_ASN      : op = new IP_Sub(argTarget, arg); break;
-                        case MUL_ASN      : op = new IP_Mul(argTarget, arg); break;
-                        case DIV_ASN      : op = new IP_Div(argTarget, arg); break;
-                        case MOD_ASN      : op = new IP_Mod(argTarget, arg); break;
-                        case SHL_ASN      : // op = new IP_???(argTarget, arg); break;
-                        case SHR_ASN      : // op = new IP_???(argTarget, arg); break;
-                        case USHR_ASN     : // op = new IP_???(argTarget, arg); break;
-                        case BIT_AND_ASN  : // op = new IP_???(argTarget, arg); break;
-                        case BIT_OR_ASN   : // op = new IP_???(argTarget, arg); break;
-                        case BIT_XOR_ASN  : // op = new IP_???(argTarget, arg); break;
-                            // TODO
-                            throw notImplemented();
+                        case ADD_ASN      : op = new IP_Add   (argTarget, arg); break;
+                        case SUB_ASN      : op = new IP_Sub   (argTarget, arg); break;
+                        case MUL_ASN      : op = new IP_Mul   (argTarget, arg); break;
+                        case DIV_ASN      : op = new IP_Div   (argTarget, arg); break;
+                        case MOD_ASN      : op = new IP_Mod   (argTarget, arg); break;
+                        case SHL_ASN      : op = new IP_Shl   (argTarget, arg); break;
+                        case SHR_ASN      : op = new IP_Shr   (argTarget, arg); break;
+                        case USHR_ASN     : op = new IP_ShrAll(argTarget, arg); break;
+                        case BIT_AND_ASN  : op = new IP_And   (argTarget, arg); break;
+                        case BIT_OR_ASN   : op = new IP_Or    (argTarget, arg); break;
+                        case BIT_XOR_ASN  : op = new IP_Xor   (argTarget, arg); break;
 
                         default:
                             throw new IllegalStateException("op=" + tokOp.getId().TEXT);
@@ -3136,19 +3146,17 @@ public abstract class Expression
                     Argument         argTarget = getTarget();
                     switch (tokOp.getId())
                         {
-                        case ADD_ASN      : op = new PIP_Add(prop, argTarget, arg); break;
-                        case SUB_ASN      : op = new PIP_Sub(prop, argTarget, arg); break;
-                        case MUL_ASN      : op = new PIP_Mul(prop, argTarget, arg); break;
-                        case DIV_ASN      : op = new PIP_Div(prop, argTarget, arg); break;
-                        case MOD_ASN      : op = new PIP_Mod(prop, argTarget, arg); break;
-                        case SHL_ASN      : // op = new PIP_???(prop, argTarget, arg); break;
-                        case SHR_ASN      : // op = new PIP_???(prop, argTarget, arg); break;
-                        case USHR_ASN     : // op = new PIP_???(prop, argTarget, arg); break;
-                        case BIT_AND_ASN  : // op = new PIP_???(prop, argTarget, arg); break;
-                        case BIT_OR_ASN   : // op = new PIP_???(prop, argTarget, arg); break;
-                        case BIT_XOR_ASN  : // op = new PIP_???(prop, argTarget, arg); break;
-                            // TODO
-                            throw notImplemented();
+                        case ADD_ASN      : op = new PIP_Add   (prop, argTarget, arg); break;
+                        case SUB_ASN      : op = new PIP_Sub   (prop, argTarget, arg); break;
+                        case MUL_ASN      : op = new PIP_Mul   (prop, argTarget, arg); break;
+                        case DIV_ASN      : op = new PIP_Div   (prop, argTarget, arg); break;
+                        case MOD_ASN      : op = new PIP_Mod   (prop, argTarget, arg); break;
+                        case SHL_ASN      : op = new PIP_Shl   (prop, argTarget, arg); break;
+                        case SHR_ASN      : op = new PIP_Shr   (prop, argTarget, arg); break;
+                        case USHR_ASN     : op = new PIP_ShrAll(prop, argTarget, arg); break;
+                        case BIT_AND_ASN  : op = new PIP_And   (prop, argTarget, arg); break;
+                        case BIT_OR_ASN   : op = new PIP_Or    (prop, argTarget, arg); break;
+                        case BIT_XOR_ASN  : op = new PIP_Xor   (prop, argTarget, arg); break;
 
                         default:
                             throw new IllegalStateException("op=" + tokOp.getId().TEXT);

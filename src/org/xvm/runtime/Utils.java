@@ -882,5 +882,23 @@ public abstract class Utils
 
         BinaryAction MOD = (frameCaller, hValue, hArg) ->
             hValue.getOpSupport().invokeMod(frameCaller, hValue, hArg, Op.A_STACK);
+
+        BinaryAction SHL = (frameCaller, hValue, hArg) ->
+            hValue.getOpSupport().invokeShl(frameCaller, hValue, hArg, Op.A_STACK);
+
+        BinaryAction SHR = (frameCaller, hValue, hArg) ->
+            hValue.getOpSupport().invokeShr(frameCaller, hValue, hArg, Op.A_STACK);
+
+        BinaryAction USHR = (frameCaller, hValue, hArg) ->
+            hValue.getOpSupport().invokeShrAll(frameCaller, hValue, hArg, Op.A_STACK);
+
+        BinaryAction AND = (frameCaller, hValue, hArg) ->
+            hValue.getOpSupport().invokeAnd(frameCaller, hValue, hArg, Op.A_STACK);
+
+        BinaryAction OR = (frameCaller, hValue, hArg) ->
+            hValue.getOpSupport().invokeOr(frameCaller, hValue, hArg, Op.A_STACK);
+
+        BinaryAction XOR = (frameCaller, hValue, hArg) ->
+            hValue.getOpSupport().invokeXor(frameCaller, hValue, hArg, Op.A_STACK);
         }
     }

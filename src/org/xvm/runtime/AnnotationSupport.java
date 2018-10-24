@@ -328,6 +328,60 @@ public class AnnotationSupport
             : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
         }
 
+    @Override
+    public int invokeVarShl(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        CallChain chain = getOpChain("<<=", 1);
+        return chain == null
+            ? ensureVarSupport().invokeVarShl(frame, hTarget, hArg)
+            : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
+        }
+
+    @Override
+    public int invokeVarShr(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        CallChain chain = getOpChain(">>=", 1);
+        return chain == null
+            ? ensureVarSupport().invokeVarShr(frame, hTarget, hArg)
+            : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
+        }
+
+    @Override
+    public int invokeVarShrAll(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        CallChain chain = getOpChain(">>>=", 1);
+        return chain == null
+            ? ensureVarSupport().invokeVarShrAll(frame, hTarget, hArg)
+            : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
+        }
+
+    @Override
+    public int invokeVarAnd(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        CallChain chain = getOpChain("&=", 1);
+        return chain == null
+            ? ensureVarSupport().invokeVarAnd(frame, hTarget, hArg)
+            : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
+        }
+
+    @Override
+    public int invokeVarOr(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        CallChain chain = getOpChain("|=", 1);
+        return chain == null
+            ? ensureVarSupport().invokeVarOr(frame, hTarget, hArg)
+            : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
+        }
+
+    @Override
+    public int invokeVarXor(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        CallChain chain = getOpChain("^=", 1);
+        return chain == null
+            ? ensureVarSupport().invokeVarXor(frame, hTarget, hArg)
+            : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
+        }
+
 
     // ----- helpers--------------------------------------------------------------------------------
 

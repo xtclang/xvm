@@ -357,6 +357,42 @@ public class xRef
         return readOnly(frame);
         }
 
+    @Override
+    public int invokeVarShl(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        return readOnly(frame);
+        }
+
+    @Override
+    public int invokeVarShr(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        return readOnly(frame);
+        }
+
+    @Override
+    public int invokeVarShrAll(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        return readOnly(frame);
+        }
+
+    @Override
+    public int invokeVarAnd(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        return readOnly(frame);
+        }
+
+    @Override
+    public int invokeVarOr(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        return readOnly(frame);
+        }
+
+    @Override
+    public int invokeVarXor(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        return readOnly(frame);
+        }
+
     protected int readOnly(Frame frame)
         {
         return frame.raiseException(xException.makeHandle("Ref cannot be assigned"));

@@ -246,6 +246,96 @@ public class xAtomicIntNumber
         }
 
     @Override
+    public int invokeVarShl(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        AtomicLong atomic = ((AtomicIntVarHandle) hTarget).m_atomicValue;
+        long       lArg   = ((JavaLong) hArg).getValue();
+
+        if (atomic == null)
+            {
+            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            }
+
+        atomic.updateAndGet(lVal -> lVal << lArg);
+        return Op.R_NEXT;
+        }
+
+    @Override
+    public int invokeVarShr(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        AtomicLong atomic = ((AtomicIntVarHandle) hTarget).m_atomicValue;
+        long       lArg   = ((JavaLong) hArg).getValue();
+
+        if (atomic == null)
+            {
+            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            }
+
+        atomic.updateAndGet(lVal -> lVal >> lArg);
+        return Op.R_NEXT;
+        }
+
+    @Override
+    public int invokeVarShrAll(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        AtomicLong atomic = ((AtomicIntVarHandle) hTarget).m_atomicValue;
+        long       lArg   = ((JavaLong) hArg).getValue();
+
+        if (atomic == null)
+            {
+            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            }
+
+        atomic.updateAndGet(lVal -> lVal >>> lArg);
+        return Op.R_NEXT;
+        }
+
+    @Override
+    public int invokeVarAnd(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        AtomicLong atomic = ((AtomicIntVarHandle) hTarget).m_atomicValue;
+        long       lArg   = ((JavaLong) hArg).getValue();
+
+        if (atomic == null)
+            {
+            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            }
+
+        atomic.updateAndGet(lVal -> lVal & lArg);
+        return Op.R_NEXT;
+        }
+
+    @Override
+    public int invokeVarOr(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        AtomicLong atomic = ((AtomicIntVarHandle) hTarget).m_atomicValue;
+        long       lArg   = ((JavaLong) hArg).getValue();
+
+        if (atomic == null)
+            {
+            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            }
+
+        atomic.updateAndGet(lVal -> lVal | lArg);
+        return Op.R_NEXT;
+        }
+
+    @Override
+    public int invokeVarXor(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        AtomicLong atomic = ((AtomicIntVarHandle) hTarget).m_atomicValue;
+        long       lArg   = ((JavaLong) hArg).getValue();
+
+        if (atomic == null)
+            {
+            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            }
+
+        atomic.updateAndGet(lVal -> lVal ^ lArg);
+        return Op.R_NEXT;
+        }
+
+    @Override
     protected int getInternal(Frame frame, RefHandle hTarget, int iReturn)
         {
         AtomicIntVarHandle hAtomic = (AtomicIntVarHandle) hTarget;

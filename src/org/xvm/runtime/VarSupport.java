@@ -162,4 +162,76 @@ public interface VarSupport
      *         or {@link Op#R_BLOCK} values
      */
     int invokeVarMod(Frame frame, RefHandle hTarget, ObjectHandle hArg);
+
+    /**
+     * Perform a "shift-left" operation on the Var.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target Var handle
+     * @param hArg     the argument handle
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    int invokeVarShl(Frame frame, RefHandle hTarget, ObjectHandle hArg);
+
+    /**
+     * Perform a "shift-right" operation on the Var.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target Var handle
+     * @param hArg     the argument handle
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    int invokeVarShr(Frame frame, RefHandle hTarget, ObjectHandle hArg);
+
+    /**
+     * Perform an "unsigned shift right" operation on the Var.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target Var handle
+     * @param hArg     the argument handle
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    int invokeVarShrAll(Frame frame, RefHandle hTarget, ObjectHandle hArg);
+
+    /**
+     * Perform an "and" operation on the Var.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target Var handle
+     * @param hArg     the argument handle
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    int invokeVarAnd(Frame frame, RefHandle hTarget, ObjectHandle hArg);
+
+    /**
+     * Perform an "or" operation on the Var.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target Var handle
+     * @param hArg     the argument handle
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    int invokeVarOr(Frame frame, RefHandle hTarget, ObjectHandle hArg);
+
+    /**
+     * Perform an "exclusive or" operation on the Var.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target Var handle
+     * @param hArg     the argument handle
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    int invokeVarXor(Frame frame, RefHandle hTarget, ObjectHandle hArg);
     }

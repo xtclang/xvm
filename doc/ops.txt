@@ -155,12 +155,12 @@
 +IP_MUL      lvalue, rvalue2                         ; T *= T
 +IP_DIV      lvalue, rvalue2                         ; T /= T
 +IP_MOD      lvalue, rvalue2                         ; T %= T
- IP_SHL      lvalue, rvalue2                         ; T <<= Int
- IP_SHR      lvalue, rvalue2                         ; T >>= Int
- IP_USHR     lvalue, rvalue2                         ; T >>>= Int
- IP_AND      lvalue, rvalue2                         ; T &= T
- IP_OR       lvalue, rvalue2                         ; T |= T
- IP_XOR      lvalue, rvalue2                         ; T ^= T
++IP_SHL      lvalue, rvalue2                         ; T <<= Int
++IP_SHR      lvalue, rvalue2                         ; T >>= Int
++IP_USHR     lvalue, rvalue2                         ; T >>>= Int
++IP_AND      lvalue, rvalue2                         ; T &= T
++IP_OR       lvalue, rvalue2                         ; T |= T
++IP_XOR      lvalue, rvalue2                         ; T ^= T
 
 // ("P"=) property ("IP"=) in-place inc/dec:
 // - the rvalue-target indicates the object on which to get/set the property value
@@ -180,15 +180,15 @@
 // - the rvalue2 can be a register or a constant value or a local-property indicator (PROPERTY)
 +PIP_ADD     PROPERTY, rvalue-target, rvalue2        ; T += T
 +PIP_SUB     PROPERTY, rvalue-target, rvalue2        ; T -= T
- PIP_MUL     PROPERTY, rvalue-target, rvalue2        ; T *= T
- PIP_DIV     PROPERTY, rvalue-target, rvalue2        ; T /= T
- PIP_MOD     PROPERTY, rvalue-target, rvalue2        ; T %= T
- PIP_SHL     PROPERTY, rvalue-target, rvalue2        ; T <<= Int
- PIP_SHR     PROPERTY, rvalue-target, rvalue2        ; T >>= Int
- PIP_USHR    PROPERTY, rvalue-target, rvalue2        ; T >>>= Int
- PIP_AND     PROPERTY, rvalue-target, rvalue2        ; T &= T
- PIP_OR      PROPERTY, rvalue-target, rvalue2        ; T |= T
- PIP_XOR     PROPERTY, rvalue-target, rvalue2        ; T ^= T
++PIP_MUL     PROPERTY, rvalue-target, rvalue2        ; T *= T
++PIP_DIV     PROPERTY, rvalue-target, rvalue2        ; T /= T
++PIP_MOD     PROPERTY, rvalue-target, rvalue2        ; T %= T
++PIP_SHL     PROPERTY, rvalue-target, rvalue2        ; T <<= Int
++PIP_SHR     PROPERTY, rvalue-target, rvalue2        ; T >>= Int
++PIP_USHR    PROPERTY, rvalue-target, rvalue2        ; T >>>= Int
++PIP_AND     PROPERTY, rvalue-target, rvalue2        ; T &= T
++PIP_OR      PROPERTY, rvalue-target, rvalue2        ; T |= T
++PIP_XOR     PROPERTY, rvalue-target, rvalue2        ; T ^= T
 
 // ("I"=) index-based (tuple and single-dimensioned array) ops
 // - all rvalues support the "local property" mode
@@ -209,13 +209,13 @@
 +IIP_SUB     rvalue-target, rvalue-ix, rvalue2
 +IIP_MUL     rvalue-target, rvalue-ix, rvalue2
 +IIP_DIV     rvalue-target, rvalue-ix, rvalue2
- IIP_MOD     rvalue-target, rvalue-ix, rvalue2
- IIP_SHL     rvalue-target, rvalue-ix, rvalue2
- IIP_SHR     rvalue-target, rvalue-ix, rvalue2
- IIP_USHR    rvalue-target, rvalue-ix, rvalue2
- IIP_AND     rvalue-target, rvalue-ix, rvalue2
- IIP_OR      rvalue-target, rvalue-ix, rvalue2
- IIP_XOR     rvalue-target, rvalue-ix, rvalue2
++IIP_MOD     rvalue-target, rvalue-ix, rvalue2
++IIP_SHL     rvalue-target, rvalue-ix, rvalue2
++IIP_SHR     rvalue-target, rvalue-ix, rvalue2
++IIP_USHR    rvalue-target, rvalue-ix, rvalue2
++IIP_AND     rvalue-target, rvalue-ix, rvalue2
++IIP_OR      rvalue-target, rvalue-ix, rvalue2
++IIP_XOR     rvalue-target, rvalue-ix, rvalue2
 
 // ("M"=) multi-dimensioned array ops
  M_GET       rvalue-target, #:(rvalue-ix), lvalue    ; T = T[ix*]

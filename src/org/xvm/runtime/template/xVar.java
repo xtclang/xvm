@@ -196,4 +196,58 @@ public class xVar
             ? new InPlaceVarBinary(BinaryAction.MOD, hTarget, hArg).doNext(frame)
             : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
         }
+
+    @Override
+    public int invokeVarShl(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        CallChain chain = findOpChain(hTarget, "<<=", 1);
+        return chain == null
+            ? new InPlaceVarBinary(BinaryAction.SHL, hTarget, hArg).doNext(frame)
+            : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
+        }
+
+    @Override
+    public int invokeVarShr(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        CallChain chain = findOpChain(hTarget, ">>=", 1);
+        return chain == null
+            ? new InPlaceVarBinary(BinaryAction.SHR, hTarget, hArg).doNext(frame)
+            : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
+        }
+
+    @Override
+    public int invokeVarShrAll(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        CallChain chain = findOpChain(hTarget, ">>>=", 1);
+        return chain == null
+            ? new InPlaceVarBinary(BinaryAction.USHR, hTarget, hArg).doNext(frame)
+            : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
+        }
+
+    @Override
+    public int invokeVarAnd(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        CallChain chain = findOpChain(hTarget, "&=", 1);
+        return chain == null
+            ? new InPlaceVarBinary(BinaryAction.AND, hTarget, hArg).doNext(frame)
+            : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
+        }
+
+    @Override
+    public int invokeVarOr(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        CallChain chain = findOpChain(hTarget, "|=", 1);
+        return chain == null
+            ? new InPlaceVarBinary(BinaryAction.OR, hTarget, hArg).doNext(frame)
+            : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
+        }
+
+    @Override
+    public int invokeVarXor(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        CallChain chain = findOpChain(hTarget, "^=", 1);
+        return chain == null
+            ? new InPlaceVarBinary(BinaryAction.XOR, hTarget, hArg).doNext(frame)
+            : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
+        }
     }

@@ -1113,6 +1113,156 @@ public abstract class ClassTemplate
             BinaryAction.MOD, this, hTarget, sPropName, hArg).doNext(frame);
         }
 
+    /**
+     * Shift-left the property value by the specified argument.
+     *
+     * @param frame      the current frame
+     * @param hTarget    the target handle
+     * @param sPropName  the property name
+     * @param hArg       the argument handle
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    public int invokePropertyShl(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+        {
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info.isRefAnnotated())
+            {
+            GenericHandle hThis = (GenericHandle) hTarget;
+            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            return hRef.getVarSupport().invokeVarShl(frame, hRef, hArg);
+            }
+
+        return new InPlacePropertyBinary(
+            BinaryAction.SHL, this, hTarget, sPropName, hArg).doNext(frame);
+        }
+
+    /**
+     * Shift-right the property value by the specified argument.
+     *
+     * @param frame      the current frame
+     * @param hTarget    the target handle
+     * @param sPropName  the property name
+     * @param hArg       the argument handle
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    public int invokePropertyShr(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+        {
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info.isRefAnnotated())
+            {
+            GenericHandle hThis = (GenericHandle) hTarget;
+            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            return hRef.getVarSupport().invokeVarShr(frame, hRef, hArg);
+            }
+
+        return new InPlacePropertyBinary(
+            BinaryAction.SHR, this, hTarget, sPropName, hArg).doNext(frame);
+        }
+
+    /**
+     * Unsigned shift-right the property value by the specified argument.
+     *
+     * @param frame      the current frame
+     * @param hTarget    the target handle
+     * @param sPropName  the property name
+     * @param hArg       the argument handle
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    public int invokePropertyShrAll(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+        {
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info.isRefAnnotated())
+            {
+            GenericHandle hThis = (GenericHandle) hTarget;
+            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            return hRef.getVarSupport().invokeVarShrAll(frame, hRef, hArg);
+            }
+
+        return new InPlacePropertyBinary(
+            BinaryAction.USHR, this, hTarget, sPropName, hArg).doNext(frame);
+        }
+
+    /**
+     * "And" the property value with the specified argument.
+     *
+     * @param frame      the current frame
+     * @param hTarget    the target handle
+     * @param sPropName  the property name
+     * @param hArg       the argument handle
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    public int invokePropertyAnd(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+        {
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info.isRefAnnotated())
+            {
+            GenericHandle hThis = (GenericHandle) hTarget;
+            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            return hRef.getVarSupport().invokeVarAnd(frame, hRef, hArg);
+            }
+
+        return new InPlacePropertyBinary(
+            BinaryAction.AND, this, hTarget, sPropName, hArg).doNext(frame);
+        }
+
+    /**
+     * "Or" the property value with the specified argument.
+     *
+     * @param frame      the current frame
+     * @param hTarget    the target handle
+     * @param sPropName  the property name
+     * @param hArg       the argument handle
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    public int invokePropertyOr(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+        {
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info.isRefAnnotated())
+            {
+            GenericHandle hThis = (GenericHandle) hTarget;
+            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            return hRef.getVarSupport().invokeVarOr(frame, hRef, hArg);
+            }
+
+        return new InPlacePropertyBinary(
+            BinaryAction.OR, this, hTarget, sPropName, hArg).doNext(frame);
+        }
+
+    /**
+     * Exclusive-or the property value with the specified argument.
+     *
+     * @param frame      the current frame
+     * @param hTarget    the target handle
+     * @param sPropName  the property name
+     * @param hArg       the argument handle
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    public int invokePropertyXor(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+        {
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info.isRefAnnotated())
+            {
+            GenericHandle hThis = (GenericHandle) hTarget;
+            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            return hRef.getVarSupport().invokeVarXor(frame, hRef, hArg);
+            }
+
+        return new InPlacePropertyBinary(
+            BinaryAction.XOR, this, hTarget, sPropName, hArg).doNext(frame);
+        }
+
 
     // ----- Ref operations ------------------------------------------------------------------------
 
