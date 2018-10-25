@@ -5,7 +5,7 @@ class HashSet<ElementType>
         {
         assert(ElementType.is(Type<Hashable>));
 
-        this.hasher = new NaturalHasher<Hashable+ElementType>();
+        this.hasher = new NaturalHasher<ElementType>();
         }
 
     construct(Hasher<ElementType> hasher)
