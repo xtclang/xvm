@@ -436,14 +436,20 @@ interface Map<KeyType, ValueType>
     <ResultType> conditional ResultType processIfPresent(KeyType key,
             function ResultType (ProcessableEntry<KeyType, ValueType>) compute)
         {
-        return process(key, entry ->
+        // this implementation can be overridden to combine the containsKey() and process() into
+        // a single step
+        if (containsKey(key))
             {
-            if (entry.exists)
+            return true, process(key, entry ->
                 {
-                return true, compute(entry);
-                }
+                assert entry.exists;
+                return compute(entry);
+                });
+            }
+        else
+            {
             return false;
-            });
+            }
         }
 
     /**
@@ -465,11 +471,17 @@ interface Map<KeyType, ValueType>
         {
         return process(key, entry ->
             {
-            if (!entry.exists)
+            ValueType value;
+            if (entry.exists)
                 {
-                entry.value = compute();
+                value = entry.value;
                 }
-            return entry.value;
+            else
+                {
+                value = compute();
+                entry.value = value;
+                }
+            return value;
             });
         }
 
@@ -511,7 +523,8 @@ interface Map<KeyType, ValueType>
     @Op void setElement(KeyType index, ValueType value)
         {
         // this must be overridden by map implementations that are not of the "mutable" variety
-        Map<KeyType, ValueType> newMap = put(index, value);
+        Map<KeyType, ValueType> map    = this;
+        Map<KeyType, ValueType> newMap = map.put(index, value);
         assert &map == &newMap;
         }
 
