@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Function;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
@@ -684,21 +685,16 @@ public abstract class TypeConstant
         }
 
     /**
-     * Type parameters are compiled as the "Type" type; assuming that this type is the type
-     * {@code Type<T>}, determine what {@code T} is.
+     * Given this (formal) type A<B<C>, <D<R>> that may contain a type parameter "R" and an actual
+     * type A<X<Y>, w<Z>>, find out what is the actual type of the type parameter "R".
      *
-     * @return the type that the type parameter (whose type is this) refers to
+     * @return the resolved actual type or null if there is no matching type parameter or
+     *         tha actual type topology is not the same as this type and doesn't provide enough
+     *         fidelity (e.g.: formal is Array<R> and actual is Object)
      */
-    public TypeConstant getTypeParameterType()
+    public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName)
         {
-        if (!isA(getConstantPool().typeType()))
-            {
-            throw new IllegalStateException("not a type parameter type: " + getValueString());
-            }
-
-        return isParamsSpecified()
-                ? getParamTypesArray()[0]
-                : getConstantPool().typeObject();
+        return getUnderlyingType().resolveTypeParameter(typeActual, sFormalName);
         }
 
     /**
@@ -816,6 +812,18 @@ public abstract class TypeConstant
             }
 
         return false;
+        }
+
+    /**
+     * Return an argument for this type constant. For all concrete types, this simply returns a
+     * type of this type. The only TypeConstant that treats it differently is a formal type
+     * parameter, which would return a corresponding register
+     *
+     * @return the argument
+     */
+    public Argument getTypeArgument()
+        {
+        return getType();
         }
 
 

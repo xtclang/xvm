@@ -314,6 +314,75 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
+    public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName)
+        {
+        if (getFormat() != typeActual.getFormat())
+            {
+            return null;
+            }
+
+        RelationalTypeConstant that = (RelationalTypeConstant) typeActual;
+
+        TypeConstant constThis1 = this.m_constType1;
+        TypeConstant constThis2 = this.m_constType2;
+        TypeConstant constThat1 = that.m_constType1;
+        TypeConstant constThat2 = that.m_constType2;
+
+        String sTopologyThis = getSign(constThis1) + getSign(constThis2);
+        String sTopologyThat = getSign(constThat1) + getSign(constThat2);
+
+        TypeConstant typeResult;
+        if (sTopologyThat.equals(sTopologyThis))
+            {
+            // branches are the same: try 1 to 1 and 2 to 2 first
+            typeResult = constThis1.resolveTypeParameter(constThat1, sFormalName);
+            if (typeResult != null)
+                {
+                return typeResult;
+                }
+            typeResult = constThis2.resolveTypeParameter(constThat2, sFormalName);
+            if (typeResult != null)
+                {
+                return typeResult;
+                }
+            }
+
+        // now check if we should try 1 to 2 and 2 to 1
+        switch (sTopologyThis)
+            {
+            case "rr":
+            case "ss":
+                if (!sTopologyThat.equals(sTopologyThis))
+                    {
+                    return null;
+                    }
+                break;
+
+            case "rs":
+            case "sr":
+                switch (sTopologyThat)
+                    {
+                    case "rr":
+                    case "ss":
+                        return null;
+                    }
+                break;
+            }
+
+        typeResult = constThis1.resolveTypeParameter(constThat2, sFormalName);
+        if (typeResult != null)
+            {
+            return typeResult;
+            }
+        return constThis2.resolveTypeParameter(constThat1, sFormalName);
+        }
+
+    private static String getSign(TypeConstant type)
+        {
+        return type.isRelationalType() ? "r" : "s";
+        }
+
+    @Override
     public boolean isIntoClassType()
         {
         return false;

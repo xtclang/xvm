@@ -12,6 +12,7 @@ import java.util.Set;
 
 import java.util.function.Consumer;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
@@ -24,6 +25,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Parameter;
+import org.xvm.asm.Register;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -541,6 +543,32 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName)
+        {
+        Constant constant = getDefiningConstant();
+        if (constant.getFormat() != Format.TypeParameter)
+            {
+            return null;
+            }
+
+        TypeParameterConstant constTypeParam = (TypeParameterConstant) constant;
+        MethodConstant        constMethod    = constTypeParam.getMethod();
+        MethodStructure       method         = (MethodStructure) constMethod.getComponent();
+        if (method == null)
+            {
+            return null;
+            }
+
+        Parameter param = method.getParam(constTypeParam.getRegister());
+        if (!param.getName().equals(sFormalName))
+            {
+            return null;
+            }
+
+        return typeActual;
+        }
+
+    @Override
     public boolean isTuple()
         {
         if (!isSingleDefiningConstant())
@@ -1043,6 +1071,20 @@ public class TerminalTypeConstant
     public <T extends TypeConstant> T findFirst(Class<T> clz)
         {
         return clz == getClass() ? (T) this : null;
+        }
+
+    @Override
+    public Argument getTypeArgument()
+        {
+        Constant constant = getDefiningConstant();
+        if (constant.getFormat() == Format.TypeParameter)
+            {
+            TypeParameterConstant constTypeParam = (TypeParameterConstant) constant;
+
+            return new Register(getType(), constTypeParam.getRegister());
+            }
+
+        return super.getTypeArgument();
         }
 
 

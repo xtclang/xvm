@@ -1942,7 +1942,7 @@ public abstract class Expression
 
                             if (typeArg == null)
                                 {
-                                typeArg = typeExpr == null ? typeMethodParam : typeExpr;
+                                typeArg = typeExpr;
                                 }
                             else if (typeExpr != null)
                                 {
@@ -1950,7 +1950,7 @@ public abstract class Expression
                                         ? typeArg
                                         : typeExpr.isA(typeArg)
                                                 ? typeExpr
-                                                : typeMethodParam;
+                                                : null;
                                 }
                             atypeAllArgs[i] = typeArg;
                             }
@@ -1966,11 +1966,10 @@ public abstract class Expression
             if (cTypeParams > 0)
                 {
                 mapTypeParams = method.resolveTypeParameters(atypeAllArgs, atypeReturn);
-                if (mapTypeParams == null)
+                if (mapTypeParams.size() < cTypeParams)
                     {
                     // different arguments/returns cause the formal type to resolve into
                     // incompatible types
-                    // TODO: should we log an error?
                     continue NextMethod;
                     }
                 }
@@ -2026,7 +2025,7 @@ public abstract class Expression
      *
      * @param setMethods  the non-empty set of methods
      * @param typeTarget  the target type
-     * @param errs        the error
+     * @param errs        the error list to log to
      *
      * @return the best matching method or null, if the methods are ambiguous, in which case
      *         an error has been reported

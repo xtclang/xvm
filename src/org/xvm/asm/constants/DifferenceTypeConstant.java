@@ -147,6 +147,20 @@ public class DifferenceTypeConstant
         }
 
     @Override
+    public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName)
+        {
+        if (getFormat() != typeActual.getFormat())
+            {
+            return null;
+            }
+
+        DifferenceTypeConstant that = (DifferenceTypeConstant) typeActual;
+
+        // only use the first branch
+        return this.m_constType1.resolveTypeParameter(that.m_constType1, sFormalName);
+        }
+
+    @Override
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
         // we've been asked to resolve some type defined as "T1 - T2", which means that we need to

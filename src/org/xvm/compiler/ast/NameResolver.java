@@ -379,15 +379,6 @@ public class NameResolver
                             throw new IllegalStateException("property id=" + constProp
                                     + ", property struct=" + structProp);
                             }
-
-                        if (!constType.isA(getPool().typeType()))
-                            {
-                            m_errs.log(Severity.ERROR, Compiler.NOT_CLASS_TYPE,
-                                new Object[] {constProp.getValueString()}, m_component);
-                            m_status = Status.ERROR;
-                            return null;
-                            }
-
                         break;
                         }
 
@@ -436,7 +427,17 @@ public class NameResolver
                         throw new IllegalStateException("illegal type param constant id: " + constParam);
                     }
 
-                TypeConstant constParamType = constType.getTypeParameterType();
+                if (!constType.isA(getPool().typeType()))
+                    {
+                    m_errs.log(Severity.ERROR, Compiler.NOT_CLASS_TYPE,
+                        new Object[] {constParam.getValueString()}, m_component);
+                    m_status = Status.ERROR;
+                    return null;
+                    }
+
+                TypeConstant constParamType = constType.isParamsSpecified()
+                        ? constType.getParamTypesArray()[0]
+                        : getPool().typeObject();
                 if (!constParamType.isSingleDefiningConstant())
                     {
                     throw new IllegalStateException("not a single defining constant: " + constParamType);
