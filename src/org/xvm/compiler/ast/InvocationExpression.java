@@ -549,27 +549,42 @@ public class InvocationExpression
                         {
                         MethodConstant  idMethod    = (MethodConstant) argMethod;
                         MethodStructure method      = m_method;
-                        TypeConstant[]  atypeArgs   = idMethod.getRawParams();
+                        TypeConstant[]  atypeParams = idMethod.getRawParams();
                         int             cTypeParams = method.getTypeParamCount();
+                        int             cArgs       = args.size();
 
                         if (cTypeParams > 0)
                             {
-                            // purge the type parameters
-                            int            cTypes = method.getParamCount() - cTypeParams;
-                            TypeConstant[] atype  = new TypeConstant[cTypes];
-                            System.arraycopy(atypeArgs, cTypeParams, atype, 0, atype.length);
-                            atypeArgs = atype;
+                            // purge the type parameters and resolve the method signature
+                            // against all the types we know by now
+                            TypeConstant[] atypeArgs = new TypeConstant[cArgs];
+                            for (int i = 0; i < cArgs; i++)
+                                {
+                                atypeArgs[i] = args.get(i).getImplicitType(ctx);
+                                }
+
+                            Map<String, TypeConstant> mapTypeParams =
+                                    method.resolveTypeParameters(atypeArgs, atypeReturn);
+
+                            int            cParams = method.getParamCount() - cTypeParams;
+                            TypeConstant[] atype   = new TypeConstant[cParams];
+                            for (int i = 0; i < cParams; i++)
+                                {
+                                atype[i] = atypeParams[cTypeParams + i].
+                                        resolveGenerics(pool, mapTypeParams::get);
+                                }
+                            atypeParams = atype;
                             }
 
                         // test the "regular fit" first and Tuple afterwards
                         TypeConstant typeTuple = null;
-                        if (!testExpressions(ctx, args, atypeArgs).isFit())
+                        if (!testExpressions(ctx, args, atypeParams).isFit())
                             {
                             // otherwise, check the tuple based invoke (see Expression.findMethod)
-                            if (args.size() == 1)
+                            if (cArgs == 1)
                                 {
                                 typeTuple = pool.ensureParameterizedTypeConstant(
-                                        pool.typeTuple(), atypeArgs);
+                                        pool.typeTuple(), atypeParams);
                                 if (!args.get(0).testFit(ctx, typeTuple).isFit())
                                     {
                                     // the regular "validateExpressions" call will report an error
@@ -580,11 +595,11 @@ public class InvocationExpression
 
                         if (typeTuple == null)
                             {
-                            atypeArgs = validateExpressions(ctx, args, atypeArgs, errs);
+                            atypeParams = validateExpressions(ctx, args, atypeParams, errs);
                             }
                         else
                             {
-                            atypeArgs   = validateExpressionsFromTuple(ctx, args, typeTuple, errs);
+                            atypeParams = validateExpressionsFromTuple(ctx, args, typeTuple, errs);
                             m_fTupleArg = true;
                             }
 
@@ -593,25 +608,31 @@ public class InvocationExpression
                             typeLeft = ctx.getVar("this").getType(); // "this" could be narrowed
                             }
 
-                        if (atypeArgs != null)
+                        ValidArgs:
+                        if (atypeParams != null)
                             {
                             Map<String, TypeConstant> mapTypeParams = Collections.EMPTY_MAP;
                             if (cTypeParams > 0)
                                 {
-                                mapTypeParams = method.resolveTypeParameters(atypeArgs, atypeReturn);
-                                assert mapTypeParams != null; // TODO: error instead?
+                                // re-resolve against the validated types
+                                mapTypeParams = method.resolveTypeParameters(atypeParams, atypeReturn);
+                                if (mapTypeParams.size() < cTypeParams)
+                                    {
+                                    // TODO: need a better error
+                                    log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+                                    break ValidArgs;
+                                    }
 
-                                TypeConstant[] atypeTypeParam = new TypeConstant[mapTypeParams.size()];
+                                Argument[] aargTypeParam = new Argument[mapTypeParams.size()];
                                 int ix = 0;
                                 for (TypeConstant type : mapTypeParams.values())
                                     {
-                                    atypeTypeParam[ix++] = pool.ensureParameterizedTypeConstant(
-                                                            pool.typeType(), type);
+                                    aargTypeParam[ix++] = type.getTypeArgument();
                                     }
-                                m_atypeTypeParams = atypeTypeParam;
+                                m_aargTypeParams = aargTypeParam;
                                 }
 
-                            m_aconstDefault = collectDefaultArgs(method, atypeArgs.length);
+                            m_aconstDefault = collectDefaultArgs(method, atypeParams.length);
 
                             TypeConstant[] atypeResult;
                             if (m_fCall)
@@ -789,10 +810,10 @@ public class InvocationExpression
                             {
                             // it's a method, and we need to generate the necessary code that calls it;
                             // generate the arguments
-                            TypeConstant[] atypeTypeParams = m_atypeTypeParams;
+                            Argument[]     aargTypeParams  = m_aargTypeParams;
                             Constant[]     aconstDefault   = m_aconstDefault;
                             int            cAll            = idMethod.getRawParams().length;
-                            int            cTypeParams     = atypeTypeParams == null ? 0 : atypeTypeParams.length;
+                            int            cTypeParams     = aargTypeParams == null ? 0 : aargTypeParams.length;
                             int            cArgs           = args.size();
                             int            cDefaults       = aconstDefault == null ? 0 : aconstDefault.length;
                             char           chArgs          = '0';
@@ -815,7 +836,7 @@ public class InvocationExpression
                                     }
                                 else if (cTypeParams == 1)
                                     {
-                                    arg = atypeTypeParams[0];
+                                    arg = aargTypeParams[0];
                                     }
                                 else if (cDefaults == 1)
                                     {
@@ -828,7 +849,7 @@ public class InvocationExpression
                                 aArgs  = new Argument[cAll];
                                 for (int i = 0; i < cTypeParams; ++i)
                                     {
-                                    aArgs[i] = atypeTypeParams[i];
+                                    aArgs[i] = aargTypeParams[i];
                                     }
                                 for (int i = 0, of = cTypeParams; i < cArgs; ++i)
                                     {
@@ -983,19 +1004,27 @@ public class InvocationExpression
             return new Argument[] {argFn};
             }
 
-        TypeConstant[] atypeSub    = typeFn.getParamTypesArray();
-        TypeConstant[] atypeParams = atypeSub[F_ARGS].getParamTypesArray();
-        int            cParams     = atypeParams.length;
-        TypeConstant[] atypeRets   = atypeSub[F_RETS].getParamTypesArray();
-        int            cRets       = atypeRets.length;
+        TypeConstant[] atypeSub        = typeFn.getParamTypesArray();
+        TypeConstant[] atypeParams     = atypeSub[F_ARGS].getParamTypesArray();
+        int            cParams         = atypeParams.length;
+        TypeConstant[] atypeRets       = atypeSub[F_RETS].getParamTypesArray();
+        int            cRets           = atypeRets.length;
+        Argument[]     aargTypeParams  = m_aargTypeParams;
+        Constant[]     aconstDefault   = m_aconstDefault;
+        int            cTypeParams     = aargTypeParams == null ? 0 : aargTypeParams.length;
+        int            cDefaults       = aconstDefault == null ? 0 : aconstDefault.length;
+        int            cArgs           = args.size();
+
+        assert cTypeParams + cArgs + cDefaults == cParams;
+
         if (m_fCall)
             {
-            int            cArgs = args.size();
-            char           chArgs      = '0';
-            Argument       arg         = null;
-            Argument[]     aArgs       = null;
-            assert cArgs == cParams; // TODO eventually support default arg values
-            assert m_fBindParams == cParams > 0;
+            char       chArgs = '0';
+            Argument   arg    = null;
+            Argument[] aArgs  = null;
+
+            assert !m_fBindParams || cArgs > 0;
+
             // TODO the following code doesn't do argument conversions to the required parameter types
             if (cArgs == 1)
                 {
@@ -1209,7 +1238,7 @@ public class InvocationExpression
      */
     protected Argument resolveName(
             Context        ctx,
-             boolean        fForce,
+            boolean        fForce,
             TypeConstant   typeLeft,
             TypeConstant[] atypeReturn,
             ErrorListener  errs)
@@ -1752,7 +1781,7 @@ public class InvocationExpression
     private transient Argument        m_argMethod;
     private transient MethodStructure m_method;          // if m_fArgMethod is a MethodConstant,
                                                          // this holds the corresponding structure
-    private transient TypeConstant[]  m_atypeTypeParams; // "hidden" type parameters
+    private transient Argument[]      m_aargTypeParams;  // "hidden" type parameters
     private transient Constant[]      m_aconstDefault;   // default arguments
     private transient MethodConstant  m_idConvert;       // conversion method
 

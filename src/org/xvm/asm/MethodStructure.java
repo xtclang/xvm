@@ -561,12 +561,13 @@ public class MethodStructure
 
     /**
      * Given arrays of actual argument types and return types, resolve and put into the
-     * specified ListMap all the actual type parameters types.
+     * specified ListMap all the actual (resolved) type parameters types.
      *
      * @param atypeArgs     the actual argument types
      * @param atypeReturns  (optional) the actual return types
      *
-     * @return a ListMap of the resolved types in the natural order, keyed by the names
+     * @return a ListMap of the resolved types in the natural order, keyed by the names;
+     *         conflicting types will be not in the map
      */
     public ListMap<String, TypeConstant> resolveTypeParameters(TypeConstant[] atypeArgs,
                                                                TypeConstant[] atypeReturns)
@@ -574,57 +575,88 @@ public class MethodStructure
         int                           cTypeParams   = getTypeParamCount();
         ListMap<String, TypeConstant> mapTypeParams = new ListMap<>(cTypeParams);
 
-        for (int i = 0; i < cTypeParams; i++)
+        TypeConstant[] atypeMethodParams  = getParamTypes();
+        TypeConstant[] atypeMethodReturns = getReturnTypes();
+        int            cMethodParams      = atypeMethodParams.length - cTypeParams;
+        int            cMethodReturns     = atypeMethodReturns.length;
+        int            cArgs              = atypeArgs == null ? 0 : atypeArgs.length;
+        int            cReturns           = atypeReturns == null ? 0 : atypeReturns.length;
+
+        assert cArgs <= cMethodParams && cReturns <= cMethodReturns;
+
+        NextParameter:
+        for (int iT = 0; iT < cTypeParams; iT++)
             {
-            String sFormalName = getParam(i).getName();
-            for (TypeConstant typeArg : atypeArgs)
+            Parameter param = getParam(iT);
+            String    sName = param.getName(); // type parameter name (formal)
+
+            for (int iA = 0; iA < cArgs; iA++)
                 {
-                if (!resolveFormalTypes(typeArg, sFormalName, mapTypeParams))
+                TypeConstant typeFormal = atypeMethodParams[cTypeParams + iA];
+                TypeConstant typeActual = atypeArgs[iA];
+
+                if (typeActual != null)
                     {
-                    // different arguments cause the formal type to resolve into
-                    // incompatible types
-                    return null;
-                    }
-                }
-            if (atypeReturns != null)
-                {
-                for (TypeConstant typeReturn : atypeReturns)
-                    {
-                    if (!resolveFormalTypes(typeReturn, sFormalName, mapTypeParams))
+                    TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, sName);
+                    if (checkConflict(typeResolved, sName, mapTypeParams))
                         {
-                        // different return types cause the formal type to resolve into
+                        // different arguments cause the formal type to resolve into
                         // incompatible types
-                        return null;
+                        mapTypeParams.remove(sName);
+                        continue NextParameter;
                         }
                     }
+                }
+
+            for (int iR = 0; iR < cReturns; iR++)
+                {
+                TypeConstant typeFormal = atypeMethodReturns[iR];
+                TypeConstant typeActual = atypeReturns[iR];
+
+                if (typeActual != null)
+                    {
+                    TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, sName);
+                    if (checkConflict(typeResolved, sName, mapTypeParams))
+                        {
+                        // different arguments cause the formal type to resolve into
+                        // incompatible types
+                        mapTypeParams.remove(sName);
+                        continue NextParameter;
+                        }
+                    }
+                }
+
+            if (!mapTypeParams.containsKey(sName))
+                {
+                // no extra knowledge; keep the formal parameter type
+                mapTypeParams.put(sName, param.asTypeParameterType(getIdentityConstant()));
                 }
             }
         return mapTypeParams;
         }
 
     /**
-     * Extract an actual formal type from the specified argument type and put it in the
-     * specified map.
+     * Put the resolved formal type in the specified map and ensure that there is no conflict.
+     *
+     * @return true iff there is a conflict
      */
-    private boolean resolveFormalTypes(TypeConstant typeArg, String sFormalName,
-                                       Map<String, TypeConstant> mapTypeParams)
+    private static boolean checkConflict(TypeConstant typeResult, String sFormalName,
+                                         Map<String, TypeConstant> mapTypeParams)
         {
-        TypeConstant typeParam = typeArg.getGenericParamType(sFormalName);
-        if (typeParam != null)
+        if (typeResult != null)
             {
             TypeConstant typePrev = mapTypeParams.get(sFormalName);
             if (typePrev != null)
                 {
-                typeParam = Op.selectCommonType(typePrev, typeParam,
-                    ErrorListener.BLACKHOLE);
-                if (typeParam == null)
+                typeResult = Op.selectCommonType(typePrev, typeResult, ErrorListener.BLACKHOLE);
+                if (typeResult == null)
                     {
-                    return false;
+                    return true;
                     }
                 }
-            mapTypeParams.put(sFormalName, typeParam);
+            mapTypeParams.put(sFormalName, typeResult);
             }
-        return true;
+        return false;
         }
 
 

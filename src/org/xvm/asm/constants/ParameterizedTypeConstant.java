@@ -379,6 +379,42 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName)
+        {
+        // unroll the actual type down to the parameterized type
+        while (true)
+            {
+            if (!typeActual.isModifyingType())
+                {
+                return null;
+                }
+
+            if (typeActual.getFormat() == Format.ParameterizedType)
+                {
+                break;
+                }
+            typeActual = typeActual.getUnderlyingType();
+            }
+
+        // now simply recurse over the parameter types
+        ParameterizedTypeConstant that = (ParameterizedTypeConstant) typeActual;
+
+        TypeConstant[] aconstThis = this.m_atypeParams;
+        TypeConstant[] aconstThat = that.m_atypeParams;
+
+        for (int i = 0, c = Math.min(aconstThis.length, aconstThat.length); i < c; ++i)
+            {
+            TypeConstant typeResult = aconstThis[i].resolveTypeParameter(aconstThat[i], sFormalName);
+            if (typeResult != null)
+                {
+                return typeResult;
+                }
+            }
+
+        return null;
+        }
+
+    @Override
     protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
         return pool.ensureParameterizedTypeConstant(type, m_atypeParams);
