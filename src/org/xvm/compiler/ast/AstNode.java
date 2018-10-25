@@ -352,6 +352,9 @@ public abstract class AstNode
         }
 
     /**
+     * Code Container method: Determine if the code container represents a method or function with
+     * a conditional return.
+     *
      * @return true iff the code container has a conditional return
      */
     public boolean isReturnConditional()
@@ -369,7 +372,7 @@ public abstract class AstNode
         throw notCodeContainer();
         }
 
-    private RuntimeException notCodeContainer()
+    protected RuntimeException notCodeContainer()
         {
         throw new IllegalStateException("not code container: " + this.getClass().getSimpleName());
         }

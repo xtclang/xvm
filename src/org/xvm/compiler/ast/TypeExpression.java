@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.List;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -231,6 +233,47 @@ public abstract class TypeExpression
         return type != null && type.isParamsSpecified()
             ? type.getGenericParamType("DataType")
             : null;
+        }
+
+
+    // ----- inner class compilation support -------------------------------------------------------
+
+    /**
+     * Anonymous inner class support: Determine the class category (e.g. interface, class) that the
+     * anonymous inner class will fulfill.
+     *
+     * @return the component format that the type of the anonymous inner class name will provide, or
+     *         null to indicate that the type must not be used as the basis for an anonymous inner
+     *         class
+     */
+    public Format getInnerClassFormat()
+        {
+        return null;
+        }
+
+    /**
+     * Anonymous inner class support: Build a String that can be used as the basis for the identity
+     * (descriptive name) of the anonymous inner class.
+     *
+     * @return the name that this type would suggest to use as an anonymous inner class name, or
+     *         null to indicate that the type must not be used as the basis for an anonymous inner
+     *         class
+     */
+    public String getInnerClassName()
+        {
+        return null;
+        }
+
+    /**
+     * Anonymous inner class support: Build a list of annotations that apply to the class.
+     *
+     * @param annotations  the list to collect the annotations into
+     *
+     * @return the type, without the annotations on it
+     */
+    public TypeExpression collectAnnotations(List<Annotation> annotations)
+        {
+        return this;
         }
 
 

@@ -3,12 +3,13 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.List;
+
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Token;
 
 
@@ -22,8 +23,13 @@ public class SequenceTypeExpression
 
     public SequenceTypeExpression(TypeExpression type, Token tokDots)
         {
+        this(type, tokDots.getEndPosition());
+        }
+
+    private SequenceTypeExpression(TypeExpression type, long lEndPos)
+        {
         this.type    = type;
-        this.lEndPos = tokDots.getEndPosition();
+        this.lEndPos = lEndPos;
         }
 
 
@@ -62,6 +68,34 @@ public class SequenceTypeExpression
         // build an Array type
         ConstantPool pool = pool();
         return pool.ensureClassTypeConstant(pool.clzSequence(), null, type.ensureTypeConstant());
+        }
+
+
+    // ----- inner class compilation support -------------------------------------------------------
+
+    @Override
+    public Format getInnerClassFormat()
+        {
+        Format format = type.getInnerClassFormat();
+        return format == null ? null : Format.CLASS;
+        }
+
+    @Override
+    public String getInnerClassName()
+        {
+        String sName = type.getInnerClassName();
+        return sName == null
+                ? null
+                : sName + "...";
+        }
+
+    @Override
+    public TypeExpression collectAnnotations(List<Annotation> annotations)
+        {
+        TypeExpression typeNew = type.collectAnnotations(annotations);
+        return type == typeNew
+                ? this
+                : new SequenceTypeExpression(type, lEndPos);
         }
 
 

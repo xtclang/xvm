@@ -5,12 +5,10 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
-
-import org.xvm.compiler.Compiler.Stage;
 
 
 /**
@@ -25,17 +23,19 @@ public class ArrayTypeExpression
 
     public ArrayTypeExpression(TypeExpression type, int dims, long lEndPos)
         {
-        this.type    = type;
-        this.dims    = dims;
-        this.indexes = null;
-        this.lEndPos = lEndPos;
+        this(type, dims, null, lEndPos);
         }
 
     public ArrayTypeExpression(TypeExpression type, List<Expression> indexes, long lEndPos)
         {
+        this(type, indexes.size(), indexes, lEndPos);
+        }
+
+    private ArrayTypeExpression(TypeExpression type, int dims, List<Expression> indexes, long lEndPos)
+        {
         this.type    = type;
-        this.dims    = indexes.size();
-        this.indexes = null;
+        this.dims    = dims;
+        this.indexes = indexes;
         this.lEndPos = lEndPos;
         }
 
@@ -82,6 +82,47 @@ public class ArrayTypeExpression
         {
         final ConstantPool pool = pool();
         return pool.ensureClassTypeConstant(pool.clzArray(), null, type.ensureTypeConstant());
+        }
+
+
+    // ----- inner class compilation support -------------------------------------------------------
+
+    @Override
+    public Format getInnerClassFormat()
+        {
+        Format format = type.getInnerClassFormat();
+        return format == null ? null : Format.CLASS;
+        }
+
+    @Override
+    public String getInnerClassName()
+        {
+        String sName = type.getInnerClassName();
+        if (sName == null)
+            {
+            return null;
+            }
+
+        if (dims <= 1)
+            {
+            return sName + "[]";
+            }
+
+        StringBuilder sb = new StringBuilder("[?");
+        for (int i = 2; i <= dims; ++i)
+            {
+            sb.append(",?");
+            }
+        return sb.append("]").toString();
+        }
+
+    @Override
+    public TypeExpression collectAnnotations(List<Annotation> annotations)
+        {
+        TypeExpression typeNew = type.collectAnnotations(annotations);
+        return type == typeNew
+                ? this
+                : new ArrayTypeExpression(typeNew, dims, indexes, lEndPos);
         }
 
 

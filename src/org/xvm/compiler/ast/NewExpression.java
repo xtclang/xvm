@@ -166,64 +166,54 @@ public class NewExpression
         }
 
 
+    // ----- Code Container methods ----------------------------------------------------------------
+
+    @Override
+    protected RuntimeException notCodeContainer()
+        {
+        // while an inner class is technically a code container, it is not directly a code container
+        // in the same sense that a method is, because it cannot directly contain a "return"
+        throw new IllegalStateException("invalid return from an anonymous inner class: " + this);
+        }
+
+
     // ----- compilation (inner class) -------------------------------------------------------------
 
     @Override
     protected void registerStructures(StageMgr mgr, ErrorListener errs)
         {
-        m_errs = errs;
-
-        // just like the MethodDeclarationStatement, lambda expressions are considered to be
-        // completely opaque, and so a lambda defers the processing of its children at this point,
-        // because it wants everything around its children to be set up by the time those children
-        // need to be able to answer all of the questions about names and types and so on
-        if (m_structClz == null)
+        if (body != null)
             {
-            mgr.deferChildren();
+            // we're only avoiding creating the anonymous inner class
+            mgr.processChildrenExcept((node) -> node == body);
             }
         }
 
     @Override
     public void resolveNames(StageMgr mgr, ErrorListener errs)
         {
-        m_errs = errs;
-
-        // see note above
-        if (m_structClz == null)
+        if (body != null)
             {
-            mgr.deferChildren();
+            // we're only deferring processing of the anonymous inner class
+            mgr.processChildrenExcept((node) -> node == body);
             }
         }
 
     @Override
     public void validateContent(StageMgr mgr, ErrorListener errs)
         {
+        if (body == null)
+            {
+            return;
+            }
+
+        // create the inner class
+        assert m_structClz == null;
+
+        new TypeCompositionStatement()
+        // store off the error listener for later usage
         m_errs = errs;
-
-        // see note above
-        if (m_structClz == null)
-            {
-            mgr.deferChildren();
-            }
-        }
-
-    @Override
-    public void generateCode(StageMgr mgr, ErrorListener errs)
-        {
-        ClassStructure method = m_structClz;
-
-        // the method body containing this must validate the new expression, which then will create
-        // the anonymous inner class structure, and that has to happen before we try to spit out any
-        // code
-        if (method == null)
-            {
-            mgr.requestRevisit();
-            mgr.deferChildren();
-            }
-        else
-            {
-            catchUpChildren(errs);
-            }
+        catchUpChildren(errs);
         }
 
 
@@ -232,17 +222,21 @@ public class NewExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        if (body != null)
+        TypeConstant typeTarget;
+        if (body == null)
             {
-            // TODO
-            throw new UnsupportedOperationException("anonymous inner class type");
+            typeTarget = type.ensureTypeConstant();
+            if (typeTarget.containsUnresolved() || !typeTarget.isSingleUnderlyingClass(false))
+                {
+                // unknown or not a class; someone will report an error later
+                return null;
+                }
             }
-
-        TypeConstant typeTarget = type.ensureTypeConstant();
-        if (typeTarget.containsUnresolved() || !typeTarget.isSingleUnderlyingClass(false))
+        else
             {
-            // unknown or not a class; someone will report an error later
-            return null;
+            // there must be an anonymous inner class skeleton by this point
+            assert m_structClz != null;
+            typeTarget = m_structClz.getIdentityConstant().getType();
             }
 
         return typeTarget;
@@ -687,12 +681,6 @@ public class NewExpression
     private transient boolean         m_fTupleArg;     // indicates that arguments come from a tuple
     private transient Constant[]      m_aconstDefault; // default arguments
 
-    /**
-     * This is only used to provide a destination for errors when we're called out of the blue to
-     * evaluate inner class type information before we validate (since validate gets passed an error
-     * listener to use). Do not use this for anything else other than ensurePrepared().
-     */
-    private transient ErrorListener         m_errs;
     /**
      * Set to true after the expression prepares by ensurePrepared().
      */

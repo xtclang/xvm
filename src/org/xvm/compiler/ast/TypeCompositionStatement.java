@@ -114,6 +114,30 @@ public class TypeCompositionStatement
         this.doc         = doc;
         }
 
+    /**
+     * Used by anonymous inner class declarations.
+     */
+    public TypeCompositionStatement(Token                category,
+                                    Token                name,
+                                    List<Expression>     args,
+                                    TypeExpression       type,
+                                    StatementBlock       body)
+        {
+        super(type.getStartPosition(), body.getEndPosition());
+
+        // TODO figure out class type
+
+        // TODO split out annotations
+        List<Annotation> annotations;
+
+        this.annotations = annotations;
+        this.category    = new Token(type.getStartPosition(), type.getStartPosition(), Token.Id.C);
+        this.name        = name;
+        this.typeArgs    = typeArgs;
+        this.args        = args;
+        this.body        = body;
+        }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 
