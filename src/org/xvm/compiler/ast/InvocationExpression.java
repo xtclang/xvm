@@ -373,12 +373,11 @@ public class InvocationExpression
             // handle method or function
             if (argMethod instanceof MethodConstant)
                 {
-                MethodConstant  idMethod    = (MethodConstant) argMethod;
-                MethodStructure method      = m_method;
-                int             cTypeParams = method.getTypeParamCount();
+                MethodConstant  idMethod = (MethodConstant) argMethod;
+                MethodStructure method   = m_method;
 
                 GenericTypeResolver resolver = null;
-                if (cTypeParams > 0)
+                if (method.getTypeParamCount() > 0)
                     {
                     // resolve the type parameters against all the arg types we know by now
                     resolver = makeTypeParameterResolver(ctx, method, atypeReturn);
@@ -388,15 +387,14 @@ public class InvocationExpression
                     {
                     if (m_method.isFunction())
                         {
-                        return resolveTypes(resolver,
-                            idMethod.getSignature().getRawReturns());
+                        return resolveTypes(resolver, idMethod.getSignature().getRawReturns());
                         }
                     if (typeLeft == null)
                         {
                         typeLeft = ctx.getVar("this").getType(); // "this" could be narrowed
                         }
                     return resolveTypes(resolver,
-                        idMethod.resolveAutoNarrowing(pool, typeLeft).getRawReturns());
+                            idMethod.resolveAutoNarrowing(pool, typeLeft).getRawReturns());
                     }
 
                 if (m_fBindTarget)
@@ -406,8 +404,7 @@ public class InvocationExpression
 
                 // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
 
-                return resolveTypes(resolver,
-                    new TypeConstant[]{idMethod.getRefType(typeLeft)});
+                return resolveTypes(resolver, new TypeConstant[]{idMethod.getRefType(typeLeft)});
                 }
 
             // must be a property or a variable of type function (@Auto conversion possibility
