@@ -5,6 +5,8 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
+import org.xvm.asm.Component;
+import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
 
@@ -90,12 +92,21 @@ public class SequenceTypeExpression
         }
 
     @Override
-    public TypeExpression collectAnnotations(List<Annotation> annotations)
+    public TypeExpression collectContributions(List<Annotation> listAnnos,
+            List<Contribution> listContribs)
         {
-        TypeExpression typeNew = type.collectAnnotations(annotations);
-        return type == typeNew
+        TypeExpression typeElement  = type.collectContributions(null, null);
+        TypeExpression typeSequence = type == typeElement
                 ? this
                 : new SequenceTypeExpression(type, lEndPos);
+
+        if (listContribs != null)
+            {
+            listContribs.add(new Contribution(Component.Composition.Implements,
+                    typeSequence.ensureTypeConstant()));
+            }
+
+        return typeSequence;
         }
 
 

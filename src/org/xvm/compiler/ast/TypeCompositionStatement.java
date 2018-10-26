@@ -60,20 +60,21 @@ public class TypeCompositionStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public TypeCompositionStatement(Source            source,
-                                    long              lStartPos,
-                                    long              lEndPos,
-                                    Expression        condition,
-                                    List<Token>       modifiers,
-                                    List<Annotation>  annotations,
-                                    Token             category,
-                                    Token             name,
-                                    List<Token>       qualified,
-                                    List<Parameter>   typeParams,
-                                    List<Parameter>   constructorParams,
-                                    List<Composition> compositions,
-                                    StatementBlock    body,
-                                    Token             doc)
+    public TypeCompositionStatement(
+            Source            source,
+            long              lStartPos,
+            long              lEndPos,
+            Expression        condition,
+            List<Token>       modifiers,
+            List<Annotation>  annotations,
+            Token             category,
+            Token             name,
+            List<Token>       qualified,
+            List<Parameter>   typeParams,
+            List<Parameter>   constructorParams,
+            List<Composition> compositions,
+            StatementBlock    body,
+            Token             doc)
         {
         super(lStartPos, lEndPos);
 
@@ -94,14 +95,15 @@ public class TypeCompositionStatement
     /**
      * Used by enumeration value declarations.
      */
-    public TypeCompositionStatement(List<Annotation>     annotations,
-                                    Token                name,
-                                    List<TypeExpression> typeArgs,
-                                    List<Expression>     args,
-                                    StatementBlock       body,
-                                    Token                doc,
-                                    long                 lStartPos,
-                                    long                 lEndPos)
+    public TypeCompositionStatement(
+            List<Annotation>     annotations,
+            Token                name,
+            List<TypeExpression> typeArgs,
+            List<Expression>     args,
+            StatementBlock       body,
+            Token                doc,
+            long                 lStartPos,
+            long                 lEndPos)
         {
         super(lStartPos, lEndPos);
 
@@ -117,25 +119,24 @@ public class TypeCompositionStatement
     /**
      * Used by anonymous inner class declarations.
      */
-    public TypeCompositionStatement(Token                category,
-                                    Token                name,
-                                    List<Expression>     args,
-                                    TypeExpression       type,
-                                    StatementBlock       body)
+    public TypeCompositionStatement(
+            List<Annotation>  annotations,
+            Token             category,
+            Token             name,
+            List<Composition> compositions,
+            List<Expression>  args,
+            StatementBlock    body,
+            long              lStartPos,
+            long              lEndPos)
         {
-        super(type.getStartPosition(), body.getEndPosition());
+        super(lStartPos, lEndPos);
 
-        // TODO figure out class type
-
-        // TODO split out annotations
-        List<Annotation> annotations;
-
-        this.annotations = annotations;
-        this.category    = new Token(type.getStartPosition(), type.getStartPosition(), Token.Id.C);
-        this.name        = name;
-        this.typeArgs    = typeArgs;
-        this.args        = args;
-        this.body        = body;
+        this.annotations  = annotations;
+        this.category     = category;
+        this.name         = name;
+        this.compositions = compositions;
+        this.args         = args;
+        this.body         = body;
         }
 
 

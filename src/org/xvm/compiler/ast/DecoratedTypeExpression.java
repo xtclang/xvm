@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
+import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Format;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -129,9 +130,9 @@ public class DecoratedTypeExpression
         }
 
     @Override
-    public TypeExpression collectAnnotations(List<Annotation> annotations)
+    public TypeExpression collectContributions(List<Annotation> listAnnos, List<Contribution> listContribs)
         {
-        TypeExpression typeNew = type.collectAnnotations(annotations);
+        TypeExpression typeNew = type.collectContributions(listAnnos, listContribs);
         return type == typeNew
                 ? this
                 : new DecoratedTypeExpression(keyword, typeNew);

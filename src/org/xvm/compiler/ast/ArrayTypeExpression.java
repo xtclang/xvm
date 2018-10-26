@@ -5,7 +5,9 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
-import org.xvm.asm.Component.Format;
+import org.xvm.asm.Component;
+import org.xvm.asm.Component.*;
+import org.xvm.asm.Component.*;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -117,12 +119,20 @@ public class ArrayTypeExpression
         }
 
     @Override
-    public TypeExpression collectAnnotations(List<Annotation> annotations)
+    public TypeExpression collectContributions(List<Annotation> listAnnos, List<Contribution> listContribs)
         {
-        TypeExpression typeNew = type.collectAnnotations(annotations);
-        return type == typeNew
+        TypeExpression typeElement = type.collectContributions(null, null);
+        TypeExpression typeArray   = type == typeElement
                 ? this
-                : new ArrayTypeExpression(typeNew, dims, indexes, lEndPos);
+                : new ArrayTypeExpression(typeElement, dims, indexes, lEndPos);
+
+        if (listContribs != null)
+            {
+            listContribs.add(new Contribution(Component.Composition.Extends,
+                    typeArray.ensureTypeConstant()));
+            }
+
+        return typeArray;
         }
 
 

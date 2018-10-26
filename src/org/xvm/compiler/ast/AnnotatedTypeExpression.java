@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
+import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -207,10 +208,11 @@ public class AnnotatedTypeExpression
         }
 
     @Override
-    public TypeExpression collectAnnotations(List<Annotation> annotations)
+    public TypeExpression collectContributions(List<Annotation> listAnnos,
+            List<Contribution> listContribs)
         {
-        annotations.add(annotation);
-        return type.collectAnnotations(annotations);
+        listAnnos.add(annotation);
+        return type.collectContributions(listAnnos, listContribs);
         }
 
     // ----- debugging assistance ------------------------------------------------------------------

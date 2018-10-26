@@ -2,6 +2,8 @@ package org.xvm.compiler.ast;
 
 
 import java.util.List;
+
+import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -267,11 +269,14 @@ public abstract class TypeExpression
     /**
      * Anonymous inner class support: Build a list of annotations that apply to the class.
      *
-     * @param annotations  the list to collect the annotations into
+     * @param listAnnos     the list to collect the annotations into, or null if no annotations
+     *                      should be collected
+     * @param listContribs  the list to collect the contributions to, or null if no contributions
+     *                      should be collected
      *
      * @return the type, without the annotations on it
      */
-    public TypeExpression collectAnnotations(List<Annotation> annotations)
+    public TypeExpression collectContributions(List<Annotation> listAnnos, List<Contribution> listContribs)
         {
         return this;
         }
