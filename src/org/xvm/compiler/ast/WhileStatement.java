@@ -399,7 +399,11 @@ public class WhileStatement
                 }
             code.add(getRepeatLabel());
             emitLabelVarUpdate(code, regFirst, regCount, labelInit);
-            fCompletes = block.completes(ctx, fCompletes, code, errs);
+
+            // we explicitly do NOT check the block completion, since our completion is not dependent on
+            // the block's ability to complete (since the loop may execute zero times)
+            block.completes(ctx, fCompletes, code, errs);
+
             code.add(getContinueLabel());
             if (cond instanceof AssignmentStatement)
                 {
@@ -450,7 +454,11 @@ public class WhileStatement
             }
         code.add(new Jump(labelInit == null ? getContinueLabel() : labelInit));
         code.add(getRepeatLabel());
-        fCompletes &= block.completes(ctx, fCompletes, code, errs);
+
+        // we explicitly do NOT check the block completion, since our completion is not dependent on
+        // the block's ability to complete (since the loop may execute zero times)
+        block.completes(ctx, fCompletes, code, errs);
+
         code.add(getContinueLabel());
         emitLabelVarUpdate(code, regFirst, regCount, labelInit);
         if (cond instanceof AssignmentStatement)

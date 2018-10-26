@@ -603,7 +603,9 @@ public class ForEachStatement
         code.add(new Invoke_0N(regIter, setId.iterator().next(), new Argument[] {regCond, argVal}));
         code.add(new JumpFalse(regCond, getEndLabel()));
 
-        fCompletes = block.completes(ctx, fCompletes, code, errs);
+        // we explicitly do NOT check the block completion, since our completion is not dependent on
+        // the block's ability to complete (since the loop may execute zero times)
+        block.completes(ctx, fCompletes, code, errs);
 
         if (hasContinueLabel())
             {
@@ -711,7 +713,11 @@ public class ForEachStatement
         code.add(lblRepeat);
         code.add(new IsEq(regVal, range.getLast(), regLast));
         LVal.assign(regVal, code, errs);
-        fCompletes = block.completes(ctx, fCompletes, code, errs);
+
+        // we explicitly do NOT check the block completion, since our completion is not dependent on
+        // the block's ability to complete (since the loop may execute zero times)
+        block.completes(ctx, fCompletes, code, errs);
+
         code.add(getContinueLabel());
         code.add(new JumpTrue(regLast, getEndLabel()));
         code.add(range.isReverse() ? new IP_Dec(regVal) : new IP_Inc(regVal));
@@ -804,7 +810,10 @@ public class ForEachStatement
             lvalVal.assign(argVal, code, errs);
             }
 
-        fCompletes = block.completes(ctx, fCompletes, code, errs);
+        // we explicitly do NOT check the block completion, since our completion is not dependent on
+        // the block's ability to complete (since the loop may execute zero times)
+        block.completes(ctx, fCompletes, code, errs);
+
         code.add(getContinueLabel());
         code.add(new JumpTrue(regLast, getEndLabel()));
         code.add(new IP_Inc(regCount));
