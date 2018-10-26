@@ -5,9 +5,6 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
-import org.xvm.asm.Component;
-import org.xvm.asm.Component.*;
-import org.xvm.asm.Component.*;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -84,55 +81,6 @@ public class ArrayTypeExpression
         {
         final ConstantPool pool = pool();
         return pool.ensureClassTypeConstant(pool.clzArray(), null, type.ensureTypeConstant());
-        }
-
-
-    // ----- inner class compilation support -------------------------------------------------------
-
-    @Override
-    public Format getInnerClassFormat()
-        {
-        Format format = type.getInnerClassFormat();
-        return format == null ? null : Format.CLASS;
-        }
-
-    @Override
-    public String getInnerClassName()
-        {
-        String sName = type.getInnerClassName();
-        if (sName == null)
-            {
-            return null;
-            }
-
-        if (dims <= 1)
-            {
-            return sName + "[]";
-            }
-
-        StringBuilder sb = new StringBuilder("[?");
-        for (int i = 2; i <= dims; ++i)
-            {
-            sb.append(",?");
-            }
-        return sb.append("]").toString();
-        }
-
-    @Override
-    public TypeExpression collectContributions(List<Annotation> listAnnos, List<Contribution> listContribs)
-        {
-        TypeExpression typeElement = type.collectContributions(null, null);
-        TypeExpression typeArray   = type == typeElement
-                ? this
-                : new ArrayTypeExpression(typeElement, dims, indexes, lEndPos);
-
-        if (listContribs != null)
-            {
-            listContribs.add(new Contribution(Component.Composition.Extends,
-                    typeArray.ensureTypeConstant()));
-            }
-
-        return typeArray;
         }
 
 

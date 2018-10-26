@@ -3,10 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.List;
-
-import org.xvm.asm.Component.Contribution;
-import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
@@ -173,47 +169,6 @@ public class AnnotatedTypeExpression
                 typeReferent, errs);
         }
 
-
-    // ----- inner class compilation support -------------------------------------------------------
-
-    @Override
-    public Format getInnerClassFormat()
-        {
-        Format fmt = type.getInnerClassFormat();
-        if (fmt == null)
-            {
-            return null;
-            }
-
-        switch (fmt)
-            {
-            case INTERFACE:
-                return Format.CLASS;
-
-            case CLASS:
-            case CONST:
-            case MIXIN:
-            case SERVICE:
-                return fmt;
-
-            default:
-                return null;
-            }
-        }
-
-    @Override
-    public String getInnerClassName()
-        {
-        return type.getInnerClassName();
-        }
-
-    @Override
-    public TypeExpression collectContributions(List<Annotation> listAnnos,
-            List<Contribution> listContribs)
-        {
-        listAnnos.add(annotation);
-        return type.collectContributions(listAnnos, listContribs);
-        }
 
     // ----- debugging assistance ------------------------------------------------------------------
 

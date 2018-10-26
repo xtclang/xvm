@@ -202,16 +202,6 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public <T extends TypeConstant> T findFirst(Class<T> clz)
-        {
-        if (clz == getClass())
-            {
-            return (T) this;
-            }
-        throw new UnsupportedOperationException();
-        }
-
-    @Override
     public TypeConstant resolveTypedefs()
         {
         TypeConstant constOriginal1 = m_constType1;

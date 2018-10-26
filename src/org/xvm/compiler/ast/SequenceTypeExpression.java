@@ -3,11 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.List;
-
-import org.xvm.asm.Component;
-import org.xvm.asm.Component.Contribution;
-import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -70,43 +65,6 @@ public class SequenceTypeExpression
         // build an Array type
         ConstantPool pool = pool();
         return pool.ensureClassTypeConstant(pool.clzSequence(), null, type.ensureTypeConstant());
-        }
-
-
-    // ----- inner class compilation support -------------------------------------------------------
-
-    @Override
-    public Format getInnerClassFormat()
-        {
-        Format format = type.getInnerClassFormat();
-        return format == null ? null : Format.CLASS;
-        }
-
-    @Override
-    public String getInnerClassName()
-        {
-        String sName = type.getInnerClassName();
-        return sName == null
-                ? null
-                : sName + "...";
-        }
-
-    @Override
-    public TypeExpression collectContributions(List<Annotation> listAnnos,
-            List<Contribution> listContribs)
-        {
-        TypeExpression typeElement  = type.collectContributions(null, null);
-        TypeExpression typeSequence = type == typeElement
-                ? this
-                : new SequenceTypeExpression(type, lEndPos);
-
-        if (listContribs != null)
-            {
-            listContribs.add(new Contribution(Component.Composition.Implements,
-                    typeSequence.ensureTypeConstant()));
-            }
-
-        return typeSequence;
         }
 
 

@@ -3,15 +3,9 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.List;
-
-import org.xvm.asm.Component.Contribution;
-import org.xvm.asm.Component.Format;
-
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Token;
-import org.xvm.compiler.Token.Id;
 
 
 /**
@@ -93,49 +87,6 @@ public class DecoratedTypeExpression
         {
         this.type = type;
         type.setParent(this);
-        }
-
-
-    // ----- inner class compilation support -------------------------------------------------------
-
-    @Override
-    public Format getInnerClassFormat()
-        {
-        Format format = type.getInnerClassFormat();
-        if (format == null)
-            {
-            return null;
-            }
-
-        switch (format)
-            {
-            case INTERFACE:
-            case CLASS:
-            case CONST:
-                return keyword.getId() == Id.IMMUTABLE ? Format.CONST : format;
-
-            case SERVICE:
-                // a service cannot be immutable
-                return keyword.getId() == Id.IMMUTABLE ? null : format;
-
-            default:
-                return null;
-            }
-        }
-
-    @Override
-    public String getInnerClassName()
-        {
-        return type.getInnerClassName();
-        }
-
-    @Override
-    public TypeExpression collectContributions(List<Annotation> listAnnos, List<Contribution> listContribs)
-        {
-        TypeExpression typeNew = type.collectContributions(listAnnos, listContribs);
-        return type == typeNew
-                ? this
-                : new DecoratedTypeExpression(keyword, typeNew);
         }
 
 

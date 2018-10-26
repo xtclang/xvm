@@ -1068,12 +1068,6 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public <T extends TypeConstant> T findFirst(Class<T> clz)
-        {
-        return clz == getClass() ? (T) this : null;
-        }
-
-    @Override
     public Argument getTypeArgument()
         {
         Constant constant = getDefiningConstant();
