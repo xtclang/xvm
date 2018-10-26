@@ -138,10 +138,9 @@ public class MethodDeclarationStatement
     @Override
     public Access getDefaultAccess()
         {
-        Access access = getAccess(modifiers);
-        return access == null
-                ? super.getDefaultAccess()
-                : access;
+        // methods are *not* taking the parent's access by default
+        Access  access = getAccess(modifiers);
+        return access == null ? Access.PUBLIC : access;
         }
 
     @Override

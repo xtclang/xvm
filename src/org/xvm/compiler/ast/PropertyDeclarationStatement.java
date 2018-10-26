@@ -141,10 +141,9 @@ public class PropertyDeclarationStatement
     @Override
     public Access getDefaultAccess()
         {
-        Access access = getAccess(modifiers);
-        return access == null
-                ? super.getDefaultAccess()
-                : access;
+        // properties are *not* taking the parent's access by default
+        Access  access = getAccess(modifiers);
+        return access == null ? Access.PUBLIC : access;
         }
 
     public Access getAccess2()

@@ -1314,8 +1314,7 @@ public class NameExpression
                 {
                 // assert !reg.isPredefined(); // REVIEW GG: see SoftVar.x
                 m_plan = Plan.RegisterRef;
-                return pool.ensureParameterizedTypeConstant(
-                        m_fAssignable ? pool.typeVar() : pool.typeRef(), reg.getType());
+                return reg.ensureRegType(pool, !m_fAssignable);
                 }
             else
                 {

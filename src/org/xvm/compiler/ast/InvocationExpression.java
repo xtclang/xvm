@@ -3,7 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +14,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
@@ -276,6 +276,34 @@ public class InvocationExpression
     @Override
     public TypeConstant[] getImplicitTypes(Context ctx)
         {
+        return resolveReturnTypes(ctx, null);
+        }
+
+    @Override
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired)
+        {
+        if (atypeRequired == null || atypeRequired.length == 0)
+            {
+            return TypeFit.Fit;
+            }
+
+        TypeConstant[] atype = resolveReturnTypes(ctx, atypeRequired);
+        return calcFitMulti(ctx, atype, atypeRequired);
+        }
+
+    /**
+     * A common implementation for both {@link #getImplicitType(Context)} and
+     * {@link #testFitMulti(Context, TypeConstant[])} that calculates the return types produced
+     * by this InvocationExpression.
+     *
+     * @param ctx            the compilation context for the statement
+     * @param atypeRequired  the types that the expression is being asked to provide (optional)
+     *
+     * @return an array of the types produced by the expression, or an empty array if the expression
+     *         is void (or if its type cannot be determined)
+     */
+    protected TypeConstant[] resolveReturnTypes(Context ctx, TypeConstant[] atypeRequired)
+        {
         ConstantPool pool = pool();
 
         if (expr instanceof NameExpression)
@@ -293,26 +321,33 @@ public class InvocationExpression
                 }
 
             // collect as many redundant return types as possible to help narrow down the
-            // possible method/function matches
-            TypeConstant[]       atypeReturn   = null;
+            // possible method/function matches and combine with required types
+            TypeConstant[]       atypeReturn   = atypeRequired;
             List<TypeExpression> listRedundant = exprName.params;
             if (listRedundant != null)
                 {
-                int                     cParams   = listRedundant.size();
-                ArrayList<TypeConstant> listTypes = new ArrayList<>(cParams);
-                for (int i = 0; i < cParams; ++i)
+                int cRequired  = atypeRequired == null ? 0 : atypeRequired.length;
+                int cRedundant = listRedundant.size();
+
+                if (cRedundant > cRequired)
+                    {
+                    atypeReturn = new TypeConstant[cRedundant];
+                    }
+                else
+                    {
+                    atypeReturn = atypeRequired.clone(); // keep the tail as is
+                    }
+
+                for (int i = 0; i < cRedundant; ++i)
                     {
                     TypeConstant typeParam = listRedundant.get(i).getImplicitType(ctx);
-                    // typeParam must be a type of Type
-                    if (typeParam == null || !typeParam.isA(pool.typeType())
+                    if (typeParam == null || !typeParam.isA(pool().typeType())
                                           || typeParam.getParamsCount() != 1)
                         {
                         break;
                         }
-                    listTypes.add(typeParam.getParamTypesArray()[0]);
+                    atypeReturn[i] = typeParam.getParamTypesArray()[0];
                     }
-
-                atypeReturn = listTypes.toArray(new TypeConstant[cParams]);
                 }
 
             Argument argMethod = resolveName(ctx, false, typeLeft, atypeReturn, ErrorListener.BLACKHOLE);
@@ -338,27 +373,38 @@ public class InvocationExpression
             // handle method or function
             if (argMethod instanceof MethodConstant)
                 {
-                MethodConstant constMethod = (MethodConstant) argMethod;
+                MethodConstant  idMethod = (MethodConstant) argMethod;
+                MethodStructure method   = m_method;
+
+                GenericTypeResolver resolver = null;
+                if (method.getTypeParamCount() > 0)
+                    {
+                    // resolve the type parameters against all the arg types we know by now
+                    resolver = makeTypeParameterResolver(ctx, method, atypeReturn);
+                    }
+
                 if (m_fCall)
                     {
                     if (m_method.isFunction())
                         {
-                        return constMethod.getSignature().getRawReturns();
+                        return resolveTypes(resolver, idMethod.getSignature().getRawReturns());
                         }
                     if (typeLeft == null)
                         {
                         typeLeft = ctx.getVar("this").getType(); // "this" could be narrowed
                         }
-                    return constMethod.resolveAutoNarrowing(pool, typeLeft).getRawReturns();
+                    return resolveTypes(resolver,
+                            idMethod.resolveAutoNarrowing(pool, typeLeft).getRawReturns());
                     }
 
                 if (m_fBindTarget)
                     {
-                    return new TypeConstant[] {constMethod.getType()};
+                    return resolveTypes(resolver, new TypeConstant[]{idMethod.getType()});
                     }
 
                 // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
-                return new TypeConstant[] {constMethod.getRefType(typeLeft)};
+
+                return resolveTypes(resolver, new TypeConstant[]{idMethod.getRefType(typeLeft)});
                 }
 
             // must be a property or a variable of type function (@Auto conversion possibility
@@ -395,7 +441,7 @@ public class InvocationExpression
             TypeConstant typeFn = expr.getImplicitType(ctx);
             if (typeFn != null)
                 {
-                typeFn = testFunction(ctx, typeFn, null, ErrorListener.BLACKHOLE);
+                typeFn = testFunction(ctx, typeFn, atypeRequired, ErrorListener.BLACKHOLE);
                 if (typeFn != null)
                     {
                     return calculateReturnType(typeFn);
@@ -557,23 +603,13 @@ public class InvocationExpression
                             {
                             // purge the type parameters and resolve the method signature
                             // against all the types we know by now
-                            TypeConstant[] atypeArgs = new TypeConstant[cArgs];
-                            for (int i = 0; i < cArgs; i++)
-                                {
-                                atypeArgs[i] = args.get(i).getImplicitType(ctx);
-                                }
-
-                            Map<String, TypeConstant> mapTypeParams =
-                                    method.resolveTypeParameters(atypeArgs, atypeReturn);
-
                             int            cParams = method.getParamCount() - cTypeParams;
                             TypeConstant[] atype   = new TypeConstant[cParams];
-                            for (int i = 0; i < cParams; i++)
-                                {
-                                atype[i] = atypeParams[cTypeParams + i].
-                                        resolveGenerics(pool, mapTypeParams::get);
-                                }
-                            atypeParams = atype;
+
+                            System.arraycopy(atypeParams, cTypeParams, atype, 0, cParams);
+
+                            atypeParams = resolveTypes(
+                                    makeTypeParameterResolver(ctx, method, atypeReturn), atype);
                             }
 
                         // test the "regular fit" first and Tuple afterwards
@@ -1676,6 +1712,56 @@ public class InvocationExpression
             return new TypeConstant[] {typeFn};
             }
         // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
+        }
+
+    /**
+     * @return a type parameter resolver for a given method and array of return types
+     *         or null if the type parameters could not be resolved
+     */
+    private GenericTypeResolver makeTypeParameterResolver(Context ctx, MethodStructure method,
+                                                          TypeConstant[] atypeReturn)
+        {
+        int            cArgs     = args.size();
+        TypeConstant[] atypeArgs = new TypeConstant[cArgs];
+        for (int i = 0; i < cArgs; i++)
+            {
+            atypeArgs[i] = args.get(i).getImplicitType(ctx);
+            }
+
+        Map<String, TypeConstant> mapTypeParams =
+                method.resolveTypeParameters(atypeArgs, atypeReturn);
+
+        return mapTypeParams.size() == method.getTypeParamCount()
+                ? mapTypeParams::get
+                : null;
+        }
+
+    /**
+     * Resolve the specified types against the specified resolver.
+     *
+     * @return an array of resolved types
+     */
+    private TypeConstant[] resolveTypes(GenericTypeResolver resolver, TypeConstant[] atype)
+        {
+        TypeConstant[] atypeResolved = atype;
+        if (resolver != null)
+            {
+            ConstantPool pool = pool();
+            for (int i = 0, c = atype.length; i < c; i++)
+                {
+                TypeConstant typeOriginal = atype[i];
+                TypeConstant typeResolved = typeOriginal.resolveGenerics(pool, resolver);
+                if (typeResolved != typeOriginal)
+                    {
+                    if (atypeResolved == atype)
+                        {
+                        atypeResolved = atype.clone();
+                        }
+                    atypeResolved[i] = typeResolved;
+                    }
+                }
+            }
+        return atypeResolved;
         }
 
 

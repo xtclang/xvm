@@ -306,6 +306,8 @@ public abstract class RelationalTypeConstant
     @Override
     public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName)
         {
+        typeActual = typeActual.resolveTypedefs();
+
         if (getFormat() != typeActual.getFormat())
             {
             return null;

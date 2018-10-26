@@ -32,29 +32,14 @@ interface Function<ParamTypes extends Tuple, ReturnTypes extends Tuple>
      * Binds a single parameter of the Function, resulting in a new Function that does not contain
      * that parameter.
      */
-//     TODO
-//    Function bind(Parameter param, param.ParamType value)
-//        {
-//        return bind(Map:{param=value});
-//        }
+    // TODO: Name "param" is unresolvable. ("param.ParamType")
+    // Function!<> bind(Parameter param, param.ParamType value);
 
     /**
      * Binds any number of parameters of the Function, resulting in a new Function that does not
      * contain any of those parameters.
      */
-    Function<> bind(Map<Parameter, Object> params)
-        {
-        if (params.empty)
-            {
-            return this;
-            }
-
-        for (Parameter param, Object value : params)
-            {
-
-            }
-        return new PartiallyBound(this, params);
-        }
+    Function!<> bind(Map<Parameter, Object> params);
 
     /**
      * Invokes the function passing the specified arguments as a Tuple that matches the function's
@@ -76,16 +61,6 @@ interface Function<ParamTypes extends Tuple, ReturnTypes extends Tuple>
      */
     @Override
     function Function() to<function Function()>();
-
-    // -----
-
-    private class PartiallyBound<ReturnTypes extends Tuple, ParamTypes extends Tuple>
-            implements Function<ReturnTypes, ParamTypes>
-        {
-        construct(Function fn, Map<Parameter, Object> params)
-            {
-            }
-        }
 
     /**
      * TODO move to own file?

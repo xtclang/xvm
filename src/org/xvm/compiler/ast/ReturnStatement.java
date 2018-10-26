@@ -153,11 +153,10 @@ public class ReturnStatement
             Expression exprOld = listExprs.get(0);
             Expression exprNew = null;
             // several possibilities:
-            // 1) most likely the expression provides a single value, which matches the single
-            //    return type for the method
-            if (cRets < 0 || cRets == 1 && exprOld.testFit(ctx, aRetTypes[0]).isFit())
+            // 1) most likely the expression matches the return types for the method
+            if (cRets < 0 || exprOld.testFitMulti(ctx, aRetTypes).isFit())
                 {
-                exprNew = exprOld.validate(ctx, cRets < 0 ? null : aRetTypes[0], errs);
+                exprNew = exprOld.validateMulti(ctx, aRetTypes, errs);
                 }
             else
                 {
@@ -179,12 +178,12 @@ public class ReturnStatement
                         fValid = false;
                         }
                     }
-                // 4) otherwise it's an error (so force validation based on the return types, which
-                // will log the error)
+                // 4) otherwise it's most probably an error and the validation will log it
+                //   (except cases when testFit() implementation doesn't fully match the validate
+                //    logic or somehow has more information to operate on)
                 else
                     {
                     exprNew = exprOld.validateMulti(ctx, aRetTypes, errs);
-                    // REVIEW: should this set fValid  = false;
                     }
                 }
 
