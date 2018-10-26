@@ -381,6 +381,8 @@ public class ParameterizedTypeConstant
     @Override
     public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName)
         {
+        typeActual = typeActual.resolveTypedefs();
+
         // unroll the actual type down to the parameterized type
         while (true)
             {

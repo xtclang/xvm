@@ -420,7 +420,7 @@ public abstract class Expression
             }
 
         // check for the existence of an @Auto conversion
-        if (typeIn.ensureTypeInfo().findConversion(typeOut) != null)
+        if (typeIn.getConverterTo(typeOut) != null)
             {
             return TypeFit.Conv;
             }
