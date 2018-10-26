@@ -523,7 +523,7 @@ public abstract class Expression
         {
         checkDepth();
 
-        int cTypesRequired = atypeRequired.length;
+        int cTypesRequired = atypeRequired == null ? 0 : atypeRequired.length;
         if (cTypesRequired > 1)
             {
             // log the error, but allow validation to continue (with no particular
