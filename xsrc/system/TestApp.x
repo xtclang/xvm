@@ -78,7 +78,7 @@ class TestApp
             }
         finally
             {
-            print(s);
+            TestApp.print(s);
             }
 
         Int method1()
@@ -116,7 +116,7 @@ class TestApp
             }
         finally
             {
-            print(i);
+            TestApp.print(i);
             }
 
         @Override
