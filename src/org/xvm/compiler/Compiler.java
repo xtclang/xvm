@@ -1007,6 +1007,10 @@ public class Compiler
      */
     public static final String INVALID_INDEX                      = "COMPILER-95";
     /**
+     * TODO
+     */
+    public static final String INVALID_ANON_CLASS_TYPE            = "COMPILER-96";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

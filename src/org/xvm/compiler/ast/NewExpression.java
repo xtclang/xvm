@@ -210,10 +210,13 @@ public class NewExpression
         // create the inner class
         assert m_structClz == null;
 
-        new TypeCompositionStatement()
+        TypeConstant       typeInner = type.ensureTypeConstant();
+        AnonInnerClass infoInner = typeInner.buildAnonInnerClassInfo();
+
+        TypeCompositionStatement stmt = new TypeCompositionStatement(infoInner.getAnnotations(), )
         // store off the error listener for later usage
-        m_errs = errs;
-        catchUpChildren(errs);
+        // m_errs = errs;
+        // catchUpChildren(errs);
         }
 
 

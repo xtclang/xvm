@@ -7,6 +7,10 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Compiler;
+
+import org.xvm.util.Severity;
+
 
 /**
  * A type expression is used to specify an abstract data type. In its compiled form, there are many
@@ -126,6 +130,38 @@ public abstract class TypeExpression
         {
         assert !isIntroductoryType();
         throw new IllegalStateException();
+        }
+
+
+    // ----- inner class compilation support -------------------------------------------------------
+
+    /**
+     * @return the AnonInnerClass that represents the outline of what an anonymous inner class
+     *         for this type would look like
+     */
+    public AnonInnerClass inferAnonInnerClass(ErrorListener errs)
+        {
+        AnonInnerClass info = new AnonInnerClass(this, errs);
+        collectAnonInnerClassInfo(info);
+        return info;
+        }
+
+    /**
+     * Collect information into the provided AnonInnerClass.
+     *
+     * @param info  a mutable collector of information about the shape of an anonymous inner class
+     */
+    protected void collectAnonInnerClassInfo(AnonInnerClass info)
+        {
+        log(info.getErrorListener(true), Severity.ERROR, Compiler.INVALID_ANON_CLASS_TYPE);
+        }
+
+    /**
+     * @return the suggested default name for an anonymous inner class of this type
+     */
+    protected String getDefaultInnerClassName()
+        {
+        return "Object";
         }
 
 

@@ -4459,55 +4459,6 @@ public abstract class TypeConstant
         }
 
 
-    // ----- inner class compilation support -------------------------------------------------------
-
-    public class AnonInnerClassTemplate
-        {
-        List<Annotation> list
-        Component.Format
-        }
-    /**
-     * Anonymous inner class support: Determine the class category (e.g. interface, class) that the
-     * anonymous inner class will fulfill.
-     *
-     * @return the component format that the type of the anonymous inner class name will provide, or
-     *         null to indicate that the type must not be used as the basis for an anonymous inner
-     *         class
-     */
-    public Component.Format getInnerClassFormat()
-        {
-        throw new IllegalStateException("type=" + this);
-        }
-
-    /**
-     * Anonymous inner class support: Build a String that can be used as the basis for the identity
-     * (descriptive name) of the anonymous inner class.
-     *
-     * @return the name that this type would suggest to use as an anonymous inner class name, or
-     *         null to indicate that the type must not be used as the basis for an anonymous inner
-     *         class
-     */
-    public String getInnerClassName()
-        {
-        return null;
-        }
-
-    /**
-     * Anonymous inner class support: Build a list of annotations that apply to the class.
-     *
-     * @param listAnnos     the list to collect the annotations into, or null if no annotations
-     *                      should be collected
-     * @param listContribs  the list to collect the contributions to, or null if no contributions
-     *                      should be collected
-     *
-     * @return the type, without the annotations on it
-     */
-    public void collectContributions(List<org.xvm.compiler.ast.Annotation> listAnnos, List<Contribution> listContribs)
-        {
-        return this;
-        }
-
-
     // ----- run-time support ----------------------------------------------------------------------
 
     /**
@@ -4695,13 +4646,16 @@ public abstract class TypeConstant
                 {
                 return false;
                 }
+
             if (isSingleUnderlyingClass(true) &&
-                getSingleUnderlyingClass(true).equals(getConstantPool().clzFunction()))
+                    getSingleUnderlyingClass(true).equals(getConstantPool().clzFunction()))
                 {
                 return false;
                 }
+
             return true;
             }
+
         return false;
         }
 

@@ -526,15 +526,15 @@ public interface Constants
      */
     public static final String VE_NEW_ABSTRACT_METHOD                 = "VERIFY-85";
     /**
-     "{0}" requires a parent instance in order to be instantiated.
+     * "{0}" requires a parent instance in order to be instantiated.
      */
     public static final String VE_NEW_REQUIRES_PARENT                 = "VERIFY-90";
     /**
-     "{0}" cannot be instantiated using a parent instance.
+     * "{0}" cannot be instantiated using a parent instance.
      */
     public static final String VE_NEW_DISALLOWS_PARENT                = "VERIFY-91";
     /**
-     "{0}" is not related to the provided parent instance type "{1}".
+     * "{0}" is not related to the provided parent instance type "{1}".
      */
     public static final String VE_NEW_UNRELATED_PARENT                = "VERIFY-92";
 

@@ -107,7 +107,7 @@ public class AnnotatedTypeExpression
         }
 
 
-    // ----- TypeConstant methods ------------------------------------------------------------------
+    // ----- TypeExpression methods ----------------------------------------------------------------
 
     @Override
     protected TypeConstant instantiateTypeConstant()
@@ -123,6 +123,19 @@ public class AnnotatedTypeExpression
         return isDisassociated()
                 ? typeUnderlying    // our annotation is not added to the underlying type constant
                 : pool.ensureAnnotatedTypeConstant(annotation.ensureAnnotation(pool), typeUnderlying);
+        }
+
+    @Override
+    protected void collectAnonInnerClassInfo(AnonInnerClass info)
+        {
+        type.collectAnonInnerClassInfo(info);
+        info.addAnnotation(getAnnotation());
+        }
+
+    @Override
+    protected String getDefaultInnerClassName()
+        {
+        return type.getDefaultInnerClassName();
         }
 
 
