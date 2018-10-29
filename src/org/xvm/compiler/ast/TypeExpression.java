@@ -94,25 +94,6 @@ public abstract class TypeExpression
         }
 
     /**
-     * Perform right-to-left inference of type information, if possible.
-     *
-     * @param type  a type constant from an expression related to this TypeExpression, in such a
-     *              way that this TypeExpression can steal information from the TypeConstant, such
-     *              as parameter types
-     *
-     * @return a TypeExpression to use instead of this TypeExpression
-     */
-    public TypeExpression inferTypeFrom(TypeConstant type)
-        {
-        assert m_constType != null;
-        // TODO this fails because conversion isn't yet plugged in: assert type == null || type.isA(m_constType);
-
-        // REVIEW this is where we could also add support for a "var" (and/or "val") keyword
-
-        return this;
-        }
-
-    /**
      * Determine if this is an introductory type expression.
      *
      * @return true iff this is an introductory type expression
