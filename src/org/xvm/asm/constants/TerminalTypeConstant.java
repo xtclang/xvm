@@ -239,17 +239,6 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public boolean isGenericType()
-        {
-        if (isSingleDefiningConstant())
-            {
-            Format format = getDefiningConstant().getFormat();
-            return format == Format.Property || format == Format.TypeParameter;
-            }
-        return false;
-        }
-
-    @Override
     public boolean isAnnotated()
         {
         TypeConstant type = resolveTypedefs();

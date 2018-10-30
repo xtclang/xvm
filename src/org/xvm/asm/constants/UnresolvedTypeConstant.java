@@ -134,9 +134,9 @@ public class UnresolvedTypeConstant
         }
 
     @Override
-    public boolean isGenericType()
+    public Category getCategory()
         {
-        return isTypeResolved() && getResolvedType().isGenericType();
+        return isTypeResolved() ? getResolvedType().getCategory() : Category.OTHER;
         }
 
     @Override

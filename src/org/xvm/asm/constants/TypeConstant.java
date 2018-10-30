@@ -344,16 +344,6 @@ public abstract class TypeConstant
         }
 
     /**
-     * TODO: consider introducing a dedicated FormalType (or GenericType) type constant.
-     *
-     * @return true iff this type represents a formal type parameter
-     */
-    public boolean isGenericType()
-        {
-        return false;
-        }
-
-    /**
      * @return true iff annotations of the type are specified
      */
     public boolean isAnnotated()
@@ -3784,7 +3774,7 @@ public abstract class TypeConstant
                 // 3. r-value (this) = T (formal parameter type), constrained by U (real type)
                 //    l-value (that) = V (real type), where U "is a" V
                 PropertyConstant idRight = (PropertyConstant) constIdRight;
-                if (typeLeft.isGenericType() && constIdLeft.getFormat() == Format.Property &&
+                if (typeLeft.isFormalType() && constIdLeft.getFormat() == Format.Property &&
                     (((PropertyConstant) constIdLeft).getName().equals(idRight.getName())))
                     {
                     return Relation.IS_A;
@@ -3807,7 +3797,7 @@ public abstract class TypeConstant
                 // 3. r-value (this) = T (type parameter type), constrained by U (real type)
                 //    l-value (that) = V (real type), where U "is a" V
                 TypeParameterConstant idRight = (TypeParameterConstant) constIdRight;
-                if (typeLeft.isGenericType() && constIdLeft.getFormat() == Format.TypeParameter &&
+                if (typeLeft.isFormalType() && constIdLeft.getFormat() == Format.TypeParameter &&
                     (((TypeParameterConstant) constIdLeft).getRegister() == idRight.getRegister()))
                     {
                     return Relation.IS_A;

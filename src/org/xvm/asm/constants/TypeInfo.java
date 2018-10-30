@@ -126,18 +126,18 @@ public class TypeInfo
         }
 
     /**
-     * Construct a TypeInfo for a generic type parameter.
+     * Construct a TypeInfo for a formal type parameter.
      *
-     * @param typeGeneric     the TypeConstant of the generic type
+     * @param typeFormal      the TypeConstant of the formal type
      * @param infoConstraint  the TypeInfo for the constraining type
      */
-    public TypeInfo(TypeConstant typeGeneric, TypeInfo infoConstraint)
+    public TypeInfo(TypeConstant typeFormal, TypeInfo infoConstraint)
         {
         assert infoConstraint != null;
         assert infoConstraint.m_progress == Progress.Complete;
-        assert typeGeneric != null && typeGeneric.isGenericType();
+        assert typeFormal != null && typeFormal.isFormalType();
 
-        m_type                = typeGeneric;
+        m_type                = typeFormal;
         m_struct              = infoConstraint.m_struct;
         m_cDepth              = infoConstraint.m_cDepth;
         m_mapTypeParams       = Collections.EMPTY_MAP;
