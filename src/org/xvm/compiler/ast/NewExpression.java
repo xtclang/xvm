@@ -31,9 +31,11 @@ import org.xvm.asm.op.New_1;
 import org.xvm.asm.op.New_N;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Constants;
 import org.xvm.compiler.Token;
 
+import org.xvm.compiler.Token.Id;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
@@ -210,13 +212,35 @@ public class NewExpression
         // create the inner class
         assert m_structClz == null;
 
-        TypeConstant       typeInner = type.ensureTypeConstant();
-        AnonInnerClass infoInner = typeInner.buildAnonInnerClassInfo();
+        // select a unique (and purposefully syntactically illegal) name for the anonymous inner
+        // class
+        AnonInnerClass info     = type.inferAnonInnerClass(errs);
+        Component      parent   = getComponent();
+        String         sDefault = info.getDefaultName();
+        int            nSuffix  = 1;
+        String         sName;
+        while (parent.getChild(sName = sDefault + ":" + nSuffix) != null)
+            {
+            ++nSuffix;
+            }
+        Token tokName = new Token(type.getStartPosition(), type.getEndPosition(), Id.IDENTIFIER, sName);
 
-        TypeCompositionStatement stmt = new TypeCompositionStatement(infoInner.getAnnotations(), )
-        // store off the error listener for later usage
-        // m_errs = errs;
-        // catchUpChildren(errs);
+        TypeCompositionStatement stmtAnon = new TypeCompositionStatement(
+                info.getAnnotations(),
+                info.getCategory(),
+                tokName,
+                info.getCompositions(),
+                args,
+                body,
+                type.getStartPosition(),
+                body.getEndPosition()
+                );
+        stmtAnon.setParent(this);
+        body.setParent(stmtAnon);
+
+        this.anon = stmtAnon;
+        this.body = null;
+        catchUpChildren(errs);
         }
 
 
@@ -673,12 +697,13 @@ public class NewExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Expression       left;
-    protected Token            operator;
-    protected TypeExpression   type;
-    protected List<Expression> args;
-    protected StatementBlock   body;
-    protected long             lEndPos;
+    protected Expression               left;
+    protected Token                    operator;
+    protected TypeExpression           type;
+    protected List<Expression>         args;
+    protected StatementBlock           body;
+    protected TypeCompositionStatement anon;
+    protected long                     lEndPos;
 
     private transient MethodStructure m_constructor;
     private transient boolean         m_fTupleArg;     // indicates that arguments come from a tuple

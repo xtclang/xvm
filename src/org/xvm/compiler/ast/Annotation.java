@@ -46,6 +46,14 @@ public class Annotation
         this.lEndPos   = lEndPos;
         }
 
+    public Annotation(NamedTypeExpression type, org.xvm.asm.Annotation anno, long lStartPos, long lEndPos)
+        {
+        this.type      = type;
+        this.m_anno    = anno;
+        this.lStartPos = lStartPos;
+        this.lEndPos   = lEndPos;
+        }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -62,13 +70,13 @@ public class Annotation
     @Override
     protected boolean canResolveNames()
         {
-        return super.canResolveNames() || type.canResolveNames();
+        return m_anno != null || super.canResolveNames() || type.canResolveNames();
         }
 
     @Override
     public long getStartPosition()
         {
-        return type.getStartPosition();
+        return lStartPos;
         }
 
     @Override

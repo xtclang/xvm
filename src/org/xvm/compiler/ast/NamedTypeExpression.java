@@ -302,6 +302,26 @@ public class NamedTypeExpression
         return type;
         }
 
+    @Override
+    protected void collectAnonInnerClassInfo(AnonInnerClass info)
+        {
+        TypeConstant type = ensureTypeConstant();
+        if (type.isExplicitClassIdentity(true))
+            {
+            info.addContribution(this);
+            }
+        else
+            {
+            // TODO it could be a legitimate typedef or an error
+            }
+        }
+
+    @Override
+    protected String getDefaultInnerClassName()
+        {
+        return names.get(names.size()-1).getValueText();
+        }
+
 
     // ----- compile phases ------------------------------------------------------------------------
 

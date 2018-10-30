@@ -1007,9 +1007,25 @@ public class Compiler
      */
     public static final String INVALID_INDEX                      = "COMPILER-95";
     /**
-     * TODO
+     * The anonymous inner class is of an invalid type.
      */
     public static final String INVALID_ANON_CLASS_TYPE            = "COMPILER-96";
+    /**
+     * Anonymous inner class cannot extend both {0} and {1}.
+     */
+    public static final String ANON_CLASS_EXTENDS_MULTI           = "COMPILER-97";
+    /**
+     * Anonymous inner class cannot extend a class of the {0} category.
+     */
+    public static final String ANON_CLASS_EXTENDS_ILLEGAL         = "COMPILER-98";
+    /**
+     * Anonymous inner class is declared such that it must be both mutable and immutable.
+     */
+    public static final String ANON_CLASS_MUTABILITY_CONFUSED     = "COMPILER-99";
+    /**
+     * An anonymous inner class may not specify an intersection type.
+     */
+    public static final String ANON_CLASS_EXTENDS_INTERSECTION    = "COMPILER-100";
     /**
      * {0} is not yet implemented.
      */

@@ -789,18 +789,18 @@ public abstract class Constant
         VarDec,
         Char,
         String,
-        Date,           // ISO8601 YYYY-MM-DD date format
-        Time,           // ISO8601 HH:MM[:SS[.sssssssss]]['Z' | ('+'|'-')hh[:mm]] format
-        DateTime,       // ISO8601 date ['T' time] format
-        Duration,       // ISO8601 P[n]Y[n]M[n]DT[n]H[n]M[n]S | P[n]W format
-        TimeInterval,   // ISO8601 datetime '/' datetime format
+        Date,               // ISO8601 YYYY-MM-DD date format
+        Time,               // ISO8601 HH:MM[:SS[.sssssssss]]['Z' | ('+'|'-')hh[:mm]] format
+        DateTime,           // ISO8601 date ['T' time] format
+        Duration,           // ISO8601 P[n]Y[n]M[n]DT[n]H[n]M[n]S | P[n]W format
+        TimeInterval,       // ISO8601 datetime '/' datetime format
         Version,
-        SingletonConst,   // identity constant for a Module, Package, an enum value or a static const
-        SingletonService, // identity constant of a Service class
-        ConstantValue,    // PropertyConstant that represents the value of a const or a service
+        SingletonConst,     // identity constant for a Module, Package, an enum value or a static const
+        SingletonService,   // identity constant of a Service class
+        ConstantValue,      // PropertyConstant that represents the value of a const or a service
         Tuple,
         Array,
-        UInt8Array,    // byte[]
+        UInt8Array,         // byte[]
         Set,
         MapEntry,
         Map,
@@ -850,8 +850,9 @@ public abstract class Constant
         ConditionNamed,
         ConditionPresent,
         ConditionVersionMatches,
-        ConditionVersioned,
-        ;
+        ConditionVersioned;
+
+        // -------------------------------------------------------------------------------------
 
         public Format next()
             {

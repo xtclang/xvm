@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Token;
+import org.xvm.compiler.Token.Id;
 
 
 /**
@@ -87,6 +88,22 @@ public class DecoratedTypeExpression
         {
         this.type = type;
         type.setParent(this);
+        }
+
+    @Override
+    protected void collectAnonInnerClassInfo(AnonInnerClass info)
+        {
+        type.collectAnonInnerClassInfo(info);
+        if (keyword.getId() == Id.IMMUTABLE)
+            {
+            info.markImmutable();
+            }
+        }
+
+    @Override
+    protected String getDefaultInnerClassName()
+        {
+        return type.getDefaultInnerClassName();
         }
 
 

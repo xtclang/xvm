@@ -129,7 +129,7 @@ public class AnnotatedTypeExpression
     protected void collectAnonInnerClassInfo(AnonInnerClass info)
         {
         type.collectAnonInnerClassInfo(info);
-        info.addAnnotation(getAnnotation());
+        info.addAnnotation(getAnnotation()); // REVIEW should this come before or after the above line?
         }
 
     @Override
