@@ -39,6 +39,17 @@ public class AsExpression
         }
 
     @Override
+    protected TypeFit calcFit(Context ctx, TypeConstant typeIn, TypeConstant typeOut)
+        {
+        if (typeIn.containsUnresolved())
+            {
+            return TypeFit.NoFit;
+            }
+
+        return super.calcFit(ctx, typeIn, typeOut);
+        }
+
+    @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         TypeFit fit = TypeFit.Fit;

@@ -131,7 +131,7 @@ public class PropertyStructure
     /**
      * @return true iff this property is a type parameter
      */
-    public boolean isTypeParameter( )
+    public boolean isTypeParameter()
         {
         return isAuxiliary();
         }
@@ -141,10 +141,9 @@ public class PropertyStructure
      */
     public void markAsTypeParameter()
         {
-        assert !isStatic()                        // never a constant
-            && !isSynthetic()                     // never synthetic
-            && m_type.isSingleDefiningConstant()  // must be "Type"
-            && m_type.getDefiningConstant().equals(getConstantPool().clzType());
+        assert !isStatic()            // never a constant
+            && !isSynthetic()         // never synthetic
+            && m_type.isTypeOfType(); // must be "Type"
 
         setAuxiliary(true);
         }
