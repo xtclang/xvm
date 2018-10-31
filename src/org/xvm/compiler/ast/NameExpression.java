@@ -844,7 +844,7 @@ public class NameExpression
                         if (cSteps == 0)
                             {
                             // it's just "this" (but note that it results in the public type)
-                            return generateReserved(Op.A_PUBLIC, errs);
+                            return generateReserved(code, Op.A_PUBLIC, errs);
                             }
 
                         Register regOuter = new Register(((PseudoConstant) argRaw).getType());
@@ -872,7 +872,7 @@ public class NameExpression
                         Register regThis;
                         if (cSteps == 0)
                             {
-                            regThis = (Register) generateReserved(Op.A_PRIVATE, errs);
+                            regThis = (Register) generateReserved(code, Op.A_PRIVATE, errs);
                             }
                         else
                             {
