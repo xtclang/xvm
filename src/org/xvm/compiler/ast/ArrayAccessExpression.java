@@ -885,7 +885,12 @@ public class ArrayAccessExpression
             return null;
             }
 
-        ConstantPool       pool       = pool();
+        ConstantPool pool = pool();
+        if (typeTuple.isFormalTypeSequence())
+            {
+            return pool.typeType();
+            }
+
         List<TypeConstant> listFields = typeTuple.getTupleParamTypes();
         try
             {

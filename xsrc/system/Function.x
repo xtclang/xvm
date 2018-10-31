@@ -2,7 +2,7 @@
  * A Function represents a unit of invocation. A function has a name, a number of
  * parameter types, and a number of return types.
  */
-interface Function<ParamTypes extends Tuple, ReturnTypes extends Tuple>
+interface Function<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple<ReturnTypes>>
         extends Hashable
     {
     /**

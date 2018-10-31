@@ -667,9 +667,14 @@ public class ForEachStatement
         Argument            argAble  = m_exprRValue.generateArgument(ctx, code, true, true, errs);
         TypeInfo            infoAble = typeRange.ensureTypeInfo(errs);
         Set<MethodConstant> setId    = infoAble.findMethods("iterator", 0, true, false);
-        assert setId.size() == 1;
-        code.add(new Invoke_01(argAble, setId.iterator().next(), regIter));
 
+        MethodConstant idIter = m_exprRValue.chooseBest(setId, typeRange, errs);
+        if (idIter == null)
+            {
+            return false;
+            }
+
+        code.add(new Invoke_01(argAble, idIter, regIter));
         return emitAnyIterator(regIter, ctx, fReachable, code, errs);
         }
 

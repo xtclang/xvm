@@ -99,12 +99,8 @@ public class PropertyBody
         assert struct != null || param.getNestedIdentity() instanceof NestedIdentity;
 
         TypeConstant typeActual = param.getActualType();
-        TypeConstant typeType   = typeActual instanceof TupleElementsTypeConstant
-                // when we're dealing with a tuple type, "ActualType" that comes from the param info
-                // provides the type of each tuple field (see TC.createInitialTypeResolver)
-                ? pool.ensureParameterizedTypeConstant(pool.typeType(),
-                        pool.ensureParameterizedTypeConstant(
-                            pool.typeTuple(), typeActual.getParamTypesArray()))
+        TypeConstant typeType   = struct != null && struct.getIdentityConstant().isTypeSequenceTypeParameter()
+                ? struct.getType() // for the turtle type property, the actual type is ignored
                 : pool.ensureParameterizedTypeConstant(pool.typeType(), typeActual);
 
         m_structProp    = struct;

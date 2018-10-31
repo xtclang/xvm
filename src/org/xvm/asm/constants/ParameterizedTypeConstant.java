@@ -209,20 +209,11 @@ public class ParameterizedTypeConstant
             TypeConstant constParamResolved = constParamOriginal.resolveGenerics(pool, resolver);
             if (constParamOriginal != constParamResolved)
                 {
-                if (constParamResolved instanceof TupleElementsTypeConstant)
+                if (aconstResolved == aconstOriginal)
                     {
-                    // we are replacing tuple's "ElementTypes"
-                    assert constOriginal.isTuple() && aconstOriginal.length == 1;
-                    aconstResolved = constParamResolved.getParamTypesArray();
+                    aconstResolved = aconstOriginal.clone();
                     }
-                else
-                    {
-                    if (aconstResolved == aconstOriginal)
-                        {
-                        aconstResolved = aconstOriginal.clone();
-                        }
-                    aconstResolved[i] = constParamResolved;
-                    }
+                aconstResolved[i] = constParamResolved;
                 fDiff = true;
                 }
             }

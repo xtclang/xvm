@@ -383,7 +383,6 @@ class Array<ElementType>
 
         }
 
-
     /**
      * Return a {@code const} array of the same type and contents as this array.
      *
