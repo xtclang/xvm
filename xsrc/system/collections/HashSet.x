@@ -8,9 +8,27 @@ class HashSet<ElementType>
         this.hasher = new NaturalHasher<ElementType>();
         }
 
+    construct(Collection<ElementType> elements)
+        {
+        construct HashSet();
+        }
+    finally
+        {
+        addAll(elements);
+        }
+
     construct(Hasher<ElementType> hasher)
         {
         this.hasher = hasher;
+        }
+
+    construct(Hasher<ElementType> hasher, Collection<ElementType> elements)
+        {
+        construct HashSet(hasher);
+        }
+    finally
+        {
+        addAll(elements);
         }
 
     public/private Hasher<ElementType> hasher;
@@ -41,5 +59,21 @@ class HashSet<ElementType>
         return false;
         }
 
-    // ...
+    @Override
+    Iterator<ElementType> iterator()
+        {
+        TODO
+        }
+
+    @Override
+    Stream<ElementType> stream()
+        {
+        TODO
+        }
+
+    @Override
+    HashSet<ElementType> clone()
+        {
+        return new HashSet(this);
+        }
     }

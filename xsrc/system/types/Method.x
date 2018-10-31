@@ -1,3 +1,5 @@
+import collections.HashSet;
+
 /**
  * A Method represents a method of a particular class or type. A method has a name, a number of
  * parameter types, and a number of return types. A method can be bound to a particular target (of
@@ -222,9 +224,14 @@ const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
             // produced by the type T1
             if (String[] namesThis : this.formalParamNames(loop.count))
                 {
+                Set<String> setThis = new HashSet(namesThis);
+
                 if (String[] namesThat : that.formalParamNames(loop.count))
                     {
-                    for (String name : namesThis.intersection(namesThat))
+                    Set<String> setThat = new HashSet(namesThat);
+
+                    setThat := setThat.retainAll(setThis);
+                    for (String name : setThat)
                         {
                         if (that.TargetType.producesFormalType(name))
                             {
