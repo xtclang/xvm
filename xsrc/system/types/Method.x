@@ -37,12 +37,15 @@ const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
         {
         if (ReturnTypes.size == 1 && ReturnTypes[0].isA(Ref) && ParamTypes.size == 0)
             {
-            for (Method getter : ReturnTypes[0].methodsByName["get"])
+            if (MultiMethod getters : ReturnTypes[0].methodsByName.get("get"))
                 {
-                if (getter.ReturnTypes.size == 1 && getter.ParamTypes.size == 0)
+                for (Method<> getter : getters.methods)
                     {
-                    return new Property /* TODO <ReturnTypes[0]> */ (
-                        getter.as(Method<Object, Tuple<>, Tuple<Ref>>));
+                    if (getter.ReturnTypes.size == 1 && getter.ParamTypes.size == 0)
+                        {
+                        return new Property /* TODO <ReturnTypes[0]> */ (
+                            getter.as(Method<Object, Tuple<>, Tuple<Ref>>));
+                        }
                     }
                 }
 
@@ -95,7 +98,7 @@ const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
             else
                 {
                 // see the exception of the rule 3 above
-                ignoreImmediateProduction = property?.readOnly;
+                ignoreImmediateProduction = property?.readOnly : false;
 
                 if (returnType.consumesFormalType(typeName, ignoreImmediateProduction))
                     {
