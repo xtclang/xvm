@@ -23,7 +23,6 @@ import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
-import org.xvm.asm.constants.TupleElementsTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeConstant.Relation;
 import org.xvm.asm.constants.TypeInfo;
@@ -311,6 +310,13 @@ public class ClassStructure
 
         ConstantPool pool = getConstantPool();
 
+        // check for turtles, for example: "ElementTypes extends Tuple<ElementTypes>"
+        if (typeConstraint.getParamsCount() == 1 &&
+                typeConstraint.getDefiningConstant().getValueString().equals("Tuple") &&
+                typeConstraint.getParamTypesArray()[0].getValueString().equals(sName))
+            {
+            typeConstraint = pool.ensureTypeSequenceTypeConstant();
+            }
         map.put(pool.ensureStringConstant(sName), typeConstraint);
 
         // each type parameter also has a synthetic property of the same name,
@@ -380,8 +386,8 @@ public class ClassStructure
                     int i = cTypesParent;
                     for (StringConstant constName : mapThis.keySet())
                         {
-                        aTypes[i++] = pool.ensureTerminalTypeConstant(
-                            pool.ensurePropertyConstant(constantClz, constName.getValue()));
+                        PropertyStructure prop = (PropertyStructure) getChild(constName.getValue());
+                        aTypes[i++] = prop.getIdentityConstant().getFormalType();
                         }
                     }
 
@@ -426,7 +432,9 @@ public class ClassStructure
                 GenericTypeResolver resolver = new SimpleTypeResolver(new ArrayList<>());
                 for (TypeConstant typeParam : mapParams.values())
                     {
-                    atypeParam[ix++] = typeParam.resolveGenerics(pool, resolver);
+                    atypeParam[ix++] = typeParam.isFormalTypeSequence()
+                            ? pool.ensureParameterizedTypeConstant(pool.typeTuple())
+                            : typeParam.resolveGenerics(pool, resolver);
                     }
                 typeCanonical = pool.ensureClassTypeConstant(constClz, null, atypeParam);
                 }
@@ -887,16 +895,10 @@ public class ClassStructure
     protected TypeConstant getGenericParamTypeImpl(ConstantPool pool, String sName,
                                                    List<TypeConstant> listActual, boolean fAllowInto)
         {
-        int ix = indexOfGenericParameter(sName);
-        if (ix >= 0)
+        TypeConstant type = extractGenericType(pool, sName, listActual);
+        if (type != null)
             {
-            if (sName.equals("ElementTypes") && ix == 0 &&
-                    getIdentityConstant().equals(getConstantPool().clzTuple()))
-                {
-                return new TupleElementsTypeConstant(getConstantPool(),
-                    listActual.toArray(new TypeConstant[listActual.size()]));
-                }
-            return ix < listActual.size() ? listActual.get(ix) : null;
+            return type;
             }
 
         for (Contribution contrib : getContributionsAsList())
@@ -931,8 +933,7 @@ public class ClassStructure
                 case Extends:
                     ClassStructure clzContrib = (ClassStructure)
                             typeContrib.getSingleUnderlyingClass(true).getComponent();
-                    TypeConstant type = clzContrib.getGenericParamTypeImpl(
-                            pool, sName, listContribTypes, false);
+                    type = clzContrib.getGenericParamTypeImpl(pool, sName, listContribTypes, false);
                     if (type != null)
                         {
                         return type;
@@ -945,6 +946,33 @@ public class ClassStructure
             }
 
         return null;
+        }
+
+    /**
+     * Extract a generic type for the formal parameter of the specified name from the specified list.
+     *
+     * @param pool   the ConstantPool to use
+     * @param sName  the formal name
+     * @param list   the actual type list
+     *
+     * @return the type corresponding to the specified formal type or null if cannot be determined
+     */
+    protected TypeConstant extractGenericType(ConstantPool pool, String sName,
+                                              List<TypeConstant> list)
+        {
+        int ix = indexOfGenericParameter(sName);
+        if (ix < 0)
+            {
+            return null;
+            }
+
+        if (isTuple())
+            {
+            return pool.ensureParameterizedTypeConstant(pool.typeTuple(),
+                list.toArray(new TypeConstant[list.size()]));
+            }
+
+        return ix < list.size() ? list.get(ix) : null;
         }
 
 
@@ -1623,7 +1651,7 @@ public class ClassStructure
                 MultiMethodStructure mms = (MultiMethodStructure) child;
                 for (MethodStructure method : mms.methods())
                     {
-                    if (method.isStatic() || !method.isAccessible(accessLeft))
+                    if (method.isStatic() || !method.isAccessible(accessLeft) || method.hasCode())
                         {
                         continue;
                         }
@@ -2035,11 +2063,7 @@ public class ClassStructure
 
             m_listActual = listActual;
 
-            if (getIdentityConstant().equals(pool.clzTuple()))
-                {
-                m_fTuple = true;
-                }
-            else
+            if (!getIdentityConstant().equals(pool.clzTuple()))
                 {
                 int cFormal = getTypeParamCount();
                 int cActual = listActual.size();
@@ -2067,7 +2091,9 @@ public class ClassStructure
                         {
                         // the canonical type itself could be formal, depending on another parameter
                         TypeConstant typeCanonical = entries.get(i).getValue();
-                        listActual.set(i, typeCanonical.resolveGenerics(pool, this));
+                        listActual.set(i, typeCanonical.isFormalTypeSequence()
+                                ? typeCanonical
+                                : typeCanonical.resolveGenerics(pool, this));
                         }
                     }
                 }
@@ -2076,19 +2102,9 @@ public class ClassStructure
         @Override
         public TypeConstant resolveGenericType(String sFormalName)
             {
-            int ix = indexOfGenericParameter(sFormalName);
-            if (ix < 0)
-                {
-                return null;
-                }
-
-            return m_fTuple
-                ? new TupleElementsTypeConstant(getConstantPool(),
-                    m_listActual.toArray(new TypeConstant[m_listActual.size()]))
-                : m_listActual.get(ix);
+            return extractGenericType(getConstantPool(), sFormalName, m_listActual);
             }
 
-        private boolean m_fTuple;
         private List<TypeConstant> m_listActual;
         }
     }

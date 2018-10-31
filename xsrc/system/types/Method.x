@@ -3,7 +3,7 @@
  * parameter types, and a number of return types. A method can be bound to a particular target (of
  * a type containing the method) in order to obtain an invocable function.
  */
-const Method<TargetType, ParamTypes extends Tuple, ReturnTypes extends Tuple>
+const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple<ReturnTypes>>
     {
     /**
      * The method's name.
@@ -41,7 +41,8 @@ const Method<TargetType, ParamTypes extends Tuple, ReturnTypes extends Tuple>
                 {
                 if (getter.ReturnTypes.size == 1 && getter.ParamTypes.size == 0)
                     {
-                    return new Property /* TODO <ReturnTypes[0]> */ (name);
+                    return new Property /* TODO <ReturnTypes[0]> */ (
+                        getter.as(Method<Object, Tuple<>, Tuple<Ref>>));
                     }
                 }
 

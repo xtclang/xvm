@@ -581,7 +581,7 @@ public class NameExpression
                     {
                     case Class:
                         // other than "Outer.this", class is ALWAYS a constant; it results in a
-                        // ClassConstant, aPseudoConstant, a SingletonConstant, or a TypeConstant
+                        // ClassConstant, a PseudoConstant, a SingletonConstant, or a TypeConstant
                         switch (m_plan)
                             {
                             case None:
@@ -1010,27 +1010,35 @@ public class NameExpression
                     case Property:
                         {
                         PropertyConstant idProp = (PropertyConstant) arg;
-                        ClassStructure   clzTop = (ClassStructure) idProp.getNamespace().getComponent();
-
-                        // we will use the private access info here since the access restrictions
-                        // must have been already checked by the "resolveName"
-                        TypeInfo     infoClz = pool().ensureAccessTypeConstant(clzTop.getFormalType(),
-                            Access.PRIVATE).ensureTypeInfo(errs);
-
-                        PropertyInfo infoProp = infoClz.findProperty(idProp);
-
-                        // there is a possibility that the name was found by the resolver
-                        // (which is using the class structure contributions), but missing in the
-                        // info, which must have already reported the contribution problem
-                        if (infoProp == null)
+                        if (idProp.isTypeSequenceTypeParameter())
                             {
-                            log(errs, Severity.ERROR, Compiler.NAME_MISSING,
-                                    sName, ctx.getMethod().getIdentityConstant().getSignature());
-                            break;
+                            m_arg         = idProp;
+                            m_fAssignable = false;
+                            }
+                        else
+                            {
+                            ClassStructure clzTop = (ClassStructure) idProp.getNamespace().getComponent();
+
+                            // we will use the private access info here since the access restrictions
+                            // must have been already checked by the "resolveName"
+                            TypeInfo infoClz = pool().ensureAccessTypeConstant(clzTop.getFormalType(),
+                                                        Access.PRIVATE).ensureTypeInfo(errs);
+
+                            PropertyInfo infoProp = infoClz.findProperty(idProp);
+
+                            // there is a possibility that the name was found by the resolver
+                            // (which is using the class structure contributions), but missing in the
+                            // info, which must have already reported the contribution problem
+                            if (infoProp == null)
+                                {
+                                log(errs, Severity.ERROR, Compiler.NAME_MISSING,
+                                        sName, ctx.getMethod().getIdentityConstant().getSignature());
+                                break;
+                                }
+                            m_arg         = infoProp.getIdentity();
+                            m_fAssignable = infoProp.isVar() && !infoProp.isInjected();
                             }
 
-                        m_arg         = infoProp.getIdentity();
-                        m_fAssignable = infoProp.isVar() && !infoProp.isInjected();
                         break;
                         }
 
@@ -1240,7 +1248,14 @@ public class NameExpression
                             {
                             typeLeft = pool().ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
                             }
-
+                        else if (arg instanceof PropertyConstant)
+                            {
+                            PropertyConstant idProp = (PropertyConstant) arg;
+                            if (idProp.isTypeSequenceTypeParameter())
+                                {
+                                typeLeft = idProp.getReferredToType();
+                                }
+                            }
                         }
                     TypeInfo     infoType = typeLeft.ensureTypeInfo(errs);
                     PropertyInfo infoProp = infoType.findProperty(sName);
@@ -1410,16 +1425,23 @@ public class NameExpression
                 // resolve the property type
                 if (left == null)
                     {
-                    ClassStructure clz = ctx.getThisClass();
-                    if (clz != prop.getParent())
+                    if (id.isTypeSequenceTypeParameter())
                         {
-                        // the property may originate in a contribution
-                        // (e.g. Range.x refers to Interval.upperBound)
-                        PropertyInfo infoProp = clz.getFormalType().
-                                ensureTypeInfo().findProperty(id);
-                        if (infoProp != null)
+                        type = id.getReferredToType();
+                        }
+                    else
+                        {
+                        ClassStructure clz = ctx.getThisClass();
+                        if (clz != prop.getParent())
                             {
-                            type = infoProp.getType();
+                            // the property may originate in a contribution
+                            // (e.g. Range.x refers to Interval.upperBound)
+                            PropertyInfo infoProp = clz.getFormalType().
+                                    ensureTypeInfo().findProperty(id);
+                            if (infoProp != null)
+                                {
+                                type = infoProp.getType();
+                                }
                             }
                         }
                     }

@@ -74,10 +74,12 @@ public class PropertyConstant
         }
 
     /**
-     * @return a TypeConstant representing a formal type represented by this property
+     * @return a TypeConstant representing a formal type represented by this property,
+     *         which must be a type parameter
      */
     public TypeConstant getFormalType()
         {
+        assert isTypeParameter();
         return getConstantPool().ensureTerminalTypeConstant(this);
         }
 
@@ -103,6 +105,16 @@ public class PropertyConstant
         PropertyStructure struct = (PropertyStructure) getComponent();
         return struct != null && struct.isTypeParameter();
         }
+
+    /**
+     * @return true iff this property is a formal type parameter that materializes into a
+     *         sequence of types
+     */
+    public boolean isTypeSequenceTypeParameter()
+        {
+        return isTypeParameter() && getReferredToType() instanceof TypeSequenceTypeConstant;
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

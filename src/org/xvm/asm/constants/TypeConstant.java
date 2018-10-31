@@ -1122,6 +1122,15 @@ public abstract class TypeConstant
 
             case PUBLIC:
                 assert !isAccessSpecified();
+                if (isTuple())
+                    {
+                    // for the TypeInfo purposes the content of the type parameters is irrelevant
+                    TypeConstant typeTuple = getConstantPool().typeTuple();
+                    if (this != typeTuple)
+                        {
+                        return typeTuple.ensureTypeInfoInternal(errs);
+                        }
+                    }
                 TypeInfo info = getConstantPool().ensureAccessTypeConstant(this, Access.PRIVATE)
                         .ensureTypeInfoInternal(errs);
                 return info == null
@@ -1337,25 +1346,23 @@ public abstract class TypeConstant
             ClassStructure   struct,
             ErrorListener    errs)
         {
+        ConstantPool           pool          = getConstantPool();
         Map<Object, ParamInfo> mapTypeParams = new HashMap<>();
-
-        // obtain the type parameters encoded in this type constant
-        TypeConstant[] atypeParams = getParamTypesArray();
-        int            cTypeParams = atypeParams.length;
 
         if (isTuple())
             {
             // warning: turtles
-            assert this instanceof AccessTypeConstant;
+            TypeConstant typeConstraint = pool.ensureTypeSequenceTypeConstant();
 
-            TypeConstant typeElements = new TupleElementsTypeConstant(getConstantPool(), atypeParams);
-            TypeConstant typePublic   = getUnderlyingType();
-
-            ParamInfo param = new ParamInfo("ElementTypes", typePublic, typeElements);
+            ParamInfo param = new ParamInfo("ElementTypes", typeConstraint, null);
             mapTypeParams.put(param.getName(), param);
             }
         else
             {
+            // obtain the type parameters encoded in this type constant
+            TypeConstant[] atypeParams = getParamTypesArray();
+            int            cTypeParams = atypeParams.length;
+
             // obtain the type parameters declared by the class and its instance parent
             List<Entry<StringConstant, TypeConstant>> listClassParams = struct.getTypeParamsAsList();
             int                                       cClassParams    = listClassParams.size();
@@ -1374,7 +1381,6 @@ public abstract class TypeConstant
                     }
                 }
 
-            ConstantPool pool           = getConstantPool();
             TypeConstant typeNormalized = this.normalizeParameters(pool);
 
             for (int i = 0; i < cClassParams; ++i)
@@ -1385,7 +1391,10 @@ public abstract class TypeConstant
                 TypeConstant                        typeActual      = null;
 
                 // resolve any generic dependencies in the type constraint
-                typeConstraint = typeConstraint.resolveGenerics(pool, typeNormalized);
+                if (!typeConstraint.isFormalTypeSequence())
+                    {
+                    typeConstraint = typeConstraint.resolveGenerics(pool, typeNormalized);
+                    }
 
                 // validate the actual type, if there is one
                 if (i < cTypeParams)
@@ -3640,11 +3649,12 @@ public abstract class TypeConstant
                 if (relation == Relation.INCOMPATIBLE && typeLeft.isDuckTypeAble())
                     {
                     // left is an interface; check the duck-typing
-                    if (typeRight.equals(pool.typeObject()))
+                    if (typeRight.equals(pool.typeObject()) || typeRight.isFormalTypeSequence())
                         {
                         // Object requires special treatment here for a number of reasons;
                         // let's disallow it to be assigned to anything for now
                         // TODO: allow an "empty" interface to be duck-typed to Object
+                        // the "turtle" type also is not duck-typable to anything
                         relation = Relation.INCOMPATIBLE;
                         }
                     else
@@ -4240,6 +4250,15 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff the TypeConstant represents a "formal type" that materializes into a type
+     *         sequence
+     */
+    public boolean isFormalTypeSequence()
+        {
+        return false;
+        }
+
+    /**
      * @return the category of this TypeConstant
      */
     public Category getCategory()
@@ -4644,17 +4663,24 @@ public abstract class TypeConstant
 
     private boolean isDuckTypeAble()
         {
-        // interfaces are duck-type able except Tuple and Function
+        // interfaces are duck-type able except Tuple, Function and Orderable
+        // (the later due to the fact that it's has no abstract methods and
+        //  is well-known by the runtime only by its "compare" function)
         if (isInterfaceType())
             {
             if (isTuple())
                 {
                 return false;
                 }
-            if (isSingleUnderlyingClass(true) &&
-                getSingleUnderlyingClass(true).equals(getConstantPool().clzFunction()))
+            if (isSingleUnderlyingClass(true))
                 {
-                return false;
+                ConstantPool pool = getConstantPool();
+                IdentityConstant id = getSingleUnderlyingClass(true);
+                if (id.equals(pool.clzFunction()) ||
+                    id.equals(pool.clzOrderable()))
+                    {
+                    return false;
+                    }
                 }
             return true;
             }

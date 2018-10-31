@@ -1639,29 +1639,6 @@ public class ConstantPool
         }
 
     /**
-     * Given the specified property or type parameter constant, obtain a TypeConstant that
-     * represents a type parameter.
-     *
-     * @param constId  a constant specifying a property or register of a method
-     *
-     * @return the constant representing the type parameter
-     */
-    public TerminalTypeConstant ensureTypeParameterConstant(Constant constId)
-        {
-        if (!(constId instanceof TypeParameterConstant || constId instanceof PropertyConstant))
-            {
-            throw new IllegalArgumentException("invalid parameter identifier: " + constId);
-            }
-
-        TerminalTypeConstant constType = (TerminalTypeConstant) ensureLocatorLookup(Format.TerminalType).get(constId);
-        if (constType == null)
-            {
-            constType = (TerminalTypeConstant) register(new TerminalTypeConstant(this, constId));
-            }
-        return constType;
-        }
-
-    /**
      * Given the specified register index, obtain a TypeConstant that represents the type parameter.
      *
      * @param constMethod  the containing method
@@ -1738,6 +1715,17 @@ public class ConstantPool
     public AnnotatedTypeConstant ensureAnnotatedTypeConstant(Annotation annotation, TypeConstant constType)
         {
         return (AnnotatedTypeConstant) register(new AnnotatedTypeConstant(this, annotation, constType));
+        }
+
+    /**
+     * Obtain a type that represents a constraint for a formal type that materializes into a
+     * sequence of types.
+     *
+     * @return a sequence of types type constant
+     */
+    public TypeSequenceTypeConstant ensureTypeSequenceTypeConstant()
+        {
+        return (TypeSequenceTypeConstant) register(new TypeSequenceTypeConstant(this));
         }
 
     /**
@@ -2223,8 +2211,11 @@ public class ConstantPool
                 /*
                 * Types.
                 */
+                case UnresolvedType:
+                    throw new IOException("UnresolvedType not supported persistently");
+
                 case TerminalType:
-                    constant = new ParameterizedTypeConstant(this, format, in);
+                    constant = new TerminalTypeConstant(this, format, in);
                     break;
 
                 case ImmutableType:
@@ -2241,6 +2232,10 @@ public class ConstantPool
 
                 case ParameterizedType:
                     constant = new ParameterizedTypeConstant(this, format, in);
+                    break;
+
+                case TurtleType:
+                    constant = new TypeSequenceTypeConstant(this);
                     break;
 
                 case UnionType:

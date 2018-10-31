@@ -496,10 +496,12 @@ public class NamedTypeExpression
                 break;
 
             case Property:
+                {
+                PropertyConstant idProp = (PropertyConstant) constTarget;
+                assert idProp.isTypeParameter();
+
                 if (ctx != null)
                     {
-                    PropertyConstant idProp = (PropertyConstant) constTarget;
-
                     // see if the FormalType was narrowed
                     Argument arg = ctx.getVar(idProp.getName());
                     if (arg instanceof Register)
@@ -507,8 +509,9 @@ public class NamedTypeExpression
                         return arg.getType();
                         }
                     }
-                idFormalTarget = null;
-                break;
+
+                return idProp.getFormalType();
+                }
 
             case TypeParameter:
                 idFormalTarget = null;
