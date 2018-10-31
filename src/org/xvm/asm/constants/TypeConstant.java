@@ -1122,15 +1122,6 @@ public abstract class TypeConstant
 
             case PUBLIC:
                 assert !isAccessSpecified();
-                if (isTuple())
-                    {
-                    // for the TypeInfo purposes the content of the type parameters is irrelevant
-                    TypeConstant typeTuple = getConstantPool().typeTuple();
-                    if (this != typeTuple)
-                        {
-                        return typeTuple.ensureTypeInfoInternal(errs);
-                        }
-                    }
                 TypeInfo info = getConstantPool().ensureAccessTypeConstant(this, Access.PRIVATE)
                         .ensureTypeInfoInternal(errs);
                 return info == null
