@@ -3673,12 +3673,16 @@ public abstract class TypeConstant
             // the check on whether C is assignable to I depends on whether the return value of
             // C.foo() is assignable to the return value of I.foo(), which causes a recursion
             //
-            // The assertion below assumes that a recursion for a given type always involves the
-            // same ConstantPool. However, there is a possibility that we cycled in to the same
+            // The soft assertion below assumes that a recursion for a given type always involves
+            // the same ConstantPool. However, there is a possibility that we cycled in to the same
             // interface type on a different pool and called isInterfaceAssignableFrom again,
             // checking all the methods and circled back for a non-interface comparison.
-            // Leaving assert in for now, but no matter what, the answer should be negative.
-            assert typeLeft.isInterfaceType();
+            // Leaving the logging in for now, but no matter what, the answer should be negative.
+            if (!typeLeft.isInterfaceType())
+                {
+                System.err.println("rejecting isA() due to a recursion:" +
+                    " left=" + typeLeft.getValueString() + "; right=" + typeRight.getValueString());
+                }
             mapRelations.put(typeLeft, relation = Relation.INCOMPATIBLE);
             }
         return relation;
