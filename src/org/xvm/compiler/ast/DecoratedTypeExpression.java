@@ -100,12 +100,6 @@ public class DecoratedTypeExpression
             }
         }
 
-    @Override
-    protected String getDefaultInnerClassName()
-        {
-        return type.getDefaultInnerClassName();
-        }
-
 
     // ----- debugging assistance ------------------------------------------------------------------
 

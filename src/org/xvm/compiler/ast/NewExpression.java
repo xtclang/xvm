@@ -31,7 +31,6 @@ import org.xvm.asm.op.New_1;
 import org.xvm.asm.op.New_N;
 
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Constants;
 import org.xvm.compiler.Token;
 
@@ -105,15 +104,6 @@ public class NewExpression
         return body != null;
         }
 
-    @Override
-    public Component getComponent()
-        {
-        ClassStructure structClz = m_structClz;
-        return structClz == null
-                ? super.getComponent()
-                : structClz;
-        }
-
     /**
      * @return the parent of the object being new'd, for example "parent.new Child()", or null if
      *         the object being new'd is of a top level class
@@ -182,26 +172,6 @@ public class NewExpression
     // ----- compilation (inner class) -------------------------------------------------------------
 
     @Override
-    protected void registerStructures(StageMgr mgr, ErrorListener errs)
-        {
-        if (body != null)
-            {
-            // we're only avoiding creating the anonymous inner class
-            mgr.processChildrenExcept((node) -> node == body);
-            }
-        }
-
-    @Override
-    public void resolveNames(StageMgr mgr, ErrorListener errs)
-        {
-        if (body != null)
-            {
-            // we're only deferring processing of the anonymous inner class
-            mgr.processChildrenExcept((node) -> node == body);
-            }
-        }
-
-    @Override
     public void validateContent(StageMgr mgr, ErrorListener errs)
         {
         if (body == null)
@@ -209,11 +179,9 @@ public class NewExpression
             return;
             }
 
-        // create the inner class
-        assert m_structClz == null;
-
         // select a unique (and purposefully syntactically illegal) name for the anonymous inner
         // class
+        assert anon == null;
         AnonInnerClass info     = type.inferAnonInnerClass(errs);
         Component      parent   = getComponent();
         String         sDefault = info.getDefaultName();
@@ -225,7 +193,8 @@ public class NewExpression
             }
         Token tokName = new Token(type.getStartPosition(), type.getEndPosition(), Id.IDENTIFIER, sName);
 
-        TypeCompositionStatement stmtAnon = new TypeCompositionStatement(
+        this.anon = new TypeCompositionStatement(
+                this,
                 info.getAnnotations(),
                 info.getCategory(),
                 tokName,
@@ -235,11 +204,7 @@ public class NewExpression
                 type.getStartPosition(),
                 body.getEndPosition()
                 );
-        stmtAnon.setParent(this);
-        body.setParent(stmtAnon);
 
-        this.anon = stmtAnon;
-        this.body = null;
         catchUpChildren(errs);
         }
 
@@ -262,8 +227,8 @@ public class NewExpression
         else
             {
             // there must be an anonymous inner class skeleton by this point
-            assert m_structClz != null;
-            typeTarget = m_structClz.getIdentityConstant().getType();
+            assert anon != null && anon.getComponent() != null;
+            typeTarget = anon.getComponent().getIdentityConstant().getType();
             }
 
         return typeTarget;
@@ -406,13 +371,6 @@ public class NewExpression
                     assert m_constructor != null;
                     }
 
-                if (body != null)
-                    {
-                    // TODO anonymous inner class
-                    log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED, "Instantiation of anonymous inner classes");
-                    return finishValidation(typeRequired, null, TypeFit.NoFit, null, errs);
-                    }
-
                 ConstantPool   pool      = pool();
                 TypeConstant[] atypeArgs = idMethod.getRawParams();
 
@@ -483,8 +441,12 @@ public class NewExpression
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         assert m_constructor != null;
-        assert left == null; // TODO construct child class
-        assert body == null; // TODO anonymous inner class
+
+        if (left != null)
+            {
+            // TODO construct child class
+            notImplemented();
+            }
 
         List<Expression> listArgs = args;
         int              cArgs    = listArgs.size();
@@ -505,8 +467,12 @@ public class NewExpression
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         assert m_constructor != null;
-        assert left == null; // TODO construct child class
-        assert body == null; // TODO anonymous inner class
+
+        if (left != null)
+            {
+            // TODO construct child class
+            notImplemented();
+            }
 
         List<Expression> listArgs = args;
         int              cArgs    = listArgs.size();
@@ -530,29 +496,6 @@ public class NewExpression
 
 
     // ----- compilation helpers -------------------------------------------------------------------
-
-    /**
-     * This is used to catch up the parts of the new expression (for an anonymous inner class) that
-     * are necessary to work with the anonymous inner class within its containing method, such that
-     * it can be asked questions about type information, etc.
-     *
-     * @param errs  the error list to log to
-     *
-     * @return true if the new expression for an anonymous inner class was able to prepare
-     */
-    protected boolean ensurePrepared(ErrorListener errs)
-        {
-        boolean fPrepared = m_fPrepared;
-
-        if (!fPrepared)
-            {
-            // TODO do we need to make sure that the type expression (the type being new'd) has been resolved?
-
-            fPrepared = true;
-            }
-
-        return m_fPrepared = fPrepared;
-        }
 
     /**
      * Generate the NEW_* op-code
@@ -701,8 +644,8 @@ public class NewExpression
     protected Token                    operator;
     protected TypeExpression           type;
     protected List<Expression>         args;
-    protected StatementBlock           body;
-    protected TypeCompositionStatement anon;
+    protected StatementBlock           body;        // NOT a child
+    protected TypeCompositionStatement anon;        // synthetic, added as a child
     protected long                     lEndPos;
 
     private transient MethodStructure m_constructor;
@@ -713,10 +656,6 @@ public class NewExpression
      * Set to true after the expression prepares by ensurePrepared().
      */
     private transient boolean               m_fPrepared;
-    /**
-     * The anonymous inner class structure (created if body is not null).
-     */
-    private transient ClassStructure        m_structClz;
     /**
      * The variables captured by the anonymous inner class, with an associated "true" flag if the
      * inner class needs to capture the variable in a read/write mode.
@@ -731,5 +670,5 @@ public class NewExpression
      */
     private transient boolean               m_fInstanceChild;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(NewExpression.class, "left", "type", "args", "body");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(NewExpression.class, "left", "type", "args", "anon");
     }

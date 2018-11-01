@@ -83,6 +83,12 @@ public class ArrayTypeExpression
         return pool.ensureClassTypeConstant(pool.clzArray(), null, type.ensureTypeConstant());
         }
 
+    @Override
+    protected void collectAnonInnerClassInfo(AnonInnerClass info)
+        {
+        info.addContribution(this);
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 

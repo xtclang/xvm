@@ -7,7 +7,10 @@ import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -74,6 +77,32 @@ public class BiTypeExpression
 
             case SUB:
                 return pool.ensureDifferenceTypeConstant(constType1, constType2);
+
+            default:
+                throw new IllegalStateException("unsupported operator: " + operator);
+            }
+        }
+
+    @Override
+    protected void collectAnonInnerClassInfo(AnonInnerClass info)
+        {
+        switch (operator.getId())
+            {
+            case ADD:
+                // delegate down to each sub-type as a separate contribution
+                type1.collectAnonInnerClassInfo(info);
+                type2.collectAnonInnerClassInfo(info);
+                break;
+
+            case BIT_OR:
+                // cannot implement an intersection type in an anonymous inner class
+                log(info.getErrorListener(true), Severity.ERROR, Compiler.ANON_CLASS_EXTENDS_INTERSECTION);
+                break;
+
+            case SUB:
+                // a difference type is treated as an interface type that can be implemented
+                info.addContribution(this);
+                break;
 
             default:
                 throw new IllegalStateException("unsupported operator: " + operator);

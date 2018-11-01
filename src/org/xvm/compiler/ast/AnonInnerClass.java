@@ -8,6 +8,7 @@ import java.util.List;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
@@ -90,7 +91,7 @@ public class AnonInnerClass
      */
     public String getDefaultName()
         {
-        return m_sName;
+        return m_sName == null ? "Object" : m_sName;
         }
 
     /**
@@ -216,40 +217,34 @@ public class AnonInnerClass
 
             case AnnotatedType:
                 {
-                TypeConstant typeNext = type.getUnderlyingType();
-                long lPos = exprType.getStartPosition();
-                NamedTypeExpression fake = new NamedTypeExpression(null, Collections.singletonList(
-                        genToken(exprType, Id.IDENTIFIER, type.getValueString())) )
-                addAnnotation(new Annotation(fake, anno, lPos, lPos));
+                addContribution(exprType, type.getUnderlyingType());
+                addAnnotation(new Annotation(((AnnotatedTypeConstant) type).getAnnotation(), exprType));
                 return;
-                }
-
-            case ParameterizedType:
-                {
-                // TODO
-                throw new UnsupportedOperationException();
                 }
 
             case UnionType:
                 {
-                // TODO
-                throw new UnsupportedOperationException();
+                addContribution(exprType, type.getUnderlyingType());
+                addContribution(exprType, type.getUnderlyingType2());
+                return;
                 }
 
             case IntersectionType:
-                exprType.log(getErrorListener(true), Severity.ERROR,
-                        Compiler.ANON_CLASS_EXTENDS_INTERSECTION);
+                exprType.log(getErrorListener(true), Severity.ERROR, Compiler.ANON_CLASS_EXTENDS_INTERSECTION);
                 return;
 
             default:
                 throw new IllegalStateException("type=" + type);
 
-            case TerminalType:  // treat it as whatever the type turns out to be
-            case DifferenceType:// treat it as an interface
-            case AccessType:    // treat it as an interface
+            case DifferenceType:    // treat it as an interface
+            case AccessType:        // treat it as an interface
+            case TerminalType:      // treat it as whatever the type turns out to be
+            case ParameterizedType: // whatever is parameterized, drop through and handle it
+                // fall out of this switch
                 break;
             }
 
+        // handling for all class & mixin types
         if (type.isExplicitClassIdentity(true))
             {
             switch (type.getExplicitClassFormat())
@@ -257,7 +252,7 @@ public class AnonInnerClass
                 case CLASS:
                     setSuper(exprType);
                     m_fmt = Format.CLASS;
-                    break;
+                    return;
 
                 case ENUM:
                 case ENUMVALUE:
@@ -266,32 +261,41 @@ public class AnonInnerClass
                     exprType.log(getErrorListener(true), Severity.ERROR,
                             Compiler.ANON_CLASS_EXTENDS_ILLEGAL,
                             type.getExplicitClassFormat().toString().toLowerCase());
+                    // fall through
                 case CONST:
                     setSuper(exprType);
                     markImmutable();
-                    break;
+                    m_fmt = Format.CONST;
+                    return;
 
                 case SERVICE:
                     ensureMutable();
                     setSuper(exprType);
                     m_fmt = Format.SERVICE;
-                    break;
+                    return;
 
                 case MIXIN:
                     ensureCompositions().add(new Incorporates(null,
                             genKeyword(exprType, Id.INCORPORATES), exprType, null, null));
-                    break;
+                    return;
 
                 case INTERFACE:
-                    ensureCompositions().add(new Implements(null,
-                            genKeyword(exprType, Id.IMPLEMENTS), exprType));
+                    // fall out of this switch
                     break;
 
                 default:
                     throw new IllegalStateException("type=" + type + ", format=" + type.getExplicitClassFormat());
                 }
             }
-        //else if (type instanceof )
+
+        // handling for all interface types
+        if (m_sName == null)
+            {
+            m_sName = type.isSingleUnderlyingClass(true)
+                    ? type.getSingleUnderlyingClass(true).getName()
+                    : type.getValueString().replace(" ", "");
+            }
+        ensureCompositions().add(new Implements(null, genKeyword(exprType, Id.IMPLEMENTS), exprType));
         }
 
 
@@ -359,6 +363,7 @@ public class AnonInnerClass
             }
 
         list.add(0, new Extends(null, genKeyword(exprType, Id.EXTENDS), exprType, null));
+        m_sName = type.getSingleUnderlyingClass(false).getName();
         }
 
     /**
@@ -372,6 +377,38 @@ public class AnonInnerClass
             m_listCompositions = list = new ArrayList<>();
             }
         return list;
+        }
+
+
+    // ----- Object methods ------------------------------------------------------------------------
+
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+
+        if (!isValid())
+            {
+            sb.append("**ERROR** ");
+            }
+
+        for (Annotation anno : getAnnotations())
+            {
+            sb.append(anno)
+              .append(' ');
+            }
+
+        sb.append(getFormat())
+          .append(' ')
+          .append(getDefaultName());
+
+        for (Composition comp : getCompositions())
+            {
+            sb.append(' ')
+              .append(comp);
+            }
+
+        return sb.toString();
         }
 
 

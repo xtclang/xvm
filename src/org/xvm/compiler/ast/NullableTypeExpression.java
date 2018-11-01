@@ -6,6 +6,10 @@ import java.lang.reflect.Field;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Compiler;
+
+import org.xvm.util.Severity;
+
 
 /**
  * A nullable type expression is a type expression followed by a question mark.
@@ -56,6 +60,12 @@ public class NullableTypeExpression
         {
         ConstantPool pool = pool();
         return pool.ensureIntersectionTypeConstant(pool.typeNullable(), type.ensureTypeConstant());
+        }
+
+    @Override
+    protected void collectAnonInnerClassInfo(AnonInnerClass info)
+        {
+        log(info.getErrorListener(true), Severity.ERROR, Compiler.ANON_CLASS_EXTENDS_INTERSECTION);
         }
 
 

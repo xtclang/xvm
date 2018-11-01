@@ -17,9 +17,13 @@ module TestAnonInner.xqiz.it
             {
             void run()
                 {
+//                @Inject X.io.Console console2;
+//                console2.println("in run");
                 }
             };
 
-        o.run();
+//        o.run();
+
+        console.println("done");
         }
     }

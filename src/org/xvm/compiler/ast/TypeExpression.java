@@ -139,7 +139,7 @@ public abstract class TypeExpression
      * @return the AnonInnerClass that represents the outline of what an anonymous inner class
      *         for this type would look like
      */
-    public AnonInnerClass inferAnonInnerClass(ErrorListener errs)
+    public final AnonInnerClass inferAnonInnerClass(ErrorListener errs)
         {
         AnonInnerClass info = new AnonInnerClass(this, errs);
         collectAnonInnerClassInfo(info);
@@ -154,14 +154,6 @@ public abstract class TypeExpression
     protected void collectAnonInnerClassInfo(AnonInnerClass info)
         {
         log(info.getErrorListener(true), Severity.ERROR, Compiler.INVALID_ANON_CLASS_TYPE);
-        }
-
-    /**
-     * @return the suggested default name for an anonymous inner class of this type
-     */
-    protected String getDefaultInnerClassName()
-        {
-        return "Object";
         }
 
 

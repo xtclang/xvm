@@ -128,14 +128,8 @@ public class AnnotatedTypeExpression
     @Override
     protected void collectAnonInnerClassInfo(AnonInnerClass info)
         {
+        info.addAnnotation(getAnnotation());
         type.collectAnonInnerClassInfo(info);
-        info.addAnnotation(getAnnotation()); // REVIEW should this come before or after the above line?
-        }
-
-    @Override
-    protected String getDefaultInnerClassName()
-        {
-        return type.getDefaultInnerClassName();
         }
 
 

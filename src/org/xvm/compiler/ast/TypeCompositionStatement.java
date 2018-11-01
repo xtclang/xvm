@@ -120,6 +120,7 @@ public class TypeCompositionStatement
      * Used by anonymous inner class declarations.
      */
     public TypeCompositionStatement(
+            NewExpression     parent,
             List<Annotation>  annotations,
             Token             category,
             Token             name,
@@ -137,6 +138,9 @@ public class TypeCompositionStatement
         this.compositions = compositions;
         this.args         = args;
         this.body         = body;
+
+        setParent(parent);
+        introduceParentage();
         }
 
 

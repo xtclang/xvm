@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -16,6 +17,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -46,12 +48,12 @@ public class Annotation
         this.lEndPos   = lEndPos;
         }
 
-    public Annotation(NamedTypeExpression type, org.xvm.asm.Annotation anno, long lStartPos, long lEndPos)
+    public Annotation(org.xvm.asm.Annotation anno, AstNode node)
         {
-        this.type      = type;
         this.m_anno    = anno;
-        this.lStartPos = lStartPos;
-        this.lEndPos   = lEndPos;
+        this.m_node    = node;
+        this.lStartPos = node.getStartPosition();
+        this.lEndPos   = node.getEndPosition();
         }
 
 
@@ -59,7 +61,15 @@ public class Annotation
 
     public NamedTypeExpression getType()
         {
-        return type;
+        NamedTypeExpression expr = type;
+        if (expr == null)
+            {
+            assert m_node != null && m_anno != null;
+            List<Token> names = Collections.singletonList(new Token(lStartPos, lEndPos,
+                    Id.IDENTIFIER, ((IdentityConstant) m_anno.getAnnotationClass()).getName()));
+            type = expr = new NamedTypeExpression(null, names, null, null, null, lEndPos);
+            }
+        return expr;
         }
 
     public List<Expression> getArguments()
@@ -271,6 +281,11 @@ public class Annotation
     @Override
     public String toString()
         {
+        if (m_anno != null)
+            {
+            return m_anno.toString();
+            }
+
         StringBuilder sb = new StringBuilder();
 
         sb.append('@')
@@ -417,6 +432,9 @@ public class Annotation
     protected long                lStartPos;
     protected long                lEndPos;
 
+    // these two fields allow us to pretend to be an Annotation by generating a type on the fly, if
+    // necessary
+    private transient AstNode                m_node;
     private transient org.xvm.asm.Annotation m_anno;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(Annotation.class, "type", "args");

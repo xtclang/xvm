@@ -6,13 +6,13 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.List;
-
 import java.util.Set;
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;

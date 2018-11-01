@@ -67,6 +67,12 @@ public class SequenceTypeExpression
         return pool.ensureClassTypeConstant(pool.clzSequence(), null, type.ensureTypeConstant());
         }
 
+    @Override
+    protected void collectAnonInnerClassInfo(AnonInnerClass info)
+        {
+        info.addContribution(this);
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 
