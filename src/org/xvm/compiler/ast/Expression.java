@@ -2125,18 +2125,20 @@ public abstract class Expression
     /**
      * Generate a "this" or some other reserved register.
      *
+     *
+     * @param code  the code block
      * @param nReg  the register identifier
      * @param errs  the error list to log to
      *
      * @return the reserved register
      */
-    protected Argument generateReserved(int nReg, ErrorListener errs)
+    protected Argument generateReserved(Code code, int nReg, ErrorListener errs)
         {
         boolean         fNoFunction  = true;
         boolean         fNoConstruct = true;
         ConstantPool    pool         = pool();
-        MethodStructure method       = (MethodStructure) getComponent();
-        TypeConstant    type         = method.getContainingClass().getIdentityConstant().getType();
+        MethodStructure method       = code.getMethodStructure();
+        TypeConstant    type         = method.getContainingClass().getFormalType();
         switch (nReg)
             {
             case Op.A_TARGET:

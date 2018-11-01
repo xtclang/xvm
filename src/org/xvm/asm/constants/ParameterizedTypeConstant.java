@@ -413,6 +413,17 @@ public class ParameterizedTypeConstant
         return pool.ensureParameterizedTypeConstant(type, m_atypeParams);
         }
 
+    @Override
+    protected TypeInfo buildTypeInfo(ErrorListener errs)
+        {
+        if (m_constType.isTuple())
+            {
+            // for the TypeInfo purposes the content of the type parameters is irrelevant
+            return m_constType.buildTypeInfo(errs);
+            }
+        return super.buildTypeInfo(errs);
+        }
+
 
     // ----- type comparison support --------------------------------------------------------------
 

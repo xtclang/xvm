@@ -731,7 +731,7 @@ public class NameExpression
 
                     case Property:
                         // "this" is used only if the property is not a constant
-                        if (!((PropertyConstant) resolveRawArgument(ctx, false, errs)).getComponent().isStatic())
+                        if (!((PropertyConstant) m_arg).getComponent().isStatic())
                             {
                             // there is a read of the implicit "this" variable
                             Token tokName = getNameToken();
@@ -844,7 +844,7 @@ public class NameExpression
                         if (cSteps == 0)
                             {
                             // it's just "this" (but note that it results in the public type)
-                            return generateReserved(Op.A_PUBLIC, errs);
+                            return generateReserved(code, Op.A_PUBLIC, errs);
                             }
 
                         Register regOuter = new Register(((PseudoConstant) argRaw).getType());
@@ -872,7 +872,7 @@ public class NameExpression
                         Register regThis;
                         if (cSteps == 0)
                             {
-                            regThis = (Register) generateReserved(Op.A_PRIVATE, errs);
+                            regThis = (Register) generateReserved(code, Op.A_PRIVATE, errs);
                             }
                         else
                             {
@@ -1248,14 +1248,6 @@ public class NameExpression
                             {
                             typeLeft = pool().ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
                             }
-                        else if (arg instanceof PropertyConstant)
-                            {
-                            PropertyConstant idProp = (PropertyConstant) arg;
-                            if (idProp.isTypeSequenceTypeParameter())
-                                {
-                                typeLeft = idProp.getReferredToType();
-                                }
-                            }
                         }
                     TypeInfo     infoType = typeLeft.ensureTypeInfo(errs);
                     PropertyInfo infoProp = infoType.findProperty(sName);
@@ -1423,25 +1415,22 @@ public class NameExpression
                 TypeConstant      type = prop.getType();
 
                 // resolve the property type
-                if (left == null)
+                if (id.isTypeSequenceTypeParameter())
                     {
-                    if (id.isTypeSequenceTypeParameter())
+                    type = id.getReferredToType();
+                    }
+                else if (left == null)
+                    {
+                    ClassStructure clz = ctx.getThisClass();
+                    if (clz != prop.getParent())
                         {
-                        type = id.getReferredToType();
-                        }
-                    else
-                        {
-                        ClassStructure clz = ctx.getThisClass();
-                        if (clz != prop.getParent())
+                        // the property may originate in a contribution
+                        // (e.g. Range.x refers to Interval.upperBound)
+                        PropertyInfo infoProp = clz.getFormalType().
+                                ensureTypeInfo().findProperty(id);
+                        if (infoProp != null)
                             {
-                            // the property may originate in a contribution
-                            // (e.g. Range.x refers to Interval.upperBound)
-                            PropertyInfo infoProp = clz.getFormalType().
-                                    ensureTypeInfo().findProperty(id);
-                            if (infoProp != null)
-                                {
-                                type = infoProp.getType();
-                                }
+                            type = infoProp.getType();
                             }
                         }
                     }

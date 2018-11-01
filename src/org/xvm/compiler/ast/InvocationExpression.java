@@ -835,7 +835,7 @@ public class InvocationExpression
                             MethodStructure method = code.getMethodStructure();
                             assert !method.isFunction();
                             argTarget = generateReserved(
-                                    method.isConstructor() ? Op.A_STRUCT : Op.A_PRIVATE, errs);
+                                    code, method.isConstructor() ? Op.A_STRUCT : Op.A_PRIVATE, errs);
                             }
                         else
                             {
