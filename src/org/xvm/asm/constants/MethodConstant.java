@@ -236,7 +236,9 @@ public class MethodConstant
     public SignatureConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget)
         {
         assert !isFunction();
-        assert typeTarget == null || typeTarget.isA(getClassIdentity().getType());
+        assert typeTarget == null ||
+               typeTarget.isA(getClassIdentity().getType()) ||
+               typeTarget.isFormalTypeSequence();
 
         return getSignature().resolveAutoNarrowing(pool, typeTarget);
         }
