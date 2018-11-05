@@ -25,6 +25,7 @@ interface Iterable<ElementType>
             {
             Iterator iter = iterator();
 
+            @Override
             conditional ElementType next()
                 {
                 while (ElementType value : iter.next())
