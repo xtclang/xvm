@@ -374,11 +374,14 @@ public class TerminalTypeConstant
         Constant constId = getDefiningConstant();
         if (constId instanceof PropertyConstant)
             {
-            TypeConstant typeResolved = resolver.resolveGenericType(
-                    ((PropertyConstant) constId).getName());
-            if (typeResolved != null)
+            PropertyConstant idProp = (PropertyConstant) constId;
+            if (!idProp.isTypeSequenceTypeParameter())
                 {
-                return typeResolved;
+                TypeConstant typeResolved = resolver.resolveGenericType(idProp.getName());
+                if (typeResolved != null)
+                    {
+                    return typeResolved;
+                    }
                 }
             }
         if (constId instanceof TypeParameterConstant)
