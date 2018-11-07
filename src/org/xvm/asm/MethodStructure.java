@@ -560,8 +560,16 @@ public class MethodStructure
     // ----- compiler support ----------------------------------------------------------------------
 
     /**
-     * Given arrays of actual argument types and return types, resolve and put into the
-     * specified ListMap all the actual (resolved) type parameters types.
+     * Given arrays of actual argument types and return types, return a ListMap with the actual
+     * (resolved) type parameters types.
+     * <p/>
+     * For example: given a method:
+     *      <T, U> T foo(U u, T t)
+     * an actual argument types:
+     *      String, Int
+     * and an actual return types:
+     *      Number
+     * this method would return a map {"T":Number, "U":String}
      *
      * @param atypeArgs     the actual argument types
      * @param atypeReturns  (optional) the actual return types
