@@ -389,10 +389,14 @@ class TestApp
         print(ai2[2]);
         }
 
-     static conditional String testConditional(Int i)
-        {
-        TODO // TODO remove
-        }
+    static conditional String testConditional(Int i)
+         {
+         if (i > 0)
+            {
+            return true, "positive";
+            }
+         return false;
+         }
 
      static void testTuple()
         {
@@ -420,15 +424,6 @@ class TestApp
 
         @annotations.ConditionalTuple Tuple<Boolean, String> t3 = testConditional(-1);
         print(t3);
-
-        static conditional String testConditional(Int i)
-             {
-             if (i > 0)
-                {
-                return true, "positive";
-                }
-             return false;
-             }
         }
 
     static const Point(Int x, Int y)

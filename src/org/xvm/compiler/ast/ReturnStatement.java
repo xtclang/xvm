@@ -151,7 +151,7 @@ public class ReturnStatement
         else // cExprs == 1
             {
             Expression exprOld = listExprs.get(0);
-            Expression exprNew = null;
+            Expression exprNew;
             // several possibilities:
             // 1) most likely the expression matches the return types for the method
             if (cRets < 0 || exprOld.testFitMulti(ctx, aRetTypes).isFit())
@@ -160,15 +160,8 @@ public class ReturnStatement
                 }
             else
                 {
-                // 2) it could be a tuple return
-                TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(pool.typeTuple(), aRetTypes);
-                if (exprOld.testFit(ctx, typeTuple).isFit())
-                    {
-                    exprNew = exprOld.validate(ctx, typeTuple, errs);
-                    m_fTupleReturn = true;
-                    }
-                // 3) it could be a conditional false
-                else if (fConditional && exprOld.testFit(ctx, pool.typeFalse()).isFit())
+                // 2) it could be a conditional false
+                if (fConditional && exprOld.testFit(ctx, pool.typeFalse()).isFit())
                     {
                     exprNew = exprOld.validate(ctx, pool.typeFalse(), errs);
                     if (exprNew != null && (!exprNew.isConstant() || !exprNew.toConstant().equals(pool.valFalse())))
@@ -178,12 +171,22 @@ public class ReturnStatement
                         fValid = false;
                         }
                     }
-                // 4) otherwise it's most probably an error and the validation will log it
-                //   (except cases when testFit() implementation doesn't fully match the validate
-                //    logic or somehow has more information to operate on)
                 else
                     {
-                    exprNew = exprOld.validateMulti(ctx, aRetTypes, errs);
+                    // 3) it could be a tuple return
+                    TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(pool.typeTuple(), aRetTypes);
+                    if (exprOld.testFit(ctx, typeTuple).isFit())
+                        {
+                        exprNew = exprOld.validate(ctx, typeTuple, errs);
+                        m_fTupleReturn = true;
+                        }
+                    // 4) otherwise it's most probably an error and the validation will log it
+                    //   (except cases when testFit() implementation doesn't fully match the validate
+                    //    logic or somehow has more information to operate on)
+                    else
+                        {
+                        exprNew = exprOld.validateMulti(ctx, aRetTypes, errs);
+                        }
                     }
                 }
 

@@ -1704,17 +1704,28 @@ public class ConstantPool
         }
 
     /**
-     * Given the specified annotation, obtain a type that represents the annotated form of the
+     * Given the specified annotations, obtain a type that represents the annotated form of the
      * specified type.
      *
-     * @param annotation   the annotation
      * @param constType    the type being annotated
+     * @param annotations  the annotations (will be applied in the inverse order)
      *
      * @return an annotated type constant
      */
-    public AnnotatedTypeConstant ensureAnnotatedTypeConstant(Annotation annotation, TypeConstant constType)
+    public AnnotatedTypeConstant ensureAnnotatedTypeConstant(TypeConstant constType, Annotation... annotations)
         {
-        return (AnnotatedTypeConstant) register(new AnnotatedTypeConstant(this, annotation, constType));
+        if (annotations.length == 0)
+            {
+            throw new IllegalArgumentException("annotations are required");
+            }
+
+        TypeConstant type = constType;
+        for (int i = annotations.length - 1; i >= 0; --i)
+            {
+            type = (TypeConstant) register(new AnnotatedTypeConstant(this, annotations[i], type));
+            }
+
+        return (AnnotatedTypeConstant) type;
         }
 
     /**

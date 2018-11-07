@@ -180,6 +180,14 @@ public class PropertyStructure
         }
 
     /**
+     * @return true iff the property contains any reference annotations
+     */
+    public boolean isRefAnnotated()
+        {
+        return getRefAnnotations().length > 0;
+        }
+
+    /**
      * @return an array of all annotations that are <i>not</i> property annotations
      */
     public Annotation[] getRefAnnotations()

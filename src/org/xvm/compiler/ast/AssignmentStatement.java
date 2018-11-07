@@ -711,7 +711,29 @@ public class AssignmentStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    public enum Category {Assign, CondExpr, CondLeft, CondRight, InPlace}
+    public enum Category
+        {
+        /**
+         * a = b
+         */
+        Assign,
+        /**
+         * a : b (only inside of "if" and "while")
+         */
+        CondExpr,
+        /**
+         * a &&= b, a ||= b, a ?:= b
+         */
+        CondLeft,
+        /**
+         * a := b
+         */
+        CondRight,
+        /**
+         * a += b, a &= b, etc.
+         */
+        InPlace
+        }
 
     protected AstNode    lvalue;
     protected Expression lvalueExpr;

@@ -291,12 +291,10 @@ public class MethodStructure
         assert !ret.isConditionalReturn();
         assert iRet == ret.getIndex();
 
-        TypeConstant type = ret.getType();
         ConstantPool pool = getConstantPool();
-        for (int i = annotations.length - 1; i >= 0; --i)
-            {
-            type = pool.ensureAnnotatedTypeConstant(annotations[i], type);
-            }
+        TypeConstant type = annotations.length == 0
+                ? ret.getType()
+                : pool.ensureAnnotatedTypeConstant(ret.getType(), annotations);
         m_aReturns[iRet] = new Parameter(pool, type, ret.getName(), ret.getDefaultValue(), true, iRet, false);
 
         // build a new MethodConstant

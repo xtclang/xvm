@@ -122,7 +122,7 @@ public class AnnotatedTypeExpression
         TypeConstant typeUnderlying = type.ensureTypeConstant();
         return isDisassociated()
                 ? typeUnderlying    // our annotation is not added to the underlying type constant
-                : pool.ensureAnnotatedTypeConstant(annotation.ensureAnnotation(pool), typeUnderlying);
+                : pool.ensureAnnotatedTypeConstant(typeUnderlying, annotation.ensureAnnotation(pool));
         }
 
     @Override

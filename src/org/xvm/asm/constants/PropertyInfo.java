@@ -729,7 +729,7 @@ public class PropertyInfo
      */
     public boolean isVar()
         {
-        if (m_fSuppressVar || isConstant() || isTypeParam())
+        if (m_fSuppressVar || isConstant() || isTypeParam() || isInjected())
             {
             return false;
             }
@@ -951,11 +951,9 @@ public class PropertyInfo
         TypeConstant typeRef = pool.ensureParameterizedTypeConstant(
             isVar() ? pool.typeVar() : pool.typeRef(), typeProp);
 
-        for (Annotation anno : getRefAnnotations())
-            {
-            typeRef = pool.ensureAnnotatedTypeConstant(anno, typeRef);
-            }
-        return typeRef;
+        return isRefAnnotated()
+                ? pool.ensureAnnotatedTypeConstant(typeRef, getRefAnnotations())
+                : typeRef;
         }
 
     /**

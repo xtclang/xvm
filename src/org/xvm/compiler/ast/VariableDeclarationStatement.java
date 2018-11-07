@@ -242,10 +242,10 @@ public class VariableDeclarationStatement
             {
             TypeConstant typeReg = pool.ensureParameterizedTypeConstant(
                     fVar ? pool.typeVar() : pool.typeRef(), typeVar);
-            for (int i = m_listRefAnnotations.size()- 1; i >= 0; --i)
+            for (int i = m_listRefAnnotations.size() - 1; i >= 0; --i)
                 {
                 typeReg = pool.ensureAnnotatedTypeConstant(
-                        m_listRefAnnotations.get(i).ensureAnnotation(pool), typeReg);
+                        typeReg, m_listRefAnnotations.get(i).ensureAnnotation(pool));
                 }
             m_reg.specifyRegType(typeReg);
             }
