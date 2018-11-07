@@ -1468,11 +1468,9 @@ public class NameExpression
                         // this shouldn't happen, but leaving the code for safety
                         TypeConstant typeRef = pool.ensureParameterizedTypeConstant(
                                 m_fAssignable ? pool.typeVar() : pool.typeRef(), type);
-                        for (Annotation anno : prop.getRefAnnotations())
-                            {
-                            typeRef = pool.ensureAnnotatedTypeConstant(anno, typeRef);
-                            }
-                        return typeRef;
+                        return prop.isRefAnnotated()
+                                ? pool.ensureAnnotatedTypeConstant(typeRef, prop.getRefAnnotations())
+                                : typeRef;
                         }
                     else
                         {
