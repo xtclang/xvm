@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.ResolutionResult;
@@ -1036,7 +1037,7 @@ public class NameExpression
                                 break;
                                 }
                             m_arg         = infoProp.getIdentity();
-                            m_fAssignable = infoProp.isVar() && !infoProp.isInjected();
+                            m_fAssignable = infoProp.isVar();
                             }
 
                         break;
@@ -1261,7 +1262,7 @@ public class NameExpression
                     else
                         {
                         m_arg         = infoProp.getIdentity();
-                        m_fAssignable = infoProp.isVar() && !infoProp.isInjected();
+                        m_fAssignable = infoProp.isVar();
                         }
                     }
                 }
@@ -1413,11 +1414,13 @@ public class NameExpression
                 PropertyConstant  id   = (PropertyConstant) argRaw;
                 PropertyStructure prop = (PropertyStructure) id.getComponent();
                 TypeConstant      type = prop.getType();
+                PropertyInfo      info = null;
 
                 // resolve the property type
                 if (id.isTypeSequenceTypeParameter())
                     {
                     type = id.getReferredToType();
+                    assert !m_fAssignable;
                     }
                 else if (left == null)
                     {
@@ -1431,6 +1434,7 @@ public class NameExpression
                         if (infoProp != null)
                             {
                             type = infoProp.getType();
+                            info = infoProp;
                             }
                         }
                     }
@@ -1445,6 +1449,7 @@ public class NameExpression
                     if (infoProp != null)
                         {
                         type = infoProp.getType();
+                        info = infoProp;
                         }
                     }
 
@@ -1458,8 +1463,22 @@ public class NameExpression
                 if (isSuppressDeref())
                     {
                     m_plan = Plan.PropertyRef;
-                    return pool.ensureParameterizedTypeConstant(
-                            m_fAssignable ? pool.typeVar() : pool.typeRef(), type);
+                    if (info == null)
+                        {
+                        // this shouldn't happen, but leaving the code for safety
+                        TypeConstant typeRef = pool.ensureParameterizedTypeConstant(
+                                m_fAssignable ? pool.typeVar() : pool.typeRef(), type);
+                        for (Annotation anno : prop.getRefAnnotations())
+                            {
+                            typeRef = pool.ensureAnnotatedTypeConstant(anno, typeRef);
+                            }
+                        return typeRef;
+                        }
+                    else
+                        {
+                        assert m_fAssignable == info.isVar();
+                        return info.getRefType();
+                        }
                     }
                 else
                     {
