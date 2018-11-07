@@ -153,7 +153,7 @@ class TestApp
         c = svc.counter;
         assert(c == 17);
 
-        function Int() fnInc = &svc.increment(); // counter = 18
+        function Int() fnInc = svc.&increment(); // counter = 18
         c = fnInc();
         print(c);
 
@@ -165,7 +165,7 @@ class TestApp
 
         FutureVar<Int> rfc2;
         @Future Int fc2 = svc.increment(); // counter = 20;
-        rfc2 = &rfc;
+        rfc2 = &fc2;
 
         rfc2.whenComplete((r, x) ->
             {

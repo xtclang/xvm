@@ -16,7 +16,7 @@ mixin ConditionalTuple
     @Op void setElement(Int index, Object newValue)
         {
         assert this[0];
-        return super(index, newValue);
+        super(index, newValue);
         }
 
     @Override

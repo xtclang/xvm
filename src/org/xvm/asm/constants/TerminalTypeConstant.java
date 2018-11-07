@@ -374,11 +374,14 @@ public class TerminalTypeConstant
         Constant constId = getDefiningConstant();
         if (constId instanceof PropertyConstant)
             {
-            TypeConstant typeResolved = resolver.resolveGenericType(
-                    ((PropertyConstant) constId).getName());
-            if (typeResolved != null)
+            PropertyConstant idProp = (PropertyConstant) constId;
+            if (!idProp.isTypeSequenceTypeParameter())
                 {
-                return typeResolved;
+                TypeConstant typeResolved = resolver.resolveGenericType(idProp.getName());
+                if (typeResolved != null)
+                    {
+                    return typeResolved;
+                    }
                 }
             }
         if (constId instanceof TypeParameterConstant)
@@ -535,26 +538,34 @@ public class TerminalTypeConstant
     public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName)
         {
         Constant constant = getDefiningConstant();
-        if (constant.getFormat() != Format.TypeParameter)
+        switch (constant.getFormat())
             {
-            return null;
-            }
+            case TypeParameter:
+                {
+                TypeParameterConstant constTypeParam = (TypeParameterConstant) constant;
+                MethodConstant        constMethod    = constTypeParam.getMethod();
+                MethodStructure       method         = (MethodStructure) constMethod.getComponent();
+                if (method != null)
+                    {
+                    Parameter param = method.getParam(constTypeParam.getRegister());
+                    if (param.getName().equals(sFormalName))
+                        {
+                        return typeActual;
+                        }
+                    }
+                break;
+                }
 
-        TypeParameterConstant constTypeParam = (TypeParameterConstant) constant;
-        MethodConstant        constMethod    = constTypeParam.getMethod();
-        MethodStructure       method         = (MethodStructure) constMethod.getComponent();
-        if (method == null)
-            {
-            return null;
+            case Property:
+                {
+                PropertyConstant idProp = (PropertyConstant) constant;
+                if (idProp.getName().equals(sFormalName))
+                    {
+                    return typeActual;
+                    }
+                }
             }
-
-        Parameter param = method.getParam(constTypeParam.getRegister());
-        if (!param.getName().equals(sFormalName))
-            {
-            return null;
-            }
-
-        return typeActual;
+        return null;
         }
 
     @Override

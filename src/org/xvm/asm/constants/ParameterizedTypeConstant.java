@@ -392,6 +392,15 @@ public class ParameterizedTypeConstant
         // now simply recurse over the parameter types
         ParameterizedTypeConstant that = (ParameterizedTypeConstant) typeActual;
 
+        // the underlying terminal type for actual type must fit the formal type
+        ConstantPool pool         = ConstantPool.getCurrentPool();
+        TypeConstant typeTermThis = this.m_constType;
+        TypeConstant typeTermThat = that.m_constType;
+        if (!typeTermThat.isA(typeTermThis))
+            {
+            return null;
+            }
+
         TypeConstant[] aconstThis = this.m_atypeParams;
         TypeConstant[] aconstThat = that.m_atypeParams;
 
