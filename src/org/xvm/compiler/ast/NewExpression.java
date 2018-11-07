@@ -13,6 +13,7 @@ import java.util.TreeMap;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
 import org.xvm.asm.Component;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -48,7 +49,6 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * "New object" expression.
  *
- * <p/> TODO anon new on an interface won't find a constructor (we must create a default one)
  * <p/> TODO constructor - create the specified constructor (same sig as super class by default)
  * <p/> TODO implicit captures - will alter the constructor that we create (add each as a constructor param)
  * <p/> TODO pass the arguments to the constructor, including the implicit captures
@@ -388,12 +388,22 @@ public class NewExpression
 
         if (fValid)
             {
-            List<Expression> listArgs = this.args;
-            MethodConstant   idMethod = findMethod(
+            List<Expression> listArgs   = this.args;
+            boolean          fInterface = infoTarget.getFormat() == Format.INTERFACE;
+            MethodConstant   idMethod   = fInterface ? null : findMethod(
                     ctx, infoTarget, "construct", listArgs, false, true, null, errs);
             if (idMethod == null)
                 {
-                fValid = false;
+                if (fInterface)
+                    {
+                    // TODO anon new on an interface won't find a constructor (we must create a default one)
+                    // TODO there must be zero constructor arguments!
+                    }
+                else
+                    {
+
+                    fValid = false;
+                    }
                 }
             else
                 {
@@ -440,6 +450,8 @@ public class NewExpression
             }
 
         TypeConstant typeResult = typeTarget;
+        TypeFit      fit        = fValid ? TypeFit.Fit : TypeFit.NoFit;
+
         if (fAnon)
             {
             typeResult = getAnonymousInnerClassType();
@@ -461,7 +473,7 @@ public class NewExpression
                 }
             }
 
-        return finishValidation(typeRequired, typeResult, fValid ? TypeFit.Fit : TypeFit.NoFit, null, errs);
+        return finishValidation(typeRequired, typeResult, fit, null, errs);
         }
 
     @Override
