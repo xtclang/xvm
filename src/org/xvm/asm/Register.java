@@ -146,7 +146,7 @@ public class Register
     /**
      * Create a register that is collocated with this register, but narrows its type.
      * <p/>
-     * To be technically correct, there is one scenario when typeNarrowed is actually wider than
+     * To be technically correct, there are scenarios when typeNarrowed is actually wider than
      * the original type. Imagine a following Ecstasy code:
      *   <pre><code>
      *   ElementType el = ...;
@@ -157,7 +157,7 @@ public class Register
      *       }
      *   </code></pre>
      *
-     * In the enclosed "if" context, it's known that the ElementType is an Int, which makes
+     * In the enclosed "if" context it's known that the ElementType is an Int, which makes
      * consumer2 not assignable to (not narrower than) consumer1, but in effect wider.
      *
      * @param typeNarrowed  the new register type
@@ -504,6 +504,13 @@ public class Register
         public void specifyRegType(TypeConstant typeReg)
             {
             throw new UnsupportedOperationException();
+            }
+
+        @Override
+        public Register narrowType(TypeConstant typeNarrowed)
+            {
+            // no reason to shadow the shadow
+            return Register.this.narrowType(typeNarrowed);
             }
 
         @Override
