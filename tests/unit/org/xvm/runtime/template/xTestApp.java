@@ -361,24 +361,6 @@ public class xTestApp extends xModule
 
         // ----- testTuple()
 
-        MethodStructure ftTestCond = getMethodStructure("testConditional", INT, null);
-            {
-            Code code = ftTestCond.createCode();
-
-            // #0 - i
-            Var var_i = new Var(adapter.getClassType("Boolean", null));
-            code.add(var_i); // #1
-            code.add(new IsGt(0, adapter.ensureValueConstantId(0), 1));
-
-            Label labelFalse = new Label();
-            code.add(new JumpFalse(var_i.getRegister(), labelFalse));
-            code.add(new Return_N(new Argument[] {
-                    adapter.ensureValueConstant(true),
-                    adapter.ensureValueConstant("positive")}));
-            code.add(labelFalse);
-            code.add(new Return_1(adapter.ensureValueConstant(false)));
-            }
-
         MethodStructure ftTestTuple = getMethodStructure("testTuple", VOID);
         ftTestTuple.createCode()
             .add(new X_Print(adapter.ensureValueConstantId("\n# in TestApp.testTuple() #")))
