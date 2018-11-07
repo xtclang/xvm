@@ -528,10 +528,6 @@ public class MethodDeclarationStatement
                         {
                         System.err.println("Compilation should have failed: " + sPath);
                         }
-                    else
-                        {
-                        System.out.println("Successfully compiled: " + sPath);
-                        }
                     }
                 }
             }
