@@ -35,9 +35,9 @@ class Array<ElementType>
         Element<ElementType>? head = null;
         if (size > 0)
             {
-            head = new Element(supply(0));
+            Element<ElementType> tail = new Element(supply(0));
+            head = tail;
 
-            Element<ElementType> tail = head;
             for (Int i : 1..size)
                 {
                 Element<ElementType> node = new Element(supply(i));
