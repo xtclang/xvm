@@ -15,7 +15,6 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpNotNull;
 import org.xvm.asm.op.JumpTrue;
@@ -469,16 +468,13 @@ public class AssignmentStatement
                 }
             }
 
-        if (exprRightNew != exprRight)
+        if (exprRightNew == null)
             {
-            if (exprRightNew == null)
-                {
-                fValid = false;
-                }
-            else
-                {
-                rvalue = exprRightNew;
-                }
+            fValid = false;
+            }
+        else
+            {
+            rvalue = exprRightNew;
             }
 
         return fValid ? this : null;
