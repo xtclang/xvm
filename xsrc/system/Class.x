@@ -48,7 +48,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      * A class is of a given category of Ecstasy language structures. These categories are not
      * entirely discrete; an Enum, for example, is a Const.
      */
-    enum Category {Module, Package, Class, Const, Enum, Service, Mixin, Interface}
+    enum Category {MODULE, PACKAGE, CLASS, CONST, ENUM, SERVICE, MIXIN, INTERFACE}
 
     /**
      * A class contains other named child structures.
@@ -236,7 +236,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      */
     @Lazy Class!? superClass.calc()
         {
-        if (category == Interface)
+        if (category == INTERFACE)
             {
             return null;
             }
@@ -280,7 +280,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      */
     Boolean extends_(Class! that)
         {
-        assert that.category != Interface;
+        assert that.category != INTERFACE;
 
         if (this == that)
             {
@@ -304,7 +304,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      */
     Boolean implements_(Class! that)
         {
-        assert that.category == Interface;
+        assert that.category == INTERFACE;
 
         if (this == that)
             {
@@ -328,7 +328,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      */
     Boolean incorporates_(Class! that)
         {
-        assert that.category == Mixin;
+        assert that.category == MIXIN;
 
         if (this == that)
             {
