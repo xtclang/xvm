@@ -753,6 +753,10 @@ public abstract class TypeConstant
         TypeConstant typeThis = this.resolveAutoNarrowing(pool, null);
         TypeConstant typeThat = that.resolveAutoNarrowing(pool, null);
 
+        // when the types are the same, then the values are comparable; in the case that the value
+        // is a constant, it's allowed to be of a wider type; for example:
+        //   Constant c = ...
+        //   if (c == "hello") // a valid comparison
         if (typeThis.equals(typeThat) || fThatIsConstant && typeThat.isA(typeThis))
             {
             return true;
@@ -764,16 +768,9 @@ public abstract class TypeConstant
         // if (s1 == s2) // is allowed despite the types are not equal
         // TODO: consider allowing this for any IntersectionType: (T1 | T2) == T1
 
-        if (typeThis.isNullable())
+        if (typeThis.isNullable() || typeThat.isNullable())
             {
-            typeThis = typeThis.removeNullable(pool);
-            return typeThis.equals(typeThat);
-            }
-
-        if (typeThat.isNullable())
-            {
-            typeThat = typeThat.removeNullable(pool);
-            return typeThis.equals(typeThat);
+            return typeThis.removeNullable(pool).equals(typeThat.removeNullable(pool));
             }
 
         return false;
