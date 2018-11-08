@@ -297,6 +297,8 @@ public class NewExpression
         TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx, null, errs);
         TypeConstant   typeTarget  = null;
         TypeInfo       infoTarget  = null;
+        TypeConstant   typeSuper   = null;
+        TypeInfo       infoSuper   = null;
         ConstantPool   pool        = pool();
         if (exprTypeNew == null)
             {
@@ -316,24 +318,27 @@ public class NewExpression
                     }
                 }
 
-            if (isNestMate(ctx, typeTarget))
+            boolean fNestMate = isNestMate(ctx, typeTarget);
+            if (fAnon)
+                {
+                // since we are going to be extending the specified type, increase visibility from
+                // the public default to protected, which we get when a class "extends" another;
+                // the real target, though, is not the specified type being "new'd", but rather the
+                // anonymous inner class
+                typeSuper  = pool.ensureAccessTypeConstant(typeTarget, fNestMate ? Access.PRIVATE : Access.PROTECTED);
+                infoSuper  = typeSuper.ensureTypeInfo(errs);
+                typeTarget = pool.ensureAccessTypeConstant(getAnonymousInnerClassType(), Access.PRIVATE);
+                }
+            else if (fNestMate)
                 {
                 // since we are new-ing a class that is a nest-mate of the current class, we can
                 // increase visibility from the public default all the way to private
                 typeTarget = pool.ensureAccessTypeConstant(typeTarget, Access.PRIVATE);
                 }
-            else if (fAnon)
-                {
-                // since we are going to be extending the specified type, increase visibility from
-                // the public default to protected, which we get when a class "extends" another
-                typeTarget = pool.ensureAccessTypeConstant(typeTarget, Access.PROTECTED);
-                }
 
+            // the target type must be new-able
             infoTarget = typeTarget.ensureTypeInfo(errs);
-
-            // if the type is NOT being used as the base for an anonymous inner class, then the type
-            // must be new-able
-            if (!fAnon && !infoTarget.isNewable())
+            if (!infoTarget.isNewable())
                 {
                 String sType = typeTarget.getValueString();
                 if (infoTarget.isExplicitlyAbstract())
@@ -389,23 +394,29 @@ public class NewExpression
         if (fValid)
             {
             List<Expression> listArgs   = this.args;
-            boolean          fInterface = infoTarget.getFormat() == Format.INTERFACE;
-            MethodConstant   idMethod   = fInterface ? null : findMethod(
-                    ctx, infoTarget, "construct", listArgs, false, true, null, errs);
-            if (idMethod == null)
+            MethodConstant   idMethod   = findMethod(ctx, infoTarget, "construct", listArgs, false, true, null, errs);
+            if (fAnon)
                 {
-                if (fInterface)
+                if (idMethod == null)
                     {
-                    // TODO anon new on an interface won't find a constructor (we must create a default one)
-                    // TODO there must be zero constructor arguments!
-                    }
-                else
-                    {
-
-                    fValid = false;
+                    // the constructor that we're looking for is not on the anonymous inner class,
+                    // so we need to find the specified constructor on the super class (which means
+                    // that the super class must NOT be an interface), and we need to verify that
+                    // there is a default constructor on the anon inner class, and it needs to be
+                    // replaced by a constructor with the same signature as the super's constructor
+                    // (note: the automatic creation of the synthetic no-arg constructor in the
+                    // absence of any explicit constructor must do this same check)
+                    MethodConstant idSuper = findMethod(ctx, infoSuper, "construct", listArgs, false, true, null, errs);
+                    // TODO
                     }
                 }
-            else
+
+            if (idMethod == null)
+                {
+                fValid = false;
+                }
+
+            if (fValid)
                 {
                 m_constructor = (MethodStructure) idMethod.getComponent();
                 if (m_constructor == null)
