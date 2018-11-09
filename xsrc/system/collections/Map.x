@@ -711,7 +711,7 @@ interface Map<KeyType, ValueType>
             Set<KeyType> oldKeys = Map.this.keys;
 
             // temp fix, part 1 of 2:
-//            static @Unassigned KeyBasedCursorEntry<KeyType, ValueType> entry;
+            KeyBasedCursorEntry<KeyType, ValueType> entry;
             Set<KeyType> newKeys = oldKeys.removeIf(key ->
                 {
                 // REVIEW this line of code is possibly "so wrong" in so many ways:
@@ -733,16 +733,18 @@ interface Map<KeyType, ValueType>
                 //       lambda, as if it were declared outside of this lambda and then captured?
                 // 2) "lazy" says "just the first time, initialize it", which could conceivably be
                 //    an implicit thing, written as:
-                static @Lazy KeyBasedCursorEntry<KeyType, ValueType> entry.calc()
-                    {
-                    return new KeyBasedCursorEntry(key);
-                    }
+                // static @Lazy KeyBasedCursorEntry<KeyType, ValueType> entry.calc()
+                //     {
+                //     return new KeyBasedCursorEntry(key);
+                //    }
+                // or better yet (not yet supported, but with implicit @Lazy):
+                // static KeyBasedCursorEntry<KeyType, ValueType> entry = new KeyBasedCursorEntry(key);
 
                 // temp fix, part 2 of 2:
-//                if (&entry.assigned)
-//                    {
-//                    entry = new KeyBasedCursorEntry(key);
-//                    }
+                if (&entry.assigned)
+                    {
+                    entry = new KeyBasedCursorEntry(key);
+                    }
 
                 return shouldRemove(entry.advance(key));
                 });
