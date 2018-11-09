@@ -17,6 +17,7 @@ import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
@@ -393,11 +394,20 @@ public class NewExpression
 
         if (fValid)
             {
-            List<Expression> listArgs   = this.args;
-            MethodConstant   idMethod   = findMethod(ctx, infoTarget, "construct", listArgs, false, true, null, errs);
+            List<Expression> listArgs = this.args;
+            MethodConstant   idMethod = null;
             if (fAnon)
                 {
-                if (idMethod == null)
+                // first, see if the constructor that we're looking for is on the anonymous
+                // inner class (which -- other than the zero-args case -- will be rare, but it
+                // is still supported); however, since it's not an error for the constructor to
+                // be missing, trap the errors in a temporary list. if we do find the constructor
+                // that we need on the anonymous inner class, then we will simply use that one (and
+                // any required dependency that it has one a super class constructor will be handled
+                // as if this were any other normal class)
+                ErrorList errsTarget = new ErrorList(10);
+                idMethod = findMethod(ctx, infoTarget, "construct", listArgs, false, true, null, errsTarget);
+                if (idMethod == null && !listArgs.isEmpty())
                     {
                     // the constructor that we're looking for is not on the anonymous inner class,
                     // so we need to find the specified constructor on the super class (which means
@@ -407,23 +417,36 @@ public class NewExpression
                     // (note: the automatic creation of the synthetic no-arg constructor in the
                     // absence of any explicit constructor must do this same check)
                     MethodConstant idSuper = findMethod(ctx, infoSuper, "construct", listArgs, false, true, null, errs);
-                    // TODO
+                    if (idSuper == null)
+                        {
+                        fValid = false;
+                        }
+                    else
+                        {
+                        // TODO - replace synthetic construct() on the inner with construct(...)
+                        notImplemented();
+                        }
                     }
+                else
+                    {
+                    errsTarget.logTo(errs);
+                    }
+                }
+            else
+                {
+                idMethod = findMethod(ctx, infoTarget, "construct", listArgs, false, true, null, errs);
                 }
 
             if (idMethod == null)
                 {
                 fValid = false;
                 }
-
-            if (fValid)
+            else if (fValid)
                 {
                 m_constructor = (MethodStructure) idMethod.getComponent();
                 if (m_constructor == null)
                     {
-                    MethodInfo info = infoTarget.getMethodById(idMethod);
-
-                    m_constructor = info.getTopmostMethodStructure(infoTarget);
+                    m_constructor = infoTarget.getMethodById(idMethod).getTopmostMethodStructure(infoTarget);
                     assert m_constructor != null;
                     }
 
@@ -460,31 +483,21 @@ public class NewExpression
                 }
             }
 
-        TypeConstant typeResult = typeTarget;
-        TypeFit      fit        = fValid ? TypeFit.Fit : TypeFit.NoFit;
-
-        if (fAnon)
+        if (fAnon && fValid)
             {
-            typeResult = getAnonymousInnerClassType();
-
-            if (fValid)
+            CaptureContext ctxAnon  = new CaptureContext(ctx);
+            TypeCompositionStatement stmtAnon = anon;
+            // TODO there has to be some some way to infect TypeCompositionStatement with ctxAnon, so if it needs to create a context, it will delegate to our capture context
+            if (!new StageMgr(stmtAnon, Stage.Emitted, errs).fastForward(20))
                 {
-                CaptureContext ctxAnon  = new CaptureContext(ctx);
-                TypeCompositionStatement stmtAnon = anon;
-                // TODO there has to be some some way to infect TypeCompositionStatement with ctxAnon, so if it needs to create a context, it will delegate to our capture context
-                if (!new StageMgr(stmtAnon, Stage.Emitted, errs).fastForward(20))
-                    {
-                    fValid = false;
-                    }
-
-                // collected VAS information from the lambda context
-                ctxAnon.exit();
-
-                // TODO m_constructor currently points to the base class instead of the anonymous inner class itself
+                fValid = false;
                 }
+
+            // collected VAS information from the lambda context
+            ctxAnon.exit();
             }
 
-        return finishValidation(typeRequired, typeResult, fit, null, errs);
+        return finishValidation(typeRequired, typeTarget, fValid ? TypeFit.Fit : TypeFit.NoFit, null, errs);
         }
 
     @Override
@@ -629,7 +642,7 @@ public class NewExpression
                 }
             else
                 {
-                assert idConstruct.getNamespace().equals(typeTarget.getDefiningConstant());
+                // REVIEW GG: assert idConstruct.getNamespace().equals(typeTarget.getDefiningConstant());
                 switch (cAll)
                     {
                     case 0:

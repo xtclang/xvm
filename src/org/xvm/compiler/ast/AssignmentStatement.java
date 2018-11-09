@@ -384,14 +384,19 @@ public class AssignmentStatement
                 }
             else
                 {
+                if (exprLeft == nodeLeft)
+                    {
+                    lvalue = nodeLeft = exprNew;
+                    }
                 exprLeft = exprNew;
                 }
             }
         lvalueExpr = exprLeft;
         exprLeft.requireAssignable(ctx, errs);
 
-        Expression exprRight    = rvalue;
-        Expression exprRightNew = null;
+        Expression     exprRight    = rvalue;
+        Expression     exprRightNew = null;
+        TypeConstant[] atypeRight   = null;
         switch (getCategory())
             {
             case Assign:
@@ -408,7 +413,6 @@ public class AssignmentStatement
                         }
 
                     exprRightNew = exprRight.validate(ctx, typeLeft, errs);
-
                     if (fInfer)
                         {
                         ctx = ctx.exit();
@@ -421,9 +425,14 @@ public class AssignmentStatement
                     }
 
                 exprLeft.markAssignment(ctx, false, errs);
+
+                if (exprRightNew != null)
+                    {
+                    atypeRight = exprRightNew.getTypes();
+                    }
                 break;
 
-            case CondExpr:
+            case CondExpr: // TODO atypeRight needs to get set for this starting with the 2nd type
             case CondRight:
                 {
                 // (LVal : RVal) or (LVal0, LVal1, ..., LValN : RVal)
@@ -478,6 +487,10 @@ public class AssignmentStatement
             else
                 {
                 rvalue = exprRightNew;
+                if (atypeRight != null)
+                    {
+                    nodeLeft.updateLValueFromRValueTypes(atypeRight);
+                    }
                 }
             }
 

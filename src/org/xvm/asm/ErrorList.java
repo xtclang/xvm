@@ -98,6 +98,22 @@ public class ErrorList
         m_severity = Severity.NONE;
         }
 
+    /**
+     * Log the errors from this ErrorList into another ErrorListener.
+     *
+     * @param errs  the ErrorListener to log all of the errors from this ErrorList to
+     */
+    public void logTo(ErrorListener errs)
+        {
+        if (errs != this)
+            {
+            for (ErrorInfo err : getErrors())
+                {
+                err.logTo(errs);
+                }
+            }
+        }
+
     @Override
     public String toString()
         {
@@ -222,6 +238,14 @@ public class ErrorList
             }
 
         /**
+         * @return the source code
+         */
+        public Source getSource()
+            {
+            return m_source;
+            }
+
+        /**
          * @return the starting position in the source (opaque)
          */
         public long getPos()
@@ -275,6 +299,27 @@ public class ErrorList
         public XvmStructure getXvmStructure()
             {
             return m_xs;
+            }
+
+        /**
+         * Log this error to an ErrorListener.
+         *
+         * @param errs  the ErrorListener to log this error to
+         */
+        public void logTo(ErrorListener errs)
+            {
+            if (errs instanceof ErrorList)
+                {
+                ((ErrorList) errs).log(this);
+                }
+            else if (getXvmStructure() != null)
+                {
+                errs.log(getSeverity(), getCode(), getParams(), getXvmStructure());
+                }
+            else
+                {
+                errs.log(getSeverity(), getCode(), getParams(), getSource(), getPos(), getEndPos());
+                }
             }
 
         @Override
