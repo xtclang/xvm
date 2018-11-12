@@ -97,10 +97,10 @@ public class TypedefConstant
         }
 
     @Override
-    public IdentityConstant ensureNestedIdentity(IdentityConstant that)
+    public IdentityConstant ensureNestedIdentity(ConstantPool pool, IdentityConstant that)
         {
-        return that.getConstantPool().ensureTypedefConstant(
-                getParentConstant().ensureNestedIdentity(that), getName());
+        return pool.ensureTypedefConstant(
+                getParentConstant().ensureNestedIdentity(pool, that), getName());
         }
 
 

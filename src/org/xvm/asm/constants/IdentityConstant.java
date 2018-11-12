@@ -307,7 +307,7 @@ public abstract class IdentityConstant
             }
         else if (nid instanceof NestedIdentity)
             {
-            return ((NestedIdentity) nid).getIdentityConstant().ensureNestedIdentity(this);
+            return ((NestedIdentity) nid).getIdentityConstant().ensureNestedIdentity(pool, this);
             }
         else if (nid == null)
             {
@@ -317,7 +317,7 @@ public abstract class IdentityConstant
         throw new IllegalArgumentException("illegal nid: " + nid);
         }
 
-    protected IdentityConstant ensureNestedIdentity(IdentityConstant that)
+    protected IdentityConstant ensureNestedIdentity(ConstantPool pool, IdentityConstant that)
         {
         return that;
         }

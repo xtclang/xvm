@@ -370,11 +370,11 @@ public class MethodConstant
         }
 
     @Override
-    public IdentityConstant ensureNestedIdentity(IdentityConstant that)
+    public IdentityConstant ensureNestedIdentity(ConstantPool pool, IdentityConstant that)
         {
         assert !isLambda();
-        return that.getConstantPool().ensureMethodConstant(
-                getParentConstant().ensureNestedIdentity(that), getSignature());
+        return pool.ensureMethodConstant(
+                getParentConstant().ensureNestedIdentity(pool, that), getSignature());
         }
 
     @Override
