@@ -946,19 +946,7 @@ public class TerminalTypeConstant
             throw new IllegalStateException("mixin=" + structMixin);
             }
 
-        Contribution contribInto = structMixin.findContribution(Composition.Into);
-        if (contribInto != null)
-            {
-            return contribInto.getTypeConstant();
-            }
-
-        Contribution contribExtends = structMixin.findContribution(Composition.Extends);
-        if (contribExtends != null)
-            {
-            return contribExtends.getTypeConstant().getExplicitClassInto();
-            }
-
-        return getConstantPool().typeObject();
+        return structMixin.getTypeInto();
         }
 
     @Override

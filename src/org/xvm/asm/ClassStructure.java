@@ -830,18 +830,43 @@ public class ClassStructure
      */
     public ClassStructure getSuper()
         {
-        for (Contribution contrib : getContributionsAsList())
+        Contribution contribExtends = findContribution(Composition.Extends);
+        if (contribExtends != null)
             {
-            if (contrib.getComposition() == Composition.Extends)
+            TypeConstant typeExtends = contribExtends.getTypeConstant();
+            if (typeExtends.isSingleUnderlyingClass(false))
                 {
-                TypeConstant typeExtends = contrib.getTypeConstant();
-                if (typeExtends.isSingleUnderlyingClass(false))
-                    {
-                    return (ClassStructure) typeExtends.getSingleUnderlyingClass(false).getComponent();
-                    }
+                return (ClassStructure) typeExtends.getSingleUnderlyingClass(false).getComponent();
                 }
             }
         return null;
+        }
+
+    /**
+     * Determine the "into" type of this mixin.
+     *
+     * @return a TypeConstant of the "into" contribution
+     */
+    public TypeConstant getTypeInto()
+        {
+        if (getFormat() != Format.MIXIN)
+            {
+            throw new IllegalStateException("not a mixin: " + getIdentityConstant());
+            }
+
+        Contribution contribInto = findContribution(Composition.Into);
+        if (contribInto != null)
+            {
+            return contribInto.getTypeConstant();
+            }
+
+        ClassStructure structSuper = getSuper();
+        if (structSuper != null)
+            {
+            return structSuper.getTypeInto();
+            }
+
+        return getConstantPool().typeObject();
         }
 
     /**
@@ -885,7 +910,7 @@ public class ClassStructure
         }
 
     /**
-     * Recursive implementation of getActualParamType method.
+     * Recursive implementation of getGenericParamType method.
      *
      * @param pool        the ConstantPool to place a potentially created new constant into
      * @param fAllowInto  specifies whether or not the "Into" contribution is to be skipped
