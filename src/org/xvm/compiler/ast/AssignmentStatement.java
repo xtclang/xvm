@@ -413,6 +413,7 @@ public class AssignmentStatement
                         }
 
                     exprRightNew = exprRight.validate(ctx, typeLeft, errs);
+
                     if (fInfer)
                         {
                         ctx = ctx.exit();
@@ -446,14 +447,14 @@ public class AssignmentStatement
                 exprRightNew = exprRight.validateMulti(ctx, atypeReq, errs);
                 exprLeft.markAssignment(ctx, true, errs);
 
+                // conditional expressions can update the LVal type from the RVal type, but the
+                // initial boolean is discarded
                 if (exprRightNew != null && getCategory() == Category.CondExpr)
                     {
-                    // the right-to-left type inference starts with the second value in the
-                    // expression, since the first value is the boolean conditional value
                     TypeConstant[] atypeAll = exprRightNew.getTypes();
-                    if (atypeAll != null)
+                    int            cTypes   = atypeAll.length - 1;
+                    if (cTypes >= 1)
                         {
-                        int cTypes = atypeAll.length - 1;
                         atypeRight = new TypeConstant[cTypes];
                         System.arraycopy(atypeAll, 1, atypeRight, 0, cTypes);
                         }
@@ -491,19 +492,17 @@ public class AssignmentStatement
                 }
             }
 
-        if (exprRightNew != exprRight)
+        if (exprRightNew == null)
             {
-            if (exprRightNew == null)
+            fValid = false;
+            }
+        else
+            {
+            rvalue = exprRightNew;
+
+            if (atypeRight != null)
                 {
-                fValid = false;
-                }
-            else
-                {
-                rvalue = exprRightNew;
-                if (atypeRight != null)
-                    {
-                    nodeLeft.updateLValueFromRValueTypes(atypeRight);
-                    }
+                nodeLeft.updateLValueFromRValueTypes(atypeRight);
                 }
             }
 
