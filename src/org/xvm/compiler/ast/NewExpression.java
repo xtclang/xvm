@@ -642,8 +642,7 @@ public class NewExpression
                 }
             else
                 {
-                // REVIEW GG: assert idConstruct.getNamespace().equals(typeTarget.getDefiningConstant());
-                switch (cAll)
+            switch (cAll)
                     {
                     case 0:
                         code.add(new New_0(idConstruct, argResult));

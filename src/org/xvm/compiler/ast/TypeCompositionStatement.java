@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -1448,6 +1449,20 @@ public class TypeCompositionStatement
     @Override
     public void generateCode(StageMgr mgr, ErrorListener errs)
         {
+        ClassStructure component = (ClassStructure) getComponent();
+        Format         format    = component.getFormat();
+        if (format != Format.INTERFACE)
+            {
+            Component constructors = component.getChild("construct");
+            assert constructors != null;
+            for (MethodStructure constructor : (Collection<? extends MethodStructure>) ((MultiMethodStructure) constructors).children())
+                {
+                if (constructor.isSynthetic() && !constructor.hasCode())
+                    {
+                    // TODO
+                    }
+                }
+            }
         // TODO what things on the type require code gen? constructors? any other init work (e.g. prop vals)?
         }
 

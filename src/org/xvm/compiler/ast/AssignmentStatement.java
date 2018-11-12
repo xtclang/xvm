@@ -432,7 +432,7 @@ public class AssignmentStatement
                     }
                 break;
 
-            case CondExpr: // TODO atypeRight needs to get set for this starting with the 2nd type
+            case CondExpr:
             case CondRight:
                 {
                 // (LVal : RVal) or (LVal0, LVal1, ..., LValN : RVal)
@@ -445,6 +445,19 @@ public class AssignmentStatement
                 System.arraycopy(atypeLVals, 0, atypeReq, 1, cLVals);
                 exprRightNew = exprRight.validateMulti(ctx, atypeReq, errs);
                 exprLeft.markAssignment(ctx, true, errs);
+
+                if (exprRightNew != null && getCategory() == Category.CondExpr)
+                    {
+                    // the right-to-left type inference starts with the second value in the
+                    // expression, since the first value is the boolean conditional value
+                    TypeConstant[] atypeAll = exprRightNew.getTypes();
+                    if (atypeAll != null)
+                        {
+                        int cTypes = atypeAll.length - 1;
+                        atypeRight = new TypeConstant[cTypes];
+                        System.arraycopy(atypeAll, 1, atypeRight, 0, cTypes);
+                        }
+                    }
                 break;
                 }
 
