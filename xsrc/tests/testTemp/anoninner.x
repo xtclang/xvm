@@ -22,7 +22,7 @@ module TestAnonInner.xqiz.it
                 }
             };
 
-//        o.run();
+        o.run();
 
         console.println("done");
         }

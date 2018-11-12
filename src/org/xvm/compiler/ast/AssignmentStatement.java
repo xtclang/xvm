@@ -413,6 +413,7 @@ public class AssignmentStatement
                         }
 
                     exprRightNew = exprRight.validate(ctx, typeLeft, errs);
+
                     if (fInfer)
                         {
                         ctx = ctx.exit();
@@ -432,7 +433,7 @@ public class AssignmentStatement
                     }
                 break;
 
-            case CondExpr: // TODO atypeRight needs to get set for this starting with the 2nd type
+            case CondExpr:
             case CondRight:
                 {
                 // (LVal : RVal) or (LVal0, LVal1, ..., LValN : RVal)
@@ -445,6 +446,19 @@ public class AssignmentStatement
                 System.arraycopy(atypeLVals, 0, atypeReq, 1, cLVals);
                 exprRightNew = exprRight.validateMulti(ctx, atypeReq, errs);
                 exprLeft.markAssignment(ctx, true, errs);
+
+                // conditional expressions can update the LVal type from the RVal type, but the
+                // initial boolean is discarded
+                if (exprRightNew != null && getCategory() == Category.CondExpr)
+                    {
+                    TypeConstant[] atypeAll = exprRightNew.getTypes();
+                    int            cTypes   = atypeAll.length - 1;
+                    if (cTypes >= 1)
+                        {
+                        atypeRight = new TypeConstant[cTypes];
+                        System.arraycopy(atypeAll, 1, atypeRight, 0, cTypes);
+                        }
+                    }
                 break;
                 }
 
@@ -478,19 +492,17 @@ public class AssignmentStatement
                 }
             }
 
-        if (exprRightNew != exprRight)
+        if (exprRightNew == null)
             {
-            if (exprRightNew == null)
+            fValid = false;
+            }
+        else
+            {
+            rvalue = exprRightNew;
+
+            if (atypeRight != null)
                 {
-                fValid = false;
-                }
-            else
-                {
-                rvalue = exprRightNew;
-                if (atypeRight != null)
-                    {
-                    nodeLeft.updateLValueFromRValueTypes(atypeRight);
-                    }
+                nodeLeft.updateLValueFromRValueTypes(atypeRight);
                 }
             }
 

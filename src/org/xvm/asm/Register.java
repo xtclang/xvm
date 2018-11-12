@@ -143,6 +143,12 @@ public class Register
             }
         }
 
+    public void specifyActualType(TypeConstant type)
+        {
+        assert type != null && type.isA(m_type);
+        m_type = type;
+        }
+
     /**
      * Create a register that is collocated with this register, but narrows its type.
      * <p/>
