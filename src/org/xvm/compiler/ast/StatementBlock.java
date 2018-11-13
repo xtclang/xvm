@@ -876,8 +876,12 @@ public class StatementBlock
         public Context emittingContext()
             {
             checkValidating();
-            m_ctxValidating.exit();
-            m_ctxValidating = null;
+            Context ctx = m_ctxValidating;
+            if (ctx != null)
+                {
+                m_ctxValidating.exit();
+                m_ctxValidating = null;
+                }
 
             m_fEmitting = true;
             return this;

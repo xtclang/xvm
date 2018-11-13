@@ -19,18 +19,27 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
+import org.xvm.asm.Register;
 import org.xvm.asm.Version;
 import org.xvm.asm.VersionTree;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.op.Construct_0;
+import org.xvm.asm.op.Construct_1;
+import org.xvm.asm.op.Construct_N;
+import org.xvm.asm.op.L_Set;
+import org.xvm.asm.op.Return_0;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.Source;
@@ -38,6 +47,7 @@ import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Composition.Default;
 
+import org.xvm.compiler.ast.StatementBlock.RootContext;
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
@@ -1455,15 +1465,88 @@ public class TypeCompositionStatement
             {
             Component constructors = component.getChild("construct");
             assert constructors != null;
-            for (MethodStructure constructor : (Collection<? extends MethodStructure>) ((MultiMethodStructure) constructors).children())
+            for (MethodStructure constructor : (Collection<? extends MethodStructure>)
+                    ((MultiMethodStructure) constructors).children())
                 {
-                if (constructor.isSynthetic() && !constructor.hasCode())
+                if (constructor.isSynthetic() && !constructor.ensureCode().hasOps())
                     {
-                    // TODO
+                    // the constructor has two responsibilities:
+                    // 1) set each property based on the parameter name, value passed in as an arg
+                    // 2) call same-signature super constructor
+                    Code code = constructor.ensureCode();
+
+                    List<org.xvm.asm.Parameter> params  = constructor.getParams();
+                    int                         cParams = params.size();
+                    Register[]                  aRegs   = new Register[cParams];
+                    for (int iParam = 0; iParam < cParams; ++iParam)
+                        {
+                        org.xvm.asm.Parameter param = params.get(iParam);
+                        aRegs[iParam] = new Register(param.getType(), iParam);
+
+                        // there must be a property by the same name
+                        String    sProp = param.getName();
+                        Component child = component.getChild(sProp);
+                        if (child.getFormat() == Format.PROPERTY)
+                            {
+                            PropertyStructure prop     = (PropertyStructure) child;
+                            TypeConstant      typeProp = prop.getType();
+                            TypeConstant      typeVal  = param.getType();
+                            if (param.getType().isA(prop.getType()))
+                                {
+                                code.add(new L_Set(prop.getIdentityConstant(), aRegs[iParam]));
+                                }
+                            else
+                                {
+                                log(errs, Severity.ERROR, Compiler.IMPLICIT_PROP_WRONG_TYPE,
+                                        sProp, typeVal.getValueString(), typeProp.getValueString());
+                                }
+                            }
+                        else
+                            {
+                            log(errs, Severity.ERROR, Compiler.IMPLICIT_PROP_MISSING, sProp);
+                            }
+                        }
+
+                    // call super constructor of the same signature
+                    ClassStructure clzSuper = component.getSuper();
+                    if (clzSuper != null)
+                        {
+                        StatementBlock blockBody = body;
+                        if (body == null)
+                            {
+                            blockBody = adopt(new StatementBlock(Collections.EMPTY_LIST));
+                            }
+                        RootContext    ctxConstr = blockBody.new RootContext(constructor);
+                        TypeInfo       infoSuper = clzSuper.getFormalType().ensureTypeInfo(errs);
+                        MethodConstant idSuper   = findMethod(ctxConstr.validatingContext(),
+                                infoSuper, "construct", args, false, true, null, errs);
+                        if (idSuper == null)
+                            {
+                            // an error has already been logged, but this is additional information
+                            log(errs, Severity.ERROR, Compiler.IMPLICIT_SUPER_CONSTRUCTOR_MISSING,
+                                    component.getIdentityConstant().getValueString(), clzSuper.getName());
+                            }
+                        else
+                            {
+                            switch (cParams)
+                                {
+                                case 0:
+                                    code.add(new Construct_0(idSuper));
+                                    break;
+                                case 1:
+                                    code.add(new Construct_1(idSuper, aRegs[0]));
+                                    break;
+                                default:
+                                    code.add(new Construct_N(idSuper, aRegs));
+                                    break;
+                                }
+                            }
+                        }
+
+                    code.add(new Return_0());
                     }
                 }
             }
-        // TODO what things on the type require code gen? constructors? any other init work (e.g. prop vals)?
         }
 
     private void disallowTypeParams(ErrorListener errs)

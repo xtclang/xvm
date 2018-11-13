@@ -1373,6 +1373,7 @@ public class InvocationExpression
                     }
                 }
 
+            boolean fLocal = true;
             NextParent: while (parent != null)
                 {
                 IdentityConstant idParent = parent.getIdentityConstant();
@@ -1414,21 +1415,24 @@ public class InvocationExpression
 
                     case Method:
                         {
-                        MethodStructure method = (MethodStructure) parent;
-
-                        int iParam = method.findParameter(sName);
-                        if (iParam >= 0)
+                        if (fLocal)
                             {
-                            TypeConstant typeParam = method.getParam(iParam).getType();
-                            if (typeParam.isA(pool.typeFunction()))
+                            MethodStructure method = (MethodStructure) parent;
+
+                            int iParam = method.findParameter(sName);
+                            if (iParam >= 0)
                                 {
-                                return m_argMethod = new Register(typeParam, iParam);
-                                }
-                            else
-                                {
-                                // TODO: check for @Auto conv
-                                // TODO: log an error
-                                notImplemented();
+                                TypeConstant typeParam = method.getParam(iParam).getType();
+                                if (typeParam.isA(pool.typeFunction()))
+                                    {
+                                    return m_argMethod = new Register(typeParam, iParam);
+                                    }
+                                else
+                                    {
+                                    // TODO: check for @Auto conv
+                                    // TODO: log an error
+                                    notImplemented();
+                                    }
                                 }
                             }
                         break;
@@ -1444,6 +1448,7 @@ public class InvocationExpression
                     }
 
                 parent = parent.getParent();
+                fLocal = false;
                 }
             }
         else // there is a "left" expression for the name
@@ -1465,7 +1470,8 @@ public class InvocationExpression
                 //   method reference, there must not be any arg binding or actual invocation
                 // - functions are included because the left is identity-mode
                 TypeInfo infoLeft = ((NameExpression) exprLeft).getIdentity(ctx).ensureTypeInfo(errs);
-                Argument arg      = findCallable(ctx, infoLeft, sName, fNoFBind && fNoCall, true, atypeReturn, errs);
+                Argument arg      = findCallable(ctx, infoLeft, sName, fNoFBind && fNoCall, true,
+                        atypeReturn, errs);
 
                 if (arg != null)
                     {

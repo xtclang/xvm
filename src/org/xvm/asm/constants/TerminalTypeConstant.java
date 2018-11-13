@@ -611,6 +611,12 @@ public class TerminalTypeConstant
                 return false;
             }
 
+        if (!idClz.equals(getConstantPool().clzTuple()))
+            {
+            Component component = idClz.getComponent();
+            assert component instanceof ClassStructure;
+            }
+
         return idClz.equals(getConstantPool().clzTuple()) ||
                 ((ClassStructure) idClz.getComponent()).isTuple();
         }

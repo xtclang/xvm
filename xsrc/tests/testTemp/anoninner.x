@@ -15,10 +15,10 @@ module TestAnonInner.xqiz.it
 
         var o = new Object()
             {
+            @Inject X.io.Console console; // TODO test without this to force capture
             void run()
                 {
-//                @Inject X.io.Console console2;
-//                console2.println("in run");
+                console.println("in run");
                 }
             };
 

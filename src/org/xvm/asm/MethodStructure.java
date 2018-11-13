@@ -436,7 +436,7 @@ public class MethodStructure
         }
 
     /**
-     * @return an array of Parameter structures that represent all return values of the method
+     * @return an array of TypeConstant structures that represent the parameters to the method
      */
     public TypeConstant[] getParamTypes()
         {
