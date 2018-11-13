@@ -179,9 +179,9 @@ const Type<DataType>
      *      1. _r2_ is assignable to _r1_
      * 2. if _T1_ is explicitly immutable, then _T2_ must also be explicitly immutable.
      */
-    Boolean isA(Type that)
+    Boolean isA(Type<> that)
         {
-        if (this == that)
+        if (this.as(Object) == that.as(Object))
             {
             return true;
             }
@@ -191,7 +191,7 @@ const Type<DataType>
             return false;
             }
 
-        if (that == Object.PublicType)
+        if (that.DataType == Object)
             {
             return true;
             }

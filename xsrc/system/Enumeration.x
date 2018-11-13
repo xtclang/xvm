@@ -122,7 +122,7 @@ mixin Enumeration<EnumType extends Enum>
         ListMap<String, EnumType> map = new ListMap();
         for (Class clz : classesByName.values)
             {
-            if (clz.extends_(this) && clz.category == Const && clz.is(Class<EnumType>))
+            if (clz.extends_(this) && clz.category == CONST && clz.is(Class<EnumType>))
                 {
                 assert clz.isSingleton;
 

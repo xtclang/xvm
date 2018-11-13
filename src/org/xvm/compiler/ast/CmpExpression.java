@@ -172,25 +172,43 @@ public class CmpExpression
             expr2 = expr2New;
             type2 = expr2New.getType();
 
-            if (typeRequest != null)
+            if (fValid)
                 {
-                boolean fConstant = expr2New.isConstant();
-                if (usesEquals())
+                ConstantPool pool = pool();
+
+                // make sure that we can compare the left value to the right value
+                TypeConstant typeCommon = Op.selectCommonType(type1, type2, errs);
+                if (typeCommon == null)
                     {
-                    if (!typeRequest.supportsEquals(pool(), type2, fConstant))
-                        {
-                        log(errs, Severity.ERROR, Compiler.TYPES_NOT_COMPARABLE,
-                            type1.getValueString(), type2.getValueString());
-                        fValid = false;
-                        }
+                    fValid = false;
                     }
                 else
                     {
-                    if (!typeRequest.supportsCompare(pool(), type2, fConstant))
+                    boolean fConstant1 = expr1New.isConstant();
+                    boolean fConstant2 = expr2New.isConstant();
+                    fValid = usesEquals()
+                            ? typeCommon.supportsEquals(pool,  type1, fConstant1) &&
+                              typeCommon.supportsEquals(pool,  type2, fConstant2)
+                            : typeCommon.supportsCompare(pool, type1, fConstant1) &&
+                              typeCommon.supportsCompare(pool, type2, fConstant2);
+                    }
+
+                if (!fValid)
+                    {
+                    if (type1.equals(pool.typeNull()))
+                        {
+                        log(errs, Severity.ERROR, Compiler.EXPRESSION_NOT_NULLABLE,
+                                type2.getValueString());
+                        }
+                    else if (type2.equals(pool.typeNull()))
+                        {
+                        log(errs, Severity.ERROR, Compiler.EXPRESSION_NOT_NULLABLE,
+                                type1.getValueString());
+                        }
+                    else
                         {
                         log(errs, Severity.ERROR, Compiler.TYPES_NOT_COMPARABLE,
-                            type1.getValueString(), type2.getValueString());
-                        fValid = false;
+                                type1.getValueString(), type2.getValueString());
                         }
                     }
                 }
@@ -208,15 +226,13 @@ public class CmpExpression
                     }
                 catch (RuntimeException e) {}
                 }
-
-            if (expr1New instanceof NameExpression && type2.equals(pool().typeNull()))
+            else if (expr1New instanceof NameExpression && type2.equals(pool().typeNull()))
                 {
-                checkNullComparison(ctx, (NameExpression) expr1New, errs);
+                checkNullComparison(ctx, (NameExpression) expr1New);
                 }
-
-            if (expr2New instanceof NameExpression && type1.equals(pool().typeNull()))
+            else if (expr2New instanceof NameExpression && type1.equals(pool().typeNull()))
                 {
-                checkNullComparison(ctx, (NameExpression) expr2New, errs);
+                checkNullComparison(ctx, (NameExpression) expr2New);
                 }
             }
 
@@ -224,7 +240,7 @@ public class CmpExpression
                 fValid ? TypeFit.Fit : TypeFit.NoFit, constVal, errs);
         }
 
-    private void checkNullComparison(Context ctx, NameExpression exprTarget, ErrorListener errs)
+    private void checkNullComparison(Context ctx, NameExpression exprTarget)
         {
         ConstantPool pool       = pool();
         TypeConstant typeTarget = exprTarget.getType();
@@ -232,12 +248,7 @@ public class CmpExpression
         TypeConstant typeTrue   = null;
         TypeConstant typeFalse  = null;
 
-        if (!typeTarget.isNullable())
-            {
-            exprTarget.log(errs, Severity.ERROR, Compiler.EXPRESSION_NOT_NULLABLE,
-                    typeTarget.getValueString());
-            return;
-            }
+        assert typeTarget.isNullable();
 
         switch (operator.getId())
             {
