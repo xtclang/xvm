@@ -128,7 +128,7 @@ const UInt16
         }
 
     @Override
-    conditional IntNumber next()
+    conditional UInt16 next()
         {
         if (this < maxvalue)
             {
@@ -139,7 +139,7 @@ const UInt16
         }
 
     @Override
-    conditional IntNumber prev()
+    conditional UInt16 prev()
         {
         if (this > minvalue)
             {

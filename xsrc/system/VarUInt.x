@@ -258,7 +258,7 @@ const VarUInt
      * Value increment. Never throws.
      */
     @Override
-    IntNumber nextValue()
+    VarUInt nextValue()
         {
         return this + 1;
         }
@@ -267,7 +267,7 @@ const VarUInt
      * Value decrement. Never throws.
      */
     @Override
-    IntNumber prevValue()
+    VarUInt prevValue()
         {
         return this - 1;
         }
@@ -276,7 +276,7 @@ const VarUInt
      * Checked value increment.
      */
     @Override
-    conditional IntNumber next()
+    conditional VarUInt next()
         {
         return true, this + 1;
         }
@@ -285,7 +285,7 @@ const VarUInt
      * Checked value decrement.
      */
     @Override
-    conditional IntNumber prev()
+    conditional VarUInt prev()
         {
         return true, this - 1;
         }

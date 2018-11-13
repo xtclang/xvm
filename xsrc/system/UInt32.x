@@ -128,7 +128,7 @@ const UInt32
         }
 
     @Override
-    conditional IntNumber next()
+    conditional UInt32 next()
         {
         if (this < maxvalue)
             {
@@ -139,7 +139,7 @@ const UInt32
         }
 
     @Override
-    conditional IntNumber prev()
+    conditional UInt32 prev()
         {
         if (this > minvalue)
             {
