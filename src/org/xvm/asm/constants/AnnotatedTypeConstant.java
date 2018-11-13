@@ -5,11 +5,14 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -132,13 +135,31 @@ public class AnnotatedTypeConstant
      */
     public TypeConstant getAnnotationType()
         {
-        Constant constAnno = m_annotation.getAnnotationClass();
-
-        if (constAnno instanceof ClassConstant)
+        Constant idAnno = getAnnotationClass();
+        if (idAnno instanceof ClassConstant)
             {
-            ClassStructure struct = (ClassStructure) ((ClassConstant) constAnno).getComponent();
+            ConstantPool   pool  = ConstantPool.getCurrentPool();
+            ClassStructure mixin = (ClassStructure) ((ClassConstant) idAnno).getComponent();
 
-            return struct.getFormalType().resolveGenerics(getConstantPool(), m_constType);
+            // here we assume that the type parameters for the annotation mixin are
+            // structurally and semantically congruent with the type parameters for the
+            // incorporating class the annotation is mixing into (regardless of the parameter name)
+            Map<StringConstant, TypeConstant> mapFormal   = mixin.getTypeParams();
+            Map<String, TypeConstant>         mapResolved = new HashMap<>(mapFormal.size());
+            List<TypeConstant>                listActual  = m_constType.getParamTypes();
+
+            for (StringConstant constName : mapFormal.keySet())
+                {
+                String sFormalName = constName.getValue();
+
+                TypeConstant typeResolved = mixin.getGenericParamType(pool, sFormalName, listActual);
+                if (typeResolved != null)
+                    {
+                    mapResolved.put(sFormalName, typeResolved);
+                    }
+                }
+
+            return mixin.getFormalType().resolveGenerics(pool, mapResolved::get);
             }
 
         // REVIEW the only other option is the constAnno to be a PseudoConstant (referring to a virtual
@@ -205,6 +226,13 @@ public class AnnotatedTypeConstant
         {
         return pool.ensureAnnotatedTypeConstant(m_annotation.getAnnotationClass(),
             m_annotation.getParams(), type);
+        }
+
+    @Override
+    protected TypeInfo buildTypeInfo(ErrorListener errs)
+        {
+        // TODO
+        return super.buildTypeInfo(errs);
         }
 
 
@@ -364,10 +392,10 @@ public class AnnotatedTypeConstant
 
             // an annotated type constant can modify a parameterized or a terminal type constant
             // that refers to a class/interface
-            TypeConstant typeNext = m_constType.resolveTypedefs();
-            if (!(typeNext instanceof AnnotatedTypeConstant || typeNext.isExplicitClassIdentity(true)))
+            TypeConstant typeBase = m_constType.resolveTypedefs();
+            if (!(typeBase instanceof AnnotatedTypeConstant || typeBase.isExplicitClassIdentity(true)))
                 {
-                fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_ILLEGAL, typeNext.getValueString());
+                fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_ILLEGAL, typeBase.getValueString());
                 fBad   = true;
                 }
 
@@ -375,30 +403,28 @@ public class AnnotatedTypeConstant
             fHalt |= m_annotation.validate(errs);
 
             // make sure that this annotation is not repeated
-            Constant constClass = m_annotation.getAnnotationClass();
-            while (typeNext instanceof AnnotatedTypeConstant)
+            ClassConstant idAnno = (ClassConstant) m_annotation.getAnnotationClass();
+            for (TypeConstant typeNext = typeBase;
+                              typeNext instanceof AnnotatedTypeConstant;
+                              typeNext = ((AnnotatedTypeConstant) typeNext).m_constType)
                 {
-                if (((AnnotatedTypeConstant) typeNext).m_annotation.getAnnotationClass().equals(constClass))
+                if (((AnnotatedTypeConstant) typeNext).m_annotation.getAnnotationClass().equals(idAnno))
                     {
-                    fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_REDUNDANT, constClass.getValueString());
+                    fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_REDUNDANT, idAnno.getValueString());
                     fBad   = true;
                     break;
                     }
-
-                typeNext = ((AnnotatedTypeConstant) typeNext).m_constType;
                 }
 
-            // verify that the underlying type can be annotated by this annotation
-            TypeConstant typeMixin = getAnnotationType();
-            if (!fBad && !fHalt && typeMixin.isExplicitClassIdentity(true)
-                    && typeMixin.getExplicitClassFormat() == Component.Format.MIXIN)
+            if (!fBad && !fHalt)
                 {
-                TypeConstant typeInto = typeMixin.getExplicitClassInto();
+                TypeConstant typeMixin = getAnnotationType();
+                TypeConstant typeInto  = typeMixin.getExplicitClassInto();
                 if (!m_constType.isA(typeInto))
                     {
                     fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
                             m_constType.getValueString(),
-                            constClass.getValueString(),
+                            idAnno.getValueString(),
                             typeInto.getValueString());
                     }
                 }
