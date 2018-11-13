@@ -3120,7 +3120,6 @@ public abstract class TypeConstant
             fHasRO       |= constMixin.equals(pool.clzRO());
             fHasAbstract |= constMixin.equals(pool.clzAbstract());
             fHasOverride |= constMixin.equals(pool.clzOverride());
-            fHasInject   |= constMixin.equals(pool.clzInject());
             }
 
         // check the non-Property annotations (including checking for verifier errors, since the
@@ -3166,8 +3165,15 @@ public abstract class TypeConstant
                         constMixin.getValueString());
                 }
 
-            fHasRefAnno   = true;
-            fHasVarAnno  |= typeInto.isA(pool.typeVar());
+            if (constMixin.equals(pool.clzInject()))
+                {
+                fHasInject = true;
+                }
+            else
+                {
+                fHasRefAnno = true;
+                fHasVarAnno |= typeInto.isA(pool.typeVar());
+                }
             }
 
         // functions and constants cannot have properties; methods cannot have constants
@@ -3422,6 +3428,15 @@ public abstract class TypeConstant
                 log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_ABSTRACT_ILLEGAL,
                         getValueString(), sName);
                 }
+            }
+        else if (constId.equals(pool.clzObject()))
+            {
+            // Object is special no matter what the source code says (its only property is "meta")
+            impl      = Implementation.Native;
+            fRO       = true;
+            fRW       = false;
+            fField    = false;
+            effectGet = Effect.BlocksSuper;
             }
         else
             {

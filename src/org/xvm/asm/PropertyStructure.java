@@ -204,9 +204,17 @@ public class PropertyStructure
 
     private void buildAnnotationArrays()
         {
+        ConstantPool pool = getConstantPool();
+        if (getParent().getIdentityConstant().equals(pool.clzObject()))
+            {
+            // the only property on Object is "meta" and it's native no matter what the source says
+            m_aPropAnno = Annotation.NO_ANNOTATIONS;
+            m_aRefAnno  = Annotation.NO_ANNOTATIONS;
+            return;
+            }
+
         List<Annotation> listPropAnno = null;
         List<Annotation> listRefAnno  = null;
-        ConstantPool     pool         = getConstantPool();
         for (Contribution contrib : getContributionsAsList())
             {
             if (contrib.getComposition() == Composition.Annotation)
@@ -216,7 +224,7 @@ public class PropertyStructure
                 TypeConstant typeMixin  = pool.ensureTerminalTypeConstant(constMixin);
                 if (typeMixin.isExplicitClassIdentity(true)
                         && typeMixin.getExplicitClassFormat() == Component.Format.MIXIN
-                        && typeMixin.getExplicitClassInto().getIntoPropertyType().equals(pool.typeProperty()))
+                        && pool.typeProperty().equals(typeMixin.getExplicitClassInto().getIntoPropertyType()))
                     {
                     if (listPropAnno == null)
                         {

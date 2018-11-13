@@ -440,7 +440,7 @@ public class PropertyBody
     public boolean isInjected()
         {
         return m_structProp != null && m_impl != Implementation.Implicit
-                && TypeInfo.containsAnnotation(m_structProp.getPropertyAnnotations(), "Inject");
+                && TypeInfo.containsAnnotation(m_structProp.getRefAnnotations(), "Inject");
         }
 
 

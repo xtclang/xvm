@@ -4,6 +4,7 @@ package org.xvm.util;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -17,14 +18,24 @@ import java.util.Set;
 public class ListMap<K,V>
         extends AbstractMap<K,V>
     {
+    /**
+     * Construct a new ListMap.
+     */
     public ListMap()
         {
         m_list = new ArrayList<>();
         }
 
+    /**
+     * Construct a new ListMap of the specified initial capacity.
+     *
+     * @param cInitSize  the initial capacity; negative value indicates an immutable empty map
+     */
     public ListMap(int cInitSize)
         {
-        m_list = new ArrayList<>(cInitSize);
+        m_list = cInitSize >= 0
+            ? new ArrayList<>(cInitSize)
+            : Collections.EMPTY_LIST;
         }
 
     @Override
@@ -47,13 +58,15 @@ public class ListMap<K,V>
         }
 
     /**
-     * Obtain a list of entries.
+     * Obtain a read-only list of entries.
      *
      * @return the entries of the map in a List
      */
     public List<Entry<K,V>> asList()
         {
-        return m_list;
+        List<Entry<K,V>> list = m_list;
+        assert (list = Collections.unmodifiableList(list)) != null;
+        return list;
         }
 
     /**
@@ -80,7 +93,7 @@ public class ListMap<K,V>
      * The contents of the map are stored in an ArrayList of SimpleEntry
      * objects.
      */
-    private final ArrayList<Entry<K, V>> m_list;
+    private final List<Entry<K, V>> m_list;
 
     /**
      * The AbstractMap implementation needs an underlying "entry set" to be
@@ -100,4 +113,9 @@ public class ListMap<K,V>
             return m_list.size();
             }
         };
+
+    /**
+     * An empty ListMap.
+     */
+    public static ListMap EMPTY = new ListMap<>(-1);
     }

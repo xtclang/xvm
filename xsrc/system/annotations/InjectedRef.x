@@ -1,8 +1,8 @@
 /**
  * An InjectedRef is used to make an immutable reference that is injected with a value
- * when the reference comes "in scope".
+ * no later than the point at which the reference comes "into scope".
  */
-mixin InjectedRef<ResourceType>(String resourceName, Object? opts = null)
-        into Property<Object, ResourceType> | Ref<ResourceType>
+mixin InjectedRef<RefType>(String resourceName, Object? opts = null)
+        into Ref<RefType>
     {
     }

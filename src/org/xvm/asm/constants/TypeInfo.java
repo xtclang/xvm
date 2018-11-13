@@ -517,7 +517,7 @@ public class TypeInfo
      */
     public boolean isTopLevel()
         {
-        return m_struct != null && m_struct.isTopLevel();
+        return m_struct == null || m_struct.isTopLevel();
         }
 
     /**
@@ -810,7 +810,7 @@ public class TypeInfo
      * @return all of the methods for this type that can be identified by just a signature, indexed
      *         by that signature
      */
-    protected Map<SignatureConstant, MethodInfo> ensureMethodsBySignature()
+    public Map<SignatureConstant, MethodInfo> ensureMethodsBySignature()
         {
         Map<SignatureConstant, MethodInfo> map = m_mapMethodsBySignature;
 
@@ -1888,7 +1888,15 @@ public class TypeInfo
 
     // ----- fields --------------------------------------------------------------------------------
 
-    public enum Progress {Absent, Building, Incomplete, Complete}
+    public enum Progress
+        {
+        Absent, Building, Incomplete, Complete;
+
+        public Progress worstOf(Progress that)
+            {
+            return this.ordinal() < that.ordinal() ? that : this;
+            }
+        }
 
 
     /**

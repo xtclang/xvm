@@ -892,12 +892,13 @@ public class PropertyInfo
         }
 
     /**
-     * @return true iff the property contains any reference annotations
+     * @return true iff the property contains any reference annotations except the "Inject"
      */
     public boolean isRefAnnotated()
         {
-        // TODO - efficiently
-        return getRefAnnotations().length > 0;
+        // this is a bit blunt, but @Inject is a very special annotation that is incompatible with
+        // any other Ref annotations, so it is split out for its own special handling
+        return !isInjected() && getRefAnnotations().length > 0;
         }
 
     /**
@@ -905,38 +906,45 @@ public class PropertyInfo
      */
     public Annotation[] getRefAnnotations()
         {
-        List<Annotation> list   = null;
-        Annotation[]     aAnnos = Annotation.NO_ANNOTATIONS;
-
-        for (PropertyBody body : m_aBody)
+        Annotation[] aAnnos = m_annotations;
+        if (aAnnos == null)
             {
-            Annotation[] aAdd = body.getStructure().getRefAnnotations();
-            if (aAdd.length > 0)
+            aAnnos = Annotation.NO_ANNOTATIONS;
+
+            List<Annotation> list = null;
+            for (PropertyBody body : m_aBody)
                 {
-                if (list == null)
+                Annotation[] aAdd = body.getStructure().getRefAnnotations();
+                if (aAdd.length > 0)
                     {
-                    if (aAnnos.length == 0)
+                    if (list == null)
                         {
-                        aAnnos = aAdd;
+                        if (aAnnos.length == 0)
+                            {
+                            aAnnos = aAdd;
+                            }
+                        else
+                            {
+                            list = new ArrayList<>();
+                            Collections.addAll(list, aAnnos);
+                            Collections.addAll(list, aAdd);
+                            }
                         }
-                    else
+
+                    if (list != null)
                         {
-                        list = new ArrayList<>();
-                        Collections.addAll(list, aAnnos);
                         Collections.addAll(list, aAdd);
                         }
                     }
-
-                if (list != null)
-                    {
-                    Collections.addAll(list, aAdd);
-                    }
                 }
-            }
 
-        return list == null
-                ? aAnnos
-                : list.toArray(new Annotation[list.size()]);
+            if (list != null)
+                {
+                aAnnos = list.toArray(new Annotation[list.size()]);
+                }
+            m_annotations = aAnnos;
+            }
+        return aAnnos;
         }
 
     /**
@@ -1082,7 +1090,12 @@ public class PropertyInfo
      */
     public boolean isInjected()
         {
-        return getHead().isInjected();
+        Boolean FInjected = m_FInjected;
+        if (FInjected == null)
+            {
+            m_FInjected = FInjected = getHead().isInjected();
+            }
+        return FInjected.booleanValue();
         }
 
 
@@ -1252,4 +1265,14 @@ public class PropertyInfo
      * Cached "set" chain.
      */
     private MethodBody[] m_chainSet;
+
+    /**
+     * Cached "annotation" chain.
+     */
+    private Annotation[] m_annotations;
+
+    /**
+     * Cached "Injected" flag.
+     */
+    private Boolean m_FInjected;
     }

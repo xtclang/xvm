@@ -4,16 +4,24 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Component.SimpleCollector;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+
+import org.xvm.util.ListMap;
+import org.xvm.util.Severity;
 
 
 /**
@@ -177,10 +185,127 @@ public class IntersectionTypeConstant
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
         // we've been asked to resolve some type defined as "T1 | T2";  first, resolve T1 and T2
-        TypeInfo info1 = getUnderlyingType().ensureTypeInfo(errs);
-        TypeInfo info2 = getUnderlyingType2().ensureTypeInfo(errs);
-        // TODO CP
-        return getConstantPool().typeObject().ensureTypeInfo(errs);
+        TypeInfo info1 = getUnderlyingType().ensureTypeInfoInternal(errs);
+        TypeInfo info2 = getUnderlyingType2().ensureTypeInfoInternal(errs);
+
+        if (info1 == null || info2 == null)
+            {
+            return null;
+            }
+
+        return new TypeInfo(this,
+                            null,                   // struct
+                            0,                      // depth
+                            false,                  // synthetic
+                            mergeTypeParams(info1, info2, errs),
+                            mergeAnnotations(info1, info2, errs),
+                            null,                   // typeExtends
+                            null,                   // typeRebase
+                            null,                   // typeInto
+                            Collections.EMPTY_LIST, // listProcess,
+                            ListMap.EMPTY,          // listmapClassChain
+                            ListMap.EMPTY,          // listmapDefaultChain
+                            mergeProperties(info1, info2, errs),
+                            mergeMethods(info1, info2, errs),
+                            Collections.EMPTY_MAP,  // mapVirtProps
+                            Collections.EMPTY_MAP,  // mapVirtMethods
+                            info1.getProgress().worstOf(info2.getProgress())
+                            );
+        }
+
+    protected Map<Object, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs)
+        {
+        Map<Object, ParamInfo> map1 = info1.getTypeParams();
+        Map<Object, ParamInfo> map2 = info2.getTypeParams();
+        Map<Object, ParamInfo> map  = new HashMap<>(map1);
+
+        for (Iterator<Map.Entry<Object, ParamInfo>> iter = map.entrySet().iterator(); iter.hasNext();)
+            {
+            Map.Entry<Object, ParamInfo> entry = iter.next();
+
+            ParamInfo param2 = map2.get(entry.getKey());
+            if (param2 != null)
+                {
+                // the type param exists in both maps; ensure the types are compatible
+                // and choose the wider one
+                ParamInfo    param1 = entry.getValue();
+                TypeConstant type1  = param1.getActualType();
+                TypeConstant type2  = param2.getActualType();
+
+                if (type2.isAssignableTo(type1))
+                    {
+                    // param1 is good
+                    // REVIEW should we compare the constraint types as well?
+                    continue;
+                    }
+
+                if (type1.isAssignableTo(type2))
+                    {
+                    // param2 is good; replace
+                    entry.setValue(param2);
+                    continue;
+                    }
+
+                log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_CONTRIB,
+                    info1.getType().getValueString(), entry.getKey(),
+                    type1.getValueString(),
+                    info1.getType().getValueString(),
+                    type2.getValueString());
+                }
+
+            // the type param is missing in the second map or incompatible; remove it
+            iter.remove();
+            }
+        return map;
+        }
+
+    protected Annotation[] mergeAnnotations(TypeInfo info1, TypeInfo info2, ErrorListener errs)
+        {
+        // TODO
+        return null;
+        }
+
+    protected Map<PropertyConstant, PropertyInfo> mergeProperties(TypeInfo info1, TypeInfo info2, ErrorListener errs)
+        {
+        Map<PropertyConstant, PropertyInfo> map = new HashMap<>();
+
+        for (Map.Entry<String, PropertyInfo> entry : info1.ensurePropertiesByName().entrySet())
+            {
+            String sName = entry.getKey();
+
+            PropertyInfo prop2 = info2.findProperty(sName);
+            if (prop2 != null)
+                {
+                // the property exists in both maps;
+                // TODO: check for the type compatibility and maybe a "common" structure
+                //       and then choose/build the best PropertyInfo
+
+                PropertyInfo prop1 = info1.findProperty(sName);
+                map.put(prop1.getIdentity(), prop1);
+                }
+            }
+        return map;
+        }
+
+    protected Map<MethodConstant, MethodInfo> mergeMethods(TypeInfo info1, TypeInfo info2, ErrorListener errs)
+        {
+        Map<MethodConstant, MethodInfo> map = new HashMap<>();
+
+        for (Map.Entry<SignatureConstant, MethodInfo> entry : info1.ensureMethodsBySignature().entrySet())
+            {
+            SignatureConstant sig = entry.getKey();
+
+            MethodInfo method2 = info2.getMethodBySignature(sig);
+            if (method2 != null)
+                {
+                // the method exists in both maps;
+                // TODO: check for the compatibility and choose the best MethodInfo
+
+                MethodInfo method1 = info1.getMethodBySignature(sig);
+                map.put(method1.getIdentity(), method1);
+                }
+            }
+        return map;
         }
 
 
@@ -287,31 +412,17 @@ public class IntersectionTypeConstant
         TypeConstant typeInto1 = getUnderlyingType().getIntoPropertyType();
         TypeConstant typeInto2 = getUnderlyingType2().getIntoPropertyType();
 
-        if (typeInto1 == null)
+        TypeConstant typeProperty = getConstantPool().typeProperty();
+        if (typeInto1 != null && typeInto1.equals(typeProperty))
+            {
+            return typeInto1;
+            }
+        if (typeInto2 != null && typeInto2.equals(typeProperty))
             {
             return typeInto2;
             }
 
-        if (typeInto2 == null)
-            {
-            return typeInto1;
-            }
-
-        ConstantPool pool     = getConstantPool();
-        TypeConstant typeProp = pool.typeProperty();
-
-        if (typeInto1.equals(typeProp) || typeInto2.equals(typeProp))
-            {
-            return typeProp;
-            }
-
-        TypeConstant typeVar = pool.typeVar();
-        if (typeInto1.equals(typeVar) || typeInto2.equals(typeVar))
-            {
-            return typeVar;
-            }
-
-        return pool.typeRef();
+        return Objects.equals(typeInto1, typeInto2) ? typeInto1 : null;
         }
 
     @Override

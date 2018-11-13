@@ -219,7 +219,7 @@ public class Annotation
     @Override
     public void registerConstants(ConstantPool pool)
         {
-        m_constClass = pool.register(getAnnotationClass());
+        m_constClass = (ClassConstant) pool.register(getAnnotationClass());
 
         Constant[] aParams = m_aParams;
         for (int i = 0, c = aParams.length; i < c; ++i)
