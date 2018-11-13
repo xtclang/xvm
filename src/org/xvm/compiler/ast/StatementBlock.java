@@ -502,7 +502,7 @@ public class StatementBlock
         @Override
         public Source getSource()
             {
-            return StatementBlock.this.getSource();
+            return getStatementBlock().getSource();
             }
 
         @Override
@@ -658,7 +658,7 @@ public class StatementBlock
             if (arg == null)
                 {
                 // resolve the name from outside of this statement
-                arg = new NameResolver(StatementBlock.this, sName)
+                arg = new NameResolver(getStatementBlock(), sName)
                         .forceResolve(errs == null ? ErrorListener.BLACKHOLE : errs);
                 if (arg != null)
                     {
@@ -876,8 +876,12 @@ public class StatementBlock
         public Context emittingContext()
             {
             checkValidating();
-            m_ctxValidating.exit();
-            m_ctxValidating = null;
+            Context ctx = m_ctxValidating;
+            if (ctx != null)
+                {
+                m_ctxValidating.exit();
+                m_ctxValidating = null;
+                }
 
             m_fEmitting = true;
             return this;

@@ -1027,6 +1027,20 @@ public class Compiler
      */
     public static final String ANON_CLASS_EXTENDS_INTERSECTION    = "COMPILER-100";
     /**
+     * The initialization of the {0} property is implied by a constructor parameter, but the
+     * property does not exist.
+     */
+    public static final String IMPLICIT_PROP_MISSING              = "COMPILER-101";
+    /**
+     * The initialization of the {0} property is implied by a constructor parameter, but the
+     * property type does not match; the expected type is {1} but the property is of type {2}.
+     */
+    public static final String IMPLICIT_PROP_WRONG_TYPE           = "COMPILER-102";
+    /**
+     * The implicit super class constructor from {0} does not exist on the {1} class.
+     */
+    public static final String IMPLICIT_SUPER_CONSTRUCTOR_MISSING = "COMPILER-103";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

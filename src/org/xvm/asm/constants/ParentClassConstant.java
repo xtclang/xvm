@@ -84,7 +84,12 @@ public class ParentClassConstant
             case ParentClass:
             case ChildClass:
             case ThisClass:
-                return constChild.getDeclarationLevelClass().getParentConstant();
+                IdentityConstant idParent = constChild.getDeclarationLevelClass().getParentConstant();
+                while (!idParent.isClass())
+                    {
+                    idParent = idParent.getParentConstant();
+                    }
+                return idParent;
 
             default:
                 throw new IllegalStateException("constChild=" + constChild);

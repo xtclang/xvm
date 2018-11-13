@@ -156,6 +156,11 @@ public class VariableDeclarationStatement
             {
             exprType.resetTypeConstant(); // REVIEW should reset take type as a param instead? (or get rid of it altogether and just use set?)
             exprType.setTypeConstant(aTypes[0]);
+
+            if (m_reg != null)
+                {
+                m_reg.specifyActualType(aTypes[0]);
+                }
             }
         }
 

@@ -1375,6 +1375,7 @@ public class Context
         public Assignment getVarAssignment(String sName)
             {
             Assignment asn = super.getVarAssignment(sName);
+            assert asn != null;
             if (!getDefiniteAssignments().containsKey(sName))
                 {
                 // the variable assignment came from outside of (i.e. before) this fork
