@@ -417,33 +417,5 @@ public class xTestApp extends xModule
             .add(new X_Print(8))
 
             .add(new Return_0());
-
-        // ----- testConst()
-
-        ClassTemplate ctPoint = f_templates.getTemplate("TestApp.Point");
-        MethodStructure mtConst = ctPoint.getMethodStructure("construct",
-            new String[]{"Int64", "Int64"});
-        mtConst.createCode()
-            // #0 = x; #1 = y
-            .add(new L_Set(adapter.getPropertyConstId("TestApp.Point", "x"), 0))
-            .add(new L_Set(adapter.getPropertyConstId("TestApp.Point", "y"), 1))
-            .add(new Return_0());
-
-
-        ClassTemplate ctRectangle = f_templates.getTemplate("TestApp.Rectangle");
-        MethodStructure mtRectangle = ctRectangle.getMethodStructure("construct",
-            new String[]{"TestApp.Point", "TestApp.Point"});
-        mtRectangle.createCode()
-            // #0 = tl; #1 = br
-            .add(new L_Set(adapter.getPropertyConstId("TestApp.Rectangle", "topLeft"), 0))
-            .add(new L_Set(adapter.getPropertyConstId("TestApp.Rectangle", "bottomRight"), 1))
-            .add(new Return_0());
-
-        ClassTemplate ctFormatter = f_templates.getTemplate("TestApp.Formatter");
-        MethodStructure mtFormatter = ctFormatter.getMethodStructure("construct", STRING);
-        mtFormatter.createCode()
-            // #0 = prefix
-            .add(new L_Set(adapter.getPropertyConstId("TestApp.Formatter", "prefix"), 0))
-            .add(new Return_0());
         }
     }

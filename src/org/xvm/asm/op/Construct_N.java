@@ -25,22 +25,6 @@ public class Construct_N
         extends OpCallable
     {
     /**
-     * Construct a CONSTR_N op.
-     *
-     * @param nConstructorId  identifies the construct function
-     * @param anArg           r-values for the construct arguments
-     *
-     * @deprecated
-     */
-    public Construct_N(int nConstructorId, int[] anArg)
-        {
-        super(null);
-
-        m_nFunctionId = nConstructorId;
-        m_anArgValue = anArg;
-        }
-
-    /**
      * Construct a CONSTR_N op based on the passed arguments.
      *
      * @param constMethod  the constructor method

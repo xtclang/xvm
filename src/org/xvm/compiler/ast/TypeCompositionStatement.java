@@ -1528,6 +1528,12 @@ public class TypeCompositionStatement
                             }
                         else
                             {
+                            if (args == null)
+                                {
+                                // this is a default constructor
+                                cParams = 0;
+                                }
+
                             switch (cParams)
                                 {
                                 case 0:
