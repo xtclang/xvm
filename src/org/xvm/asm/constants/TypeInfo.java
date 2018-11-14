@@ -843,10 +843,10 @@ public class TypeInfo
      */
     public MethodInfo getMethodBySignature(SignatureConstant sig)
         {
-        Map<SignatureConstant, MethodInfo> map = m_mapMethodsBySignature;
-        if (map != null)
+        Map<SignatureConstant, MethodInfo> mapBySig = m_mapMethodsBySignature;
+        if (mapBySig != null)
             {
-            MethodInfo method = map.get(sig);
+            MethodInfo method = mapBySig.get(sig);
             if (method != null)
                 {
                 return method;
@@ -861,15 +861,27 @@ public class TypeInfo
 
         TypeConstant typeThis = getType();
 
+        mapBySig = ensureMethodsBySignature();
+
         for (MethodInfo methodTest : m_mapMethods.values())
             {
-            if (methodTest.getIdentity().getSignature().isSubstitutableFor(sig, typeThis))
+            SignatureConstant sigTest = methodTest.getIdentity().getSignature();
+            if (!sigTest.getName().equals(sig.getName()))
                 {
-                ensureMethodsBySignature().putIfAbsent(sig, methodTest);
+                continue;
+                }
+
+            SignatureConstant sigResolved = resolveMethodConstant(methodTest).getSignature();
+            if (sigResolved.equals(sig) ||
+                    sigResolved.isSubstitutableFor(sig, typeThis) ||
+                    sigTest    .isSubstitutableFor(sig, typeThis))
+                {
+                mapBySig.putIfAbsent(sig, methodTest);
                 return methodTest;
                 }
             }
 
+        // TODO: cache the miss
         return null;
         }
 
