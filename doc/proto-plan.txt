@@ -99,7 +99,7 @@
 
 + isA() to support auto-narrowing types
     - add a test for auto-narrowing method invocation
-    - Tuple, Function (and Method?) have to have specialized "isA" algorithms
+    + Tuple, Function (and Method?) have to have specialized "isA" algorithms
 
 + changed the Service API - Void registerAsyncSection(AsyncSection asyncSection);
     - pending futures are kept along with the corresponding AsyncSection

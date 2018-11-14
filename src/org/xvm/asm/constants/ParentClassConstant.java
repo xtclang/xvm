@@ -99,7 +99,17 @@ public class ParentClassConstant
     @Override
     public IdentityConstant resolveClass(IdentityConstant idTarget)
         {
-        return idTarget == null ? getDeclarationLevelClass() : idTarget.getParentConstant();
+        if (idTarget == null)
+            {
+            return getDeclarationLevelClass();
+            }
+
+        IdentityConstant idParent = idTarget.getParentConstant();
+        while (!idParent.isClass())
+            {
+            idParent = idParent.getParentConstant();
+            }
+        return idParent;
         }
 
     @Override
