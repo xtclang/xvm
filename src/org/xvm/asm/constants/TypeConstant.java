@@ -1030,6 +1030,14 @@ public abstract class TypeConstant
         }
 
     /**
+     * Clear out any cached TypeInfo for this one specific TypeConstant.
+     */
+    public void clearTypeInfo()
+        {
+        s_typeinfo.set(this, null);
+        }
+
+    /**
      * Rank is null, place-holder, incomplete, complete.
      *
      * @param info  a TypeInfo

@@ -1459,6 +1459,9 @@ public class TypeCompositionStatement
     @Override
     public void generateCode(StageMgr mgr, ErrorListener errs)
         {
+        if (!mgr.processChildren())
+
+        ;
         ClassStructure component = (ClassStructure) getComponent();
         Format         format    = component.getFormat();
         if (format != Format.INTERFACE)
@@ -1481,29 +1484,35 @@ public class TypeCompositionStatement
                     for (int iParam = 0; iParam < cParams; ++iParam)
                         {
                         org.xvm.asm.Parameter param = params.get(iParam);
-                        aRegs[iParam] = new Register(param.getType(), iParam);
+                        Register              reg   = new Register(param.getType(), iParam);
+                        aRegs[iParam] = reg;
 
-                        // there must be a property by the same name
-                        String    sProp = param.getName();
-                        Component child = component.getChild(sProp);
-                        if (child.getFormat() == Format.PROPERTY)
+                        if (args == null)
                             {
-                            PropertyStructure prop     = (PropertyStructure) child;
-                            TypeConstant      typeProp = prop.getType();
-                            TypeConstant      typeVal  = param.getType();
-                            if (param.getType().isA(prop.getType()))
+                            // REVIEW @see Point3d example in Test.x & Composition.Extends - need to do some prop sets and call a reduced-parameter super constructor
+
+                            // there must be a property by the same name
+                            String sProp = param.getName();
+                            Component child = component.getChild(sProp);
+                            if (child.getFormat() == Format.PROPERTY)
                                 {
-                                code.add(new L_Set(prop.getIdentityConstant(), aRegs[iParam]));
+                                PropertyStructure prop     = (PropertyStructure) child;
+                                TypeConstant      typeProp = prop.getType();
+                                TypeConstant      typeVal  = param.getType();
+                                if (param.getType().isA(prop.getType()))
+                                    {
+                                    code.add(new L_Set(prop.getIdentityConstant(), reg));
+                                    }
+                                else
+                                    {
+                                    log(errs, Severity.ERROR, Compiler.IMPLICIT_PROP_WRONG_TYPE,
+                                            sProp, typeVal.getValueString(), typeProp.getValueString());
+                                    }
                                 }
                             else
                                 {
-                                log(errs, Severity.ERROR, Compiler.IMPLICIT_PROP_WRONG_TYPE,
-                                        sProp, typeVal.getValueString(), typeProp.getValueString());
+                                log(errs, Severity.ERROR, Compiler.IMPLICIT_PROP_MISSING, sProp);
                                 }
-                            }
-                        else
-                            {
-                            log(errs, Severity.ERROR, Compiler.IMPLICIT_PROP_MISSING, sProp);
                             }
                         }
 

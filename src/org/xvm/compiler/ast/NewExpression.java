@@ -12,6 +12,7 @@ import java.util.TreeMap;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
@@ -328,6 +329,7 @@ public class NewExpression
                 // anonymous inner class
                 typeSuper  = pool.ensureAccessTypeConstant(typeTarget, fNestMate ? Access.PRIVATE : Access.PROTECTED);
                 infoSuper  = typeSuper.ensureTypeInfo(errs);
+                // REVIEW GG - causes warning: "Suspicious assignment from: testSimple(?)#Object:1 to: testSimple(?)#Object:1:private"
                 typeTarget = pool.ensureAccessTypeConstant(getAnonymousInnerClassType(), Access.PRIVATE);
                 }
             else if (fNestMate)
@@ -423,12 +425,44 @@ public class NewExpression
                         }
                     else
                         {
-                        // TODO - replace synthetic construct() on the inner with construct(...)
-                        notImplemented();
+                        // we found a super constructor that needs to get called from the
+                        // constructor on the inner class; find the no-parameter synthetic
+                        // "construct()" constructor on the inner class, and remove it, replacing it
+                        // with a constructor that matches the super class constructor, so that we
+                        // correctly invoke it
+                        ClassStructure clzAnon        = (ClassStructure) anon.getComponent();
+                        MethodConstant idDefault      = pool.ensureMethodConstant(
+                                anon.getComponent().getIdentityConstant(), "construct",
+                                TypeConstant.NO_TYPES, TypeConstant.NO_TYPES);
+                        MethodStructure constrDefault = (MethodStructure) idDefault.getComponent();
+                        if (constrDefault == null)
+                            {
+                            // TODO log error missing constructor
+                            }
+                        else
+                            {
+                            // remove synthetic construct() on the anonymous inner class
+                            clzAnon.getChild("construct").removeChild(constrDefault);
+
+                            // create a constructor that matches the one that we need to route to
+                            // on the super class
+//                            clzAnon.createMethod()
+//                            MethodStructure method = container.createMethod(fFunction, access, aAnnotations,
+//                                    aReturns, sName, aParams, body != null, fUsesSuper);
+
+                            // TODO - replace synthetic construct() on the inner with construct(...)
+                            notImplemented();
+
+                            // since we just modified the component, flush the TypeInfo cache for
+                            // the type of the anonymous inner class
+                            typeTarget.clearTypeInfo();
+                            }
                         }
                     }
                 else
                     {
+                    // we did find a constructor; there were probably no errors, but just in case
+                    // something got logged, transfer it to the real error list
                     errsTarget.logTo(errs);
                     }
                 }

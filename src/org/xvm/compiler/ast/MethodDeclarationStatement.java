@@ -255,7 +255,7 @@ public class MethodDeclarationStatement
 
                     if (fConstructor)
                         {
-                        aReturns = new org.xvm.asm.Parameter[0];
+                        aReturns = org.xvm.asm.Parameter.NO_PARAMS;
                         }
                     else
                         {
