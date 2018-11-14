@@ -1482,6 +1482,17 @@ public class MethodStructure
         }
 
 
+    // ----- Object methods ------------------------------------------------------------------------
+
+    @Override
+    protected MethodStructure clone()
+        {
+        MethodStructure that = (MethodStructure) super.clone();
+        // TODO
+        return that;
+        }
+
+
     // ----- inner class: Code ---------------------------------------------------------------------
 
     /**

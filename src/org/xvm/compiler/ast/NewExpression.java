@@ -14,7 +14,6 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
-import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -190,46 +189,6 @@ public class NewExpression
         // while an inner class is technically a code container, it is not directly a code container
         // in the same sense that a method is, because it cannot directly contain a "return"
         throw new IllegalStateException("invalid return from an anonymous inner class: " + this);
-        }
-
-
-    // ----- compilation (inner class) -------------------------------------------------------------
-
-    @Override
-    public void validateContent(StageMgr mgr, ErrorListener errs)
-        {
-        if (body == null)
-            {
-            return;
-            }
-
-        // select a unique (and purposefully syntactically illegal) name for the anonymous inner
-        // class
-        assert anon == null;
-        AnonInnerClass info     = type.inferAnonInnerClass(errs);
-        Component      parent   = getComponent();
-        String         sDefault = info.getDefaultName();
-        int            nSuffix  = 1;
-        String         sName;
-        while (parent.getChild(sName = sDefault + ":" + nSuffix) != null)
-            {
-            ++nSuffix;
-            }
-        Token tokName = new Token(type.getStartPosition(), type.getEndPosition(), Id.IDENTIFIER, sName);
-
-        this.anon = new TypeCompositionStatement(
-                this,
-                info.getAnnotations(),
-                info.getCategory(),
-                tokName,
-                info.getCompositions(),
-                args,
-                body,
-                type.getStartPosition(),
-                body.getEndPosition()
-                );
-
-        catchUpChildren(errs);
         }
 
 
@@ -691,6 +650,66 @@ public class NewExpression
                         break;
                     }
                 }
+            }
+        }
+
+    /**
+     * Create the necessary AST and Component nodes for the anonymous inner class.
+     *
+     * @param fTemp  true to specify that the inner class is only being created on a temporary basis
+     * @param errs   the error listener to log any errors to
+     */
+    private void createInnerClass(boolean fTemp, ErrorListener errs)
+        {
+        if (body == null)
+            {
+            return;
+            }
+
+        // select a unique (and purposefully syntactically illegal) name for the anonymous inner
+        // class
+        assert anon == null;
+        AnonInnerClass info     = type.inferAnonInnerClass(errs);
+        Component      parent   = getComponent();
+        String         sDefault = info.getDefaultName();
+        int            nSuffix  = 1;
+        String         sName;
+        while (parent.getChild(sName = sDefault + ":" + nSuffix) != null)
+            {
+            ++nSuffix;
+            }
+        Token tokName = new Token(type.getStartPosition(), type.getEndPosition(), Id.IDENTIFIER, sName);
+
+        TypeCompositionStatement stmtAnon = new TypeCompositionStatement(
+                this,
+                info.getAnnotations(),
+                info.getCategory(),
+                tokName,
+                info.getCompositions(),
+                args,
+                body,
+                type.getStartPosition(),
+                body.getEndPosition());
+
+        this.anon = fTemp ? (TypeCompositionStatement) stmtAnon.clone() : stmtAnon;
+
+        catchUpChildren(errs);
+        }
+
+    /**
+     * If the inner class was created on a temporary basis, then clean up the temporary data and
+     * objects.
+     */
+    private void destroyTempInnerClass()
+        {
+        if (anon != null)
+            {
+            ClassStructure clzAnon = (ClassStructure) anon.getComponent();
+            if (clzAnon != null)
+                {
+                getComponent().removeChild(clzAnon);
+                }
+            anon = null;
             }
         }
 

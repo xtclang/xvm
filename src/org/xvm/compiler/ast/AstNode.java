@@ -654,8 +654,9 @@ public abstract class AstNode
             return true;
             }
 
-        for (Stage stageCurrent = stageOldest.nextTarget(), stageThis = getStage();
-                stageCurrent.compareTo(stageThis) < 0;
+        for (Stage stageCurrent = stageOldest.nextTarget(),
+                   stageTarget  = getStage().isTargetable() ? getStage() : getStage().prevTarget();
+                stageCurrent.compareTo(stageTarget) < 0;
                 stageCurrent = stageCurrent.nextTarget())
             {
             StageMgr mgrKids = new StageMgr(listChildren, stageCurrent, errs);

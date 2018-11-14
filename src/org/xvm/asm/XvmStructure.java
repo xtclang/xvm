@@ -712,5 +712,5 @@ public abstract class XvmStructure
      */
     private XvmStructure m_xsParent;
 
-    private transient SourceInfo m_sourceinfo;
+    private transient SourceInfo m_sourceinfo; // REVIEW not used!?!
     }

@@ -17,6 +17,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 
 import java.util.function.Consumer;
@@ -1417,7 +1418,8 @@ public abstract class Component
     /**
      * @return the number of children
      */
-    public int getChildrenCount()
+    public int
+    getChildrenCount()
         {
         return m_childByName == null ? 0 : m_childByName.size();
         }
@@ -1711,6 +1713,113 @@ public abstract class Component
         else
             {
             writePackedLong(out, 0);
+            }
+        }
+
+    /**
+     * Write a child AND all of its siblings to the DataOutput stream, and then recursively for the
+     * various children of those siblings.
+     *
+     * @param child  the eldest sibling of the siblings to recursively clone
+     *
+     * @throws IOException  if an I/O exception occurs during assembly to the provided DataOutput
+     *                      stream
+     */
+    private Component cloneChild(Component child)
+            throws IOException
+        {
+        // deep-clone any contained structures
+        Map<String, Component> mapThis = this.m_childByName;
+        if (mapThis != null)
+            {
+            Map<String, Component> mapThat = new ListMap<>();
+            for (Entry<String, Component> entry : mapThis.entrySet())
+                {
+                Component childThis = entry.getValue();
+                Component childThat = childThis.clone();
+                childThat.setContaining(that);
+                mapThat.put(entry.getKey(), childThat);
+                }
+            that.m_childByName = mapThat;
+            }
+
+        if (child.m_sibling != null || child.m_cond != null)
+            {
+            // multiple child / conditional format:
+            // first is an indicator that we're using the conditional format
+            out.writeByte(CONDITIONAL_BIT);
+
+            // second is the number of kids
+            int cSiblings = 0;
+            for (Component eachSibling = child; eachSibling != null; eachSibling = eachSibling.m_sibling)
+                {
+                ++cSiblings;
+                }
+            writePackedLong(out, cSiblings);
+
+            // last comes a sequence of siblings, each preceded by its condition
+            for (Component eachSibling = child; eachSibling != null; eachSibling = eachSibling.m_sibling)
+                {
+                writePackedLong(out, Constant.indexOf(eachSibling.m_cond));
+                eachSibling.assemble(out);
+                }
+            }
+        else
+            {
+            // single child format
+            child.assemble(out);
+            }
+
+        // children nested under these siblings are length-encoded as a group
+        if (child.hasChildren())
+            {
+            ByteArrayOutputStream outNestedRaw = new ByteArrayOutputStream();
+            DataOutputStream outNestedData = new DataOutputStream(outNestedRaw);
+            child.assembleChildren(outNestedData);
+            byte[] abGrandChildren = outNestedRaw.toByteArray();
+            writePackedLong(out, abGrandChildren.length);
+            out.write(abGrandChildren);
+            }
+        else
+            {
+            writePackedLong(out, 0);
+            }
+        }
+
+    protected Component cloneBody() // TODO Class, Method, Property, Typedef, Multi, Package, Module, Composite
+        {
+        try
+            {
+            Component that = (Component) super.clone();
+
+            if (that.m_listContribs != null)
+                {
+                that.m_listContribs = new ArrayList<>(that.m_listContribs);
+                }
+
+            that.m_sibling     = null;
+            that.m_childByName = null;
+
+            return that;
+            }
+        catch (CloneNotSupportedException e)
+            {
+            throw new IllegalStateException();
+            }
+        }
+
+    /**
+     * Clone any child components.
+     */
+    protected void cloneChildren(Collection<? extends Component> collThat)
+            throws IOException
+        {
+        if (getChildrenCount() > 0)
+            {
+            for (Component child : children())
+                {
+                assembleChild(out, child);
+                }
             }
         }
 
@@ -2017,17 +2126,7 @@ public abstract class Component
     @Override
     protected Component clone()
         {
-        try
-            {
-            Component that = (Component) super.clone();
-            // TODO this needs to clone data structures on this component as well
-            // TODO this needs to be overridden by all sub-classes of Component
-            return that;
-            }
-        catch (CloneNotSupportedException e)
-            {
-            throw new IllegalStateException();
-            }
+        // TODO override this on: File, Module, Package, Composite
         }
 
     @Override

@@ -635,6 +635,17 @@ public class PropertyStructure
         }
 
 
+    // ----- Object methods ------------------------------------------------------------------------
+
+    @Override
+    protected PropertyStructure clone()
+        {
+        PropertyStructure that = (PropertyStructure) super.clone();
+        // TODO
+        return that;
+        }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     /**
