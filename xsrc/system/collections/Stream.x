@@ -543,7 +543,7 @@ interface Stream<ElementType>
          *         the ResultType is the same as the AccumulationType
          */
         static <ElementType, AccumulationType, ResultType>
-            Collector<ElementType, ResultType, ResultType> of(
+            Collector<ElementType, AccumulationType, ResultType> of(
                 function AccumulationType ()                                   supply,     // Supplier
                 function Boolean (AccumulationType, ElementType)               accumulate, // Accumulator
                 function AccumulationType (AccumulationType, AccumulationType) combine)    // Combiner
