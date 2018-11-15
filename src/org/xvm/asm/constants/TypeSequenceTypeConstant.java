@@ -39,6 +39,12 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
+    public boolean isAutoNarrowing()
+        {
+        return false;
+        }
+
+    @Override
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget)
         {
         return this;
