@@ -628,7 +628,7 @@ public class TerminalTypeConstant
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return constId.getReferredToType().buildTypeInfo(errs);
+            return constId.getReferredToType().ensureTypeInfoInternal(errs);
             }
 
         Constant constant = getDefiningConstant();
@@ -642,17 +642,17 @@ public class TerminalTypeConstant
 
             case Property:
                 return new TypeInfo(this,
-                        ((PropertyConstant) constant).getReferredToType().buildTypeInfo(errs));
+                        ((PropertyConstant) constant).getReferredToType().ensureTypeInfoInternal(errs));
 
             case TypeParameter:
                 return new TypeInfo(this,
-                        ((TypeParameterConstant) constant).getReferredToType().buildTypeInfo(errs));
+                        ((TypeParameterConstant) constant).getReferredToType().ensureTypeInfoInternal(errs));
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
                 return ((PseudoConstant) constant).getDeclarationLevelClass().getType()
-                        .buildTypeInfo(errs);
+                        .ensureTypeInfoInternal(errs);
 
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constant);

@@ -428,7 +428,7 @@ public class ParameterizedTypeConstant
         if (m_constType.isTuple())
             {
             // for the TypeInfo purposes the content of the type parameters is irrelevant
-            return m_constType.buildTypeInfo(errs);
+            return m_constType.ensureTypeInfoInternal(errs);
             }
         return super.buildTypeInfo(errs);
         }

@@ -111,7 +111,7 @@ public class TypeSequenceTypeConstant
         ConstantPool pool = ConstantPool.getCurrentPool();
 
         TypeConstant typeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeType());
-        return typeArray.buildTypeInfo(errs);
+        return typeArray.ensureTypeInfoInternal(errs);
         }
 
     @Override

@@ -114,7 +114,7 @@ public class ImmutableTypeConstant
         // the "immutable" keyword does not affect the TypeInfo, even though the type itself is
         // slightly different
         // REVIEW what about in the case of "this:class"?
-        return m_constType.buildTypeInfo(errs);
+        return m_constType.ensureTypeInfoInternal(errs);
         }
 
 
