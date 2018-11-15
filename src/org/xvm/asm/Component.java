@@ -1809,17 +1809,16 @@ public abstract class Component
         }
 
     /**
-     * Clone any child components.
+     * Clone the passed collection child components onto this component.
+     *
+     * @param collThat  a collection of child components to clone
      */
     protected void cloneChildren(Collection<? extends Component> collThat)
             throws IOException
         {
-        if (getChildrenCount() > 0)
+        for (Component child : collThat)
             {
-            for (Component child : children())
-                {
-                assembleChild(out, child);
-                }
+            cloneChild(child);
             }
         }
 
