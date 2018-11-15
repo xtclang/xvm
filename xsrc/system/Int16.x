@@ -223,7 +223,7 @@ const Int16
         }
 
     @Override
-    conditional IntNumber next()
+    conditional Int16 next()
         {
         if (this < maxvalue)
             {
@@ -234,7 +234,7 @@ const Int16
         }
 
     @Override
-    conditional IntNumber prev()
+    conditional Int16 prev()
         {
         if (this > minvalue)
             {

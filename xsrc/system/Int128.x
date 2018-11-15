@@ -228,7 +228,7 @@ const Int128
         }
 
     @Override
-    conditional IntNumber next()
+    conditional Int128 next()
         {
         if (this < maxvalue)
             {
@@ -239,7 +239,7 @@ const Int128
         }
 
     @Override
-    conditional IntNumber prev()
+    conditional Int128 prev()
         {
         if (this > minvalue)
             {
