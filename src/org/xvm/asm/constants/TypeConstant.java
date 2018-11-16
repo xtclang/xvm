@@ -1473,6 +1473,12 @@ public abstract class TypeConstant
                                 typeMixin.getValueString());
                         break;
                         }
+                    if (typeMixin.isAutoNarrowing())
+                        {
+                        log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
+                                typeMixin.getValueString(), this.getValueString());
+                        typeMixin = typeMixin.resolveAutoNarrowing(getConstantPool(), null);
+                        }
 
                     // the annotation could be a mixin "into Class", which means that it's a
                     // non-virtual, compile-time mixin (like @Abstract)
@@ -1597,9 +1603,16 @@ public abstract class TypeConstant
                 }
             else
                 {
+                TypeConstant typeAnno = annotation.getAnnotationType();
+                if (typeAnno.isAutoNarrowing())
+                    {
+                    log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
+                            typeAnno.getValueString(), this.getValueString());
+                    typeAnno = typeAnno.resolveAutoNarrowing(getConstantPool(), null);
+                    }
                 // apply annotation
-                listProcess.add(new Contribution(annotation, pool.ensureAccessTypeConstant(
-                        annotation.getAnnotationType(), Access.PROTECTED)));
+                listProcess.add(new Contribution(annotation,
+                        pool.ensureAccessTypeConstant(typeAnno, Access.PROTECTED)));
                 }
             }
 
@@ -1780,8 +1793,20 @@ public abstract class TypeConstant
         NextContrib: for ( ; iContrib < cContribs; ++iContrib)
             {
             // only process annotations
-            Contribution contrib     = listContribs.get(iContrib);
-            TypeConstant typeContrib = contrib.resolveGenerics(pool, this);
+            Contribution contrib         = listContribs.get(iContrib);
+            TypeConstant typeContribOrig = contrib.resolveGenerics(pool, this);
+            TypeConstant typeContrib;      // needs to be effectively final
+
+            if (typeContribOrig != null && typeContribOrig.isAutoNarrowing())
+                {
+                log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
+                        typeContribOrig.getValueString(), this.getValueString());
+                typeContrib = typeContribOrig.resolveAutoNarrowing(getConstantPool(), null);
+                }
+            else
+                {
+                typeContrib = typeContribOrig;
+                }
 
             switch (contrib.getComposition())
                 {
@@ -1950,11 +1975,23 @@ public abstract class TypeConstant
             }
         if (typeExtends != null)
             {
+            if (typeExtends.isAutoNarrowing())
+                {
+                log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
+                        typeExtends.getValueString(), this.getValueString());
+                typeExtends = typeExtends.resolveAutoNarrowing(getConstantPool(), null);
+                }
             listProcess.add(new Contribution(Composition.Extends,
                     pool.ensureAccessTypeConstant(typeExtends, Access.PROTECTED)));
             }
         if (typeInto != null)
             {
+            if (typeInto.isAutoNarrowing())
+                {
+                log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
+                        typeInto.getValueString(), this.getValueString());
+                typeInto = typeInto.resolveAutoNarrowing(getConstantPool(), null);
+                }
             if (!typeInto.isAccessSpecified() && typeInto.isSingleDefiningConstant())
                 {
                 typeInto = pool.ensureAccessTypeConstant(typeInto, Access.PROTECTED);
@@ -2020,13 +2057,7 @@ public abstract class TypeConstant
                     {
                     // append to the call chain
                     TypeConstant typeContrib = contrib.getTypeConstant(); // already resolved
-                    if (typeContrib.isAutoNarrowing())
-                        {
-                        log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
-                                typeContrib.getValueString(), this.getValueString());
-                        typeContrib = typeContrib.resolveAutoNarrowing(getConstantPool(), null);
-                        }
-                    TypeInfo infoContrib = typeContrib.ensureTypeInfoInternal(errs);
+                    TypeInfo     infoContrib = typeContrib.ensureTypeInfoInternal(errs);
 
                     if (infoContrib == null)
                         {
