@@ -163,8 +163,20 @@ public class NamedTypeExpression
         {
         TypeExpression type   = this;
         AstNode        parent = getParent();
-        while (!(parent instanceof Statement))
+        while (true)
             {
+            if (!parent.isAutoNarrowingAllowed(type))
+                {
+                // annotation; disallow auto-narrowing
+                return false;
+                }
+
+            if (parent.isComponentNode())
+                {
+                // the containing component didn't reject; we are good to auto-narrow
+                return true;
+                }
+
             if (parent instanceof TypeExpression)
                 {
                 type = (TypeExpression) parent;
@@ -172,9 +184,6 @@ public class NamedTypeExpression
 
             parent = parent.getParent();
             }
-
-        return parent instanceof ComponentStatement
-                && ((ComponentStatement) parent).isAutoNarrowingAllowed(type);
         }
 
     /**
@@ -191,11 +200,20 @@ public class NamedTypeExpression
                 }
             else if (constId instanceof ClassConstant) // isAutoNarrowingAllowed()
                 {
-                ClassStructure struct = getComponent().getContainingClass();
-                if (struct != null)
+                ClassConstant  idThatClass     = (ClassConstant) constId;
+                ClassStructure structThisClass = getComponent().getContainingClass();
+                ClassStructure structThatClass = (ClassStructure) idThatClass.getComponent();
+
+                if (structThisClass != null
+                        && structThisClass.getFormat().isAutoNarrowingAllowed()
+                        && structThatClass.getFormat().isAutoNarrowingAllowed())
                     {
-                    ClassConstant constThisClass = (ClassConstant) struct.getIdentityConstant();
-                    return constThisClass.calculateAutoNarrowingConstant((ClassConstant) constId);
+                    IdentityConstant idClz = structThisClass.getIdentityConstant();
+                    if (idClz.getFormat() == Constant.Format.Class)
+                        {
+                        ClassConstant constThisClass = (ClassConstant) structThisClass.getIdentityConstant();
+                        return constThisClass.calculateAutoNarrowingConstant(idThatClass);
+                        }
                     }
                 }
             }

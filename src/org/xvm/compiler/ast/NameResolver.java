@@ -17,6 +17,7 @@ import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.TypeParameterConstant;
@@ -421,6 +422,14 @@ public class NameResolver
                         constType = constTypeParam.getMethod().getSignature().
                                 getRawParams()[constTypeParam.getRegister()];
                         break;
+                        }
+
+                    case ThisClass:
+                    case ChildClass:
+                    case ParentClass:
+                        {
+                        PseudoConstant constClass = (PseudoConstant) constParam;
+                        return constClass.getDeclarationLevelClass().getComponent();
                         }
 
                     default:

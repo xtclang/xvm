@@ -163,6 +163,13 @@ public class NewExpression
         }
 
     @Override
+    public boolean isAutoNarrowingAllowed(TypeExpression type)
+        {
+        // anonymous inner class declaration cannot auto-narrow its contributions
+        return !isComponentNode();
+        }
+
+    @Override
     public long getStartPosition()
         {
         return left == null ? operator.getStartPosition() : left.getStartPosition();

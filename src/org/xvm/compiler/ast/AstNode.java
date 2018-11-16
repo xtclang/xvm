@@ -348,6 +348,20 @@ public abstract class AstNode
         }
 
     /**
+     * Given a type expression that is used as some part of this AstNode, determine if that type is
+     * allowed to auto narrow.
+     *
+     * @param type  a TypeExpression that is a child of this AstNode
+     *
+     * @return true iff the specified TypeExpression is being used in a place that supports
+     *         auto-narrowing
+     */
+    public boolean isAutoNarrowingAllowed(TypeExpression type)
+        {
+        return true;
+        }
+
+    /**
      * Code Container method: TODO
      *
      * @return the required return types from the code container, which comes from the signature if
