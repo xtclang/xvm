@@ -537,6 +537,10 @@ public interface Constants
      * "{0}" is not related to the provided parent instance type "{1}".
      */
     public static final String VE_NEW_UNRELATED_PARENT                = "VERIFY-92";
+    /**
+     * Unexpected auto-narrowing contribution "{0}" for type "{1}".
+     */
+    public static final String VE_UNEXPECTED_AUTO_NARROW              = "VERIFY-93";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

@@ -1126,6 +1126,8 @@ public abstract class TypeConstant
                         : info.limitAccess(Access.PUBLIC);
             }
 
+        assert !isAutoNarrowing();
+
         // this implementation only deals with modifying (not including immutable) and terminal type
         // constants (not including typedefs, type parameters, auto-narrowing types, and unresolved
         // names); in other words, there must be an identity constant and a component structure
@@ -2018,7 +2020,13 @@ public abstract class TypeConstant
                     {
                     // append to the call chain
                     TypeConstant typeContrib = contrib.getTypeConstant(); // already resolved
-                    TypeInfo     infoContrib = typeContrib.ensureTypeInfoInternal(errs);
+                    if (typeContrib.isAutoNarrowing())
+                        {
+                        log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
+                                typeContrib.getValueString(), this.getValueString());
+                        typeContrib = typeContrib.resolveAutoNarrowing(getConstantPool(), null);
+                        }
+                    TypeInfo infoContrib = typeContrib.ensureTypeInfoInternal(errs);
 
                     if (infoContrib == null)
                         {
@@ -2388,8 +2396,15 @@ public abstract class TypeConstant
         // layer on an "into" of either "into Ref" or "into Var"
         ConstantPool pool     = getConstantPool();
         TypeConstant typeTerm = info.isVar() ? pool.typeVarRB() : pool.typeRefRB();
+        TypeConstant typeProp = info.getType();
+
+        if (typeProp.isAutoNarrowing())
+            {
+            typeProp = typeProp.resolveAutoNarrowing(pool, this);
+            }
+
         TypeConstant typeInto = pool.ensureAccessTypeConstant(
-            pool.ensureParameterizedTypeConstant(typeTerm, info.getType()), Access.PROTECTED);
+            pool.ensureParameterizedTypeConstant(typeTerm, typeProp), Access.PROTECTED);
         TypeInfo     infoInto = typeInto.ensureTypeInfoInternal(errs);
         if (infoInto == null)
             {
@@ -2411,7 +2426,7 @@ public abstract class TypeConstant
             ClassStructure clzAnno  = (ClassStructure) ((IdentityConstant) anno.getAnnotationClass()).getComponent();
             if (clzAnno.indexOfGenericParameter("RefType") == 0)
                 {
-                typeAnno = pool.ensureParameterizedTypeConstant(typeAnno, info.getType());
+                typeAnno = pool.ensureParameterizedTypeConstant(typeAnno, typeProp);
                 }
             typeAnno = pool.ensureAccessTypeConstant(typeAnno, Access.PROTECTED);
 
