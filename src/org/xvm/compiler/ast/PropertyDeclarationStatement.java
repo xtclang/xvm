@@ -108,7 +108,7 @@ public class PropertyDeclarationStatement
         {
         // the property's type is allowed to auto-narrow, but only for non-static properties
         // belonging to a non-singleton class (even if nested inside another property)
-        return type == this.type && getComponent().isAutoNarrowingAllowed();
+        return getComponent().isAutoNarrowingAllowed();
         }
 
     /**

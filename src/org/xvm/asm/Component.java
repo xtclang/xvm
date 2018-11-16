@@ -2271,6 +2271,32 @@ public abstract class Component
                 }
             }
 
+        public boolean isAutoNarrowingAllowed()
+            {
+            switch (this)
+                {
+                case MODULE:
+                case PACKAGE:
+                case ENUM:
+                case ENUMVALUE:
+                case PROPERTY:
+                case MULTIMETHOD:
+                case METHOD:
+                case TYPEDEF:
+                    return false;
+
+                case MIXIN:
+                case INTERFACE:
+                case CLASS:
+                case CONST:
+                case SERVICE:
+                    return true;
+
+                default:
+                    throw new IllegalStateException("unsupported format: " + this);
+                }
+            }
+
         /**
          * Look up a Format enum by its ordinal.
          *

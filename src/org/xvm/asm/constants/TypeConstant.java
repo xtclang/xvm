@@ -1134,6 +1134,8 @@ public abstract class TypeConstant
                         : info.limitAccess(Access.PUBLIC);
             }
 
+        assert !isAutoNarrowing();
+
         // this implementation only deals with modifying (not including immutable) and terminal type
         // constants (not including typedefs, type parameters, auto-narrowing types, and unresolved
         // names); in other words, there must be an identity constant and a component structure
@@ -1479,6 +1481,12 @@ public abstract class TypeConstant
                                 typeMixin.getValueString());
                         break;
                         }
+                    if (typeMixin.isAutoNarrowing())
+                        {
+                        log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
+                                typeMixin.getValueString(), this.getValueString());
+                        typeMixin = typeMixin.resolveAutoNarrowing(getConstantPool(), null);
+                        }
 
                     // the annotation could be a mixin "into Class", which means that it's a
                     // non-virtual, compile-time mixin (like @Abstract)
@@ -1603,9 +1611,16 @@ public abstract class TypeConstant
                 }
             else
                 {
+                TypeConstant typeAnno = annotation.getAnnotationType();
+                if (typeAnno.isAutoNarrowing())
+                    {
+                    log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
+                            typeAnno.getValueString(), this.getValueString());
+                    typeAnno = typeAnno.resolveAutoNarrowing(getConstantPool(), null);
+                    }
                 // apply annotation
-                listProcess.add(new Contribution(annotation, pool.ensureAccessTypeConstant(
-                        annotation.getAnnotationType(), Access.PROTECTED)));
+                listProcess.add(new Contribution(annotation,
+                        pool.ensureAccessTypeConstant(typeAnno, Access.PROTECTED)));
                 }
             }
 
@@ -1786,8 +1801,20 @@ public abstract class TypeConstant
         NextContrib: for ( ; iContrib < cContribs; ++iContrib)
             {
             // only process annotations
-            Contribution contrib     = listContribs.get(iContrib);
-            TypeConstant typeContrib = contrib.resolveGenerics(pool, this);
+            Contribution contrib         = listContribs.get(iContrib);
+            TypeConstant typeContribOrig = contrib.resolveGenerics(pool, this);
+            TypeConstant typeContrib;      // needs to be effectively final
+
+            if (typeContribOrig != null && typeContribOrig.isAutoNarrowing())
+                {
+                log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
+                        typeContribOrig.getValueString(), this.getValueString());
+                typeContrib = typeContribOrig.resolveAutoNarrowing(getConstantPool(), null);
+                }
+            else
+                {
+                typeContrib = typeContribOrig;
+                }
 
             switch (contrib.getComposition())
                 {
@@ -1956,11 +1983,23 @@ public abstract class TypeConstant
             }
         if (typeExtends != null)
             {
+            if (typeExtends.isAutoNarrowing())
+                {
+                log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
+                        typeExtends.getValueString(), this.getValueString());
+                typeExtends = typeExtends.resolveAutoNarrowing(getConstantPool(), null);
+                }
             listProcess.add(new Contribution(Composition.Extends,
                     pool.ensureAccessTypeConstant(typeExtends, Access.PROTECTED)));
             }
         if (typeInto != null)
             {
+            if (typeInto.isAutoNarrowing())
+                {
+                log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
+                        typeInto.getValueString(), this.getValueString());
+                typeInto = typeInto.resolveAutoNarrowing(getConstantPool(), null);
+                }
             if (!typeInto.isAccessSpecified() && typeInto.isSingleDefiningConstant())
                 {
                 typeInto = pool.ensureAccessTypeConstant(typeInto, Access.PROTECTED);
@@ -2396,8 +2435,15 @@ public abstract class TypeConstant
         // layer on an "into" of either "into Ref" or "into Var"
         ConstantPool pool     = getConstantPool();
         TypeConstant typeTerm = info.isVar() ? pool.typeVarRB() : pool.typeRefRB();
+        TypeConstant typeProp = info.getType();
+
+        if (typeProp.isAutoNarrowing())
+            {
+            typeProp = typeProp.resolveAutoNarrowing(pool, this);
+            }
+
         TypeConstant typeInto = pool.ensureAccessTypeConstant(
-            pool.ensureParameterizedTypeConstant(typeTerm, info.getType()), Access.PROTECTED);
+            pool.ensureParameterizedTypeConstant(typeTerm, typeProp), Access.PROTECTED);
         TypeInfo     infoInto = typeInto.ensureTypeInfoInternal(errs);
         if (infoInto == null)
             {
@@ -2419,7 +2465,7 @@ public abstract class TypeConstant
             ClassStructure clzAnno  = (ClassStructure) ((IdentityConstant) anno.getAnnotationClass()).getComponent();
             if (clzAnno.indexOfGenericParameter("RefType") == 0)
                 {
-                typeAnno = pool.ensureParameterizedTypeConstant(typeAnno, info.getType());
+                typeAnno = pool.ensureParameterizedTypeConstant(typeAnno, typeProp);
                 }
             typeAnno = pool.ensureAccessTypeConstant(typeAnno, Access.PROTECTED);
 

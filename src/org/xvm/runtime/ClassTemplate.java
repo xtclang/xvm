@@ -421,14 +421,14 @@ public abstract class ClassTemplate
             return hFD.callChain(frameCaller, Access.PUBLIC, contAssign);
             });
 
-        Map<TypeConstant, MethodStructure> mapConstructors = m_mapConstructors;
-        if (mapConstructors == null)
+        Map<TypeConstant, MethodStructure> mapInitializers = m_mapInitializers;
+        if (mapInitializers == null)
             {
-            mapConstructors = m_mapConstructors = new ConcurrentHashMap<>();
+            mapInitializers = m_mapInitializers = new ConcurrentHashMap<>();
             }
 
-        MethodStructure methodID = mapConstructors.computeIfAbsent(
-            hStruct.getType(), f_struct::getDefaultInitializer);
+        MethodStructure methodID = mapInitializers.computeIfAbsent(
+            hStruct.getType(), f_struct::createInitializer);
 
         if (methodID.isAbstract())
             {
@@ -1325,11 +1325,12 @@ public abstract class ClassTemplate
 
         // if there is an "equals" function that is not native (on the Object itself),
         // we need to call it
-        MethodStructure functionEquals = clazz.getType().ensureTypeInfo().findEqualsFunction();
+        TypeConstant    type           = clazz.getType();
+        MethodStructure functionEquals = type.ensureTypeInfo().findEqualsFunction();
         if (functionEquals != null && !functionEquals.isNative())
             {
             return frame.call1(functionEquals, null,
-                    new ObjectHandle[]{hValue1, hValue2}, iReturn);
+                    new ObjectHandle[]{type.getTypeHandle(), hValue1, hValue2}, iReturn);
             }
 
         // only Const classes have an automatic implementation;
@@ -1352,11 +1353,12 @@ public abstract class ClassTemplate
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // if there is an "compare" function, we need to call it
-        MethodStructure functionCompare = clazz.getType().ensureTypeInfo().findCompareFunction();;
+        TypeConstant    type            = clazz.getType();
+        MethodStructure functionCompare = type.ensureTypeInfo().findCompareFunction();
         if (functionCompare != null && !functionCompare.isNative())
             {
             return frame.call1(functionCompare, null,
-                new ObjectHandle[]{hValue1, hValue2}, iReturn);
+                new ObjectHandle[]{type.getTypeHandle(), hValue1, hValue2}, iReturn);
             }
 
         // only Const and Enum classes have automatic implementations
@@ -1670,5 +1672,5 @@ public abstract class ClassTemplate
     /**
      * A cache of default constructors.
      */
-    private Map<TypeConstant, MethodStructure> m_mapConstructors;
+    private Map<TypeConstant, MethodStructure> m_mapInitializers;
     }

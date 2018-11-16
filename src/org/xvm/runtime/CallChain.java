@@ -21,7 +21,10 @@ public class CallChain
     // Construct the CallChain
     public CallChain(MethodBody[] aMethods)
         {
-        assert aMethods != null;
+        if (aMethods == null)
+            {
+            throw new IllegalArgumentException("methods are missing");
+            }
 
         f_aMethods = aMethods;
         }

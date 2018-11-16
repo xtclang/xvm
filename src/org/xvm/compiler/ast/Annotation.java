@@ -78,6 +78,12 @@ public class Annotation
         }
 
     @Override
+    public boolean isAutoNarrowingAllowed(TypeExpression type)
+        {
+        return false;
+        }
+
+    @Override
     protected boolean canResolveNames()
         {
         return m_anno != null || super.canResolveNames() || type.canResolveNames();

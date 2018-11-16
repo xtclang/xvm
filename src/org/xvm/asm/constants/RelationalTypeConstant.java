@@ -184,7 +184,7 @@ public abstract class RelationalTypeConstant
     public boolean isAutoNarrowing()
         {
         return m_constType1.isAutoNarrowing()
-            && m_constType2.isAutoNarrowing();
+            || m_constType2.isAutoNarrowing();
         }
 
     @Override

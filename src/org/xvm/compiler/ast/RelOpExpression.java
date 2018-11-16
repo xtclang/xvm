@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
@@ -294,11 +295,16 @@ public class RelOpExpression
             return fitVia;
             }
 
+        ConstantPool pool = pool();
         for (MethodInfo infoAuto : infoLeft.getAutoMethodInfos())
             {
             TypeConstant typeConv = infoAuto.getSignature().getRawReturns()[0];
-            TypeInfo     infoConv = typeConv.ensureTypeInfo();
-            for (MethodConstant idMethod : infoConv.findOpMethods(sMethod, sOp, 1))
+            if (typeConv.isAutoNarrowing())
+                {
+                typeConv = typeConv.resolveAutoNarrowing(pool, infoLeft.getType());
+                }
+
+            for (MethodConstant idMethod : typeConv.ensureTypeInfo().findOpMethods(sMethod, sOp, 1))
                 {
                 TypeConstant[] aRets = idMethod.getRawReturns();
                 if (aRets.length >= 1 && aRets[0].isAssignableTo(typeRequired))

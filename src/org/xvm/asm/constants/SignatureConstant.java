@@ -316,7 +316,7 @@ public class SignatureConstant
      * Note: both "this" and "that" signatures must be resolved.
      *
      * @param that     the signature of the matching method
-     * @param typeCtx  the type within which this signature is used
+     * @param typeCtx  the type within which this signature is used  (TODO: remove as unused)
      */
     public boolean isSubstitutableFor(SignatureConstant that, TypeConstant typeCtx)
         {

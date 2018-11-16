@@ -137,6 +137,25 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public boolean isAutoNarrowing()
+        {
+        if (m_constType.isAutoNarrowing())
+            {
+            return true;
+            }
+
+        for (int i = 0, c = m_atypeParams.length; i < c; ++i)
+            {
+            if (m_atypeParams[i].isAutoNarrowing())
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
+    @Override
     public Component.Format getExplicitClassFormat()
         {
         return getUnderlyingType().getExplicitClassFormat();
@@ -428,7 +447,7 @@ public class ParameterizedTypeConstant
         if (m_constType.isTuple())
             {
             // for the TypeInfo purposes the content of the type parameters is irrelevant
-            return m_constType.buildTypeInfo(errs);
+            return m_constType.ensureTypeInfoInternal(errs);
             }
         return super.buildTypeInfo(errs);
         }

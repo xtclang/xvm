@@ -146,11 +146,7 @@ public class MethodDeclarationStatement
     @Override
     public boolean isAutoNarrowingAllowed(TypeExpression type)
         {
-        return getComponent().isAutoNarrowingAllowed() &&
-                (   (typeParams != null && typeParams.stream().anyMatch(param -> param.getType() == type))
-                 || (returns != null && returns.contains(type))
-                 || (redundant != null && redundant.contains(type))
-                 || (params != null && params.stream().anyMatch(param -> param.getType() == type)));
+        return getComponent().isAutoNarrowingAllowed();
         }
 
     @Override

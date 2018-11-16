@@ -15,8 +15,6 @@ import java.util.function.Consumer;
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
-import org.xvm.asm.Component.Composition;
-import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Constant;
@@ -628,7 +626,7 @@ public class TerminalTypeConstant
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return constId.getReferredToType().buildTypeInfo(errs);
+            return constId.getReferredToType().ensureTypeInfoInternal(errs);
             }
 
         Constant constant = getDefiningConstant();
@@ -641,18 +639,28 @@ public class TerminalTypeConstant
                 return super.buildTypeInfo(errs);
 
             case Property:
-                return new TypeInfo(this,
-                        ((PropertyConstant) constant).getReferredToType().buildTypeInfo(errs));
-
+                {
+                TypeConstant typeConstraint = ((PropertyConstant) constant).getReferredToType();
+                if (typeConstraint.isAutoNarrowing())
+                    {
+                    typeConstraint = typeConstraint.resolveAutoNarrowing(getConstantPool(), null);
+                    }
+                return new TypeInfo(this, typeConstraint.ensureTypeInfoInternal(errs));
+                }
             case TypeParameter:
-                return new TypeInfo(this,
-                        ((TypeParameterConstant) constant).getReferredToType().buildTypeInfo(errs));
-
+                {
+                TypeConstant typeConstraint = ((TypeParameterConstant) constant).getReferredToType();
+                if (typeConstraint.isAutoNarrowing())
+                    {
+                    typeConstraint = typeConstraint.resolveAutoNarrowing(getConstantPool(), null);
+                    }
+                return new TypeInfo(this, typeConstraint.ensureTypeInfoInternal(errs));
+                }
             case ThisClass:
             case ParentClass:
             case ChildClass:
                 return ((PseudoConstant) constant).getDeclarationLevelClass().getType()
-                        .buildTypeInfo(errs);
+                        .ensureTypeInfoInternal(errs);
 
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constant);
