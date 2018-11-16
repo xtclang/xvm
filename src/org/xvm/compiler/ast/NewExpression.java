@@ -157,6 +157,11 @@ public class NewExpression
      */
     public TypeConstant getAnonymousInnerClassType()
         {
+        if (anon == null)
+            {
+            ensureInnerClass(true, ErrorListener.BLACKHOLE);
+            }
+
         // there must be an anonymous inner class skeleton by this point
         assert anon != null && anon.getComponent() != null;
         return anon.getComponent().getIdentityConstant().getType();
@@ -233,6 +238,10 @@ public class NewExpression
         {
         boolean fValid = true;
         boolean fAnon  = anon != null;
+        if (fAnon)
+            {
+            ensureInnerClass(false, errs);
+            }
 
         // validate the expression that occurs _before_ the new, e.g. x in "x.new Y()", which
         // specifies an "outer this" that provides support for virtual construction
@@ -288,8 +297,9 @@ public class NewExpression
                 // anonymous inner class
                 typeSuper  = pool.ensureAccessTypeConstant(typeTarget, fNestMate ? Access.PRIVATE : Access.PROTECTED);
                 infoSuper  = typeSuper.ensureTypeInfo(errs);
+                typeTarget = getAnonymousInnerClassType();
                 // REVIEW GG - causes warning: "Suspicious assignment from: testSimple(?)#Object:1 to: testSimple(?)#Object:1:private"
-                typeTarget = pool.ensureAccessTypeConstant(getAnonymousInnerClassType(), Access.PRIVATE);
+                // typeTarget = pool.ensureAccessTypeConstant(getAnonymousInnerClassType(), Access.PRIVATE);
                 }
             else if (fNestMate)
                 {
@@ -659,39 +669,64 @@ public class NewExpression
      * @param fTemp  true to specify that the inner class is only being created on a temporary basis
      * @param errs   the error listener to log any errors to
      */
-    private void createInnerClass(boolean fTemp, ErrorListener errs)
+    private void ensureInnerClass(boolean fTemp, ErrorListener errs)
         {
-        if (body == null)
+        assert body != null;
+
+        // check if there is already a temp copy of the anonymous inner class floating around, and
+        // if so, get rid of it
+        if (m_anonActual != null)
             {
-            return;
+            destroyTempInnerClass();
             }
 
         // select a unique (and purposefully syntactically illegal) name for the anonymous inner
         // class
-        assert anon == null;
-        AnonInnerClass info     = type.inferAnonInnerClass(errs);
-        Component      parent   = getComponent();
-        String         sDefault = info.getDefaultName();
-        int            nSuffix  = 1;
-        String         sName;
-        while (parent.getChild(sName = sDefault + ":" + nSuffix) != null)
+        if (anon == null)
             {
-            ++nSuffix;
+            AnonInnerClass info     = type.inferAnonInnerClass(errs);
+            Component      parent   = getComponent();
+            String         sDefault = info.getDefaultName();
+            int            nSuffix  = 1;
+            String         sName;
+            while (parent.getChild(sName = sDefault + ":" + nSuffix) != null)
+                {
+                ++nSuffix;
+                }
+            Token tokName = new Token(type.getStartPosition(), type.getEndPosition(), Id.IDENTIFIER, sName);
+
+            this.anon = adopt(new TypeCompositionStatement(
+                    this,
+                    info.getAnnotations(),
+                    info.getCategory(),
+                    tokName,
+                    info.getCompositions(),
+                    args,
+                    body,
+                    type.getStartPosition(),
+                    body.getEndPosition()));
             }
-        Token tokName = new Token(type.getStartPosition(), type.getEndPosition(), Id.IDENTIFIER, sName);
 
-        TypeCompositionStatement stmtAnon = new TypeCompositionStatement(
-                this,
-                info.getAnnotations(),
-                info.getCategory(),
-                tokName,
-                info.getCompositions(),
-                args,
-                body,
-                type.getStartPosition(),
-                body.getEndPosition());
+        if (fTemp)
+            {
+            TypeCompositionStatement anonActual = anon;
+            ClassStructure           clzActual  = (ClassStructure) anon.getComponent();
 
-        this.anon = fTemp ? (TypeCompositionStatement) stmtAnon.clone() : stmtAnon;
+            anon = adopt((TypeCompositionStatement) anonActual.clone());
+            if (clzActual != null)
+                {
+                Component componentParent = clzActual.getParent();
+                assert componentParent == getComponent();       // the parent should be this method
+
+                ClassStructure clzTemp = (ClassStructure) clzActual.clone();
+                componentParent.replaceChild(clzActual, clzTemp);
+
+                anon.setComponent(clzTemp);
+                }
+
+            m_anonActual = anonActual;
+            m_clzActual  = clzActual;
+            }
 
         catchUpChildren(errs);
         }
@@ -702,14 +737,28 @@ public class NewExpression
      */
     private void destroyTempInnerClass()
         {
-        if (anon != null)
+        if (m_anonActual != null)
             {
-            ClassStructure clzAnon = (ClassStructure) anon.getComponent();
-            if (clzAnon != null)
+            ClassStructure clzTemp = (ClassStructure) anon.getComponent();
+            if (clzTemp != null)
                 {
-                getComponent().removeChild(clzAnon);
+                Component componentParent = clzTemp.getParent();
+                assert componentParent == getComponent();       // the parent should be this method
+
+                ClassStructure clzReal = m_clzActual;
+                if (clzReal == null)
+                    {
+                    componentParent.removeChild(clzTemp);
+                    }
+                else
+                    {
+                    componentParent.replaceChild(clzTemp, clzReal);
+                    }
                 }
-            anon = null;
+
+            anon         = m_anonActual;
+            m_anonActual = null;
+            m_clzActual  = null;
             }
         }
 
@@ -1079,6 +1128,9 @@ public class NewExpression
     private transient MethodStructure m_constructor;
     private transient boolean         m_fTupleArg;     // indicates that arguments come from a tuple
     private transient Constant[]      m_aconstDefault; // default arguments
+
+    private transient TypeCompositionStatement m_anonActual;
+    private transient ClassStructure           m_clzActual;
 
     /**
      * The variables captured by the anonymous inner class, with an associated "true" flag if the

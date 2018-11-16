@@ -211,12 +211,8 @@ public class MethodStructure
      */
     public boolean resolveAnnotations()
         {
-        if (getReturnCount() == 0)
-            {
-            return true;
-            }
-
-        int cMove = 0;
+        boolean fVoid = getReturnCount() == 0;
+        int     cMove = 0;
         for (Annotation annotation : m_aAnnotations)
             {
             if (annotation.containsUnresolved())
@@ -230,7 +226,7 @@ public class MethodStructure
                 return false;
                 }
 
-            if (!typeInto.isIntoMethodType())
+            if (!fVoid && !typeInto.isIntoMethodType())
                 {
                 ++cMove;
                 }
@@ -1281,6 +1277,28 @@ public class MethodStructure
         return super.resolveName(sName, collector);
         }
 
+    @Override
+    protected MethodStructure cloneBody()
+        {
+        MethodStructure that = (MethodStructure) super.cloneBody();
+
+        // the m_aReturns array can have its contents altered by the annotation resolution logic
+        if (this.m_aReturns != null && this.m_aReturns.length > 0)
+            {
+            that.m_aReturns = this.m_aReturns.clone();
+            }
+
+        // m_code is a mutable object, and tied back to the MethodStructure, so explicitly clone it
+        if (this.m_code != null)
+            {
+            that.m_code = this.m_code.cloneOnto(that);
+            }
+
+        // note: ignoring the @deprecated m_structFinally field
+
+        return that;
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -1482,17 +1500,6 @@ public class MethodStructure
         }
 
 
-    // ----- Object methods ------------------------------------------------------------------------
-
-    @Override
-    protected MethodStructure clone()
-        {
-        MethodStructure that = (MethodStructure) super.clone();
-        // TODO
-        return that;
-        }
-
-
     // ----- inner class: Code ---------------------------------------------------------------------
 
     /**
@@ -1502,35 +1509,28 @@ public class MethodStructure
         {
         // ----- constructors -----------------------------------------------------------------
 
-        public Code()
-            {
-            this(null);
-            }
-
         /**
          * Construct a Code object. This disassembles the bytes of code from the MethodStructure if
          * it was itself disassembled; otherwise this starts empty and allows ops to be added.
          */
         Code(MethodStructure method)
             {
+            assert method != null;
             f_method = method;
 
-            if (method != null)
+            byte[] abOps = method.m_abOps;
+            if (abOps != null)
                 {
-                byte[] abOps = method.m_abOps;
-                if (abOps != null)
+                try
                     {
-                    try
-                        {
-                        m_aop = abOps.length == 0
-                                ? Op.NO_OPS
-                                : Op.readOps(new DataInputStream(new ByteArrayInputStream(abOps)),
-                                        method.getLocalConstants());
-                        }
-                    catch (IOException e)
-                        {
-                        throw new RuntimeException(e);
-                        }
+                    m_aop = abOps.length == 0
+                            ? Op.NO_OPS
+                            : Op.readOps(new DataInputStream(new ByteArrayInputStream(abOps)),
+                                    method.getLocalConstants());
+                    }
+                catch (IOException e)
+                    {
+                    throw new RuntimeException(e);
                     }
                 }
             }
@@ -1544,6 +1544,8 @@ public class MethodStructure
          */
         Code(MethodStructure method, Op[] aop)
             {
+            assert method != null;
+
             f_method = method;
             m_aop    = aop;
 
@@ -1552,8 +1554,10 @@ public class MethodStructure
 
         Code(MethodStructure method, Code wrappee)
             {
-            f_method = method;
+            assert method != null;
             assert wrappee != null;
+
+            f_method = method;
             }
 
         // ----- Code methods -----------------------------------------------------------------
@@ -1703,9 +1707,37 @@ public class MethodStructure
         public boolean hasOps()
             {
             return m_listOps != null && !m_listOps.isEmpty()
-                || f_method != null && f_method.m_abOps != null && f_method.m_abOps.length > 0;
+                || f_method.m_abOps != null && f_method.m_abOps.length > 0;
             }
 
+        /**
+         * Create a clone of this code that will exist on the specified method structure.
+         *
+         * @param method  the method structure to graft a clone onto
+         *
+         * @return the new Code clone
+         */
+        Code cloneOnto(MethodStructure method)
+            {
+            Code that = new Code(method, this);
+
+            if (this.m_listOps != null)
+                {
+                // this isn't 100% correct, since a few ops are mutable in theory, but unless the
+                // clone is made in the middle of code being added (which is not a supported time
+                // at which to be calling clone), then this should be fine; (otherwise we'd have to
+                // individually clone every single op)
+                that.m_listOps = new ArrayList<>(this.m_listOps);
+                }
+
+            that.m_mapIndex        = this.m_mapIndex;
+            that.m_fTrailingPrefix = this.m_fTrailingPrefix;
+            that.m_aop             = this.m_aop;
+            that.m_nPrevLine       = this.m_nPrevLine;
+            that.m_nCurLine        = this.m_nCurLine;
+
+            return that;
+            }
 
         // ----- helpers for building Ops -----------------------------------------------------
 
@@ -1827,14 +1859,14 @@ public class MethodStructure
 
         protected void ensureAppending()
             {
-            if (f_method != null && f_method.m_abOps != null)
+            if (f_method.m_abOps != null)
                 {
                 throw new IllegalStateException("not appendable");
                 }
 
             if (m_listOps == null)
                 {
-                m_listOps =  new ArrayList<>();
+                m_listOps = new ArrayList<>();
                 }
             }
 
@@ -1843,7 +1875,7 @@ public class MethodStructure
             if (f_method.m_abOps == null)
                 {
                 Op.ConstantRegistry registry = f_method.m_registry =
-                    new Op.ConstantRegistry(f_method.getConstantPool());
+                        new Op.ConstantRegistry(f_method.getConstantPool());
                 Op[] aop;
                 try
                     {
@@ -1925,7 +1957,6 @@ public class MethodStructure
                 }
             return aop;
             }
-
 
         // ----- fields -----------------------------------------------------------------------
 

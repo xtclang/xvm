@@ -189,6 +189,7 @@ public class StageMgr
 
                     case Loaded:
                         // nothing to do; this stage does not apply to most AstNodes
+                        markComplete();
                         return true;
 
                     case Resolved:

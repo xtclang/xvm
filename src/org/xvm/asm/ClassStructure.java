@@ -699,6 +699,23 @@ public class ClassStructure
         return ResolutionResult.UNKNOWN;
         }
 
+    @Override
+    protected ClassStructure cloneBody()
+        {
+        ClassStructure that = (ClassStructure) super.cloneBody();
+
+        // deep-clone the parameter list information (since the structure is mutable)
+        if (this.m_mapParams != null)
+            {
+            ListMap<StringConstant, TypeConstant> mapThis = this.m_mapParams;
+            ListMap<StringConstant, TypeConstant> mapThat = new ListMap<>();
+            mapThat.putAll(mapThis);
+            that.m_mapParams = mapThat;
+            }
+
+        return that;
+        }
+
 
     // ----- type comparison support ---------------------------------------------------------------
 
@@ -2023,23 +2040,6 @@ public class ClassStructure
 
 
     // ----- Object methods ------------------------------------------------------------------------
-
-    @Override
-    protected ClassStructure clone()
-        {
-        ClassStructure that = (ClassStructure) super.clone();
-
-        // deep-clone the parameter list information (since the structure is mutable)
-        if (this.m_mapParams != null)
-            {
-            ListMap<StringConstant, TypeConstant> mapThis = this.m_mapParams;
-            ListMap<StringConstant, TypeConstant> mapThat = new ListMap<>();
-            mapThat.putAll(mapThis);
-            that.m_mapParams = mapThat;
-            }
-
-        return that;
-        }
 
     @Override
     public boolean equals(Object obj)

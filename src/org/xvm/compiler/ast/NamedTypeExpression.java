@@ -49,9 +49,6 @@ public class NamedTypeExpression
         this.nonnarrow  = nonnarrow;
         this.paramTypes = params;
         this.lEndPos    = lEndPos;
-
-        this.m_resolver = new NameResolver(this, names.stream().map(
-                token -> (String) token.getValue()).iterator());
         }
 
 
@@ -239,7 +236,13 @@ public class NamedTypeExpression
     @Override
     public NameResolver getNameResolver()
         {
-        return m_resolver;
+        NameResolver resolver = m_resolver;
+        if (resolver == null || resolver.getNode() != this)
+            {
+            m_resolver = resolver = new NameResolver(this, names.stream().map(
+                    token -> (String) token.getValue()).iterator());
+            }
+        return resolver;
         }
 
 

@@ -13,7 +13,6 @@ import java.util.Map;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.MethodConstant;
 
 import org.xvm.util.IdentityArrayList;
 
@@ -483,6 +482,14 @@ public class CompositeComponent
     protected void assembleChildren(DataOutput out)
             throws IOException
         {
+        throw new UnsupportedOperationException();
+        }
+
+    @Override
+    protected Component cloneBody()
+        {
+        // this can be implemented, but it's not immediately clear what would be explicitly shared
+        // vs. not shared as the result of the clone
         throw new UnsupportedOperationException();
         }
 
