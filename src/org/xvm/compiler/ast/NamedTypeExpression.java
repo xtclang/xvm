@@ -189,7 +189,7 @@ public class NamedTypeExpression
     /**
      * @return the constant to use
      */
-    public Constant inferAutoNarrowing(Constant constId, ErrorListener errs)
+    protected Constant inferAutoNarrowing(Constant constId, ErrorListener errs)
         {
         // check for auto-narrowing
         if (!constId.containsUnresolved() && isAutoNarrowingAllowed() != isExplicitlyNonAutoNarrowing())
