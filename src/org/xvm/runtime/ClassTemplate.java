@@ -421,14 +421,14 @@ public abstract class ClassTemplate
             return hFD.callChain(frameCaller, Access.PUBLIC, contAssign);
             });
 
-        Map<TypeConstant, MethodStructure> mapConstructors = m_mapConstructors;
-        if (mapConstructors == null)
+        Map<TypeConstant, MethodStructure> mapInitializers = m_mapInitializers;
+        if (mapInitializers == null)
             {
-            mapConstructors = m_mapConstructors = new ConcurrentHashMap<>();
+            mapInitializers = m_mapInitializers = new ConcurrentHashMap<>();
             }
 
-        MethodStructure methodID = mapConstructors.computeIfAbsent(
-            hStruct.getType(), f_struct::getDefaultInitializer);
+        MethodStructure methodID = mapInitializers.computeIfAbsent(
+            hStruct.getType(), f_struct::createInitializer);
 
         if (methodID.isAbstract())
             {
@@ -1672,5 +1672,5 @@ public abstract class ClassTemplate
     /**
      * A cache of default constructors.
      */
-    private Map<TypeConstant, MethodStructure> m_mapConstructors;
+    private Map<TypeConstant, MethodStructure> m_mapInitializers;
     }

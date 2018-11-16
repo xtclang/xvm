@@ -19,6 +19,7 @@ import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.IntersectionTypeConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
@@ -1854,32 +1855,22 @@ public class ClassStructure
      *
      * @return the [synthetic] MethodStructure for the corresponding default constructor
      */
-    public MethodStructure getDefaultInitializer(TypeConstant typeStruct)
+    public MethodStructure createInitializer(TypeConstant typeStruct)
         {
-        MultiMethodStructure mms = (MultiMethodStructure) getChild("default");
-        if (mms == null)
-            {
-            mms = ensureMultiMethodStructure("default");
-            }
-        else
-            {
-            for (MethodStructure method : mms.methods())
-                {
-                if (method.getParamArray()[0].getType().equals(typeStruct))
-                    {
-                    return method;
-                    }
-                }
-            }
-
-        // there is no constructor; create "void default(StructType struct)"
-        Parameter[] aParam = new Parameter[]
+        ConstantPool   pool       = ConstantPool.getCurrentPool();
+        int            nFlags     = Format.METHOD.ordinal() | Access.PUBLIC.FLAGS | Component.STATIC_BIT;
+        TypeConstant[] atypeParam = new TypeConstant[] {typeStruct};
+        Parameter[]    aParam     = new Parameter[]
            {
-           new Parameter(getConstantPool(), typeStruct, "struct", null, false, 0, false)
+           new Parameter(pool, typeStruct, "struct", null, false, 0, false)
            };
 
-        MethodStructure method = mms.createMethod(true, Access.PUBLIC, null,
-            Parameter.NO_PARAMS, aParam, true, false);
+        // create an orphaned transient MethodStructure (using current pool)
+        MethodConstant idMethod = pool.ensureMethodConstant(
+                getIdentityConstant(), "default", atypeParam, TypeConstant.NO_TYPES);
+
+        MethodStructure method = new MethodStructure(this, nFlags, idMethod, null,
+                Annotation.NO_ANNOTATIONS, Parameter.NO_PARAMS, aParam, true, false);
 
         MethodStructure.Code code = method.createCode();
 
