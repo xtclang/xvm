@@ -181,7 +181,7 @@ public abstract class Utils
                 if (hArg instanceof DeferredPropertyHandle)
                     {
                     ObjectHandle hThis = frameCaller.getThis();
-                    String sProp = ((DeferredPropertyHandle) hArg).m_property.getName();
+                    String sProp = ((DeferredPropertyHandle) hArg).getProperty();
 
                     switch (hThis.getTemplate().getPropertyValue(
                             frameCaller, hThis, sProp, Op.A_STACK))
@@ -204,9 +204,7 @@ public abstract class Utils
                     }
                 else if (hArg instanceof DeferredCallHandle)
                     {
-                    Frame frameNext = ((DeferredCallHandle) hArg).f_frameNext;
-                    frameNext.setContinuation(this);
-                    return frameCaller.call(frameNext);
+                    return ((DeferredCallHandle) hArg).proceed(frameCaller, this);
                     }
                 }
             return continuation.proceed(frameCaller);

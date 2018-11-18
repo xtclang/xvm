@@ -81,7 +81,8 @@ public class ObjectHeap
                 return new DeferredCallHandle(frameNext);
 
             case Op.R_EXCEPTION:
-                // TODO: generate a DeferredCallHandle() to a frame that immediately throws
+                return new DeferredCallHandle(frame);
+
             default:
                 throw new IllegalStateException();
             }
@@ -163,8 +164,10 @@ public class ObjectHeap
 
             case Set:
             case MapEntry:
-            case Map:
                 throw new UnsupportedOperationException("TODO: " + constValue);
+
+            case Map:
+                return f_poolRoot.typeMap();
 
             case Module:
                 return f_poolRoot.typeModule();

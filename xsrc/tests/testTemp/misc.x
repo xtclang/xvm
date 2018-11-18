@@ -32,7 +32,7 @@ module TestMisc.xqiz.it
         // REVIEW GG
         testInterval();
         // testTupleConv();
-        // testMap();
+        testMap();
         }
 
     void testInts()
@@ -350,6 +350,7 @@ module TestMisc.xqiz.it
 
         Tuple<String, Int> t2 = getTupleSI();
         }
+
     Tuple<String, IntLiteral> getTupleSI()
         {
         return ("Hello", 4);

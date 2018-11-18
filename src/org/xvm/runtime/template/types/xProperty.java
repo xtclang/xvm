@@ -50,19 +50,24 @@ public class xProperty
     public static class DeferredPropertyHandle
             extends DeferredCallHandle
         {
-        public PropertyConstant m_property;
+        protected final PropertyConstant f_property;
 
         protected DeferredPropertyHandle(PropertyConstant prop)
             {
             super(null);
 
-            m_property = prop;
+            f_property = prop;
             }
 
+        public String getProperty()
+            {
+            return f_property.getName();
+
+            }
         @Override
         public String toString()
             {
-            return "Deferred property access: " + m_property.getName();
+            return "Deferred property access: " + f_property.getName();
             }
         }
     }
