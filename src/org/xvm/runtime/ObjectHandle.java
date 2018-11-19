@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.xvm.asm.Constants;
+import org.xvm.asm.Op;
+
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -367,7 +369,7 @@ public abstract class ObjectHandle
     public static class DeferredCallHandle
             extends ObjectHandle
         {
-        public Frame f_frameNext;
+        protected Frame f_frameNext;
 
         protected DeferredCallHandle(Frame frameNext)
             {
@@ -376,10 +378,26 @@ public abstract class ObjectHandle
             f_frameNext = frameNext;
             }
 
+        // continue with the processing
+        public int proceed(Frame frameCaller, Frame.Continuation continuation)
+            {
+            Frame frameNext = f_frameNext;
+            if (frameNext.m_hException == null)
+                {
+                frameNext.setContinuation(continuation);
+                return frameCaller.call(frameNext);
+                }
+
+            frameCaller.m_hException = frameNext.m_hException;
+            return Op.R_EXCEPTION;
+            }
+
         @Override
         public String toString()
             {
-            return "Deferred call: " + f_frameNext;
+            return f_frameNext.m_hException == null
+                ? "Deferred call: " + f_frameNext
+                : "Deferred exception: " + f_frameNext.m_hException;
             }
         }
 

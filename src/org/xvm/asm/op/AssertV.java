@@ -180,7 +180,7 @@ public class AssertV
                 ObjectHandle hValueOrig = ahOrig[i];
                 if (hValueOrig instanceof DeferredPropertyHandle)
                     {
-                    asName[i] = ((DeferredPropertyHandle) hValueOrig).m_property.getName();
+                    asName[i] = ((DeferredPropertyHandle) hValueOrig).getProperty();
                     }
                 else // simply a constant; no label
                     {

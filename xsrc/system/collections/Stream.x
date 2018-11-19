@@ -427,10 +427,10 @@ interface Stream<ElementType>
      */
     conditional ElementType reduce(function ElementType accumulate(ElementType, ElementType))
         {
-        Iterator<ElementType> iterator = iterator();
-        if (ElementType result : iterator.next())
+        Iterator<ElementType> iter = iterator();
+        if (ElementType result : iter.next())
             {
-            for (ElementType element : iterator)
+            for (ElementType element : iter)
                 {
                 result = accumulate(result, element);
                 }

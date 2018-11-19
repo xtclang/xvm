@@ -1031,7 +1031,7 @@ public abstract class AstNode
 
         NextMethod: for (MethodConstant idMethod : setMethods)
             {
-            MethodInfo infoMethod = infoTarget.getMethodById(idMethod);
+            MethodInfo      infoMethod = infoTarget.getMethodById(idMethod);
             MethodStructure method     = infoMethod.getTopmostMethodStructure(infoTarget);
 
             int cAllParams  = method.getParamCount();
