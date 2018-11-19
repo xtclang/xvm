@@ -507,9 +507,9 @@ public class NewExpression
             CaptureContext ctxAnon = new CaptureContext(ctx);
             anon.setCaptureContext(ctxAnon);
 
+            // force a temp clone of the inner class to go through its validate() stage so that we
+            // can determine what variables get captured (and if they are effectively final)
             ensureInnerClass(/* fTemp */ true, ErrorListener.BLACKHOLE);
-
-            // TODO there has to be some some way to infect TypeCompositionStatement with ctxAnon, so if it needs to create a context, it will delegate to our capture context
             if (!new StageMgr(anon, Stage.Emitted, errs).fastForward(20))
                 {
                 fValid = false;
@@ -522,15 +522,14 @@ public class NewExpression
             destroyTempInnerClass();
             anon.setCaptureContext(null);
 
-            // at this point we have a fair bit of data about which variables get captured, what we lack is the
-            // effectively final data that will only get reported (via exit() on the context) as
-            // the variables go out of scope in the method body that contains this lambda, so we need
-            // to store off the data from the capture context, and defer the signature creation to the
-            // generateAssignment() method
+            // at this point we have a fair bit of data about which variables get captured, but we
+            // still lack the effectively final data that will only get reported when the various
+            // nested contexts in which the captured variables were declared go through their exit()
+            // logic (as the variables go out of scope in the method body that contains this
+            // NewExpression); for now, store off the data from the capture context
             m_mapCapture     = ctxAnon.getCaptureMap();
             m_mapRegisters   = ctxAnon.ensureRegisterMap();
-            m_fInstanceChild = ctxAnon.
-
+            m_fInstanceChild = ctxAnon.isInstanceChild();
             }
 
         return finishValidation(typeRequired, typeTarget, fValid ? TypeFit.Fit : TypeFit.NoFit, null, errs);

@@ -642,6 +642,14 @@ public class FileStructure
         return false;
         }
 
+    @Override
+    protected boolean isSiblingAllowed()
+        {
+        // TODO
+        return false;
+        }
+
+
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override

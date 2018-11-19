@@ -17,7 +17,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 
 import java.util.function.Consumer;
@@ -639,13 +638,22 @@ public abstract class Component
         }
 
     /**
+     * @return true iff the component allows multiple conditional children to exist for the same
+     *         identity
+     */
+    protected boolean isSiblingAllowed()
+        {
+        return getParent().isSiblingAllowed();
+        }
+
+    /**
      * @return assuming that this is one of any number of siblings, obtain a reference to the first
      *         sibling (which may be this); never null
      */
     protected Component getEldestSibling()
         {
         Component parent = getParent();
-        if (parent == null)
+        if (parent == null || !isSiblingAllowed())
             {
             return this;
             }
@@ -661,7 +669,18 @@ public abstract class Component
      */
     protected Component getNextSibling()
         {
-        return m_sibling;
+        return isSiblingAllowed() ? m_sibling : null;
+        }
+
+    /**
+     * TODO
+     *
+     * @param sibling
+     */
+    private void setNextSibling(Component sibling)
+        {
+        assert isSiblingAllowed();
+        m_sibling = sibling;
         }
 
     /**
@@ -671,6 +690,32 @@ public abstract class Component
      */
     protected Iterator<Component> siblings()
         {
+        if (!isSiblingAllowed())
+            {
+            return new Iterator()
+                {
+                private boolean first = true;
+
+                @Override
+                public boolean hasNext()
+                    {
+                    return first;
+                    }
+
+                @Override
+                public Component next()
+                    {
+                    if (first)
+                        {
+                        first = false;
+                        return Component.this;
+                        }
+
+                    throw new NoSuchElementException();
+                    }
+                };
+            }
+
         return new Iterator<Component>()
             {
             private Component nextSibling = getEldestSibling();
@@ -690,7 +735,7 @@ public abstract class Component
                     throw new NoSuchElementException();
                     }
 
-                nextSibling = sibling.m_sibling;
+                nextSibling = sibling.getNextSibling();
                 return sibling;
                 }
             };
@@ -721,6 +766,7 @@ public abstract class Component
     public Map<String, Component> ensureChildByNameMap()
         {
         ensureChildren();
+
         Map<String, Component> map = m_childByName;
         if (map == null)
             {
@@ -805,8 +851,6 @@ public abstract class Component
         // if the child is a method, it can only be contained by a MultiMethodStructure
         assert !(child instanceof MethodStructure);
 
-        ensureChildren();
-
         Map<String, Component> kids  = ensureChildByNameMap();
         String                 sName = child.getName();
 
@@ -831,6 +875,8 @@ public abstract class Component
      */
     protected void linkSibling(Component child, Component sibling)
         {
+        assert isSiblingAllowed();
+
         // there has to be a condition that sets the new kid apart from its siblings, but that
         // condition might not be available (resolved) when the kid is created, so defer the
         // check for the existence of the condition and the mutual exclusivity of the condition
@@ -849,16 +895,15 @@ public abstract class Component
         // make sure that the parent is set correctly
         child.setContaining(this);
 
-        // TODO: remove eventually
-        System.err.println("*** Component " + toString() + " has duplicate children " + child.toString());
-
         // the new kid gets put at the end of the linked list of siblings
         Component lastSibling = sibling;
-        while (lastSibling.m_sibling != null)
+        Component nextSibling = lastSibling.getNextSibling();
+        while (nextSibling != null)
             {
-            lastSibling = lastSibling.m_sibling;
+            lastSibling = nextSibling;
+            nextSibling = lastSibling.getNextSibling();
             }
-        lastSibling.m_sibling = child;
+        lastSibling.setNextSibling(child);
 
         child.adoptChildren(sibling);
         }
@@ -924,7 +969,7 @@ public abstract class Component
      */
     protected void unlinkSibling(Map kids, Object id, Component child, Component sibling)
         {
-        if (sibling == child && child.m_sibling == null)
+        if (sibling == child && child.getNextSibling() == null)
             {
             // most common case: the specified child is the only sibling with that id
             markModified();
@@ -940,7 +985,7 @@ public abstract class Component
         if (sibling == child)
             {
             // the child to remove is in the head of the linked list
-            kids.put(id, child.m_sibling);
+            kids.put(id, child.getNextSibling());
             }
         else
             {
@@ -949,12 +994,12 @@ public abstract class Component
             kids.put(id, sibling);
             do
                 {
-                if (sibling.m_sibling == child)
+                if (sibling.getNextSibling() == child)
                     {
-                    sibling.m_sibling = child.m_sibling;
+                    sibling.setNextSibling(child.getNextSibling());
                     break;
                     }
-                sibling = sibling.m_sibling;
+                sibling = sibling.getNextSibling();
                 }
             while (sibling != null);
             }
@@ -1152,7 +1197,7 @@ public abstract class Component
                 return (MultiMethodStructure) sibling;
                 }
 
-            sibling = sibling.m_sibling;
+            sibling = sibling.getNextSibling();
             }
 
         MultiMethodConstant  constId = getConstantPool().ensureMultiMethodConstant(getIdentityConstant(), sName);
@@ -1274,7 +1319,7 @@ public abstract class Component
 
             for (Component eachThis = childThis, eachThat = childThat;
                     eachThis != null || eachThat != null;
-                    eachThis = eachThis.m_sibling, eachThat = eachThat.m_sibling)
+                    eachThis = eachThis.getNextSibling(), eachThat = eachThat.getNextSibling())
                 {
                 if (eachThis == null || eachThat == null)
                     {
@@ -1323,7 +1368,7 @@ public abstract class Component
             }
 
         // common result: exactly one non-conditional match
-        if (firstSibling.m_sibling == null
+        if (firstSibling.getNextSibling() == null
                 && firstSibling.getIdentityConstant().equals(constId)
                 && firstSibling.m_cond == null)
             {
@@ -1413,7 +1458,7 @@ public abstract class Component
             }
 
         // common result: exactly one non-conditional match
-        if (firstSibling.m_sibling == null && firstSibling.m_cond == null)
+        if (firstSibling.getNextSibling() == null && firstSibling.m_cond == null)
             {
             return firstSibling;
             }
@@ -1493,7 +1538,7 @@ public abstract class Component
 
         // see which siblings will be present based on what has been required in the current
         // assembler context
-        for (Component eachSibling = firstSibling; eachSibling != null; eachSibling = eachSibling.m_sibling)
+        for (Component eachSibling = firstSibling; eachSibling != null; eachSibling = eachSibling.getNextSibling())
             {
             if (ctxLink == null || eachSibling.isPresent(ctxLink))
                 {
@@ -1582,7 +1627,7 @@ public abstract class Component
                         }
                     else
                         {
-                        prevSibling.m_sibling = curSibling;
+                        prevSibling.setNextSibling(curSibling);
                         }
                     prevSibling = curSibling;
                     }
@@ -1601,7 +1646,7 @@ public abstract class Component
                     // just read the bytes for the children and store it off for later
                     byte[] ab = new byte[cb];
                     in.readFully(ab);
-                    for (Component eachSibling = kid; eachSibling != null; eachSibling = eachSibling.m_sibling)
+                    for (Component eachSibling = kid; eachSibling != null; eachSibling = eachSibling.getNextSibling())
                         {
                         // note that every sibling has a copy of all of the children; this is because
                         // the byte[] serves as both the storage of those children and an indicator that
@@ -1640,7 +1685,7 @@ public abstract class Component
      */
     private void registerChildConstants(ConstantPool pool, Component child)
         {
-        for (Component eachSibling = child; eachSibling != null; eachSibling = eachSibling.m_sibling)
+        for (Component eachSibling = child; eachSibling != null; eachSibling = eachSibling.getNextSibling())
             {
             eachSibling.registerConstants(pool);
             }
@@ -1690,7 +1735,7 @@ public abstract class Component
     private void assembleChild(DataOutput out, Component child)
             throws IOException
         {
-        if (child.m_sibling != null || child.m_cond != null)
+        if (child.getNextSibling() != null || child.m_cond != null)
             {
             // multiple child / conditional format:
             // first is an indicator that we're using the conditional format
@@ -1698,14 +1743,14 @@ public abstract class Component
 
             // second is the number of kids
             int cSiblings = 0;
-            for (Component eachSibling = child; eachSibling != null; eachSibling = eachSibling.m_sibling)
+            for (Component eachSibling = child; eachSibling != null; eachSibling = eachSibling.getNextSibling())
                 {
                 ++cSiblings;
                 }
             writePackedLong(out, cSiblings);
 
             // last comes a sequence of siblings, each preceded by its condition
-            for (Component eachSibling = child; eachSibling != null; eachSibling = eachSibling.m_sibling)
+            for (Component eachSibling = child; eachSibling != null; eachSibling = eachSibling.getNextSibling())
                 {
                 writePackedLong(out, Constant.indexOf(eachSibling.m_cond));
                 eachSibling.assemble(out);
@@ -1788,16 +1833,16 @@ public abstract class Component
         // ... and the rest of the siblings
         Component childThisPrev = childThis;
         Component childThatPrev = childThat;
-        Component childThatNext = childThatPrev.m_sibling;
+        Component childThatNext = childThatPrev.getNextSibling();
         while (childThatNext != null)
             {
             Component childThisNext = childThatNext.cloneBody();
             childThisNext.setContaining(this);
-            childThisPrev.m_sibling = childThisNext;
+            childThisPrev.setNextSibling(childThisNext);
 
             childThisPrev = childThisNext;
             childThatPrev = childThatNext;
-            childThatNext = childThatPrev.m_sibling;
+            childThatNext = childThatPrev.getNextSibling();
             }
 
         // clone the grand-children nested under these siblings
@@ -1837,7 +1882,7 @@ public abstract class Component
     @Override
     public boolean isModified()
         {
-        for (Component eachSibling = this; eachSibling != null; eachSibling = eachSibling.m_sibling)
+        for (Component eachSibling = this; eachSibling != null; eachSibling = eachSibling.getNextSibling())
             {
             if (eachSibling.isBodyModified())
                 {
@@ -1861,7 +1906,7 @@ public abstract class Component
     @Override
     protected void resetModified()
         {
-        for (Component eachSibling = this; eachSibling != null; eachSibling = eachSibling.m_sibling)
+        for (Component eachSibling = this; eachSibling != null; eachSibling = eachSibling.getNextSibling())
             {
             eachSibling.m_fModified = false;
             }
@@ -1891,7 +1936,7 @@ public abstract class Component
             {
             sb.append(", synthetic");
             }
-        if (m_sibling != null)
+        if (getNextSibling() != null)
             {
             sb.append(", next-sibling");
             }
@@ -2066,7 +2111,7 @@ public abstract class Component
     private void dumpChild(Component child, PrintWriter out, String sIndent)
         {
         // dump all of the siblings
-        for (Component eachSibling = child; eachSibling != null; eachSibling = eachSibling.m_sibling)
+        for (Component eachSibling = child; eachSibling != null; eachSibling = eachSibling.getNextSibling())
             {
             eachSibling.dump(out, sIndent);
             }
@@ -2115,7 +2160,14 @@ public abstract class Component
         Component that = this.cloneBody();
         assert this.getContaining() == that.getContaining();
 
-        that.cloneChildren(this.children());
+        // TODO clone has to work differently for cloning a component when the isSiblingAllowed() is true (conditional components) or false (working with a flat model)
+        // mark the component as a clone root
+        that.m_sibling = that;
+
+        if (this.hasChildren())
+            {
+            that.cloneChildren(this.children());
+            }
         return that;
         }
 

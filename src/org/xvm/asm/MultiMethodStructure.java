@@ -92,14 +92,10 @@ public class MultiMethodStructure
         // MultiMethodStructure can only hold MethodStructures
         assert child instanceof MethodStructure;
 
-        ensureChildren();
-
-        Map<MethodConstant, MethodStructure> kids = ensureMethodByConstantMap();
-
-        MethodStructure method = (MethodStructure) child;
-        MethodConstant  id     = method.getIdentityConstant();
-
-        MethodStructure sibling = kids.get(id);
+        Map<MethodConstant, MethodStructure> kids    = ensureMethodByConstantMap();
+        MethodStructure                      method  = (MethodStructure) child;
+        MethodConstant                       id      = method.getIdentityConstant();
+        MethodStructure                      sibling = kids.get(id);
         if (sibling == null)
             {
             kids.put(id, method);
@@ -198,6 +194,16 @@ public class MultiMethodStructure
             }
 
         return null;
+        }
+
+    @Override
+    protected Component cloneBody()
+        {
+        MultiMethodStructure that = (MultiMethodStructure) super.cloneBody();
+
+        that.m_methodByConstant = null;
+
+        return that;
         }
 
 
