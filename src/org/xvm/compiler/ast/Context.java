@@ -477,8 +477,8 @@ public class Context
             }
 
         map.put(sName, reg);
-        ensureDefiniteAssignments().put(sName, reg.isPredefined() ? Assignment.Unassigned
-                                                                  : Assignment.AssignedOnce);
+        ensureDefiniteAssignments().put(sName, reg.isPredefined() ? Assignment.AssignedOnce
+                                                                  : Assignment.Unassigned);
         }
 
     /**

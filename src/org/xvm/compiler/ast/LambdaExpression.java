@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -876,6 +877,7 @@ public class LambdaExpression
                 TypeConstant[]        atypeAllParams = new TypeConstant[cAllParams];
                 String[]              asAllParams    = new String[cAllParams];
                 int                   iParam         = 0;
+                List<Op>              listMoveOp     = new ArrayList(cBindArgs);
 
                 aBindArgs = new Argument[cBindArgs];
                 for (Entry<String, Boolean> entry : mapCapture.entrySet())
@@ -890,7 +892,7 @@ public class LambdaExpression
                         typeCapture = pool.ensureParameterizedTypeConstant(pool.typeVar(), typeCapture);
                         Register regVal = (Register) argCapture;
                         Register regVar = new Register(typeCapture, Op.A_STACK);
-                        code.add(new MoveVar(regVal, regVar));
+                        listMoveOp.add(new MoveVar(regVal, regVar));
                         argCapture     = regVar;
                         fImplicitDeref = true;
                         }
@@ -901,7 +903,7 @@ public class LambdaExpression
                         typeCapture = pool.ensureParameterizedTypeConstant(pool.typeRef(), typeCapture);
                         Register regVal = (Register) argCapture;
                         Register regVar = new Register(typeCapture, Op.A_STACK);
-                        code.add(new MoveRef(regVal, regVar));
+                        listMoveOp.add(new MoveRef(regVal, regVar));
                         argCapture     = regVar;
                         fImplicitDeref = true;
                         }
@@ -922,6 +924,12 @@ public class LambdaExpression
                     ++iParam;
                     }
                 assert iParam == cBindArgs;
+
+                // since the Move* ops push refs onto the stack, add them in the inverse order
+                for (int i = listMoveOp.size() -1; i >= 0; --i)
+                    {
+                    code.add(listMoveOp.get(i));
+                    }
 
                 System.arraycopy(atypeParams, 0, atypeAllParams, cBindArgs, cLambdaParams);
                 System.arraycopy(asParams   , 0, asAllParams   , cBindArgs, cLambdaParams);
@@ -1093,27 +1101,11 @@ public class LambdaExpression
             {
             Context ctxOuter = super.exit();
 
-            // apply variable assignment information from the capture scope to the variables
-            // captured from the outer scope
+            // record the registers for the captured variables
             Map<String, Boolean>  mapCapture = ensureCaptureMap();
             Map<String, Register> mapVars    = ensureRegisterMap();
-            for (Entry<String, Boolean> entry : mapCapture.entrySet())
+            for (String sName : mapCapture.keySet())
                 {
-                String  sName = entry.getKey();
-                boolean fMod  = entry.getValue();
-                if (!fMod && getDefiniteAssignments().containsKey(sName))
-                    {
-                    entry.setValue(true);
-                    fMod = true;
-                    }
-
-                if (fMod)
-                    {
-                    Assignment asnOld = ctxOuter.getVarAssignment(sName);
-                    Assignment asnNew = asnOld.applyAssignmentFromCapture();
-                    ctxOuter.setVarAssignment(sName, asnNew);
-                    }
-
                 mapVars.put(sName, (Register) getVar(sName));
                 }
 
@@ -1159,28 +1151,11 @@ public class LambdaExpression
                 if (fCapture)
                     {
                     // capture the variable
-                    Map<String, Boolean> map = ensureCaptureMap();
-                    if (!map.containsKey(sName))
-                        {
-                        map.put(sName, false);
-                        }
+                    ensureCaptureMap().putIfAbsent(sName, false);
                     }
                 }
 
             super.markVarRead(fNested, sName, tokName, errs);
-            }
-
-        @Override
-        protected void markVarWrite(String sName, Token tokName, ErrorListener errs)
-            {
-            // names in the name map but not in the capture map are lambda parameters; all other
-            // names become captures
-            if (!getNameMap().containsKey(sName) || getCaptureMap().containsKey(sName))
-                {
-                ensureCaptureMap().put(sName, true);
-                }
-
-            super.markVarWrite(sName, tokName, errs);
             }
 
         /**
@@ -1252,6 +1227,13 @@ public class LambdaExpression
                     ensureDefiniteAssignments().put(sName, Assignment.AssignedOnce);
                     }
                 }
+            }
+
+        @Override
+        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
+            {
+            ensureCaptureMap().put(sName, true);
+            return asnOuter.applyAssignmentFromCapture();
             }
 
         /**
