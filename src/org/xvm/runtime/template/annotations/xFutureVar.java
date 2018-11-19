@@ -193,7 +193,7 @@ public class xFutureVar
         CompletableFuture<ObjectHandle> cf = hFuture.m_future;
         if (cf == null)
             {
-            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            return frame.raiseException(xException.unassignedReference());
             }
 
         if (cf.isDone())

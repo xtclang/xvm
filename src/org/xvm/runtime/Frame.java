@@ -330,10 +330,16 @@ public class Frame
         return Op.R_EXCEPTION;
         }
 
-    // return one of the pre-defined arguments
-    public ObjectHandle getPredefinedArgument(int nArgId)
+    /**
+     * Obtain a handle for one of the pre-defined arguments.
+     *
+     * @param iArgId  the argument id (negative value in the reserved range)
+     *
+     * @return a corresponding handle
+     */
+    public ObjectHandle getPredefinedArgument(int iArgId)
         {
-        switch (nArgId)
+        switch (iArgId)
             {
             case Op.A_STACK:
                 return popStack();
@@ -403,19 +409,28 @@ public class Frame
                 return f_context.f_container.getModule();
 
             default:
-                throw new IllegalStateException("Invalid argument " + nArgId);
+                throw new IllegalStateException("Invalid argument " + iArgId);
             }
         }
 
-    // return the type of the pre-defined argument
-    public TypeConstant getPredefinedArgumentType(int nArgId)
+    /**
+     * Obtain the type of the specified pre-defined argument.
+     *
+     * @param iArgId  the argument id (negative value in the reserved range)
+     * @param hArg  in case the argument id points to the stack, indicates the argument itself
+     *
+     * @return the type of the specified per-defined argument or null if the argument points to the
+     *         stack and the operation is going to push the stack (hArg == null)
+     */
+    public TypeConstant getPredefinedArgumentType(int iArgId, ObjectHandle hArg)
         {
-        if (nArgId == Op.A_STACK)
+        if (iArgId == Op.A_STACK)
             {
-            // the compile type of the stack arg is not necessarily the same as the run-time type
-            return null;
+            return hArg == null
+                ? null
+                : hArg.getType();
             }
-        return getPredefinedArgument(nArgId).getType();
+        return getPredefinedArgument(iArgId).getType();
         }
 
     // create a new "current" scope
@@ -993,25 +1008,42 @@ public class Frame
         return constText.getValue();
         }
 
-    // return the type (resolved) of the specified argument
-    public TypeConstant getArgumentType(int iArg)
+    /**
+     * Obtain the type of the specified argument. Negative argument ids are treated as constants.
+     *
+     * @param iArg  the argument id
+     * @param hArg  in case the argument id points to the stack, indicates the argument itself
+     *
+     * @return the type (resolved) of the specified argument or null if the argument points to the
+     *         stack and the operation is going to push the stack (hArg == null)
+     */
+    public TypeConstant getArgumentType(int iArg, ObjectHandle hArg)
         {
         return iArg >= 0
             ? getRegisterType(iArg)
             : iArg <= Op.CONSTANT_OFFSET
                 ? getConstant(iArg).getType()  // a constant cannot be generic
-                : getPredefinedArgumentType(iArg);
+                : getPredefinedArgumentType(iArg, hArg);
         }
 
-    // same as getArgumentType, but treats the negative ids as "local-property" references
-    public TypeConstant getLocalType(int iArg)
+    /**
+     * Similarly to {@link #getArgumentType}, obtain the type of the specified argument except
+     * that the negative ids are treated as "local-property" references.
+     *
+     * @param iArg  the argument id
+     * @param hArg  in case the argument id points to the stack, indicates the argument itself
+     *
+     * @return the type (resolved) of the specified argument or null if the argument points to the
+     *         stack and the operation is going to push the stack (hArg == null)
+     */
+    public TypeConstant getLocalType(int iArg, ObjectHandle hArg)
         {
         return iArg >= 0
             ? getRegisterType(iArg)
             : iArg <= Op.CONSTANT_OFFSET
                 // "local property" type needs to be resolved
                 ? getConstant(iArg).getType().resolveGenerics(poolContext(), getGenericsResolver())
-                : getPredefinedArgumentType(iArg);
+                : getPredefinedArgumentType(iArg, hArg);
         }
 
     protected TypeConstant getRegisterType(int iArg)
@@ -1846,7 +1878,7 @@ public class Frame
             else
                 {
                 // "local property" or a literal constant
-                typeArray = frame.getLocalType(nTargetReg);
+                typeArray = frame.getLocalType(nTargetReg, null);
                 }
 
             if (typeArray.isParamsSpecified())
@@ -1881,7 +1913,7 @@ public class Frame
             ConstantPool poolCtx  = frame.poolContext();
 
             PropertyConstant constProperty = (PropertyConstant) poolCode.getConstant(iAuxId);
-            TypeConstant typeTarget = frame.getLocalType(nTargetReg);
+            TypeConstant typeTarget = frame.getLocalType(nTargetReg, null);
 
             return typeTarget.containsGenericParam(constProperty.getName())
                 ? poolCtx.ensureParameterizedTypeConstant(poolCtx.typeType(),

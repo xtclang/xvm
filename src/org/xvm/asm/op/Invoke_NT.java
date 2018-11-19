@@ -139,7 +139,7 @@ public class Invoke_NT
         CallChain chain = getCallChain(frame, hTarget);
         MethodStructure method = chain.getTop();
 
-        checkReturnTupleRegister(frame, method);
+        checkReturnTupleRegister(frame, method, hTarget);
 
         ObjectHandle[] ahVar;
         if (ahArg == null)

@@ -80,6 +80,12 @@ module TestLambda.xqiz.it
             console.println("result=" + f());
             // console.println("i=" + i + ", result=" + f() + ", i=" + i);
             }
+
+        // test for the capture of an unassigned variable
+        Int j;
+        function void() f2 = () -> {j = ++i;};
+        f2();
+        console.println("j=" + &j.get());
         }
 
     void testComplexCapture()
