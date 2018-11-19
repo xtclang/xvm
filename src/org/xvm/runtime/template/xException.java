@@ -57,6 +57,11 @@ public class xException
 
     // stock exception: TODO: use the actual exceptions
 
+    public static ExceptionHandle unassignedReference()
+        {
+        return makeHandle("Unassigned reference");
+        }
+
     public static ExceptionHandle immutableObject()
         {
         return makeHandle("Immutable object");

@@ -159,22 +159,22 @@ public abstract class OpCondJump
 
             if (isDeferred(hValue1))
                 {
-                type1 = frame.getLocalType(m_nArg);
+                type1 = frame.getLocalType(m_nArg, null);
                 fAnyProp = true;
                 }
             else
                 {
-                type1 = frame.getArgumentType(m_nArg);
+                type1 = frame.getArgumentType(m_nArg, hValue1);
                 }
 
             if (isDeferred(hValue2))
                 {
-                type2 = frame.getLocalType(m_nArg2);
+                type2 = frame.getLocalType(m_nArg2, null);
                 fAnyProp = true;
                 }
             else
                 {
-                type2 = frame.getArgumentType(m_nArg2);
+                type2 = frame.getArgumentType(m_nArg2, hValue2);
                 }
 
             TypeConstant typeCommon = selectCommonType(type1, type2, ErrorListener.BLACKHOLE);

@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.ResolutionResult;
@@ -39,7 +38,9 @@ import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
 import org.xvm.asm.op.L_Get;
+import org.xvm.asm.op.MoveRef;
 import org.xvm.asm.op.MoveThis;
+import org.xvm.asm.op.MoveVar;
 import org.xvm.asm.op.P_Get;
 import org.xvm.asm.op.P_Ref;
 import org.xvm.asm.op.P_Var;
@@ -925,9 +926,20 @@ public class NameExpression
                     }
 
             case PropertyRef:
-            case RegisterRef:
                 // TODO
                 throw new UnsupportedOperationException("&" + getName());
+
+            case RegisterRef:
+                {
+                Register     regVal  = (Register) argRaw;
+                TypeConstant typeRef = getType();
+
+                Register regRef = new Register(typeRef, Op.A_STACK);
+                code.add(m_fAssignable
+                        ? new MoveVar(regVal, regRef)
+                        : new MoveRef(regVal, regRef));
+                return regRef;
+                }
 
             case TypeOfTypedef:
             case TypeOfClass:

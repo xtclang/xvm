@@ -148,7 +148,7 @@ public abstract class OpInvocable extends Op
         }
 
     // check if a register for the return value needs to be allocated
-    protected void checkReturnRegister(Frame frame, MethodStructure method)
+    protected void checkReturnRegister(Frame frame, MethodStructure method, ObjectHandle hTarget)
         {
         assert !isMultiReturn();
 
@@ -158,7 +158,7 @@ public abstract class OpInvocable extends Op
             if (typeRet == null)
                 {
                 typeRet = m_typeRetReg = method.getReturnTypes()[0].
-                    resolveGenerics(frame.poolContext(), frame.getLocalType(m_nTarget));
+                    resolveGenerics(frame.poolContext(), frame.getLocalType(m_nTarget, hTarget));
                 }
 
             frame.introduceResolvedVar(m_nRetValue, typeRet);
@@ -166,7 +166,7 @@ public abstract class OpInvocable extends Op
         }
 
     // check if a register for the return Tuple value needs to be allocated
-    protected void checkReturnTupleRegister(Frame frame, MethodStructure method)
+    protected void checkReturnTupleRegister(Frame frame, MethodStructure method, ObjectHandle hTarget)
         {
         assert !isMultiReturn();
 
@@ -179,7 +179,7 @@ public abstract class OpInvocable extends Op
 
                 typeRet = m_typeRetReg = pool.ensureParameterizedTypeConstant(
                     pool.typeTuple(), method.getReturnTypes()).
-                        resolveGenerics(pool, frame.getLocalType(m_nTarget));
+                        resolveGenerics(pool, frame.getLocalType(m_nTarget, hTarget));
                 }
 
             frame.introduceResolvedVar(m_nRetValue, typeRet);
@@ -187,7 +187,7 @@ public abstract class OpInvocable extends Op
         }
 
     // check if any registers for the return values need to be allocated
-    protected void checkReturnRegisters(Frame frame, MethodStructure method)
+    protected void checkReturnRegisters(Frame frame, MethodStructure method, ObjectHandle hTarget)
         {
         assert isMultiReturn();
 
@@ -204,7 +204,8 @@ public abstract class OpInvocable extends Op
                     atypeRet = m_atypeRetReg = method.getReturnTypes(); // a clone
                     for (int j = 0, cRet = atypeRet.length; j < cRet; j++)
                         {
-                        atypeRet[j] = atypeRet[j].resolveGenerics(pool, frame.getLocalType(m_nTarget));
+                        atypeRet[j] = atypeRet[j].resolveGenerics(pool,
+                            frame.getLocalType(m_nTarget, hTarget));
                         }
                     }
 

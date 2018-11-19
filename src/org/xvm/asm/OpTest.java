@@ -156,22 +156,22 @@ public abstract class OpTest
 
             if (isDeferred(hValue1))
                 {
-                type1 = frame.getLocalType(m_nValue1);
+                type1 = frame.getLocalType(m_nValue1, null);
                 fAnyProp = true;
                 }
             else
                 {
-                type1 = frame.getArgumentType(m_nValue1);
+                type1 = frame.getArgumentType(m_nValue1, hValue1);
                 }
 
             if (isDeferred(hValue2))
                 {
-                type2 = frame.getLocalType(m_nValue2);
+                type2 = frame.getLocalType(m_nValue2, null);
                 fAnyProp = true;
                 }
             else
                 {
-                type2 = frame.getArgumentType(m_nValue2);
+                type2 = frame.getArgumentType(m_nValue2, hValue2);
                 }
 
             TypeConstant typeCommon = selectCommonType(type1, type2, ErrorListener.BLACKHOLE);

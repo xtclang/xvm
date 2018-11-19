@@ -284,7 +284,10 @@ public class xRef
                 int   nVar     = hTarget.m_iVar;
                 assert frameRef != null && nVar >= 0;
 
-                return frame.assignValue(iReturn, frameRef.f_ahVar[nVar]);
+                ObjectHandle hValue = frameRef.f_ahVar[nVar];
+                return hValue == null
+                    ? frame.raiseException(xException.unassignedReference())
+                    : frame.assignValue(iReturn, hValue);
                 }
             }
         }
@@ -293,7 +296,7 @@ public class xRef
         {
         ObjectHandle hValue = hRef.getValue();
         return hValue == null
-            ? frame.raiseException(xException.makeHandle("Unassigned reference"))
+            ? frame.raiseException(xException.unassignedReference())
             : frame.assignValue(iReturn, hValue);
         }
 
