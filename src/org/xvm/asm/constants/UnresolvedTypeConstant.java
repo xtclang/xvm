@@ -225,7 +225,7 @@ public class UnresolvedTypeConstant
         {
         if (isTypeResolved())
             {
-            return getResolvedType().buildTypeInfo(errs);
+            return getResolvedType().ensureTypeInfoInternal(errs);
             }
         throw new IllegalStateException();
         }

@@ -39,6 +39,12 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
+    public boolean isAutoNarrowing()
+        {
+        return false;
+        }
+
+    @Override
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget)
         {
         return this;
@@ -111,7 +117,7 @@ public class TypeSequenceTypeConstant
         ConstantPool pool = ConstantPool.getCurrentPool();
 
         TypeConstant typeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeType());
-        return typeArray.buildTypeInfo(errs);
+        return typeArray.ensureTypeInfoInternal(errs);
         }
 
     @Override

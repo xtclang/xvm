@@ -267,6 +267,26 @@ public class ModuleStructure
                 : moduleActual.resolveName(sName, collector);
         }
 
+    @Override
+    protected ModuleStructure cloneBody()
+        {
+        ModuleStructure that = (ModuleStructure) super.cloneBody();
+
+        if (this.vtreeImportAllowVers != null)
+            {
+            that.vtreeImportAllowVers = new VersionTree<>();
+            that.vtreeImportAllowVers.putAll(this.vtreeImportAllowVers);
+            }
+
+        if (this.listImportPreferVers != null)
+            {
+            that.listImportPreferVers = new ArrayList<>();
+            that.listImportPreferVers.addAll(this.listImportPreferVers);
+            }
+
+        return that;
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

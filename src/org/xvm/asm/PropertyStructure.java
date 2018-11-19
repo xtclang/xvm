@@ -426,9 +426,9 @@ public class PropertyStructure
                     }
 
                 // find the "into" of the mixin
-                ClassStructure structMixin    = (ClassStructure) ((IdentityConstant) annotation.getAnnotationClass()).getComponent();
-                Contribution   contribInto    = null;
-                Contribution   contribExtends = null;
+                ClassStructure structMixin = (ClassStructure) ((IdentityConstant) annotation.getAnnotationClass()).getComponent();
+                Contribution   contribInto = null;
+                Contribution   contribExtends;
                 while (structMixin != null && structMixin.getFormat() == Format.MIXIN
                         && (contribInto    = structMixin.findContribution(Composition.Into   )) == null
                         && (contribExtends = structMixin.findContribution(Composition.Extends)) != null)
@@ -569,6 +569,7 @@ public class PropertyStructure
         return result;
         }
 
+
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -635,17 +636,6 @@ public class PropertyStructure
         }
 
 
-    // ----- Object methods ------------------------------------------------------------------------
-
-    @Override
-    protected PropertyStructure clone()
-        {
-        PropertyStructure that = (PropertyStructure) super.clone();
-        // TODO
-        return that;
-        }
-
-
     // ----- fields --------------------------------------------------------------------------------
 
     /**
@@ -677,11 +667,6 @@ public class PropertyStructure
      * A cached array of the annotations that apply to the property itself.
      */
     private transient Annotation[] m_aPropAnno;
-
-    /**
-     * A cached RefType.
-     */
-    private transient TypeConstant m_typeRef;
 
     /**
      * A cached array of the annotations that apply to the Ref/Var of the property.

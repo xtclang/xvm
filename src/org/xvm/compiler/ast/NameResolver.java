@@ -17,6 +17,7 @@ import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.TypeParameterConstant;
@@ -60,6 +61,14 @@ public class NameResolver
         m_node  = node;
         m_iter  = iterNames;
         m_sName = m_iter.next();
+        }
+
+    /**
+     * @return the AstNode for which this NameResolver exists
+     */
+    public AstNode getNode()
+        {
+        return m_node;
         }
 
     /**
@@ -421,6 +430,14 @@ public class NameResolver
                         constType = constTypeParam.getMethod().getSignature().
                                 getRawParams()[constTypeParam.getRegister()];
                         break;
+                        }
+
+                    case ThisClass:
+                    case ChildClass:
+                    case ParentClass:
+                        {
+                        PseudoConstant constClass = (PseudoConstant) constParam;
+                        return constClass.getDeclarationLevelClass().getComponent();
                         }
 
                     default:

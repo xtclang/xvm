@@ -374,32 +374,6 @@ public class MultiMethodStructure
         }
 
 
-    // ----- Object methods ------------------------------------------------------------------------
-
-    @Override
-    protected MultiMethodStructure clone()
-        {
-        MultiMethodStructure that = (MultiMethodStructure) super.clone();
-
-        // deep-clone any contained methods
-        Map<MethodConstant, MethodStructure> mapThis = this.m_methodByConstant;
-        if (mapThis != null)
-            {
-            Map<MethodConstant, MethodStructure> mapThat = new ListMap<>();
-            for (Entry<MethodConstant, MethodStructure> entry : mapThis.entrySet())
-                {
-                MethodStructure methodThis = entry.getValue();
-                MethodStructure methodThat = methodThis.clone();
-                methodThat.setContaining(that);
-                mapThat.put(entry.getKey(), methodThat);
-                }
-            that.m_methodByConstant = mapThat;
-            }
-
-        return that;
-        }
-
-
     // ----- data fields ---------------------------------------------------------------------------
 
     /**

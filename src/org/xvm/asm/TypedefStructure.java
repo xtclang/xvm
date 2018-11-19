@@ -105,15 +105,6 @@ public class TypedefStructure
         }
 
 
-    // ----- Object methods ------------------------------------------------------------------------
-
-    @Override
-    protected TypedefStructure clone()
-        {
-        return (TypedefStructure) super.clone();
-        }
-
-
     // ----- fields --------------------------------------------------------------------------------
 
     /**

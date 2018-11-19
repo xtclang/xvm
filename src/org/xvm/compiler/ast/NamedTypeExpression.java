@@ -49,9 +49,6 @@ public class NamedTypeExpression
         this.nonnarrow  = nonnarrow;
         this.paramTypes = params;
         this.lEndPos    = lEndPos;
-
-        this.m_resolver = new NameResolver(this, names.stream().map(
-                token -> (String) token.getValue()).iterator());
         }
 
 
@@ -163,8 +160,20 @@ public class NamedTypeExpression
         {
         TypeExpression type   = this;
         AstNode        parent = getParent();
-        while (!(parent instanceof Statement))
+        while (true)
             {
+            if (!parent.isAutoNarrowingAllowed(type))
+                {
+                // annotation; disallow auto-narrowing
+                return false;
+                }
+
+            if (parent.isComponentNode())
+                {
+                // the containing component didn't reject; we are good to auto-narrow
+                return true;
+                }
+
             if (parent instanceof TypeExpression)
                 {
                 type = (TypeExpression) parent;
@@ -172,15 +181,12 @@ public class NamedTypeExpression
 
             parent = parent.getParent();
             }
-
-        return parent instanceof ComponentStatement
-                && ((ComponentStatement) parent).isAutoNarrowingAllowed(type);
         }
 
     /**
      * @return the constant to use
      */
-    public Constant inferAutoNarrowing(Constant constId, ErrorListener errs)
+    protected Constant inferAutoNarrowing(Constant constId, ErrorListener errs)
         {
         // check for auto-narrowing
         if (!constId.containsUnresolved() && isAutoNarrowingAllowed() != isExplicitlyNonAutoNarrowing())
@@ -191,11 +197,20 @@ public class NamedTypeExpression
                 }
             else if (constId instanceof ClassConstant) // isAutoNarrowingAllowed()
                 {
-                ClassStructure struct = getComponent().getContainingClass();
-                if (struct != null)
+                ClassConstant  idThatClass     = (ClassConstant) constId;
+                ClassStructure structThisClass = getComponent().getContainingClass();
+                ClassStructure structThatClass = (ClassStructure) idThatClass.getComponent();
+
+                if (structThisClass != null
+                        && structThisClass.getFormat().isAutoNarrowingAllowed()
+                        && structThatClass.getFormat().isAutoNarrowingAllowed())
                     {
-                    ClassConstant constThisClass = (ClassConstant) struct.getIdentityConstant();
-                    return constThisClass.calculateAutoNarrowingConstant((ClassConstant) constId);
+                    IdentityConstant idClz = structThisClass.getIdentityConstant();
+                    if (idClz.getFormat() == Constant.Format.Class)
+                        {
+                        ClassConstant constThisClass = (ClassConstant) structThisClass.getIdentityConstant();
+                        return constThisClass.calculateAutoNarrowingConstant(idThatClass);
+                        }
                     }
                 }
             }
@@ -239,7 +254,13 @@ public class NamedTypeExpression
     @Override
     public NameResolver getNameResolver()
         {
-        return m_resolver;
+        NameResolver resolver = m_resolver;
+        if (resolver == null || resolver.getNode() != this)
+            {
+            m_resolver = resolver = new NameResolver(this, names.stream().map(
+                    token -> (String) token.getValue()).iterator());
+            }
+        return resolver;
         }
 
 
@@ -289,14 +310,19 @@ public class NamedTypeExpression
                     pool.ensureTerminalTypeConstant(constId), aconstParams);
             }
 
-        if (access != null && access != Access.PUBLIC)
+        // unlike the parametrization, we shouldn't modify unresolved types; doing so can cause
+        // a double-dipping during resolution (e.g. Object:protected:protected)
+        if (!(type instanceof UnresolvedTypeConstant))
             {
-            type = pool.ensureAccessTypeConstant(type, access);
-            }
+            if (access != null && access != Access.PUBLIC)
+                {
+                type = pool.ensureAccessTypeConstant(type, access);
+                }
 
-        if (immutable != null)
-            {
-            type = pool.ensureImmutableTypeConstant(type);
+            if (immutable != null)
+                {
+                type = pool.ensureImmutableTypeConstant(type);
+                }
             }
 
         return type;

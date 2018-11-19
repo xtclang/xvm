@@ -348,6 +348,20 @@ public abstract class AstNode
         }
 
     /**
+     * Given a type expression that is used as some part of this AstNode, determine if that type is
+     * allowed to auto narrow.
+     *
+     * @param type  a TypeExpression that is a child of this AstNode
+     *
+     * @return true iff the specified TypeExpression is being used in a place that supports
+     *         auto-narrowing
+     */
+    public boolean isAutoNarrowingAllowed(TypeExpression type)
+        {
+        return true;
+        }
+
+    /**
      * Code Container method: TODO
      *
      * @return the required return types from the code container, which comes from the signature if
@@ -630,23 +644,43 @@ public abstract class AstNode
      */
     protected boolean catchUpChildren(ErrorListener errs)
         {
+        // determine what stage we're trying to catch the children up to
+        Stage stageTarget = getStage();
+        if (!stageTarget.isTargetable())
+            {
+            // we want to catch up to the last target that this component completed, and not
+            // actually pass the stage that this component is at, which can be accomplished using
+            // StageMgr processChildrenExcept() or processChildren() if the children need to
+            // complete the stage that this node is currently working on (if this node is currently
+            // in a transition stage)
+            stageTarget = stageTarget.prevTarget();
+            if (!stageTarget.isTargetable())
+                {
+                assert stageTarget == Stage.Initial;
+                return true;
+                }
+            }
+
         // method children are all deferred up until this stage, so we have to "catch them up" at
-        // this point, recreating the various compiler stages here
+        // this point, recreating the various compiler stages here; start by collecting all of the
+        // children that may need to be processed and figuring out how far behind the oldest is
         Stage         stageOldest  = null;
         List<AstNode> listChildren = new ArrayList<>();
         for (AstNode node : children())
             {
-            // collect all of the children that may need to be processed
-            listChildren.add(node);
-
             Stage stage = node.getStage();
-            if (stageOldest == null)
+            if (stage.compareTo(stageTarget) < 0)
                 {
-                stageOldest = stage;
-                }
-            else if (stage.compareTo(stageOldest) < 0)
-                {
-                stageOldest = stage;
+                listChildren.add(node);
+
+                if (stageOldest == null)
+                    {
+                    stageOldest = stage;
+                    }
+                else if (stage.compareTo(stageOldest) < 0)
+                    {
+                    stageOldest = stage;
+                    }
                 }
             }
         if (stageOldest == null)
@@ -654,12 +688,10 @@ public abstract class AstNode
             return true;
             }
 
-        for (Stage stageCurrent = stageOldest.nextTarget(),
-                   stageTarget  = getStage().isTargetable() ? getStage() : getStage().prevTarget();
-                stageCurrent.compareTo(stageTarget) < 0;
-                stageCurrent = stageCurrent.nextTarget())
+        while (stageOldest.compareTo(stageTarget) < 0)
             {
-            StageMgr mgrKids = new StageMgr(listChildren, stageCurrent, errs);
+            Stage    stageNext = stageOldest.nextTarget();
+            StageMgr mgrKids   = new StageMgr(listChildren, stageNext, errs);
             while (!mgrKids.processComplete())
                 {
                 if (errs.isAbortDesired() || mgrKids.getIterations() > 20)
@@ -673,6 +705,8 @@ public abstract class AstNode
                         }
                     }
                 }
+
+            stageOldest = stageNext;
             }
 
         return true;

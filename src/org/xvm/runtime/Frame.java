@@ -1057,8 +1057,15 @@ public class Frame
 
     public TypeConstant resolveType(int iArg)
         {
+        ConstantPool pool = poolContext();
         TypeConstant type = (TypeConstant) getConstant(iArg); // must exist
-        return type.resolveGenerics(poolContext(), getGenericsResolver());
+
+        type = type.resolveGenerics(pool, getGenericsResolver());
+        if (type.isAutoNarrowing() && f_hThis != null)
+            {
+            type = type.resolveAutoNarrowing(pool, f_hThis.getType());
+            }
+        return type;
         }
 
     /**

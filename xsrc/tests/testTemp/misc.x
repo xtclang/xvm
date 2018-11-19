@@ -30,7 +30,7 @@ module TestMisc.xqiz.it
         // testAssertDecl();
 
         // REVIEW GG
-        // testInterval();
+        testInterval();
         // testTupleConv();
         // testMap();
         }
@@ -376,7 +376,7 @@ module TestMisc.xqiz.it
         Boolean f1 = false;
         f1 &&= true;
         console.println("f1=" + f1 + " (should be false)");
-        
+
         Boolean f2 = false;
         f2 ||= true;
         console.println("f2=" + f2 + " (should be true)");
@@ -384,15 +384,15 @@ module TestMisc.xqiz.it
         Boolean f3 = true;
         f3 &&= false;
         console.println("f3=" + f3 + " (should be false)");
-        
+
         Boolean f4 = true;
         f4 ||= false;
         console.println("f4=" + f4 + " (should be true)");
-        
+
         Boolean f5 = true;
         f5 &&= true;
         console.println("f5=" + f5 + " (should be true)");
-        
+
         Boolean f6 = false;
         f6 ||= false;
         console.println("f6=" + f6 + " (should be false)");
