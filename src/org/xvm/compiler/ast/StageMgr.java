@@ -321,6 +321,9 @@ public class StageMgr
     /**
      * Suspend the processing of the current node and process each of its children, only returning
      * to the current node after all of the children return.
+     *
+     * @return true iff the processing of the children completed without an explicit indication of
+     *         incompleteness
      */
     public boolean processChildren()
         {
@@ -330,6 +333,9 @@ public class StageMgr
     /**
      * Suspend the processing of the current node and process each of its children, only returning
      * to the current node after all of the children return.
+     *
+     * @return true iff the processing of the children completed without an explicit indication of
+     *         incompleteness
      */
     public boolean processChildrenExcept(Predicate<AstNode> exclude)
         {
