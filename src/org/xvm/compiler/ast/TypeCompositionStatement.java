@@ -253,6 +253,24 @@ public class TypeCompositionStatement
             }
         }
 
+    /**
+     * @return the Context that can provide local variables that can be "captured" by this type,
+     *         or null if no capture Context is available
+     */
+    public Context getCaptureContext()
+        {
+        return m_ctx;
+        }
+
+    /**
+     * @param ctx  the Context that the type should use to find local variables that can be
+     *             "captured" by this type, or null to clear any previously set Context
+     */
+    public void setCaptureContext(Context ctx)
+        {
+        m_ctx = ctx;
+        }
+
     @Override
     protected Field[] getChildFields()
         {
@@ -1246,7 +1264,7 @@ public class TypeCompositionStatement
             component.getConstantPool().buildValidPoolSet();
             }
 
-        if (format == Format.PACKAGE && moduleImported == null)
+        if (format == Format.PACKAGE && m_moduleImported == null)
             {
             for (Composition composition : compositions)
                 {
@@ -1272,7 +1290,7 @@ public class TypeCompositionStatement
                             }
                         else
                             {
-                            moduleImported = structAct;
+                            m_moduleImported = structAct;
                             }
                         fModuleImport = true;
                         break;
@@ -1990,7 +2008,13 @@ public class TypeCompositionStatement
      * fingerprint.) Note that during compilation, the other module may itself be in the process of
      * compilation, so it may be in the same "compiler pass" as this module for any given pass.
      */
-    transient private ModuleStructure moduleImported;
+    transient private ModuleStructure m_moduleImported;
+
+    /**
+     * A capture Context provided during pre-compilation of an anonymous inner class for the purpose
+     * of determining what variables need to be captured by the anonymous inner class.
+     */
+    transient private Context m_ctx;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TypeCompositionStatement.class,
             "condition", "annotations", "typeParams", "constructorParams", "typeArgs", "args",

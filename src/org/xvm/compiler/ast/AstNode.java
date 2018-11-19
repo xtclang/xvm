@@ -648,7 +648,17 @@ public abstract class AstNode
         Stage stageTarget = getStage();
         if (!stageTarget.isTargetable())
             {
-            stageTarget = stageTarget.nextTarget();
+            // we want to catch up to the last target that this component completed, and not
+            // actually pass the stage that this component is at, which can be accomplished using
+            // StageMgr processChildrenExcept() or processChildren() if the children need to
+            // complete the stage that this node is currently working on (if this node is currently
+            // in a transition stage)
+            stageTarget = stageTarget.prevTarget();
+            if (!stageTarget.isTargetable())
+                {
+                assert stageTarget == Stage.Initial;
+                return true;
+                }
             }
 
         // method children are all deferred up until this stage, so we have to "catch them up" at

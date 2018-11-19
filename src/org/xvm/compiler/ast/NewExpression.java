@@ -495,16 +495,42 @@ public class NewExpression
 
         if (fAnon && fValid)
             {
-            CaptureContext ctxAnon  = new CaptureContext(ctx);
-            TypeCompositionStatement stmtAnon = anon;
+            // at this point, we need to create a temporary copy of the anonymous inner class for
+            // the purpose of determining which local variables from this context will be "captured"
+            // by the code in the anonymous inner class; to determine the captures, we need to go
+            // much further in the compilation of the inner class, to the point of the emit stage
+            // in which the expression validations are done (which means that the inner class will
+            // end up emitting code); fortunately, all of that work can be done with temporary
+            // structures, such that we can revert it after we collect the information about the
+            // captures
+            destroyTempInnerClass();
+            CaptureContext ctxAnon = new CaptureContext(ctx);
+            anon.setCaptureContext(ctxAnon);
+
+            ensureInnerClass(/* fTemp */ true, ErrorListener.BLACKHOLE);
+
             // TODO there has to be some some way to infect TypeCompositionStatement with ctxAnon, so if it needs to create a context, it will delegate to our capture context
-            if (!new StageMgr(stmtAnon, Stage.Emitted, errs).fastForward(20))
+            if (!new StageMgr(anon, Stage.Emitted, errs).fastForward(20))
                 {
                 fValid = false;
                 }
 
             // collected VAS information from the lambda context
-            ctxAnon.exit();
+            ctx = ctxAnon.exit();
+
+            // clean up temporary inner class and the capture context
+            destroyTempInnerClass();
+            anon.setCaptureContext(null);
+
+            // at this point we have a fair bit of data about which variables get captured, what we lack is the
+            // effectively final data that will only get reported (via exit() on the context) as
+            // the variables go out of scope in the method body that contains this lambda, so we need
+            // to store off the data from the capture context, and defer the signature creation to the
+            // generateAssignment() method
+            m_mapCapture     = ctxAnon.getCaptureMap();
+            m_mapRegisters   = ctxAnon.ensureRegisterMap();
+            m_fInstanceChild = ctxAnon.
+
             }
 
         return finishValidation(typeRequired, typeTarget, fValid ? TypeFit.Fit : TypeFit.NoFit, null, errs);
@@ -986,6 +1012,14 @@ public class NewExpression
                 }
 
             return map;
+            }
+
+        /**
+         * @return true iff the inner class captures the outer "this"
+         */
+        public boolean isInstanceChild()
+            {
+            return m_fCaptureThis;
             }
 
         @Override
