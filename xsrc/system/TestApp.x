@@ -324,10 +324,12 @@ class TestApp
 
     static void testRef(String arg)
         {
+        print("\n*** In TestApp.testRef");
+
         Var<String> ra = &arg;
         print(ra.get());
         ra.set("bye");
-        print(arg);
+        print("arg=" + arg);
 
         assert(ra.const_);
 
@@ -338,35 +340,35 @@ class TestApp
             ri = &i;
 
             assert(ri == ri2);
-            print(ri.get());
+            print("ri->" + ri.get());
 
             ri.set(2);
-            print(i);
+            print("i=" + i);
 
             i = 3;
-            print(ri2);
+            print("ri2=" + ri2);
             }
-        print(ri.get());
+        print("ri->" + ri.get());
 
         TestClass tc = new TestClass("before");
         Var<String> rp = tc.&prop1;
-        print(rp);
+        print("rp=" + rp);
         rp.set("after");
-        print(tc);
+        print("tc=" + tc);
 
         TestService svc = new TestService();
         ri = svc.&counter;
         ri.get();
-        print(ri);
+        print("ri=" + ri);
 
         AtomicVar<Int> ari = svc.&counter2;
         ari.replace(5, 6);
-        print(ari);
+        print("ari=" + ari);
         }
 
     static void testArray()
         {
-        print("*** In TestApp.testArray");
+        print("\n*** In TestApp.testArray");
 
         Int[] ai = new Int[]; // mutable Array<Int>
         ai[0] = 1;

@@ -9,6 +9,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpProperty;
 import org.xvm.asm.Scope;
+
 import org.xvm.asm.constants.PropertyConstant;
 
 import org.xvm.runtime.Frame;
