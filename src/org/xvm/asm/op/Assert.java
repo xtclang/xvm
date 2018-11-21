@@ -126,6 +126,12 @@ public class Assert
         m_argTest = registerArgument(m_argTest, registry);
         }
 
+    @Override
+    public String toString()
+        {
+        return super.toString() + ' ' + Argument.toIdString(m_argTest, m_nTest);
+        }
+
     private int m_nTest;
 
     private Argument m_argTest;

@@ -137,6 +137,12 @@ public class AssertM
         m_constMsg = (StringConstant) registerArgument(m_constMsg, registry);
         }
 
+    @Override
+    public String toString()
+        {
+        return super.toString() + ' ' + Argument.toIdString(m_argTest, m_nTest);
+        }
+
     private int m_nTest;
     private int m_nMsgConstId;
 

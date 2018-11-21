@@ -133,7 +133,8 @@ public class ListExpression
         TypeConstant     typeActual  = pool.typeArray();
         TypeConstant     typeElement = null;
 
-        if (typeRequired != null && typeRequired.isA(pool.typeSequence()))
+        if (typeRequired != null && typeRequired.isA(pool.typeSequence())
+                                 && typeRequired.isParamsSpecified())
             {
             // if there is a required element type, then we'll use that to force the expressions to
             // convert to that type if necessary
@@ -188,7 +189,7 @@ public class ListExpression
             typeElement = TypeCollector.inferFrom(aElementTypes, pool);
             if (typeElement != null)
                 {
-                typeActual  = typeActual.adoptParameters(pool, new TypeConstant[] {typeElement});
+                typeActual = typeActual.adoptParameters(pool, new TypeConstant[] {typeElement});
                 }
             }
 

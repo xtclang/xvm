@@ -60,7 +60,7 @@ public abstract class OpProperty extends Op
     @Override
     public String toString()
         {
-        return super.toString()+ ' ' + Argument.toIdString(m_constProperty, m_nPropId);
+        return super.toString() + ' ' + Argument.toIdString(m_constProperty, m_nPropId);
         }
 
     protected int m_nPropId;

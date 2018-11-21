@@ -777,13 +777,57 @@ public class NameExpression
         {
         if (LVal.isLocalArgument())
             {
-            // optimize a couple of paths
+            // optimize the code for a couple of paths (see symmetrical logic at generateArgument())
             Argument argLVal = LVal.getLocalArgument();
+            Argument argRaw  = m_arg;
+
             switch (m_plan)
                 {
+                case OuterThis:
+                    {
+                    assert getMeaning() == Meaning.Class;
+
+                    if (argRaw instanceof ParentClassConstant && argLVal instanceof Register)
+                        {
+                        int cSteps = ((ParentClassConstant) argRaw).getDepth();
+
+                        code.add(new MoveThis(cSteps, (Register) argLVal));
+                        return;
+                        }
+                    break;
+                    }
+
+                case PropertyDeref:
+                    {
+                    if (left instanceof NameExpression &&
+                            ((NameExpression) left).getMeaning() == Meaning.Label)
+                        {
+                        break;
+                        }
+
+                    // TODO this is not complete; the "implicit this" covers both nested properties and outer properties
+                    boolean fThisProp = left == null;  // TODO or left == this
+                    if (fThisProp && LVal.supportsLocalPropMode())
+                        {
+                        // local property mode
+                        break;
+                        }
+
+                    if (fThisProp)
+                        {
+                        code.add(new L_Get((PropertyConstant) argRaw, argLVal));
+                        }
+                    else
+                        {
+                        Argument argLeft = left.generateArgument(ctx, code, false, false, errs);
+                        code.add(new P_Get((PropertyConstant) argRaw, argLeft, argLVal));
+                        }
+                    return;
+                    }
+
                 case PropertyRef:
                     {
-                    PropertyConstant idProp    = (PropertyConstant) m_arg;
+                    PropertyConstant idProp    = (PropertyConstant) argRaw;
                     Argument         argTarget = left == null
                             ? new Register(ctx.getThisType(), Op.A_TARGET)
                             : left.generateArgument(ctx, code, true, true, errs);
@@ -798,13 +842,14 @@ public class NameExpression
                     if (argLVal instanceof Register)
                         {
                         Register regLVal = (Register) argLVal;
-                        Register regRVal = (Register) m_arg;
+                        Register regRVal = (Register) argRaw;
 
                         code.add(m_fAssignable
                                 ? new MoveVar(regRVal, regLVal)
                                 : new MoveRef(regRVal, regLVal));
                         return;
                         }
+                    break;
                 }
             }
 
@@ -823,77 +868,35 @@ public class NameExpression
                 return argRaw;
 
             case OuterThis:
-                switch (getMeaning())
+                {
+                assert getMeaning() == Meaning.Class;
+
+                if (argRaw instanceof ThisClassConstant)
                     {
-                    case Class:
-                        {
-                        int cSteps = 0;
-                        PseudoConstant idClz = (PseudoConstant) argRaw;
-                        while (idClz instanceof ParentClassConstant)
-                            {
-                            idClz = ((ParentClassConstant) idClz).getChildClass();
-                            ++cSteps;
-                            }
-                        assert idClz instanceof ThisClassConstant;
-
-                        if (cSteps == 0)
-                            {
-                            // it's just "this" (but note that it results in the public type)
-                            return generateReserved(code, Op.A_PUBLIC, errs);
-                            }
-
-                        Register regOuter = new Register(((PseudoConstant) argRaw).getType());
-                        code.add(new MoveThis(cSteps, regOuter));
-                        return regOuter;
-                        }
-
-                    case Property:
-                        {
-                        PropertyConstant idProp = (PropertyConstant) argRaw;
-                        IdentityConstant idClz  = idProp.getClassIdentity();
-                        int cSteps = 0;
-
-                        // count the steps up to the class containing the property
-                        IdentityConstant idParent = code.getMethodStructure().getIdentityConstant();
-                        while (idParent.equals(idProp))
-                            {
-                            if (idParent.isClass())
-                                {
-                                ++cSteps;
-                                }
-                            idParent = idParent.getParentConstant();
-                            }
-
-                        Register regThis;
-                        if (cSteps == 0)
-                            {
-                            regThis = (Register) generateReserved(code, Op.A_PRIVATE, errs);
-                            }
-                        else
-                            {
-                            regThis = new Register(idClz.getType());
-                            code.add(new MoveThis(cSteps, regThis));
-                            }
-
-                        TypeConstant typeLeft = left == null ? null : left.getType();
-                        TypeConstant type     = idProp.getRefType(typeLeft);
-                        Register     regOuter = new Register(type);
-                        code.add(type.isA(pool().typeVar())
-                                ? new P_Var(idProp, regThis, regOuter)
-                                : new P_Ref(idProp, regThis, regOuter));
-                        return regOuter;
-                        }
-
-                    default:
-                        throw new IllegalStateException("arg=" + argRaw);
+                    // it's just "this" (but note that it results in the public type)
+                    return generateReserved(code, Op.A_PUBLIC, errs);
                     }
+
+                int cSteps = ((ParentClassConstant) argRaw).getDepth();
+
+                TypeConstant type     = argRaw.getType();
+                Register     regOuter = fUsedOnce
+                            ? new Register(type, Op.A_STACK)
+                            : new Register(type);
+                code.add(new MoveThis(cSteps, regOuter));
+                return regOuter;
+                }
 
             case PropertyDeref:
                 {
-                if (left instanceof NameExpression && ((NameExpression) left).getMeaning() == Meaning.Label)
+                if (left instanceof NameExpression)
                     {
-                    LabelVar labelVar = (LabelVar) ((NameExpression) left).m_arg;
-                    return labelVar.getPropRegister(getName());
+                    NameExpression nameLeft = (NameExpression) left;
+                    if (nameLeft.getMeaning() == Meaning.Label)
+                        {
+                        LabelVar labelVar = (LabelVar) nameLeft.m_arg;
+                        return labelVar.getPropRegister(getName());
+                        }
                     }
 
                 // TODO this is not complete; the "implicit this" covers both nested properties and outer properties
@@ -903,21 +906,20 @@ public class NameExpression
                     // local property mode
                     return argRaw;
                     }
+
+                Register reg = fUsedOnce
+                        ? new Register(getType(), Op.A_STACK)
+                        : new Register(getType());
+                if (fThisProp)
+                    {
+                    code.add(new L_Get((PropertyConstant) argRaw, reg));
+                    }
                 else
                     {
-                    Register reg = new Register(getType());
-                    if (fThisProp)
-                        {
-                        code.add(new L_Get((PropertyConstant) argRaw, reg));
-                        }
-                    else
-                        {
-                        Argument argLeft = left.generateArgument(ctx, code, false, false, errs);
-                        code.add(new P_Get((PropertyConstant) argRaw, argLeft, reg));
-                        }
-
-                    return reg;
+                    Argument argLeft = left.generateArgument(ctx, code, false, false, errs);
+                    code.add(new P_Get((PropertyConstant) argRaw, argLeft, reg));
                     }
+                return reg;
                 }
 
             case PropertyRef:
@@ -928,7 +930,9 @@ public class NameExpression
                         ? new Register(ctx.getThisType(), Op.A_TARGET)
                         : left.generateArgument(ctx, code, true, true, errs);
 
-                Register regRef = new Register(typeRef, Op.A_STACK);
+                Register regRef = fUsedOnce
+                            ? new Register(typeRef, Op.A_STACK)
+                            : new Register(typeRef);
                 code.add(m_fAssignable
                         ? new P_Var(idProp, argTarget, regRef)
                         : new P_Ref(idProp, argTarget, regRef));
@@ -940,7 +944,9 @@ public class NameExpression
                 Register     regVal  = (Register) argRaw;
                 TypeConstant typeRef = getType();
 
-                Register regRef = new Register(typeRef, Op.A_STACK);
+                Register regRef = fUsedOnce
+                            ? new Register(typeRef, Op.A_STACK)
+                            : new Register(typeRef);
                 code.add(m_fAssignable
                         ? new MoveVar(regVal, regRef)
                         : new MoveRef(regVal, regRef));
