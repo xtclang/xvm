@@ -951,20 +951,21 @@ public abstract class Component
         }
 
     /**
-     * Replace the specified first child with the specified second child.
+     * Replace the specified first child and all of its siblings (and their children) with the
+     * specified second child and all of its siblings (and their children).
      *
      * @param childOld  the child to remove
      * @param childNew  the child to add
      */
-    public void replaceChild(Component childOld, Component childNew)
+    protected void replaceChild(Component childOld, Component childNew)
         {
         assert childOld != null && childNew != null;
         assert childOld.getParent() == this;
         assert childNew.getParent() == this;
         assert childOld.getIdentityConstant().equals(childNew.getIdentityConstant());
 
-        removeChild(childOld);
-        addChild(childNew);
+        // warning: brute force
+        ensureChildByNameMap().put(childNew.getName(), childNew);
         }
 
     /**
@@ -1787,50 +1788,57 @@ public abstract class Component
         }
 
     /**
-     * Create a temporary clone of the component that has the identity of this component (which is
-     * typically this component).
+     * Create a temporary clone of this component, and replace this component with the new clone,
+     * such that this component is no longer navigable from its parent.
      *
-     * @return a clone of the component
+     * @return a clone of this component
      */
     public Component replaceWithTemporary()
         {
-        // this implementation is only designed to replace a singular sibling and all of its
-        // children; it is possible to handle more complex scenarios, but they simply are not fully
-        // understood at the point that this is being written
-        assert getEldestSibling() == this && this.getNextSibling() == null;
+        // re-arrange the siblings so that this is the oldest, because we're about to replace
+        // all of the siblings with the clone, so re-ordering them prevents the rest of the
+        // siblings from being lost
+        Component eldest = getEldestSibling();
+        if (this != eldest)
+            {
+            // start by finding this component in the middle (or at the end) of the sibling list
+            Component tail = this.getNextSibling(); // null if this is the end of the list
+            Component cur = eldest;
+            Component next;
+            while ((next = cur.getNextSibling()) != this)
+                {
+                assert next != null;
+                cur = next;
+                }
 
-        Component that = this.cloneBody();
-        assert this.getContaining() == that.getContaining();
+            // remove this from the middle of the list and put it at the head of the sibling list
+            cur.setNextSibling(tail);
+            this.setNextSibling(eldest);
+            }
+
+        Component parent = (Component) this.getContaining();
+        Component that   = this.cloneBody();
+        assert that.getContaining() == parent;
 
         if (this.hasChildren())
             {
             that.cloneChildren(this.children());
             }
 
+        parent.replaceChild(this, that);
         return that;
-
-        // TODO
-        componentParent.replaceChild(clzActual, clzTemp);
-
-        // getEldestSibling()
-        return null;
         }
 
     /**
-     * Destroy the component last returned by createTemporaryClone() for the component identity of
-     * this component.
+     * Given a component that previously was replaced using {@link #replaceWithTemporary()}, remove
+     * the clone and replace it with the original component.
      *
-     * @return the Component that existed for the identity before the the component last returned by
-     *         createTemporaryClone() was created
+     * @param that  the Component that was previously replaced with a temporary clone component
      */
     public void replaceTemporaryWith(Component that)
         {
-        assert getEldestSibling() == this && this.getNextSibling() == null;
-
-        // TODO
-        componentParent.replaceChild(clzTemp, clzReal);
-
-        return null;
+        Component parent = (Component) this.getContaining();
+        parent.replaceChild(this, that);
         }
 
     /**
