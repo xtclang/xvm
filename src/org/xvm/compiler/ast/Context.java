@@ -649,12 +649,14 @@ public class Context
         Assignment asn = getVarAssignment(sName);
         if (asn != null)
             {
+            Argument arg = getVar(sName);
+
             if (!asn.isDefinitelyAssigned())
                 {
-                return false;
+                // DVar is always readable (TODO: ensure the "get" is overridden)
+                return arg instanceof Register && ((Register) arg).isDVar();
                 }
 
-            Argument arg = getVar(sName);
             return !(arg instanceof Register) || ((Register) arg).isReadable();
             }
 
