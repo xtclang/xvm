@@ -199,7 +199,7 @@ public class ArrayAccessExpression
                 }
 
             // array[index..index]
-            if (typeRequired.isA(pool.typeInterval()) && indexes.get(0).testFit(ctx,
+            if (typeRequired.isA(pool.typeSequence()) && indexes.get(0).testFit(ctx,
                     pool.ensureParameterizedTypeConstant(pool.typeInterval(), pool.typeInt())).isFit())
                 {
                 // REVIEW this might not be quite right .. assemble the type and then find the result of the [..] and see if that isA(typeRequired)
@@ -291,13 +291,13 @@ public class ArrayAccessExpression
             if (typeRequired != null)
                 {
                 // array[index]
-                TypeConstant typeElement  = null;
+                TypeConstant typeElement = null;
                 if (aexprIndexes[0].testFit(ctx, pool.typeInt()).isFit())
                     {
                     typeElement = typeRequired;
                     }
                 // array[index..index]
-                else if (typeRequired.isA(pool.typeInterval()) && aexprIndexes[0].testFit(ctx,
+                else if (typeRequired.isA(pool.typeSequence()) && aexprIndexes[0].testFit(ctx,
                         pool.ensureParameterizedTypeConstant(pool.typeInterval(), pool.typeInt())).isFit())
                     {
                     // REVIEW keep this in sync with testFit()
@@ -306,7 +306,7 @@ public class ArrayAccessExpression
 
                 if (typeElement != null)
                     {
-                    typeArrayReq = pool.ensureParameterizedTypeConstant(typeArrayReq, typeRequired);
+                    typeArrayReq = pool.ensureParameterizedTypeConstant(typeArrayReq, typeElement);
                     }
                 }
             }
