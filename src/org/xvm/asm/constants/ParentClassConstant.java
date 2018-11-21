@@ -75,6 +75,25 @@ public class ParentClassConstant
         return m_constChild;
         }
 
+    /**
+     * @return the number of {@link ParentClassConstant} (including this one) that wrap an
+     *         underlying {@link ThisClassConstant}
+     */
+    public int getDepth()
+        {
+        PseudoConstant idClz  = this;
+        int            cDepth = 0;
+        do
+            {
+            ++cDepth;
+            idClz = ((ParentClassConstant) idClz).getChildClass();
+            }
+        while (idClz instanceof ParentClassConstant);
+
+        assert idClz instanceof ThisClassConstant;
+        return cDepth;
+        }
+
     @Override
     public IdentityConstant getDeclarationLevelClass()
         {
