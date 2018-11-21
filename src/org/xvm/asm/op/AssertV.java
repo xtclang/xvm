@@ -205,6 +205,12 @@ public class AssertV
         registerArguments(m_aArgValue, registry);
         }
 
+    @Override
+    public String toString()
+        {
+        return super.toString() + ' ' + Argument.toIdString(m_argTest, m_nTest);
+        }
+
     private int m_nTest;
     private int m_nMsgConstId;
     private int[] m_anValue;
