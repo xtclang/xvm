@@ -750,10 +750,7 @@ public class NewExpression
                 Component componentParent = clzActual.getParent();
                 assert componentParent == getComponent();       // the parent should be this method
 
-                ClassStructure clzTemp = (ClassStructure) clzActual.clone();
-                componentParent.replaceChild(clzActual, clzTemp);
-
-                anon.setComponent(clzTemp);
+                anon.setComponent((ClassStructure) clzActual.replaceWithTemporary());
                 }
 
             m_anonActual = anonActual;
@@ -784,7 +781,7 @@ public class NewExpression
                     }
                 else
                     {
-                    componentParent.replaceChild(clzTemp, clzReal);
+                    clzTemp.replaceTemporaryWith(clzReal);
                     }
                 }
 

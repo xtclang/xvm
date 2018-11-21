@@ -638,6 +638,14 @@ public abstract class Component
         }
 
     /**
+     * Determine whether multiple different components (versions, alternatives) may exist for the
+     * same component identity. It is possible to work with a "flat" component model, i.e. when no
+     * component has any siblings and siblings are disallowed. It is also possible to work with a
+     * "combined" component model, in which multiple alternatives may exist for the same component
+     * identity.
+     *
+     * <p/>REVIEW - how to toggle this?
+     *
      * @return true iff the component allows multiple conditional children to exist for the same
      *         identity
      */
@@ -653,7 +661,7 @@ public abstract class Component
     protected Component getEldestSibling()
         {
         Component parent = getParent();
-        if (parent == null || !isSiblingAllowed())
+        if (parent == null) // || !isSiblingAllowed())
             {
             return this;
             }
@@ -1779,30 +1787,78 @@ public abstract class Component
         }
 
     /**
+     * Create a temporary clone of the component that has the identity of this component (which is
+     * typically this component).
+     *
+     * @return a clone of the component
+     */
+    public Component replaceWithTemporary()
+        {
+        // this implementation is only designed to replace a singular sibling and all of its
+        // children; it is possible to handle more complex scenarios, but they simply are not fully
+        // understood at the point that this is being written
+        assert getEldestSibling() == this && this.getNextSibling() == null;
+
+        Component that = this.cloneBody();
+        assert this.getContaining() == that.getContaining();
+
+        if (this.hasChildren())
+            {
+            that.cloneChildren(this.children());
+            }
+
+        return that;
+
+        // TODO
+        componentParent.replaceChild(clzActual, clzTemp);
+
+        // getEldestSibling()
+        return null;
+        }
+
+    /**
+     * Destroy the component last returned by createTemporaryClone() for the component identity of
+     * this component.
+     *
+     * @return the Component that existed for the identity before the the component last returned by
+     *         createTemporaryClone() was created
+     */
+    public void replaceTemporaryWith(Component that)
+        {
+        assert getEldestSibling() == this && this.getNextSibling() == null;
+
+        // TODO
+        componentParent.replaceChild(clzTemp, clzReal);
+
+        return null;
+        }
+
+    /**
      * Clone this component's body, but not its siblings nor its children.
      *
      * @return a clone of this component, sans siblings and sans children
      */
     protected Component cloneBody()
         {
+        Component that;
         try
             {
-            Component that = (Component) super.clone();
-
-            if (that.m_listContribs != null)
-                {
-                that.m_listContribs = new ArrayList<>(that.m_listContribs);
-                }
-
-            that.m_sibling     = null;
-            that.m_childByName = null;
-
-            return that;
+            that = (Component) super.clone();
             }
         catch (CloneNotSupportedException e)
             {
             throw new IllegalStateException(e);
             }
+
+        if (that.m_listContribs != null)
+            {
+            that.m_listContribs = new ArrayList<>(that.m_listContribs);
+            }
+
+        that.m_sibling     = null;
+        that.m_childByName = null;
+
+        return that;
         }
 
     /**
@@ -2153,23 +2209,6 @@ public abstract class Component
 
 
     // ----- Object methods ------------------------------------------------------------------------
-
-    @Override
-    public Component clone()
-        {
-        Component that = this.cloneBody();
-        assert this.getContaining() == that.getContaining();
-
-        // TODO clone has to work differently for cloning a component when the isSiblingAllowed() is true (conditional components) or false (working with a flat model)
-        // mark the component as a clone root
-        that.m_sibling = that;
-
-        if (this.hasChildren())
-            {
-            that.cloneChildren(this.children());
-            }
-        return that;
-        }
 
     @Override
     public boolean equals(Object obj)
