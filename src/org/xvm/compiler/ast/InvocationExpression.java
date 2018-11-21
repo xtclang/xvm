@@ -852,15 +852,15 @@ public class InvocationExpression
                             int            cTypeParams     = aargTypeParams == null ? 0 : aargTypeParams.length;
                             int            cArgs           = args.size();
                             int            cDefaults       = aconstDefault == null ? 0 : aconstDefault.length;
-                            char           chArgs          = '0';
                             Argument       arg             = null;
                             Argument[]     aArgs           = null;
+                            char           chArgs;
 
                             assert cTypeParams + cArgs + cDefaults == cAll;
 
                             if (cAll == 0)
                                 {
-                                chArgs = 'N';
+                                chArgs = '0';
                                 aArgs  = NO_RVALUES;
                                 }
                             else if (cAll == 1)
@@ -883,17 +883,20 @@ public class InvocationExpression
                                 {
                                 chArgs = 'N';
                                 aArgs  = new Argument[cAll];
-                                for (int i = 0; i < cTypeParams; ++i)
+
+                                if (cTypeParams > 0)
                                     {
-                                    aArgs[i] = aargTypeParams[i];
+                                    System.arraycopy(aargTypeParams, 0, aArgs, 0, cTypeParams);
                                     }
+
                                 for (int i = 0, of = cTypeParams; i < cArgs; ++i)
                                     {
                                     aArgs[of + i] = args.get(i).generateArgument(ctx, code, false, true, errs);
                                     }
-                                for (int i = 0, of = cTypeParams + cArgs; i < cDefaults; ++i)
+
+                                if (cDefaults > 0)
                                     {
-                                    aArgs[of + i] = aconstDefault[i];
+                                    System.arraycopy(aconstDefault, 0, aArgs, cTypeParams + cArgs, cDefaults);
                                     }
                                 }
 

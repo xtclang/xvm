@@ -773,55 +773,48 @@ public class NameExpression
         }
 
     @Override
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
+        {
+        if (LVal.isLocalArgument())
+            {
+            // optimize a couple of paths
+            Argument argLVal = LVal.getLocalArgument();
+            switch (m_plan)
+                {
+                case PropertyRef:
+                    {
+                    PropertyConstant idProp    = (PropertyConstant) m_arg;
+                    Argument         argTarget = left == null
+                            ? new Register(ctx.getThisType(), Op.A_TARGET)
+                            : left.generateArgument(ctx, code, true, true, errs);
+
+                    code.add(m_fAssignable
+                            ? new P_Var(idProp, argTarget, argLVal)
+                            : new P_Ref(idProp, argTarget, argLVal));
+                    return;
+                    }
+
+                case RegisterRef:
+                    if (argLVal instanceof Register)
+                        {
+                        Register regLVal = (Register) argLVal;
+                        Register regRVal = (Register) m_arg;
+
+                        code.add(m_fAssignable
+                                ? new MoveVar(regRVal, regLVal)
+                                : new MoveRef(regRVal, regLVal));
+                        return;
+                        }
+                }
+            }
+
+        super.generateAssignment(ctx, code, LVal, errs);
+        }
+
+    @Override
     public Argument generateArgument(
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-//        // TODO this code came from InvocationExpression; evaluate NameExpression code for necessary fixes
-//            Argument argMethod = m_argMethod;
-//            if (argMethod instanceof Register)
-//                {
-//                assert !exprName.hasSideEffects();
-//                assert exprLeft == null;
-//                argFn = argMethod;
-//                }
-//            else if (argMethod instanceof PropertyConstant)
-//                {
-//                assert !exprName.hasSideEffects();
-//                PropertyConstant  idProp = (PropertyConstant) argMethod;
-//                PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
-//                if (prop.isConstant())
-//                    {
-//                    if (prop.hasInitialValue())
-//                        {
-//                        argFn = prop.getInitialValue();
-//                        }
-//                    else
-//                        {
-//                        // generate code to get the value of the constant property
-//                        Register regResult = new Register(prop.getType());
-//                        code.add(new P_Get(idProp, Register.IGNORE, regResult));
-//                        argFn = regResult;
-//                        }
-//                    }
-//                else
-//                    {
-//                    Argument argTarget;
-//                    if (exprLeft == null)
-//                        {
-//                        // use "this"
-//                        MethodStructure method = code.getMethodStructure();
-//                        assert !method.isFunction();
-//                        argTarget = generateReserved(method.isConstructor() ? Op.A_STRUCT : Op.A_PRIVATE, errs);
-//                        }
-//                    else
-//                        {
-//                        argTarget = exprLeft.generateArgument(code, false, true, true, errs);
-//                        }
-//
-//                    // TODO
-//                    }
-//                }
-
         Argument argRaw = m_arg;
         switch (m_plan)
             {
@@ -896,6 +889,7 @@ public class NameExpression
                     }
 
             case PropertyDeref:
+                {
                 if (left instanceof NameExpression && ((NameExpression) left).getMeaning() == Meaning.Label)
                     {
                     LabelVar labelVar = (LabelVar) ((NameExpression) left).m_arg;
@@ -924,10 +918,22 @@ public class NameExpression
 
                     return reg;
                     }
+                }
 
             case PropertyRef:
-                // TODO
-                throw new UnsupportedOperationException("&" + getName());
+                {
+                PropertyConstant idProp    = (PropertyConstant) argRaw;
+                TypeConstant     typeRef   = getType();
+                Argument         argTarget = left == null
+                        ? new Register(ctx.getThisType(), Op.A_TARGET)
+                        : left.generateArgument(ctx, code, true, true, errs);
+
+                Register regRef = new Register(typeRef, Op.A_STACK);
+                code.add(m_fAssignable
+                        ? new P_Var(idProp, argTarget, regRef)
+                        : new P_Ref(idProp, argTarget, regRef));
+                return regRef;
+                }
 
             case RegisterRef:
                 {
