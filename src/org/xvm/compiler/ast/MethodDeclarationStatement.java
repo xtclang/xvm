@@ -295,6 +295,7 @@ public class MethodDeclarationStatement
                     MethodStructure methodFinally = container.createMethod(false, Access.PRIVATE,
                             null, aReturns, "finally", aParams, true, false);
                     this.methodFinally = methodFinally;
+                    method.setConstructFinally(methodFinally);
                     }
                 }
             else

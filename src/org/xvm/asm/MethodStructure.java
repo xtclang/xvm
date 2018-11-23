@@ -893,20 +893,20 @@ public class MethodStructure
         }
 
     /**
-     * @deprecated
+     * Obtain the corresponding "finally" method for this constructor.
      */
     public MethodStructure getConstructFinally()
         {
-        // TODO this method must calculate the value
+        assert isConstructor();
         return m_structFinally;
         }
 
     /**
-     * @deprecated
+     * Set the corresponding "finally" method for this constructor.
      */
     public void setConstructFinally(MethodStructure structFinally)
         {
-        // TODO this method must die (eventually)
+        assert isConstructor();
         m_structFinally = structFinally;
         }
 
