@@ -805,14 +805,14 @@ public class NameExpression
                         break;
                         }
 
-                    // TODO this is not complete; the "implicit this" covers both nested properties and outer properties
-                    boolean fThisProp = left == null;  // TODO or left == this
-                    if (fThisProp && LVal.supportsLocalPropMode())
+                    if (!LVal.supportsLocalPropMode())
                         {
                         // local property mode
                         break;
                         }
 
+                    // TODO this is not complete; the "implicit this" covers both nested properties and outer properties
+                    boolean fThisProp = left == null;  // TODO or left == this
                     if (fThisProp)
                         {
                         code.add(new L_Get((PropertyConstant) argRaw, argLVal));
@@ -879,10 +879,7 @@ public class NameExpression
 
                 int cSteps = ((ParentClassConstant) argRaw).getDepth();
 
-                TypeConstant type     = argRaw.getType();
-                Register     regOuter = fUsedOnce
-                            ? new Register(type, Op.A_STACK)
-                            : new Register(type);
+                Register regOuter = createRegister(argRaw.getType(), fUsedOnce);
                 code.add(new MoveThis(cSteps, regOuter));
                 return regOuter;
                 }
@@ -907,9 +904,7 @@ public class NameExpression
                     return argRaw;
                     }
 
-                Register reg = fUsedOnce
-                        ? new Register(getType(), Op.A_STACK)
-                        : new Register(getType());
+                Register reg = createRegister(getType(), fUsedOnce);
                 if (fThisProp)
                     {
                     code.add(new L_Get((PropertyConstant) argRaw, reg));
@@ -925,14 +920,11 @@ public class NameExpression
             case PropertyRef:
                 {
                 PropertyConstant idProp    = (PropertyConstant) argRaw;
-                TypeConstant     typeRef   = getType();
                 Argument         argTarget = left == null
                         ? new Register(ctx.getThisType(), Op.A_TARGET)
                         : left.generateArgument(ctx, code, true, true, errs);
 
-                Register regRef = fUsedOnce
-                            ? new Register(typeRef, Op.A_STACK)
-                            : new Register(typeRef);
+                Register regRef = createRegister(getType(), fUsedOnce);
                 code.add(m_fAssignable
                         ? new P_Var(idProp, argTarget, regRef)
                         : new P_Ref(idProp, argTarget, regRef));
@@ -941,12 +933,8 @@ public class NameExpression
 
             case RegisterRef:
                 {
-                Register     regVal  = (Register) argRaw;
-                TypeConstant typeRef = getType();
-
-                Register regRef = fUsedOnce
-                            ? new Register(typeRef, Op.A_STACK)
-                            : new Register(typeRef);
+                Register regVal = (Register) argRaw;
+                Register regRef = createRegister(getType(), fUsedOnce);
                 code.add(m_fAssignable
                         ? new MoveVar(regVal, regRef)
                         : new MoveRef(regVal, regRef));

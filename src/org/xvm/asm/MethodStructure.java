@@ -531,6 +531,12 @@ public class MethodStructure
      */
     public void setOps(Op[] aop)
         {
+        // TODO: remove when compiler is fully operational
+        if (m_code != null)
+            {
+            System.err.println("*** already compiled naturally: " + MethodStructure.this.toString());
+            }
+
         resetRuntimeInfo();
         m_aconstLocal = null;
         m_abOps       = null;

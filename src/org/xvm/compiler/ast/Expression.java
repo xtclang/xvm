@@ -1482,6 +1482,20 @@ public abstract class Expression
         }
 
     /**
+     * Produce a register.
+     *
+     * @param type       the type of the register
+     * @param fUsedOnce  true iff the value will be used once and only once (such that the local
+     *                   stack can be utilized for storage)
+     */
+    protected Register createRegister(TypeConstant type, boolean fUsedOnce)
+        {
+        return fUsedOnce
+                ? new Register(type, Op.A_STACK)
+                : new Register(type);
+        }
+
+    /**
      * For an L-Value expression with exactly one value, create a representation of the L-Value.
      * <p/>
      * An exception is generated if the expression is not assignable.
@@ -2482,40 +2496,28 @@ public abstract class Expression
                             return null;
 
                         case PreInc:
-                            if (LValResult == null)
+                        case PreDec:
+                            {
+                            if (LValResult != null && LValResult.isLocalArgument())
                                 {
-                                code.add(new IP_Inc(argTarget));
-                                return argTarget;
-                                }
-                            else if (LValResult.isLocalArgument())
-                                {
-                                code.add(new IP_PreInc(argTarget, LValResult.getLocalArgument()));
-                                return null;
-                                }
-                            else
-                                {
-                                code.add(new IP_Inc(argTarget));
-                                LValResult.assign(argTarget, code, errs);
+                                code.add(seq.isInc()
+                                        ? new IP_PreInc(argTarget, LValResult.getLocalArgument())
+                                        : new IP_PreDec(argTarget, LValResult.getLocalArgument()));
                                 return null;
                                 }
 
-                        case PreDec:
+                            Register regResult = createRegister(argTarget.getType(), fUsedOnce);
+                            code.add(seq.isInc()
+                                    ? new IP_PreInc(argTarget, regResult)
+                                    : new IP_PreDec(argTarget, regResult));
+
                             if (LValResult == null)
                                 {
-                                code.add(new IP_Dec(argTarget));
-                                return argTarget;
+                                return regResult;
                                 }
-                            else if (LValResult.isLocalArgument())
-                                {
-                                code.add(new IP_PreDec(argTarget, LValResult.getLocalArgument()));
-                                return null;
-                                }
-                            else
-                                {
-                                code.add(new IP_Dec(argTarget));
-                                LValResult.assign(argTarget, code, errs);
-                                return null;
-                                }
+                            LValResult.assign(regResult, code, errs);
+                            return null;
+                            }
 
                         case PostInc:
                         case PostDec:
