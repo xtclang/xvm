@@ -148,7 +148,7 @@ public abstract class xConstrainedInteger
         long l2 = ((JavaLong) hArg).getValue();
         long lr = l1 + l2;
 
-        if (f_fChecked && (((l1 ^ l2) & (l1 ^ lr)) << f_cAddCheckShift) < 0)
+        if (f_fChecked && (((l1 ^ lr) & (l2 ^ lr)) << f_cAddCheckShift) < 0)
             {
             return overflow(frame);
             }
