@@ -1101,6 +1101,15 @@ public class Frame
         }
 
     /**
+     * @return true iff the specified argument refers to a constant (iArg < 0)
+     *         or the corresponding register (iArg >= 0) is assigned.
+     */
+    public boolean isAssigned(int iArg)
+        {
+        return iArg < 0 || f_ahVar[iArg] != null;
+        }
+
+    /**
      * @return an ObjectHandle (could be DeferredCallHandle), or null if the value is "pending future"
      *
      * @throw ExceptionHandle.WrapperException if the async assignment has failed

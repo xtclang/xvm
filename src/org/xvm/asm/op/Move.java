@@ -74,6 +74,13 @@ public class Move
             int nFrom = m_nFromValue;
             int nTo   = m_nToValue;
 
+            if (!frame.isAssigned(nFrom))
+                {
+                // Move is the only op that allows an unassigned argument, if which case
+                // it's a no-op
+                return iPC + 1;
+                }
+
             ObjectHandle hValue = frame.getArgument(nFrom);
             if (hValue == null)
                 {
