@@ -554,7 +554,7 @@ public class AssignmentStatement
                 System.arraycopy(LVals, 0, LValsAll, 1, cLVals);
                 if (fCompletes &= lvalueExpr.isCompletable())
                     {
-                    rvalue.generateAssignments(ctx, code, LVals, errs);
+                    rvalue.generateAssignments(ctx, code, LValsAll, errs);
                     fCompletes &= rvalue.isCompletable();
                     }
                 break;
