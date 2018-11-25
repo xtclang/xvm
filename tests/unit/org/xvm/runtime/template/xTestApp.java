@@ -10,7 +10,6 @@ import org.xvm.asm.Op;
 import org.xvm.asm.op.*;
 
 import org.xvm.runtime.Adapter;
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.TemplateRegistry;
 
 /**

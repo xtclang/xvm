@@ -46,7 +46,7 @@ class TestApp
         {
         TestClass t = new TestClass("Hello World!");
 
-        print(t);
+        print("t=" + t);
         print(t.prop1);
         print(t.method1());
 
@@ -60,7 +60,7 @@ class TestApp
             }
 
         TestClass t2 = new TestClass2(42, "Goodbye");
-        print(t2);
+        print("t2=" + t2);
         print(t2.prop1);
         print(t2.method1());
 
@@ -74,18 +74,28 @@ class TestApp
 
         construct(String s)
             {
+            TestApp.print("# in constructor: TestClass #");
             prop1 = s;
             }
         finally
             {
-            TestApp.print(s);
+            TestApp.print("# in finally: TestClass #");
+            TestApp.print("s=" + s);
             }
 
         Int method1()
             {
+            TestApp.print("# in TestClass.method1 #");
             String s = prop1;
-            (Boolean f, Int of) = s.indexOf("World", 0);
-            return of + s.size;
+
+            if (Int of : s.indexOf("World", 0))
+                {
+                return of + s.size;
+                }
+            else
+                {
+                return -1;
+                }
             }
 
         Int exceptional(String? s)
@@ -110,12 +120,14 @@ class TestApp
 
         construct(Int i, String s)
             {
+            TestApp.print("# in constructor: TestClass2 #");
             prop2 = i;
 
             construct TestClass(s);
             }
         finally
             {
+            TestApp.print("# in finally: TestClass2 #");
             TestApp.print(i);
             }
 
@@ -303,6 +315,7 @@ class TestApp
         // exceptional
         Int exceptional(Int cDelay)
             {
+            DEBUG;
             if (cDelay == 0)
                 {
                 throw new Exception("test");
@@ -324,7 +337,7 @@ class TestApp
 
     static void testRef(String arg)
         {
-        print("\n*** In TestApp.testRef");
+        print("*** In TestApp.testRef");
 
         Var<String> ra = &arg;
         print(ra.get());
@@ -368,7 +381,7 @@ class TestApp
 
     static void testArray()
         {
-        print("\n*** In TestApp.testArray");
+        print("*** In TestApp.testArray");
 
         Int[] ai = new Int[]; // mutable Array<Int>
         ai[0] = 1;

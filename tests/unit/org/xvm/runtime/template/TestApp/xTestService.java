@@ -30,21 +30,6 @@ public class xTestService extends xService
     @Override
     public void initDeclared()
         {
-        MethodStructure constructor = getMethodStructure("construct", INT);
-        constructor.setOps(new Op[]
-            { // #0 - counter
-            new L_Set(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0),
-            new Return_0(),
-            });
-
-        MethodStructure mtIncrement = getMethodStructure("increment", VOID, INT);
-        mtIncrement.setOps(new Op[]
-            {
-            new X_Print(adapter.ensureValueConstantId("\n# in TestService.increment #")),
-            new IP_PreInc(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0), // next register #0
-            new Return_1(0),
-            });
-
         MethodStructure ftLambda$1 = getMethodStructure("lambda_1",
             new String[]{"Var<Int64>", "Int64"});
         ftLambda$1.setOps(new Op[]
