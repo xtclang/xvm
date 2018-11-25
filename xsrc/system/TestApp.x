@@ -74,18 +74,18 @@ class TestApp
 
         construct(String s)
             {
-            TestApp.print("# in constructor: TestClass #");
+            TestApp.print("\n# in constructor: TestClass #");
             prop1 = s;
             }
         finally
             {
-            TestApp.print("# in finally: TestClass #");
+            TestApp.print("# in finally: TestClass #\n");
             TestApp.print("s=" + s);
             }
 
         Int method1()
             {
-            TestApp.print("# in TestClass.method1 #");
+            TestApp.print("\n# in TestClass.method1 #");
             String s = prop1;
 
             if (Int of : s.indexOf("World", 0))
@@ -134,7 +134,7 @@ class TestApp
         @Override
         Int method1()
             {
-            console.println("*** In TestClass2.method1");
+            console.println("\n*** In TestClass2.method1");
             temp = super();
             return temp + prop2;
             }
@@ -302,7 +302,7 @@ class TestApp
 
         void testConstant()
             {
-            console.println("*** In TestService.testConstant");
+            console.println("\n*** In TestService.testConstant");
             TestApp.Point origin = TestPackage.Origin;
             console.println("*** Origin=" + origin);
             }
@@ -337,7 +337,7 @@ class TestApp
 
     static void testRef(String arg)
         {
-        print("*** In TestApp.testRef");
+        print("\n*** In TestApp.testRef");
 
         Var<String> ra = &arg;
         print(ra.get());
@@ -381,7 +381,7 @@ class TestApp
 
     static void testArray()
         {
-        print("*** In TestApp.testArray");
+        print("\n*** In TestApp.testArray");
 
         Int[] ai = new Int[]; // mutable Array<Int>
         ai[0] = 1;
@@ -486,7 +486,7 @@ class TestApp
 
     static void testConst()
         {
-        println("*** in TestApp.testConst()");
+        println("\n*** in TestApp.testConst()");
 
         Point p1 = new Point(0, 1);
         Point p2 = new Point(1, 0);
