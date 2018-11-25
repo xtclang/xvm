@@ -209,7 +209,7 @@ public abstract class OpInvocable extends Op
                         }
                     }
 
-                frame.introduceResolvedVar(m_nRetValue, atypeRet[i]);
+                frame.introduceResolvedVar(anRet[i], atypeRet[i]);
                 }
             }
         }
