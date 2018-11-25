@@ -29,26 +29,6 @@ public class Invoke_NT
         extends OpInvocable
     {
     /**
-     * Construct an NVOK_NT op.
-     *
-     * @param nTarget    r-value that specifies the object on which the method being invoked
-     * @param nMethodId  r-value that specifies the method being invoked
-     * @param anArg      the r-value locations of the method arguments
-     * @param nTupleRet  the l-value location for the tuple result
-     *
-     * @deprecated
-     */
-    public Invoke_NT(int nTarget, int nMethodId, int[] anArg, int nTupleRet)
-        {
-        super((Argument) null, null);
-
-        m_nTarget = nTarget;
-        m_nMethodId = nMethodId;
-        m_anArgValue = anArg;
-        m_nRetValue = nTupleRet;
-        }
-
-    /**
      * Construct an NVOK_NT op based on the passed arguments.
      *
      * @param argTarget    the target Argument

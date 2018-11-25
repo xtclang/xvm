@@ -33,26 +33,6 @@ public class Invoke_TN
         extends OpInvocable
     {
     /**
-     * Construct an NVOK_TN op.
-     *
-     * @param nTarget    r-value that specifies the object on which the method being invoked
-     * @param nMethodId  r-value that specifies the method being invoked
-     * @param nArg       the r-value location of the tuple of method arguments
-     * @param anRet      the l-value locations for the results
-     *
-     * @deprecated
-     */
-    public Invoke_TN(int nTarget, int nMethodId, int nArg, int [] anRet)
-        {
-        super((Argument) null, null);
-
-        m_nTarget = nTarget;
-        m_nMethodId = nMethodId;
-        m_nArgTupleValue = nArg;
-        m_anRetValue = anRet;
-        }
-
-    /**
      * Construct an NVOK_TN op based on the passed arguments.
      *
      * @param argTarget    the target Argument
@@ -172,6 +152,14 @@ public class Invoke_TN
             ? hTarget.getTemplate().invokeNativeNN(frame, method, hTarget, ahArg, m_anRetValue)
             : hTarget.getTemplate().invokeN(frame, chain, hTarget,
                 Utils.ensureSize(ahArg, method.getMaxVars()), m_anRetValue);
+        }
+
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        m_argValue = registerArgument(m_argValue, registry);
         }
 
     private int m_nArgTupleValue;

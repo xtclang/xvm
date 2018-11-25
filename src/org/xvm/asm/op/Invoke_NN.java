@@ -28,26 +28,6 @@ public class Invoke_NN
         extends OpInvocable
     {
     /**
-     * Construct an NVOK_NN op.
-     *
-     * @param nTarget    r-value that specifies the object on which the method being invoked
-     * @param nMethodId  r-value that specifies the method being invoked
-     * @param anArg      the r-value locations of the method arguments
-     * @param anRet      the l-value locations for the results
-     *
-     * @deprecated
-     */
-    public Invoke_NN(int nTarget, int nMethodId, int[] anArg, int[] anRet)
-        {
-        super((Argument) null, null);
-
-        m_nTarget = nTarget;
-        m_nMethodId = nMethodId;
-        m_anArgValue = anArg;
-        m_anRetValue = anRet;
-        }
-
-    /**
      * Construct an NVOK_NN op based on the passed arguments.
      *
      * @param argTarget    the target Argument
@@ -185,6 +165,14 @@ public class Invoke_NN
         return chain.isNative()
              ? hTarget.getTemplate().invokeNativeNN(frame, chain.getTop(), hTarget, ahVar, m_anRetValue)
              : hTarget.getTemplate().invokeN(frame, chain, hTarget, ahVar, m_anRetValue);
+        }
+
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        registerArguments(m_aArgValue, registry);
         }
 
     @Override
