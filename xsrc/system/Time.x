@@ -1,4 +1,4 @@
-const Time(Int hour, Int minute, Int second=0, Int nanoseconds=0)
+const Time(Int hour, Int minute, Int second=0, Int nano=0)
     {
     @Op Time add(Duration duration)
         {

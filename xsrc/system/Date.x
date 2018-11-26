@@ -4,8 +4,16 @@
 const Date(Int year, Int month, Int day)
         implements Sequential
     {
-    @RO Int dayOfYear;
+    @RO Int dayOfYear.get()
+        {
+        TODO
+        }
+
     enum DayOfWeek {Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday}
+    @RO DayOfWeek dayOfWeek.get()
+        {
+        TODO
+        }
 
     // ops
     @Op Date add(Duration duration)

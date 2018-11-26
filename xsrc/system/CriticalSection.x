@@ -59,7 +59,7 @@ const CriticalSection
         this.reentrancy = reentrancy.maxOf(previousReentrancy);
 
         // keep track of when the critical section began
-        startTime = previousCriticalSection?.startTime : runtimeClock.time;
+        startTime = previousCriticalSection?.startTime : runtimeClock.now;
         }
     finally
         {
@@ -90,14 +90,14 @@ const CriticalSection
     /**
      * The time at which this CriticalSection began.
      */
-    Time startTime;
+    DateTime startTime;
 
     /**
      * The duration of this CriticalSection.
      */
     Duration duration.get()
         {
-        return runtimeClock.time - startTime;
+        return runtimeClock.now - startTime;
         }
 
     /**

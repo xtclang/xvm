@@ -315,7 +315,8 @@ class TestApp
         // exceptional
         Int exceptional(Int cDelay)
             {
-            DEBUG;
+            @Inject Clock runtimeClock;
+
             if (cDelay == 0)
                 {
                 throw new Exception("test");
@@ -323,7 +324,8 @@ class TestApp
             else
                 {
                 @Future Int iRet;
-                runtimeClock.scheduleAlarm(() -> {iRet = cDelay;}, DateTime.now()); // &iRet.set(0)
+                DateTime dtWakeup = runtimeClock.now; // + Duration.ofSeconds(10);
+                runtimeClock.scheduleAlarm(dtWakeup, () -> {iRet = cDelay;});
                 return iRet;
                 }
             }

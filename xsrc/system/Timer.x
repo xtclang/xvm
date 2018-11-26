@@ -17,5 +17,5 @@ interface Timer
     /**
      * Schedule an #Alarm that will be invoked after the specified Duration completes.
      */
-    Cancellable scheduleAlarm(Alarm alarm, Duration durationBeforeAlarm);
+    Cancellable scheduleAlarm(Duration durationBeforeAlarm, Alarm alarm);
     }

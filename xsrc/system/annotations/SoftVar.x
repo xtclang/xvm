@@ -35,7 +35,7 @@ mixin SoftVar<RefType>(function void ()? notify)
      * soft references are *not* cleared. Furthermore, the garbage collector is permitted to alter
      * or reset this value, so this value should not be trusted as authoritative.
      */
-    public/private Time? lastAccessTime;
+    public/private DateTime? lastAccessTime;
 
     /**
      * The number of times that this reference has been accessed, maintained for the use of the
@@ -67,9 +67,9 @@ mixin SoftVar<RefType>(function void ()? notify)
             {
             assert (&this).actualType.incorporates_(LazyVar);
 
-            Time    start = runtimeClock.time;
-            RefType value = super();
-            Time    stop  = runtimeClock.time;
+            DateTime start = runtimeClock.now;
+            RefType  value = super();
+            DateTime stop  = runtimeClock.now;
 
             ++accessCount;
             lastAccessTime   = stop;
@@ -79,7 +79,7 @@ mixin SoftVar<RefType>(function void ()? notify)
             }
 
         ++accessCount;
-        lastAccessTime = runtimeClock.time;
+        lastAccessTime = runtimeClock.now;
         return super();
         }
     }

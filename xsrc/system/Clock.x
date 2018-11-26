@@ -12,31 +12,36 @@ interface Clock
     typedef function void () Alarm;
     typedef function void () Cancellable;
 
-    @RO DateTime epoch;
+    /**
+     * @return a DateTime at the time of execution (a.k.a. "now")
+     */
+    @RO DateTime now;
+
 //    @RO TimeZone timezone;
-    @RO Interval precision;
+    @RO Duration precision;
     @RO Boolean monotonic;
     @RO Boolean realtime;
-
-    @RO Time time;
 
     Timer createTimer();
 
     /**
+     * Schedule an #Alarm that will be invoked after the specified Duration completes.
      *
-     * <p>
      * Invoking the returned #Cancellable will attempt to cancel the invocation of the #Alarm, but
      * cancellation is not guaranteed, for example if the request for cancellation occurs concurrently
      * with the clock attempting to invoke the alarm.
      */
-    Cancellable scheduleAlarm(Alarm alarm, DateTime timeToWakeUp);
+    Cancellable scheduleAlarm(DateTime timeToWakeUp, Alarm alarm);
 
     // well-known (injectable) implementations
     static class RuntimeClock
             implements Clock
         {
         @Override
-        Cancellable scheduleAlarm(Alarm alarm, DateTime timeToWakeUp)
+        @RO DateTime now; // native
+
+        @Override
+        Cancellable scheduleAlarm(DateTime timeToWakeUp, Alarm alarm)
             {
             TODO - native
             }
