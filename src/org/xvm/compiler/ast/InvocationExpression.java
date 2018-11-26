@@ -803,10 +803,19 @@ public class InvocationExpression
     public Argument[] generateArguments(
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        // NameExpression cannot (must not!) attempt to resolve method / function names; it is an
-        // assertion or error if it tries; that is the responsibility of InvocationExpression
-        Argument argFn      = null;
+        // 1. NameExpression cannot (must not!) attempt to resolve method / function names; it is an
+        //    assertion or error if it tries; that is the responsibility of InvocationExpression
+        // 2. To avoid an out-of-order execution, we cannot allow the use of local properties
+        //    unless there are no arguments
+        // 3. The arguments are allowed to be pushed on the stack since the run-time knows to load
+        //    them up in the inverse order; however, the target itself should not be put on the
+        //    stack unless there are no arguments
+        int      cArgs      = args.size();
         boolean  fConstruct = false;
+        Argument argFn;
+
+        fLocalPropOk &= cArgs == 0;
+
         if (expr instanceof NameExpression)
             {
             NameExpression exprName = (NameExpression) expr;
@@ -839,21 +848,20 @@ public class InvocationExpression
                             }
                         else
                             {
-                            argTarget = exprLeft.generateArgument(ctx, code, true, true, errs);
+                            argTarget = exprLeft.generateArgument(ctx, code, fLocalPropOk, cArgs == 0, errs);
                             }
 
                         if (m_fCall)
                             {
                             // it's a method, and we need to generate the necessary code that calls it;
                             // generate the arguments
-                            Argument[]     aargTypeParams  = m_aargTypeParams;
-                            Constant[]     aconstDefault   = m_aconstDefault;
-                            int            cAll            = idMethod.getRawParams().length;
-                            int            cTypeParams     = aargTypeParams == null ? 0 : aargTypeParams.length;
-                            int            cArgs           = args.size();
-                            int            cDefaults       = aconstDefault == null ? 0 : aconstDefault.length;
-                            Argument       arg             = null;
-                            Argument[]     aArgs           = null;
+                            Argument[]     aargTypeParams = m_aargTypeParams;
+                            Constant[]     aconstDefault  = m_aconstDefault;
+                            int            cAll           = idMethod.getRawParams().length;
+                            int            cTypeParams    = aargTypeParams == null ? 0 : aargTypeParams.length;
+                            int            cDefaults      = aconstDefault == null ? 0 : aconstDefault.length;
+                            Argument       arg            = null;
+                            Argument[]     aArgs          = null;
                             char           chArgs;
 
                             assert cTypeParams + cArgs + cDefaults == cAll;
@@ -868,7 +876,7 @@ public class InvocationExpression
                                 chArgs = '1';
                                 if (cArgs == 1)
                                     {
-                                    arg = args.get(0).generateArgument(ctx, code, false, true, errs);
+                                    arg = args.get(0).generateArgument(ctx, code, false, fUsedOnce, errs);
                                     }
                                 else if (cTypeParams == 1)
                                     {
@@ -891,7 +899,7 @@ public class InvocationExpression
 
                                 for (int i = 0, of = cTypeParams; i < cArgs; ++i)
                                     {
-                                    aArgs[of + i] = args.get(i).generateArgument(ctx, code, false, true, errs);
+                                    aArgs[of + i] = args.get(i).generateArgument(ctx, code, false, fUsedOnce, errs);
                                     }
 
                                 if (cDefaults > 0)
@@ -1014,7 +1022,7 @@ public class InvocationExpression
                 else
                     {
                     // evaluate to find the argument (e.g. "var.prop", where prop holds a function)
-                    argFn = expr.generateArgument(ctx, code, true, true, errs);
+                    argFn = expr.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
                     }
                 }
             }
@@ -1022,7 +1030,7 @@ public class InvocationExpression
             {
             // obtain the function that will be bound and/or called
             assert !m_fBindTarget;
-            argFn = expr.generateArgument(ctx, code, true, true, errs);
+            argFn = expr.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
             }
 
         // bind arguments and/or generate a call to the function specified by argFn; first, convert
@@ -1043,16 +1051,15 @@ public class InvocationExpression
             return new Argument[] {argFn};
             }
 
-        TypeConstant[] atypeSub        = typeFn.getParamTypesArray();
-        TypeConstant[] atypeParams     = atypeSub[F_ARGS].getParamTypesArray();
-        int            cParams         = atypeParams.length;
-        TypeConstant[] atypeRets       = atypeSub[F_RETS].getParamTypesArray();
-        int            cRets           = atypeRets.length;
-        Argument[]     aargTypeParams  = m_aargTypeParams;
-        Constant[]     aconstDefault   = m_aconstDefault;
-        int            cTypeParams     = aargTypeParams == null ? 0 : aargTypeParams.length;
-        int            cDefaults       = aconstDefault == null ? 0 : aconstDefault.length;
-        int            cArgs           = args.size();
+        TypeConstant[] atypeSub       = typeFn.getParamTypesArray();
+        TypeConstant[] atypeParams    = atypeSub[F_ARGS].getParamTypesArray();
+        int            cParams        = atypeParams.length;
+        TypeConstant[] atypeRets      = atypeSub[F_RETS].getParamTypesArray();
+        int            cRets          = atypeRets.length;
+        Argument[]     aargTypeParams = m_aargTypeParams;
+        Constant[]     aconstDefault  = m_aconstDefault;
+        int            cTypeParams    = aargTypeParams == null ? 0 : aargTypeParams.length;
+        int            cDefaults      = aconstDefault == null ? 0 : aconstDefault.length;
 
         assert cTypeParams + cArgs + cDefaults == cParams;
 
@@ -1068,7 +1075,7 @@ public class InvocationExpression
             if (cArgs == 1)
                 {
                 chArgs = '1';
-                arg    = args.get(0).generateArgument(ctx, code, false, true, errs);
+                arg    = args.get(0).generateArgument(ctx, code, false, fUsedOnce, errs);
                 }
             else if (cArgs > 1)
                 {
@@ -1076,7 +1083,7 @@ public class InvocationExpression
                 aArgs  = new Argument[cArgs];
                 for (int i = 0; i < cArgs; ++i)
                     {
-                    aArgs[i] = args.get(i).generateArgument(ctx, code, false, true, errs);
+                    aArgs[i] = args.get(i).generateArgument(ctx, code, false, fUsedOnce, errs);
                     }
                 }
 
@@ -1189,7 +1196,7 @@ public class InvocationExpression
             if (!args.get(i).isNonBinding())
                 {
                 aiArg[iNext] = i;
-                aArg [iNext] = args.get(i).generateArgument(ctx, code, false, true, errs);
+                aArg [iNext] = args.get(i).generateArgument(ctx, code, false, fUsedOnce, errs);
                 }
             }
 
