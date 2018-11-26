@@ -410,6 +410,11 @@ public abstract class ClassTemplate
 
         frameCD.setContinuation(frameCaller ->
             {
+            if (!hStruct.validateFields())
+                {
+                return frame.raiseException(xException.unassignedFields());
+                }
+
             if (isConstructImmutable())
                 {
                 hStruct.makeImmutable();

@@ -107,9 +107,24 @@ public class SingletonConstant
      */
     public void setHandle(ObjectHandle handle)
         {
-        assert m_handle == null || m_handle == handle; // not re-settable
+        assert m_handle == null && handle != null; // not re-settable
 
-        m_handle = handle;
+        m_handle        = handle;
+        m_fInitializing = false;
+        }
+
+    /**
+     * Mark this ObjectHandle as being initialized.
+     *
+     * @return false iff the ObjectHandle has already been marked as "initializing"
+     */
+    public boolean markInitializing()
+        {
+        if (m_fInitializing)
+            {
+            return false;
+            }
+        return m_fInitializing = true;
         }
 
 
@@ -249,4 +264,9 @@ public class SingletonConstant
      * The ObjectHandle representing this singleton's value.
      */
     private transient ObjectHandle m_handle;
+
+    /**
+     * Set to true when the handle for this singleton is being initialized.
+     */
+    private transient boolean m_fInitializing;
     }

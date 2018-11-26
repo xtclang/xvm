@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Set;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
@@ -650,6 +652,28 @@ public class PropertyInfo
             if (body.getInitializer() != null)
                 {
                 return null;
+                }
+            }
+
+        return null;
+        }
+    /**
+     * @return the default value of the property as a constant, or null if there is no default value
+     *         for this property
+     */
+    public Constant getDefaultValue()
+        {
+        TypeConstant type = getType();
+
+        if (type.isSingleUnderlyingClass(false))
+            {
+            IdentityConstant id   = type.getSingleUnderlyingClass(false);
+            ClassStructure   clz  = (ClassStructure) id.getComponent();
+            Component        prop = clz.getChild("default");
+            if (prop instanceof PropertyStructure)
+                {
+                PropertyStructure propDefault = (PropertyStructure) prop;
+                return propDefault.getInitialValue();
                 }
             }
 

@@ -1019,7 +1019,7 @@ public class MethodStructure
      */
     public int ensureInitialized(Frame frame, Frame frameNext)
         {
-        if (m_FInitialized == Boolean.TRUE)
+        if (m_fInitialized)
             {
             return Op.R_NEXT;
             }
@@ -1063,14 +1063,11 @@ public class MethodStructure
                     }
 
                 // we are on the main context and can actually perform the initialization
-                if (m_FInitialized == Boolean.FALSE)
+                if (!constSingleton.markInitializing())
                     {
                     // this can only happen if we are called recursively
-                    assert frameNext == null;
                     return frame.raiseException(xException.makeHandle("Circular initialization"));
                     }
-
-                m_FInitialized = Boolean.FALSE;
 
                 IdentityConstant constValue = constSingleton.getValue();
 
@@ -1114,7 +1111,8 @@ public class MethodStructure
                             template.f_struct.getFormat() == Format.ENUM)
                             {
                             // TODO: rework this when enum values constructors are generated
-                            return Op.R_NEXT;
+                            assert constSingleton.getHandle() != null;
+                            continue;
                             }
 
                         // the class must have a no-params constructor to call
@@ -1146,7 +1144,7 @@ public class MethodStructure
         // if on the main context, me are entitled to set the flag;
         // otherwise, we didn't do anything, so even if other threads don't immediately see the flag
         // (since it's not volatile) they will simply repeat the "do nothing" loop
-        m_FInitialized = Boolean.TRUE;
+        m_fInitialized = true;
         return frameNext == null
             ? frame.assignValue(0, xNullable.NULL) // the result is ignored, but has to be assigned
             : frame.call(frameNext);
@@ -2095,7 +2093,7 @@ public class MethodStructure
      * Cached information about whether any singleton constants used by this method have been
      * fully initialized.
      */
-    private transient Boolean m_FInitialized;
+    private transient boolean m_fInitialized;
 
     /**
      * Cached method for the construct-finally that goes with this method, iff this method is a
