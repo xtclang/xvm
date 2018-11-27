@@ -114,11 +114,7 @@ public class TemplateRegistry
             }
 
         // TODO: remove - test classes
-        getTemplate("TestApp.TestService").initDeclared();
-        getTemplate("TestApp.TestClass2").initDeclared();
-        getTemplate("TestApp.TestClass").initDeclared();
         getTemplate("TestApp").initDeclared();
-        getTemplate("TestPackage.Origin").initDeclared();
         }
 
     // sPackage is either empty or ends with a dot
