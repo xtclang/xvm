@@ -1,8 +1,6 @@
 package org.xvm.runtime.template;
 
 
-import java.util.Collections;
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
@@ -29,7 +27,7 @@ public class xNullable
         {
         if (f_struct.getFormat() == Component.Format.ENUM)
             {
-            ConstantPool pool = f_struct.getConstantPool();
+            ConstantPool pool = pool();
 
             f_templates.registerNativeTemplate(pool.typeNull(), this);
 

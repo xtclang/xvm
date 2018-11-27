@@ -50,7 +50,7 @@ public class xCharArray
     @Override
     public TypeConstant getCanonicalType()
         {
-        ConstantPool pool = f_struct.getConstantPool();
+        ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeChar());
         }
 

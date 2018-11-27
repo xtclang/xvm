@@ -558,7 +558,7 @@ public abstract class ClassTemplate
                 if (method.getName().equals("to"))
                     {
                     if (method.getReturnCount() == 1 &&
-                        method.getReturn(0).getType() == f_struct.getConstantPool().typeString())
+                        method.getReturn(0).getType().equals(pool().typeString()))
                         {
                         return buildStringValue(frame, hTarget, iReturn);
                         }
@@ -1565,6 +1565,16 @@ public abstract class ClassTemplate
         return frame.assignValue(iReturn, xString.makeHandle(hTarget.toString()));
         }
 
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * @return the constant pool associated with the corresponding structure
+     */
+    public ConstantPool pool()
+        {
+        return f_struct.getConstantPool();
+        }
 
     // =========== TEMPORARY ========
 

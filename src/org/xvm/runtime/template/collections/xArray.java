@@ -104,7 +104,7 @@ public class xArray
         TypeConstant[] atypeParams = type.getParamTypesArray();
         if (atypeParams.length > 0)
             {
-            ConstantPool pool      = f_struct.getConstantPool();
+            ConstantPool pool      = pool();
             TypeConstant typeParam = atypeParams[0];
             if (typeParam.equals(pool.typeInt()))
                 {
