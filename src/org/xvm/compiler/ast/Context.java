@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.xvm.asm.Argument;
@@ -27,6 +28,7 @@ import org.xvm.asm.constants.TypeParameterConstant;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
+import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Severity;
 
@@ -1396,7 +1398,7 @@ public class Context
         }
 
 
-    // ----- inner class: AndContext ------------------------------------------------------------
+    // ----- inner class: AndContext ---------------------------------------------------------------
 
     /**
      * A nested context for handling "&&" expressions.
@@ -1467,7 +1469,7 @@ public class Context
         }
 
 
-    // ----- inner class: OrContext ------------------------------------------------------------
+    // ----- inner class: OrContext ----------------------------------------------------------------
 
     /**
      * A nested context for handling "||" expressions.
@@ -1538,7 +1540,7 @@ public class Context
         }
 
 
-    // ----- inner class: NotContext ------------------------------------------------------------
+    // ----- inner class: NotContext ---------------------------------------------------------------
 
     /**
      * A nested context for swapping "when false" and "when true".
@@ -1595,7 +1597,7 @@ public class Context
         }
 
 
-    // ----- inner class: LoopingContext ------------------------------------------------------------
+    // ----- inner class: LoopingContext -----------------------------------------------------------
 
     /**
      * A nested context for a loop.
@@ -1617,7 +1619,7 @@ public class Context
         }
 
 
-    // ----- inner class: InferringContext ------------------------------------------------------------
+    // ----- inner class: InferringContext ---------------------------------------------------------
 
     /**
      * A delegating context that allows an expression to resolve names based on the specified type's
@@ -1680,6 +1682,172 @@ public class Context
             }
 
         TypeConstant m_typeLeft;
+        }
+
+
+    // ----- inner class: CaptureContext -----------------------------------------------------------
+
+    /**
+     * A context for compiling in a scope that can capture local variables from an outer scope.
+     */
+    public static class CaptureContext
+            extends Context
+        {
+        /**
+         * Construct a CaptureContext.
+         *
+         * @param ctxOuter  the context within which this context is nested
+         */
+        public CaptureContext(Context ctxOuter)
+            {
+            super(ctxOuter, true);
+            }
+
+        @Override
+        public Context exit()
+            {
+            Context ctxOuter = super.exit();
+
+            // record the registers for the captured variables
+            Map<String, Boolean>  mapCapture = ensureCaptureMap();
+            Map<String, Register> mapVars    = ensureRegisterMap();
+            for (String sName : mapCapture.keySet())
+                {
+                mapVars.put(sName, (Register) getVar(sName));
+                }
+
+            return ctxOuter;
+            }
+
+        @Override
+        protected void markVarRead(boolean fNested, String sName, Token tokName, ErrorListener errs)
+            {
+            // variable capture will create a variable in this scope (a parameter for a lambda, or
+            // a de-referenced property value for an anonymous inner class), so if the variable is
+            // not already declared in this scope but it exists in the outer scope, then capture it
+            final Context ctxOuter = getOuterContext();
+            if (!isVarDeclaredInThisScope(sName) && ctxOuter.isVarReadable(sName))
+                {
+                boolean fCapture = true;
+                if (isReservedName(sName))
+                    {
+                    switch (sName)
+                        {
+                        case "this":
+                        case "this:target":
+                        case "this:public":
+                        case "this:protected":
+                        case "this:private":
+                        case "this:struct":
+                            // the only names that we capture _without_ a capture parameter are the
+                            // various "this" references that refer to "this" object
+                            if (ctxOuter.isMethod())
+                                {
+                                m_fCaptureThis = true;
+                                return;
+                                }
+                            break;
+
+                        case "this:service":
+                        case "this:module":
+                            // these two are available globally, and are _not_ captured
+                            return;
+                        }
+                    }
+
+                if (fCapture)
+                    {
+                    // capture the variable
+                    ensureCaptureMap().putIfAbsent(sName, false);
+                    }
+                }
+
+            super.markVarRead(fNested, sName, tokName, errs);
+            }
+
+        /**
+         * @return a map of variable name to a Boolean representing if the capture is read-only
+         *         (false) or read/write (true)
+         */
+        public Map<String, Boolean> getCaptureMap()
+            {
+            return m_mapCapture == null
+                    ? Collections.EMPTY_MAP
+                    : m_mapCapture;
+            }
+
+        /**
+         * Obtain the map of names to registers, if it has been built.
+         * <p/>
+         * Note: built by exit()
+         *
+         * @return a non-null map of variable name to Register for all of variables to capture
+         */
+        public Map<String, Register> ensureRegisterMap()
+            {
+            Map<String, Register> map = m_mapRegisters;
+            if (map == null)
+                {
+                if (getCaptureMap().isEmpty())
+                    {
+                    // there are never more capture-registers than there are captures
+                    return Collections.EMPTY_MAP;
+                    }
+
+                m_mapRegisters = map = new HashMap<>();
+                }
+
+            return map;
+            }
+
+        /**
+         * @return true iff the lambda is built as a method (and not as a function) in order to
+         *         capture the "this" object reference
+         */
+        public boolean isThisCaptured()
+            {
+            return m_fCaptureThis;
+            }
+
+        @Override
+        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
+            {
+            ensureCaptureMap().put(sName, true);
+            return asnOuter.applyAssignmentFromCapture();
+            }
+
+        /**
+         * @return a map of variable name to a Boolean representing if the capture is read-only
+         *         (false) or read/write (true)
+         */
+        private Map<String, Boolean> ensureCaptureMap()
+            {
+            Map<String, Boolean> map = m_mapCapture;
+            if (map == null)
+                {
+                // use a tree map, as it will keep the captures in alphabetical order, which will
+                // help to produce lambdas with a "predictable" signature
+                m_mapCapture = map = new TreeMap<>();
+                }
+
+            return map;
+            }
+
+        /**
+         * A map from variable name to read/write flag (false is read-only, true is read-write) for
+         * the variables to capture.
+         */
+        private Map<String, Boolean> m_mapCapture;
+
+        /**
+         * A map from variable name to register, built by exit().
+         */
+        private Map<String, Register> m_mapRegisters;
+
+        /**
+         * Set to true iff "this" is captured.
+         */
+        private boolean m_fCaptureThis;
         }
 
 
