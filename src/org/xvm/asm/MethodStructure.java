@@ -1170,6 +1170,38 @@ public class MethodStructure
         return -1;
         }
 
+    /**
+     * Calculate the line number for a given op counter.
+     *
+     * @return the corresponding line number (one-based) of zero if the line cannot be calculated
+     */
+    public int calculateLineNumber(int iPC)
+        {
+        Code code = m_code;
+        if (code == null)
+            {
+            return 0;
+            }
+
+        Op[] aOp = code.m_aop;
+        if (aOp == null)
+            {
+            return 0;
+            }
+
+        // Nop() line count is zero based
+        int nLine = 1;
+        for (int i = 0; i < iPC; i++)
+            {
+            Op op = aOp[i];
+            if (op instanceof Nop)
+                {
+                nLine += ((Nop) op).getLineCount();
+                }
+            }
+        return nLine == 1 ? 0 : nLine;
+        }
+
 
     // ----- GenericTypeResolver interface ---------------------------------------------------------
 

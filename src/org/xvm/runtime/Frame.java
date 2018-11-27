@@ -1619,9 +1619,23 @@ public class Frame
 
         if (iPC >= 0)
             {
-            sb.append(" (iPC=").append(iPC)
-              .append(", op=").append(aOp[iPC].getClass().getSimpleName())
-              .append(')');
+            int nLine = 0;
+            if (function != null)
+                {
+                nLine = function.calculateLineNumber(iPC);
+                }
+
+            if (nLine > 0)
+                {
+                sb.append(" (line=").append(nLine);
+                }
+            else
+                {
+                sb.append(" (iPC=").append(iPC);
+                }
+            // TODO: remove printing the Op name (temporary for debugging purposes only)
+            sb.append(", op=").append(aOp[iPC].getClass().getSimpleName());
+            sb.append(')');
             }
 
         return sb.toString();
