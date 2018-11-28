@@ -67,7 +67,7 @@ public class Container
         f_adapter = f_templates.f_adapter;
         f_heapGlobal = new ObjectHeap(f_moduleRoot.getConstantPool(), f_templates);
 
-        if (sAppName.equals("TestApp"))
+        if (sAppName.equals(Constants.ECSTASY_MODULE))
             {
             // TODO: remove -- but for now TestApp is a part of the "system"
             f_constModule = f_moduleRoot.getIdentityConstant();
@@ -97,10 +97,10 @@ public class Container
         ConstantPool.setCurrentPool(null);
 
         ModuleStructure structModule = (ModuleStructure) f_constModule.getComponent();
-        if (f_sAppName.equals("TestApp"))
+        if (f_sAppName.equals(Constants.ECSTASY_MODULE))
             {
             // TODO: remove -- but for now TestApp is a part of the "system"
-            m_app = f_templates.getTemplate(f_sAppName);
+            m_app = f_templates.getTemplate("TestApp");
             assert structModule == f_moduleRoot;
             }
         else
