@@ -484,18 +484,30 @@ public class CommandLine
      */
     protected boolean isModule(File file)
         {
+        return getModuleName(file) != null;
+        }
+
+    /**
+     * Check if the specified file contains a module and if so, return the module's name.
+     *
+     * @param file  the file (NOT a directory) to examine
+     *
+     * @return the module's name if the file declares a module; null otherwise
+     */
+    protected String getModuleName(File file)
+        {
         assert file.isFile() && file.canRead();
         if (opts.verbose)
             {
             out("xtc: Parsing file: " + file);
             }
 
-        Statement stmt = null;
+        Statement stmt    = null;
         ErrorList errlist = new ErrorList(100);
         try
             {
-            Source    source  = new Source(file);
-            Parser    parser  = new Parser(source, errlist);
+            Source source  = new Source(file);
+            Parser parser  = new Parser(source, errlist);
             stmt = parser.parseSource();
             }
         catch (CompilerException e)
@@ -524,13 +536,15 @@ public class CommandLine
                     out("xtc: Contains " + category.getId().TEXT + " " + typeStmt.getName());
                     out();
                     }
-                return category.getId() == Token.Id.MODULE;
+                return category.getId() == Token.Id.MODULE
+                    ? typeStmt.getName()
+                    : null;
                 }
 
             deferred.add("xtc: File \"" + file + "\" did not contain a type definition.");
             }
 
-        return false;
+        return null;
         }
 
     /**
@@ -543,7 +557,8 @@ public class CommandLine
      */
     protected Node buildTree(File file)
         {
-        DirNode node = new DirNode();
+        DirNode node  = new DirNode();
+        boolean fRoot = false;
         if (file.isDirectory())
             {
             // we're parsing a sub-directory looking for source files
@@ -562,6 +577,7 @@ public class CommandLine
             node.filePkg = file;
             node.fileDir = file.getParentFile();
             node.pkgNode = new FileNode(file);
+            fRoot        = true;
             }
         else
             {
@@ -609,6 +625,21 @@ public class CommandLine
                 // it's a source file
                 FileNode cmp = new FileNode(child);
                 node.sources.put(child, cmp);
+                }
+            }
+
+        // check if the module is the "Ecstasy" module and add native classes if so
+        if (fRoot && Constants.ECSTASY_MODULE.equals(getModuleName(node.filePkg)))
+            {
+            File fileNative = new File(node.fileDir.getParentFile(), "_native");
+            if (fileNative.isDirectory())
+                {
+                DirNode nodeNative = (DirNode) buildTree(fileNative);
+                if (nodeNative != null)
+                    {
+                    nodeNative.parent = node;
+                    node.packages.add(nodeNative);
+                    }
                 }
             }
 

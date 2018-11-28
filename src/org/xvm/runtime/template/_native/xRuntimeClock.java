@@ -1,4 +1,4 @@
-package org.xvm.runtime.template.Clock;
+package org.xvm.runtime.template._native;
 
 
 import java.time.LocalDate;

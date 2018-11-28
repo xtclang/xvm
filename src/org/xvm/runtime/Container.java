@@ -190,7 +190,7 @@ public class Container
             {
             TypeConstant typeClock = templateClock.getCanonicalType();
 
-            ClassTemplate templateRTClock = f_templates.getTemplate("Clock.RuntimeClock");
+            ClassTemplate templateRTClock = f_templates.getTemplate("_native.RuntimeClock");
 
             Supplier<ObjectHandle> supplierClock = () ->
                 xService.makeHandle(createServiceContext("RuntimeClock", f_moduleRoot),
@@ -205,7 +205,7 @@ public class Container
             {
             TypeConstant typeConsole = templateConsole.getCanonicalType();
 
-            ClassTemplate templateRTConsole = f_templates.getTemplate("io.Console.TerminalConsole");
+            ClassTemplate templateRTConsole = f_templates.getTemplate("_native.TerminalConsole");
 
             Supplier<ObjectHandle> supplierConsole = () ->
                 xService.makeHandle(createServiceContext("Console", f_moduleRoot),

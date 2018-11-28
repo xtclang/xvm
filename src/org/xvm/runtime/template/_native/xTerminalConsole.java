@@ -1,4 +1,4 @@
-package org.xvm.runtime.template.io.Console;
+package org.xvm.runtime.template._native;
 
 
 import java.io.BufferedReader;

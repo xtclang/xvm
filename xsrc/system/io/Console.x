@@ -25,21 +25,4 @@ interface Console
     * @return the previous echo value
     */
     Boolean echo(Boolean flag);
-
-    // well-known (injectable) implementations
-    static class TerminalConsole
-            implements Console
-        {
-        @Override
-        void print(Object o) {TODO("native");}
-
-        @Override
-        void println(Object o = "") {TODO("native");}
-
-        @Override
-        String readLine()  {TODO("native");}
-
-        @Override
-        Boolean echo(Boolean flag) {TODO("native");}
-        }
     }

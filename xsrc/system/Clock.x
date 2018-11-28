@@ -32,18 +32,4 @@ interface Clock
      * with the clock attempting to invoke the alarm.
      */
     Cancellable scheduleAlarm(DateTime timeToWakeUp, Alarm alarm);
-
-    // well-known (injectable) implementations
-    static class RuntimeClock
-            implements Clock
-        {
-        @Override
-        @RO DateTime now; // native
-
-        @Override
-        Cancellable scheduleAlarm(DateTime timeToWakeUp, Alarm alarm)
-            {
-            TODO - native
-            }
-        }
     }
