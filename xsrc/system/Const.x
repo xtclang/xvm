@@ -1,6 +1,7 @@
 interface Const
         extends collections.Hashable
         extends Orderable
+        extends Stringable
     {
     /**
      * The default implementation of comparison for Const implementations is to compare each of
@@ -30,6 +31,13 @@ interface Const
     // this declaration is necessary so that the non-override to<Byte[]>() method is allowed
     @Override
     Const[] to<Const[]>();
+
+    @Override to<String>()
+        {
+        StringBuffer buf = new StringBuffer(estimateStringLength());
+        appendTo(buf);
+        return buf.to<String>();
+        }
 
     @Override
     @RO Int hash;

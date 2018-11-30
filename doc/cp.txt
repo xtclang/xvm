@@ -895,3 +895,77 @@ Contributions and call chains:
         }
 
 
+// Int64 formatting:
+
+    /**
+     * Format the integer into a String.
+     *
+     * @param digits  a value greater than zero specifies a fixed length output
+     * @param radix   2 (binary), 8 (octal), 10 (decimal), or 16 (hex)
+     * @param prefix  a prefix to the digits that comes after the sign (if any)
+     * @param plus    true to force the use of a sign
+     */
+    String fmt(
+            Int     digits = 0,
+            Int     radix  = 10,
+            String  prefix = "",
+            Boolean plus   = false)
+        {
+        Int shift = 0;
+        Int mask  = radix - 1;
+        switch (radix)
+            {
+            case 2:
+                shift = 1;
+                break;
+
+            case 8:
+                shift = 3;
+                break;
+
+            case 10:
+                break;
+
+            case 16:
+                shift = 4;
+                break;
+
+            default:
+                throw new IllegalArgumentException("radix=" + radix);
+            }
+
+        Int length;
+        if (digits == null)
+            {
+            // calculate the number of digits
+            }
+        else
+            {
+            length  = digits;
+            divisor =
+            }
+
+        // 255 FF 80
+        //
+        Boolean hasSign;
+        switch (sign)
+            {
+            case Negative:
+                hasSign = unsigned;
+
+            case Zero:
+                hasSign = false;
+                break;
+
+            case Positive:
+
+            }
+
+        VarInt val = to<VarInt>();
+        if (val.sign)
+        // radix
+        // +/-, -, or unsigned
+        // fill character
+
+        StringBuffer buf = new StringBuffer()
+        }

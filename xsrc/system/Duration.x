@@ -1,74 +1,477 @@
 /**
- * TODO
+ * A Duration represents a magnitude of time, with picosecond resolution.
  */
-const Duration
+const Duration(UInt128 picosecondsTotal)
     {
+    static IntLiteral PICOS_PER_NANO   = 1000;
+    static IntLiteral PICOS_PER_MICRO  = 1000 * PICOS_PER_NANO;
+    static IntLiteral PICOS_PER_MILLI  = 1000 * PICOS_PER_MICRO;
+    static IntLiteral PICOS_PER_SECOND = 1000 * PICOS_PER_MILLI;
+    static IntLiteral PICOS_PER_MINUTE = 60   * PICOS_PER_SECOND;
+    static IntLiteral PICOS_PER_HOUR   = 60   * PICOS_PER_MINUTE;
+    static IntLiteral PICOS_PER_DAY    = 24   * PICOS_PER_HOUR;
+
+    static Duration NONE     = new Duration(0);
+    static Duration PICOSEC  = new Duration(1);
+    static Duration NANOSEC  = new Duration(PICOS_PER_NANO);
+    static Duration MICROSEC = new Duration(PICOS_PER_MICRO);
+    static Duration MILLISEC = new Duration(PICOS_PER_MILLI);
+    static Duration SECOND   = new Duration(PICOS_PER_SECOND);
+    static Duration MINUTE   = new Duration(PICOS_PER_MINUTE);
+    static Duration HOUR     = new Duration(PICOS_PER_HOUR);
+    static Duration DAY      = new Duration(PICOS_PER_DAY);
+
     /**
-     * The total number of hours, rounded down. This is the same as
-     * #minutesTotal / 60.
+     * Create a Duration of a certain number of days.
+     *
+     * @param the number of days in the requested Duration
      */
-    Int hoursTotal;
+    static Duration ofDays(Int days)
+        {
+        return new Duration(days.to<UInt128>() * PICOS_PER_DAY);
+        }
+        
     /**
-     * The total number of minutes, rounded down. This is the same as
-     * #secondsTotal / 60.
+     * Create a Duration of a certain number of hours.
+     *
+     * @param the number of hours in the requested Duration
      */
-    Int minutesTotal;
+    static Duration ofHours(Int hours)
+        {
+        return new Duration(hours.to<UInt128>() * PICOS_PER_HOUR);
+        }
+        
     /**
-     * The total number of seconds, rounded down. This is the same as
-     * #nanosecondsTotal / 1000000000.
+     * Create a Duration of a certain number of minutes.
+     *
+     * @param the number of minutes in the requested Duration
      */
-    Int secondsTotal;
+    static Duration ofMinutes(Int minutes)
+        {
+        return new Duration(minutes.to<UInt128>() * PICOS_PER_MINUTE);
+        }
+        
     /**
-     * The total number of nanoseconds, rounded down.
+     * Create a Duration of a certain number of seconds.
+     *
+     * @param the number of seconds in the requested Duration
      */
-    Int nanosecondsTotal;
+    static Duration ofSeconds(Int seconds)
+        {
+        return new Duration(seconds.to<UInt128>() * PICOS_PER_SECOND);
+        }
+        
     /**
-     * Exclusive of the time represented by #hoursTotal, the number of minutes,
-     * rounded down. This is the same as #minutesTotal - (#hoursTotal * 60).
+     * Create a Duration of a certain number of milliseconds.
+     *
+     * @param the number of milliseconds in the requested Duration
      */
-    Int minutesPart;
+    static Duration ofMillis(Int millis)
+        {
+        return new Duration(millis.to<UInt128>() * PICOS_PER_MILLI);
+        }
+
     /**
-     * Exclusive of the time represented by #minutesTotal, the number of seconds,
-     * rounded down. This is the same as #secondsTotal - (#minutesTotal * 60).
+     * Create a Duration of a certain number of microseconds.
+     *
+     * @param the number of microseconds in the requested Duration
      */
-    Int secondsPart;
+    static Duration ofMicros(Int micros)
+        {
+        return new Duration(micros.to<UInt128>() * PICOS_PER_MICRO);
+        }
+
     /**
-     * Exclusive of the time represented by #secondsTotal, the number of nanoseconds,
-     * rounded down. This is the same as #nanosecondsTotal - (#secondsTotal * 1000000000).
+     * Create a Duration of a certain number of nanoseconds.
+     *
+     * @param the number of nanoseconds in the requested Duration
      */
-    Int nanosecondsPart;
+    static Duration ofNanos(Int nanos)
+        {
+        return new Duration(nanos.to<UInt128>() * PICOS_PER_NANO);
+        }
+
+    /**
+     * Create a Duration of a certain number of picoseconds.
+     *
+     * @param the number of picoseconds in the requested Duration
+     */
+    static Duration ofPicos(Int picos)
+        {
+        return new Duration(picos.to<UInt128>());
+        }
+
+    /**
+     * Construct a Duration based on a total number of picoseconds.
+     *
+     * @param picosecondsTotal  the total number of picoseconds in the Duration
+     */
+    construct(UInt128 picosecondsTotal)
+        {
+        assert picosecondsTotal >= 0;
+        this.picosecondsTotal = picosecondsTotal;
+        }
+
+    /**
+     * Construct a Duration based on a total number of picoseconds.
+     *
+     * @param days     a number of days to add to the duration
+     * @param hours    a number of hours to add to the duration
+     * @param minutes  a number of minutes to add to the duration
+     * @param seconds  (optional) a number of seconds to add to the duration
+     * @param millis   (optional) a number of milliseconds to add to the duration
+     * @param picos    (optional) a number of picoseconds to add to the duration
+     */
+    construct(Int days, Int hours, Int minutes, Int seconds=0, Int millis=0, Int picos=0)
+        {
+        assert days    >= 0;
+        assert hours   >= 0;
+        assert minutes >= 0;
+        assert seconds >= 0;
+        assert millis  >= 0;
+        construct Duration((((days     * 24
+                            + hours  ) * 60
+                            + minutes) * 60
+                            + seconds) * 1000
+                            + millis ).to<UInt128>() * PICOS_PER_MILLI + picos.to<UInt128>();
+        }
+
+    /**
+     * The number of days, rounded down. This is the same as daysTotal.
+     */
+    Int days.get()
+        {
+        return daysTotal;
+        }
+
+    /**
+     * Exclusive of the time represented by daysTotal, the number of hours, rounded down. This is
+     * the same as:
+     *
+     *   hoursTotal - (daysTotal * 24)
+     */
+    Int hours.get()
+        {
+        return hoursTotal % 24;
+        }
+
+    /**
+     * Exclusive of the time represented by hoursTotal, the number of minutes, rounded down. This is
+     * the same as:
+     *
+     *   minutesTotal - (hoursTotal * 60)
+     */
+    Int minutes.get()
+        {
+        return minutesTotal % 60;
+        }
+
+    /**
+     * Exclusive of the time represented by minutesTotal, the number of seconds, rounded down. This
+     * is the same as:
+     *
+     *   secondsTotal - (minutesTotal * 60)
+     */
+    Int seconds.get()
+        {
+        return secondsTotal % 60;
+        }
+
+    /**
+     * Exclusive of the time represented by secondsTotal, the number of milliseconds, rounded down.
+     * This is the same as:
+     *
+     *   microseconds / 1000
+     *
+     * This property represents the fractional portion of a second, with a significant portion of
+     * the Duration's precision thrown away. As such, it can be useful for rending human-readable
+     * information when higher precision is not required.
+     */
+    Int milliseconds.get()
+        {
+        return picoseconds / PICOS_PER_MILLI;
+        }
+
+    /**
+     * Exclusive of the time represented by secondsTotal, the number of microseconds, rounded down.
+     * This is the same as:
+     *
+     *   nanoseconds / 1000
+     *
+     * This property represents the fractional portion of a second, with a significant portion of
+     * the Duration's precision thrown away. As such, it can be useful for rending human-readable
+     * information when higher precision is not required.
+     */
+    Int microseconds.get()
+        {
+        return picoseconds / PICOS_PER_MICRO;
+        }
+
+    /**
+     * Exclusive of the time represented by secondsTotal, the number of nanoseconds, rounded down.
+     * This is the same as:
+     *
+     *   picoseconds / 1000
+     *
+     * This property represents the fractional portion of a second, with a significant portion of
+     * the Duration's precision thrown away. As such, it can be useful for rending human-readable
+     * information when higher precision is not required.
+     */
+    Int nanoseconds.get()
+        {
+        return picoseconds / PICOS_PER_NANO;
+        }
+
+    /**
+     * Exclusive of the time represented by secondsTotal, the number of picoseconds, rounded down.
+     * This is the same as:
+     *
+     *   picosecondsTotal - (secondsTotal * 1000000000000)
+     */
+    Int picoseconds.get()
+        {
+        return (picosecondsTotal % PICOS_PER_SECOND).to<Int>();
+        }
+
+    /**
+     * The total number of days, rounded down. This is the same as:
+     *
+     *   hoursTotal / 24.
+     */
+    Int daysTotal.get()
+        {
+        return (picosecondsTotal / PICOS_PER_DAY).to<Int>();
+        }
+
+    /**
+     * The total number of hours, rounded down. This is the same as:
+     *
+     *   minutesTotal / 60.
+     */
+    Int hoursTotal.get()
+        {
+        return (picosecondsTotal / PICOS_PER_HOUR).to<Int>();
+        }
+
+    /**
+     * The total number of minutes, rounded down. This is the same as:
+     *
+     *   secondsTotal / 60
+     */
+    Int minutesTotal.get()
+        {
+        return (picosecondsTotal / PICOS_PER_MINUTE).to<Int>();
+        }
+
+    /**
+     * The total number of seconds, rounded down. This is the same as:
+     *
+     *   millisecondsTotal / 1000
+     *
+     * Or:
+     *
+     *   picosecondsTotal / 1000000000000
+     */
+    Int secondsTotal.get()
+        {
+        return (picosecondsTotal / PICOS_PER_SECOND).to<Int>();
+        }
+
+    /**
+     * The total number of milliseconds, rounded down. This is the same as:
+     *
+     *   microsecondsTotal / 1000
+     */
+    Int millisecondsTotal.get()
+        {
+        return (picosecondsTotal / PICOS_PER_MILLI).to<Int>();
+        }
+
+    /**
+     * The total number of microseconds, rounded down. This is the same as:
+     *
+     *   nanosecondsTotal / 1000
+     */
+    Int microsecondsTotal.get()
+        {
+        return (picosecondsTotal / PICOS_PER_MICRO).to<Int>();
+        }
+
+    /**
+     * The total number of nanoseconds, rounded down. This is the same as:
+     *
+     *   picosecondsTotal / 1000
+     */
+    Int nanosecondsTotal.get()
+        {
+        return (picosecondsTotal / PICOS_PER_NANO).to<Int>();
+        }
+
+    /**
+     * The total number of picoseconds.
+     */
+    UInt128 picosecondsTotal;
 
     /**
      * Addition: return a sum of durations.
      */
-    @Op Duration add(Duration duration)
+    @Op("+") Duration add(Duration duration)
         {
-        TODO
+        return new Duration(this.picosecondsTotal + duration.picosecondsTotal);
         }
 
     /**
      * Subtraction: return a difference of durations.
      */
-    @Op Duration sub(Duration duration)
+    @Op("-") Duration sub(Duration duration)
         {
-        TODO
+        return new Duration(this.picosecondsTotal - duration.picosecondsTotal);
         }
 
     /**
      * Multiplication: return a multiple of this duration.
      */
-    @Op Duration mul(Number factor)
+    @Op("*") Duration mul(Int factor)
         {
-        TODO
+        return new Duration(this.picosecondsTotal * factor.to<UInt128>());
+        }
+
+    /**
+     * Multiplication: return a multiple of this duration.
+     */
+    @Op("*") Duration mul(Decimal factor)
+        {
+        return (this.picosecondsTotal.to<VarDec>() * factor.to<VarDec>()).to<UInt128>();
         }
 
     /**
      * Division: return a fraction of this duration.
      */
-    @Op Duration div(Number divisor)
+    @Op("/") Duration div(Int divisor)
         {
-        TODO
+        return new Duration(this.picosecondsTotal / divisor.to<UInt128>());
         }
 
-    static Duration INSTANT = new Duration();
+    @Override
+    Int estimateStringLength()
+        {
+        // format: ...###:00:00.###...
+        // format:        ##:00.###...
+        // format:           ##.###...
+        Int length = switch()
+            {
+            case picosecondsTotal >= PICOS_PER_HOUR  : hoursTotal  .estimateStringLength() + 6;
+            case picosecondsTotal >= PICOS_PER_MINUTE: minutesTotal.estimateStringLength() + 3;
+            default                                  : secondsTotal.estimateStringLength();
+            }
+
+        return length + picosFractionalLength(picoseconds);
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        Boolean zerofill = false;
+
+        if (picosecondsTotal >= PICOS_PER_HOUR)
+            {
+            hoursTotal.appendTo(appender);
+            appender.add(':');
+            zerofill = true;
+            }
+
+        if (picosecondsTotal >= PICOS_PER_MINUTE)
+            {
+            Int part = minutes;
+            if (part < 10 && zerofill)
+                {
+                appender.add('0');
+                }
+            else
+                {
+                zerofill = true;
+                }
+            part.appendTo(appender);
+            appender.add(':');
+            }
+
+        Int part = seconds;
+        if (part < 10 && zerofill)
+            {
+            appender.add('0');
+            }
+        part.appendTo(appender);
+
+        Int picos = picoseconds;
+        if (picos > 0)
+            {
+            appender.add('.');
+            picosFractional(picos).appendTo(appender);
+            }
+        }
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Calculate the String length of an optional picosecond fraction of a second.
+     */
+    static Int picosFractionalLength(Int picos)
+        {
+        if (picos == 0)
+            {
+            return 0;
+            }
+
+        // add a decimal point and the picoseconds, but drop any trailing zeros
+        Int length = 13;
+        if (picos % 100_000_000 == 0)
+            {
+            picos  /= 100_000_000;
+            length -= 8;
+            }
+        if (picos % 10_000 == 0)
+            {
+            picos  /= 10_000;
+            length -= 4;
+            }
+        if (picos % 100 == 0)
+            {
+            picos  /= 100;
+            length -= 2;
+            }
+        if (picos % 10 == 0)
+            {
+            picos  /= 10;
+            length -= 1;
+            }
+        return length;
+        }
+
+    /**
+     * Calculate an Int value to use as the number to follow a decimal point to represent a
+     * picosecond fraction of a second.
+     */
+    static Int picosFractional(Int picos)
+        {
+        assert picos > 0;
+
+        // drop any trailing zeros
+        if (picos % 100_000_000 == 0)
+            {
+            picos /= 100_000_000;
+            }
+        if (picos % 10_000 == 0)
+            {
+            picos /= 10_000;
+            }
+        if (picos % 100 == 0)
+            {
+            picos /= 100;
+            }
+        if (picos % 10 == 0)
+            {
+            picos /= 10;
+            }
+        return picos;
+        }
     }

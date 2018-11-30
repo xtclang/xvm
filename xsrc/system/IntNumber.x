@@ -10,42 +10,42 @@ interface IntNumber
     /**
      * Bitwise AND.
      */
-    @Op IntNumber and(IntNumber that);
+    @Op("&") IntNumber and(IntNumber that);
 
     /**
      * Bitwise OR.
      */
-    @Op IntNumber or(IntNumber that);
+    @Op("|") IntNumber or(IntNumber that);
 
     /**
      * Bitwise XOR.
      */
-    @Op IntNumber xor(IntNumber that);
+    @Op("^") IntNumber xor(IntNumber that);
 
     /**
      * Bitwise NOT.
      */
-    @Op IntNumber not();
+    @Op("~") IntNumber not();
 
     /**
      * Shift bits left. This is both a logical left shift and arithmetic left shift, for
      * both signed and unsigned integer values.
      */
-    @Op IntNumber shiftLeft(Int count);
+    @Op("<<") IntNumber shiftLeft(Int count);
 
     /**
      * Shift bits right. For signed integer values, this is an arithmetic right shift. For
      * unsigned integer values, this is both a logical right shift and arithmetic right
      * shift.
      */
-    @Op IntNumber shiftRight(Int count);
+    @Op(">>") IntNumber shiftRight(Int count);
 
     /**
      * "Unsigned" shift bits right. For signed integer values, this is an logical right
      * shift. For unsigned integer values, this is both a logical right shift and arithmetic
      * right shift.
      */
-    @Op IntNumber shiftAllRight(Int count);
+    @Op(">>>") IntNumber shiftAllRight(Int count);
 
     /**
      * Rotate bits left.
@@ -89,7 +89,7 @@ interface IntNumber
     @RO Int trailingZeroCount;
 
     /**
-     * Determine the number of bits that are set (non-zero) in the integer.
+     * The number of bits that are set (non-zero) in the integer.
      */
     @RO Int bitCount;
 
@@ -131,6 +131,14 @@ interface IntNumber
      */
     @Override
     Boolean[] to<Boolean[]>();
+
+
+    // ----- formatting ----------------------------------------------------------------------------
+
+    /**
+     * The number of digits necessary to represent the magnitude of this integer value.
+     */
+    @RO Int digitCount;
 
 
     // ----- helpers -------------------------------------------------------------------------------

@@ -25,10 +25,16 @@ interface Number
     @RO Int byteLength.get()
         {
         // make sure the bit length is at least 8, and also a power-of-two
-        assert:always bitLength == (bitLength & ~0x7).leftmostBit;
+        assert bitLength == (bitLength & ~0x7).leftmostBit;
 
         return bitLength / 8;
         }
+
+    /**
+     * True if the numeric type is signed (has the potential to hold positive or negative values);
+     * false if unsigned (representing only a magnitude).
+     */
+    @RO Boolean signed;
 
     /**
      * The Sign of the number.
@@ -97,8 +103,17 @@ interface Number
             }
 
         Number n = -this;
-        assert:always n.sign != Negative;
+        assert n.sign != Negative;
         return n;
+        }
+
+    /**
+     * The magnitude of this number (its distance from zero), which may use a different Number type
+     * if the magnitude cannot be represented by the type of this value.
+     */
+    @RO Number! magnitude.get()
+        {
+        return abs();
         }
 
     /**

@@ -170,6 +170,88 @@ const String
         }
 
     /**
+     * Format this String into a left-justified String of the specified length, with the remainder
+     * of the new String filled with the specified character. If the specified length is shorter
+     * than the size of this String, then the result will be a truncated copy of this String,
+     * containing only the first _length_ characters of this String.
+     *
+     * @param length  the size of the resulting String
+     * @param fill    an optional fill character to use
+     *
+     * @return this String formatted into a left-justified String filled with the specified
+     *         character
+     */
+    String! leftJustify(Int length, Char fill = ' ')
+        {
+        switch (length.sign)
+            {
+            case Negative:
+                assert;
+
+            case Zero:
+                return "";
+
+            case Positive:
+                Int append = length - size;
+                switch (append.sign)
+                    {
+                    case Negative:
+                        return this[0..length];
+
+                    case Zero:
+                        return this;
+
+                    case Positive:
+                        return new StringBuffer(length)
+                            .add(this)
+                            .add(fill * append)
+                            .to<String>();
+                    }
+            }
+        }
+
+    /**
+     * Format this String into a right-justified String of the specified length, with the remainder
+     * of the new String filled with the specified character. If the specified length is shorter
+     * than the size of this String, then the result will be a truncated copy of this String,
+     * containing only the last _length_ characters of this String.
+     *
+     * @param length  the size of the resulting String
+     * @param fill    an optional fill character to use
+     *
+     * @return this String formatted into a left-justified String filled with the specified
+     *         character
+     */
+    String! rightJustify(Int length, Char fill = ' ')
+        {
+        switch (length.sign)
+            {
+            case Negative:
+                assert;
+
+            case Zero:
+                return "";
+
+            case Positive:
+                Int append = length - size;
+                switch (append.sign)
+                    {
+                    case Negative:
+                        return this.substring(-append);
+
+                    case Zero:
+                        return this;
+
+                    case Positive:
+                        return new StringBuffer(length)
+                            .add(fill * append)
+                            .add(this)
+                            .to<String>();
+                    }
+            }
+        }
+
+    /**
      * Duplicate this String the specified number of times.
      *
      * @param n  the number of times to duplicate this String
