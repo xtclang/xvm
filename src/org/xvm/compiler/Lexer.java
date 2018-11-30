@@ -2098,17 +2098,17 @@ public class Lexer
      */
     public static final String CHAR_NO_CHAR         = "LEXER-07";
     /**
-     * An illegal character string literal.
+     * An illegally terminated string literal.
      */
     public static final String STRING_NO_TERM       = "LEXER-08";
     /**
-     * An illegal character string literal.
+     * An illegally escaped string literal.
      */
-    public static final String STRING_BAD_ESC       = "LEXER-08";
+    public static final String STRING_BAD_ESC       = "LEXER-09";
     /**
      * An illegal freeform literal.
      */
-    public static final String FREEFORM_BAD         = "LEXER-09";
+    public static final String FREEFORM_BAD         = "LEXER-10";
 
 
     // ----- data members ------------------------------------------------------
