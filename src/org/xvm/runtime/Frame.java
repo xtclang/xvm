@@ -1380,14 +1380,14 @@ public class Frame
      *
      * Note: this method increments the "nextVar" index.
      *
+     * @param nVar       the variable to introduce
      * @param nTargetId  if positive, the register number holding a target (handle);
      *                     otherwise a constant id pointing to local property holding the target
      * @param constProp  the property constant whose type needs to be resolved in the context
-     *                     of the target class
      */
-    public void introducePropertyVar(int nTargetId, PropertyConstant constProp)
+    public void introducePropertyVar(int nVar, int nTargetId, PropertyConstant constProp)
         {
-        int nVar = f_anNextVar[m_iScope]++;
+        f_anNextVar[m_iScope] = Math.max(f_anNextVar[m_iScope], nVar + 1);
 
         f_aInfo[nVar] = new VarInfo(nTargetId, constProp.getPosition(), PROPERTY_RESOLVER);
         }

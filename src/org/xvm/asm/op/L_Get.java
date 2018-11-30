@@ -97,7 +97,7 @@ public class L_Get
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introducePropertyVar(A_THIS, constProperty);
+            frame.introducePropertyVar(m_nRetValue, A_THIS, constProperty);
             }
 
         return hTarget.getTemplate().getPropertyValue(

@@ -112,7 +112,7 @@ public class P_Get
 
             if (frame.isNextRegister(m_nRetValue))
                 {
-                frame.introducePropertyVar(m_nTarget, constProperty);
+                frame.introducePropertyVar(m_nRetValue, m_nTarget, constProperty);
                 }
 
             if (isDeferred(hTarget))

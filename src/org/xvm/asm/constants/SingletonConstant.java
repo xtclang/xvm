@@ -107,7 +107,8 @@ public class SingletonConstant
      */
     public void setHandle(ObjectHandle handle)
         {
-        assert m_handle == null && handle != null; // not re-settable
+        // not re-settable
+        assert handle != null && (m_handle == null || m_handle == handle);
 
         m_handle        = handle;
         m_fInitializing = false;

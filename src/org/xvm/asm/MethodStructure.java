@@ -1111,7 +1111,21 @@ public class MethodStructure
                             template.f_struct.getFormat() == Format.ENUM)
                             {
                             // TODO: rework this when enum values constructors are generated
-                            assert constSingleton.getHandle() != null;
+                            if (constSingleton.getHandle() == null)
+                                {
+                                // this can happen if the constant's handle was assigned on
+                                // a different constant pool
+                                switch (template.createConstHandle(frame, constSingleton))
+                                    {
+                                    case Op.R_NEXT:
+                                        constSingleton.setHandle(frame.popStack());
+                                        break;
+                                    case Op.R_EXCEPTION:
+                                        return OpGeneral.R_EXCEPTION;
+                                    default:
+                                        throw new IllegalStateException();
+                                    }
+                                }
                             continue;
                             }
 
