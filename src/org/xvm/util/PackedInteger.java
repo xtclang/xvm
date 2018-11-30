@@ -119,13 +119,13 @@ public class PackedInteger
     public int getUnsignedByteSize()
         {
         verifyInitialized();
-        if (m_fBig ? this.compareTo(ZERO) < 0 : m_lValue < 0)
+        if (m_fBig ? m_bigint.signum() < 0 : m_lValue < 0)
             {
             throw new IllegalStateException("value is signed");
             }
 
         int nBytes = m_fBig
-                ? calculateSignedByteCount(m_bigint)
+                ? calculateUnsignedByteCount(m_bigint)
                 : Math.max(1, (((64 - Long.numberOfLeadingZeros(m_lValue)) + 7) / 8));
 
         assert nBytes >= 1 && nBytes <= 32;
@@ -695,7 +695,7 @@ public class PackedInteger
      */
     private static int calculateSignedByteCount(BigInteger bigint)
         {
-        return (bigint.bitLength() + 7) / 8;
+        return bigint.bitLength() / 8 + 1;
         }
 
     /**
@@ -708,9 +708,7 @@ public class PackedInteger
      */
     private static int calculateUnsignedByteCount(BigInteger bigint)
         {
-        // TODO this is from the signed version
-        // return (bigint.bitLength() + 7) / 8;
-        throw new UnsupportedOperationException();
+        return (bigint.bitLength() + 7) / 8;
         }
 
 

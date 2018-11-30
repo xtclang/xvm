@@ -36,7 +36,7 @@ public abstract class xConstrainedInteger
         f_fUnsigned = fUnsigned;
 
         f_cAddCheckShift = 64 - cNumBits;
-        f_cMulCheckShift = cNumBits / 2 - 1;
+        f_cMulCheckShift = fUnsigned ? (cNumBits / 2) : (cNumBits / 2 - 1);
         }
 
     @Override
@@ -242,6 +242,10 @@ public abstract class xConstrainedInteger
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
 
+        if (l2 == 0)
+            {
+            return overflow(frame);
+            }
         return frame.assignValue(iReturn, makeJavaLong(l1 / l2));
         }
 
@@ -250,6 +254,11 @@ public abstract class xConstrainedInteger
         {
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
+
+        if (l2 == 0)
+            {
+            return overflow(frame);
+            }
 
         long lMod = l1 % l2;
         if (lMod < 0)

@@ -1,119 +1,141 @@
 package org.xvm.runtime.template;
 
 
-import org.xvm.util.PackedInteger;
-
 import java.math.BigInteger;
 
 
 /**
- * 128 bit long implementation.
+ * 128 bit long implementation used by both Int128 and UInt128.
  */
 public class LongLong
-        implements Comparable<LongLong>
     {
-    public LongLong(long lLowValue, long lHighValue)
+    /**
+     * Construct a LongLong object based on the low and high long values.
+     */
+    public LongLong(long lLow, long lHigh)
         {
-        m_lLowValue = lLowValue;
-        m_lHighValue = lHighValue;
+        m_lLow  = lLow;
+        m_lHigh = lHigh;
         }
 
+    /**
+     * Construct a LongLong object based on the low long value.
+     */
     public LongLong(long lValue)
         {
         this(lValue, lValue >= 0 ? 0 : -1L);
         }
 
-    public LongLong(BigInteger bi)
-        {
-        long lLow = 0;
-        long lHigh = 0;
-
-        byte[] bytes = bi.toByteArray();
-
-        int i;
-
-        for (i = 0; i < Math.min(4, bytes.length); ++i)
-            {
-            lLow |= (long)(bytes[i]) << (8 * i);
-            }
-
-        for (; i < Math.min(8, bytes.length); ++i)
-            {
-            lHigh |= (long)(bytes[i]) << (8 * (i - 4));
-            }
-
-        m_lLowValue = lLow;
-        m_lHighValue = lHigh;
-        }
-
     public LongLong add(LongLong ll)
         {
-        long lResultLow = m_lLowValue + ll.m_lLowValue;
-        long lResultHigh = m_lHighValue + ll.m_lHighValue;
+        long l1L = m_lLow;
+        long l1H = m_lHigh;
+        long l2L = ll.m_lLow;
+        long l2H = ll.m_lHigh;
+        long lrL = l1L + l2L;
+        long lrH = l1H + l2H;
 
-        if (((m_lLowValue ^ ll.m_lLowValue) & (m_lLowValue ^ lResultLow)) < 0)
+        // high overflow check is the same as for signed longs
+        if (((l1H ^ lrH) & (l2H ^ lrH)) < 0)
             {
             return OVERFLOW;
             }
 
-        if (((m_lLowValue & ll.m_lLowValue) | ((m_lLowValue | ll.m_lLowValue) & ~lResultLow)) < 0)
+        // low overflow check is the same as for unsigned longs
+        if (((l1L & l2L) | ((l1L | l2L) & ~lrL)) < 0)
             {
-            if (ll.m_lHighValue < 0)
+            if (lrH == Long.MAX_VALUE)
                 {
-                if (lResultHigh == Long.MIN_VALUE)
-                    {
-                    return OVERFLOW;
-                    }
-
-                --lResultHigh;
+                return OVERFLOW;
                 }
-            else
-                {
-                if (lResultHigh == Long.MAX_VALUE)
-                    {
-                    return OVERFLOW;
-                    }
-
-                ++lResultHigh;
-                }
+            lrH++;
             }
 
-        return new LongLong(lResultLow, lResultHigh);
+        return new LongLong(lrL, lrH);
+        }
+
+    public LongLong addUnsigned(LongLong ll)
+        {
+        long l1L = m_lLow;
+        long l1H = m_lHigh;
+        long l2L = ll.m_lLow;
+        long l2H = ll.m_lHigh;
+        long lrL = l1L + l2L;
+        long lrH = l1H + l2H;
+
+        // both high and low overflow checks are the same as for unsigned longs
+        if (((l1H & l2H) | ((l1H | l2H) & ~lrH)) < 0)
+            {
+            return OVERFLOW;
+            }
+
+        if (((l1L & l2L) | ((l1L | l2L) & ~lrL)) < 0)
+            {
+            if (lrH == -1) // maximum unsigned long
+                {
+                return OVERFLOW;
+                }
+            lrH++;
+            }
+
+        return new LongLong(lrL, lrH);
         }
 
     public LongLong sub(LongLong ll)
         {
-        long lResultLow = m_lLowValue - ll.m_lLowValue;
-        long lResultHigh = m_lHighValue - ll.m_lHighValue;
+        long l1L = m_lLow;
+        long l1H = m_lHigh;
+        long l2L = ll.m_lLow;
+        long l2H = ll.m_lHigh;
+        long lrL = l1L - l2L;
+        long lrH = l1H - l2H;
 
-        if (((m_lLowValue ^ ll.m_lLowValue) & (m_lLowValue ^ lResultLow)) < 0)
+        // high overflow check is the same as for signed longs
+        if (((l1H ^ l2H) & (l1H ^ lrH)) < 0)
             {
             return OVERFLOW;
             }
 
-        if (((~m_lLowValue & ll.m_lLowValue) | ((~m_lLowValue | ll.m_lLowValue) & lResultLow)) < 0)
+        // low overflow check is the same as for unsigned longs
+        if (((~l1L & l2L) | ((~l1L | l2L) & lrL)) < 0)
             {
-            if (ll.m_lHighValue > 0)
+            if (lrH == Long.MIN_VALUE)
                 {
-                if (lResultHigh == Long.MIN_VALUE)
-                    {
-                    return OVERFLOW;
-                    }
-
-                --lResultHigh;
+                return OVERFLOW;
                 }
-            else
-                {
-                if (lResultHigh == Long.MAX_VALUE)
-                    {
-                    return OVERFLOW;
-                    }
 
-                ++lResultHigh;
-                }
+            lrH--;
             }
 
-        return new LongLong(lResultLow, lResultHigh);
+        return new LongLong(lrL, lrH);
+        }
+
+    public LongLong subUnassigned(LongLong ll)
+        {
+        long l1L = m_lLow;
+        long l1H = m_lHigh;
+        long l2L = ll.m_lLow;
+        long l2H = ll.m_lHigh;
+        long lrL = l1L - l2L;
+        long lrH = l1H - l2H;
+
+        // both high and low overflow checks are the same as for unsigned longs
+        if (((~l1H & l2H) | ((~l1H | l2H) & lrH)) < 0)
+            {
+            return OVERFLOW;
+            }
+
+        if (((~l1L & l2L) | ((~l1L | l2L) & lrL)) < 0)
+            {
+            if (lrH == 0)
+                {
+                return OVERFLOW;
+                }
+
+            lrH--;
+            }
+
+        return new LongLong(lrL, lrH);
         }
 
     public LongLong mul(LongLong ll)
@@ -123,13 +145,13 @@ public class LongLong
         int cShift = 0;
         boolean fNeg = false;
 
-        if (m_lHighValue < 0)
+        if (m_lHigh < 0)
             {
             lhs = lhs.negate();
             fNeg = true;
             }
 
-        if (ll.m_lHighValue < 0)
+        if (ll.m_lHigh < 0)
             {
             ll = ll.negate();
             fNeg = !fNeg;
@@ -137,7 +159,7 @@ public class LongLong
 
         while (!ll.equals(LongLong.ZERO))
             {
-            if ((ll.m_lLowValue & 1) != 0)
+            if ((ll.m_lLow & 1) != 0)
                 {
                 llResult = llResult.add(lhs.shl(cShift));
 
@@ -154,9 +176,20 @@ public class LongLong
         return fNeg ? llResult.negate() : llResult;
         }
 
+    public LongLong mulUnsigned(LongLong ll)
+        {
+        BigInteger bi1 = toUnsignedBigInteger();
+        BigInteger bi2 = ll.toUnsignedBigInteger();
+        BigInteger bir = bi1.multiply(bi2);
+
+        return bir.bitLength() <= 64
+            ? fromUnsignedBigInteger(bir)
+            : OVERFLOW;
+        }
+
     public LongLong div(LongLong ll)
         {
-        if (m_lLowValue == 0 && m_lHighValue == 0)
+        if (m_lLow == 0 && m_lHigh == 0)
             {
             return LongLong.ZERO; // div by 0 error not required since it's handled by numeric classes
             }
@@ -164,13 +197,13 @@ public class LongLong
         boolean fNeg = false;
         LongLong llNumerator = this;
 
-        if (llNumerator.compareTo(LongLong.ZERO) < 0)
+        if (llNumerator.signum() < 0)
             {
             llNumerator = llNumerator.negate();
             fNeg = true;
             }
 
-        if (ll.compareTo(LongLong.ZERO) < 0)
+        if (ll.signum() < 0)
             {
             fNeg = !fNeg;
             ll = ll.negate();
@@ -184,7 +217,7 @@ public class LongLong
             llRemainder = llRemainder.shl(1);
             llRemainder = llRemainder.or((llNumerator.and(LongLong.ONE.shl(i))).ushr(i));
 
-            if (llRemainder.compareTo(ll) >= 0)
+            if (llRemainder.compare(ll) >= 0)
                 {
                 llRemainder = llRemainder.sub(ll);
                 llQuotient = llQuotient.or(LongLong.ONE.shl(i));
@@ -194,9 +227,18 @@ public class LongLong
         return fNeg ? llQuotient.negate() : llQuotient;
         }
 
+    public LongLong divUnsigned(LongLong ll)
+        {
+        BigInteger bi1 = toUnsignedBigInteger();
+        BigInteger bi2 = ll.toUnsignedBigInteger();
+        BigInteger bir = bi1.divide(bi2);
+
+        return fromUnsignedBigInteger(bir);
+        }
+
     public LongLong mod(LongLong ll)
         {
-        if (m_lLowValue == 0 && m_lHighValue == 0)
+        if (m_lLow == 0 && m_lHigh == 0)
             {
             return LongLong.ZERO; // div by 0 error not required since it's handled by numeric classes
             }
@@ -204,13 +246,13 @@ public class LongLong
         boolean fNeg = false;
         LongLong llNumerator = this;
 
-        if (llNumerator.compareTo(LongLong.ZERO) < 0)
+        if (llNumerator.signum() < 0)
             {
             llNumerator = llNumerator.negate();
             fNeg = true;
             }
 
-        if (ll.compareTo(LongLong.ZERO) < 0)
+        if (ll.signum() < 0)
             {
             fNeg = !fNeg;
             ll = ll.negate();
@@ -223,7 +265,7 @@ public class LongLong
             llRemainder = llRemainder.shl(1);
             llRemainder = llRemainder.or((llNumerator.and(LongLong.ONE.shl(i))).ushr(i));
 
-            if (llRemainder.compareTo(ll) >= 0)
+            if (llRemainder.compare(ll) >= 0)
                 {
                 llRemainder = llRemainder.sub(ll);
                 }
@@ -232,64 +274,73 @@ public class LongLong
         return fNeg ? ll.sub(llRemainder) : llRemainder;
         }
 
-    public LongLong next()
+    public LongLong modUnsigned(LongLong ll)
         {
-        if (m_lLowValue == -1)
-            {
-            if (m_lHighValue == Long.MAX_VALUE)
-                {
-                return OVERFLOW;
-                }
+        BigInteger bi1 = toUnsignedBigInteger();
+        BigInteger bi2 = ll.toUnsignedBigInteger();
+        BigInteger bir = bi1.mod(bi2);
 
-            return new LongLong(0L, m_lHighValue + 1);
-            }
-
-        return new LongLong(m_lLowValue + 1, m_lHighValue);
+        return fromUnsignedBigInteger(bir);
         }
 
-    public LongLong prev()
+    public LongLong next(boolean fSigned)
         {
-        if (m_lLowValue == 0)
+        if (m_lLow == -1)
             {
-            if (m_lHighValue == Long.MIN_VALUE)
+            if (m_lHigh == (fSigned ? Long.MAX_VALUE : -1))
                 {
                 return OVERFLOW;
                 }
 
-            return new LongLong(-1L, m_lHighValue - 1);
+            return new LongLong(0L, m_lHigh + 1);
             }
 
-        return new LongLong(m_lLowValue - 1, m_lHighValue);
+        return new LongLong(m_lLow + 1, m_lHigh);
+        }
+
+    public LongLong prev(boolean fSigned)
+        {
+        if (m_lLow == 0)
+            {
+            if (m_lHigh == (fSigned ? Long.MIN_VALUE : 0))
+                {
+                return OVERFLOW;
+                }
+
+            return new LongLong(-1L, m_lHigh - 1);
+            }
+
+        return new LongLong(m_lLow - 1, m_lHigh);
         }
 
     public LongLong negate()
         {
-        if (m_lHighValue == Long.MIN_VALUE && m_lLowValue == 0)
+        if (m_lHigh == Long.MIN_VALUE && m_lLow == 0)
             {
             return OVERFLOW;
             }
 
-        return complement().next();
+        return complement().next(true);
         }
 
     public LongLong and(LongLong ll)
         {
-        return new LongLong(m_lLowValue & ll.m_lLowValue, m_lHighValue & ll.m_lHighValue);
+        return new LongLong(m_lLow & ll.m_lLow, m_lHigh & ll.m_lHigh);
         }
 
     public LongLong or(LongLong ll)
         {
-        return new LongLong(m_lLowValue | ll.m_lLowValue, m_lHighValue | ll.m_lHighValue);
+        return new LongLong(m_lLow | ll.m_lLow, m_lHigh | ll.m_lHigh);
         }
 
     public LongLong xor(LongLong ll)
         {
-        return new LongLong(m_lLowValue ^ ll.m_lLowValue, m_lHighValue ^ ll.m_lHighValue);
+        return new LongLong(m_lLow ^ ll.m_lLow, m_lHigh ^ ll.m_lHigh);
         }
 
     public LongLong complement()
         {
-        return new LongLong(~m_lLowValue, ~m_lHighValue);
+        return new LongLong(~m_lLow, ~m_lHigh);
         }
 
     public LongLong shl(int n)
@@ -297,12 +348,12 @@ public class LongLong
         if (n <= 64)
             {
             final long nComp = 64 - n;
-            final long bitDifference = ((-1 >>> nComp) << nComp) & m_lLowValue;
+            final long bitDifference = ((-1 >>> nComp) << nComp) & m_lLow;
 
-            return new LongLong(m_lLowValue << n, (m_lHighValue << n) | (bitDifference >> nComp));
+            return new LongLong(m_lLow << n, (m_lHigh << n) | (bitDifference >> nComp));
             }
 
-        return new LongLong(0, m_lLowValue << (n - 64));
+        return new LongLong(0, m_lLow << (n - 64));
         }
 
     public LongLong shr(int n)
@@ -310,12 +361,12 @@ public class LongLong
         if (n <= 64)
             {
             final long nComp = 64 - n;
-            final long bitDifference = (Long.MAX_VALUE >>> nComp) & m_lHighValue;
+            final long bitDifference = (Long.MAX_VALUE >>> nComp) & m_lHigh;
 
-            return new LongLong((m_lLowValue >>> n) | (bitDifference << nComp), m_lHighValue >> n);
+            return new LongLong((m_lLow >>> n) | (bitDifference << nComp), m_lHigh >> n);
             }
 
-        return new LongLong((m_lHighValue >>> (n - 64)) & Long.MAX_VALUE, m_lHighValue < 0 ? Long.MIN_VALUE : 0);
+        return new LongLong((m_lHigh >>> (n - 64)) & Long.MAX_VALUE, m_lHigh < 0 ? Long.MIN_VALUE : 0);
         }
 
     public LongLong ushr(int n)
@@ -323,48 +374,53 @@ public class LongLong
         if (n <= 64)
             {
             final long nComp = 64 - n;
-            final long bitDifference = (-1 >>> nComp) & m_lHighValue;
+            final long bitDifference = (-1 >>> nComp) & m_lHigh;
 
-            return new LongLong((m_lLowValue >>> n) | (bitDifference << nComp), m_lHighValue >>> n);
+            return new LongLong((m_lLow >>> n) | (bitDifference << nComp), m_lHigh >>> n);
             }
 
-        return new LongLong(m_lHighValue >>> (n - 64), 0);
+        return new LongLong(m_lHigh >>> (n - 64), 0);
         }
 
     public LongLong shl(LongLong n)
         {
-        if (n.m_lHighValue != 0 || n.m_lLowValue > 127 || n.m_lLowValue < 0)
+        if (n.m_lHigh != 0 || n.m_lLow > 127 || n.m_lLow < 0)
             {
             return LongLong.ZERO;
             }
 
-        return shl((int)n.m_lLowValue);
+        return shl((int) n.m_lLow);
         }
 
     public LongLong shr(LongLong n)
         {
-        if (n.m_lHighValue != 0 || n.m_lLowValue > 127 || n.m_lLowValue < 0)
+        if (n.m_lHigh != 0 || n.m_lLow > 127 || n.m_lLow < 0)
             {
             return LongLong.ZERO;
             }
 
-        return shr((int)n.m_lLowValue);
+        return shr((int) n.m_lLow);
         }
 
     public LongLong ushr(LongLong n)
         {
-        if (n.m_lHighValue != 0 || n.m_lLowValue > 127 || n.m_lLowValue < 0)
+        if (n.m_lHigh != 0 || n.m_lLow > 127 || n.m_lLow < 0)
             {
             return LongLong.ZERO;
             }
 
-        return ushr((int)n.m_lLowValue);
+        return ushr((int) n.m_lLow);
+        }
+
+    public int signum()
+        {
+        return Long.signum(m_lHigh);
         }
 
     @Override
     public int hashCode()
         {
-        return Long.hashCode(m_lLowValue) ^ Long.hashCode(m_lHighValue);
+        return Long.hashCode(m_lLow) ^ Long.hashCode(m_lHigh);
         }
 
     @Override
@@ -376,39 +432,79 @@ public class LongLong
             }
 
         LongLong ll = (LongLong)obj;
-        return m_lLowValue == ll.m_lLowValue && m_lHighValue == ll.m_lHighValue;
+        return m_lLow == ll.m_lLow && m_lHigh == ll.m_lHigh;
         }
 
-    @Override
-    public int compareTo(LongLong ll)
+    public int compare(LongLong ll)
         {
-        if (m_lHighValue != ll.m_lHighValue)
+        long lThisHigh = m_lHigh;
+        long lThatHigh = ll.m_lHigh;
+        if (lThisHigh != lThatHigh)
             {
-            return m_lHighValue > ll.m_lHighValue ? 1 : -1;
+            return Long.compare(lThisHigh, lThatHigh);
             }
 
-        return xUnsignedConstrainedInt.unsignedCompare(m_lLowValue, m_lHighValue);
+        int nCompare = Long.compareUnsigned(m_lLow, ll.m_lLow);
+        return lThisHigh >= 0 ? nCompare : -nCompare;
+        }
+
+    public int compareUnsigned(LongLong ll)
+        {
+        long lThisHigh = m_lHigh;
+        long lThatHigh = ll.m_lHigh;
+        if (lThisHigh != lThatHigh)
+            {
+            return Long.compareUnsigned(lThisHigh, lThatHigh);
+            }
+
+        int nCompare = Long.compareUnsigned(m_lLow, ll.m_lLow);
+        return lThisHigh >= 0 ? nCompare : -nCompare;
         }
 
     public long getLowValue()
         {
-        return m_lLowValue;
+        return m_lLow;
         }
 
     public long getHighValue()
         {
-        return m_lHighValue;
+        return m_lHigh;
         }
 
     public BigInteger toBigInteger()
         {
-        return new BigInteger(Long.toString(m_lLowValue)).
-            or(new BigInteger(Long.toString(m_lHighValue)).shiftLeft(64));
+        return toUnsignedBigInteger(m_lLow).
+            or(BigInteger.valueOf(m_lHigh).shiftLeft(64));
         }
 
-    public PackedInteger toPackedInteger()
+    public BigInteger toUnsignedBigInteger()
         {
-        return new PackedInteger(toBigInteger());
+        return toUnsignedBigInteger(m_lLow).
+            or(toUnsignedBigInteger(m_lHigh).shiftLeft(64));
+        }
+
+    public static BigInteger toUnsignedBigInteger(long l)
+        {
+        if (l >= 0L)
+            {
+            return BigInteger.valueOf(l);
+            }
+
+        int nHigh = (int) (l >>> 32);
+        int nLow  = (int) l;
+
+        return (BigInteger.valueOf(Integer.toUnsignedLong(nHigh))).shiftLeft(32).
+            add(BigInteger.valueOf(Integer.toUnsignedLong(nLow)));
+        }
+
+    public static LongLong fromUnsignedBigInteger(BigInteger bi)
+        {
+        assert bi.signum() >= 0;
+        assert bi.bitLength() <= 64;
+
+        BigInteger biLow  = bi.or(BIG_MASK64);
+        BigInteger biHigh = bi.shiftRight(64);
+        return new LongLong(biLow.longValue(), biHigh.longValue());
         }
 
     @Override
@@ -420,11 +516,15 @@ public class LongLong
     public static final LongLong ZERO = new LongLong(0, 0);
     public static final LongLong ONE = new LongLong(1, 0);
     public static final LongLong NEG_ONE = new LongLong(-1, -1);
-
+    public static final LongLong MAX_VALUE = new LongLong(-1, Long.MAX_VALUE);
+    public static final LongLong MIN_VALUE = new LongLong(0, Long.MIN_VALUE);
+    public static final LongLong MAX_VALUE_UNSIGNED = new LongLong(-1, -1);
     public static final LongLong OVERFLOW = new Overflow();
 
-    protected final long m_lLowValue;
-    protected final long m_lHighValue;
+    protected static final BigInteger BIG_MASK64 = new BigInteger("FFFFFFFFFFFFFFFF", 16);
+
+    protected final long m_lLow;
+    protected final long m_lHigh;
 
     private static class Overflow
             extends LongLong

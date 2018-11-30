@@ -13,10 +13,10 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
-public class xInt128
+public class xUInt128
         extends xConst
     {
-    public xInt128(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xUInt128(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
         }
@@ -34,15 +34,12 @@ public class xInt128
         markNativeMethod("to", VOID, new String[]{"UInt8"});
         markNativeMethod("to", VOID, THIS);
 
-        markNativeMethod("abs", VOID, THIS);
-
         // @Op methods
         markNativeMethod("add", THIS, THIS);
         markNativeMethod("sub", THIS, THIS);
         markNativeMethod("mul", THIS, THIS);
         markNativeMethod("div", THIS, THIS);
         markNativeMethod("mod", THIS, THIS);
-        markNativeMethod("neg", VOID, THIS);
         }
 
     @Override
@@ -96,13 +93,6 @@ public class xInt128
         {
         switch (method.getName())
             {
-            case "abs":
-                {
-                LongLong ll = ((LongLongHandle) hTarget).getValue();
-                return frame.assignValue(iReturn, ll.signum() >= 0
-                    ? hTarget : makeLongLong(ll.negate()));
-                }
-
             case "to":
                 {
                 TypeConstant typeRet = method.getReturn(0).getType();
@@ -113,9 +103,6 @@ public class xInt128
                     }
                 break;
                 }
-
-            case "neg":
-                return invokeNeg(frame, hTarget, iReturn);
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -126,7 +113,7 @@ public class xInt128
         {
         LongLong ll1 = ((LongLongHandle) hTarget).getValue();
         LongLong ll2 = ((LongLongHandle) hArg).getValue();
-        LongLong llr = ll1.add(ll2);
+        LongLong llr = ll1.addUnsigned(ll2);
 
         if (llr == LongLong.OVERFLOW)
             {
@@ -141,7 +128,7 @@ public class xInt128
         {
         LongLong ll1 = ((LongLongHandle) hTarget).getValue();
         LongLong ll2 = ((LongLongHandle) hArg).getValue();
-        LongLong llr = ll1.sub(ll2);
+        LongLong llr = ll1.subUnassigned(ll2);
 
         if (llr == LongLong.OVERFLOW)
             {
@@ -156,21 +143,7 @@ public class xInt128
         {
         LongLong ll1 = ((LongLongHandle) hTarget).getValue();
         LongLong ll2 = ((LongLongHandle) hArg).getValue();
-        LongLong llr = ll1.mul(ll2);
-
-        if (llr == LongLong.OVERFLOW)
-            {
-            return overflow(frame);
-            }
-
-        return frame.assignValue(iReturn, makeLongLong(llr));
-        }
-
-    @Override
-    public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        LongLong ll = ((LongLongHandle) hTarget).getValue();
-        LongLong llr = ll.negate();
+        LongLong llr = ll1.mulUnsigned(ll2);
 
         if (llr == LongLong.OVERFLOW)
             {
@@ -184,7 +157,7 @@ public class xInt128
     public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         LongLong ll = ((LongLongHandle) hTarget).getValue();
-        LongLong llr = ll.prev(true);
+        LongLong llr = ll.prev(false);
 
         if (llr == LongLong.OVERFLOW)
             {
@@ -198,7 +171,7 @@ public class xInt128
     public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         LongLong ll = ((LongLongHandle) hTarget).getValue();
-        LongLong llr = ll.next(true);
+        LongLong llr = ll.next(false);
 
         if (llr == LongLong.OVERFLOW)
             {
@@ -214,7 +187,7 @@ public class xInt128
         LongLong ll1 = ((LongLongHandle) hTarget).getValue();
         LongLong ll2 = ((LongLongHandle) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeLongLong(ll1.div(ll2)));
+        return frame.assignValue(iReturn, makeLongLong(ll1.divUnsigned(ll2)));
         }
 
     @Override
@@ -222,12 +195,7 @@ public class xInt128
         {
         LongLong ll1 = ((LongLongHandle) hTarget).getValue();
         LongLong ll2 = ((LongLongHandle) hArg).getValue();
-        LongLong llMod = ll1.mod(ll2);
-
-        if (llMod.signum() < 0)
-            {
-            llMod = llMod.add((ll2.signum() < 0 ? ll2.negate() : ll2));
-            }
+        LongLong llMod = ll1.modUnsigned(ll2);
 
         return frame.assignValue(iReturn, makeLongLong(llMod));
         }
@@ -291,14 +259,9 @@ public class xInt128
         {
         LongLong ll1 = ((LongLongHandle) hTarget).getValue();
         LongLong ll2 = ((LongLongHandle) hArg).getValue();
-        LongLong llMod = ll1.mod(ll2);
+        LongLong llMod = ll1.modUnsigned(ll2);
 
-        if (llMod.signum() < 0)
-            {
-            llMod = llMod.add(ll2.signum() < 0 ? ll2.negate() : ll2);
-            }
-
-        return frame.assignValues(aiReturn, makeLongLong(ll1.div(ll2)), makeLongLong(llMod));
+        return frame.assignValues(aiReturn, makeLongLong(ll1.divUnsigned(ll2)), makeLongLong(llMod));
         }
 
     @Override
@@ -376,40 +339,26 @@ public class xInt128
         {
         LongLong ll = ((LongLongHandle) hTarget).getValue();
 
-        long lHigh = ll.getHighValue();
-        long lLow  = ll.getLowValue();
-
-        if (lHigh > 0 || lHigh < -1 || (lHigh == -1 && lLow >= 0))
+        if (ll.getHighValue() != 0)
             {
             return overflow(frame);
             }
 
-        boolean fNeg = lHigh == -1;
+        long lVal = ll.getLowValue();
 
-        if (template.f_fUnsigned && fNeg)
+        // UInt64 fits always
+        if (!(template instanceof xUInt64) &&
+                (lVal < 0 || lVal > template.f_cMaxValue))
             {
             return overflow(frame);
             }
 
-        if (template instanceof xUInt64)
-            {
-            // UInt64 fits to any lLow content
-            }
-        else
-            {
-            if (lLow < template.f_cMinValue ||
-                lLow > template.f_cMaxValue)
-                {
-                return overflow(frame);
-                }
-            }
-
-        return frame.assignValue(iReturn, template.makeJavaLong(lLow));
+        return frame.assignValue(iReturn, template.makeJavaLong(lVal));
         }
 
-    public static LongLongHandle makeLongLong(LongLong llValue)
+    public static LongLongHandle makeLongLong(LongLong ll)
         {
-        return new LongLongHandle(INSTANCE.getCanonicalClass(), llValue);
+        return new LongLongHandle(INSTANCE.getCanonicalClass(), ll);
         }
 
     public static class LongLongHandle
@@ -417,10 +366,10 @@ public class xInt128
         {
         protected LongLong m_llValue;
 
-        public LongLongHandle(TypeComposition clazz, LongLong llValue)
+        public LongLongHandle(TypeComposition clazz, LongLong ll)
             {
             super(clazz);
-            m_llValue = llValue;
+            m_llValue = ll;
             }
 
         public LongLong getValue()
@@ -437,7 +386,8 @@ public class xInt128
         @Override
         public boolean equals(Object obj)
             {
-            return obj instanceof LongLongHandle && m_llValue.equals(((LongLongHandle)obj).getValue());
+            return obj instanceof LongLongHandle &&
+                m_llValue.equals(((LongLongHandle) obj).getValue());
             }
 
         @Override
