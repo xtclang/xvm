@@ -6,6 +6,9 @@ import java.math.BigInteger;
 
 /**
  * 128 bit long implementation used by both Int128 and UInt128.
+ *
+ * TODO: optimize out BigInteger use for multiplication and division;
+ * see https://mrob.com/pub/math/int128.c.txt
  */
 public class LongLong
     {
@@ -140,40 +143,13 @@ public class LongLong
 
     public LongLong mul(LongLong ll)
         {
-        LongLong lhs = this;
-        LongLong llResult = LongLong.ZERO;
-        int cShift = 0;
-        boolean fNeg = false;
+        BigInteger bi1 = toBigInteger();
+        BigInteger bi2 = ll.toBigInteger();
+        BigInteger bir = bi1.multiply(bi2);
 
-        if (m_lHigh < 0)
-            {
-            lhs = lhs.negate();
-            fNeg = true;
-            }
-
-        if (ll.m_lHigh < 0)
-            {
-            ll = ll.negate();
-            fNeg = !fNeg;
-            }
-
-        while (!ll.equals(LongLong.ZERO))
-            {
-            if ((ll.m_lLow & 1) != 0)
-                {
-                llResult = llResult.add(lhs.shl(cShift));
-
-                if (llResult.equals(OVERFLOW))
-                    {
-                    return OVERFLOW;
-                    }
-                }
-
-            ll = ll.ushr(1);
-            ++cShift;
-            }
-
-        return fNeg ? llResult.negate() : llResult;
+        return bir.bitLength() <= 127
+            ? fromBigInteger(bir)
+            : OVERFLOW;
         }
 
     public LongLong mulUnsigned(LongLong ll)
@@ -182,49 +158,18 @@ public class LongLong
         BigInteger bi2 = ll.toUnsignedBigInteger();
         BigInteger bir = bi1.multiply(bi2);
 
-        return bir.bitLength() <= 64
-            ? fromUnsignedBigInteger(bir)
+        return bir.bitLength() <= 128
+            ? fromBigInteger(bir)
             : OVERFLOW;
         }
 
     public LongLong div(LongLong ll)
         {
-        if (m_lLow == 0 && m_lHigh == 0)
-            {
-            return LongLong.ZERO; // div by 0 error not required since it's handled by numeric classes
-            }
+        BigInteger bi1 = toBigInteger();
+        BigInteger bi2 = ll.toBigInteger();
+        BigInteger bir = bi1.divide(bi2);
 
-        boolean fNeg = false;
-        LongLong llNumerator = this;
-
-        if (llNumerator.signum() < 0)
-            {
-            llNumerator = llNumerator.negate();
-            fNeg = true;
-            }
-
-        if (ll.signum() < 0)
-            {
-            fNeg = !fNeg;
-            ll = ll.negate();
-            }
-
-        LongLong llQuotient = LongLong.ZERO;
-        LongLong llRemainder = LongLong.ZERO;
-
-        for (int i = 127; i >= 0; --i)
-            {
-            llRemainder = llRemainder.shl(1);
-            llRemainder = llRemainder.or((llNumerator.and(LongLong.ONE.shl(i))).ushr(i));
-
-            if (llRemainder.compare(ll) >= 0)
-                {
-                llRemainder = llRemainder.sub(ll);
-                llQuotient = llQuotient.or(LongLong.ONE.shl(i));
-                }
-            }
-
-        return fNeg ? llQuotient.negate() : llQuotient;
+        return fromBigInteger(bir);
         }
 
     public LongLong divUnsigned(LongLong ll)
@@ -233,45 +178,16 @@ public class LongLong
         BigInteger bi2 = ll.toUnsignedBigInteger();
         BigInteger bir = bi1.divide(bi2);
 
-        return fromUnsignedBigInteger(bir);
+        return fromBigInteger(bir);
         }
 
     public LongLong mod(LongLong ll)
         {
-        if (m_lLow == 0 && m_lHigh == 0)
-            {
-            return LongLong.ZERO; // div by 0 error not required since it's handled by numeric classes
-            }
+        BigInteger bi1 = toBigInteger();
+        BigInteger bi2 = ll.toBigInteger();
+        BigInteger bir = bi1.mod(bi2);
 
-        boolean fNeg = false;
-        LongLong llNumerator = this;
-
-        if (llNumerator.signum() < 0)
-            {
-            llNumerator = llNumerator.negate();
-            fNeg = true;
-            }
-
-        if (ll.signum() < 0)
-            {
-            fNeg = !fNeg;
-            ll = ll.negate();
-            }
-
-        LongLong llRemainder = LongLong.ZERO;
-
-        for (int i = 127; i >= 0; --i)
-            {
-            llRemainder = llRemainder.shl(1);
-            llRemainder = llRemainder.or((llNumerator.and(LongLong.ONE.shl(i))).ushr(i));
-
-            if (llRemainder.compare(ll) >= 0)
-                {
-                llRemainder = llRemainder.sub(ll);
-                }
-            }
-
-        return fNeg ? ll.sub(llRemainder) : llRemainder;
+        return fromBigInteger(bir);
         }
 
     public LongLong modUnsigned(LongLong ll)
@@ -280,7 +196,7 @@ public class LongLong
         BigInteger bi2 = ll.toUnsignedBigInteger();
         BigInteger bir = bi1.mod(bi2);
 
-        return fromUnsignedBigInteger(bir);
+        return fromBigInteger(bir);
         }
 
     public LongLong next(boolean fSigned)
@@ -483,7 +399,7 @@ public class LongLong
             or(toUnsignedBigInteger(m_lHigh).shiftLeft(64));
         }
 
-    public static BigInteger toUnsignedBigInteger(long l)
+    private static BigInteger toUnsignedBigInteger(long l)
         {
         if (l >= 0L)
             {
@@ -497,12 +413,20 @@ public class LongLong
             add(BigInteger.valueOf(Integer.toUnsignedLong(nLow)));
         }
 
-    public static LongLong fromUnsignedBigInteger(BigInteger bi)
+    /**
+     * Create a LongLong from a 128 bit BigInteger.
+     *
+     * This algorithm works for both signed and unsigned values.
+     *
+     * @param bi  the big integer to convert
+     *
+     * @return a corresponding LongLong value
+     */
+    public static LongLong fromBigInteger(BigInteger bi)
         {
-        assert bi.signum() >= 0;
-        assert bi.bitLength() <= 64;
+        assert bi.bitLength() <= 128;
 
-        BigInteger biLow  = bi.or(BIG_MASK64);
+        BigInteger biLow  = bi.and(BIG_MASK64);
         BigInteger biHigh = bi.shiftRight(64);
         return new LongLong(biLow.longValue(), biHigh.longValue());
         }
