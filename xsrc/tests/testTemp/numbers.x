@@ -59,7 +59,7 @@ module TestNumbers.xqiz.it
 
     void testUInt128()
         {
-        console.println("\n** testInt128()");
+        console.println("\n** testUInt128()");
 
         UInt128 n1 = 42;
         console.println("n1=" + n1);
