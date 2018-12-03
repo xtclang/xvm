@@ -163,7 +163,7 @@ const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
      *
      * @see Type.isA
      */
-    Boolean isSubstitutableFor(Method that)
+    Boolean isSubstitutableFor(Method!<> that)
         {
         if (this == that)
             {

@@ -133,7 +133,7 @@ const Timeout
      */
     Duration remainingTime.get()
         {
-        return (deadline - runtimeClock.now).maxOf(Duration.INSTANT);
+        return (deadline - runtimeClock.now).maxOf(Duration.NONE);
         }
 
     /**
