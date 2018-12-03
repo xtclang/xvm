@@ -13,7 +13,7 @@ const Time(Int picos)
     static IntLiteral PICOS_PER_DAY    = 24   * PICOS_PER_HOUR;
 
     static Time MIDNIGHT = new Time(0);
-    
+
     /**
      * Construct a Time based on the number of picoseconds elapsed since 00:00:00.
      *
@@ -117,7 +117,7 @@ const Time(Int picos)
             return this;
             }
 
-        return new Time((picos.to<UInt128>() + period) % PICOS_PER_DAY).to<Int>();
+        return new Time(((picos.to<UInt128>() + period) % PICOS_PER_DAY).to<Int>());
         }
 
     @Op("-") Time sub(Duration duration)
@@ -172,7 +172,7 @@ const Time(Int picos)
             appender.add('0');
             }
         hour.appendTo(appender);
-                
+
         Int minute = this.minute;
         if (minute < 10)
             {
@@ -180,7 +180,7 @@ const Time(Int picos)
             }
         appender.add(':');
         minute.appendTo(appender);
-                
+
         Int second = this.second;
         if (second < 10)
             {
@@ -188,7 +188,7 @@ const Time(Int picos)
             }
         appender.add(':');
         second.appendTo(appender);
-                
+
         Int fraction = picoseconds;
         if (fraction != 0)
             {

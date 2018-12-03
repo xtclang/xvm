@@ -43,6 +43,7 @@ const VarInt
         return bitLength / 8;
         }
 
+    @Override
     VarUInt magnitude.get()
         {
         // use the bits "as is" for zero, positive numbers, and

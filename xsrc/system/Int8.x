@@ -48,6 +48,7 @@ const Int8
         return Positive;
         }
 
+    @Override
     @RO UInt8 magnitude.get()
         {
         return to<Int16>().abs().to<UInt8>();

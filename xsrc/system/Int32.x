@@ -48,6 +48,7 @@ const Int32
         return Positive;
         }
 
+    @Override
     @RO UInt32 magnitude.get()
         {
         return to<Int64>().abs().to<UInt32>();

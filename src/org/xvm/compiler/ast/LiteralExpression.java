@@ -99,14 +99,6 @@ public class LiteralExpression
             }
         }
 
-    @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
-        {
-        // strip off packing and unpacking and conversions (since this is a literal)
-        TypeFit fit = super.testFit(ctx, typeRequired);
-        return fit.isFit() ? TypeFit.Fit : TypeFit.NoFit;
-        }
-
     /**
      * Take a unary prefix token ('+' or '-') and prepend it to this literal.
      *
