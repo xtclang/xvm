@@ -757,7 +757,10 @@ public abstract class TypeConstant
         // is a constant, it's allowed to be of a wider type; for example:
         //   Constant c = ...
         //   if (c == "hello") // a valid comparison
-        if (typeThis.equals(typeThat) || fThatIsConstant && typeThat.isA(typeThis))
+        //
+        // Additionally, any Ref objects are comparable, since it means the actual Ref-equality
+        if (typeThis.equals(typeThat) || fThatIsConstant && typeThat.isA(typeThis)
+         || typeThis.isA(pool.typeRef()) && typeThat.isA(pool.typeRef()))
             {
             return true;
             }

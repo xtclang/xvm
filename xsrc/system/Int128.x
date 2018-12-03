@@ -48,6 +48,7 @@ const Int128
         return Positive;
         }
 
+    @Override
     @RO UInt128 magnitude.get()
         {
         return to<VarInt>().abs().to<UInt128>();

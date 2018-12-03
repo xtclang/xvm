@@ -48,6 +48,7 @@ const Int16
         return Positive;
         }
 
+    @Override
     @RO UInt16 magnitude.get()
         {
         return to<Int32>().abs().to<UInt16>();

@@ -19,7 +19,7 @@
  *   useful for acting like a UTC time, but whose DateTime values are incapable of being compared
  *   with those of any other TimeZone.
  */
-const TimeZone(Int picos, String? name)
+const TimeZone(Int picos, String? name = null)
     {
     /**
      * Construct a resolved TimeZone.
@@ -28,9 +28,9 @@ const TimeZone(Int picos, String? name)
      *               picosecond value in order to calculate a TimeZone-adjusted picosecond value
      * @param name   the name of the TimeZone
      */
-    construct(Int picos, String? name)
+    construct(Int picos, String? name = null)
         {
-        assert picos.abs <= Time.PICOS_PER_DAY;
+        assert picos.abs() <= Time.PICOS_PER_DAY;
         this.picos = picos;
         this.name  = name;
         }
@@ -170,7 +170,7 @@ const TimeZone(Int picos, String? name)
     /**
      * Using this TimeZone information, obtain a TimeZone for the given DateTime that
      */
-    @RO TimeZone resolve(DateTime datetime)
+    TimeZone! resolve(DateTime datetime)
         {
         if (resolved)
             {
@@ -214,7 +214,7 @@ const TimeZone(Int picos, String? name)
             return new DateTime(orig.date, orig.time, this);
             }
 
-        return new DateTime(orig.picos, this);
+        return new DateTime(orig.epochPicos, this);
         }
 
     // ----- operators -----------------------------------------------------------------------------
@@ -222,20 +222,47 @@ const TimeZone(Int picos, String? name)
     @Op("+") TimeZone add(Duration duration)
         {
         assert resolved && !isNoTZ;
-        return new TimeZone(this.picos + duration.picosecondsTotal);
+        return new TimeZone(normalize(this.picos.to<Int128>() + duration.picosecondsTotal.to<Int128>()));
         }
 
     @Op("-") TimeZone sub(Duration duration)
         {
         assert resolved && !isNoTZ;
-        return new TimeZone(this.picos - duration.picosecondsTotal);
+        return new TimeZone(normalize(this.picos.to<Int128>() - duration.picosecondsTotal.to<Int128>()));
+        }
+
+    /**
+     * Normalize a potentially-large timezone offset to the range -12:00:00 .. +12:00:00.
+     */
+    private static Int normalize(Int128 picos)
+        {
+        Boolean negative = picos < 0;
+        if (negative)
+            {
+            picos = picos.abs();
+            }
+
+        Int normalized = (picos % Time.PICOS_PER_DAY).to<Int>();
+        if (normalized > 12 * Time.PICOS_PER_HOUR)
+            {
+            normalized -= Time.PICOS_PER_DAY;
+            }
+
+        return negative ? -normalized : +normalized;
         }
 
     @Op("-") Duration sub(TimeZone timezone)
         {
         assert this.resolved && timezone.resolved;
         assert this.isNoTZ == timezone.isNoTZ;
-        return new Duration(this.picos - timezone.picos);
+
+        Int difference = this.picos - timezone.picos;
+        if (difference < 0)
+            {
+            difference += Time.PICOS_PER_DAY;
+            }
+
+        return new Duration(difference.to<UInt128>());
         }
 
     // ----- Stringable ----------------------------------------------------------------------------
@@ -285,6 +312,7 @@ const TimeZone(Int picos, String? name)
     void appendTo(Appender<Char> appender)
         {
         Boolean showPicos = resolved;
+        String? name      = this.name;
         if (name != null)
             {
             appender.add(name);
@@ -305,13 +333,13 @@ const TimeZone(Int picos, String? name)
                 {
                 appender.add('0');
                 }
-            appender.add(hours);
+            hours.appendTo(appender);
             appender.add(':');
             if (minutes < 10)
                 {
                 appender.add('0');
                 }
-            appender.add(minutes);
+            minutes.appendTo(appender);
 
             if (picos % Time.PICOS_PER_MINUTE != 0)
                 {
@@ -322,12 +350,13 @@ const TimeZone(Int picos, String? name)
                     {
                     appender.add('0');
                     }
-                appender.add(seconds);
+                seconds.appendTo(appender);
                 remainder -= seconds * Time.PICOS_PER_SECOND;
 
                 if (remainder > 0)
                     {
-                    appender.add('.').add(Duration.picosFractional(remainder));
+                    appender.add('.');
+                    Duration.picosFractional(remainder).appendTo(appender);
                     }
                 }
 

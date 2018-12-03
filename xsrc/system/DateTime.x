@@ -36,7 +36,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone)
     /**
      * The date portion of the date/time value.
      */
-    @RO Date date.get()
+    Date date.get()
         {
         Int128 picos = adjustedPicos;
         return new Date(picos >= 0
@@ -47,7 +47,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone)
     /**
      * The time portion of the date/time value.
      */
-    @RO Time time.get()
+    Time time.get()
         {
         return new Time(adjustedPicos % Time.PICOS_PER_DAY);
         }
@@ -60,7 +60,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone)
     /**
      * For a DateTime value, obtain the UTC DateTime value.
      */
-    @RO DateTime utc()
+    DateTime utc()
         {
         return TimeZone.UTC.adopt(this);
         }

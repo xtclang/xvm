@@ -30,7 +30,7 @@ const Duration(UInt128 picosecondsTotal)
         {
         return new Duration(days.to<UInt128>() * PICOS_PER_DAY);
         }
-        
+
     /**
      * Create a Duration of a certain number of hours.
      *
@@ -40,7 +40,7 @@ const Duration(UInt128 picosecondsTotal)
         {
         return new Duration(hours.to<UInt128>() * PICOS_PER_HOUR);
         }
-        
+
     /**
      * Create a Duration of a certain number of minutes.
      *
@@ -50,7 +50,7 @@ const Duration(UInt128 picosecondsTotal)
         {
         return new Duration(minutes.to<UInt128>() * PICOS_PER_MINUTE);
         }
-        
+
     /**
      * Create a Duration of a certain number of seconds.
      *
@@ -60,7 +60,7 @@ const Duration(UInt128 picosecondsTotal)
         {
         return new Duration(seconds.to<UInt128>() * PICOS_PER_SECOND);
         }
-        
+
     /**
      * Create a Duration of a certain number of milliseconds.
      *
@@ -129,11 +129,11 @@ const Duration(UInt128 picosecondsTotal)
         assert minutes >= 0;
         assert seconds >= 0;
         assert millis  >= 0;
-        construct Duration((((days     * 24
+        construct Duration(((((days     * 24
                             + hours  ) * 60
                             + minutes) * 60
                             + seconds) * 1000
-                            + millis ).to<UInt128>() * PICOS_PER_MILLI + picos.to<UInt128>();
+                            + millis ).to<UInt128>() * PICOS_PER_MILLI + picos.to<UInt128>());
         }
 
     /**
@@ -341,7 +341,7 @@ const Duration(UInt128 picosecondsTotal)
      */
     @Op("*") Duration mul(Dec factor)
         {
-        return (this.picosecondsTotal.to<VarDec>() * factor.to<VarDec>()).to<UInt128>();
+        return new Duration((this.picosecondsTotal.to<VarDec>() * factor.to<VarDec>()).to<UInt128>());
         }
 
     /**

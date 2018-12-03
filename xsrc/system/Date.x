@@ -43,7 +43,7 @@ const Date(Int epochDay)
      * The year portion of the date.
      *
      * This uses the Gregorian calendar system, so while dates before 1582-10-15 are supported by
-     * the Date class, they are not expressable in terms of year/month/day.
+     * the Date class, they are not expressible in terms of year/month/day.
      */
     @RO Int year.get()
         {
@@ -55,7 +55,7 @@ const Date(Int epochDay)
      * The month portion of the date.
      *
      * This uses the Gregorian calendar system, so while dates before 1582-10-15 are supported by
-     * the Date class, they are not expressable in terms of year/month/day.
+     * the Date class, they are not expressible in terms of year/month/day.
      */
     @RO Int month.get()
         {
@@ -67,7 +67,7 @@ const Date(Int epochDay)
      * The day portion of the date.
      *
      * This uses the Gregorian calendar system, so while dates before 1582-10-15 are supported by
-     * the Date class, they are not expressable in terms of year/month/day.
+     * the Date class, they are not expressible in terms of year/month/day.
      */
     @RO Int day.get()
         {
@@ -79,7 +79,7 @@ const Date(Int epochDay)
      * The day-of-year portion of the date.
      *
      * This uses the Gregorian calendar system, so while dates before 1582-10-15 are supported by
-     * the Date class, they are not expressable in terms of year/month/day.
+     * the Date class, they are not expressible in terms of year/month/day.
      */
     @RO Int dayOfYear.get()
         {
@@ -100,7 +100,7 @@ const Date(Int epochDay)
      * The month of the year represented by the date.
      *
      * This uses the Gregorian calendar system, so while dates before 1582-10-15 are supported by
-     * the Date class, they are not expressable in terms of year/month/day.
+     * the Date class, they are not expressible in terms of year/month/day.
      */
     @RO MonthOfYear monthOfYear.get()
         {
@@ -114,24 +114,25 @@ const Date(Int epochDay)
         return new Date(this.epochDay + duration.daysTotal);
         }
 
-    @Op("-") Duration sub(Date date)
-        {
-        return Duration.ofDays(this.epochDay - date.epochDay);
-        }
-
-
     @Op("-") Date sub(Duration duration)
         {
         return new Date(this.epochDay - duration.daysTotal);
         }
 
+    @Op("-") Duration sub(Date date)
+        {
+        return Duration.ofDays(this.epochDay - date.epochDay);
+        }
+
     // ----- Sequential ----------------------------------------------------------------------------
 
+    @Override
     conditional Date prev()
         {
         return true, new Date(this.epochDay-1);
         }
 
+    @Override
     conditional Date next()
         {
         return true, new Date(this.epochDay+1);
@@ -165,14 +166,14 @@ const Date(Int epochDay)
     void appendTo(Appender<Char> appender)
         {
         appender.add(year);
-                
+
         Int month = this.month;
         if (month < 10)
             {
             appender.add('0');
             }
         appender.add('-').add(month);
-                
+
         Int day = this.day;
         if (day < 10)
             {
@@ -185,7 +186,7 @@ const Date(Int epochDay)
 
     /**
      * Determine if the specified combination of year, month, and day is a valid date on the
-     * Gregorian calendar. The Gregorian calendard began on 1582-10-15, so any date before that
+     * Gregorian calendar. The Gregorian calendar began on 1582-10-15, so any date before that
      * does not exist on the Gregorian calendar.
      *
      * @param year   the year to test
@@ -255,7 +256,7 @@ const Date(Int epochDay)
     static Int calcEpochOffset(Int year)
         {
         assert year >= 1582;
-        
+
         Int qcenturyNum  = (year - QCENTURY_YEAR) / 400;
         Int qcenturyYear = QCENTURY_YEAR + qcenturyNum * 400;
         Int centuryNum   = (year - qcenturyYear) / 100;
@@ -391,16 +392,6 @@ const Date(Int epochDay)
         }
 
     /**
-     * The number of days in each month (January is month 0) of the year for normal years.
-     */
-    static Int[] MONTH_DAYS      = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-
-    /**
-     * The number of days in each month (January is month 0) of the year for leap years.
-     */
-    static Int[] MONTH_DAYS_LEAP = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-
-    /**
      * For a valid year and month, determine the number of days in the specified month.
      *
      *   Thirty days hath September,
@@ -420,18 +411,6 @@ const Date(Int epochDay)
         assert month >= 1 && month <= 12;
         return (isLeapYear(year) ? MONTH_DAYS_LEAP : MONTH_DAYS) [month-1];
         }
-
-    /**
-     * The number of days that have elapsed in a normal year at the beginning of a month (January is
-     * month 0) and at the end of a month (January is month 1).
-     */
-    static Int[] SUM_DAYS        = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365];
-
-    /**
-     * The number of days that have elapsed in a leap year at the beginning of a month (January is
-     * month 0) and at the end of a month (January is month 1).
-     */
-    static Int[] SUM_DAYS_LEAP   = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366];
 
     /**
      * Calculate the number of days that come before the specified month in the specified year.
@@ -463,4 +442,26 @@ const Date(Int epochDay)
         assert month >= 1 && month <= 12;
         return (isLeapYear(year) ? SUM_DAYS_LEAP : SUM_DAYS) [month];
         }
+
+    /**
+     * The number of days in each month (January is month 0) of the year for normal years.
+     */
+    static Int[] MONTH_DAYS      = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+    /**
+     * The number of days in each month (January is month 0) of the year for leap years.
+     */
+    static Int[] MONTH_DAYS_LEAP = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+    /**
+     * The number of days that have elapsed in a normal year at the beginning of a month (January is
+     * month 0) and at the end of a month (January is month 1).
+     */
+    static Int[] SUM_DAYS        = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365];
+
+    /**
+     * The number of days that have elapsed in a leap year at the beginning of a month (January is
+     * month 0) and at the end of a month (January is month 1).
+     */
+    static Int[] SUM_DAYS_LEAP   = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366];
     }
