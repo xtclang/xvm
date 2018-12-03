@@ -21,6 +21,7 @@ import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -424,11 +425,15 @@ public class NewExpression
 
                             // create a constructor that matches the one that we need to route to
                             // on the super class
-//                            clzAnon.createMethod()
-//                            MethodStructure method = container.createMethod(fFunction, access, aAnnotations,
-//                                    aReturns, sName, aParams, body != null, fUsesSuper);
-
-                            // TODO - replace synthetic construct() on the inner with construct(...)
+                            MethodStructure constrSuper = (MethodStructure) idSuper.getComponent();
+                            Parameter[]     aParams     = constrSuper.getParamArray();
+                            int             cParams     = aParams.length;
+                            MethodStructure constrThis  = clzAnon.createMethod(true,
+                                    Access.PUBLIC, null, Parameter.NO_PARAMS, "construct",
+                                    aParams, true, false);
+                            Code code = constrThis.createCode();
+                            code.add(cParams == 1      // TODO CONSTRUCT_1 or CONSTRUCT_N
+                                    ? new CidSuper.getPar)
                             notImplemented();
 
                             // since we just modified the component, flush the TypeInfo cache for
