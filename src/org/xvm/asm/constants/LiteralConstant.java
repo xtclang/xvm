@@ -69,8 +69,9 @@ public class LiteralConstant
      * @param pool    the ConstantPool that will contain this Constant
      * @param format  the Constant Format
      * @param sVal    the literal value
+     * @param oVal    (optional) the format-specific value
      */
-    public LiteralConstant(ConstantPool pool, Format format, String sVal)
+    public LiteralConstant(ConstantPool pool, Format format, String sVal, Object oVal)
         {
         this(pool, format);
 
@@ -122,6 +123,7 @@ public class LiteralConstant
             }
 
         m_constStr = pool.ensureStringConstant(sVal);
+        m_oVal     = oVal;
         }
 
     /**
@@ -213,7 +215,14 @@ public class LiteralConstant
     public PackedInteger getPackedInteger()
         {
         assert getFormat() == Format.IntLiteral;
-        String s = getValue();
+
+        PackedInteger pint = (PackedInteger) m_oVal;
+        if (pint != null)
+            {
+            return pint;
+            }
+
+        String s = getValue().replace("_", ""); // TODO all of the lexer logic has to show up here
         int    r = getIntRadix();
         if (r == 10)
             {
@@ -256,6 +265,15 @@ public class LiteralConstant
     public BigDecimal getBigDecimal()
         {
         assert getFormat() == Format.IntLiteral || getFormat() == Format.FPLiteral && getFPRadix() == 10;
+
+        Object oVal = m_oVal;
+        if (oVal != null)
+            {
+            return oVal instanceof BigDecimal
+                    ? (BigDecimal) oVal
+                    : new BigDecimal(((PackedInteger) oVal).getBigInteger());
+            }
+
 
         // Java BigDecimal uses "E" to indicate a decimal exponent, while ISO uses "P"
         return getFormat() == Format.IntLiteral
@@ -1347,4 +1365,9 @@ public class LiteralConstant
      * The String Constant that is the literal value.
      */
     private StringConstant m_constStr;
+
+    /**
+     * Cached value.
+     */
+    private transient Object m_oVal;
     }
