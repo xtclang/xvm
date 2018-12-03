@@ -127,7 +127,7 @@ public class xUInt64
         long lr = l1 * l2;
 
         if (f_fChecked &&
-                (l1 | l2) >>> 31 != 0 && Long.divideUnsigned(lr, l2) != l1)
+                (l1 | l2) >>> 31 != 0 && divUnassigned(lr, l2) != l1)
             {
             return overflow(frame);
             }
