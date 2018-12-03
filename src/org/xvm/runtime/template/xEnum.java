@@ -60,7 +60,7 @@ public class xEnum
             List<String> listNames = new ArrayList<>(listAll.size());
             List<EnumHandle> listHandles = new ArrayList<>(listAll.size());
 
-            ConstantPool pool = f_struct.getConstantPool();
+            ConstantPool pool = pool();
             int cValues = 0;
             for (Component child : listAll)
                 {

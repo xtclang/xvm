@@ -46,7 +46,7 @@ class TestApp
         {
         TestClass t = new TestClass("Hello World!");
 
-        print(t);
+        print("t=" + t);
         print(t.prop1);
         print(t.method1());
 
@@ -60,7 +60,7 @@ class TestApp
             }
 
         TestClass t2 = new TestClass2(42, "Goodbye");
-        print(t2);
+        print("t2=" + t2);
         print(t2.prop1);
         print(t2.method1());
 
@@ -74,18 +74,28 @@ class TestApp
 
         construct(String s)
             {
+            TestApp.print("\n# in constructor: TestClass #");
             prop1 = s;
             }
         finally
             {
-            TestApp.print(s);
+            TestApp.print("# in finally: TestClass #\n");
+            TestApp.print("s=" + s);
             }
 
         Int method1()
             {
+            TestApp.print("\n# in TestClass.method1 #");
             String s = prop1;
-            (Boolean f, Int of) = s.indexOf("World", 0);
-            return of + s.size;
+
+            if (Int of : s.indexOf("World", 0))
+                {
+                return of + s.size;
+                }
+            else
+                {
+                return -1;
+                }
             }
 
         Int exceptional(String? s)
@@ -110,19 +120,21 @@ class TestApp
 
         construct(Int i, String s)
             {
+            TestApp.print("# in constructor: TestClass2 #");
             prop2 = i;
 
             construct TestClass(s);
             }
         finally
             {
+            TestApp.print("# in finally: TestClass2 #");
             TestApp.print(i);
             }
 
         @Override
         Int method1()
             {
-            console.println("*** In TestClass2.method1");
+            console.println("\n*** In TestClass2.method1");
             temp = super();
             return temp + prop2;
             }
@@ -290,7 +302,7 @@ class TestApp
 
         void testConstant()
             {
-            console.println("*** In TestService.testConstant");
+            console.println("\n*** In TestService.testConstant");
             TestApp.Point origin = TestPackage.Origin;
             console.println("*** Origin=" + origin);
             }
@@ -303,6 +315,8 @@ class TestApp
         // exceptional
         Int exceptional(Int cDelay)
             {
+            @Inject Clock runtimeClock;
+
             if (cDelay == 0)
                 {
                 throw new Exception("test");
@@ -310,7 +324,8 @@ class TestApp
             else
                 {
                 @Future Int iRet;
-                runtimeClock.scheduleAlarm(() -> {iRet = cDelay;}, DateTime.now()); // &iRet.set(0)
+                DateTime dtWakeup = runtimeClock.now; // + Duration.ofSeconds(10);
+                runtimeClock.scheduleAlarm(dtWakeup, () -> {iRet = cDelay;});
                 return iRet;
                 }
             }
@@ -473,7 +488,7 @@ class TestApp
 
     static void testConst()
         {
-        println("*** in TestApp.testConst()");
+        println("\n*** in TestApp.testConst()");
 
         Point p1 = new Point(0, 1);
         Point p2 = new Point(1, 0);

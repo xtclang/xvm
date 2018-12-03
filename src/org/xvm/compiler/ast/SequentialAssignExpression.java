@@ -120,7 +120,7 @@ public class SequentialAssignExpression
     public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         Assignable LValTarget = ensureTarget(ctx, code, errs);
-        return LValTarget.assignSequential(getSeq(), null, false, code, errs);
+        return LValTarget.assignSequential(getSeq(), null, fUsedOnce, code, errs);
         }
 
     @Override

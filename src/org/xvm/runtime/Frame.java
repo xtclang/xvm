@@ -537,6 +537,20 @@ public class Frame
         }
 
     /**
+     * Push a value on the local stack if it was popped from the stack.
+     *
+     * @param iArg    the argument id
+     * @param hValue  a value to push back on stack
+     */
+    public void restoreStack(int iArg, ObjectHandle hValue)
+        {
+        if (iArg == Op.A_STACK)
+            {
+            pushStack(hValue);
+            }
+        }
+
+    /**
      * Assign a specified register on this frame.
      *
      * @param nVar    the register id
@@ -1101,6 +1115,15 @@ public class Frame
         }
 
     /**
+     * @return true iff the specified argument refers to a constant (iArg < 0)
+     *         or the corresponding register (iArg >= 0) is assigned.
+     */
+    public boolean isAssigned(int iArg)
+        {
+        return iArg < 0 || f_ahVar[iArg] != null;
+        }
+
+    /**
      * @return an ObjectHandle (could be DeferredCallHandle), or null if the value is "pending future"
      *
      * @throw ExceptionHandle.WrapperException if the async assignment has failed
@@ -1138,6 +1161,7 @@ public class Frame
 
                             case Op.R_BLOCK:
                                 info.markWaiting();
+                                restoreStack(iArg, hValue);
                                 return null;
 
                             case Op.R_EXCEPTION:
@@ -1177,8 +1201,16 @@ public class Frame
                         : getPredefinedArgument(iArg);
         }
 
-    // return the ObjectHandle[] or null if the value is "pending future", or
-    // throw if the async assignment has failed
+    /**
+     * Create an array of ObjectHandles holding the specified arguments.
+     * <p/>
+     * Note, that the arguments are retrieved in the inverse order, to allow the
+     * {@link org.xvm.compiler.ast.InvocationExpression} to use stack collecting the arguments.
+     *
+     * @return the array of handles or null if at least on value is a "pending future"
+     *
+     * @throws ExceptionHandle.WrapperException if the async assignment has failed
+     */
     public ObjectHandle[] getArguments(int[] aiArg, int cVars)
                 throws ExceptionHandle.WrapperException
         {
@@ -1188,11 +1220,16 @@ public class Frame
 
         ObjectHandle[] ahArg = new ObjectHandle[cVars];
 
-        for (int i = 0; i < cArgs; i++)
+        for (int i = cArgs - 1; i >= 0; --i)
             {
             ObjectHandle hArg = getArgument(aiArg[i]);
             if (hArg == null)
                 {
+                // the i-th element has already been restored
+                for (int j = i + 1; j < cArgs; j++)
+                    {
+                    restoreStack(aiArg[j], ahArg[j]);
+                    }
                 return null;
                 }
 
@@ -1343,14 +1380,14 @@ public class Frame
      *
      * Note: this method increments the "nextVar" index.
      *
+     * @param nVar       the variable to introduce
      * @param nTargetId  if positive, the register number holding a target (handle);
      *                     otherwise a constant id pointing to local property holding the target
      * @param constProp  the property constant whose type needs to be resolved in the context
-     *                     of the target class
      */
-    public void introducePropertyVar(int nTargetId, PropertyConstant constProp)
+    public void introducePropertyVar(int nVar, int nTargetId, PropertyConstant constProp)
         {
-        int nVar = f_anNextVar[m_iScope]++;
+        f_anNextVar[m_iScope] = Math.max(f_anNextVar[m_iScope], nVar + 1);
 
         f_aInfo[nVar] = new VarInfo(nTargetId, constProp.getPosition(), PROPERTY_RESOLVER);
         }
@@ -1547,7 +1584,7 @@ public class Frame
                     MethodStructure fnCaller = fiber.f_fnCaller;
                     sb.append("\n  ")
                       .append(formatFrameDetails(fiberCaller.f_context, fnCaller,
-                              iPC, fnCaller.getOps(), null));
+                              iPC, fnCaller == null ? null : fnCaller.getOps(), null));
                     break;
                     }
                 fiber = fiberCaller;
@@ -1582,9 +1619,23 @@ public class Frame
 
         if (iPC >= 0)
             {
-            sb.append(" (iPC=").append(iPC)
-              .append(", op=").append(aOp[iPC].getClass().getSimpleName())
-              .append(')');
+            int nLine = 0;
+            if (function != null)
+                {
+                nLine = function.calculateLineNumber(iPC);
+                }
+
+            if (nLine > 0)
+                {
+                sb.append(" (line=").append(nLine);
+                }
+            else
+                {
+                sb.append(" (iPC=").append(iPC);
+                }
+            // TODO: remove printing the Op name (temporary for debugging purposes only)
+            sb.append(", op=").append(aOp[iPC].getClass().getSimpleName());
+            sb.append(')');
             }
 
         return sb.toString();

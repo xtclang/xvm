@@ -10,7 +10,7 @@ const UInt128
     /**
      * The maximum value for an UInt128.
      */
-    static IntLiteral maxvalue =  0x10000000000000000000000000000000;
+    static IntLiteral maxvalue =  0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
 
     private Bit[] bits;
 

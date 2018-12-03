@@ -72,6 +72,14 @@ public abstract class ObjectHandle
         m_fMutable = false;
         }
 
+    /**
+     * @return true iff all the fields are assigned
+     */
+    public boolean validateFields()
+        {
+        return true;
+        }
+
     public boolean isStruct()
         {
         return m_clazz.isStruct();
@@ -192,6 +200,22 @@ public abstract class ObjectHandle
                 }
             }
 
+        @Override
+        public boolean validateFields()
+            {
+            if (m_mapFields != null)
+                {
+                for (ObjectHandle hValue : m_mapFields.values())
+                    {
+                    if (hValue == null)
+                        {
+                        return false;
+                        }
+                    }
+                }
+            return true;
+            }
+
         public static boolean compareIdentity(GenericHandle h1, GenericHandle h2)
             {
             if (h1 == h2)
@@ -296,7 +320,7 @@ public abstract class ObjectHandle
     public static class JavaLong
             extends ObjectHandle
         {
-        protected long m_lValue = UNASSIGNED;
+        protected long m_lValue;
 
         public JavaLong(TypeComposition clazz, long lValue)
             {
@@ -332,7 +356,6 @@ public abstract class ObjectHandle
             {
             return super.toString() + m_lValue;
             }
-        private final static long UNASSIGNED = 0xBADBAD0BADBADBADl;
         }
 
     // abstract array handle

@@ -10,7 +10,7 @@ const UInt16
     /**
      * The maximum value for an UInt16.
      */
-    static IntLiteral maxvalue = 0x10000;
+    static IntLiteral maxvalue = 0xFFFF;
 
     private Bit[] bits;
 

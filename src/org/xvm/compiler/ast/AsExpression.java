@@ -99,9 +99,7 @@ public class AsExpression
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         Argument argBefore = expr1.generateArgument(ctx, code, true, true, errs);
-        Register regAfter  = fUsedOnce
-                ? new Register(getType(), Op.A_STACK)
-                : new Register(getType());
+        Register regAfter  = createRegister(getType(), fUsedOnce);
         code.add(new MoveCast(argBefore, regAfter));
         return code.lastRegister();
         }

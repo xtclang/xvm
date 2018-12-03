@@ -131,7 +131,7 @@ public class ObjectHeap
             case Dec64:
             case Dec128:
             case VarDec:
-                throw new UnsupportedOperationException("TODO: " + constValue);
+                return constValue.getType();
 
             case Char:
                 return f_poolRoot.typeChar();

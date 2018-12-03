@@ -49,7 +49,7 @@ public class xAtomicVar
     public ClassTemplate getTemplate(TypeConstant type)
         {
         // if RefType is Int64, then the template should be AtomicIntNumber
-        return type.getParamTypesArray()[0] == f_struct.getConstantPool().typeInt()
+        return type.getParamTypesArray()[0] == pool().typeInt()
             ? xAtomicIntNumber.INSTANCE
             : this;
         }

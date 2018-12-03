@@ -62,6 +62,11 @@ public class xException
         return makeHandle("Unassigned reference");
         }
 
+    public static ExceptionHandle unassignedFields()
+        {
+        return makeHandle("Unassigned fields");
+        }
+
     public static ExceptionHandle immutableObject()
         {
         return makeHandle("Immutable object");

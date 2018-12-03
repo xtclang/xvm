@@ -99,6 +99,14 @@ public class Nop extends Op
         return iPC + 1;
         }
 
+    /**
+     * @return the line count for this op
+     */
+    public int getLineCount()
+        {
+        return f_cLines;
+        }
+
     @Override
     public String toString()
         {

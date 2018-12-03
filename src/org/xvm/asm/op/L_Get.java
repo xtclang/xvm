@@ -8,8 +8,8 @@ import java.io.IOException;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpProperty;
-
 import org.xvm.asm.Scope;
+
 import org.xvm.asm.constants.PropertyConstant;
 
 import org.xvm.runtime.Frame;
@@ -97,7 +97,7 @@ public class L_Get
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introducePropertyVar(A_THIS, constProperty);
+            frame.introducePropertyVar(m_nRetValue, A_THIS, constProperty);
             }
 
         return hTarget.getTemplate().getPropertyValue(
@@ -132,7 +132,7 @@ public class L_Get
     @Override
     public String toString()
         {
-        return super.toString()+ ", " + Argument.toIdString(m_argReturn, m_nRetValue);
+        return super.toString() + ", " + Argument.toIdString(m_argReturn, m_nRetValue);
         }
 
     private int m_nRetValue;

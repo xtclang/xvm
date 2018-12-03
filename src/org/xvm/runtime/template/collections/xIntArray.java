@@ -48,7 +48,7 @@ public class xIntArray
     @Override
     public TypeConstant getCanonicalType()
         {
-        ConstantPool pool = f_struct.getConstantPool();
+        ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeInt());
         }
 

@@ -100,6 +100,7 @@
 // "move" operations
 // - does NOT support "local property" mode;
 // - for MOV and REF the lvalue-dest can be a next unallocated register
+// - for MOV the source could be unassigned
 +MOV        rvalue-src, lvalue-dest                 ; copy source to destination ("protection" proxy may be generated)
 +MOV_VAR    rvalue-src, lvalue-dest                 ; move ("R"=) Var-to-source to destination
 +MOV_REF    rvalue-src, lvalue-dest                 ; move ("R"=) Ref-to-source to destination (read-only)
@@ -129,9 +130,9 @@
 // ("L"=) local property and ("P"=) property load/store operations
 // - lvalue return values can specify the "next register" to allocate
 // - for P_GET and P_REF, an rvalue-target of "black hole" indicates a constant property
-+L_GET       PROPERTY, lvalue                        ; get local property (move local property value to register)
++L_GET       PROPERTY, lvalue                        ; get local property (move local property value to a register or local property)
 +L_SET       PROPERTY, rvalue                        ; set local property (move register value to local property)
-+P_GET       PROPERTY, rvalue-target, lvalue         ; get property (move target property value to register)
++P_GET       PROPERTY, rvalue-target, lvalue         ; get property (move target property value to a register or local property)
 +P_SET       PROPERTY, rvalue-target, rvalue         ; set property (move register value to target property)
 +P_VAR       PROPERTY, rvalue-target, lvalue-dest    ; move Var-to-property to destination
 +P_REF       PROPERTY, rvalue-target, lvalue-dest    ; move Ref-to-property to destination

@@ -1897,6 +1897,10 @@ public class ClassStructure
             if (infoProp.hasField())
                 {
                 Constant constValue = infoProp.getInitialValue();
+                if (constValue == null)
+                    {
+                    constValue = infoProp.getDefaultValue();
+                    }
                 if (constValue != null)
                     {
                     code.add(new L_Set(infoProp.getIdentity(), constValue));

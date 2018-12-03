@@ -531,6 +531,12 @@ public class MethodStructure
      */
     public void setOps(Op[] aop)
         {
+        // TODO: remove when compiler is fully operational
+        if (m_code != null)
+            {
+            System.err.println("*** already compiled naturally: " + MethodStructure.this.toString());
+            }
+
         resetRuntimeInfo();
         m_aconstLocal = null;
         m_abOps       = null;
@@ -887,20 +893,20 @@ public class MethodStructure
         }
 
     /**
-     * @deprecated
+     * Obtain the corresponding "finally" method for this constructor.
      */
     public MethodStructure getConstructFinally()
         {
-        // TODO this method must calculate the value
+        assert isConstructor();
         return m_structFinally;
         }
 
     /**
-     * @deprecated
+     * Set the corresponding "finally" method for this constructor.
      */
     public void setConstructFinally(MethodStructure structFinally)
         {
-        // TODO this method must die (eventually)
+        assert isConstructor();
         m_structFinally = structFinally;
         }
 
@@ -1013,7 +1019,7 @@ public class MethodStructure
      */
     public int ensureInitialized(Frame frame, Frame frameNext)
         {
-        if (m_FInitialized == Boolean.TRUE)
+        if (m_fInitialized)
             {
             return Op.R_NEXT;
             }
@@ -1057,14 +1063,11 @@ public class MethodStructure
                     }
 
                 // we are on the main context and can actually perform the initialization
-                if (m_FInitialized == Boolean.FALSE)
+                if (!constSingleton.markInitializing())
                     {
                     // this can only happen if we are called recursively
-                    assert frameNext == null;
                     return frame.raiseException(xException.makeHandle("Circular initialization"));
                     }
-
-                m_FInitialized = Boolean.FALSE;
 
                 IdentityConstant constValue = constSingleton.getValue();
 
@@ -1108,7 +1111,22 @@ public class MethodStructure
                             template.f_struct.getFormat() == Format.ENUM)
                             {
                             // TODO: rework this when enum values constructors are generated
-                            return Op.R_NEXT;
+                            if (constSingleton.getHandle() == null)
+                                {
+                                // this can happen if the constant's handle was assigned on
+                                // a different constant pool
+                                switch (template.createConstHandle(frame, constSingleton))
+                                    {
+                                    case Op.R_NEXT:
+                                        constSingleton.setHandle(frame.popStack());
+                                        break;
+                                    case Op.R_EXCEPTION:
+                                        return OpGeneral.R_EXCEPTION;
+                                    default:
+                                        throw new IllegalStateException();
+                                    }
+                                }
+                            continue;
                             }
 
                         // the class must have a no-params constructor to call
@@ -1140,7 +1158,7 @@ public class MethodStructure
         // if on the main context, me are entitled to set the flag;
         // otherwise, we didn't do anything, so even if other threads don't immediately see the flag
         // (since it's not volatile) they will simply repeat the "do nothing" loop
-        m_FInitialized = Boolean.TRUE;
+        m_fInitialized = true;
         return frameNext == null
             ? frame.assignValue(0, xNullable.NULL) // the result is ignored, but has to be assigned
             : frame.call(frameNext);
@@ -1164,6 +1182,38 @@ public class MethodStructure
                 }
             }
         return -1;
+        }
+
+    /**
+     * Calculate the line number for a given op counter.
+     *
+     * @return the corresponding line number (one-based) of zero if the line cannot be calculated
+     */
+    public int calculateLineNumber(int iPC)
+        {
+        Code code = m_code;
+        if (code == null)
+            {
+            return 0;
+            }
+
+        Op[] aOp = code.m_aop;
+        if (aOp == null)
+            {
+            return 0;
+            }
+
+        // Nop() line count is zero based
+        int nLine = 1;
+        for (int i = 0; i < iPC; i++)
+            {
+            Op op = aOp[i];
+            if (op instanceof Nop)
+                {
+                nLine += ((Nop) op).getLineCount();
+                }
+            }
+        return nLine == 1 ? 0 : nLine;
         }
 
 
@@ -2089,7 +2139,7 @@ public class MethodStructure
      * Cached information about whether any singleton constants used by this method have been
      * fully initialized.
      */
-    private transient Boolean m_FInitialized;
+    private transient boolean m_fInitialized;
 
     /**
      * Cached method for the construct-finally that goes with this method, iff this method is a

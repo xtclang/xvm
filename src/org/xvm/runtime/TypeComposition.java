@@ -19,8 +19,6 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
-import org.xvm.runtime.template.xRef.RefHandle;
-
 import org.xvm.util.ListMap;
 
 
@@ -72,8 +70,8 @@ public class TypeComposition
     // cached property setter call chain (the top-most method first)
     private final Map<String, CallChain> f_mapSetters;
 
-    // cached map of fields (values are always nulls)
-    private final Map<String, ObjectHandle> f_mapFields;
+    // cached map of fields (values are either nulls or TypeComposition for refs)
+    private final Map<String, TypeComposition> f_mapFields;
 
     /**
      * Construct the TypeComposition for a given "inception" type and a "revealed" type.
@@ -378,18 +376,33 @@ public class TypeComposition
     // create unassigned (with a null value) entries for all fields
     protected Map<String, ObjectHandle> createFields()
         {
-        Map mapCached = f_mapFields;
+        Map<String, TypeComposition> mapCached = f_mapFields;
         if (mapCached == null)
             {
             return null;
             }
 
         Map<String, ObjectHandle> mapFields = new ListMap<>();
-        mapFields.putAll(mapCached);
+        for (Map.Entry<String, TypeComposition> entry : f_mapFields.entrySet())
+            {
+            String          sName  = entry.getKey();
+            TypeComposition clzRef = entry.getValue();
+            ObjectHandle    hValue = null;
+            if (clzRef != null)
+                {
+                hValue = ((VarSupport) clzRef.getSupport()).createRefHandle(clzRef, sName);
+                }
+            mapFields.put(sName, hValue);
+            }
         return mapFields;
         }
 
-    private Map<String, ObjectHandle> ensureFields()
+    /**
+     * Create a map of fields that serves as a prototype for all instances of this class.
+     *
+     * @return a prototype map
+     */
+    private Map<String, TypeComposition> ensureFields()
         {
         ConstantPool pool = f_typeInception.getConstantPool();
 
@@ -397,25 +410,22 @@ public class TypeComposition
             f_typeInception.getUnderlyingType(), Access.STRUCT);
         TypeInfo infoStruct = typeStruct.ensureTypeInfo();
 
-        Map mapFields = new ListMap<>();
+        Map<String, TypeComposition> mapFields = new ListMap<>();
         for (Map.Entry<PropertyConstant, PropertyInfo> entry :
                 infoStruct.getProperties().entrySet())
             {
             String sPropName = entry.getKey().getName();
             PropertyInfo infoProp = entry.getValue();
 
-            RefHandle hRef = null;
             if (infoProp.hasField())
                 {
+                TypeComposition clzRef = null;
                 if (infoProp.isRefAnnotated())
                     {
-                    TypeComposition clzRef =
-                        f_template.f_templates.resolveClass(infoProp.getRefType());
-
-                    hRef = ((VarSupport) clzRef.getSupport()).
-                        createRefHandle(clzRef, sPropName);
+                    clzRef = f_template.f_templates.resolveClass(infoProp.getRefType());
                     }
-                mapFields.put(sPropName, hRef);
+
+                mapFields.put(sPropName, clzRef);
                 }
             }
         return mapFields.isEmpty() ? null : mapFields;
