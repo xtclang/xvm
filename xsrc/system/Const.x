@@ -32,7 +32,8 @@ interface Const
     @Override
     Const[] to<Const[]>();
 
-    @Override to<String>()
+    @Override
+    String to<String>()
         {
         StringBuffer buf = new StringBuffer(estimateStringLength());
         appendTo(buf);

@@ -339,7 +339,7 @@ const Duration(UInt128 picosecondsTotal)
     /**
      * Multiplication: return a multiple of this duration.
      */
-    @Op("*") Duration mul(Decimal factor)
+    @Op("*") Duration mul(Dec factor)
         {
         return (this.picosecondsTotal.to<VarDec>() * factor.to<VarDec>()).to<UInt128>();
         }
@@ -363,7 +363,7 @@ const Duration(UInt128 picosecondsTotal)
             case picosecondsTotal >= PICOS_PER_HOUR  : hoursTotal  .estimateStringLength() + 6;
             case picosecondsTotal >= PICOS_PER_MINUTE: minutesTotal.estimateStringLength() + 3;
             default                                  : secondsTotal.estimateStringLength();
-            }
+            };
 
         return length + picosFractionalLength(picoseconds);
         }

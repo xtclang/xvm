@@ -91,7 +91,7 @@ const TimeZone(Int picos, String? name)
             {
             return 0;
             }
-        }
+        };
 
     /**
      * The "not-a-TimeZone" TimeZone.
@@ -137,7 +137,7 @@ const TimeZone(Int picos, String? name)
             // note: this only supports dates on or after 1582-10-15 on the Gregorian calendar
             return orig.timezone.isNoTZ ? orig : new DateTime(orig.date, orig.time, this);
             }
-        }
+        };
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -264,13 +264,21 @@ const TimeZone(Int picos, String? name)
                 }
             }
 
-        return switch (nameLength > 0, offsetLength > 0)
+// TODO
+//        return switch (nameLength > 0, offsetLength > 0)
+//            {
+//            case (true , true ): nameLength + offsetLength + 3;
+//            case (true , false): nameLength;
+//            case (false, true ): offsetLength;
+//            case (false, false): 6;
+//            }
+        return switch ()
             {
-            case (true , true ): nameLength + offsetLength + 3;
-            case (true , false): nameLength;
-            case (false, true ): offsetLength;
-            case (false, false): 6;
-            }
+            case nameLength > 0 && offsetLength > 0: nameLength + offsetLength + 3;
+            case nameLength > 0: nameLength;
+            case offsetLength > 0: offsetLength;
+            default: 6;
+            };
         }
 
     @Override
@@ -279,7 +287,7 @@ const TimeZone(Int picos, String? name)
         Boolean showPicos = resolved;
         if (name != null)
             {
-            appender.add(name)
+            appender.add(name);
 
             showPicos &&= picos != 0;
             if (showPicos)
@@ -315,7 +323,7 @@ const TimeZone(Int picos, String? name)
                     appender.add('0');
                     }
                 appender.add(seconds);
-                remainder -= seconds * Time.PICOS_PER_SECOND
+                remainder -= seconds * Time.PICOS_PER_SECOND;
 
                 if (remainder > 0)
                     {

@@ -295,7 +295,8 @@ const Date(Int epochDay)
      *
      * @return a tuple of year, month, day, and day-of-year
      */
-    static (Int year, Int month, Int day, Int dayOfYear) calcDate(Int epochDay)
+// TODO static (Int year, Int month, Int day, Int dayOfYear) calcDate(Int epochDay)
+    static (Int, Int, Int, Int) calcDate(Int epochDay)
         {
         assert epochDay >= GREGORIAN_OFFSET;
 
@@ -332,7 +333,8 @@ const Date(Int epochDay)
      *
      * @return a tuple of month and day
      */
-    static (Int month, Int day) calcDate(Int year, Int dayOfYear)
+// TODO static (Int month, Int day) calcDate(Int year, Int dayOfYear)
+    static (Int, Int) calcDate(Int year, Int dayOfYear)
         {
         assert dayOfYear >= 1 && dayOfYear <= daysInYear(year);
 
@@ -355,7 +357,7 @@ const Date(Int epochDay)
      *
      * @return the "n-th day of the year" (starting with 1) for the specified year, month, and day
      */
-    static Int dayOfYear(Int year, Int month, Int day)
+    static Int calcDayOfYear(Int year, Int month, Int day)
         {
         assert isGregorian(year, month, day);
         return daysInYearBefore(year, month) + day;

@@ -1007,6 +1007,10 @@ public class ConstantPool
                 sSub = "Signum";
                 break;
 
+            case "Dec":
+                sClz = "Dec64";
+                break;
+
             case "Int":
                 sClz = "Int64";
                 break;

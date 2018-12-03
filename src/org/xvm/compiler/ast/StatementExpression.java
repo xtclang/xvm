@@ -11,7 +11,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
 
-import org.xvm.compiler.ast.LambdaExpression.CaptureContext;
+import org.xvm.compiler.ast.LambdaExpression.LambdaContext;
 
 import org.xvm.util.Severity;
 
@@ -251,8 +251,9 @@ public class StatementExpression
      *
      * @return a capturing context
      */
-    protected CaptureContext enterCapture(Context ctx, StatementBlock body)
+    protected LambdaContext enterCapture(Context ctx, StatementBlock body)
         {
+        // TODO don't use LambdaContext? use a similar class specific to the StatementExpression?
         return LambdaExpression.enterCapture(ctx, body, null, null);
         }
 

@@ -15,7 +15,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone)
 
         Int128 picos = date.epochDay.to<Int128>() * Time.PICOS_PER_DAY
                      + time.picos.to<Int128>();
-                     - timezone.picos.to<Int128>()
+                     - timezone.picos.to<Int128>();
 
         construct DateTime(picos, timezone);
         }

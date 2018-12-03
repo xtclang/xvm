@@ -1689,6 +1689,7 @@ public class Context
 
     /**
      * A context for compiling in a scope that can capture local variables from an outer scope.
+     * This is used by lambdas (LambdaExpression) and anonymous inner classes (NewExpression).
      */
     public static class CaptureContext
             extends Context
@@ -1717,52 +1718,6 @@ public class Context
                 }
 
             return ctxOuter;
-            }
-
-        @Override
-        protected void markVarRead(boolean fNested, String sName, Token tokName, ErrorListener errs)
-            {
-            // variable capture will create a variable in this scope (a parameter for a lambda, or
-            // a de-referenced property value for an anonymous inner class), so if the variable is
-            // not already declared in this scope but it exists in the outer scope, then capture it
-            final Context ctxOuter = getOuterContext();
-            if (!isVarDeclaredInThisScope(sName) && ctxOuter.isVarReadable(sName))
-                {
-                boolean fCapture = true;
-                if (isReservedName(sName))
-                    {
-                    switch (sName)
-                        {
-                        case "this":
-                        case "this:target":
-                        case "this:public":
-                        case "this:protected":
-                        case "this:private":
-                        case "this:struct":
-                            // the only names that we capture _without_ a capture parameter are the
-                            // various "this" references that refer to "this" object
-                            if (ctxOuter.isMethod())
-                                {
-                                m_fCaptureThis = true;
-                                return;
-                                }
-                            break;
-
-                        case "this:service":
-                        case "this:module":
-                            // these two are available globally, and are _not_ captured
-                            return;
-                        }
-                    }
-
-                if (fCapture)
-                    {
-                    // capture the variable
-                    ensureCaptureMap().putIfAbsent(sName, false);
-                    }
-                }
-
-            super.markVarRead(fNested, sName, tokName, errs);
             }
 
         /**
@@ -1801,6 +1756,17 @@ public class Context
             }
 
         /**
+         * Mark the capturing context as requiring a "this" from outside of the context. For a
+         * lambda, this makes the lambda result into a method instead of a function. For an
+         * anonymous inner class, this makes the resulting class an instance child instead of a
+         * static child.
+         */
+        protected void captureThis()
+            {
+            m_fCaptureThis = true;
+            }
+
+        /**
          * @return true iff the lambda is built as a method (and not as a function) in order to
          *         capture the "this" object reference
          */
@@ -1820,7 +1786,7 @@ public class Context
          * @return a map of variable name to a Boolean representing if the capture is read-only
          *         (false) or read/write (true)
          */
-        private Map<String, Boolean> ensureCaptureMap()
+        protected Map<String, Boolean> ensureCaptureMap()
             {
             Map<String, Boolean> map = m_mapCapture;
             if (map == null)

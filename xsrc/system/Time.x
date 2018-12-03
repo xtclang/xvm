@@ -74,7 +74,7 @@ const Time(Int picos)
      */
     Int milliseconds.get()
         {
-        return picoseconds / PICOS_PER_MILLI
+        return picoseconds / PICOS_PER_MILLI;
         }
 
     /**
