@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.util.Collections;
 import java.util.Map;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.compiler.Token;
 
 
@@ -31,6 +32,11 @@ public class IgnoredNameExpression
         return new BadTypeExpression(this);
         }
 
+    @Override
+    public TypeConstant getImplicitType(Context ctx)
+        {
+        return pool().typeObject();
+        }
 
     // ----- debugging assistance ------------------------------------------------------------------
 

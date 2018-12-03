@@ -3628,14 +3628,10 @@ public class Parser
                     idEnd     = Id.R_CURLY;
                     }
 
-                List<Expression> exprs = null;
+                List<Expression> exprs = new ArrayList<>();
                 while (match(idEnd) == null)
                     {
-                    if (exprs == null)
-                        {
-                        exprs = new ArrayList<>();
-                        }
-                    else
+                    if (!exprs.isEmpty())
                         {
                         expect(Id.COMMA);
                         }

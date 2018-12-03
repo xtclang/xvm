@@ -93,7 +93,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone)
     @Op("-") Duration sub(DateTime datetime)
         {
         assert this.timezone.isNoTZ == datetime.timezone.isNoTZ;
-        return new Duration((this.epochPicos - datetime.epochPicos).to<U8Int128>());
+        return new Duration((this.epochPicos - datetime.epochPicos).to<UInt128>());
         }
 
     /**
