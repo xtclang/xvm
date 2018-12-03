@@ -19,7 +19,7 @@ module TestNumbers.xqiz.it
         UInt n1 = 42;
         console.println("n1=" + n1);
 
-        UInt n2 = 0xFFFFFFFFFFFFFFFF;
+        UInt n2 = 0xFFFF_FFFF_FFFF_FFFF;
         console.println("n2=" + n2);
         console.println("-1=" + (--n2));
         console.println("+1=" + (++n2));
@@ -36,7 +36,7 @@ module TestNumbers.xqiz.it
         Int128 n1 = 42;
         console.println("n1=" + n1);
 
-        Int128 n2 = 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
+        Int128 n2 = 0x7FFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF;
         console.println("n2=" + n2);
         console.println("-1=" + (--n2));
         console.println("+1=" + (++n2));
@@ -64,7 +64,7 @@ module TestNumbers.xqiz.it
         UInt128 n1 = 42;
         console.println("n1=" + n1);
 
-        UInt128 n2 = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
+        UInt128 n2 = 0xFFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF;
         console.println("n2=" + n2);
         console.println("-1=" + (--n2));
         console.println("+1=" + (++n2));
