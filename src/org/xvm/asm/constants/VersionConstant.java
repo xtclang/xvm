@@ -40,7 +40,7 @@ public class VersionConstant
      */
     public VersionConstant(ConstantPool pool, Version ver)
         {
-        super(pool, Format.Version, ver.toString());
+        super(pool, Format.Version, ver.toString(), null); // REVIEW should we use "ver" as the value?
         m_ver = ver;
         }
 

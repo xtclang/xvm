@@ -217,11 +217,11 @@ public class LiteralExpression
                 return pool.ensureStringConstant((String) literal.getValue());
 
             case LIT_INT:
-                return pool.ensureLiteralConstant(Format.IntLiteral, literal.getString(getSource()));
+                return pool.ensureLiteralConstant(Format.IntLiteral, literal.getString(getSource()), literal.getValue());
 
             case LIT_DEC:
             case LIT_BIN:
-                return pool.ensureLiteralConstant(Format.FPLiteral, literal.getString(getSource()));
+                return pool.ensureLiteralConstant(Format.FPLiteral, literal.getString(getSource()), literal.getValue());
 
             default:
                 throw new IllegalStateException(literal.getId().name() + "=" + literal.getValue());

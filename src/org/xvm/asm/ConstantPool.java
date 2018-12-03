@@ -280,6 +280,11 @@ public class ConstantPool
 
     public LiteralConstant ensureLiteralConstant(Format format, String s)
         {
+        return ensureLiteralConstant(format, s, null);
+        }
+
+    public LiteralConstant ensureLiteralConstant(Format format, String s, Object oValue)
+        {
         switch (format)
             {
             case IntLiteral:
@@ -292,7 +297,7 @@ public class ConstantPool
                 LiteralConstant constant = (LiteralConstant) ensureLocatorLookup(format).get(s);
                 if (constant == null)
                     {
-                    constant = (LiteralConstant) register(new LiteralConstant(this, format, s));
+                    constant = (LiteralConstant) register(new LiteralConstant(this, format, s, oValue));
                     }
                 return constant;
 
