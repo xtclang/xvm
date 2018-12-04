@@ -4,7 +4,15 @@ package org.xvm.compiler.ast;
 import java.util.Collections;
 import java.util.Map;
 
+import org.xvm.asm.Argument;
+import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure.Code;
+
+import org.xvm.asm.Op;
+import org.xvm.asm.Register;
+
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.compiler.Token;
 
 
@@ -36,6 +44,31 @@ public class IgnoredNameExpression
     public TypeConstant getImplicitType(Context ctx)
         {
         return pool().typeObject();
+        }
+
+    @Override
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+        {
+        TypeConstant type = typeRequired == null
+                ? pool().typeObject()
+                : typeRequired;
+
+        return finishValidation(type, type, TypeFit.Fit, null, errs);
+        }
+
+    @Override
+    public boolean isAssignable()
+        {
+        return true;
+        }
+
+    @Override
+    public Argument generateArgument(Context ctx, Code code,
+                                     boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+        {
+        return fUsedOnce
+            ? new Register(pool().typeObject(), Op.A_STACK)
+            : new Register(pool().typeObject());
         }
 
     // ----- debugging assistance ------------------------------------------------------------------
