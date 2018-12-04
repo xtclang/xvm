@@ -3,15 +3,10 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.TreeMap;
 
 import org.xvm.asm.Argument;
-import org.xvm.asm.Assignment;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
@@ -38,8 +33,8 @@ import org.xvm.asm.op.NewG_N;
 import org.xvm.asm.op.New_0;
 import org.xvm.asm.op.New_1;
 import org.xvm.asm.op.New_N;
-
 import org.xvm.asm.op.Return_0;
+
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Constants;
