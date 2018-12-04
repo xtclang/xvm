@@ -151,7 +151,7 @@ const Date(Int epochDay)
      */
     DateTime to<DateTime>()
         {
-        return new DateTime(this, Time.MIDNIGHT);
+        return new DateTime(this, Time.MIDNIGHT, TimeZone.NoTZ);
         }
 
     // ----- Stringable ----------------------------------------------------------------------------
@@ -311,11 +311,11 @@ const Date(Int epochDay)
         Int centuryNum   = daysLeft / DAYS_PER_CENTURY;
         daysLeft        -= centuryNum * DAYS_PER_CENTURY;
 
-        Int qennialNum   = daysLeft / DAYS_PER_QENNIAL;
-        daysLeft        -= qennialNum * DAYS_PER_QENNIAL;
+        Int qennialNum   = daysLeft / DAYS_PER_QYEAR;
+        daysLeft        -= qennialNum * DAYS_PER_QYEAR;
 
-        Int ennialNum    = daysLeft / DAYS_PER_ENNIAL;
-        daysLeft        -= ennialNum * DAYS_PER_ENNIAL;
+        Int ennialNum    = daysLeft / DAYS_PER_YEAR;
+        daysLeft        -= ennialNum * DAYS_PER_YEAR;
 
         Int year         = QCENTURY_YEAR + qcenturyNum * 400
                                          + centuryNum  * 100
@@ -388,7 +388,7 @@ const Date(Int epochDay)
      *
      * @return 365 for normal years; 366 for leap years
      */
-    static Boolean daysInYear(Int year)
+    static Int daysInYear(Int year)
         {
         return isLeapYear(year) ? 366 : 365;
         }

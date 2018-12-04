@@ -96,6 +96,12 @@ public class Call_NN
         }
 
     @Override
+    protected boolean isMultiReturn()
+        {
+        return true;
+        }
+
+    @Override
     public int process(Frame frame, int iPC)
         {
         try

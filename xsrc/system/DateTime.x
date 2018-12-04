@@ -41,7 +41,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone)
         Int128 picos = adjustedPicos;
         return new Date(picos >= 0
                 ? (picos / Time.PICOS_PER_DAY).to<Int>()
-                : -1 - ((picos.abs() - 1) / PICOS_PER_DAY).to<Int>());
+                : -1 - ((picos.abs() - 1) / Time.PICOS_PER_DAY).to<Int>());
         }
 
     /**

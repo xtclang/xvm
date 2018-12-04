@@ -486,7 +486,7 @@ public class MethodStructure
         Code code;
 
         // TODO: remove when compiler is fully operational
-        if (m_code != null)
+        if (m_code != null && getIdentityConstant().getNamespace().getName().contains("Test"))
             {
             System.err.println("*** already compiled naturally: " + MethodStructure.this.toString());
             }
@@ -532,7 +532,7 @@ public class MethodStructure
     public void setOps(Op[] aop)
         {
         // TODO: remove when compiler is fully operational
-        if (m_code != null)
+        if (m_code != null && getIdentityConstant().getName().contains("Test"))
             {
             System.err.println("*** already compiled naturally: " + MethodStructure.this.toString());
             }

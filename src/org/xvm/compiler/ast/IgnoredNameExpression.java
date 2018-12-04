@@ -66,9 +66,7 @@ public class IgnoredNameExpression
     public Argument generateArgument(Context ctx, Code code,
                                      boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        return fUsedOnce
-            ? new Register(pool().typeObject(), Op.A_STACK)
-            : new Register(pool().typeObject());
+        return new Register(pool().typeObject(), Op.A_IGNORE);
         }
 
     // ----- debugging assistance ------------------------------------------------------------------
