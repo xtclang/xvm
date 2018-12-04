@@ -30,6 +30,8 @@ import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.asm.op.Construct_1;
+import org.xvm.asm.op.Construct_N;
 import org.xvm.asm.op.NewG_0;
 import org.xvm.asm.op.NewG_1;
 import org.xvm.asm.op.NewG_N;
@@ -37,6 +39,7 @@ import org.xvm.asm.op.New_0;
 import org.xvm.asm.op.New_1;
 import org.xvm.asm.op.New_N;
 
+import org.xvm.asm.op.Return_0;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Constants;
@@ -417,6 +420,7 @@ public class NewExpression
                         if (constrDefault == null)
                             {
                             // TODO log error missing constructor
+                            fValid = false;
                             }
                         else
                             {
@@ -431,10 +435,24 @@ public class NewExpression
                             MethodStructure constrThis  = clzAnon.createMethod(true,
                                     Access.PUBLIC, null, Parameter.NO_PARAMS, "construct",
                                     aParams, true, false);
+                            idMethod = constrThis.getIdentityConstant();
+
                             Code code = constrThis.createCode();
-                            code.add(cParams == 1      // TODO CONSTRUCT_1 or CONSTRUCT_N
-                                    ? new CidSuper.getPar)
-                            notImplemented();
+                            if (cParams == 1)
+                                {
+                                code.add(new Construct_1(idSuper, new Register(aParams[0].getType(), 0)));
+                                }
+                            else
+                                {
+                                assert cParams > 1;
+                                Register[] aArgs = new Register[cParams];
+                                for (int i = 0; i < cParams; ++i)
+                                    {
+                                    aArgs[i] = new Register(aParams[i].getType(), i);
+                                    }
+                                code.add(new Construct_N(idSuper, aArgs));
+                                }
+                            code.add(new Return_0());
 
                             // since we just modified the component, flush the TypeInfo cache for
                             // the type of the anonymous inner class
