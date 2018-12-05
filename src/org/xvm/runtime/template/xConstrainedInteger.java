@@ -10,6 +10,7 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
@@ -18,7 +19,8 @@ import org.xvm.runtime.TypeComposition;
 
 
 /**
- * Abstract base class for constrained integers (Int8, UInt16, @Unchecked Int32, ...)
+ * Abstract base class for constrained integers that fit into 64 bits
+ * (Int8, UInt16, @Unchecked Int32, ...)
  */
 public abstract class xConstrainedInteger
         extends xConst
@@ -33,7 +35,7 @@ public abstract class xConstrainedInteger
         f_cMaxValue = cMaxValue;
         f_cNumBits = cNumBits;
         f_fChecked = fChecked;
-        f_fUnsigned = fUnsigned;
+        f_fSigned = !fUnsigned;
 
         f_cAddCheckShift = 64 - cNumBits;
         f_cMulCheckShift = fUnsigned ? (cNumBits / 2) : (cNumBits / 2 - 1);
@@ -53,12 +55,15 @@ public abstract class xConstrainedInteger
         markNativeMethod("to", VOID, sName.equals("UInt16") ? THIS : new String[]{"UInt16"});
         markNativeMethod("to", VOID, sName.equals("UInt8")  ? THIS : new String[]{"UInt8"});
 
-        if (!f_fUnsigned)
-            {
-            markNativeMethod("abs", VOID, THIS);
-            }
+        markNativeMethod("to", VOID, new String[]{"Int128"});
+        markNativeMethod("to", VOID, new String[]{"UInt128"});
+        markNativeMethod("to", VOID, new String[]{"VarInt"});
+        markNativeMethod("to", VOID, new String[]{"VarUInt"});
+        markNativeMethod("to", VOID, new String[]{"VarFloat"});
+        markNativeMethod("to", VOID, new String[]{"VarDec"});
 
         // @Op methods
+        markNativeMethod("abs", VOID, THIS);
         markNativeMethod("add", THIS, THIS);
         markNativeMethod("sub", THIS, THIS);
         markNativeMethod("mul", THIS, THIS);
@@ -119,17 +124,50 @@ public abstract class xConstrainedInteger
             {
             case "abs":
                 {
-                long l = ((JavaLong) hTarget).getValue();
-                return frame.assignValue(iReturn, l >= 0 ? hTarget : makeJavaLong(-l));
+                if (f_fSigned)
+                    {
+                    long l = ((JavaLong) hTarget).getValue();
+                    return frame.assignValue(iReturn, l >= 0 ? hTarget : makeJavaLong(-l));
+                    }
+                return frame.assignValue(iReturn, hTarget);
                 }
 
             case "to":
                 {
-                TypeConstant        typeRet  = method.getReturn(0).getType();
-                xConstrainedInteger template = getTemplateByType(typeRet);
-                if (template != null)
+                TypeConstant  typeRet  = method.getReturn(0).getType();
+                ClassTemplate template = getTemplateByType(typeRet);
+
+                if (template == this)
                     {
-                    return template.convertIntegerType(frame, ((JavaLong) hTarget).getValue(), iReturn);
+                    return frame.assignValue(iReturn, hTarget);
+                    }
+
+                if (template instanceof xConstrainedInteger)
+                    {
+                    xConstrainedInteger templateTo = (xConstrainedInteger) template;
+                    long                lValue     = ((JavaLong) hTarget).getValue();
+
+                    // there is one overflow case that needs to be handled here: UInt64 -> Int*
+                    if (lValue < 0 && this instanceof xUInt64)
+                        {
+                        return templateTo.overflow(frame);
+                        }
+
+                    return templateTo.convertLong(frame, lValue, iReturn);
+                    }
+
+                if (template instanceof xBaseInt128)
+                    {
+                    xBaseInt128 templateTo = (xBaseInt128) template;
+                    long        lValue     = ((JavaLong) hTarget).getValue();
+
+                    if (f_fSigned && lValue < 0 && !templateTo.f_fSigned)
+                        {
+                        // cannot assign negative value to the unsigned type
+                        return overflow(frame);
+                        }
+
+                    return templateTo.convertLong(frame, lValue, iReturn);
                     }
                 break;
                 }
@@ -202,7 +240,7 @@ public abstract class xConstrainedInteger
         {
         long l = ((JavaLong) hTarget).getValue();
 
-        if (f_fChecked && l == f_cMinValue)
+        if (f_fChecked && (!f_fSigned || l == f_cMinValue))
             {
             return overflow(frame);
             }
@@ -389,11 +427,11 @@ public abstract class xConstrainedInteger
         }
 
     /**
-     * Converts an object of "this" integer type to the type represented by the template.
+     * Convert a long value into a handle for the type represented by this template.
      *
      * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */
-    protected int convertIntegerType(Frame frame, long lValue, int iReturn)
+    public int convertLong(Frame frame, long lValue, int iReturn)
         {
         if (lValue < f_cMinValue || lValue > f_cMaxValue)
             {
@@ -434,7 +472,7 @@ public abstract class xConstrainedInteger
      *
      * @return a class template instance corresponding to the specified name
      */
-    public static xConstrainedInteger getTemplateByType(TypeConstant type)
+    public static ClassTemplate getTemplateByType(TypeConstant type)
         {
         String sName = ((ClassConstant) type.getDefiningConstant()).getPathElementString();
 
@@ -448,6 +486,8 @@ public abstract class xConstrainedInteger
                 return xInt32.INSTANCE;
             case "Int64":
                 return xInt64.INSTANCE;
+            case "Int128":
+                return xInt128.INSTANCE;
             case "UInt8":
                 return xUInt8.INSTANCE;
             case "UInt16":
@@ -456,6 +496,8 @@ public abstract class xConstrainedInteger
                 return xUInt32.INSTANCE;
             case "UInt64":
                 return xUInt64.INSTANCE;
+            case "UInt128":
+                return xUInt128.INSTANCE;
             default:
                 return null;
             }
@@ -471,5 +513,5 @@ public abstract class xConstrainedInteger
     protected final int f_cMulCheckShift;
 
     protected final boolean f_fChecked;
-    protected final boolean f_fUnsigned;
+    protected final boolean f_fSigned;
     }

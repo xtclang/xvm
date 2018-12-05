@@ -1585,7 +1585,11 @@ public abstract class ClassTemplate
 
     public void markNativeMethod(String sName, String[] asParamType, String[] asRetType)
         {
-        getMethodStructure(sName, asParamType, asRetType).setNative(true);
+        MethodStructure method = getMethodStructure(sName, asParamType, asRetType);
+        if (method != null)
+            {
+            method.setNative(true);
+            }
         }
 
     public MethodStructure getMethodStructure(String sName, String[] asParam)
@@ -1595,12 +1599,7 @@ public abstract class ClassTemplate
 
     public MethodStructure getMethodStructure(String sName, String[] asParam, String[] asRet)
         {
-        MethodStructure method = f_templates.f_adapter.getMethod(this, sName, asParam, asRet);
-        if (method == null)
-            {
-            throw new IllegalArgumentException("Method is not defined: " + f_sName + '#' + sName);
-            }
-        return method;
+        return f_templates.f_adapter.getMethod(this, sName, asParam, asRet);
         }
 
     // mark the property getter as native
@@ -1618,10 +1617,10 @@ public abstract class ClassTemplate
             }
         }
 
-    public MethodStructure ensureGetter(String sPropName)
+    public MethodStructure getGetter(String sPropName)
         {
         PropertyStructure prop = getProperty(sPropName);
-
+        assert prop != null;
         return prop.getGetter();
         }
 

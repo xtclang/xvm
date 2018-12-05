@@ -55,7 +55,7 @@ public class xCharArray
         }
 
     @Override
-    public ArrayHandle createArrayHandle(Frame frame, TypeComposition clzArray, ObjectHandle[] ahArg)
+    public ArrayHandle createArrayHandle(TypeComposition clzArray, ObjectHandle[] ahArg)
         {
         int    c  = ahArg.length;
         char[] al = new char[c];
@@ -67,7 +67,7 @@ public class xCharArray
         }
 
     @Override
-    public ArrayHandle createArrayHandle(Frame frame, TypeComposition clzArray, long cCapacity)
+    public ArrayHandle createArrayHandle(TypeComposition clzArray, long cCapacity)
         {
         return new CharArrayHandle(clzArray, cCapacity);
         }

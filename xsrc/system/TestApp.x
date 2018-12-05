@@ -324,7 +324,7 @@ class TestApp
             else
                 {
                 @Future Int iRet;
-                DateTime dtWakeup = runtimeClock.now; // + Duration.ofSeconds(10);
+                DateTime dtWakeup = runtimeClock.now + Duration.ofSeconds(1);
                 runtimeClock.scheduleAlarm(dtWakeup, () -> {iRet = cDelay;});
                 return iRet;
                 }

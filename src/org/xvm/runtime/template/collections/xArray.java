@@ -147,7 +147,7 @@ public class xArray
             }
 
         xArray template = (xArray) clzArray.getTemplate();
-        ArrayHandle hArray = template.createArrayHandle(frame, clzArray, ahValue);
+        ArrayHandle hArray = template.createArrayHandle(clzArray, ahValue);
 
         hArray.makeImmutable();
 
@@ -158,13 +158,12 @@ public class xArray
     /**
      * Create a one dimensional array for a specified class and content.
      *
-     * @param frame      the current frame
-     * @param clzArray   the class of the array
-     * @param ahArg      the array elements
+     * @param clzArray  the class of the array
+     * @param ahArg     the array elements
      *
      * @return the array handle
      */
-    public ArrayHandle createArrayHandle(Frame frame, TypeComposition clzArray, ObjectHandle[] ahArg)
+    public ArrayHandle createArrayHandle(TypeComposition clzArray, ObjectHandle[] ahArg)
         {
         return new GenericArrayHandle(clzArray, ahArg);
         }
@@ -172,13 +171,12 @@ public class xArray
     /**
      * Create a one dimensional array for a specified type and arity.
      *
-     * @param frame      the current frame
      * @param clzArray   the class of the array
      * @param cCapacity  the array size
      *
      * @return the array handle
      */
-    public ArrayHandle createArrayHandle(Frame frame, TypeComposition clzArray, long cCapacity)
+    public ArrayHandle createArrayHandle(TypeComposition clzArray, long cCapacity)
         {
         return new GenericArrayHandle(clzArray, cCapacity);
         }
@@ -198,7 +196,7 @@ public class xArray
             }
 
         xArray      template = (xArray) clzArray.getTemplate();
-        ArrayHandle hArray   = template.createArrayHandle(frame, clzArray, cCapacity);
+        ArrayHandle hArray   = template.createArrayHandle(clzArray, cCapacity);
 
         if (ahVar.length == 1)
             {
@@ -754,7 +752,7 @@ public class xArray
         {
         public ObjectHandle[] m_ahValue;
 
-        protected GenericArrayHandle(TypeComposition clzArray, ObjectHandle[] ahValue)
+        public GenericArrayHandle(TypeComposition clzArray, ObjectHandle[] ahValue)
             {
             super(clzArray);
 
@@ -762,7 +760,7 @@ public class xArray
             m_cSize = ahValue.length;
             }
 
-        protected GenericArrayHandle(TypeComposition clzArray, long cCapacity)
+        public GenericArrayHandle(TypeComposition clzArray, long cCapacity)
             {
             super(clzArray);
 

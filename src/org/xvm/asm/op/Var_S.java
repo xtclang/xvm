@@ -119,7 +119,7 @@ public class Var_S
                 }
 
             xArray template = (xArray) clzArray.getTemplate();
-            ArrayHandle hArray = template.createArrayHandle(frame, clzArray, ahArg);
+            ArrayHandle hArray = template.createArrayHandle(clzArray, ahArg);
             hArray.makeImmutable();
 
             frame.introduceResolvedVar(m_nVar, typeSequence, null, Frame.VAR_STANDARD, hArray);

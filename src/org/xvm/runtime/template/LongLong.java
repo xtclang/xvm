@@ -165,6 +165,30 @@ public class LongLong
 
     public LongLong div(LongLong ll)
         {
+        long l2L = ll.m_lLow;
+        long l2H = ll.m_lHigh;
+
+        if (l2H == 0)
+            {
+            if (l2L == 0)
+                {
+                return OVERFLOW;
+                }
+
+            if (l2L > 0)
+                {
+                return div(l2L);
+                }
+            }
+        else
+            {
+            if (l2H == -1 && l2L < 0)
+                {
+                return div(l2L);
+                }
+            }
+
+        // the divisor doesn't fit into a long; use the BigInteger for now
         BigInteger bi1 = toBigInteger();
         BigInteger bi2 = ll.toBigInteger();
         BigInteger bir = bi1.divide(bi2);
@@ -172,10 +196,86 @@ public class LongLong
         return fromBigInteger(bir);
         }
 
+    public LongLong div(long l)
+        {
+        long l1L = m_lLow;
+        long l1H = m_lHigh;
+
+        if (l1H == 0)
+            {
+            if (l1L == 0)
+                {
+                return ZERO;
+                }
+
+            if (l1L > 0)
+                {
+                return new LongLong(l1H/l);
+                }
+            }
+        else
+            {
+            if (l1H == -1 && l1L < 0)
+                {
+                return new LongLong(l1H/l);
+                }
+            }
+
+        // the dividend doesn't fit into a long; use the BigInteger for now
+        BigInteger bi1 = toBigInteger();
+        BigInteger bi2 = BigInteger.valueOf(l);
+        BigInteger bir = bi1.divide(bi2);
+
+        return fromBigInteger(bir);
+        }
+
     public LongLong divUnsigned(LongLong ll)
         {
+        long l2L = ll.m_lLow;
+        long l2H = ll.m_lHigh;
+
+        if (l2H == 0)
+            {
+            if (l2L == 0)
+                {
+                return OVERFLOW;
+                }
+
+            if (l2L > 0)
+                {
+                return divUnsigned(l2L);
+                }
+            }
+
+        // the divisor doesn't fit into a long; use the BigInteger for now
         BigInteger bi1 = toUnsignedBigInteger();
         BigInteger bi2 = ll.toUnsignedBigInteger();
+        BigInteger bir = bi1.divide(bi2);
+
+        return fromBigInteger(bir);
+        }
+
+    public LongLong divUnsigned(long l)
+        {
+        long l1L = m_lLow;
+        long l1H = m_lHigh;
+
+        if (l1H == 0)
+            {
+            if (l1L == 0)
+                {
+                return ZERO;
+                }
+
+            if (l1L > 0)
+                {
+                return new LongLong(l1H/l);
+                }
+            }
+
+        // the dividend doesn't fit into a long; use the BigInteger for now
+        BigInteger bi1 = toUnsignedBigInteger();
+        BigInteger bi2 = toUnsignedBigInteger(l);
         BigInteger bir = bi1.divide(bi2);
 
         return fromBigInteger(bir);

@@ -4,11 +4,13 @@ package org.xvm.runtime.template.types;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.PropertyConstant;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.TemplateRegistry;
 
@@ -40,7 +42,13 @@ public class xProperty
         {
         if (constant instanceof PropertyConstant)
             {
-            frame.pushStack(new DeferredPropertyHandle((PropertyConstant) constant));
+            PropertyConstant  idProp = (PropertyConstant) constant;
+            PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
+            ObjectHandle      hValue = prop.isStatic()
+                ? frame.f_context.f_heapGlobal.ensureConstHandle(frame, prop.getInitialValue())
+                : new DeferredPropertyHandle(idProp);
+
+            frame.pushStack(hValue);
             return Op.R_NEXT;
             }
 
@@ -59,11 +67,16 @@ public class xProperty
             f_property = prop;
             }
 
-        public String getProperty()
+        public PropertyConstant getProperty()
+            {
+            return f_property;
+            }
+
+        public String getPropertyName()
             {
             return f_property.getName();
-
             }
+
         @Override
         public String toString()
             {

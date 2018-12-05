@@ -1,5 +1,6 @@
 package org.xvm.runtime.template;
 
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
@@ -8,6 +9,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
@@ -21,7 +23,7 @@ import org.xvm.util.PackedInteger;
 public abstract class xBaseInt128
         extends xConst
     {
-    private boolean f_fSigned;
+    public final boolean f_fSigned;
 
     public xBaseInt128(TemplateRegistry templates, ClassStructure structure, boolean fSigned)
         {
@@ -33,10 +35,12 @@ public abstract class xBaseInt128
     @Override
     public void initDeclared()
         {
+        markNativeMethod("to", VOID, new String[]{"Int128"});
         markNativeMethod("to", VOID, new String[]{"Int64"});
         markNativeMethod("to", VOID, new String[]{"Int32"});
         markNativeMethod("to", VOID, new String[]{"Int16"});
         markNativeMethod("to", VOID, new String[]{"Int8"});
+        markNativeMethod("to", VOID, new String[]{"UInt128"});
         markNativeMethod("to", VOID, new String[]{"UInt64"});
         markNativeMethod("to", VOID, new String[]{"UInt32"});
         markNativeMethod("to", VOID, new String[]{"UInt16"});
@@ -44,11 +48,13 @@ public abstract class xBaseInt128
         markNativeMethod("to", VOID, THIS);
 
         // @Op methods
+        markNativeMethod("abs", VOID, THIS);
         markNativeMethod("add", THIS, THIS);
         markNativeMethod("sub", THIS, THIS);
         markNativeMethod("mul", THIS, THIS);
         markNativeMethod("div", THIS, THIS);
         markNativeMethod("mod", THIS, THIS);
+        markNativeMethod("neg", VOID, THIS);
         }
 
     @Override
@@ -78,6 +84,9 @@ public abstract class xBaseInt128
         {
         switch (method.getName())
             {
+            case "abs":
+                return invokeAbs(frame, hTarget, iReturn);
+
             case "add":
                 return invokeAdd(frame, hTarget, hArg, iReturn);
 
@@ -89,6 +98,9 @@ public abstract class xBaseInt128
 
             case "div":
                 return invokeDiv(frame, hTarget, hArg, iReturn);
+
+            case "neg":
+                return invokeNeg(frame, hTarget, iReturn);
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -102,17 +114,84 @@ public abstract class xBaseInt128
             {
             case "to":
                 {
-                TypeConstant typeRet = method.getReturn(0).getType();
-                xConstrainedInteger template = xConstrainedInteger.getTemplateByType(typeRet);
-                if (template != null)
+                TypeConstant  typeRet  = method.getReturn(0).getType();
+                ClassTemplate template = xConstrainedInteger.getTemplateByType(typeRet);
+
+                if (template == this)
                     {
-                    return convertIntegerType(frame, template, hTarget, iReturn);
+                    return frame.assignValue(iReturn, hTarget);
+                    }
+
+                if (template instanceof xConstrainedInteger)
+                    {
+                    return convertToConstrainedType(frame, (xConstrainedInteger) template, hTarget, iReturn);
+                    }
+
+                if (template instanceof xBaseInt128)
+                    {
+                    xBaseInt128 templateTo = (xBaseInt128) template;
+                    LongLong    llValue    = ((LongLongHandle) hTarget).getValue();
+
+                    if (f_fSigned && llValue.signum() < 0 && !templateTo.f_fSigned)
+                        {
+                        // cannot assign negative value to the unsigned type
+                        return overflow(frame);
+                        }
+
+                    if (!f_fSigned && llValue.getHighValue() < 0 && templateTo.f_fSigned)
+                        {
+                        // too large value for signed LongLong
+                        return overflow(frame);
+                        }
+                    return frame.assignValue(iReturn, templateTo.makeLongLong(llValue));
                     }
                 break;
                 }
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        }
+
+    protected int invokeAbs(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        if (!f_fSigned)
+            {
+            return frame.assignValue(iReturn, hTarget);
+            }
+
+        LongLong ll = ((LongLongHandle) hTarget).getValue();
+
+        if (ll.signum() >= 0)
+            {
+            frame.assignValue(iReturn, hTarget);
+            }
+
+        LongLong llr = ll.negate();
+        if (llr == LongLong.OVERFLOW)
+            {
+            return overflow(frame);
+            }
+
+        return frame.assignValue(iReturn, makeLongLong(llr));
+        }
+
+    @Override
+    public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        if (!f_fSigned)
+            {
+            return overflow(frame);
+            }
+
+        LongLong ll = ((LongLongHandle) hTarget).getValue();
+        LongLong llr = ll.negate();
+
+        if (llr == LongLong.OVERFLOW)
+            {
+            return overflow(frame);
+            }
+
+        return frame.assignValue(iReturn, makeLongLong(llr));
         }
 
     @Override
@@ -194,13 +273,16 @@ public abstract class xBaseInt128
         LongLong ll1 = ((LongLongHandle) hTarget).getValue();
         LongLong ll2 = ((LongLongHandle) hArg).getValue();
 
-        if (ll2.equals(LongLong.ZERO))
+        LongLong llDiv = f_fSigned
+            ? ll1.div(ll2)
+            : ll1.divUnsigned(ll2);
+
+        if (llDiv == LongLong.OVERFLOW)
             {
             return overflow(frame);
             }
 
-        return frame.assignValue(iReturn, makeLongLong(
-            f_fSigned ? ll1.div(ll2) : ll1.divUnsigned(ll2)));
+        return frame.assignValue(iReturn, makeLongLong(llDiv));
         }
 
     @Override
@@ -209,12 +291,42 @@ public abstract class xBaseInt128
         LongLong ll1 = ((LongLongHandle) hTarget).getValue();
         LongLong ll2 = ((LongLongHandle) hArg).getValue();
 
-        if (ll2.equals(LongLong.ZERO))
+        LongLong llMod = f_fSigned
+            ? ll1.mod(ll2)
+            : ll1.modUnsigned(ll2);
+
+        if (llMod == LongLong.OVERFLOW)
             {
             return overflow(frame);
             }
-        return frame.assignValue(iReturn, makeLongLong(
-            f_fSigned ? ll1.mod(ll2) : ll1.modUnsigned(ll2)));
+
+        return frame.assignValue(iReturn, makeLongLong(llMod));
+        }
+
+    @Override
+    public int invokeDivMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
+        {
+        LongLong ll1 = ((LongLongHandle) hTarget).getValue();
+        LongLong ll2 = ((LongLongHandle) hArg).getValue();
+
+        LongLong llDiv;
+        LongLong llMod;
+        if (f_fSigned)
+            {
+            llDiv = ll1.div(ll2);
+            llMod = ll1.mod(ll2);
+            }
+        else
+            {
+            llDiv = ll1.divUnsigned(ll2);
+            llMod = ll1.modUnsigned(ll2);
+            }
+
+        if (llDiv == LongLong.OVERFLOW)
+            {
+            return overflow(frame);
+            }
+        return frame.assignValues(aiReturn, makeLongLong(llDiv), makeLongLong(llMod));
         }
 
     @Override
@@ -269,19 +381,6 @@ public abstract class xBaseInt128
         LongLong ll2 = ((LongLongHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeLongLong(ll1.xor(ll2)));
-        }
-
-    @Override
-    public int invokeDivMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
-        {
-        LongLong ll1 = ((LongLongHandle) hTarget).getValue();
-        LongLong ll2 = ((LongLongHandle) hArg).getValue();
-
-        return f_fSigned
-            ? frame.assignValues(aiReturn,
-                makeLongLong(ll1.div(ll2)), makeLongLong(ll1.mod(ll2)))
-            : frame.assignValues(aiReturn,
-                makeLongLong(ll1.divUnsigned(ll2)), makeLongLong(ll1.modUnsigned(ll2)));
         }
 
     @Override
@@ -344,12 +443,25 @@ public abstract class xBaseInt128
         }
 
     /**
+     * Convert a long value into a handle for the type represented by this template.
+     *
+     * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
+     */
+    public int convertLong(Frame frame, long lValue, int iReturn)
+        {
+        return frame.assignValue(iReturn, makeLongLong(
+            f_fSigned
+                ? new LongLong(lValue)
+                : new LongLong(lValue, 0)));
+        }
+
+    /**
      * Converts an object of "this" integer type to the type represented by the template.
      *
      * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */
-    abstract protected int convertIntegerType(Frame frame, xConstrainedInteger template,
-                                              ObjectHandle hTarget, int iReturn);
+    abstract protected int convertToConstrainedType(Frame frame, xConstrainedInteger template,
+                                                    ObjectHandle hTarget, int iReturn);
 
     public LongLongHandle makeLongLong(LongLong ll)
         {

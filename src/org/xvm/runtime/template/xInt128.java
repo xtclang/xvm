@@ -11,68 +11,22 @@ import org.xvm.runtime.TemplateRegistry;
 public class xInt128
         extends xBaseInt128
     {
+    public static xInt128 INSTANCE;
+
     public xInt128(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, true);
+
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
     public void initDeclared()
         {
         super.initDeclared();
-
-        markNativeMethod("abs", VOID, THIS);
-        markNativeMethod("neg", VOID, THIS);
-        }
-
-    @Override
-    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
-        {
-        switch (method.getName())
-            {
-            case "abs":
-                {
-                return invokeAbs(frame, hTarget, iReturn);
-                }
-
-            case "neg":
-                return invokeNeg(frame, hTarget, iReturn);
-            }
-
-        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
-        }
-
-    protected int invokeAbs(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        LongLong ll = ((LongLongHandle) hTarget).getValue();
-
-        if (ll.signum() >= 0)
-            {
-            frame.assignValue(iReturn, hTarget);
-            }
-
-        LongLong llr = ll.negate();
-        if (llr == LongLong.OVERFLOW)
-            {
-            return overflow(frame);
-            }
-
-        return frame.assignValue(iReturn, makeLongLong(llr));
-        }
-
-    @Override
-    public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        LongLong ll = ((LongLongHandle) hTarget).getValue();
-        LongLong llr = ll.negate();
-
-        if (llr == LongLong.OVERFLOW)
-            {
-            return overflow(frame);
-            }
-
-        return frame.assignValue(iReturn, makeLongLong(llr));
         }
 
     /**
@@ -80,8 +34,8 @@ public class xInt128
      *
      * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */
-    protected int convertIntegerType(Frame frame, xConstrainedInteger template,
-                                     ObjectHandle hTarget, int iReturn)
+    protected int convertToConstrainedType(Frame frame, xConstrainedInteger template,
+                                           ObjectHandle hTarget, int iReturn)
         {
         LongLong ll = ((LongLongHandle) hTarget).getValue();
 
@@ -95,7 +49,7 @@ public class xInt128
 
         boolean fNeg = lHigh == -1;
 
-        if (template.f_fUnsigned && fNeg)
+        if (template.f_fSigned && fNeg)
             {
             return overflow(frame);
             }

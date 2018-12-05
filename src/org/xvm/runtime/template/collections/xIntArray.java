@@ -53,7 +53,7 @@ public class xIntArray
         }
 
     @Override
-    public ArrayHandle createArrayHandle(Frame frame, TypeComposition clzArray, ObjectHandle[] ahArg)
+    public ArrayHandle createArrayHandle(TypeComposition clzArray, ObjectHandle[] ahArg)
         {
         int    c  = ahArg.length;
         long[] al = new long[c];
@@ -65,7 +65,7 @@ public class xIntArray
         }
 
     @Override
-    public ArrayHandle createArrayHandle(Frame frame, TypeComposition clzArray, long cCapacity)
+    public ArrayHandle createArrayHandle(TypeComposition clzArray, long cCapacity)
         {
         return new IntArrayHandle(clzArray, cCapacity);
         }

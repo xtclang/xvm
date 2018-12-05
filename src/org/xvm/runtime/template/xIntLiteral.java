@@ -1,6 +1,7 @@
 package org.xvm.runtime.template;
 
 
+import java.math.BigInteger;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
@@ -39,8 +40,24 @@ public class xIntLiteral
     @Override
     public void initDeclared()
         {
-        markNativeMethod("to", VOID, INT);
         markNativeMethod("to", VOID, STRING);
+
+        markNativeMethod("to", VOID, new String[]{"Int128"});
+        markNativeMethod("to", VOID, new String[]{"Int64"});
+        markNativeMethod("to", VOID, new String[]{"Int32"});
+        markNativeMethod("to", VOID, new String[]{"Int16"});
+        markNativeMethod("to", VOID, new String[]{"Int8"});
+
+        markNativeMethod("to", VOID, new String[]{"UInt128"});
+        markNativeMethod("to", VOID, new String[]{"UInt64"});
+        markNativeMethod("to", VOID, new String[]{"UInt32"});
+        markNativeMethod("to", VOID, new String[]{"UInt16"});
+        markNativeMethod("to", VOID, new String[]{"UInt8"});
+
+        markNativeMethod("to", VOID, new String[]{"VarInt"});
+        markNativeMethod("to", VOID, new String[]{"VarUInt"});
+        markNativeMethod("to", VOID, new String[]{"VarFloat"});
+        markNativeMethod("to", VOID, new String[]{"VarDec"});
         }
 
     @Override
@@ -55,8 +72,64 @@ public class xIntLiteral
     @Override
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi = ((VarIntHandle) hTarget).getValue(); // TODO: make this actually add
-        return frame.assignValue(iReturn, makeIntLiteral(pi));
+        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
+        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+
+        return frame.assignValue(iReturn, makeIntLiteral(pi1.add(pi2)));
+        }
+
+    @Override
+    public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
+        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+
+        return frame.assignValue(iReturn, makeIntLiteral(pi1.sub(pi2)));
+        }
+
+    @Override
+    public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
+        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+
+        return frame.assignValue(iReturn, makeIntLiteral(pi1.mul(pi2)));
+        }
+
+    @Override
+    public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
+        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+
+        return frame.assignValue(iReturn, makeIntLiteral(pi1.div(pi2)));
+        }
+
+    @Override
+    public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
+        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+
+        return frame.assignValue(iReturn, makeIntLiteral(pi1.mod(pi2)));
+        }
+
+    @Override
+    public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
+        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+
+        return frame.assignValue(iReturn, makeIntLiteral(pi1.and(pi2)));
+        }
+
+    @Override
+    public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
+        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+
+        return frame.assignValue(iReturn, makeIntLiteral(pi1.or(pi2)));
         }
 
     @Override
@@ -67,11 +140,30 @@ public class xIntLiteral
         switch (method.getName())
             {
             case "to":
-                TypeConstant        typeRet  = method.getReturn(0).getType();
-                xConstrainedInteger template = xConstrainedInteger.getTemplateByType(typeRet);
-                if (template != null)
+                TypeConstant  typeRet  = method.getReturn(0).getType();
+                ClassTemplate template = xConstrainedInteger.getTemplateByType(typeRet);
+                PackedInteger piValue  = hLiteral.getValue();
+
+                if (template instanceof xConstrainedInteger)
                     {
-                    return template.convertIntegerType(frame, hLiteral.getValue().getLong(), iReturn);
+                    if (piValue.isBig())
+                        {
+                        return ((xConstrainedInteger) template).overflow(frame);
+                        }
+                    return ((xConstrainedInteger) template).
+                        convertLong(frame, piValue.getLong(), iReturn);
+                    }
+                if (template instanceof xBaseInt128)
+                    {
+                    xBaseInt128 template128 = (xBaseInt128) template;
+                    BigInteger  biValue     = piValue.getBigInteger();
+                    LongLong    llValue     = LongLong.fromBigInteger(biValue);
+
+                    if (!template128.f_fSigned && llValue.signum() < 0)
+                        {
+                        return template128.overflow(frame);
+                        }
+                    return frame.assignValue(iReturn, template128.makeLongLong(llValue));
                     }
                 break;
             }

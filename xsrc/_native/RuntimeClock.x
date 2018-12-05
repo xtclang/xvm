@@ -8,5 +8,20 @@ class RuntimeClock
     @RO DateTime now;
 
     @Override
-    Cancellable scheduleAlarm(DateTime timeToWakeUp, Alarm alarm);
+    @RO TimeZone timezone;
+
+    @Override
+    Duration resolution.get()
+        {
+        return Duration.MILLISEC;
+        }
+
+    @Override
+    Boolean monotonic.get()
+        {
+        return false;
+        }
+
+    @Override
+    Cancellable scheduleAlarm(DateTime when, Alarm alarm);
     }
