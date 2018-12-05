@@ -741,6 +741,19 @@ public abstract class AstNode
         }
 
     /**
+     * Give the AST node a chance to resolve a name by capturing a local variable. This is used by
+     * the anonymous inner class compilation.
+     *
+     * @param sName  a simple name to resolve
+     *
+     * @return either a component that the name refers to, or null
+     */
+    protected Component resolveCapture(String sName)
+        {
+        return null;
+        }
+
+    /**
      * @return true iff this AstNode should be able to resolve names
      */
     protected boolean canResolveNames()

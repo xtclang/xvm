@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import java.io.DataOutput;
+import java.io.IOException;
 import java.lang.reflect.Field;
 
 import java.util.List;
@@ -19,8 +21,10 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -202,6 +206,18 @@ public class NewExpression
         // while an inner class is technically a code container, it is not directly a code container
         // in the same sense that a method is, because it cannot directly contain a "return"
         throw new IllegalStateException("invalid return from an anonymous inner class: " + this);
+        }
+
+    @Override
+    protected Component resolveCapture(String sName)
+        {
+        Argument arg = m_ctxCapture.getVar(sName);
+        if (arg == null)
+            {
+            return null;
+            }
+
+        // we're going to need a synthetic property
         }
 
 
@@ -525,7 +541,7 @@ public class NewExpression
             // captures
             destroyTempInnerClass();
             AnonInnerClassContext ctxAnon = new AnonInnerClassContext(ctx);
-            anon.setCaptureContext(ctxAnon);
+            m_ctxCapture = ctxAnon;
 
             // force a temp clone of the inner class to go through its validate() stage so that we
             // can determine what variables get captured (and if they are effectively final)
@@ -536,11 +552,11 @@ public class NewExpression
                 }
 
             // collected VAS information from the lambda context
-            ctx = ctxAnon.exit();
+            ctxAnon.exit();
 
             // clean up temporary inner class and the capture context
             destroyTempInnerClass();
-            anon.setCaptureContext(null);
+            m_ctxCapture = null;
 
             // at this point we have a fair bit of data about which variables get captured, but we
             // still lack the effectively final data that will only get reported when the various
@@ -882,6 +898,100 @@ public class NewExpression
 
     // ----- inner class: CaptureContext -----------------------------------------------------------
 
+    public class NativeRebaseConstant
+            extends ClassConstant
+        {
+        /**
+         * Construct a {@link org.xvm.asm.constants.NativeRebaseConstant} representing the specified interface.
+         */
+        public NativeRebaseConstant(ClassConstant constIface)
+            {
+            super(constIface.getConstantPool(), constIface.getParentConstant(), constIface.getName());
+
+            assert constIface.getComponent().getFormat() == Component.Format.INTERFACE;
+
+            m_constIface = constIface;
+            }
+
+
+        // ----- type specific methods  ----------------------------------------------------------------
+
+        /**
+         * @return the underlying ClassConstant
+         */
+        public ClassConstant getClassConstant()
+            {
+            return m_constIface;
+            }
+
+
+        // ----- Constant methods ----------------------------------------------------------------------
+
+
+        @Override
+        public boolean containsUnresolved()
+            {
+            return super.containsUnresolved() || m_constIface.containsUnresolved();
+            }
+
+        @Override
+        public boolean validate(ErrorListener errlist)
+            {
+            return true;
+            }
+
+        @Override
+        public Format getFormat()
+            {
+            return Format.CapturedVariable;
+            }
+
+        @Override
+        protected int compareDetails(Constant that)
+            {
+            if (!(that instanceof org.xvm.asm.constants.NativeRebaseConstant))
+                {
+                return -1;
+                }
+            return m_constIface.compareDetails(((org.xvm.asm.constants.NativeRebaseConstant) that).m_constIface);
+            }
+
+        @Override
+        protected void assemble(DataOutput out)
+                throws IOException
+            {
+            throw new IllegalStateException();
+            }
+
+
+        @Override
+        public int hashCode()
+            {
+            return -m_constIface.hashCode();
+            }
+
+        @Override
+        public String toString()
+            {
+            return getValueString();
+            }
+
+        @Override
+        public String getValueString()
+            {
+            return "Native(" + m_constIface.getValueString() + ')';
+            }
+
+
+        // ----- data fields ---------------------------------------------------------------------------
+
+        /**
+         * The underlying type.
+         */
+        private ClassConstant m_constIface;
+        }
+    // ----- inner class: CaptureContext -----------------------------------------------------------
+
     /**
      * A context for compiling new expressions that define an anonymous inner class.
      * <p/>TODO capture "this" (makes a lambda into a method, or a static anonymous class into an instance anonymous class)
@@ -905,7 +1015,7 @@ public class NewExpression
          */
         public boolean isInstanceChild()
             {
-            return isThisCaptured();
+            return isThisCaptured() | true; // TODO it's not immediately obvious how to capture "outer this" (GG?)
             }
         }
 
@@ -927,6 +1037,10 @@ public class NewExpression
     private transient TypeCompositionStatement m_anonActual;
     private transient ClassStructure           m_clzActual;
 
+    /**
+     * The capture context, while it is active.
+     */
+    private transient AnonInnerClassContext m_ctxCapture;
     /**
      * The variables captured by the anonymous inner class, with an associated "true" flag if the
      * inner class needs to capture the variable in a read/write mode.
