@@ -125,12 +125,9 @@ public class UnionTypeConstant
         {
         assert isSingleUnderlyingClass(fAllowInterface);
 
-        IdentityConstant clz = m_constType1.getSingleUnderlyingClass(fAllowInterface);
-        if (clz == null)
-            {
-            clz = m_constType2.getSingleUnderlyingClass(fAllowInterface);
-            }
-        return clz;
+        return m_constType1.isSingleUnderlyingClass(fAllowInterface)
+                ? m_constType1.getSingleUnderlyingClass(fAllowInterface)
+                : m_constType2.getSingleUnderlyingClass(fAllowInterface);
         }
 
     @Override
