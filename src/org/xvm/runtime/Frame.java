@@ -629,7 +629,7 @@ public class Frame
 
                     default:
                         // why did the compiler/verifier allow this?
-                        System.out.println("Suspicious assignment from: " + typeFrom.getValueString()
+                        System.err.println("Suspicious assignment from: " + typeFrom.getValueString()
                             + " to: " + typeTo.getValueString());
                     }
                 }

@@ -62,6 +62,6 @@ public class Jump
     @Override
     public int process(Frame frame, int iPC)
         {
-        return iPC + m_ofJmp;
+        return jump(frame, iPC + m_ofJmp, m_cExits);
         }
     }

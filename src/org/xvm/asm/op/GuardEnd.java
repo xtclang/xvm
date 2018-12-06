@@ -49,7 +49,7 @@ public class GuardEnd
      * @param aconst  an array of constants used within the method
      */
     public GuardEnd(DataInput in, Constant[] aconst)
-    throws IOException
+            throws IOException
         {
         super(in, aconst);
         }
@@ -58,6 +58,12 @@ public class GuardEnd
     public int getOpCode()
         {
         return OP_GUARD_END;
+        }
+
+    @Override
+    public boolean isExit()
+        {
+        return true;
         }
 
     @Override

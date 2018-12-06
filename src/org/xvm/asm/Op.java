@@ -119,6 +119,22 @@ public abstract class Op
         }
 
     /**
+     * @return true iff this op represents an explicit or implicit ENTER
+     */
+    public boolean isEnter()
+        {
+        return false;
+        }
+
+    /**
+     * @return true iff this op represents an explicit or implicit ENTER
+     */
+    public boolean isExit()
+        {
+        return false;
+        }
+
+    /**
      * Determine if the specified Argument is a Constant.
      *
      * @param arg  the argument
@@ -299,32 +315,21 @@ public abstract class Op
         }
 
     /**
-     * Calculate a relative address from the specified program counter (iPC) to the
-     * specified destination op-code.
+     * Helper method for "jump"-ing op codes.
      *
-     * @param code    the Code
-     * @param iPC     the "current" program counter
-     * @param opDest  the destination Op
+     * @param frame   the current frame
+     * @param iPCTo   the program counter to jump to
+     * @param cExits  the number of scopes to exit
      *
-     * @return the offset from the current PC to the destination Op
+     * @return the next program counter
      */
-    protected static int resolveAddress(MethodStructure.Code code, int iPC, Op opDest)
+    protected static int jump(Frame frame, int iPCTo, int cExits)
         {
-        assert (opDest != null);
-
-        int iPCThat = code.addressOf(opDest);
-        if (iPCThat < 0)
+        while (cExits-- > 0)
             {
-            throw new IllegalStateException("cannot find op: " + opDest);
+            frame.exitScope();
             }
-
-        // calculate relative offset
-        int ofJmp = iPCThat - iPC;
-        if (ofJmp == 0)
-            {
-            throw new IllegalStateException("infinite loop: code=" + code + "; PC=" + iPC);
-            }
-        return ofJmp;
+        return iPCTo;
         }
 
     /**
@@ -410,6 +415,18 @@ public abstract class Op
         public Op getNextOp()
             {
             return m_op;
+            }
+
+        @Override
+        public boolean isEnter()
+            {
+            return m_op.isEnter();
+            }
+
+        @Override
+        public boolean isExit()
+            {
+            return m_op.isExit();
             }
 
         /**

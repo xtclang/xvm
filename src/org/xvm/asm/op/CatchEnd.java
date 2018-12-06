@@ -61,6 +61,12 @@ public class CatchEnd
         }
 
     @Override
+    public boolean isExit()
+        {
+        return true;
+        }
+
+    @Override
     public int process(Frame frame, int iPC)
         {
         frame.exitScope();

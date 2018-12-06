@@ -86,14 +86,14 @@ public class JumpNotEq
             case R_NEXT:
                 {
                 BooleanHandle hValue = (BooleanHandle) frame.popStack();
-                return hValue.get() ? iPC + 1 : iPC + m_ofJmp;
+                return hValue.get() ? iPC + 1 : jump(frame, iPC + m_ofJmp, m_cExits);
                 }
 
             case R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->
                     {
                     BooleanHandle hValue = (BooleanHandle) frameCaller.popStack();
-                    return hValue.get() ? iPC + 1 : iPC + m_ofJmp;
+                    return hValue.get() ? iPC + 1 : jump(frame, iPC + m_ofJmp, m_cExits);
                     });
                 return R_CALL;
 

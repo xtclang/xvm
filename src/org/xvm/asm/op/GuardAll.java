@@ -62,6 +62,12 @@ public class GuardAll
         }
 
     @Override
+    public boolean isEnter()
+        {
+        return true;
+        }
+
+    @Override
     public int process(Frame frame, int iPC)
         {
         int iScope = frame.enterScope();

@@ -68,6 +68,6 @@ public class JumpZero
     @Override
     protected int completeUnaryOp(Frame frame, int iPC, ObjectHandle hValue)
         {
-        return ((JavaLong) hValue).getValue() == 0 ? iPC + m_ofJmp : iPC + 1;
+        return ((JavaLong) hValue).getValue() == 0 ? jump(frame, iPC + m_ofJmp, m_cExits) : iPC + 1;
         }
     }

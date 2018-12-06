@@ -7,6 +7,8 @@ import java.io.IOException;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.MethodStructure.Code;
+
 import org.xvm.asm.op.Label;
 
 import org.xvm.runtime.Frame;
@@ -91,12 +93,13 @@ public abstract class OpCondJump
         }
 
     @Override
-    public void resolveAddress(MethodStructure.Code code, int iPC)
+    public void resolveAddress(Code code, int iPC)
         {
         if (m_opDest != null && m_ofJmp == 0)
             {
-            m_ofJmp = resolveAddress(code, iPC, m_opDest);
+            m_ofJmp = code.resolveAddress(iPC, m_opDest);
             }
+        m_cExits = code.calculateExits(iPC, m_ofJmp);
         }
 
     /**
@@ -298,4 +301,7 @@ public abstract class OpCondJump
     private Argument m_argVal;
     private Argument m_argVal2;
     private Op       m_opDest;
+
+    // number of exits to simulate on the jump
+    transient protected int m_cExits;
     }
