@@ -11,8 +11,10 @@ import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
 
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
+import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xRef.RefHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -93,17 +95,30 @@ public class Var_C
         {
         try
             {
-            RefHandle hRef = (RefHandle) frame.getArgument(m_nArgValue);
+            // the argument could be a deferred RefHandle
+            ObjectHandle hRef = frame.getArgument(m_nArgValue);
 
-            frame.introduceResolvedVar(m_nVar, hRef.getType(),
-                hRef.getName(), Frame.VAR_DYNAMIC_REF, hRef);
+            if (isDeferred(hRef))
+                {
+                ObjectHandle[] ahValue = new ObjectHandle[] {hRef};
+                Frame.Continuation stepNext = frameCaller ->
+                    complete(frameCaller, iPC, (RefHandle) ahValue[0]);
+                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
+                }
 
-            return iPC + 1;
+            return complete(frame, iPC, (RefHandle) hRef);
             }
         catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }
+        }
+
+    protected int complete(Frame frame, int iPC, RefHandle hRef)
+        {
+        frame.introduceResolvedVar(m_nVar, hRef.getType(),
+            hRef.getName(), Frame.VAR_DYNAMIC_REF, hRef);
+        return iPC + 1;
         }
 
     @Override
