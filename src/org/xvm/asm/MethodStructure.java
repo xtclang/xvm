@@ -1491,7 +1491,7 @@ public class MethodStructure
                 {
                 m_code.ensureAssembled();
                 }
-            catch (UnsupportedOperationException e)
+            catch (IllegalStateException | UnsupportedOperationException e)
                 {
                 System.err.println("Error in MethodStructure.assemble(): " + e);
                 }

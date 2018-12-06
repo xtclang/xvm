@@ -18,6 +18,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.Assignment;
 
@@ -32,12 +33,18 @@ import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.Nop;
 import org.xvm.asm.op.Return_0;
 import org.xvm.asm.op.Var_C;
+import org.xvm.asm.op.Var_CN;
+import org.xvm.asm.op.Var_IN;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
+import org.xvm.compiler.ast.NewExpression.AnonInnerClassContext;
+import org.xvm.compiler.ast.NewExpression.CaptureConstant;
+
+import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 
@@ -249,7 +256,7 @@ public class StatementBlock
         Statement that = this.validate(ctx.validatingContext(), errsValidation);
         if (that != null && !errsValidation.hasEncountered(Severity.ERROR) && !errs.isAbortDesired())
             {
-            boolean fCompletes = that.completes(ctx.emittingContext(), true, code, errs);
+            boolean fCompletes = that.completes(ctx.emittingContext(code), true, code, errs);
 
             if (fCompletes)
                 {
@@ -499,6 +506,48 @@ public class StatementBlock
             return StatementBlock.this;
             }
 
+        /**
+         * @return true iff the code that is being compiled belongs to a class that is an anonymous
+         *         inner class
+         */
+        public boolean isAnonymousInnerClass()
+            {
+            AstNode parent = getStatementBlock();
+            while (!(parent instanceof TypeCompositionStatement))
+                {
+                parent = parent.getParent();
+                }
+            
+            return parent.getParent() instanceof NewExpression;
+            }
+
+        public NewExpression getAnonymousInnerClassExpression()
+            {
+            AstNode parent = getStatementBlock();
+            while (!(parent instanceof TypeCompositionStatement))
+                {
+                parent = parent.getParent();
+                }
+
+            return parent.getParent() instanceof NewExpression
+                    ? (NewExpression) parent.getParent()
+                    : null;
+            }
+
+        /**
+         * @return the ClassStructure that contains the code being compiled
+         */
+        public ClassStructure getEnclosingClass()
+            {
+            AstNode parent = getStatementBlock();
+            while (!(parent instanceof TypeCompositionStatement))
+                {
+                parent = parent.getParent();
+                }
+
+            return (ClassStructure) parent.getComponent();
+            }
+
         @Override
         public Source getSource()
             {
@@ -550,7 +599,7 @@ public class StatementBlock
             if (arg instanceof Register)
                 {
                 Register reg = (Register) arg;
-                return reg.getIndex() >= 0 || reg.isUnknown();
+                return reg.isUnknown() || reg.getIndex() >= 0;
                 }
 
             return false;
@@ -657,12 +706,61 @@ public class StatementBlock
             Argument              arg       = mapByName.get(sName);
             if (arg == null)
                 {
-                // resolve the name from outside of this statement
-                arg = new NameResolver(getStatementBlock(), sName)
-                        .forceResolve(errs == null ? ErrorListener.BLACKHOLE : errs);
+                if (isAnonymousInnerClass())
+                    {
+                    NewExpression exprNew = getAnonymousInnerClassExpression();
+                    if (exprNew.isCapture(sName))
+                        {
+                        // the name refers to a capture variable, which was provided to the
+                        // anonymous inner class via a synthetic property
+                        PropertyStructure prop = (PropertyStructure) getEnclosingClass().getChild(sName);
+                        assert prop.isSynthetic();
+
+                        TypeConstant type = exprNew.getCaptureType(sName);
+                        Register     reg  = new Register(type);
+
+                        ensureCaptureVars().put(sName, reg);
+                        arg = reg;
+
+                        // REVIEW should it be registered as a local variable? definite assignment etc.
+                        ensureDefiniteAssignments().put(sName, Assignment.Assigned);
+                        }
+                    }
+
+                if (arg == null)
+                    {
+                    // resolve the name from outside of this statement
+                    arg = new NameResolver(getStatementBlock(), sName)
+                            .forceResolve(errs == null ? ErrorListener.BLACKHOLE : errs);
+                    }
+
                 if (arg != null)
                     {
-                    mapByName.put(sName, arg);
+                    // it is possible that the argument indicates that we are responsible for
+                    // capturing a variable
+                    if (arg instanceof CaptureConstant)
+                        {
+                        // while it appears that we are doing a great deal of work at this point,
+                        // validating the AST and so on, it is all temporary and will be discarded;
+                        // the entire point of this validation is to determine the read/write nature
+                        // of the captured variables so we will know (when we're doing the actual
+                        // code generation) whether the captured variables need to be injected into
+                        // the inner class as a value of type T, as a Ref<T>, or as a Var<T>
+                        CaptureConstant capture = (CaptureConstant) arg;
+                        Register        reg     = new Register(capture.getType());
+                        super.registerVar(name, reg, errs);
+                        ensureDefiniteAssignments().put(sName, capture.getContext().getVarAssignment(sName));
+                        ensureCaptureConstants().put(sName, capture);
+
+                        // return the local register and not the CaptureConstant (which only serves
+                        // the purpose of communicating information from a CaptureContext through
+                        // various boundaries up to this RootContext)
+                        arg = reg;
+                        }
+                    else
+                        {
+                        mapByName.put(sName, arg);
+                        }
                     }
                 }
 
@@ -871,9 +969,13 @@ public class StatementBlock
             }
 
         /**
+         * Generate an emitting context, and emit the preamble, if any.
+         * 
+         * @param code  the code that is being emitted to
+         * 
          * @return a Context that can be used while emitting code
          */
-        public Context emittingContext()
+        public Context emittingContext(Code code)
             {
             checkValidating();
             Context ctx = m_ctxValidating;
@@ -881,6 +983,49 @@ public class StatementBlock
                 {
                 m_ctxValidating.exit();
                 m_ctxValidating = null;
+
+                if (m_mapCaptureConstants != null)
+                    {
+                    // this is something like "exit()" processing, except that it's when the root
+                    // context switches from validating (which may have captured some variables into
+                    // the anonymous inner class) which now need to be reported out to the capture
+                    // context for the anonymous inner class, so that it knows what has been read
+                    // (assume everything captured is read) and written (assume anything whose
+                    // assignment changed was written)
+                    for (Map.Entry<String, CaptureConstant> entry : m_mapCaptureConstants.entrySet())
+                        {
+                        String                sName      = entry.getKey();
+                        CaptureConstant       capture    = entry.getValue();
+                        AnonInnerClassContext ctxCapture = capture.getContext();
+                        Assignment            asnOrig    = ctxCapture.getVarAssignment(sName);
+                        boolean               fModified  = getVarAssignment(sName) != asnOrig;
+                        ctxCapture.markVarRead(true, sName, null, null);
+                        if (fModified)
+                            {
+                            ctxCapture.setVarAssignment(sName, asnOrig.applyAssignmentFromCapture());
+                            }
+                        }
+                    m_mapCaptureConstants = null;
+                    }
+
+                if (m_mapCaptureVars != null)
+                    {
+                    // REVIEW arguably, it would have been cleaner to put this with the code in StatementBlock.emit()
+                    // emit the pre-amble that provides captured variables as local variables
+                    assert isAnonymousInnerClass();
+                    NewExpression  exprNew = getAnonymousInnerClassExpression();
+                    ClassStructure clzAnon = getEnclosingClass();
+                    for (Map.Entry<String, Register> entry : m_mapCaptureVars.entrySet())
+                        {
+                        String            sName = entry.getKey();
+                        Register          reg   = entry.getValue();
+                        PropertyStructure prop  = (PropertyStructure) clzAnon.getChild(sName);
+                        PropertyConstant  id    = prop.getIdentityConstant();
+                        code.add(exprNew.isImplicitDeref(sName)
+                                ? new Var_CN(reg, id.getNameConstant(), id)
+                                : new Var_IN(reg, id.getNameConstant(), id));
+                        }
+                    }
                 }
 
             m_fEmitting = true;
@@ -903,9 +1048,51 @@ public class StatementBlock
                 }
             }
 
+        /**
+         * @return a map of capture constants being collected during validation that need to be
+         *         reported out to the enclosing NewExpression
+         */
+        private Map<String, CaptureConstant> ensureCaptureConstants()
+            {
+            Map<String, CaptureConstant> map = m_mapCaptureConstants;
+            if (map == null)
+                {
+                m_mapCaptureConstants = map = new ListMap<>();
+                }
+
+            return map;
+            }
+
+        /**
+         * @return a map of variables identified during validation that need to be created in the
+         *         preamble in order to provide local variables for captured variables
+         */
+        private Map<String, Register> ensureCaptureVars()
+            {
+            Map<String, Register> map = m_mapCaptureVars;
+            if (map == null)
+                {
+                m_mapCaptureVars = map = new ListMap<>();
+                }
+
+            return map;
+            }
+
         private MethodStructure m_method;
         private Context         m_ctxValidating;
         private boolean         m_fEmitting;
+
+        /**
+         * A lazily created mapping of captured variables that is collected during the validation
+         * on a temporary (throw-away) copy of an inner class.
+         */
+        private Map<String, CaptureConstant> m_mapCaptureConstants;
+
+        /**
+         * A lazily created mapping of variables that need to be created to implicitly dereference
+         * capture-properties in an anonymous inner class.
+         */
+        private Map<String, Register> m_mapCaptureVars;
         }
 
 

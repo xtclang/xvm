@@ -20,6 +20,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 import org.xvm.asm.Component;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
@@ -748,7 +749,7 @@ public abstract class AstNode
      *
      * @return either a component that the name refers to, or null
      */
-    protected Component resolveCapture(String sName)
+    protected Constant resolveCapture(String sName)
         {
         return null;
         }

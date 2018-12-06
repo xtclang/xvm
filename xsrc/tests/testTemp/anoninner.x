@@ -18,18 +18,21 @@ module TestAnonInner.xqiz.it
         @Inject X.io.Console console;
         console.println("\n** testSimple()");
 
-        var o = new Object()
-        // var o = new Inner("hello")
+        Int i = 4;
+
+        // var o = new Object()
+        var o = new Inner("hello")
             {
             // @Inject X.io.Console console; // TODO test without this to force capture
             void run()
                 {
-                console.println("in run");
+                console.println("in run (i=" + i + ")");
+                ++i;
                 }
             };
 
         o.run();
 
-        console.println("done");
+        console.println("done (i=" + i + ")");
         }
     }

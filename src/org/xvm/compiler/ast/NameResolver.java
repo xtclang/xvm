@@ -213,10 +213,10 @@ public class NameResolver
                                             }
                                         else
                                             {
-                                            Component componentCaptured = node.resolveCapture(m_sName);
-                                            if (componentCaptured != null)
+                                            Constant idCaptured = node.resolveCapture(m_sName);
+                                            if (idCaptured != null)
                                                 {
-                                                result = resolvedComponent(componentCaptured);
+                                                result = resolvedConstant(idCaptured);
 
                                                 // we need to re-evaluate the result now that it may
                                                 // have changed
