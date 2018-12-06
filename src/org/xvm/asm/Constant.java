@@ -827,6 +827,7 @@ public abstract class Constant
         TypeParameter,
         Signature,
         NativeClass,
+        CapturedVariable,
 
         /*
          * Types.

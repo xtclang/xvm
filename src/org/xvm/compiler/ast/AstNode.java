@@ -20,6 +20,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 import org.xvm.asm.Component;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
@@ -738,6 +739,19 @@ public abstract class AstNode
         {
         AstNode parent = getParent();
         return parent == null ? null : parent.resolveImportBySingleName(sName);
+        }
+
+    /**
+     * Give the AST node a chance to resolve a name by capturing a local variable. This is used by
+     * the anonymous inner class compilation.
+     *
+     * @param sName  a simple name to resolve
+     *
+     * @return either a component that the name refers to, or null
+     */
+    protected Constant resolveCapture(String sName)
+        {
+        return null;
         }
 
     /**

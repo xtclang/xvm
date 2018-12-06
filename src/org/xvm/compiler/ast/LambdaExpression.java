@@ -4,14 +4,11 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.TreeMap;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
@@ -511,7 +508,7 @@ public class LambdaExpression
             m_fLambdaIsMethod = ctxLambda.isLambdaMethod();
 
             typeActual = pool.buildFunctionType(atypeParams, atypeRets);
-            ;
+
             if (m_mapCapture.isEmpty() && !m_fLambdaIsMethod)
                 {
                 // there are no bindings, so the lambda is a constant i.e. the function is the value
@@ -927,7 +924,7 @@ public class LambdaExpression
                     }
                 assert iParam == cBindArgs;
 
-                // since the Move* ops push refs onto the stack, add them in the inverse order
+                // since the Move* ops push refs onto the stack, add them in the inverse order // REVIEW GG
                 for (int i = listMoveOp.size() -1; i >= 0; --i)
                     {
                     code.add(listMoveOp.get(i));
@@ -1132,9 +1129,6 @@ public class LambdaExpression
                             return;
                         }
                     }
-
-                // capture the variable
-                ensureCaptureMap().putIfAbsent(sName, false);
                 }
 
             super.markVarRead(fNested, sName, tokName, errs);

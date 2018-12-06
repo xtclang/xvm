@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
@@ -16,17 +17,24 @@ import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
+import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.asm.op.Construct_0;
 import org.xvm.asm.op.Construct_1;
 import org.xvm.asm.op.Construct_N;
+import org.xvm.asm.op.L_Set;
+import org.xvm.asm.op.MoveRef;
+import org.xvm.asm.op.MoveVar;
 import org.xvm.asm.op.NewG_0;
 import org.xvm.asm.op.NewG_1;
 import org.xvm.asm.op.NewG_N;
@@ -202,6 +210,24 @@ public class NewExpression
         // while an inner class is technically a code container, it is not directly a code container
         // in the same sense that a method is, because it cannot directly contain a "return"
         throw new IllegalStateException("invalid return from an anonymous inner class: " + this);
+        }
+
+    @Override
+    protected Constant resolveCapture(String sName)
+        {
+        // there is only a capture context when we are in the middle of validating the NewExpression
+        // that instantiates an anonymous inner class
+        if (m_ctxCapture == null)
+            {
+            return null;
+            }
+
+        // check if some code inside an anonymous inner class is attempting to capture a variable
+        // from the context that contains this NewExpression
+        Argument arg = m_ctxCapture.getVar(sName);
+        return arg == null
+                ? null
+                : new CaptureConstant(pool(), m_ctxCapture, sName, arg);
         }
 
 
@@ -407,52 +433,12 @@ public class NewExpression
                         // "construct()" constructor on the inner class, and remove it, replacing it
                         // with a constructor that matches the super class constructor, so that we
                         // correctly invoke it
-                        ClassStructure clzAnon        = (ClassStructure) anon.getComponent();
-                        MethodConstant idDefault      = pool.ensureMethodConstant(
-                                anon.getComponent().getIdentityConstant(), "construct",
-                                TypeConstant.NO_TYPES, TypeConstant.NO_TYPES);
-                        MethodStructure constrDefault = (MethodStructure) idDefault.getComponent();
-                        if (constrDefault == null)
-                            {
-                            // TODO log error missing constructor
-                            fValid = false;
-                            }
-                        else
-                            {
-                            // remove synthetic construct() on the anonymous inner class
-                            clzAnon.getChild("construct").removeChild(constrDefault);
+                        destroyDefaultConstructor();
+                        idMethod = createPassThroughConstructor(idSuper);
 
-                            // create a constructor that matches the one that we need to route to
-                            // on the super class
-                            MethodStructure constrSuper = (MethodStructure) idSuper.getComponent();
-                            Parameter[]     aParams     = constrSuper.getParamArray();
-                            int             cParams     = aParams.length;
-                            MethodStructure constrThis  = clzAnon.createMethod(true,
-                                    Access.PUBLIC, null, Parameter.NO_PARAMS, "construct",
-                                    aParams, true, false);
-                            idMethod = constrThis.getIdentityConstant();
-
-                            Code code = constrThis.createCode();
-                            if (cParams == 1)
-                                {
-                                code.add(new Construct_1(idSuper, new Register(aParams[0].getType(), 0)));
-                                }
-                            else
-                                {
-                                assert cParams > 1;
-                                Register[] aArgs = new Register[cParams];
-                                for (int i = 0; i < cParams; ++i)
-                                    {
-                                    aArgs[i] = new Register(aParams[i].getType(), i);
-                                    }
-                                code.add(new Construct_N(idSuper, aArgs));
-                                }
-                            code.add(new Return_0());
-
-                            // since we just modified the component, flush the TypeInfo cache for
-                            // the type of the anonymous inner class
-                            typeTarget.clearTypeInfo();
-                            }
+                        // since we just modified the component, flush the TypeInfo cache for
+                        // the type of the anonymous inner class
+                        typeTarget.clearTypeInfo();
                         }
                     }
                 else
@@ -525,7 +511,7 @@ public class NewExpression
             // captures
             destroyTempInnerClass();
             AnonInnerClassContext ctxAnon = new AnonInnerClassContext(ctx);
-            anon.setCaptureContext(ctxAnon);
+            m_ctxCapture = ctxAnon;
 
             // force a temp clone of the inner class to go through its validate() stage so that we
             // can determine what variables get captured (and if they are effectively final)
@@ -536,11 +522,11 @@ public class NewExpression
                 }
 
             // collected VAS information from the lambda context
-            ctx = ctxAnon.exit();
+            ctxAnon.exit();
 
             // clean up temporary inner class and the capture context
             destroyTempInnerClass();
-            anon.setCaptureContext(null);
+            m_ctxCapture = null;
 
             // at this point we have a fair bit of data about which variables get captured, but we
             // still lack the effectively final data that will only get reported when the various
@@ -552,7 +538,9 @@ public class NewExpression
             m_fInstanceChild = ctxAnon.isInstanceChild();
             }
 
-        return finishValidation(typeRequired, typeTarget, fValid ? TypeFit.Fit : TypeFit.NoFit, null, errs);
+        Expression exprResult = finishValidation(typeRequired, typeTarget, fValid ? TypeFit.Fit : TypeFit.NoFit, null, errs);
+        clearAnonTypeInfos();
+        return exprResult;
         }
 
     @Override
@@ -584,60 +572,36 @@ public class NewExpression
         }
 
     @Override
-    public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
-        {
-        assert m_constructor != null;
-
-        if (left != null)
-            {
-            // TODO construct child class
-            notImplemented();
-            }
-
-        List<Expression> listArgs = args;
-        int              cArgs    = listArgs.size();
-        Argument[]       aArgs    = new Argument[cArgs];
-        for (int i = 0; i < cArgs; ++i)
-            {
-            aArgs[i] = listArgs.get(i).generateArgument(ctx, code, true, true, errs);
-            }
-
-        Argument argResult = new Register(getType());
-
-        generateNew(code, aArgs, argResult);
-
-        return argResult;
-        }
-
-    @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         assert m_constructor != null;
 
-        if (left != null)
+        if (LVal.isLocalArgument())
             {
-            // TODO construct child class
-            notImplemented();
+            if (left != null)
+                {
+                // TODO construct child class
+                notImplemented();
+                }
+
+            List<Expression> listArgs = args;
+            int              cArgs    = listArgs.size();
+            Argument[]       aArgs    = new Argument[cArgs];
+            for (int i = 0; i < cArgs; ++i)
+                {
+                aArgs[i] = listArgs.get(i).generateArgument(ctx, code, true, true, errs);
+                }
+
+            if (anon != null)
+                {
+                aArgs = addCaptures(code, aArgs);
+                }
+
+            generateNew(code, aArgs, LVal.getLocalArgument());
             }
-
-        List<Expression> listArgs = args;
-        int              cArgs    = listArgs.size();
-        Argument[]       aArgs    = new Argument[cArgs];
-        for (int i = 0; i < cArgs; ++i)
+        else
             {
-            aArgs[i] = listArgs.get(i).generateArgument(ctx, code, true, true, errs);
-            }
-
-        Argument argResult = LVal.isLocalArgument()
-                ? LVal.getLocalArgument()
-                : new Register(LVal.getType());
-
-        generateNew(code, aArgs, argResult);
-
-        if (!LVal.isLocalArgument())
-            {
-            LVal.assign(argResult, code, errs);
+            super.generateAssignment(ctx, code, LVal, errs);
             }
         }
 
@@ -811,6 +775,218 @@ public class NewExpression
             }
         }
 
+    /**
+     * Remove synthetic default constructor on the anonymous inner class.
+     */
+    private void destroyDefaultConstructor()
+        {
+        ClassStructure clz = (ClassStructure) anon.getComponent();
+        MethodConstant id  = pool().ensureMethodConstant(clz.getIdentityConstant(), "construct",
+                TypeConstant.NO_TYPES, TypeConstant.NO_TYPES);
+        MethodStructure constrDefault = (MethodStructure) id.getComponent();
+        if (constrDefault != null)
+            {
+            clz.getChild("construct").removeChild(constrDefault);
+            }
+        }
+
+    /**
+     * Create a synthetic constructor on the inner class that calls the specified super constructor.
+     *
+     * @param idSuper  the super constructor
+     *
+     * @return the identity of the new constructor on the anonymous inner class
+     */
+    private MethodConstant createPassThroughConstructor(MethodConstant idSuper)
+        {
+        // create a constructor that matches the one that we need to route to on the super class
+        Parameter[]     aParams     = ((MethodStructure) idSuper.getComponent()).getParamArray();
+        int             cParams     = aParams.length;
+        ClassStructure  clzAnon     = (ClassStructure) anon.getComponent();
+        MethodStructure constrThis  = clzAnon.createMethod(true, Access.PUBLIC, null,
+                Parameter.NO_PARAMS, "construct", aParams, true, false);
+        constrThis.setSynthetic(true);
+
+        Code code = constrThis.createCode();
+        if (cParams == 1)
+            {
+            code.add(new Construct_1(idSuper, new Register(aParams[0].getType(), 0)));
+            }
+        else
+            {
+            assert cParams > 1;
+            Register[] aArgs = new Register[cParams];
+            for (int i = 0; i < cParams; ++i)
+                {
+                aArgs[i] = new Register(aParams[i].getType(), i);
+                }
+            code.add(new Construct_N(idSuper, aArgs));
+            }
+        code.add(new Return_0());
+
+        return constrThis.getIdentityConstant();
+        }
+
+    /**
+     * Apply information that was collected by analyzing the capture behavior of the anonymous inner
+     * class.
+     *
+     * @param code  the code being emitted for the site of the NewExpression
+     */
+    private Argument[] addCaptures(Code code, Argument[] aOldArgs)
+        {
+        // we're going to be making changes, so get rid of any cached TypeInfo
+        clearAnonTypeInfos();
+
+        // if the anonymous inner class captures the "outer this", then it has to be an instance
+        // child
+        anon.getComponent().setStatic(!m_fInstanceChild);
+
+        // if nothing else is captured, then we're done
+        Map<String, Boolean>  mapCapture   = m_mapCapture;
+        Map<String, Register> mapRegisters = m_mapRegisters;
+        if (mapCapture == null || mapCapture.isEmpty())
+            {
+            return aOldArgs;
+            }
+
+        // we're going to replace the constructor by creating a new constructor that calls the old
+        // one, but that first stores off all of the passed-in binding values
+        ConstantPool pool       = pool();
+        Parameter[]  aOldParams = m_constructor.getParamArray();
+        int          cOldParams = aOldParams.length;
+        int          cCaptures  = mapCapture.size();
+        int          cNewParams = cOldParams + cCaptures;
+        Parameter[]  aNewParams = new Parameter[cNewParams];
+        int          iNewParam  = cOldParams;
+        Argument[]   aNewArgs   = new Argument[cNewParams];
+        assert cOldParams == aOldArgs.length;
+        System.arraycopy(aOldParams, 0, aNewParams, 0, cOldParams);
+        System.arraycopy(aOldArgs  , 0, aNewArgs  , 0, cOldParams);
+        for (Entry<String, Boolean> entry : mapCapture.entrySet())
+            {
+            String       sName = entry.getKey();
+            Register     reg   = mapRegisters.get(sName);
+            Boolean      FVar  = entry.getValue();
+            TypeConstant type  = reg.getType();
+            Register     arg   = reg;
+            if (FVar)
+                {
+                // it's a read/write capture; obtain the Var of the capture
+                type = pool.ensureParameterizedTypeConstant(pool.typeVar(), type);
+                arg  = new Register(type, Op.A_STACK);
+                code.add(new MoveVar(reg, arg));
+                }
+            else if (!reg.isEffectivelyFinal())
+                {
+                // it's a read-only capture, but since we were unable to prove that the
+                // register was effectively final, we need to capture the Ref
+                type = pool.ensureParameterizedTypeConstant(pool.typeRef(), type);
+                arg  = new Register(type, Op.A_STACK);
+                code.add(new MoveRef(reg, arg));
+                }
+
+            // the new constructor will have the value/Ref/Var passed in as an additional parameter
+            aNewParams[iNewParam] = new Parameter(pool, type, sName, null, false, iNewParam, false);
+            aNewArgs  [iNewParam] = arg;
+            ++iNewParam;
+            }
+
+        // create a wrapper constructor that takes the additional capture values and then delegates
+        // to the original constructor
+        ClassStructure  clzAnon   = (ClassStructure) anon.getComponent();
+        MethodStructure constrOld = m_constructor;
+        MethodStructure constrNew = clzAnon.createMethod(true, Access.PUBLIC, null,
+                Parameter.NO_PARAMS, "construct", aNewParams, true, false);
+        constrNew.setSynthetic(true);
+        Code codeConstr = constrNew.createCode();
+
+        // for each capture variable needed by the anonymous inner class, create a property that
+        // will hold it, and store the value (which is being passed into the new constructor) into
+        // that property
+        for (int iCapture = 0; iCapture < cCaptures; ++iCapture)
+            {
+            iNewParam = cOldParams + iCapture;
+            Parameter    param = aNewParams[iNewParam];
+            String       sName = param.getName();
+            TypeConstant type  = param.getType();
+            Register     reg   = new Register(type, iNewParam);
+
+            // create the property as a private synthetic
+            PropertyStructure prop = clzAnon.createProperty(
+                    false, Access.PRIVATE, Access.PRIVATE, type, sName);   // TODO @Final
+            prop.setSynthetic(true);
+
+            // store the constructor parameter into the property
+            codeConstr.add(new L_Set(prop.getIdentityConstant(), reg));
+            }
+
+        // call the previous constructor
+        MethodConstant idOld = constrOld.getIdentityConstant();
+        switch (cOldParams)
+            {
+            case 0:
+                codeConstr.add(new Construct_0(idOld));
+                break;
+            case 1:
+                codeConstr.add(new Construct_1(idOld, new Register(aNewParams[0].getType(), 0)));
+                break;
+            default:
+                Register[] aArgs = new Register[cOldParams];
+                for (int i = 0; i < cOldParams; ++i)
+                    {
+                    aArgs[i] = new Register(aOldParams[i].getType(), i);
+                    }
+                codeConstr.add(new Construct_N(constrOld.getIdentityConstant(), aArgs));
+                break;
+            }
+        codeConstr.add(new Return_0());
+
+        // the new constructor calls the old constructor, so we need to call the new constructor
+        m_constructor = constrNew;
+
+        return aNewArgs;
+        }
+
+    private void clearAnonTypeInfos()
+        {
+        if (anon != null)
+            {
+            TypeConstant type = getType();
+            type.clearTypeInfo();
+            pool().ensureAccessTypeConstant(type, Access.PRIVATE).clearTypeInfo();
+            }
+        }
+
+    /**
+     * @return true iff the name specifies a captured variable
+     */
+    boolean isCapture(String sCaptureName)
+        {
+        return m_mapCapture != null && m_mapCapture.containsKey(sCaptureName);
+        }
+
+    /**
+     * @return the type of the value (not the Ref or Var, if implicit deref is used)
+     */
+    TypeConstant getCaptureType(String sCaptureName)
+        {
+        Register reg = m_mapRegisters.get(sCaptureName);
+        return reg.getType();
+        }
+
+    /**
+     * @return true iff a capture variable needs to be implicitly de-ref'd (via a CVAR)
+     */
+    boolean isImplicitDeref(String sCaptureName)
+        {
+        assert m_mapCapture.containsKey(sCaptureName);
+
+        Register reg    = m_mapRegisters.get(sCaptureName);
+        Boolean  FVar   = m_mapCapture  .get(sCaptureName);
+        return FVar || !reg.isEffectivelyFinal();
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -880,6 +1056,89 @@ public class NewExpression
         }
 
 
+    // ----- inner class: CaptureConstant ----------------------------------------------------------
+
+    /**
+     * A CaptureConstant is a fake constant that is used to expose local variable information across
+     * component boundaries that variables cannot normally cross -- or even be visible across. When
+     * code in an anonymous inner class attempts to find a variable that it needs to capture, it
+     * fails to do so locally, and thus the root context for that code will use a name resolver,
+     * which in turn climbs the AST / component ladder in order to resolve the name. If it reaches
+     * this currently-in-the-middle-of-validating NewExpression, and the validating context that the
+     * NewExpression exists within knows that variable name, then the information about the variable
+     * is sent back down to the code that needs to resolve that name via a CaptureContext, which is
+     * basically just an envelope for the information about the variable that needs to be captured.
+     */
+    public class CaptureConstant
+            extends PseudoConstant
+        {
+        /**
+         * Construct a CaptureConstant.
+         *
+         * @param pool   the constant pool
+         * @param ctx    the capture context
+         * @param sName  the captured variable name
+         * @param arg    the captured argument (contains type information, for example)
+         */
+        public CaptureConstant(ConstantPool pool, AnonInnerClassContext ctx, String sName, Argument arg)
+            {
+            super(pool);
+            m_ctx   = ctx;
+            m_sName = sName;
+            m_arg   = arg;
+            }
+
+        public AnonInnerClassContext getContext()
+            {
+            return m_ctx;
+            }
+
+        public String getName()
+            {
+            return m_sName;
+            }
+
+        public Argument getArgument()
+            {
+            return m_arg;
+            }
+
+        @Override
+        public Format getFormat()
+            {
+            return Format.CapturedVariable;
+            }
+
+        @Override
+        public TypeConstant getType()
+            {
+            return m_arg.getType();
+            }
+
+        @Override
+        public String getValueString()
+            {
+            return m_sName;
+            }
+
+        @Override
+        public String getDescription()
+            {
+            return "arg=" + m_arg;
+            }
+
+        @Override
+        protected int compareDetails(Constant that)
+            {
+            throw new IllegalStateException();
+            }
+
+        private AnonInnerClassContext m_ctx;
+        private String                m_sName;
+        private Argument              m_arg;
+        }
+
+
     // ----- inner class: CaptureContext -----------------------------------------------------------
 
     /**
@@ -905,7 +1164,7 @@ public class NewExpression
          */
         public boolean isInstanceChild()
             {
-            return isThisCaptured();
+            return isThisCaptured() | true; // TODO it's not immediately obvious how to capture "outer this" (GG?)
             }
         }
 
@@ -927,6 +1186,10 @@ public class NewExpression
     private transient TypeCompositionStatement m_anonActual;
     private transient ClassStructure           m_clzActual;
 
+    /**
+     * The capture context, while it is active.
+     */
+    private transient AnonInnerClassContext m_ctxCapture;
     /**
      * The variables captured by the anonymous inner class, with an associated "true" flag if the
      * inner class needs to capture the variable in a read/write mode.

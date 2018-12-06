@@ -194,30 +194,53 @@ public class NameResolver
                                 }
 
                             // ask the component to resolve the name
-                            switch (componentResolver.resolveName(m_sName, this))
+                            ResolutionResult result  = componentResolver.resolveName(m_sName, this);
+                            boolean          fRepeat = false;
+                            do
                                 {
-                                case POSSIBLE:
-                                    // formal types could not be resolved; keep walking up
-                                    fPossibleFormal = true;
-                                    // break-through
-                                case UNKNOWN:
-                                    // the component didn't know the name; keep walking up
-                                    break;
+                                switch (result)
+                                    {
+                                    case POSSIBLE:
+                                        // formal types could not be resolved; keep walking up
+                                        fPossibleFormal = true;
+                                        // fall-through
+                                    case UNKNOWN:
+                                        if (fRepeat)
+                                            {
+                                            // already re-tried, so the result at this point is
+                                            // actually unknown
+                                            fRepeat = false;
+                                            }
+                                        else
+                                            {
+                                            Constant idCaptured = node.resolveCapture(m_sName);
+                                            if (idCaptured != null)
+                                                {
+                                                result = resolvedConstant(idCaptured);
 
-                                case RESOLVED:
-                                    // the component resolved the first name
-                                    break WalkUpToTheRoot;
+                                                // we need to re-evaluate the result now that it may
+                                                // have changed
+                                                fRepeat = true;
+                                                }
+                                            }
+                                        break;
 
-                                case ERROR:
-                                    m_status = Status.ERROR;
-                                    return Result.ERROR;
+                                    case RESOLVED:
+                                        // the component resolved the first name
+                                        break WalkUpToTheRoot;
 
-                                case DEFERRED:
-                                    return Result.DEFERRED;
+                                    case ERROR:
+                                        m_status = Status.ERROR;
+                                        return Result.ERROR;
 
-                                default:
-                                    throw new IllegalStateException();
+                                    case DEFERRED:
+                                        return Result.DEFERRED;
+
+                                    default:
+                                        throw new IllegalStateException();
+                                    }
                                 }
+                            while (fRepeat);
                             }
 
                         // walk up towards the root

@@ -1720,6 +1720,18 @@ public class Context
             return ctxOuter;
             }
 
+        @Override
+        protected void markVarRead(boolean fNested, String sName, Token tokName, ErrorListener errs)
+            {
+            if (!isVarDeclaredInThisScope(sName) && getOuterContext().isVarReadable(sName))
+                {
+                // capture the variable
+                ensureCaptureMap().putIfAbsent(sName, false);
+                }
+
+            super.markVarRead(fNested, sName, tokName, errs);
+            }
+
         /**
          * @return a map of variable name to a Boolean representing if the capture is read-only
          *         (false) or read/write (true)
