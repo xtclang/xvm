@@ -896,6 +896,17 @@ public class NameExpression
                         }
                     }
 
+                PropertyConstant  idProp = (PropertyConstant) argRaw;
+                PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
+                if (prop.isConstant())
+                    {
+                    Constant constValue = prop.getInitialValue();
+                    if (constValue != null)
+                        {
+                        return constValue;
+                        }
+                    }
+
                 // TODO this is not complete; the "implicit this" covers both nested properties and outer properties
                 boolean fThisProp = left == null; // TODO or left == this
                 if (fThisProp && fLocalPropOk)
@@ -907,12 +918,12 @@ public class NameExpression
                 Register reg = createRegister(getType(), fUsedOnce);
                 if (fThisProp)
                     {
-                    code.add(new L_Get((PropertyConstant) argRaw, reg));
+                    code.add(new L_Get(idProp, reg));
                     }
                 else
                     {
                     Argument argLeft = left.generateArgument(ctx, code, false, false, errs);
-                    code.add(new P_Get((PropertyConstant) argRaw, argLeft, reg));
+                    code.add(new P_Get(idProp, argLeft, reg));
                     }
                 return reg;
                 }
