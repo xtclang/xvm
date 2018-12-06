@@ -816,6 +816,11 @@ public class InvocationExpression
 
         fLocalPropOk &= cArgs == 0;
 
+        Argument[] aargTypeParams = m_aargTypeParams;
+        Constant[] aconstDefault  = m_aconstDefault;
+        int        cTypeParams    = aargTypeParams == null ? 0 : aargTypeParams.length;
+        int        cDefaults      = aconstDefault == null ? 0 : aconstDefault.length;
+
         if (expr instanceof NameExpression)
             {
             NameExpression exprName = (NameExpression) expr;
@@ -855,14 +860,10 @@ public class InvocationExpression
                             {
                             // it's a method, and we need to generate the necessary code that calls it;
                             // generate the arguments
-                            Argument[]     aargTypeParams = m_aargTypeParams;
-                            Constant[]     aconstDefault  = m_aconstDefault;
-                            int            cAll           = idMethod.getRawParams().length;
-                            int            cTypeParams    = aargTypeParams == null ? 0 : aargTypeParams.length;
-                            int            cDefaults      = aconstDefault == null ? 0 : aconstDefault.length;
-                            Argument       arg            = null;
-                            Argument[]     aArgs          = null;
-                            char           chArgs;
+                            int        cAll  = idMethod.getRawParams().length;
+                            Argument   arg   = null;
+                            Argument[] aArgs = null;
+                            char       chArgs;
 
                             assert cTypeParams + cArgs + cDefaults == cAll;
 
@@ -1051,39 +1052,59 @@ public class InvocationExpression
             return new Argument[] {argFn};
             }
 
-        TypeConstant[] atypeSub       = typeFn.getParamTypesArray();
-        TypeConstant[] atypeParams    = atypeSub[F_ARGS].getParamTypesArray();
-        int            cParams        = atypeParams.length;
-        TypeConstant[] atypeRets      = atypeSub[F_RETS].getParamTypesArray();
-        int            cRets          = atypeRets.length;
-        Argument[]     aargTypeParams = m_aargTypeParams;
-        Constant[]     aconstDefault  = m_aconstDefault;
-        int            cTypeParams    = aargTypeParams == null ? 0 : aargTypeParams.length;
-        int            cDefaults      = aconstDefault == null ? 0 : aconstDefault.length;
+        TypeConstant[] atypeSub    = typeFn.getParamTypesArray();
+        TypeConstant[] atypeParams = atypeSub[F_ARGS].getParamTypesArray();
+        int            cAll        = atypeParams.length;
 
-        assert cTypeParams + cArgs + cDefaults == cParams;
+        assert cTypeParams + cArgs + cDefaults == cAll;
 
         if (m_fCall)
             {
-            char       chArgs = '0';
-            Argument   arg    = null;
-            Argument[] aArgs  = null;
+            Argument  arg   = null;
+            Argument[]aArgs = null;
+            char      chArgs;
 
             assert !m_fBindParams || cArgs > 0;
 
-            // TODO the following code doesn't do argument conversions to the required parameter types
-            if (cArgs == 1)
+            if (cAll == 0)
+                {
+                chArgs = '0';
+                aArgs  = NO_RVALUES;
+                }
+            else if (cAll == 1)
                 {
                 chArgs = '1';
-                arg    = args.get(0).generateArgument(ctx, code, false, fUsedOnce, errs);
+                if (cArgs == 1)
+                    {
+                    arg = args.get(0).generateArgument(ctx, code, false, fUsedOnce, errs);
+                    }
+                else if (cTypeParams == 1)
+                    {
+                    arg = aargTypeParams[0];
+                    }
+                else if (cDefaults == 1)
+                    {
+                    arg = aconstDefault[0];
+                    }
                 }
-            else if (cArgs > 1)
+            else
                 {
                 chArgs = 'N';
-                aArgs  = new Argument[cArgs];
-                for (int i = 0; i < cArgs; ++i)
+                aArgs  = new Argument[cAll];
+
+                if (cTypeParams > 0)
                     {
-                    aArgs[i] = args.get(i).generateArgument(ctx, code, false, fUsedOnce, errs);
+                    System.arraycopy(aargTypeParams, 0, aArgs, 0, cTypeParams);
+                    }
+
+                for (int i = 0, of = cTypeParams; i < cArgs; ++i)
+                    {
+                    aArgs[of + i] = args.get(i).generateArgument(ctx, code, false, fUsedOnce, errs);
+                    }
+
+                if (cDefaults > 0)
+                    {
+                    System.arraycopy(aconstDefault, 0, aArgs, cTypeParams + cArgs, cDefaults);
                     }
                 }
 
@@ -1112,9 +1133,11 @@ public class InvocationExpression
                 }
 
             // generate registers for the return values
-            char       chRets = '0';
-            Register   ret    = null;
-            Register[] aRets  = Register.NO_REGS;
+            TypeConstant[] atypeRets = atypeSub[F_RETS].getParamTypesArray();
+            int            cRets     = atypeRets.length;
+            char           chRets    = '0';
+            Register       ret       = null;
+            Register[]     aRets     = Register.NO_REGS;
             if (cRets == 1)
                 {
                 chRets = '1';
@@ -1180,8 +1203,9 @@ public class InvocationExpression
         assert m_fBindParams;
 
         // count the number of parameters to bind
-        int cBind = 0;
-        for (int i = 0; i < cParams; ++i)
+        int cBind     = cTypeParams + cDefaults;
+        int ofDefault = cAll - cDefaults;
+        for (int i = 0; i < cArgs; ++i)
             {
             if (!args.get(i).isNonBinding())
                 {
@@ -1191,9 +1215,19 @@ public class InvocationExpression
 
         int[]      aiArg = new int[cBind];
         Argument[] aArg  = new Argument[cBind];
-        for (int i = 0, iNext = 0; i < cParams; ++i)
+        for (int i = 0, iNext = 0; i < cArgs; ++i)
             {
-            if (!args.get(i).isNonBinding())
+            if (i < cTypeParams)
+                {
+                aiArg[iNext] = i;
+                aArg [iNext] = aargTypeParams[i];
+                }
+            else if (i >= ofDefault)
+                {
+                aiArg[iNext] = i;
+                aArg [iNext] = aconstDefault[i - ofDefault];
+                }
+            else if (!args.get(i).isNonBinding())
                 {
                 aiArg[iNext] = i;
                 aArg [iNext] = args.get(i).generateArgument(ctx, code, false, fUsedOnce, errs);
