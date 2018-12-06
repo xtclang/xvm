@@ -10,9 +10,16 @@ import org.xvm.runtime.TemplateRegistry;
 public class xUInt128
         extends xBaseInt128
     {
+    public static xUInt128 INSTANCE;
+
     public xUInt128(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
+
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
@@ -26,8 +33,8 @@ public class xUInt128
      *
      * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */
-    protected int convertIntegerType(Frame frame, xConstrainedInteger template,
-                                     ObjectHandle hTarget, int iReturn)
+    protected int convertToConstrainedType(Frame frame, xConstrainedInteger template,
+                                           ObjectHandle hTarget, int iReturn)
         {
         LongLong ll = ((LongLongHandle) hTarget).getValue();
 

@@ -1724,6 +1724,90 @@ public class MethodStructure
             }
 
         /**
+         * Calculate a relative address from the specified program counter (iPC) to the
+         * specified destination op-code.
+         *
+         * @param iPC     the "current" program counter
+         * @param opDest  the destination Op
+         *
+         * @return the offset from the current PC to the destination Op
+         */
+        public int resolveAddress(int iPC, Op opDest)
+            {
+            assert (opDest != null);
+
+            int iPCThat = addressOf(opDest);
+            if (iPCThat < 0)
+                {
+                throw new IllegalStateException("cannot find op: " + opDest);
+                }
+
+            // calculate relative offset
+            int ofJmp = iPCThat - iPC;
+            if (ofJmp == 0)
+                {
+                throw new IllegalStateException("infinite loop: code=" + this + "; PC=" + iPC);
+                }
+            return ofJmp;
+            }
+
+        /**
+         * Calculate a number of scopes that must be exited by a jump from one op to another.
+         *
+         * @param iPC    the program counter of a "jump" op code
+         * @param nJump  the jump distance (positive or negative)
+         *
+         * @return the number of scopes to exit
+         */
+        public int calculateExits(int iPC, int nJump)
+            {
+            int ofStart, ofEnd;
+
+            assert nJump != 0;
+            if (nJump > 0)
+                {
+                // forward
+                ofStart  = iPC + 1;
+                ofEnd    = iPC + nJump - 1;
+                }
+            else
+                {
+                // backward
+                ofStart  = iPC + nJump;
+                ofEnd    = iPC - 1;
+                }
+
+            Op[] aOP    = m_aop;
+            int  cDelta = 0; // number of Enter ops minus number of Exit ops
+
+            for (int i = ofStart; i <= ofEnd; i++)
+                {
+                Op op = aOP[i];
+                if (op.isEnter())
+                    {
+                    cDelta++;
+                    }
+                else if (op.isExit())
+                    {
+                    cDelta--;
+                    }
+                }
+
+            if (cDelta != 0)
+                {
+                // jump forward should see number of exits outnumbering enters;
+                // jump backward should see the opposite;
+                if (nJump < 0 ^ cDelta > 0)
+                    {
+                    throw new IllegalStateException();
+                    }
+                return Math.abs(cDelta);
+                }
+
+            return 0;
+            }
+
+        /**
          * @return true iff any of the op codes refer to the "super"
          */
         public boolean usesSuper()

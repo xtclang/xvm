@@ -82,11 +82,13 @@ public class JumpLte
         switch (type.callCompare(frame, hValue1, hValue2, A_STACK))
             {
             case R_NEXT:
-                return frame.popStack() == xOrdered.GREATER ? iPC + 1 : iPC + m_ofJmp;
+                return frame.popStack() == xOrdered.GREATER ?
+                    iPC + 1 : jump(frame, iPC + m_ofJmp, m_cExits);
 
             case R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->
-                    frameCaller.popStack() == xOrdered.GREATER ? iPC + 1 : iPC + m_ofJmp);
+                    frameCaller.popStack() == xOrdered.GREATER ?
+                        iPC + 1 : jump(frame, iPC + m_ofJmp, m_cExits));
                 return R_CALL;
 
             case R_EXCEPTION:

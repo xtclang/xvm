@@ -533,6 +533,12 @@ public class xFunction
                 {
                 return handle;
                 }
+
+            @Override
+            public String toString()
+                {
+                return "NO_OP";
+                }
             };
         }
 

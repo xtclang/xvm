@@ -70,6 +70,6 @@ public class JumpNType
         TypeConstant type     = hValue.getType();
         TypeConstant typeTest = frame.resolveType(m_nArg2);
 
-        return type.isA(typeTest) ? iPC + 1 : iPC + m_ofJmp;
+        return type.isA(typeTest) ? iPC + 1 : jump(frame, iPC + m_ofJmp, m_cExits);
         }
     }

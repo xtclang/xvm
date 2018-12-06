@@ -142,7 +142,7 @@ public class GuardStart
 
             for (int i = 0; i < c; i++)
                 {
-                m_aofCatch[i] = resolveAddress(code, iPC, m_aOpCatch[i]);
+                m_aofCatch[i] = code.resolveAddress(iPC, m_aOpCatch[i]);
                 }
             }
         }
@@ -151,6 +151,12 @@ public class GuardStart
     public int getOpCode()
         {
         return OP_GUARD;
+        }
+
+    @Override
+    public boolean isEnter()
+        {
+        return true;
         }
 
     @Override

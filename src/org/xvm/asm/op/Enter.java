@@ -27,6 +27,12 @@ public class Enter
         }
 
     @Override
+    public boolean isEnter()
+        {
+        return true;
+        }
+
+    @Override
     public int process(Frame frame, int iPC)
         {
         frame.enterScope();

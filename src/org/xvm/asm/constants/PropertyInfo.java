@@ -978,7 +978,7 @@ public class PropertyInfo
         {
         // TODO cp - may need a TypeConstant for the specific type of the property
         TypeConstant typeProp = getType();
-        ConstantPool pool     = typeProp.getConstantPool();
+        ConstantPool pool     = pool();
 
         TypeConstant typeRef = pool.ensureParameterizedTypeConstant(
             isVar() ? pool.typeVar() : pool.typeRef(), typeProp);
@@ -993,7 +993,7 @@ public class PropertyInfo
      */
     public boolean isAtomic()
         {
-        IdentityConstant idAtomic = m_type.getConstantPool().clzAtomic();
+        IdentityConstant idAtomic = pool().clzAtomic();
         for (Annotation anno : getRefAnnotations())
             {
             if (anno.getAnnotationClass().equals(idAtomic))
@@ -1028,7 +1028,7 @@ public class PropertyInfo
     public MethodConstant getGetterId()
         {
         PropertyConstant constId = getIdentity();
-        ConstantPool     pool    = constId.getConstantPool();
+        ConstantPool     pool    = pool();
         return pool.ensureMethodConstant(constId, "get", ConstantPool.NO_TYPES, new TypeConstant[]{getType()});
         }
 
@@ -1060,7 +1060,7 @@ public class PropertyInfo
     public MethodConstant getSetterId()
         {
         PropertyConstant constId = getIdentity();
-        ConstantPool     pool    = constId.getConstantPool();
+        ConstantPool     pool    = pool();
         return pool.ensureMethodConstant(constId, "set", new TypeConstant[]{getType()}, ConstantPool.NO_TYPES);
         }
 
@@ -1196,6 +1196,14 @@ public class PropertyInfo
                 }
             }
         return chain;
+        }
+
+    /**
+     * @return the ConstantPool
+     */
+    private ConstantPool pool()
+        {
+        return ConstantPool.getCurrentPool();
         }
 
 

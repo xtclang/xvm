@@ -207,7 +207,7 @@ public abstract class ObjectHandle
                 {
                 for (ObjectHandle hValue : m_mapFields.values())
                     {
-                    if (hValue == null)
+                    if (hValue == null || !hValue.validateFields())
                         {
                         return false;
                         }

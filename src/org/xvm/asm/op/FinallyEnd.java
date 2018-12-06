@@ -28,6 +28,12 @@ public class FinallyEnd
         }
 
     @Override
+    public boolean isExit()
+        {
+        return true;
+        }
+
+    @Override
     public int process(Frame frame, int iPC)
         {
         // a possible exception sits in the first variable of this scope,

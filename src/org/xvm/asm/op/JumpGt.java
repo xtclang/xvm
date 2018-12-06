@@ -84,11 +84,13 @@ public class JumpGt
         switch (type.callCompare(frame, hValue1, hValue2, A_STACK))
             {
             case R_NEXT:
-                return frame.popStack() == xOrdered.GREATER ? iPC + m_ofJmp : iPC + 1;
+                return frame.popStack() == xOrdered.GREATER ?
+                    jump(frame, iPC + m_ofJmp, m_cExits) : iPC + 1;
 
             case R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->
-                    frameCaller.popStack() == xOrdered.GREATER ? iPC + m_ofJmp : iPC + 1);
+                    frameCaller.popStack() == xOrdered.GREATER ?
+                        jump(frame, iPC + m_ofJmp, m_cExits) : iPC + 1);
                 return R_CALL;
 
             case R_EXCEPTION:

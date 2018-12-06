@@ -75,7 +75,7 @@ public abstract class xUncheckedConstrainedInt
         }
 
     @Override
-    protected int convertIntegerType(Frame frame, long lValue, int iReturn)
+    public int convertLong(Frame frame, long lValue, int iReturn)
         {
         return frame.assignValue(iReturn, makeJavaLong(lValue));
         }

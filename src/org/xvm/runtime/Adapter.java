@@ -1,7 +1,6 @@
 package org.xvm.runtime;
 
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -20,7 +19,6 @@ import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -206,28 +204,7 @@ public class Adapter
         TypeConstant[] atArg = getTypeConstants(template, asArgType);
         TypeConstant[] atRet = getTypeConstants(template, asRetType);
 
-        MethodStructure method = template.getDeclaredMethod(sMethName, atArg, atRet);
-        if (method != null)
-            {
-            return method;
-            }
-
-        if (method == null && (asArgType != null || asRetType != null))
-            {
-            method = template.getDeclaredMethod(sMethName, null, null);
-            if (method != null)
-                {
-                MethodConstant constMethod = method.getIdentityConstant();
-                System.out.println("\n******** parameter mismatch at " + template.f_sName + "#" + sMethName);
-                System.out.println("     provided:");
-                System.out.println("         arguments " + Arrays.toString(atArg));
-                System.out.println("         return " + Arrays.toString(atRet));
-                System.out.println("     found:");
-                System.out.println("         arguments " + Arrays.toString(constMethod.getRawParams()));
-                System.out.println("         return " + Arrays.toString(constMethod.getRawReturns()));
-                }
-            }
-        return method;
+        return template.getDeclaredMethod(sMethName, atArg, atRet);
         }
 
     // get a "relative" property constant id

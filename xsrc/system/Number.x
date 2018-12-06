@@ -118,6 +118,7 @@ interface Number
 
     /**
      * Calculate the negative of this number.
+     * TODO: do we want to return a "complementary" signed type analogous to "magnitude"?
      */
     @Op Number neg();
 

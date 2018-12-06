@@ -65,7 +65,7 @@ public class X_Print
             if (hValue instanceof DeferredPropertyHandle)
                 {
                 DeferredPropertyHandle hProp = (DeferredPropertyHandle) hValue;
-                sb.append("Local property: ").append(hProp.getProperty());
+                sb.append("Local property: ").append(hProp.getPropertyName());
                 return R_NEXT;
                 }
 

@@ -79,6 +79,12 @@ const Int128
         }
 
     @Override
+    @Auto Int128 to<Int128>()
+        {
+        return this;
+        }
+
+    @Override
     @Auto UInt8 to<UInt8>()
         {
         return this;
@@ -102,7 +108,8 @@ const Int128
         return this;
         }
 
-    @Auto Int128 to<Int128>()
+    @Override
+    @Auto UInt128 to<UInt128>()
         {
         return this;
         }

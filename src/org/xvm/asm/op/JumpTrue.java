@@ -69,6 +69,6 @@ public class JumpTrue
     @Override
     protected int completeUnaryOp(Frame frame, int iPC, ObjectHandle hValue)
         {
-        return ((BooleanHandle) hValue).get() ? iPC + m_ofJmp : iPC + 1;
+        return ((BooleanHandle) hValue).get() ? jump(frame, iPC + m_ofJmp, m_cExits) : iPC + 1;
         }
     }

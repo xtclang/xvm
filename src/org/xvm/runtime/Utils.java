@@ -181,7 +181,7 @@ public abstract class Utils
                 if (hArg instanceof DeferredPropertyHandle)
                     {
                     ObjectHandle hThis = frameCaller.getThis();
-                    String sProp = ((DeferredPropertyHandle) hArg).getProperty();
+                    String       sProp = ((DeferredPropertyHandle) hArg).getPropertyName();
 
                     switch (hThis.getTemplate().getPropertyValue(
                             frameCaller, hThis, sProp, Op.A_STACK))

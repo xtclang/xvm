@@ -88,9 +88,9 @@ public class JumpInt
             m_aofCase = new int[c];
             for (int i = 0; i < c; i++)
                 {
-                m_aofCase[i] = resolveAddress(code, iPC, m_aOpCase[i]);
+                m_aofCase[i] = code.resolveAddress(iPC, m_aOpCase[i]);
                 }
-            m_ofDefault = resolveAddress(code, iPC, m_opDefault);
+            m_ofDefault = code.resolveAddress(iPC, m_opDefault);
             }
         }
 
