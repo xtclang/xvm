@@ -95,9 +95,15 @@ public class TypeComposition
         typeInception = typeInception.getConstantPool().
             ensureAccessTypeConstant(typeInception, Access.PRIVATE);
 
+        ClassTemplate template = support.getTemplate(typeInception);
+        if (support instanceof ClassTemplate)
+            {
+            support = template;
+            }
+
         f_clzInception = this;
         f_support = support;
-        f_template = support.getTemplate(typeInception);
+        f_template = template;
         f_typeInception = typeInception;
         f_typeRevealed = typeRevealed;
         f_mapCompositions = new ConcurrentHashMap<>();
