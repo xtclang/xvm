@@ -21,20 +21,6 @@ public class IP_Inc
         extends OpInPlace
     {
     /**
-     * Construct an IP_INC op.
-     *
-     * @param nTarget  indicates the incrementable target
-     *
-     * @deprecated
-     */
-    public IP_Inc(int nTarget)
-        {
-        super(null);
-
-        m_nTarget = nTarget;
-        }
-
-    /**
      * Construct an IP_INC op for the passed arguments.
      *
      * @param argTarget  the target Argument
@@ -86,17 +72,5 @@ public class IP_Inc
         ObjectHandle hTarget = frame.getThis();
 
         return hTarget.getTemplate().invokePostInc(frame, hTarget, sProperty, A_IGNORE);
-        }
-
-    @Override
-    public String toString()
-        {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(super.toString())
-                .append(' ')
-                .append(getTargetString());
-
-        return sb.toString();
         }
     }
