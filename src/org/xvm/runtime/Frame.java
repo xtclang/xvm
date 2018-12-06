@@ -11,6 +11,7 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -35,6 +36,7 @@ import org.xvm.runtime.template.collections.xTuple.TupleHandle;
  * A call stack frame.
  */
 public class Frame
+        implements GenericTypeResolver
     {
     public final Fiber              f_fiber;
     public final ServiceContext     f_context;      // same as f_fiber.f_context
@@ -214,7 +216,6 @@ public class Frame
                 throw new IllegalStateException();
             }
         }
-
 
     // create a new pseudo-frame on the same target
     public Frame createNativeFrame(Op[] aop, ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
@@ -492,11 +493,6 @@ public class Frame
         {
         assert f_hThis != null;
         return f_hThis;
-        }
-
-    public GenericTypeResolver getGenericsResolver()
-        {
-        return f_hThis == null ? f_function : f_hThis.getType();
         }
 
     /**
@@ -1026,7 +1022,6 @@ public class Frame
      * Obtain the type of the specified argument. Negative argument ids are treated as constants.
      *
      * @param iArg  the argument id
-     * @param hArg  in case the argument id points to the stack, indicates the argument itself
      *
      * @return the type (resolved) of the specified argument or null if the argument points to the
      *         stack and the operation is going to push the stack (hArg == null)
@@ -1471,9 +1466,9 @@ public class Frame
                 throw new IllegalStateException("Variable " + nVar + " ouf of scope " + f_function);
                 }
 
-            info = f_aInfo[nVar] = new VarInfo(
-                f_function.getParam(nVar).getType().getPosition(), 0, VAR_STANDARD);
-            info.setName(f_function.getParam(nVar).getName());
+            Parameter param = f_function.getParam(nVar);
+            info = f_aInfo[nVar] = new VarInfo(param.getType().getPosition(), 0, VAR_STANDARD);
+            info.setName(param.getName());
             }
         return info;
         }
@@ -1542,6 +1537,46 @@ public class Frame
                     }
                 };
             }
+        }
+
+    // ----- GenericTypeResolver interface ---------------------------------------------------------
+
+    public GenericTypeResolver getGenericsResolver()
+        {
+        return this;
+        }
+
+    @Override
+    public TypeConstant resolveGenericType(String sFormalName)
+        {
+        // first try to use "this" type
+        ObjectHandle hThis = f_hThis;
+        if (hThis != null)
+            {
+            TypeConstant type = hThis.getType().resolveGenericType(sFormalName);
+            if (type != null)
+                {
+                return type;
+                }
+            }
+
+        // then look for a name match only amongst the method's formal type parameters
+        MethodStructure method = f_function;
+        for (int i = 0, c = method.getTypeParamCount(); i < c; i++)
+            {
+            Parameter param = method.getParam(i);
+
+            if (sFormalName.equals(param.getName()))
+                {
+                TypeConstant typeType = f_ahVar[i].getType();
+
+                // type parameter's type must be of Type<DataType>
+                assert typeType.isTypeOfType() && typeType.getParamsCount() == 1;
+                return typeType.getParamTypesArray()[0];
+                }
+            }
+
+        return null;
         }
 
     // temporary
