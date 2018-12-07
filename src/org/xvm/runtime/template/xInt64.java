@@ -25,6 +25,12 @@ public class xInt64
             }
         }
 
+    @Override
+    protected xConstrainedInteger getComplimentaryTemplate()
+        {
+        return xUInt64.INSTANCE;
+        }
+
     public static JavaLong makeHandle(long lValue)
         {
         return INSTANCE.makeJavaLong(lValue);

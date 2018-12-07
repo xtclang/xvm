@@ -46,6 +46,8 @@ public abstract class xConstrainedInteger
         {
         String sName = f_struct.getName();
 
+        markNativeGetter("magnitude");
+
         markNativeMethod("to", VOID, sName.equals("Int64")  ? THIS : new String[]{"Int64"});
         markNativeMethod("to", VOID, sName.equals("Int32")  ? THIS : new String[]{"Int32"});
         markNativeMethod("to", VOID, sName.equals("Int16")  ? THIS : new String[]{"Int16"});
@@ -72,6 +74,11 @@ public abstract class xConstrainedInteger
         markNativeMethod("neg", VOID, THIS);
         }
 
+    /**
+     * @return a complimentary template (signed for unsigned and vice versa)
+     */
+    abstract protected xConstrainedInteger getComplimentaryTemplate();
+
     @Override
     public boolean isGenericHandle()
         {
@@ -89,6 +96,28 @@ public abstract class xConstrainedInteger
             }
 
         return super.createConstHandle(frame, constant);
+        }
+
+    @Override
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
+        {
+        switch (sPropName)
+            {
+            case "hash":
+                return buildHashCode(frame, hTarget, iReturn);
+
+            case "magnitude":
+                {
+                if (f_fSigned)
+                    {
+                    hTarget = getComplimentaryTemplate().makeJavaLong(
+                        ((JavaLong) hTarget).getValue());
+                    }
+                return frame.assignValue(iReturn, hTarget);
+                }
+            }
+
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     @Override
@@ -382,20 +411,6 @@ public abstract class xConstrainedInteger
         long l = ((JavaLong) hTarget).getValue();
 
         return frame.assignValue(iReturn, makeJavaLong(~l));
-        }
-
-    @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
-        JavaLong hThis = (JavaLong) hTarget;
-
-        switch (sPropName)
-            {
-            case "hash":
-                return frame.assignValue(iReturn, hThis);
-            }
-
-        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     @Override

@@ -23,4 +23,10 @@ public class xUncheckedUInt64
             INSTANCE = this;
             }
         }
+
+    @Override
+    protected xConstrainedInteger getComplimentaryTemplate()
+        {
+        return xUncheckedInt64.INSTANCE;
+        }
     }

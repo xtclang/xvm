@@ -32,6 +32,12 @@ public class xUInt64
         }
 
     @Override
+    protected xConstrainedInteger getComplimentaryTemplate()
+        {
+        return xInt64.INSTANCE;
+        }
+
+    @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof IntConstant)

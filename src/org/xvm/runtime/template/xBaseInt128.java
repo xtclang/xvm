@@ -35,6 +35,8 @@ public abstract class xBaseInt128
     @Override
     public void initDeclared()
         {
+        markNativeGetter("magnitude");
+
         markNativeMethod("to", VOID, new String[]{"Int128"});
         markNativeMethod("to", VOID, new String[]{"Int64"});
         markNativeMethod("to", VOID, new String[]{"Int32"});
@@ -76,6 +78,33 @@ public abstract class xBaseInt128
             }
 
         return super.createConstHandle(frame, constant);
+        }
+
+    @Override
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
+        {
+        switch (sPropName)
+            {
+            case "hash":
+                return buildHashCode(frame, hTarget, iReturn);
+
+            case "magnitude":
+                {
+                if (f_fSigned)
+                    {
+                    LongLong ll = ((LongLongHandle) hTarget).getValue();
+                    if (ll.signum() < 0)
+                        {
+                        ll = new LongLong(ll.getLowValue(), -ll.getHighValue());
+                        }
+
+                    return frame.assignValue(iReturn, xUInt128.INSTANCE.makeLongLong(ll));
+                    }
+                return frame.assignValue(iReturn, hTarget);
+                }
+            }
+
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     @Override

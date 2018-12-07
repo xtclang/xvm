@@ -23,4 +23,10 @@ public class xUncheckedInt8
             INSTANCE = this;
             }
         }
+
+    @Override
+    protected xConstrainedInteger getComplimentaryTemplate()
+        {
+        return xUncheckedUInt8.INSTANCE;
+        }
     }
