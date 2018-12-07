@@ -311,7 +311,8 @@ public class Register
         }
 
     /**
-     * @return true iff this is a normal (not D_VAR), readable and writable, local variable
+     * @return true iff this is a normal (not D_VAR), readable and writable, local variable (and
+     *         not the stack)
      */
     public boolean isNormal()
         {

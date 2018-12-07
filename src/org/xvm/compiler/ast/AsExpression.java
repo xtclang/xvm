@@ -107,7 +107,7 @@ public class AsExpression
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
-        if (LVal.isNormalVariable())
+        if (LVal.isNormalVariableOrStack())
             {
             Argument argTarget = expr1.generateArgument(ctx, code, true, true, errs);
             code.add(new MoveCast(argTarget, LVal.getRegister()));

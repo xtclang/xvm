@@ -2091,11 +2091,20 @@ public abstract class Expression
             }
 
         /**
-         * @return true iff the lvalue is a local variable register that is "normal"
+         * @return true iff the lvalue is a local variable register that is "normal" (but not the
+         *         stack)
          */
         public boolean isNormalVariable()
             {
             return m_form == AssignForm.LocalVar && ((Register) m_arg).isNormal();
+            }
+
+        /**
+         * @return true iff the lvalue is a local variable register that is "normal", or the stack
+         */
+        public boolean isNormalVariableOrStack()
+            {
+            return m_form == AssignForm.LocalVar && (((Register) m_arg).isNormal() || m_arg.isStack());
             }
 
         /**
