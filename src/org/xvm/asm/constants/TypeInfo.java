@@ -865,19 +865,27 @@ public class TypeInfo
 
         for (MethodInfo methodTest : m_mapMethods.values())
             {
-            SignatureConstant sigTest = methodTest.getIdentity().getSignature();
-            if (!sigTest.getName().equals(sig.getName()))
+            if (!methodTest.getSignature().getName().equals(sig.getName()))
                 {
                 continue;
                 }
 
-            SignatureConstant sigResolved = resolveMethodConstant(methodTest).getSignature();
-            if (sigResolved.equals(sig) ||
-                    sigResolved.isSubstitutableFor(sig, typeThis) ||
-                    sigTest    .isSubstitutableFor(sig, typeThis))
+            for (MethodBody body : methodTest.getChain())
                 {
-                mapBySig.putIfAbsent(sig, methodTest);
-                return methodTest;
+                SignatureConstant sigTest = body.getIdentity().getSignature();
+                if (sigTest.equals(sig) || sigTest.isSubstitutableFor(sig, typeThis))
+                    {
+                    mapBySig.putIfAbsent(sig, methodTest);
+                    return methodTest;
+                    }
+
+                SignatureConstant sigResolved =
+                        resolveMethodConstant(body.getIdentity(), methodTest).getSignature();
+                if (sigResolved.equals(sig) || sigResolved.isSubstitutableFor(sig, typeThis))
+                    {
+                    mapBySig.putIfAbsent(sig, methodTest);
+                    return methodTest;
+                    }
                 }
             }
 
@@ -1442,8 +1450,15 @@ public class TypeInfo
      */
     protected MethodConstant resolveMethodConstant(MethodInfo method)
         {
+        return resolveMethodConstant(method.getIdentity(), method);
+        }
+
+    /**
+     * @return resolved method constant, which may be synthetic (not pointing to a structure)
+     */
+    protected MethodConstant resolveMethodConstant(MethodConstant idMethod, MethodInfo method)
+        {
         ConstantPool      pool        = pool();
-        MethodConstant    idMethod    = method.getIdentity();
         SignatureConstant sigOrig     = idMethod.getSignature();
         SignatureConstant sigResolved = sigOrig.resolveGenericTypes(pool, m_type)
                                                .resolveAutoNarrowing(pool, m_type);
