@@ -270,7 +270,8 @@ public class ServiceContext
 
                     if (continuation != null)
                         {
-                        switch (continuation.proceed(frame))
+                        int iResult = continuation.proceed(frame);
+                        switch (iResult)
                             {
                             case Op.R_NEXT:
                                 break;
@@ -302,7 +303,12 @@ public class ServiceContext
                                 break;
 
                             default:
-                                throw new IllegalStateException();
+                                if (iResult < 0)
+                                    {
+                                    throw new IllegalStateException();
+                                    }
+                                iPC = iResult;
+                                break;
                             }
                         }
 
