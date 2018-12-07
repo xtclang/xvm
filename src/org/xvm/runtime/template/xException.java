@@ -86,7 +86,7 @@ public class xException
         {
         return makeHandle(lIndex < 0 ?
                 "Negative index: " + lIndex :
-                "Array index " + lIndex + " out of range 0.." + cSize);
+                "Array index " + lIndex + " out of range 0.." + (cSize-1));
         }
 
     // ---- ObjectHandle helpers -----
