@@ -1317,9 +1317,7 @@ public class TypeInfo
 
         TypeConstant typeType = atypeParam[0];
         if (!typeType.isParamsSpecified() ||
-            !typeType.getUnderlyingType().equals(pool.typeType()) ||
-            !typeType.getParamTypesArray()[0].getDefiningConstant().
-                equals(clzThis))
+            !typeType.getUnderlyingType().equals(pool.typeType()))
             {
             return false;
             }
