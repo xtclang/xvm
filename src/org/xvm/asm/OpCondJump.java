@@ -167,7 +167,7 @@ public abstract class OpCondJump
                 }
             else
                 {
-                type1 = frame.getArgumentType(m_nArg, hValue1);
+                type1 = frame.getArgumentType(m_nArg);
                 }
 
             if (isDeferred(hValue2))
@@ -177,14 +177,14 @@ public abstract class OpCondJump
                 }
             else
                 {
-                type2 = frame.getArgumentType(m_nArg2, hValue2);
+                type2 = frame.getArgumentType(m_nArg2);
                 }
 
             TypeConstant typeCommon = selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
             if (typeCommon == null)
                 {
                 // this shouldn't have compiled
-                throw new IllegalStateException("Incomparable types: " + type1.getValueString()
+                System.err.printf("Suspicious comparison: " + type1.getValueString()
                     + " and " + type2.getValueString());
                 }
 

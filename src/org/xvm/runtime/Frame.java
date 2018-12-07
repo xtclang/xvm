@@ -1024,15 +1024,15 @@ public class Frame
      * @param iArg  the argument id
      *
      * @return the type (resolved) of the specified argument or null if the argument points to the
-     *         stack and the operation is going to push the stack (hArg == null)
+     *         stack
      */
-    public TypeConstant getArgumentType(int iArg, ObjectHandle hArg)
+    public TypeConstant getArgumentType(int iArg)
         {
         return iArg >= 0
             ? getRegisterType(iArg)
             : iArg <= Op.CONSTANT_OFFSET
                 ? getConstant(iArg).getType()  // a constant cannot be generic
-                : getPredefinedArgumentType(iArg, hArg);
+                : getPredefinedArgumentType(iArg, null);
         }
 
     /**

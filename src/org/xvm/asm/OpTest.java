@@ -161,7 +161,7 @@ public abstract class OpTest
                 }
             else
                 {
-                type1 = frame.getArgumentType(m_nValue1, hValue1);
+                type1 = frame.getArgumentType(m_nValue1);
                 }
 
             if (isDeferred(hValue2))
@@ -171,14 +171,14 @@ public abstract class OpTest
                 }
             else
                 {
-                type2 = frame.getArgumentType(m_nValue2, hValue2);
+                type2 = frame.getArgumentType(m_nValue2);
                 }
 
             TypeConstant typeCommon = selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
             if (typeCommon == null)
                 {
                 // this shouldn't have compiled
-                throw new IllegalStateException("Incomparable types: " + type1.getValueString()
+                System.err.printf("Suspicious comparison: " + type1.getValueString()
                     + " and " + type2.getValueString());
                 }
 

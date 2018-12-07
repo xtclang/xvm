@@ -84,7 +84,7 @@ public class MoveCast
     protected int complete(Frame frame, ObjectHandle hValue)
         {
         TypeConstant typeFrom = hValue.getType();
-        TypeConstant typeTo   = frame.getArgumentType(m_nToValue, null);
+        TypeConstant typeTo   = frame.getArgumentType(m_nToValue);
 
         // typeTo could be null if the "to" argument is on the stack
         return typeTo == null || typeFrom.isA(typeTo)

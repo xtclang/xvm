@@ -1607,13 +1607,15 @@ public abstract class ClassTemplate
     public void markNativeGetter(String sPropName)
         {
         PropertyStructure prop = getProperty(sPropName);
-        assert prop != null;
-        prop.markNativeGetter();
-
-        MethodStructure methGetter = prop.getGetter();
-        if (methGetter != null)
+        if (prop != null)
             {
-            methGetter.setNative(true);
+            prop.markNativeGetter();
+
+            MethodStructure methGetter = prop.getGetter();
+            if (methGetter != null)
+                {
+                methGetter.setNative(true);
+                }
             }
         }
 
