@@ -49,7 +49,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone)
      */
     Time time.get()
         {
-        return new Time(adjustedPicos % Time.PICOS_PER_DAY);
+        return new Time((adjustedPicos % Time.PICOS_PER_DAY).to<Int>());
         }
 
     /**
