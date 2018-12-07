@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.MethodStructure;
+
 import org.xvm.util.Notifier;
 import org.xvm.util.SimpleNotifier;
 
@@ -130,8 +132,18 @@ public class DaemonPool
                             {
                             // TODO: RTError
                             frame = context.getCurrentFrame();
-                            Utils.log(frame, "\nUnhandled exception at " + frame +
-                                    "; iPC=" + (frame == null ? 0 : frame.m_iPC));
+                            if (frame != null)
+                                {
+                                MethodStructure function = frame.f_function;
+                                int nLine = 0;
+                                if (function != null)
+                                    {
+                                    nLine = function.calculateLineNumber(frame.m_iPC);
+                                    }
+
+                                Utils.log(frame, "\nUnhandled exception at " + frame
+                                    + (nLine > 0 ? "; line=" + nLine : "; iPC=" + frame.m_iPC));
+                                }
                             e.printStackTrace(System.out);
                             System.exit(-1);
                             }
