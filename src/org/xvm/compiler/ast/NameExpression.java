@@ -38,6 +38,7 @@ import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
 import org.xvm.asm.op.L_Get;
+import org.xvm.asm.op.Move;
 import org.xvm.asm.op.MoveRef;
 import org.xvm.asm.op.MoveThis;
 import org.xvm.asm.op.MoveVar;
@@ -809,6 +810,18 @@ public class NameExpression
                         {
                         // local property mode
                         break;
+                        }
+
+                    PropertyConstant  idProp = (PropertyConstant) argRaw;
+                    PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
+                    if (prop.isConstant())
+                        {
+                        Constant constValue = prop.getInitialValue();
+                        if (constValue != null)
+                            {
+                            code.add(new Move(constValue, (Register) argLVal));
+                            return;
+                            }
                         }
 
                     // TODO this is not complete; the "implicit this" covers both nested properties and outer properties

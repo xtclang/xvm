@@ -62,6 +62,11 @@ public class IgnoredNameExpression
         return true;
         }
 
+    public Assignable generateAssignable(Context ctx, Code code, ErrorListener errs)
+        {
+        return new Assignable();
+        }
+
     @Override
     public Argument generateArgument(Context ctx, Code code,
                                      boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)

@@ -100,9 +100,8 @@ public class P_Set
         {
         try
             {
-            ObjectHandle hTarget = frame.getArgument(m_nTarget);
-            ObjectHandle hValue = frame.getArgument(m_nValue);
-            if (hTarget == null || hValue == null)
+            ObjectHandle[] ahArg = frame.getArguments(new int[] {m_nTarget, m_nValue}, 2);
+            if (ahArg == null)
                 {
                 return R_REPEAT;
                 }
@@ -110,9 +109,8 @@ public class P_Set
             PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
             String sProperty = constProperty.getName();
 
-            if (isDeferred(hTarget) || isDeferred(hValue))
+            if (anyDeferred(ahArg))
                 {
-                ObjectHandle[] ahArg = new ObjectHandle[] {hTarget, hValue};
                 Frame.Continuation stepNext = frameCaller ->
                     ahArg[0].getTemplate().setPropertyValue(
                         frame, ahArg[0], sProperty, ahArg[1]);
@@ -120,8 +118,8 @@ public class P_Set
                 return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
-            return hTarget.getTemplate().setPropertyValue(
-                frame, hTarget, sProperty, hValue);
+            return ahArg[0].getTemplate().setPropertyValue(
+                frame, ahArg[0], sProperty, ahArg[1]);
             }
         catch (ExceptionHandle.WrapperException e)
             {

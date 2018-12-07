@@ -82,9 +82,8 @@ public class GP_DivMod
         {
         try
             {
-            ObjectHandle hTarget = frame.getArgument(m_nTarget);
-            ObjectHandle hArg    = frame.getArgument(m_nArgValue);
-            if (hTarget == null || hArg == null)
+            ObjectHandle[] ahArg = frame.getArguments(new int[] {m_nTarget, m_nArgValue}, 2);
+            if (ahArg == null)
                 {
                 return R_REPEAT;
                 }
@@ -99,16 +98,15 @@ public class GP_DivMod
                 frame.introduceVarCopy(m_anRetValue[1], m_nTarget);
                 }
 
-            if (isDeferred(hTarget) || isDeferred(hArg))
+            if (anyDeferred(ahArg))
                 {
-                ObjectHandle[] ahValue = new ObjectHandle[] {hTarget, hArg};
                 Frame.Continuation stepNext = frameCaller ->
-                        complete(frameCaller, ahValue[0], ahValue[1]);
+                        complete(frameCaller, ahArg[0], ahArg[1]);
 
-                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
-            return complete(frame, hTarget, hArg);
+            return complete(frame, ahArg[0], ahArg[1]);
             }
         catch (ExceptionHandle.WrapperException e)
             {

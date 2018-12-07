@@ -100,7 +100,10 @@ public class AssertV
         {
         try
             {
-            ObjectHandle hTest = frame.getArgument(m_nTest);
+            // TODO: combine all args
+            assert m_nTest != A_STACK;
+
+            ObjectHandle   hTest   = frame.getArgument(m_nTest);
             ObjectHandle[] ahValue = frame.getArguments(m_anValue, m_anValue.length);
             if (hTest == null || ahValue == null)
                 {
