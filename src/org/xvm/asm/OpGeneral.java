@@ -149,9 +149,8 @@ public abstract class OpGeneral
         {
         try
             {
-            ObjectHandle hTarget = frame.getArgument(m_nTarget);
-            ObjectHandle hArg = frame.getArgument(m_nArgValue);
-            if (hTarget == null || hArg == null)
+            ObjectHandle[] ahArg = frame.getArguments(new int[] {m_nTarget, m_nArgValue}, 2);
+            if (ahArg == null)
                 {
                 return R_REPEAT;
                 }
@@ -161,16 +160,15 @@ public abstract class OpGeneral
                 frame.introduceVarCopy(m_nRetValue, m_nTarget);  // TODO GG type *must* come from the op method
                 }
 
-            if (isDeferred(hTarget) || isDeferred(hArg))
+            if (anyDeferred(ahArg))
                 {
-                ObjectHandle[] ahValue = new ObjectHandle[] {hTarget, hArg};
                 Frame.Continuation stepNext = frameCaller ->
-                    completeBinary(frameCaller, ahValue[0], ahValue[1]);
+                    completeBinary(frameCaller, ahArg[0], ahArg[1]);
 
-                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
-            return completeBinary(frame, hTarget, hArg);
+            return completeBinary(frame, ahArg[0], ahArg[1]);
             }
         catch (ExceptionHandle.WrapperException e)
             {

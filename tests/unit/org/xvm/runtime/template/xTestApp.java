@@ -115,14 +115,14 @@ public class xTestApp extends xModule
 
             .add(new IP_Add(1, adapter.ensureValueConstantId(47)))
             .add(new IP_Div(1, adapter.ensureValueConstantId(2)))
-            .add(new IsEq(1, adapter.ensureValueConstantId(48), Op.A_STACK))
+            .add(new IsEq(1, adapter.ensureValueConstantId(48), Op.A_STACK, adapter.getClassType("Int64", null)))
             .add(new AssertM(Op.A_STACK, adapter.ensureValueConstantId("counter == 48")))
 
             .add(new P_Set(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0,
                 adapter.ensureValueConstantId(17)))
             .add(new P_Get(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0, 1))
 
-            .add(new IsEq(1, adapter.ensureValueConstantId(17), Op.A_STACK))
+            .add(new IsEq(1, adapter.ensureValueConstantId(17), Op.A_STACK, adapter.getClassType("Int64", null)))
             .add(new AssertM(Op.A_STACK, adapter.ensureValueConstantId("c == 17")))
 
             .add(new Var_N(adapter.getClassTypeConstId("Function"),
@@ -179,15 +179,15 @@ public class xTestApp extends xModule
 
             .add(new PIP_PreInc(adapter.getPropertyConstId("TestApp.TestService", "counter2"), 0,
                 8))  // next register #8
-            .add(new IsEq(8, adapter.ensureValueConstantId(6), Op.A_STACK))
+            .add(new IsEq(8, adapter.ensureValueConstantId(6), Op.A_STACK, adapter.getClassType("Int64", null)))
             .add(new AssertM(Op.A_STACK, adapter.ensureValueConstantId("++counter2 == 6")))
 
             .add(new PIP_PostInc(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0, 8))
-            .add(new IsEq(8, adapter.ensureValueConstantId(20), Op.A_STACK))
+            .add(new IsEq(8, adapter.ensureValueConstantId(20), Op.A_STACK, adapter.getClassType("Int64", null)))
             .add(new AssertM(Op.A_STACK, adapter.ensureValueConstantId("counter++ == 20")))
 
             .add(new Invoke_01(0, adapter.getMethodConstId("TestApp.TestService", "increment"), 8))
-            .add(new IsEq(8, adapter.ensureValueConstantId(22), Op.A_STACK))
+            .add(new IsEq(8, adapter.ensureValueConstantId(22), Op.A_STACK, adapter.getClassType("Int64", null)))
             .add(new AssertM(Op.A_STACK, adapter.ensureValueConstantId("svc.increment() == 22")))
 
             .add(new P_Get(adapter.getPropertyConstId("Ref", "RefType"), 4, 9)) // next register #9
@@ -316,7 +316,7 @@ public class xTestApp extends xModule
             .add(new Invoke_T1(adapter.ensureValueConstantId("the test"),
                 adapter.getMethodConstId("String", "indexOf"), 2, 4))
 
-            .add(new IsEq(4, adapter.ensureValueConstantId(4), 5)) // next register #5
+            .add(new IsEq(4, adapter.ensureValueConstantId(4), 5, adapter.getClassType("Int64", null))) // next register #5
             .add(new AssertV(5, adapter.ensureValueConstantId("of == 4"), new int[]{4}))
 
             .add(new Var_N(adapter.getClassTypeConstId("String"),

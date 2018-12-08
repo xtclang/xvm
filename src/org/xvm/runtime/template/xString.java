@@ -9,9 +9,11 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.StringConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
@@ -25,6 +27,7 @@ import org.xvm.runtime.template.collections.xCharArray.CharArrayHandle;
  */
 public class xString
         extends xConst
+        implements IndexSupport
     {
     public static xString INSTANCE;
 
@@ -205,6 +208,42 @@ public class xString
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
+
+    // ----- IndexSupport -----
+
+    @Override
+    public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        char[] ach = ((StringHandle) hTarget).getValue();
+        try
+            {
+            return frame.assignValue(iReturn, xChar.makeHandle(ach[(int) lIndex]));
+            }
+        catch (ArrayIndexOutOfBoundsException e)
+            {
+            return frame.raiseException(xException.outOfRange(lIndex, ach.length));
+            }
+        }
+
+    @Override
+    public int assignArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
+        {
+        return frame.raiseException(xException.immutableObject());
+        }
+
+    @Override
+    public TypeConstant getElementType(ObjectHandle hTarget, long lIndex)
+            throws ExceptionHandle.WrapperException
+        {
+        return pool().typeChar();
+        }
+
+    @Override
+    public long size(ObjectHandle hTarget)
+        {
+        return ((StringHandle) hTarget).getValue().length;
+        }
+
 
     // ----- comparison support -----
 

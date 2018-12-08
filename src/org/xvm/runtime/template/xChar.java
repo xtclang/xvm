@@ -97,6 +97,7 @@ public class xChar
 
     public static JavaLong makeHandle(long chValue)
         {
+        // TODO: cache Latin1 chars
         return new JavaLong(INSTANCE.getCanonicalClass(), chValue);
         }
     }

@@ -22,4 +22,10 @@ public class xUncheckedUInt32
             INSTANCE = this;
             }
         }
+
+    @Override
+    protected xConstrainedInteger getComplimentaryTemplate()
+        {
+        return xUncheckedInt32.INSTANCE;
+        }
     }

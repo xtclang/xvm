@@ -149,55 +149,23 @@ public abstract class OpCondJump
         {
         try
             {
-            ObjectHandle hValue1 = frame.getArgument(m_nArg);
-            ObjectHandle hValue2 = frame.getArgument(m_nArg2);
-            if (hValue1 == null || hValue2 == null)
+            ObjectHandle[] ahArg = frame.getArguments(new int[]{m_nArg, m_nArg2}, 2);
+            if (ahArg == null)
                 {
                 return R_REPEAT;
                 }
 
-            TypeConstant type1;
-            TypeConstant type2;
-            boolean fAnyProp = false;
+            TypeConstant typeCommon = frame.resolveType(m_typeCommon);
 
-            if (isDeferred(hValue1))
+            if (anyDeferred(ahArg))
                 {
-                type1 = frame.getLocalType(m_nArg, null);
-                fAnyProp = true;
-                }
-            else
-                {
-                type1 = frame.getArgumentType(m_nArg);
-                }
-
-            if (isDeferred(hValue2))
-                {
-                type2 = frame.getLocalType(m_nArg2, null);
-                fAnyProp = true;
-                }
-            else
-                {
-                type2 = frame.getArgumentType(m_nArg2);
-                }
-
-            TypeConstant typeCommon = selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
-            if (typeCommon == null)
-                {
-                // this shouldn't have compiled
-                System.err.printf("Suspicious comparison: " + type1.getValueString()
-                    + " and " + type2.getValueString());
-                }
-
-            if (fAnyProp)
-                {
-                ObjectHandle[] ahValue = new ObjectHandle[] {hValue1, hValue2};
                 Frame.Continuation stepNext = frameCaller ->
-                    completeBinaryOp(frame, iPC, typeCommon, ahValue[0], ahValue[1]);
+                    completeBinaryOp(frame, iPC, typeCommon, ahArg[0], ahArg[1]);
 
-                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
-            return completeBinaryOp(frame, iPC, typeCommon, hValue1, hValue2);
+            return completeBinaryOp(frame, iPC, typeCommon, ahArg[0], ahArg[1]);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -230,7 +198,16 @@ public abstract class OpCondJump
         if (isBinaryOp())
             {
             m_argVal2 = registerArgument(m_argVal2, registry);
+            m_typeCommon = (TypeConstant) registerArgument(m_typeCommon, registry);
             }
+        }
+
+    /**
+     * Used by the compiler and verifier to inject the common type.
+     */
+    public void setCommonType(TypeConstant type)
+        {
+        m_typeCommon = type;
         }
 
     /**
@@ -304,4 +281,7 @@ public abstract class OpCondJump
 
     // number of exits to simulate on the jump
     transient protected int m_cExits;
+
+    // the type to use for the comparison
+    transient protected TypeConstant m_typeCommon;
     }

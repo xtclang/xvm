@@ -21,4 +21,10 @@ public class xUncheckedInt32 extends xUncheckedConstrainedInt
             INSTANCE = this;
             }
         }
+
+    @Override
+    protected xConstrainedInteger getComplimentaryTemplate()
+        {
+        return xUncheckedUInt32.INSTANCE;
+        }
     }

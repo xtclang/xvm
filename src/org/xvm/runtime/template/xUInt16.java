@@ -23,4 +23,10 @@ public class xUInt16
             INSTANCE = this;
             }
         }
+
+    @Override
+    protected xConstrainedInteger getComplimentaryTemplate()
+        {
+        return xInt16.INSTANCE;
+        }
     }

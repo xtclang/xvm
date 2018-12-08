@@ -74,24 +74,21 @@ public abstract class OpIndexInPlace
         {
         try
             {
-            ObjectHandle hTarget = frame.getArgument(m_nTarget);
-            ObjectHandle hIndex  = frame.getArgument(m_nIndex);
-            ObjectHandle hValue  = frame.getArgument(m_nValue);
-            if (hTarget == null || hIndex == null || hValue == null)
+            ObjectHandle[] ahArg = frame.getArguments(new int[] {m_nTarget, m_nIndex, m_nValue}, 3);
+            if (ahArg == null)
                 {
                 return R_REPEAT;
                 }
 
-            if (isDeferred(hTarget) || isDeferred(hIndex) || isDeferred(hValue))
+            if (anyDeferred(ahArg))
                 {
-                ObjectHandle[] ahArg = new ObjectHandle[] {hTarget, hIndex, hValue};
                 Frame.Continuation stepNext = frameCaller ->
                     complete(frameCaller, ahArg[0], (JavaLong) ahArg[1], ahArg[2]);
 
                 return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
-            return complete(frame, hTarget, (JavaLong) hIndex, hValue);
+            return complete(frame, ahArg[0], (JavaLong) ahArg[1], ahArg[2]);
             }
         catch (ExceptionHandle.WrapperException e)
             {

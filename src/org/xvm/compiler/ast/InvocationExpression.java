@@ -808,8 +808,8 @@ public class InvocationExpression
         // 2. To avoid an out-of-order execution, we cannot allow the use of local properties
         //    unless there are no arguments
         // 3. The arguments are allowed to be pushed on the stack since the run-time knows to load
-        //    them up in the inverse order; however, the target itself should not be put on the
-        //    stack unless there are no arguments
+        //    them up in the inverse order; however, the target itself or the function should not be
+        //    put on the stack unless there are no arguments
         int      cArgs      = args.size();
         boolean  fConstruct = false;
         Argument argFn;
@@ -820,6 +820,7 @@ public class InvocationExpression
         Constant[] aconstDefault  = m_aconstDefault;
         int        cTypeParams    = aargTypeParams == null ? 0 : aargTypeParams.length;
         int        cDefaults      = aconstDefault == null ? 0 : aconstDefault.length;
+        boolean    fTargetOnStack = fUsedOnce && cArgs == 0;
 
         if (expr instanceof NameExpression)
             {
@@ -853,7 +854,7 @@ public class InvocationExpression
                             }
                         else
                             {
-                            argTarget = exprLeft.generateArgument(ctx, code, fLocalPropOk, cArgs == 0, errs);
+                            argTarget = exprLeft.generateArgument(ctx, code, fLocalPropOk, fTargetOnStack, errs);
                             }
 
                         if (m_fCall)
@@ -1023,7 +1024,7 @@ public class InvocationExpression
                 else
                     {
                     // evaluate to find the argument (e.g. "var.prop", where prop holds a function)
-                    argFn = expr.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
+                    argFn = expr.generateArgument(ctx, code, fLocalPropOk, fTargetOnStack, errs);
                     }
                 }
             }
@@ -1031,7 +1032,7 @@ public class InvocationExpression
             {
             // obtain the function that will be bound and/or called
             assert !m_fBindTarget;
-            argFn = expr.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
+            argFn = expr.generateArgument(ctx, code, fLocalPropOk, fTargetOnStack, errs);
             }
 
         // bind arguments and/or generate a call to the function specified by argFn; first, convert

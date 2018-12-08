@@ -23,4 +23,10 @@ public class xUInt8
             INSTANCE = this;
             }
         }
+
+    @Override
+    protected xConstrainedInteger getComplimentaryTemplate()
+        {
+        return xInt8.INSTANCE;
+        }
     }

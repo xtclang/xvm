@@ -73,27 +73,20 @@ public abstract class OpPropInPlaceAssign
         {
         try
             {
-            ObjectHandle hTarget = frame.getArgument(m_nTarget);
-            if (hTarget == null)
+            ObjectHandle[] ahArg = frame.getArguments(new int[] {m_nTarget, m_nValue}, 2);
+            if (ahArg == null)
                 {
                 return R_REPEAT;
                 }
 
-            ObjectHandle hValue = frame.getArgument(m_nValue);
-            if (hValue == null)
+            if (anyDeferred(ahArg))
                 {
-                return R_REPEAT;
-                }
-
-            if (isDeferred(hTarget) || isDeferred(hValue))
-                {
-                ObjectHandle[] ahArg = new ObjectHandle[] {hTarget, hValue};
                 Frame.Continuation stepNext = frameCaller ->
                     processProperty(frameCaller, ahArg[0], ahArg[1]);
 
                 return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
-            return processProperty(frame, hTarget, hValue);
+            return processProperty(frame, ahArg[0], ahArg[1]);
             }
         catch (ExceptionHandle.WrapperException e)
             {

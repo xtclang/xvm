@@ -23,4 +23,10 @@ public class xUInt32
             INSTANCE = this;
             }
         }
+
+    @Override
+    protected xConstrainedInteger getComplimentaryTemplate()
+        {
+        return xInt32.INSTANCE;
+        }
     }

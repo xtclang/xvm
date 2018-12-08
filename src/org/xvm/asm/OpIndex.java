@@ -108,23 +108,21 @@ public abstract class OpIndex
         {
         try
             {
-            ObjectHandle hTarget = frame.getArgument(m_nTarget);
-            ObjectHandle hIndex  = frame.getArgument(m_nIndex);
-            if (hTarget == null || hIndex == null)
+            ObjectHandle[] ahArg = frame.getArguments(new int[] {m_nTarget, m_nIndex}, 2);
+            if (ahArg == null)
                 {
                 return R_REPEAT;
                 }
 
-            if (isDeferred(hTarget) || isDeferred(hIndex))
+            if (anyDeferred(ahArg))
                 {
-                ObjectHandle[] ahArg = new ObjectHandle[] {hTarget, hIndex};
                 Frame.Continuation stepNext = frameCaller ->
                     processArgs(frameCaller, ahArg[0], (JavaLong) ahArg[1]);
 
                 return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
-            return processArgs(frame, hTarget, (JavaLong) hIndex);
+            return processArgs(frame, ahArg[0], (JavaLong) ahArg[1]);
             }
         catch (ExceptionHandle.WrapperException e)
             {

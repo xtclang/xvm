@@ -29,13 +29,14 @@ public class IsEq
      *
      * @deprecated
      */
-    public IsEq(int nValue1, int nValue2, int nRet)
+    public IsEq(int nValue1, int nValue2, int nRet, TypeConstant typeCommon)
         {
         super(null, null, null);
 
         m_nValue1   = nValue1;
         m_nValue2   = nValue2;
         m_nRetValue = nRet;
+        m_typeCommon = typeCommon;
         }
 
     /**

@@ -7,6 +7,8 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpCondJump;
+import org.xvm.asm.OpTest;
 
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -177,7 +179,7 @@ public class CmpExpression
                 ConstantPool pool = pool();
 
                 // make sure that we can compare the left value to the right value
-                TypeConstant typeCommon = Op.selectCommonType(type1, type2, errs);
+                TypeConstant typeCommon = m_typeCommon = Op.selectCommonType(type1, type2, errs);
                 if (typeCommon == null)
                     {
                     fValid = false;
@@ -276,38 +278,45 @@ public class CmpExpression
             Argument arg1      = expr1.generateArgument(ctx, code, true, true, errs);
             Argument arg2      = expr2.generateArgument(ctx, code, true, true, errs);
             Argument argResult = LVal.getLocalArgument();
+            OpTest   op;
 
             // generate the op that combines the two sub-expressions
             switch (operator.getId())
                 {
                 case COMP_EQ:
-                    code.add(new IsEq(arg1, arg2, argResult));
+                    op = new IsEq(arg1, arg2, argResult);
                     break;
 
                 case COMP_NEQ:
-                    code.add(new IsNotEq(arg1, arg2, argResult));
+                    op = new IsNotEq(arg1, arg2, argResult);
                     break;
 
                 case COMP_LT:
-                    code.add(new IsLt(arg1, arg2, argResult));
+                    op = new IsLt(arg1, arg2, argResult);
                     break;
 
                 case COMP_GT:
-                    code.add(new IsGt(arg1, arg2, argResult));
+                    op = new IsGt(arg1, arg2, argResult);
                     break;
 
                 case COMP_LTEQ:
-                    code.add(new IsLte(arg1, arg2, argResult));
+                    op = new IsLte(arg1, arg2, argResult);
                     break;
 
                 case COMP_GTEQ:
-                    code.add(new IsGte(arg1, arg2, argResult));
+                    op = new IsGte(arg1, arg2, argResult);
                     break;
 
                 case COMP_ORD:
-                    code.add(new Cmp(arg1, arg2, argResult));
+                    op = new Cmp(arg1, arg2, argResult);
+                    break;
+
+                default:
+                    throw new IllegalStateException();
                 }
 
+            op.setCommonType(m_typeCommon);
+            code.add(op);
             return;
             }
 
@@ -321,52 +330,56 @@ public class CmpExpression
         if (!isConstant() && producesBoolean())
             {
             // evaluate the sub-expressions
-            Argument arg1 = expr1.generateArgument(ctx, code, true, true, errs);
-            Argument arg2 = expr2.generateArgument(ctx, code, true, true, errs);
+            Argument   arg1 = expr1.generateArgument(ctx, code, true, true, errs);
+            Argument   arg2 = expr2.generateArgument(ctx, code, true, true, errs);
+            OpCondJump op;
 
             // generate the op that combines the two sub-expressions
             switch (operator.getId())
                 {
                 case COMP_EQ:
-                    code.add(fWhenTrue
+                    op = fWhenTrue
                             ? new JumpEq(arg1, arg2, label)
-                            : new JumpNotEq(arg1, arg2, label));
-                    return;
+                            : new JumpNotEq(arg1, arg2, label);
+                    break;
 
                 case COMP_NEQ:
-                    code.add(fWhenTrue
+                    op = fWhenTrue
                             ? new JumpNotEq(arg1, arg2, label)
-                            : new JumpEq(arg1, arg2, label));
-                    return;
+                            : new JumpEq(arg1, arg2, label);
+                    break;
 
                 case COMP_LT:
-                    code.add(fWhenTrue
+                    op = fWhenTrue
                             ? new JumpLt(arg1, arg2, label)
-                            : new JumpGte(arg1, arg2, label));
-                    return;
+                            : new JumpGte(arg1, arg2, label);
+                    break;
 
                 case COMP_GT:
-                    code.add(fWhenTrue
+                    op = fWhenTrue
                             ? new JumpGt(arg1, arg2, label)
-                            : new JumpLte(arg1, arg2, label));
-                    return;
+                            : new JumpLte(arg1, arg2, label);
+                    break;
 
                 case COMP_LTEQ:
-                    code.add(fWhenTrue
+                    op = fWhenTrue
                             ? new JumpLte(arg1, arg2, label)
-                            : new JumpGt(arg1, arg2, label));
-                    return;
+                            : new JumpGt(arg1, arg2, label);
+                    break;
 
                 case COMP_GTEQ:
-                    code.add(fWhenTrue
+                    op = fWhenTrue
                             ? new JumpGte(arg1, arg2, label)
-                            : new JumpLt(arg1, arg2, label));
-                    return;
+                            : new JumpLt(arg1, arg2, label);
+                    break;
 
                 default:
                 case COMP_ORD:
                     throw new IllegalStateException();
                 }
+
+            op.setCommonType(m_typeCommon);
+            code.add(op);
             }
 
         super.generateConditionalJump(ctx, code, label, fWhenTrue, errs);
@@ -374,4 +387,8 @@ public class CmpExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    /**
+     * The common type used for the comparison.
+     */
+    protected TypeConstant m_typeCommon;
     }
