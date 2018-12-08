@@ -88,7 +88,7 @@ public class NameResolver
 
             case DEFERRED:
                 m_node.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, m_sName);
-                m_status = Status.ERROR;
+                m_stage = Stage.ERROR;
                 // fall through
             case ERROR:
             default:
@@ -101,7 +101,7 @@ public class NameResolver
      */
     public boolean isFirstTime()
         {
-        return m_status == Status.INITIAL;
+        return m_stage == Stage.CHECK_IMPORTS;
         }
 
     /**
@@ -120,13 +120,15 @@ public class NameResolver
         // (note: there's no attempt to clean this up later)
         m_errs = errs;
 
-        switch (m_status)
+        switch (m_stage)
             {
-            case INITIAL:
+            case CHECK_IMPORTS:
                 // the first name could be an import, in which case that needs to be evaluated right
                 // away (because the imports will continue to be registered as the AST is resolved,
                 // so the answers to the questions about the imports will change if we don't ask now
-                // and store off the result)
+                // and store off the result); even if we find the name in the imports, we do NOT use
+                // it at this point -- it is held in case we work our way up to the point where the
+                // import is registered, at which point we will use the result that we found here
                 m_stmtImport = m_node.resolveImportBySingleName(m_sName);
                 if (m_stmtImport != null)
                     {
@@ -137,147 +139,138 @@ public class NameResolver
                         }
                     m_blockImport = (StatementBlock) parent;
                     }
-                m_status = Status.CHECKED_IMPORTS;
+                m_stage = Stage.RESOLVE_FIRST_NAME;
                 // fall through
 
-            case CHECKED_IMPORTS:
+            case RESOLVE_FIRST_NAME:
                 // resolve the first name if possible; otherwise defer (to come back to this point).
                 // remember to check the import statement if it exists (but only use it when we make
                 // our way up to the node that the import was registered with). if no one knows what
                 // the first name is, then check if it is an implicitly imported identity.
 
-                // check if the name is an unhideable name
-                Component componentParent = m_node.resolveParentBySimpleName(m_sName);
-                if (componentParent == null)
+                // start with the current node, and one by one walk up to the root, asking at
+                // each level for the node to resolve the name
+                boolean fPossibleFormal = false;
+                AstNode node            = m_node;
+                WalkUpToTheRoot: while (node != null)
                     {
-                    // start with the current node, and one by one walk up to the root, asking at
-                    // each level for the node to resolve the name
-                    boolean fPossibleFormal = false;
-                    AstNode node            = m_node;
-                    WalkUpToTheRoot: while (node != null)
+                    // if the first name refers to an import, then ask that import to figure out
+                    // what the corresponding qualified name refers to (i.e. delegate!)
+                    if (node == m_blockImport)
                         {
-                        // if the first name refers to an import, then ask that import to figure out
-                        // what the corresponding qualified name refers to (i.e. delegate!)
-                        if (node == m_blockImport)
+                        NameResolver resolver = m_stmtImport.getNameResolver();
+                        switch (resolver.resolve(errs))
                             {
-                            NameResolver resolver = m_stmtImport.getNameResolver();
-                            switch (resolver.resolve(errs))
+                            case RESOLVED:
+                                m_constant  = resolver.m_constant;
+                                m_component = resolver.m_component;
+                                break WalkUpToTheRoot;
+
+                            case DEFERRED:
+                                // dependent on a node that is deferred, so this is deferred
+                                return Result.DEFERRED;
+
+                            default:
+                            case ERROR:
+                                // no need to log an error; the import already should have
+                                m_stage = Stage.ERROR;
+                                return Result.ERROR;
+                            }
+                        }
+
+                    // otherwise, if the node has a component associated with it that is
+                    // prepared to resolve names, then ask it to resolve the name, and if it
+                    // isn't ready, we'll come back later
+                    if (node.isComponentNode())
+                        {
+                        Component componentResolver = getResolvingComponent(node);
+                        if (componentResolver == null)
+                            {
+                            // the component that can do the resolve isn't yet available; come
+                            // back later
+                            return Result.DEFERRED;
+                            }
+
+                        // ask the component to resolve the name
+                        ResolutionResult result  = componentResolver.resolveName(m_sName, this);
+                        boolean          fRepeat = false;
+                        do
+                            {
+                            switch (result)
                                 {
+                                case POSSIBLE:
+                                    // formal types could not be resolved; keep walking up
+                                    fPossibleFormal = true;
+                                    // fall-through
+                                case UNKNOWN:
+                                    if (fRepeat)
+                                        {
+                                        // already re-tried, so the result at this point is
+                                        // actually unknown
+                                        fRepeat = false;
+                                        }
+                                    else
+                                        {
+                                        Constant idCaptured = node.resolveCapture(m_sName);
+                                        if (idCaptured != null)
+                                            {
+                                            result = resolvedConstant(idCaptured);
+
+                                            // we need to re-evaluate the result now that it may
+                                            // have changed
+                                            fRepeat = true;
+                                            }
+                                        }
+                                    break;
+
                                 case RESOLVED:
-                                    m_constant  = resolver.getConstant();
-                                    m_component = resolver.getComponent();
+                                    // the component resolved the first name
                                     break WalkUpToTheRoot;
 
+                                case ERROR:
+                                    m_stage = Stage.ERROR;
+                                    return Result.ERROR;
+
                                 case DEFERRED:
-                                    // dependent on a node that is deferred, so this is deferred
                                     return Result.DEFERRED;
 
                                 default:
-                                case ERROR:
-                                    // no need to log an error; the import already should have
-                                    m_status = Status.ERROR;
-                                    return Result.ERROR;
+                                    throw new IllegalStateException();
                                 }
                             }
-
-                        // otherwise, if the node has a component associated with it that is
-                        // prepared to resolve names, then ask it to resolve the name, and if it
-                        // isn't ready, we'll come back later
-                        if (node.isComponentNode())
-                            {
-                            Component componentResolver = getResolvingComponent(node);
-                            if (componentResolver == null)
-                                {
-                                // the component that can do the resolve isn't yet available; come
-                                // back later
-                                return Result.DEFERRED;
-                                }
-
-                            // ask the component to resolve the name
-                            ResolutionResult result  = componentResolver.resolveName(m_sName, this);
-                            boolean          fRepeat = false;
-                            do
-                                {
-                                switch (result)
-                                    {
-                                    case POSSIBLE:
-                                        // formal types could not be resolved; keep walking up
-                                        fPossibleFormal = true;
-                                        // fall-through
-                                    case UNKNOWN:
-                                        if (fRepeat)
-                                            {
-                                            // already re-tried, so the result at this point is
-                                            // actually unknown
-                                            fRepeat = false;
-                                            }
-                                        else
-                                            {
-                                            Constant idCaptured = node.resolveCapture(m_sName);
-                                            if (idCaptured != null)
-                                                {
-                                                result = resolvedConstant(idCaptured);
-
-                                                // we need to re-evaluate the result now that it may
-                                                // have changed
-                                                fRepeat = true;
-                                                }
-                                            }
-                                        break;
-
-                                    case RESOLVED:
-                                        // the component resolved the first name
-                                        break WalkUpToTheRoot;
-
-                                    case ERROR:
-                                        m_status = Status.ERROR;
-                                        return Result.ERROR;
-
-                                    case DEFERRED:
-                                        return Result.DEFERRED;
-
-                                    default:
-                                        throw new IllegalStateException();
-                                    }
-                                }
-                            while (fRepeat);
-                            }
-
-                        // walk up towards the root
-                        node = node.getParent();
+                        while (fRepeat);
                         }
 
-                    // last chance: check the implicitly imported names
-                    if (m_constant == null)
-                        {
-                        Component component = getPool().getImplicitlyImportedComponent(m_sName);
-                        if (component == null)
-                            {
-                            if (fPossibleFormal)
-                                {
-                                return Result.DEFERRED;
-                                }
-                            m_node.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, m_sName);
-                            m_status = Status.ERROR;
-                            return Result.ERROR;
-                            }
-                        else
-                            {
-                            resolvedComponent(component);
-                            }
-                        }
+                    // walk up towards the root
+                    node = node.getParent();
                     }
-                else
+
+                // last chance: check the implicitly imported names
+                if (m_constant == null)
                     {
-                    resolvedComponent(componentParent);
+                    Component component = getPool().getImplicitlyImportedComponent(m_sName);
+                    if (component == null)
+                        {
+                        if (fPossibleFormal)
+                            {
+                            return Result.DEFERRED;
+                            }
+                        m_node.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, m_sName);
+                        m_stage = Stage.ERROR;
+                        return Result.ERROR;
+                        }
+                    else
+                        {
+                        resolvedComponent(component);
+                        }
                     }
 
                 // first name has been resolved
-                m_status = Status.RESOLVED_PARTIAL;
+                m_stage = Stage.RESOLVE_DOT_NAME;
                 m_sName  = m_iter.hasNext() ? m_iter.next() : null;
                 // fall through
 
-            case RESOLVED_PARTIAL:
+            case RESOLVE_DOT_NAME:
                 // at this point, we have a component (or other identity) to work from, so the next
                 // name has to be relative to that component
                 while (m_sName != null)
@@ -293,7 +286,7 @@ public class NameResolver
                         case UNKNOWN:
                             // the component didn't know the name
                             m_node.log(errs, Severity.ERROR, Compiler.NAME_MISSING, m_sName, m_constant);
-                            m_status = Status.ERROR;
+                            m_stage = Stage.ERROR;
                             return Result.ERROR;
 
                         case RESOLVED:
@@ -302,7 +295,7 @@ public class NameResolver
                             break;
 
                         case ERROR:
-                            m_status = Status.ERROR;
+                            m_stage = Stage.ERROR;
                             return Result.ERROR;
 
                         case DEFERRED:
@@ -314,15 +307,15 @@ public class NameResolver
                     }
 
                 // no names left to resolve, but what we resolved to has not yet been resolved
-                m_status = Status.RESOLVING_TURTLES;
+                m_stage = Stage.RESOLVE_TURTLES;
                 // fall through
 
-            case RESOLVING_TURTLES:
-                // note that
+            case RESOLVE_TURTLES:
+                // stay in this stage until the constant that we have resolved to is itself resolved
                 if (m_constant.canResolve())
                     {
                     // no turtles left to resolve
-                    m_status = Status.RESOLVED;
+                    m_stage = Stage.RESOLVED;
                     }
                 else
                     {
@@ -399,8 +392,8 @@ public class NameResolver
                                 if (!constType.equals(constTypeN))
                                     {
                                     // eventual To-Do: we need to handle cases where composite
-                                    // components differ in substantial ways, such as type, but for now
-                                    // this is just an assertion that the type does not vary
+                                    // components differ in substantial ways, such as type, but for
+                                    // now this is just an assertion that the type does not vary
                                     throw new UnsupportedOperationException("non-uniform composite property type: "
                                             + constProp + "; 0=" + constType + ", " + i + "=" + constTypeN);
                                     }
@@ -432,8 +425,8 @@ public class NameResolver
                                 if (!constType.equals(constTypeN))
                                     {
                                     // eventual To-Do: we need to handle cases where composite
-                                    // components differ in substantial ways, such as type, but for now
-                                    // this is just an assertion that the type does not vary
+                                    // components differ in substantial ways, such as type, but for
+                                    // now this is just an assertion that the type does not vary
                                     throw new UnsupportedOperationException("non-uniform composite typedef type: "
                                             + constTypedef + "; 0=" + constType + ", " + i + "=" + constTypeN);
                                     }
@@ -470,8 +463,8 @@ public class NameResolver
                 if (!constType.isA(getPool().typeType()))
                     {
                     m_errs.log(Severity.ERROR, Compiler.NOT_CLASS_TYPE,
-                        new Object[] {constParam.getValueString()}, m_component);
-                    m_status = Status.ERROR;
+                            new Object[] {constParam.getValueString()}, m_component);
+                    m_stage = Stage.ERROR;
                     return null;
                     }
 
@@ -495,11 +488,11 @@ public class NameResolver
      */
     public Result getResult()
         {
-        switch (m_status)
+        switch (m_stage)
             {
-            case INITIAL:
-            case CHECKED_IMPORTS:
-            case RESOLVED_PARTIAL:
+            case CHECK_IMPORTS:
+            case RESOLVE_FIRST_NAME:
+            case RESOLVE_DOT_NAME:
                 // not done yet
                 return Result.DEFERRED;
 
@@ -524,16 +517,6 @@ public class NameResolver
         }
 
     /**
-     * @return the Component that the NameResolver has resolved to thus far, which may be null if
-     *         the name resolves to something that is not representable as a Component; this value
-     *         can only be depended on after the NameResolver result is RESOLVED
-     */
-    public Component getComponent()
-        {
-        return m_component;
-        }
-
-    /**
      * @return the ConstantPool
      */
     private ConstantPool getPool()
@@ -552,7 +535,7 @@ public class NameResolver
         if (component instanceof CompositeComponent && ((CompositeComponent) component).isAmbiguous())
             {
             m_node.log(m_errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, m_sName);
-            m_status = Status.ERROR;
+            m_stage = Stage.ERROR;
             return ResolutionResult.ERROR;
             }
 
@@ -569,7 +552,7 @@ public class NameResolver
                     {
                     // can't switch from type mode to identity mode
                     m_node.log(m_errs, Severity.ERROR, Compiler.NAME_MISSING, component.getName(), m_constant);
-                    m_status = Status.ERROR;
+                    m_stage = Stage.ERROR;
                     return ResolutionResult.ERROR;
                     }
                 else
@@ -612,7 +595,7 @@ public class NameResolver
     /**
      * The possible internal states for the resolver.
      */
-    private enum Status {INITIAL, CHECKED_IMPORTS, RESOLVED_PARTIAL, RESOLVING_TURTLES, RESOLVED, ERROR}
+    private enum Stage {CHECK_IMPORTS, RESOLVE_FIRST_NAME, RESOLVE_DOT_NAME, RESOLVE_TURTLES, RESOLVED, ERROR}
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -620,7 +603,7 @@ public class NameResolver
     /**
      * The node that this NameResolver is working for.
      */
-    private AstNode          m_node;
+    private AstNode m_node;
 
     /**
      * The sequence of names to resolve.
@@ -630,41 +613,41 @@ public class NameResolver
     /**
      * The current simple name to resolve.
      */
-    private String           m_sName;
+    private String m_sName;
 
     /**
      * The current internal status of the name resolution.
      */
-    private Status           m_status = Status.INITIAL;
+    private Stage m_stage = Stage.CHECK_IMPORTS;
 
     /**
      * The import statement selected by the import-checking phase, if any possible match was found.
      */
-    private ImportStatement  m_stmtImport;
+    private ImportStatement m_stmtImport;
 
     /**
      * The node that the import was registered with, if any possible import match was found.
      */
-    private StatementBlock   m_blockImport;
+    private StatementBlock m_blockImport;
 
     /**
      * The constant representing what the node has thus far resolved to.
      */
-    private Constant         m_constant;
+    private Constant m_constant;
 
     /**
      * The component representing what the node has thus far resolved to.
      */
-    private Component        m_component;
+    private Component m_component;
 
     /**
      * Set to true when the resolution has switched into "type mode". This occurs once a type
      * parameter or type definition has been encountered.
      */
-    private boolean          m_fTypeMode;
+    private boolean m_fTypeMode;
 
     /**
      * The ErrorListener to log errors to.
      */
-    private ErrorListener    m_errs;
+    private ErrorListener m_errs;
     }

@@ -13,6 +13,12 @@ module TestAnonInner.xqiz.it
         construct(String s) {}
         }
 
+    void foo()
+        {
+        @Inject X.io.Console console;
+        console.println("in foo()");
+        }
+
     void testSimple()
         {
         @Inject X.io.Console console;
@@ -28,6 +34,7 @@ module TestAnonInner.xqiz.it
                 {
                 console.println("in run (i=" + i + ")");
                 ++i;
+                // foo();
                 }
             };
 

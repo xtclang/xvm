@@ -74,18 +74,6 @@ public abstract class ComponentStatement
     // ----- compile phases ------------------------------------------------------------------------
 
 
-    // ----- name resolution -----------------------------------------------------------------------
-
-    @Override
-    protected Component resolveParentBySimpleName(String sName)
-        {
-        Component componentParent = super.resolveParentBySimpleName(sName);
-        return componentParent == null && component != null && sName.equals(component.getSimpleName())
-                ? component
-                : componentParent;
-        }
-
-
     // ----- helpers -------------------------------------------------------------------------------
 
     public static boolean isStatic(List<Token> modifiers)

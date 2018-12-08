@@ -1439,6 +1439,7 @@ public class InvocationExpression
                             m_argMethod   = idCallable;
                             m_method      = getMethod(infoType, idCallable);
                             m_fBindTarget = m_method != null && !m_method.isFunction();
+                            // TODO this allows the wrong target to be associated with the method that was found
                             return idCallable;
                             }
 
