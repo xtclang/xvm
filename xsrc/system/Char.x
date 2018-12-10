@@ -85,12 +85,6 @@ const Char
         return codepoint.to<Int>();
         }
 
-    @Override
-    @Auto String to<String>()
-        {
-        return new String(to<Char[]>());
-        }
-
     @Op("*") String dup(Int n)
         {
         TODO

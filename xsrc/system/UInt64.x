@@ -10,7 +10,7 @@ const UInt64
     /**
      * The maximum value for an UInt64.
      */
-    static IntLiteral maxvalue =  0xFFFFFFFFFFFFFFFF;
+    static IntLiteral maxvalue =  0xFFFF_FFFF_FFFF_FFFF;
 
     private Bit[] bits;
 
@@ -288,4 +288,39 @@ const UInt64
 
         return result;
         }
+
+    @Override
+    Int estimateStringLength()
+        {
+        return calculateStringSize(this, sizeArray);
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        if (this == 0)
+            {
+            appender.add('0');
+            }
+        else
+            {
+            (UInt64 left, UInt64 digit) = this /% 10;
+            if (left != 0)
+                {
+                left.appendTo(appender);
+                }
+            appender.add(DIGITS[digit]);
+            }
+        }
+
+
+    // maxvalue = 18_446_744_073_709_551_615 (20 digits)
+    static private UInt64[] sizeArray =
+         [
+         9, 99, 999, 9_999, 99_999, 999_999,
+         9_999_999, 99_999_999, 999_999_999, 9_999_999_999, 99_999_999_999, 999_999_999_999,
+         9_999_999_999_999, 99_999_999_999_999, 999_999_999_999_999,
+         9_999_999_999_999_999, 99_999_999_999_999_999, 999_999_999_999_999_999,
+         9_999_999_999_999_999_999, 18_446_744_073_709_551_615
+         ];
     }

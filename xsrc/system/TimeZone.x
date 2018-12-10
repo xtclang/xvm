@@ -299,13 +299,28 @@ const TimeZone(Int picos, String? name = null)
 //            case (false, true ): offsetLength;
 //            case (false, false): 6;
 //            }
-        return switch ()
+// or
+//        return switch ()
+//            {
+//            case nameLength > 0 && offsetLength > 0: nameLength + offsetLength + 3;
+//            case nameLength > 0: nameLength;
+//            case offsetLength > 0: offsetLength;
+//            default: 6;
+//            };
+
+        if (nameLength > 0 && offsetLength > 0)
             {
-            case nameLength > 0 && offsetLength > 0: nameLength + offsetLength + 3;
-            case nameLength > 0: nameLength;
-            case offsetLength > 0: offsetLength;
-            default: 6;
-            };
+            return nameLength + offsetLength + 3;
+            }
+        if (nameLength > 0)
+            {
+            return nameLength;
+            }
+        if (offsetLength > 0)
+            {
+            return offsetLength;
+            }
+        return 6;
         }
 
     @Override

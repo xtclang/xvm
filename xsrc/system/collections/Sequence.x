@@ -6,6 +6,7 @@
 interface Sequence<ElementType>
         extends UniformIndexed<Int, ElementType>
         extends Iterable<ElementType>
+        extends Stringable
     {
     /**
      * The size of the Sequence, which is the number of elements in the Sequence.
@@ -185,4 +186,76 @@ interface Sequence<ElementType>
 //            i += increment;
 //            }
 //        }
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        Int capacity = 2; // allow for "[]"
+        if (ElementType.is(Type<Stringable>))
+            {
+            for (ElementType v : this)
+                {
+                capacity += v.estimateStringLength() + 2; // allow for ", "
+                }
+            }
+        else
+            {
+            for (ElementType v : this)
+                {
+                if (v.is(Stringable))
+                    {
+                    capacity += v.estimateStringLength() + 2;
+                    }
+                else
+                    {
+                    capacity += 2;
+                    }
+                }
+            }
+
+        return capacity;
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        appender.add('[');
+
+        if (ElementType.is(Type<Stringable>))
+            {
+            Append:
+            for (ElementType v : this)
+                {
+                if (!Append.first)
+                    {
+                    appender.add(", ");
+                    }
+
+                v.appendTo(appender);
+                }
+            }
+        else
+            {
+            Append:
+            for (ElementType v : this)
+                {
+                if (!Append.first)
+                    {
+                    appender.add(", ");
+                    }
+
+                if (v.is(Stringable))
+                    {
+                    v.appendTo(appender);
+                    }
+                else
+                    {
+                    v.to<String>().appendTo(appender);
+                    }
+                }
+            }
+        appender.add(']');
+        }
     }
