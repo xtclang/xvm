@@ -349,4 +349,21 @@ interface IntNumber
             }
         return bools;
         }
+
+    // ----- Stringable support --------------------------------------------------------------------
+
+    /**
+     * Calculate the string size for the specified IntNumber and type specific size array.
+     */
+    static <IntType extends IntNumber> Int calculateStringSize(IntType n, IntType[] sizeArray)
+        {
+        for (Int index = 0; true; index++)
+            {
+            if (n <= sizeArray[index])
+                {
+                return index + 1;
+                }
+            }
+        TODO remove this
+        }
     }

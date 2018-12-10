@@ -65,7 +65,6 @@ public class xArray
         markNativeMethod("addElement", ELEMENT_TYPE, ARRAY);
         markNativeMethod("addElements", ARRAY, ARRAY);
         markNativeMethod("slice", new String[]{"Range<Int64>"}, ARRAY);
-        markNativeMethod("to", VOID, STRING);
         }
 
     private void registerNative(xArray template)
