@@ -716,7 +716,7 @@ public class ForEachStatement
 
         Label lblRepeat = new Label("repeat_foreach_" + getLabelId());
         code.add(lblRepeat);
-        code.add(new IsEq(regVal, range.getLast(), regLast));
+        code.add(new IsEq(regVal, range.getLast(), regLast, regVal.getType()));
         LVal.assign(regVal, code, errs);
 
         // we explicitly do NOT check the block completion, since our completion is not dependent on
@@ -783,7 +783,7 @@ public class ForEachStatement
         m_exprRValue.generateAssignment(ctx, code, m_exprRValue.new Assignable(regSeq), errs);
 
         code.add(new P_Get(idSize, regSeq, regEnd));
-        code.add(new JumpGte(regCount, regEnd, getEndLabel()));
+        code.add(new JumpGte(regCount, regEnd, getEndLabel(), pool.typeInt()));
         code.add(new IP_Dec(regEnd));
 
         Assignable lvalVal  = m_exprLValue.generateAssignable(ctx, code, errs);
@@ -807,7 +807,7 @@ public class ForEachStatement
 
         Label lblRepeat = new Label("repeat_foreach_" + getLabelId());
         code.add(lblRepeat);
-        code.add(new IsEq(regCount, regEnd, regLast));
+        code.add(new IsEq(regCount, regEnd, regLast, pool.typeInt()));
 
         code.add(new I_Get(regSeq, regCount, argVal));
         if (fTempVal)
