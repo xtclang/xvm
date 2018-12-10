@@ -22,8 +22,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
-import org.xvm.runtime.template.types.xProperty;
-
 import static org.xvm.util.Handy.byteToHexString;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
@@ -306,7 +304,7 @@ public abstract class Op
         {
         for (ObjectHandle h : aHandle)
             {
-            if (h instanceof xProperty.DeferredPropertyHandle)
+            if (h instanceof DeferredCallHandle)
                 {
                 return true;
                 }
