@@ -716,19 +716,6 @@ public abstract class AstNode
     // ----- name resolution -----------------------------------------------------------------------
 
     /**
-     * From the root down, see if one of the parents answers to the specified name.
-     *
-     * @param sName  a simple name
-     *
-     * @return the Constant of one of the parents that answers to the specified name, or null
-     */
-    protected Component resolveParentBySimpleName(String sName)
-        {
-        AstNode parent = getParent();
-        return parent == null ? null : parent.resolveParentBySimpleName(sName);
-        }
-
-    /**
      * Determine if this particular node has an import registered on it of the specified name.
      *
      * @param sName  a simple name

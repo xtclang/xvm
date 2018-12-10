@@ -124,13 +124,6 @@ public class ImportStatement
         {
         setStage(Stage.Resolving);
 
-        // check if the alias name is an unhideable name
-        Component component = resolveParentBySimpleName(getAliasName());
-        if (component != null)
-            {
-            log(errs, Severity.ERROR, Compiler.NAME_UNHIDEABLE, getAliasName(), component.getIdentityConstant());
-            }
-
         // as global visibility is resolved, each import statement registers itself so that anything
         // following it can see the import, but anything preceding it does not
         AstNode parent = getParent();
