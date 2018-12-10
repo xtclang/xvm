@@ -172,21 +172,21 @@ const Time(Int picos)
             appender.add('0');
             }
         hour.appendTo(appender);
+        appender.add(':');
 
         Int minute = this.minute;
         if (minute < 10)
             {
             appender.add('0');
             }
-        appender.add(':');
         minute.appendTo(appender);
+        appender.add(':');
 
         Int second = this.second;
         if (second < 10)
             {
             appender.add('0');
             }
-        appender.add(':');
         second.appendTo(appender);
 
         Int fraction = picoseconds;
