@@ -3055,22 +3055,23 @@ public abstract class TypeConstant
         {
         ConstantPool pool      = getConstantPool();
         boolean      fComplete = true;
-        boolean      fNative   = constId instanceof NativeRebaseConstant;
+        boolean      fRebase   = constId instanceof NativeRebaseConstant;
 
         if (structContrib instanceof MethodStructure)
             {
             MethodStructure   method       = (MethodStructure) structContrib;
             boolean           fHasNoCode   = !method.hasCode();
+            boolean           fNative      = method.isNative();
             boolean           fHasAbstract = method.findAnnotation(pool.clzAbstract()) != null;
             MethodConstant    id           = method.getIdentityConstant();
             SignatureConstant sig          = id.getSignature().resolveGenericTypes(pool, this);
             MethodBody        body         = new MethodBody(id, sig,
-                    fInterface && fHasNoCode    ? Implementation.Declared :
-                    fInterface                  ? Implementation.Default  :
-                    fNative | method.isNative() ? Implementation.Native   :
-                    fHasAbstract                ? Implementation.Abstract :
-                    fHasNoCode                  ? Implementation.SansCode :
-                                                  Implementation.Explicit  );
+                    fInterface && fHasNoCode       ? Implementation.Declared :
+                    fInterface                     ? Implementation.Default  :
+                    fRebase & fHasNoCode | fNative ? Implementation.Native   :
+                    fHasAbstract                   ? Implementation.Abstract :
+                    fHasNoCode                     ? Implementation.SansCode :
+                                                     Implementation.Explicit  );
             MethodInfo infoNew = new MethodInfo(body);
             mapMethods.put(id, infoNew);
             }
@@ -3083,10 +3084,10 @@ public abstract class TypeConstant
                 return true;
                 }
 
-            assert !(fNative && fInterface); // cannot be native and interface at the same time
+            assert !(fRebase && fInterface); // cannot be native and interface at the same time
 
             PropertyConstant  id   = prop.getIdentityConstant();
-            PropertyInfo      info = createPropertyInfo(prop, constId, fNative, fInterface, errs);
+            PropertyInfo      info = createPropertyInfo(prop, constId, fRebase, fInterface, errs);
             mapProps.put(id, info);
 
             if (info.isCustomLogic() || info.isRefAnnotated())
