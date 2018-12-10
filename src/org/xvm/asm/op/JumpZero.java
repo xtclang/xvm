@@ -23,22 +23,6 @@ public class JumpZero
     /**
      * Construct a JMP_ZERO op.
      *
-     * @param nValue    the value to test
-     * @param nRelAddr  the relative address to jump to
-     *
-     * @deprecated
-     */
-    public JumpZero(int nValue, int nRelAddr)
-        {
-        super((Argument) null, null);
-
-        m_nArg  = nValue;
-        m_ofJmp = nRelAddr;
-        }
-
-    /**
-     * Construct a JMP_ZERO op.
-     *
      * @param arg  the argument to test
      * @param op   the op to conditionally jump to
      */

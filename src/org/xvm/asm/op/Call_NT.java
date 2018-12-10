@@ -29,24 +29,6 @@ public class Call_NT
         extends OpCallable
     {
     /**
-     * Construct a CALL_NT op.
-     *
-     * @param nFunction  the r-value indicating the function to call
-     * @param anArg      the r-values indicating the arguments
-     * @param nTupleRet  the l-value location for the tuple result
-     *
-     * @deprecated
-     */
-    public Call_NT(int nFunction, int[] anArg, int nTupleRet)
-        {
-        super(null);
-
-        m_nFunctionId = nFunction;
-        m_anArgValue = anArg;
-        m_nRetValue = nTupleRet;
-        }
-
-    /**
      * Construct a CALL_NT op based on the passed arguments.
      *
      * @param argFunction  the function Argument

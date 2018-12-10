@@ -32,24 +32,6 @@ public class Call_TT
         extends OpCallable
     {
     /**
-     * Construct a CALL_TT op.
-     *
-     * @param nFunction       the r-value indicating the function to call
-     * @param nTupleArg       the r-value indicating the tuple holding the arguments
-     * @param nRetTupleValue  the l-value location for the tuple result
-     *
-     * @deprecated
-     */
-    public Call_TT(int nFunction, int nTupleArg, int nRetTupleValue)
-        {
-        super(null);
-
-        m_nFunctionId = nFunction;
-        m_nArgTupleValue = nTupleArg;
-        m_nRetValue = nRetTupleValue;
-        }
-
-    /**
      * Construct a CALL_TT op based on the passed arguments.
      *
      * @param argFunction  the function Argument

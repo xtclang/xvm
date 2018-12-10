@@ -25,20 +25,6 @@ public class Call_00
         extends OpCallable
     {
     /**
-     * Construct a CALL_00 op.
-     *
-     * @param nFunction  the r-value indicating the function to call
-     *
-     * @deprecated
-     */
-    public Call_00(int nFunction)
-        {
-        super(null);
-
-        m_nFunctionId = nFunction;
-        }
-
-    /**
      * Construct a CALL_00 op based on the passed arguments.
      *
      * @param argFunction the function Argument

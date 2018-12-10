@@ -26,24 +26,6 @@ public class Call_NN
         extends OpCallable
     {
     /**
-     * Construct a CALL_NN op.
-     *
-     * @param nFunction  the r-value indicating the function to call
-     * @param anArg      the r-values indicating the arguments
-     * @param anRet      the l-value locations for the result
-     *
-     * @deprecated
-     */
-    public Call_NN(int nFunction, int[] anArg, int[] anRet)
-        {
-        super(null);
-
-        m_nFunctionId = nFunction;
-        m_anArgValue = anArg;
-        m_anRetValue = anRet;
-        }
-
-    /**
      * Construct a CALL_NN op based on the passed arguments.
      *
      * @param argFunction  the function Argument

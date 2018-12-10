@@ -25,24 +25,6 @@ public class Invoke_N0
         extends OpInvocable
     {
     /**
-     * Construct an NVOK_N0 op.
-     *
-     * @param nTarget    r-value that specifies the object on which the method being invoked
-     * @param nMethodId  r-value that specifies the method being invoked
-     * @param anArg      the r-value locations of the method arguments
-     *
-     * @deprecated
-     */
-    public Invoke_N0(int nTarget, int nMethodId, int[] anArg)
-        {
-        super((Argument) null, null);
-
-        m_nTarget = nTarget;
-        m_nMethodId = nMethodId;
-        m_anArgValue = anArg;
-        }
-
-    /**
      * Construct an NVOK_N0 op based on the passed arguments.
      *
      * @param argTarget    the target Argument

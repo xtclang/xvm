@@ -26,20 +26,6 @@ public class Var_N
         extends OpVar
     {
     /**
-     * Construct a VAR_N op.
-     *
-     * @param nType     the variable type id
-     * @param nNameId   the name of the variable id
-     */
-    public Var_N(int nType, int nNameId)
-        {
-        super();
-
-        m_nType = nType;
-        m_nNameId = nNameId;
-        }
-
-    /**
      * Construct a VAR_N op for the specified type and name.
      *
      * @param constType  the variable type

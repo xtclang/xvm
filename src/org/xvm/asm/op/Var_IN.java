@@ -28,24 +28,6 @@ public class Var_IN
         extends OpVar
     {
     /**
-     * Construct a VAR_IN op.
-     *
-     * @param nType     the variable type id
-     * @param nNameId   the name of the variable id
-     * @param nValueId  the initial value id
-     *
-     * @deprecated
-     */
-    public Var_IN(int nType, int nNameId, int nValueId)
-        {
-        super();
-
-        m_nType    = nType;
-        m_nNameId  = nNameId;
-        m_nValueId = nValueId;
-        }
-
-    /**
      * Construct a VAR_IN op for the specified type, name and argument.
      *
      * @param constType  the variable type

@@ -26,22 +26,6 @@ public class Call_N0
         extends OpCallable
     {
     /**
-     * Construct a CALL_N0 op.
-     *
-     * @param nFunction  the r-value indicating the function to call
-     * @param anArg      the r-values indicating the arguments
-     *
-     * @deprecated
-     */
-    public Call_N0(int nFunction, int[] anArg)
-        {
-        super(null);
-
-        m_nFunctionId = nFunction;
-        m_anArgValue = anArg;
-        }
-
-    /**
      * Construct a CALL_N0 op based on the passed arguments.
      *
      * @param argFunction  the function Argument

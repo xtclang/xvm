@@ -28,24 +28,6 @@ public class P_Get
         extends OpProperty
     {
     /**
-     * Construct a P_GET op.
-     *
-     * @param nPropId  the property to get
-     * @param nTarget  the target object
-     * @param nRet     the location to store the result
-     *
-     * @deprecated
-     */
-    public P_Get(int nPropId, int nTarget, int nRet)
-        {
-        super(null);
-
-        m_nPropId = nPropId;
-        m_nTarget = nTarget;
-        m_nRetValue = nRet;
-        }
-
-    /**
      * Construct a P_GET op based on the specified arguments.
      *
      * @param constProperty  the property constant
@@ -136,18 +118,7 @@ public class P_Get
     @Override
     public void simulate(Scope scope)
         {
-        // TODO: remove when deprecated construction is removed
-        if (m_argReturn == null)
-            {
-            if (scope.isNextRegister(m_nRetValue))
-                {
-                scope.allocVar();
-                }
-            }
-        else
-            {
-            checkNextRegister(scope, m_argReturn);
-            }
+        checkNextRegister(scope, m_argReturn);
         }
 
     @Override

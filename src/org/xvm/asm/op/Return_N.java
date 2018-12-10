@@ -23,18 +23,6 @@ public class Return_N
     /**
      * Construct a RETURN_N op.
      *
-     * @param anValue  the values to return
-     *
-     * @deprecated
-     */
-    public Return_N(int[] anValue)
-        {
-        m_anArg = anValue;
-        }
-
-    /**
-     * Construct a RETURN_N op.
-     *
      * @param aArg  the arguments to return
      */
     public Return_N(Argument[] aArg)

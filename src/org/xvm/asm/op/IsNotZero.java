@@ -22,22 +22,6 @@ public class IsNotZero
         extends OpTest
     {
     /**
-     * Construct an IS_NZERO op.
-     *
-     * @param nValue  the value to test
-     * @param nRet    the location to store the Boolean result
-     *
-     * @deprecated
-     */
-    public IsNotZero(int nValue, int nRet)
-        {
-        super((Argument) null, null);
-
-        m_nValue1   = nValue;
-        m_nRetValue = nRet;
-        }
-
-    /**
      * Construct an IS_NZERO op based on the specified arguments.
      *
      * @param arg        the value Argument

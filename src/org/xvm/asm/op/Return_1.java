@@ -27,18 +27,6 @@ public class Return_1
     /**
      * Construct a RETURN_1 op.
      *
-     * @param nValue  the value to return
-     *
-     * @deprecated
-     */
-    public Return_1(int nValue)
-        {
-        m_nArg = nValue;
-        }
-
-    /**
-     * Construct a RETURN_1 op.
-     *
      * @param arg  the value to return
      */
     public Return_1(Argument arg)

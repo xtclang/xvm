@@ -28,24 +28,6 @@ public class P_Set
         extends OpProperty
     {
     /**
-     * Construct a P_SET op.
-     *
-     * @param nPropId  the property to set
-     * @param nTarget  the target object
-     * @param nValue   the value to store in the property
-     *
-     * @deprecated
-     */
-    public P_Set(int nPropId, int nTarget, int nValue)
-        {
-        super(null);
-
-        m_nPropId = nPropId;
-        m_nTarget = nTarget;
-        m_nValue = nValue;
-        }
-
-    /**
      * Construct a P_SET op based on the specified arguments.
      *
      * @param constProperty  the property constant

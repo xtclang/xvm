@@ -1592,11 +1592,6 @@ public abstract class ClassTemplate
             }
         }
 
-    public MethodStructure getMethodStructure(String sName, String[] asParam)
-        {
-        return getMethodStructure(sName, asParam, VOID);
-        }
-
     public MethodStructure getMethodStructure(String sName, String[] asParam, String[] asRet)
         {
         return f_templates.f_adapter.getMethod(this, sName, asParam, asRet);
@@ -1617,13 +1612,6 @@ public abstract class ClassTemplate
                 methGetter.setNative(true);
                 }
             }
-        }
-
-    public MethodStructure getGetter(String sPropName)
-        {
-        PropertyStructure prop = getProperty(sPropName);
-        assert prop != null;
-        return prop.getGetter();
         }
 
 

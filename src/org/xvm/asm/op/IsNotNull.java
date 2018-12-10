@@ -22,22 +22,6 @@ public class IsNotNull
         extends OpTest
     {
     /**
-     * Construct an IS_NNULL op.
-     *
-     * @param nValue  the Nullable value to test
-     * @param nRet    the location to store the Boolean result
-     *
-     * @deprecated
-     */
-    public IsNotNull(int nValue, int nRet)
-        {
-        super((Argument) null, null);
-
-        m_nValue1   = nValue;
-        m_nRetValue = nRet;
-        }
-
-    /**
      * Construct an IS_NNULL op based on the specified arguments.
      *
      * @param arg        the value Argument

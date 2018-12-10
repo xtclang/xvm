@@ -26,22 +26,6 @@ public class Var_I
         extends OpVar
     {
     /**
-     * Construct an VAR_I op.
-     *
-     * @param nType     the variable type id
-     * @param nValueId  the initial value id
-     *
-     * @deprecated
-     */
-    public Var_I(int nType, int nValueId)
-        {
-        super();
-
-        m_nType = nType;
-        m_nValueId = nValueId;
-        }
-
-    /**
      * Construct a VAR_I op for the specified type and argument.
      *
      * @param constType the variable type

@@ -27,22 +27,6 @@ public class Var_T
         extends OpVar
     {
     /**
-     * Construct a VAR_T op.
-     *
-     * @param nType      the type id of the Tuple variable
-     * @param anValueId  the value ids for the sequence
-     *
-     * @deprecated
-     */
-    public Var_T(int nType, int[] anValueId)
-        {
-        super();
-
-        m_nType      = nType;
-        m_anArgValue = anValueId;
-        }
-
-    /**
      * Construct a VAR_T op for the specified Tuple type and arguments.
      *
      * @param constType  the Tuple type

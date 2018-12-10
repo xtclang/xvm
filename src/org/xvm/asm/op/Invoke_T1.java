@@ -32,26 +32,6 @@ public class Invoke_T1
         extends OpInvocable
     {
     /**
-     * Construct an NVOK_T1 op.
-     *
-     * @param nTarget    r-value that specifies the object on which the method being invoked
-     * @param nMethodId  r-value that specifies the method being invoked
-     * @param nArg       the r-value location of the tuple of method arguments
-     * @param nRet       the l-value location for the result
-     *
-     * @deprecated
-     */
-    public Invoke_T1(int nTarget, int nMethodId, int nArg, int nRet)
-        {
-        super((Argument) null, null);
-
-        m_nTarget = nTarget;
-        m_nMethodId = nMethodId;
-        m_nArgTupleValue = nArg;
-        m_nRetValue = nRet;
-        }
-
-    /**
      * Construct an NVOK_T1 op based on the passed arguments.
      *
      * @param argTarget    the target Argument

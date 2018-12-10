@@ -24,22 +24,6 @@ public class JumpTrue
     /**
      * Construct a JMP_TRUE op.
      *
-     * @param nValue    the Boolean value to test
-     * @param nRelAddr  the relative address to jump to
-     *
-     * @deprecated
-     */
-    public JumpTrue(int nValue, int nRelAddr)
-        {
-        super((Argument) null, null);
-
-        m_nArg  = nValue;
-        m_ofJmp = nRelAddr;
-        }
-
-    /**
-     * Construct a JMP_TRUE op.
-     *
      * @param arg  the argument to test
      * @param op   the op to conditionally jump to
      */

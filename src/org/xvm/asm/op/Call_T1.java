@@ -32,24 +32,6 @@ public class Call_T1
         extends OpCallable
     {
     /**
-     * Construct a CALL_T1 op.
-     *
-     * @param nFunction  the r-value indicating the function to call
-     * @param nTupleArg  the r-value indicating the tuple holding the arguments
-     * @param nRetValue  the l-value location for the result
-     *
-     * @deprecated
-     */
-    public Call_T1(int nFunction, int nTupleArg, int nRetValue)
-        {
-        super(null);
-
-        m_nFunctionId = nFunction;
-        m_nArgTupleValue = nTupleArg;
-        m_nRetValue = nRetValue;
-        }
-
-    /**
      * Construct a CALL_T1 op based on the passed arguments.
      *
      * @param argFunction  the function Argument

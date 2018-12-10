@@ -26,24 +26,6 @@ public class JumpEq
     /**
      * Construct a JMP_EQ op.
      *
-     * @param nValue1   the first value to compare
-     * @param nValue2   the second value to compare
-     * @param nRelAddr  the relative address to jump to
-     *
-     * @deprecated
-     */
-    public JumpEq(int nValue1, int nValue2, int nRelAddr)
-        {
-        super((Argument) null, null, null);
-
-        m_nArg  = nValue1;
-        m_nArg2 = nValue2;
-        m_ofJmp = nRelAddr;
-        }
-
-    /**
-     * Construct a JMP_EQ op.
-     *
      * @param arg1  the first argument to compare
      * @param arg2  the second argument to compare
      * @param op    the op to conditionally jump to

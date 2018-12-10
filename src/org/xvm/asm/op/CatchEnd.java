@@ -19,20 +19,6 @@ public class CatchEnd
         extends OpJump
     {
     /**
-     * Construct a CATCH_END op.
-     *
-     * @param iRelAddr  the relative address to jump to when the handler completes
-     *
-     * @deprecated
-     */
-    public CatchEnd(int iRelAddr)
-        {
-        super(null);
-
-        m_ofJmp = iRelAddr;
-        }
-
-    /**
      * Construct a CATCH_END op based on the destination Op.
      *
      * @param op  the Op to jump to when the handler completes

@@ -22,20 +22,6 @@ public class Construct_0
         extends OpCallable
     {
     /**
-     * Construct a CONSTR_0 op.
-     *
-     * @param nConstructorId  identifies the construct function
-     *
-     * @deprecated
-     */
-    public Construct_0(int nConstructorId, int nArg)
-        {
-        super(null);
-
-        m_nFunctionId = nConstructorId;
-        }
-
-    /**
      * Construct a CONSTR_0 op based on the passed arguments.
      *
      * @param constMethod  the constructor method

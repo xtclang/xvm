@@ -24,24 +24,6 @@ public class IsNotEq
         extends OpTest
     {
     /**
-     * Construct an IS_NEQ op.
-     *
-     * @param nValue1  the first value to compare
-     * @param nValue2  the second value to compare
-     * @param nRet     the location to store the Boolean result
-     *
-     * @deprecated
-     */
-    public IsNotEq(int nValue1, int nValue2, int nRet)
-        {
-        super(null, null, null);
-
-        m_nValue1   = nValue1;
-        m_nValue2   = nValue2;
-        m_nRetValue = nRet;
-        }
-
-    /**
      * Construct an IS_NEQ op based on the specified arguments.
      *
      * @param arg1       the first value Argument

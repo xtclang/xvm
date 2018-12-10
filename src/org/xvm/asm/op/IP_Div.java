@@ -21,22 +21,6 @@ public class IP_Div
         extends OpInPlaceAssign
     {
     /**
-     * Construct an IP_DIV op.
-     *
-     * @param nTarget  the target object
-     * @param nValue   the value
-     *
-     * @deprecated
-     */
-    public IP_Div(int nTarget, int nValue)
-        {
-        super((Argument) null, null);
-
-        m_nTarget = nTarget;
-        m_nArgValue = nValue;
-        }
-
-    /**
      * Construct a IP_ADD op based on the passed arguments.
      *
      * @param argTarget  the target Argument

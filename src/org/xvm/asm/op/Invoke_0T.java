@@ -29,24 +29,6 @@ public class Invoke_0T
         extends OpInvocable
     {
     /**
-     * Construct an NVOK_0T op.
-     *
-     * @param nTarget    r-value that specifies the object on which the method being invoked
-     * @param nMethodId  r-value that specifies the method being invoked
-     * @param nRet       the l-value location for the tuple result
-     *
-     * @deprecated
-     */
-    public Invoke_0T(int nTarget, int nMethodId, int nRet)
-        {
-        super((Argument) null, null);
-
-        m_nTarget = nTarget;
-        m_nMethodId = nMethodId;
-        m_nRetValue = nRet;
-        }
-
-    /**
      * Construct an NVOK_0T op based on the passed arguments.
      *
      * @param argTarget    the target Argument

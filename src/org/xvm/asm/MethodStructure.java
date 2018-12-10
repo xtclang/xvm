@@ -485,13 +485,8 @@ public class MethodStructure
         {
         Code code;
 
-        // TODO: remove when compiler is fully operational
-        if (m_code != null && getIdentityConstant().getNamespace().getName().contains("Test"))
-            {
-            System.err.println("*** already compiled naturally: " + MethodStructure.this.toString());
-            }
-
         resetRuntimeInfo();
+
         m_fNative     = false;
         m_aconstLocal = null;
         m_abOps       = null;
@@ -520,40 +515,6 @@ public class MethodStructure
     public Constant[] getLocalConstants()
         {
         return m_aconstLocal;
-        }
-
-    /**
-     * Specify the ops for this method.
-     *
-     * @param aop  the op-code array for this method
-     *
-     * @deprecated
-     */
-    public void setOps(Op[] aop)
-        {
-        // TODO: remove when compiler is fully operational
-        if (m_code != null && getIdentityConstant().getName().contains("Test"))
-            {
-            System.err.println("*** already compiled naturally: " + MethodStructure.this.toString());
-            }
-
-        resetRuntimeInfo();
-        m_aconstLocal = null;
-        m_abOps       = null;
-        m_code        = new Code(this, aop);
-        m_FUsesSuper  = null;
-        markModified();
-
-        registerConstants(getConstantPool());
-        try
-            {
-            assemble(new DataOutputStream(new ByteArrayOutputStream()));
-            }
-        catch (IOException e)
-            {
-            throw new IllegalStateException(e);
-            }
-        m_code.ensureAssembled();
         }
 
 
@@ -1344,7 +1305,7 @@ public class MethodStructure
             that.m_code = this.m_code.cloneOnto(that);
             }
 
-        // note: ignoring the @deprecated m_structFinally field
+        // note: ignoring the m_structFinally field
 
         return that;
         }
@@ -1583,23 +1544,6 @@ public class MethodStructure
                     throw new RuntimeException(e);
                     }
                 }
-            }
-
-        /**
-         * TODO remove when deprecated setOps() is removed
-         *
-         * @param aop   array of ops
-         *
-         * @deprecated
-         */
-        Code(MethodStructure method, Op[] aop)
-            {
-            assert method != null;
-
-            f_method = method;
-            m_aop    = aop;
-
-            ensureAssembled();
             }
 
         Code(MethodStructure method, Code wrappee)

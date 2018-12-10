@@ -29,22 +29,6 @@ public class Call_10
         extends OpCallable
     {
     /**
-     * Construct a CALL_10 op.
-     *
-     * @param nFunction  the r-value indicating the function to call
-     * @param nArg       the r-value indicating the argument
-     *
-     * @deprecated
-     */
-    public Call_10(int nFunction, int nArg)
-        {
-        super(null);
-
-        m_nFunctionId = nFunction;
-        m_nArgValue = nArg;
-        }
-
-    /**
      * Construct a CALL_10 op based on the passed arguments.
      *
      * @param argFunction  the function Argument

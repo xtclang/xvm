@@ -32,18 +32,6 @@ public class Return_T
     /**
      * Construct a RETURN_T op.
      *
-     * @param nValue  the tuple value to return
-     *
-     * @deprecated
-     */
-    public Return_T(int nValue)
-        {
-        m_nArg = nValue;
-        }
-
-    /**
-     * Construct a RETURN_T op.
-     *
      * @param argT  the tuple value to return
      */
     public Return_T(Argument argT)

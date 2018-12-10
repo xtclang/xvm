@@ -28,22 +28,6 @@ public class Construct_1
         extends OpCallable
     {
     /**
-     * Construct a CONSTR_1 op.
-     *
-     * @param nConstructorId  identifies the construct function
-     * @param nArg            r-value for the construct argument
-     *
-     * @deprecated
-     */
-    public Construct_1(int nConstructorId, int nArg)
-        {
-        super(null);
-
-        m_nFunctionId = nConstructorId;
-        m_nArgValue = nArg;
-        }
-
-    /**
      * Construct a CONSTR_1 op based on the passed arguments.
      *
      * @param constMethod  the constructor method

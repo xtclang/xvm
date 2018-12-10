@@ -19,20 +19,6 @@ public class GuardEnd
         extends OpJump
     {
     /**
-     * Construct an GUARD_E op.
-     *
-     * @param iRelAddr  the address of the next op to execute after the guarded block
-     *
-     * @deprecated
-     */
-    public GuardEnd(int iRelAddr)
-        {
-        super(null);
-
-        m_ofJmp = iRelAddr;
-        }
-
-    /**
      * Construct a GUARD_E op based on the destination Op.
      *
      * @param op  the Op to jump to when the guarded section completes

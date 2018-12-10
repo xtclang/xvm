@@ -23,18 +23,6 @@ public class Throw
         extends Op
     {
     /**
-     * Construct a THROW op.
-     *
-     * @param nValue  the exception to throw
-     *
-     * @deprecated
-     */
-    public Throw(int nValue)
-        {
-        m_nArgValue = nValue;
-        }
-
-    /**
      * Construct a THROW op for the passed argument.
      *
      * @param argValue  the throw value Argument

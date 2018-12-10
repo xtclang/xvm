@@ -3,11 +3,7 @@ package org.xvm.runtime.template;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Op;
 
-import org.xvm.asm.op.L_Set;
-import org.xvm.asm.op.Return_0;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -38,14 +34,6 @@ public class xException
     @Override
     public void initDeclared()
         {
-        MethodStructure ct = getMethodStructure("construct", new String[]{"String?", "Exception?"}, VOID);
-        ct.setOps(new Op[] // #0 - text, #1 - cause
-            {
-            new L_Set(Op.CONSTANT_OFFSET - getProperty("text").getIdentityConstant().getPosition(), 0),
-            new L_Set(Op.CONSTANT_OFFSET - getProperty("cause").getIdentityConstant().getPosition(), 1),
-            new Return_0(),
-            });
-
         markNativeMethod("to", VOID, STRING);
         }
 

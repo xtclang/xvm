@@ -22,22 +22,6 @@ public class IIP_Inc
         extends OpIndex
     {
     /**
-     * Construct an IIP_INC op.
-     *
-     * @param nTarget  the target array
-     * @param nIndex   the index of the value to increment
-     *
-     * @deprecated
-     */
-    public IIP_Inc(int nTarget, int nIndex)
-        {
-        super((Argument) null, null);
-
-        m_nTarget = nTarget;
-        m_nIndex = nIndex;
-        }
-
-    /**
      * Construct an IIP_INC op for the passed arguments.
      *
      * @param argTarget  the target Argument

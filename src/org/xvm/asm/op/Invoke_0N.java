@@ -25,24 +25,6 @@ import org.xvm.runtime.Utils;
 public class Invoke_0N
         extends OpInvocable
     {
-     /**
-     * Construct an NVOK_0N op.
-     *
-     * @param nTarget    r-value that specifies the object on which the method being invoked
-     * @param nMethodId  r-value that specifies the method being invoked
-     * @param anRet      the l-value locations for the results
-     *
-     * @deprecated
-     */
-    public Invoke_0N(int nTarget, int nMethodId, int[] anRet)
-        {
-        super((Argument) null, null);
-
-        m_nTarget = nTarget;
-        m_nMethodId = nMethodId;
-        m_anRetValue = anRet;
-        }
-
     /**
      * Construct an NVOK_0N op based on the passed arguments.
      *

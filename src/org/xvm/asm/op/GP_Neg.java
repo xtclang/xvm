@@ -19,22 +19,6 @@ public class GP_Neg
         extends OpGeneral
     {
     /**
-     * Construct a GP_NEG op.
-     *
-     * @param nArg  the r-value target to negate
-     * @param nRet  the l-value to store the result in
-     *
-     * @deprecated
-     */
-    public GP_Neg(int nArg, int nRet)
-        {
-        super((Argument) null, null);
-
-        m_nArgValue = nArg;
-        m_nRetValue = nRet;
-        }
-
-    /**
      * Construct a GP_NEG op for the passed arguments.
      *
      * @param argValue  the Argument to negate

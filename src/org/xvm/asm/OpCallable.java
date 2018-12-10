@@ -77,28 +77,10 @@ public abstract class OpCallable extends Op
         if (isMultiReturn())
             {
             checkNextRegisters(scope, m_aArgReturn);
-
-            // TODO: remove when deprecated construction is removed
-            if (m_anRetValue != null)
-                {
-                for (int i = 0, c = m_anRetValue.length; i < c; i++)
-                    {
-                    if (scope.isNextRegister(m_anRetValue[i]))
-                        {
-                        scope.allocVar();
-                        }
-                    }
-                }
             }
         else
             {
             checkNextRegister(scope, m_argReturn);
-
-            // TODO: remove when deprecated construction is removed
-            if (scope.isNextRegister(m_nRetValue))
-                {
-                scope.allocVar();
-                }
             }
         }
 

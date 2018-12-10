@@ -15,7 +15,7 @@ const Exception
 
         this.text = text;
         this.cause = cause;
-        this.stackTrace = stack;
+        // this.stackTrace = stack;
         }
 
     String? text;

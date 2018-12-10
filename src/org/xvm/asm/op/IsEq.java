@@ -21,25 +21,6 @@ public class IsEq
         extends OpTest
     {
     /**
-     * Construct an IS_EQ op.
-     *
-     * @param nValue1  the first value to compare
-     * @param nValue2  the second value to compare
-     * @param nRet     the location to store the Boolean result
-     *
-     * @deprecated
-     */
-    public IsEq(int nValue1, int nValue2, int nRet, TypeConstant typeCommon)
-        {
-        super(null, null, null);
-
-        m_nValue1   = nValue1;
-        m_nValue2   = nValue2;
-        m_nRetValue = nRet;
-        m_typeCommon = typeCommon;
-        }
-
-    /**
      * Construct an IS_EQ op based on the specified arguments.
      *
      * @param arg1       the first value Argument
@@ -49,6 +30,21 @@ public class IsEq
     public IsEq(Argument arg1, Argument arg2, Argument argReturn)
         {
         super(arg1, arg2, argReturn);
+        }
+
+    /**
+     * Construct an IS_EQ op based on the specified arguments and a common type.
+     *
+     * @param arg1       the first value Argument
+     * @param arg2       the second value Argument
+     * @param argReturn  the location to store the Boolean result
+     * @param type       the common type
+     */
+    public IsEq(Argument arg1, Argument arg2, Argument argReturn, TypeConstant type)
+        {
+        super(arg1, arg2, argReturn);
+
+        m_typeCommon = type;
         }
 
     /**

@@ -32,24 +32,6 @@ public class Call_TN
         extends OpCallable
     {
     /**
-     * Construct a CALL_TN op.
-     *
-     * @param nFunction   the r-value indicating the function to call
-     * @param nTupleArg   the r-value indicating the tuple holding the arguments
-     * @param anRetValue  the l-value locations for the result
-     *
-     * @deprecated
-     */
-    public Call_TN(int nFunction, int nTupleArg, int[] anRetValue)
-        {
-        super(null);
-
-        m_nFunctionId = nFunction;
-        m_nArgTupleValue = nTupleArg;
-        m_anRetValue = anRetValue;
-        }
-
-    /**
      * Construct a CALL_TN op based on the passed arguments.
      *
      * @param argFunction  the function Argument

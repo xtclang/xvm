@@ -181,18 +181,7 @@ public abstract class OpInPlace
         {
         if (isAssignOp())
             {
-            // TODO: remove when deprecated construction is removed
-            if (m_argReturn == null)
-                {
-                if (scope.isNextRegister(m_nRetValue))
-                    {
-                    scope.allocVar();
-                    }
-                }
-            else
-                {
-                checkNextRegister(scope, m_argReturn);
-                }
+            checkNextRegister(scope, m_argReturn);
             }
         }
 

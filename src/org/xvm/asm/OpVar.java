@@ -18,13 +18,6 @@ public abstract class OpVar
         extends Op
     {
     /**
-     * @deprecated constructor used by deprecated sub-class constructors
-     */
-    protected OpVar()
-        {
-        }
-
-    /**
      * Construct a variable that will hold the specified type.
      *
      * @param constType  the variable type

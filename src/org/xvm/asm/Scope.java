@@ -77,29 +77,6 @@ public class Scope
         }
 
     /**
-     * Check if the specified index points to the next available register.
-     *
-     * @param nVar  the register index
-     *
-     * @return true iff the specified index points to the next available register
-     *
-     * @deprecated remove when the deprecated Op constructors are removed
-     */
-    public boolean isNextRegister(int nVar)
-        {
-        int nNext = getCurVars();
-        if (nVar < nNext) // this also covers all negative values ("local property" mode)
-            {
-            return false;
-            }
-        if (nVar == nNext)
-            {
-            return true;
-            }
-        throw new IllegalStateException("Invalid register index");
-        }
-
-    /**
      * Allocate a variable (a sequential register number).
      *
      * @return the variable identity
