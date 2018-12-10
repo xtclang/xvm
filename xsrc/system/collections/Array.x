@@ -11,6 +11,7 @@ class Array<ElementType>
         implements FixedSizeAble
         implements PersistentAble
         implements ConstAble
+        implements Stringable
     {
     /**
      * Construct a dynamically growing array with the specified initial capacity.
@@ -106,7 +107,9 @@ class Array<ElementType>
         Int from = range.lowerBound;
         Int to   = range.upperBound;
 
-        ElementType[] that = new ElementType[to - from + 1, (i) -> this[from + i]];
+        ElementType[] that = range.reversed
+            ? new ElementType[range.size, (i) -> this[to   - i]]
+            : new ElementType[range.size, (i) -> this[from + i]];
         return that;
         }
 
@@ -245,23 +248,84 @@ class Array<ElementType>
         return true;
         }
 
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        Int capacity = 2; // allow for "[]"
+        if (ElementType.is(Type<Stringable>))
+            {
+            for (ElementType v : this)
+                {
+                capacity += v.estimateStringLength() + 2; // allow for ", "
+                }
+            }
+        else
+            {
+            for (ElementType v : this)
+                {
+                if (v.is(Stringable))
+                    {
+                    capacity += v.estimateStringLength() + 2;
+                    }
+                else
+                    {
+                    capacity += 2;
+                    }
+                }
+            }
+
+        return capacity;
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        appender.add('[');
+
+        if (ElementType.is(Type<Stringable>))
+            {
+            Append:
+            for (ElementType v : this)
+                {
+                if (!Append.first)
+                    {
+                    appender.add(", ");
+                    }
+
+                v.appendTo(appender);
+                }
+            }
+        else
+            {
+            Append:
+            for (ElementType v : this)
+                {
+                if (!Append.first)
+                    {
+                    appender.add(", ");
+                    }
+
+                if (v.is(Stringable))
+                    {
+                    v.appendTo(appender);
+                    }
+                else
+                    {
+                    v.to<String>().appendTo(appender);
+                    }
+                }
+            }
+        appender.add(']');
+        }
+
     @Override
     String to<String>()
         {
-        StringBuffer buffer = new StringBuffer(7*size); // a wild guess
-        buffer.append('[');
-
-        loop:
-        for (ElementType v : this)
-            {
-            if (!loop.first)
-                {
-                buffer.append(", ");
-                }
-            buffer.append(v);
-            }
-        buffer.append(']');
-        return buffer.to<String>();
+        StringBuffer buf = new StringBuffer(estimateStringLength());
+        appendTo(buf);
+        return buf.to<String>();
         }
 
     // ----- internal implementation details -------------------------------------------------------

@@ -166,21 +166,21 @@ const Date(Int epochDay)
     void appendTo(Appender<Char> appender)
         {
         year.appendTo(appender);
+        appender.add('-');
 
         Int month = this.month;
         if (month < 10)
             {
             appender.add('0');
             }
-        appender.add('-');
         month.appendTo(appender);
+        appender.add('-');
 
         Int day = this.day;
         if (day < 10)
             {
             appender.add('0');
             }
-        appender.add('-');
         day.appendTo(appender);
         }
 

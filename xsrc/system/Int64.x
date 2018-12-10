@@ -5,12 +5,12 @@ const Int64
     /**
      * The minimum value for an Int64.
      */
-    static IntLiteral minvalue = -0x8000000000000000;
+    static IntLiteral minvalue = -0x8000_0000_0000_0000;
 
     /**
      * The maximum value for an Int64.
      */
-    static IntLiteral maxvalue =  0x7FFFFFFFFFFFFFFF;
+    static IntLiteral maxvalue =  0x7FFF_FFFF_FFFF_FFFF;
 
     private Bit[] bits;
 
@@ -309,5 +309,23 @@ const Int64
             }
 
         return result;
+        }
+
+    // ----- Stringable ----------------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        return magnitude.estimateStringLength() + (this < 0 ? 1 : 0);
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        if (this < 0)
+            {
+            appender.add('-');
+            }
+        magnitude.appendTo(appender);
         }
     }
