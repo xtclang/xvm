@@ -20,20 +20,6 @@ public class GuardAll
         extends OpJump
     {
     /**
-     * Construct a GUARDALL op.
-     *
-     * @param nRelAddress  the relative address of the finally block
-     *
-     * @deprecated
-     */
-    public GuardAll(int nRelAddress)
-        {
-        super(null);
-
-        m_ofJmp = nRelAddress;
-        }
-
-    /**
      * Construct a GUARDALL op based on the destination Op.
      *
      * @param op  the Op to jump to when the guarded section completes

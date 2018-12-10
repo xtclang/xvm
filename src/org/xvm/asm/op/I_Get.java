@@ -22,24 +22,6 @@ public class I_Get
         extends OpIndex
     {
     /**
-     * Construct an I_GET op.
-     *
-     * @param nTarget  the target indexed object
-     * @param nIndex   the index
-     * @param nRet     the location to store the resulting reference
-     *
-     * @deprecated
-     */
-    public I_Get(int nTarget, int nIndex, int nRet)
-        {
-        super(null, null, null);
-
-        m_nTarget   = nTarget;
-        m_nIndex    = nIndex;
-        m_nRetValue = nRet;
-        }
-
-    /**
      * Construct an I_GET op for the passed arguments.
      *
      * @param argTarget  the target Argument

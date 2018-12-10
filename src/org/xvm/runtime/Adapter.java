@@ -4,9 +4,7 @@ package org.xvm.runtime;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
@@ -19,7 +17,6 @@ import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.util.Handy;
@@ -173,60 +170,12 @@ public class Adapter
         return fNullable ? pool.ensureNullableTypeConstant(constType) : constType;
         }
 
-    public int getSingletonConstId(String sClass)
-        {
-        return Op.CONSTANT_OFFSET - getSingletonConstant(sClass).getPosition();
-        }
-
-    public SingletonConstant getSingletonConstant(String sClass)
-        {
-        ClassConstant constClass = f_templates.getClassConstant(sClass);
-        return f_pool.ensureSingletonConstConstant(constClass);
-        }
-
-    // get a "relative" method constant id
-    public int getMethodConstId(String sClassName, String sMethName)
-        {
-        return getMethodConstId(sClassName, sMethName, null, null);
-        }
-
-    // get a "relative" method constant id
-    public int getMethodConstId(String sClassName, String sMethName, String[] asArgType, String[] asRetType)
-        {
-        ClassTemplate template = f_templates.getTemplate(sClassName);
-
-        return Op.CONSTANT_OFFSET -
-            getMethod(template, sMethName, asArgType, asRetType).getIdentityConstant().getPosition();
-        }
-
     public MethodStructure getMethod(ClassTemplate template, String sMethName, String[] asArgType, String[] asRetType)
         {
         TypeConstant[] atArg = getTypeConstants(template, asArgType);
         TypeConstant[] atRet = getTypeConstants(template, asRetType);
 
         return template.getDeclaredMethod(sMethName, atArg, atRet);
-        }
-
-    // get a "relative" property constant id
-    public int getPropertyConstId(String sClassName, String sPropName)
-        {
-        try
-            {
-            ClassConstant constClass = f_templates.getClassConstant(sClassName);
-            ClassStructure struct = (ClassStructure) constClass.getComponent();
-            PropertyStructure prop = (PropertyStructure) struct.getChild(sPropName);
-            return Op.CONSTANT_OFFSET - prop.getIdentityConstant().getPosition();
-            }
-        catch (NullPointerException e)
-            {
-            throw new IllegalArgumentException("Property is not defined: " + sClassName + '#' + sPropName);
-            }
-        }
-
-    // get a "relative" value constant id
-    public int ensureValueConstantId(Object oValue)
-        {
-        return Op.CONSTANT_OFFSET - ensureValueConstant(oValue).getPosition();
         }
 
     public TypeConstant[] getTypeConstants(ClassTemplate template, String[] asType)
@@ -258,77 +207,6 @@ public class Adapter
                     (fReturn ?"r":"p")+i, null, fReturn, i, false);
             }
         return aType;
-        }
-
-    public Constant ensureValueConstant(Object oValue)
-        {
-        ConstantPool pool = f_pool;
-        if (oValue instanceof Integer || oValue instanceof Long)
-            {
-            return pool.ensureIntConstant(((Number) oValue).longValue());
-            }
-
-        if (oValue instanceof String)
-            {
-            return pool.ensureStringConstant((String) oValue);
-            }
-
-        if (oValue instanceof Character)
-            {
-            return pool.ensureCharConstant(((Character) oValue).charValue());
-            }
-
-        if (oValue instanceof Boolean)
-            {
-            return ((Boolean) oValue).booleanValue() ? pool.valTrue() : pool.valFalse();
-            }
-
-        if (oValue instanceof Object[])
-            {
-            Object[] ao = (Object[]) oValue;
-            int c = ao.length;
-            TypeConstant[] aType = new TypeConstant[c];
-            Constant[] aconst = new Constant[c];
-            TypeConstant typeUniform = null;
-
-            for (int i = 0; i < c; i++)
-                {
-                Constant constVal = ensureValueConstant(ao[i]);
-                TypeConstant type = constVal.getType();
-
-                if (i == 0)
-                    {
-                    typeUniform = type;
-                    }
-                else if (type != typeUniform)
-                    {
-                    typeUniform = null;
-                    }
-
-                aType[i]  = type;
-                aconst[i] = constVal;
-                }
-
-            if (typeUniform == null)
-                {
-                TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(
-                    pool.typeTuple(), aType);
-                return pool.ensureTupleConstant(typeTuple, aconst);
-                }
-            else
-                {
-                TypeConstant typeArray = pool.ensureParameterizedTypeConstant(
-                    pool.typeArray(), typeUniform);
-                return pool.ensureArrayConstant(typeArray, aconst);
-                }
-            }
-
-        if (oValue == null)
-            {
-            return pool.ensureSingletonConstConstant(pool.clzNull());
-            }
-
-        throw new IllegalArgumentException();
         }
 
     public MethodStructure addMethod(Component structure, String sName,

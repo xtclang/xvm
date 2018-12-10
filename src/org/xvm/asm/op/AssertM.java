@@ -30,20 +30,6 @@ public class AssertM
         extends Op
     {
     /**
-     * Construct an ASSERT_T op.
-     *
-     * @param nTest  the r-value to test
-     * @param nMsgId  the text to display on assertion failure
-     *
-     * @deprecated
-     */
-    public AssertM(int nTest, int nMsgId)
-        {
-        m_nTest = nTest;
-        m_nMsgConstId = nMsgId;
-        }
-
-    /**
      * Construct an ASSERT_T op based on the specified arguments.
      *
      * @param argTest   the test Argument

@@ -29,22 +29,6 @@ public class Call_01
         extends OpCallable
     {
     /**
-     * Construct a CALL_01 op.
-     *
-     * @param nFunction  the r-value indicating the function to call
-     * @param nRet       the l-value location for the result
-     *
-     * @deprecated
-     */
-    public Call_01(int nFunction, int nRet)
-        {
-        super(null);
-
-        m_nFunctionId = nFunction;
-        m_nRetValue = nRet;
-        }
-
-    /**
      * Construct a CALL_01 op based on the passed arguments.
      *
      * @param argFunction  the function Argument

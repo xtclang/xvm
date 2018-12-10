@@ -30,22 +30,6 @@ public class Construct_T
         extends OpCallable
     {
     /**
-     * Construct a CONSTR_T op.
-     *
-     * @param nConstructorId  identifies the construct function
-     * @param nArg            r-value for the construct tuple argument
-     *
-     * @deprecated
-     */
-    public Construct_T(int nConstructorId, int nArg)
-        {
-        super(null);
-
-        m_nFunctionId = nConstructorId;
-        m_nArgTupleValue = nArg;
-        }
-
-    /**
      * Construct a CONSTR_T op based on the passed arguments.
      *
      * @param constMethod  the constructor method

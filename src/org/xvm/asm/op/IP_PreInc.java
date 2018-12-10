@@ -21,22 +21,6 @@ public class IP_PreInc
         extends OpInPlace
     {
     /**
-     * Construct an IP_INCB op.
-     *
-     * @param nTarget  the location to increment
-     * @param nRet     the location to store the post-incremented value
-     *
-     * @deprecated
-     */
-    public IP_PreInc(int nTarget, int nRet)
-        {
-        super((Argument) null, null);
-
-        m_nTarget = nTarget;
-        m_nRetValue = nRet;
-        }
-
-    /**
      * Construct an IP_INCB op for the passed arguments.
      *
      * @param argTarget  the target Argument

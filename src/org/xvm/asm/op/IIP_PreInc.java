@@ -21,24 +21,6 @@ public class IIP_PreInc
         extends OpIndex
     {
     /**
-     * Construct an IIP_INCB op.
-     *
-     * @param nTarget  the target array
-     * @param nIndex   the index of the value to increment
-     * @param nRet     the location to store the pre-incremented value
-     *
-     * @deprecated
-     */
-    public IIP_PreInc(int nTarget, int nIndex, int nRet)
-        {
-        super(null, null, null);
-
-        m_nTarget = nTarget;
-        m_nIndex = nIndex;
-        m_nRetValue = nRet;
-        }
-
-    /**
      * Construct an IIP_INCB op for the passed arguments.
      *
      * @param argTarget  the target Argument

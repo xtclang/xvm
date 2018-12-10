@@ -1,5 +1,7 @@
 module TestMisc.xqiz.it
     {
+    import X.IllegalArgumentException;
+
     @Inject X.io.Console console;
 
     void run()
@@ -29,10 +31,10 @@ module TestMisc.xqiz.it
         // testAssertFalseExpr();
         // testAssertDecl();
 
-        // REVIEW GG
         testInterval();
+        testException();
         // testTupleConv();
-        testMap();
+        // testMap();
         }
 
     void testInts()
@@ -338,6 +340,15 @@ module TestMisc.xqiz.it
         Object c = a..b;
         // Range<Int> c = a..b;
         console.println("range=" + c);
+        }
+
+    // TODO
+    void testException()
+        {
+        console.println("\n** tesException()");
+
+        Exception e = new Exception("test");
+        console.println("e=" + e);
         }
 
     // TODO

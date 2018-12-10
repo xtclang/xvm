@@ -30,24 +30,6 @@ public class MBind
         extends OpInvocable
     {
     /**
-     * Construct an MBIND op.
-     *
-     * @param nTarget    the target object containing the method
-     * @param nMethodId  the method id
-     * @param nRet       the location to store the resulting function
-     *
-     * @deprecated
-     */
-    public MBind(int nTarget, int nMethodId, int nRet)
-        {
-        super((Argument) null, null);
-
-        m_nTarget = nTarget;
-        m_nMethodId = nMethodId;
-        m_nRetValue = nRet;
-        }
-
-    /**
      * Construct an MBIND op based on the passed arguments.
      *
      * @param argTarget    the target argument

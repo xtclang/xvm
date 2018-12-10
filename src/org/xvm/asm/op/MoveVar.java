@@ -22,22 +22,6 @@ public class MoveVar
         extends OpMove
     {
     /**
-     * Construct a MOV_VAR op.
-     *
-     * @param nSource  the source location
-     * @param nDest    the destination location
-     *
-     * @deprecated
-     */
-    public MoveVar(int nSource, int nDest)
-        {
-        super((Argument) null, null);
-
-        m_nFromValue = nSource;
-        m_nToValue   = nDest;
-        }
-
-    /**
      * Construct a MOV_VAR op for the passed arguments.
      *
      * @param regSrc   the source Register

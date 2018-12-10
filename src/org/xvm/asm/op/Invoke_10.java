@@ -28,24 +28,6 @@ public class Invoke_10
         extends OpInvocable
     {
     /**
-     * Construct an NVOK_10 op.
-     *
-     * @param nTarget    r-value that specifies the object on which the method being invoked
-     * @param nMethodId  r-value that specifies the method being invoked
-     * @param nArg       the r-value location of the method argument
-     *
-     * @deprecated
-     */
-    public Invoke_10(int nTarget, int nMethodId, int nArg)
-        {
-        super((Argument) null, null);
-
-        m_nTarget = nTarget;
-        m_nMethodId = nMethodId;
-        m_nArgValue = nArg;
-        }
-
-    /**
      * Construct an NVOK_10 op based on the passed arguments.
      *
      * @param argTarget    the target Argument

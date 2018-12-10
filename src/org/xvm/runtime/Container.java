@@ -14,7 +14,6 @@ import org.xvm.asm.Constants;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
-import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -67,20 +66,12 @@ public class Container
         f_adapter = f_templates.f_adapter;
         f_heapGlobal = new ObjectHeap(f_moduleRoot.getConstantPool(), f_templates);
 
-        if (sAppName.equals(Constants.ECSTASY_MODULE))
+        ModuleStructure module = repository.loadModule(sAppName);
+        if (module == null)
             {
-            // TODO: remove -- but for now TestApp is a part of the "system"
-            f_constModule = f_moduleRoot.getIdentityConstant();
+            throw new IllegalStateException("Unable to load module \"" + sAppName + "\"");
             }
-        else
-            {
-            ModuleStructure module = repository.loadModule(sAppName);
-            if (module == null)
-                {
-                throw new IllegalStateException("Unable to load module \"" + sAppName + "\"");
-                }
-            f_constModule = module.getIdentityConstant();
-            }
+        f_constModule = module.getIdentityConstant();
         }
 
     public void start()
@@ -97,17 +88,8 @@ public class Container
         ConstantPool.setCurrentPool(null);
 
         ModuleStructure structModule = (ModuleStructure) f_constModule.getComponent();
-        if (f_sAppName.equals(Constants.ECSTASY_MODULE))
-            {
-            // TODO: remove -- but for now TestApp is a part of the "system"
-            m_app = f_templates.getTemplate("TestApp");
-            assert structModule == f_moduleRoot;
-            }
-        else
-            {
-            m_app = f_templates.getTemplate(f_constModule);
-            m_hModule = ((xModule) m_app).ensureModuleHandle(f_constModule);
-            }
+        m_app = f_templates.getTemplate(f_constModule);
+        m_hModule = ((xModule) m_app).ensureModuleHandle(f_constModule);
 
         ConstantPool.setCurrentPool(structModule.getConstantPool());
 
@@ -157,19 +139,11 @@ public class Container
 
             FunctionHandle hFunction;
 
-            if (m_hModule == null)
-                {
-                // TODO: remove along with the TestApp
-                MethodBody[] aBody = infoApp.getOptimizedMethodChain(idMethod);
-                hFunction = xFunction.makeHandle(aBody[0].getMethodStructure());
-                }
-            else
-                {
-                CallChain chain = m_hModule.getComposition().
-                    getMethodCallChain(idMethod.getSignature());
-                hFunction = xFunction.makeHandle(chain, 0);
-                hFunction = hFunction.bindTarget(m_hModule);
-                }
+            CallChain chain = m_hModule.getComposition().
+                getMethodCallChain(idMethod.getSignature());
+            hFunction = xFunction.makeHandle(chain, 0);
+            hFunction = hFunction.bindTarget(m_hModule);
+
             m_contextMain.callLater(hFunction, ahArg);
             }
         catch (Exception e)

@@ -20,20 +20,6 @@ public class Jump
     /**
      * Construct a JMP op.
      *
-     * @param nRelAddr  the relative address to jump to
-     *
-     * @deprecated
-     */
-    public Jump(int nRelAddr)
-        {
-        super(null);
-
-        m_ofJmp = nRelAddr;
-        }
-
-    /**
-     * Construct a JMP op.
-     *
      * @param op  the op to jump to
      */
     public Jump(Op op)

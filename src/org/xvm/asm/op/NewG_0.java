@@ -27,24 +27,6 @@ public class NewG_0
         extends OpCallable
     {
     /**
-     * Construct a NEWG_0 op.
-     *
-     * @param nConstructorId  identifies the constructor
-     * @param nType           the type of the object being created
-     * @param nRet            the location to store the new object
-     *
-     * @deprecated
-     */
-    public NewG_0(int nConstructorId, int nType, int nRet)
-        {
-        super(null);
-
-        m_nFunctionId = nConstructorId;
-        m_nTypeValue = nType;
-        m_nRetValue = nRet;
-        }
-
-    /**
      * Construct a NEWG_0 op based on the passed arguments.
      *
      * @param constMethod  the constructor method

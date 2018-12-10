@@ -22,22 +22,6 @@ public class Move
         extends OpMove
     {
     /**
-     * Construct a MOV op.
-     *
-     * @param nFrom  the source location
-     * @param nTo    the destination location
-     *
-     * @deprecated
-     */
-    public Move(int nFrom, int nTo)
-        {
-        super((Argument) null, null);
-
-        m_nToValue = nTo;
-        m_nFromValue = nFrom;
-        }
-
-    /**
      * Construct a MOV op for the passed arguments.
      *
      * @param argFrom  the Argument to move from

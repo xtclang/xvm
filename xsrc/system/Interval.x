@@ -93,4 +93,21 @@ const Interval<ElementType extends Orderable>
 
         return true, new Interval(this.lowerBound.minOf(that.lowerBound), this.upperBound.maxOf(that.upperBound));
         }
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        return lowerBound.to<Const>().estimateStringLength() +
+               upperBound.to<Const>().estimateStringLength() + 2;
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        lowerBound.to<Const>().appendTo(appender);
+        appender.add("..");
+        upperBound.to<Const>().appendTo(appender);
+        }
     }

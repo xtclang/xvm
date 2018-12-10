@@ -21,24 +21,6 @@ public class PIP_PostInc
         extends OpPropInPlace
     {
     /**
-     * Construct a PIP_INCA op.
-     *
-     * @param nPropId  the property to increment
-     * @param nTarget  the object on which the property exists
-     * @param nRet     the location to store the post-incremented value
-     *
-     * @deprecated
-     */
-    public PIP_PostInc(int nPropId, int nTarget, int nRet)
-        {
-        super(null, null, null);
-
-        m_nPropId = nPropId;
-        m_nTarget = nTarget;
-        m_nRetValue = nRet;
-        }
-
-    /**
      * Construct a PIP_INCA op based on the passed arguments.
      *
      * @param constProperty  the property constant

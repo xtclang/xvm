@@ -22,24 +22,6 @@ public class I_Ref
         extends OpIndex
     {
     /**
-     * Construct an I_REF op.
-     *
-     * @param nTarget  the target array
-     * @param nIndex   the index of the value in the array
-     * @param nRet     the location to store the reference to the value in the array
-     *
-     * @deprecated
-     */
-    public I_Ref(int nTarget, int nIndex, int nRet)
-        {
-        super(null, null, null);
-
-        m_nTarget = nTarget;
-        m_nIndex = nIndex;
-        m_nRetValue = nRet;
-        }
-
-    /**
      * Construct an I_REF op for the passed arguments.
      *
      * @param argTarget  the target Argument

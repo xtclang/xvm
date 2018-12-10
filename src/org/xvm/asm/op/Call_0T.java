@@ -29,22 +29,6 @@ public class Call_0T
         extends OpCallable
     {
     /**
-     * Construct a CALL_0T op.
-     *
-     * @param nFunction  the r-value indicating the function to call
-     * @param nRet       the l-value indicating the tuple result location
-     *
-     * @deprecated
-     */
-    public Call_0T(int nFunction, int nRet)
-        {
-        super(null);
-
-        m_nFunctionId = nFunction;
-        m_nRetValue = nRet;
-        }
-
-    /**
      * Construct a CALL_0T op based on the passed arguments.
      *
      * @param argFunction  the function Argument

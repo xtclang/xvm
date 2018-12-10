@@ -28,18 +28,6 @@ public class Assert
         extends Op
     {
     /**
-     * Construct an ASSERT op.
-     *
-     * @param nTest  the r-value of the assertion expression
-     *
-     * @deprecated
-     */
-    public Assert(int nTest)
-        {
-        m_nTest = nTest;
-        }
-
-    /**
      * Construct an ASSERT op based on the specified arguments.
      *
      * @param argTest  the test Argument

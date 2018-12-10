@@ -22,24 +22,6 @@ public class I_Set
         extends OpIndexInPlace
     {
     /**
-     * Construct an I_SET op.
-     *
-     * @param nTarget  the target indexed object
-     * @param nIndex   the index
-     * @param nValue   the value to store
-     *
-     * @deprecated
-     */
-    public I_Set(int nTarget, int nIndex, int nValue)
-        {
-        super(null, null, null);
-
-        m_nTarget = nTarget;
-        m_nIndex  = nIndex;
-        m_nValue  = nValue;
-        }
-
-    /**
      * Construct an I_SET op for the passed target.
      *
      * @param argTarget  the target Argument

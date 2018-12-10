@@ -32,22 +32,6 @@ public class Call_T0
         extends OpCallable
     {
     /**
-     * Construct a CALL_T0 op.
-     *
-     * @param nFunction  the r-value indicating the function to call
-     * @param nTupleArg  the r-value indicating the tuple holding the arguments
-     *
-     * @deprecated
-     */
-    public Call_T0(int nFunction, int nTupleArg)
-        {
-        super(null);
-
-        m_nFunctionId = nFunction;
-        m_nArgTupleValue = nTupleArg;
-        }
-
-    /**
      * Construct a CALL_T0 op based on the passed arguments.
      *
      * @param argFunction  the function Argument

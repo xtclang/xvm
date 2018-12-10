@@ -19,24 +19,6 @@ public class GP_Add
         extends OpGeneral
     {
     /**
-     * Construct a GP_ADD op.
-     *
-     * @param nTarget  the first r-value, which will implement the add
-     * @param nArg     the second r-value
-     * @param nRet     the l-value to store the result into
-     *
-     * @deprecated
-     */
-    public GP_Add(int nTarget, int nArg, int nRet)
-        {
-        super(null, null, null);
-
-        m_nTarget   = nTarget;
-        m_nArgValue = nArg;
-        m_nRetValue = nRet;
-        }
-
-    /**
      * Construct a GP_ADD op for the passed arguments.
      *
      * @param argTarget  the target Argument

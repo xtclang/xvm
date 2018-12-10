@@ -31,26 +31,6 @@ public class FBind
         extends OpCallable
     {
     /**
-     * Construct an FBIND op.
-     *
-     * @param nFunction     identifies the function to bind
-     * @param anParamIx     identifies the parameter(s) to bind
-     * @param anParamValue  identifies the values to use corresponding to those parameters
-     * @param nRet          identifies where to place the bound function
-     *
-     * @deprecated
-     */
-    public FBind(int nFunction, int[] anParamIx, int[] anParamValue, int nRet)
-        {
-        super(null);
-
-        m_nFunctionId = nFunction;
-        m_anParamIx = anParamIx;
-        m_anParamValue = anParamValue;
-        m_nRetValue = nRet;
-        }
-
-    /**
      * Construct an FBIND op based on the passed arguments.
      *
      * @param argFunction  the function Argument

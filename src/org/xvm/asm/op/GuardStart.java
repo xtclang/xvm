@@ -29,38 +29,6 @@ public class GuardStart
     /**
      * Construct a GUARD op for a single exception.
      *
-     * @param nClassConstId  the exception class to catch
-     * @param nNameConstId   the name of the catch exception variable
-     * @param nCatchAddress  the address of the catch handler
-     *
-     * @deprecated
-     */
-    public GuardStart(int nClassConstId, int nNameConstId, int nCatchAddress)
-        {
-        this(new int[] {nClassConstId}, new int[] {nNameConstId}, new int[] {nCatchAddress});
-        }
-
-    /**
-     * Construct a GUARD op for multiple exceptions.
-     *
-     * @param anClassConstId  the exception classes to catch
-     * @param anNameConstId   the names of each catch exception variable
-     * @param anCatch         the addresses of each catch handler
-     *
-     * @deprecated
-     */
-    public GuardStart(int[] anClassConstId, int[] anNameConstId, int[] anCatch)
-        {
-        assert anClassConstId.length == anCatch.length;
-
-        m_anTypeId = anClassConstId;
-        m_anNameId = anNameConstId;
-        m_aofCatch = anCatch;
-        }
-
-    /**
-     * Construct a GUARD op for a single exception.
-     *
      * @param typeException  the exception type to catch
      * @param constName      the name constant for the catch exception variable
      * @param opCatch        the first op of the catch handler

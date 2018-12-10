@@ -27,22 +27,6 @@ public class L_Set
         extends OpProperty
     {
     /**
-     * Construct an L_SET op.
-     *
-     * @param nPropId  the property id
-     * @param nValue   the value to set
-     *
-     * @deprecated
-     */
-    public L_Set(int nPropId, int nValue)
-        {
-        super(null);
-
-        m_nPropId = nPropId;
-        m_nValue = nValue;
-        }
-
-    /**
      * Construct an L_SET op based on the specified arguments.
      *
      * @param constProperty  the property constant

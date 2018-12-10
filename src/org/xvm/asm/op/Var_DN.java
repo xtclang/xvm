@@ -31,20 +31,6 @@ public class Var_DN
         extends OpVar
     {
     /**
-     * Construct a VAR_DN.
-     *
-     * @param nType     the variable type id
-     * @param nNameId   the name of the variable id
-     */
-    public Var_DN(int nType, int nNameId)
-        {
-        super();
-
-        m_nType   = nType;
-        m_nNameId = nNameId;
-        }
-
-    /**
      * Construct a VAR_DN op for the specified type and name.
      *
      * @param constType  the variable type

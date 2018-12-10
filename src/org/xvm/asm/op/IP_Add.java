@@ -21,22 +21,6 @@ public class IP_Add
         extends OpInPlaceAssign
     {
     /**
-     * Construct an IP_ADD op.
-     *
-     * @param nTarget  the target object
-     * @param nValue   the value
-     *
-     * @deprecated
-     */
-    public IP_Add(int nTarget, int nValue)
-        {
-        super((Argument) null, null);
-
-        m_nTarget = nTarget;
-        m_nArgValue = nValue;
-        }
-
-    /**
      * Construct a IP_ADD op based on the passed arguments.
      *
      * @param argTarget  the target Argument

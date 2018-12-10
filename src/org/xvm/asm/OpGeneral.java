@@ -184,18 +184,7 @@ public abstract class OpGeneral
     @Override
     public void simulate(Scope scope)
         {
-        if (m_argReturn == null)
-            {
-            // TODO: remove when deprecated construction is removed
-            if (scope.isNextRegister(m_nRetValue))
-                {
-                scope.allocVar();
-                }
-            }
-        else
-            {
-            checkNextRegister(scope, m_argReturn);
-            }
+        checkNextRegister(scope, m_argReturn);
         }
 
     @Override

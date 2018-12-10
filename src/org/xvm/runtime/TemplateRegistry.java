@@ -104,17 +104,8 @@ public class TemplateRegistry
 
         for (ClassTemplate template : setTemplates)
             {
-            if (template.f_sName.startsWith("Test"))
-                {
-                // TODO: remove - test classes
-                continue;
-                }
-
             template.initDeclared();
             }
-
-        // TODO: remove - test classes
-        getTemplate("TestApp").initDeclared();
         }
 
     // sPackage is either empty or ends with a dot

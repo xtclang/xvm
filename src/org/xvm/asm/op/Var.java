@@ -20,20 +20,6 @@ public class Var
         extends OpVar
     {
     /**
-     * Construct a VAR op.
-     *
-     * @param nType  the variable type id
-     *
-     * @deprecated
-     */
-    public Var(int nType)
-        {
-        super();
-
-        m_nType = nType;
-        }
-
-    /**
      * Construct a VAR op for the specified type.
      *
      * @param constType  the variable type
