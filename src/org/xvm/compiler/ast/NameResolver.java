@@ -11,15 +11,20 @@ import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypedefConstant;
+import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.compiler.Compiler;
@@ -34,21 +39,25 @@ public class NameResolver
         implements ResolutionCollector
     {
     /**
-     * Create a resolver for a single name.
+     * Create a resolver for a single name, for the purpose of resolving a reference to a value
+     * (including a type, which can be treated as if it were a value) or a multi-method (which can
+     * also be treated as if it were a value).
      *
-     * @param node   the node which is requesting the resolution of the name
-     * @param sName  the name to resolve
+     * @param node      the node which is requesting the resolution of the name
+     * @param fHasThis  if the "this" reference is available
+     * @param sName     the name to resolve
      */
-    public NameResolver(AstNode node, String sName)
+    public NameResolver(AstNode node, boolean fHasThis, String sName)
         {
-        m_node  = node;
-        m_iter  = Collections.emptyIterator();
-        m_sName = sName;
+        m_node     = node;
+        m_iter     = Collections.emptyIterator();
+        m_sName    = sName;
+        m_fHasThis = fHasThis;
         }
 
     /**
      * Create a resolver used during the resolveNames() process that can evaluate a sequence of
-     * names.
+     * names, for the purpose of resolving a "type name".
      *
      * @param node       the NameResolving AstNode for which the resolution is occurring
      * @param iterNames  the iterator of the sequence of names
@@ -58,9 +67,10 @@ public class NameResolver
         assert node instanceof NameResolving;
         assert iterNames != null && iterNames.hasNext();
 
-        m_node  = node;
-        m_iter  = iterNames;
-        m_sName = m_iter.next();
+        m_node      = node;
+        m_iter      = iterNames;
+        m_sName     = m_iter.next();
+        m_fTypeGoal = true;
         }
 
     /**
@@ -150,8 +160,13 @@ public class NameResolver
 
                 // start with the current node, and one by one walk up to the root, asking at
                 // each level for the node to resolve the name
-                boolean fPossibleFormal = false;
-                AstNode node            = m_node;
+                boolean          fPossibleFormal = false;
+                AstNode          node            = m_node;
+                IdentityConstant idPrev          = null;
+                TypeInfo         infoPrev        = null;
+                Access           access          = Access.PRIVATE;
+                IdentityConstant idOuter         = null;
+                ConstantPool     pool            = getPool();
                 WalkUpToTheRoot: while (node != null)
                     {
                     // if the first name refers to an import, then ask that import to figure out
@@ -183,62 +198,138 @@ public class NameResolver
                     // isn't ready, we'll come back later
                     if (node.isComponentNode())
                         {
-                        Component componentResolver = getResolvingComponent(node);
-                        if (componentResolver == null)
+                        if (!node.canResolveNames())
                             {
-                            // the component that can do the resolve isn't yet available; come
-                            // back later
+                            // not ready yet
                             return Result.DEFERRED;
                             }
 
-                        // ask the component to resolve the name
-                        ResolutionResult result  = componentResolver.resolveName(m_sName, this);
-                        boolean          fRepeat = false;
-                        do
+                        Component componentResolver = node.getComponent();
+                        if (componentResolver == null)
                             {
-                            switch (result)
+                            // corresponding component isn't available (yet?)
+                            return Result.DEFERRED;
+                            }
+
+                        // the identity of the component corresponding to the current node as
+                        // we "WalkUpToTheRoot"
+                        IdentityConstant id = componentResolver.getIdentityConstant();
+
+                        // first time through, figure out the "outermost" class, which is the
+                        // boundary where we will transition from looking at all (including
+                        // private) members, to looking at only public members
+                        IdentityConstant idClz = id.getClassIdentity();
+                        if (idOuter == null)
+                            {
+                            idOuter = idClz instanceof ClassConstant ? ((ClassConstant) idClz).getOutermost() : idClz;
+                            }
+
+                        // first attempt: ask the component to resolve the name
+                        ResolutionResult result = componentResolver.resolveName(m_sName, this);
+
+                        // second attempt: ask the TypeInfo if it knows what the name refers to
+                        if (result == ResolutionResult.UNKNOWN && !m_fTypeGoal
+                                && node.getStage().compareTo(Compiler.Stage.Resolved) >= 0)
+                            {
+                            // load the TypeInfo for the class that we are looking for names in
+                            TypeInfo info;
+                            if (idPrev != null && idClz == idPrev)
                                 {
-                                case POSSIBLE:
-                                    // formal types could not be resolved; keep walking up
-                                    fPossibleFormal = true;
-                                    // fall-through
-                                case UNKNOWN:
-                                    if (fRepeat)
+                                info = infoPrev;
+                                }
+                            else
+                                {
+                                idPrev   = idClz;
+                                infoPrev = info = pool.ensureAccessTypeConstant(
+                                        idClz.getType(), access).ensureTypeInfo(errs);
+                                }
+
+                            if (id == idClz)
+                                {
+                                // we're at a class level
+                                PropertyInfo prop = info.ensurePropertiesByName().get(m_sName);
+                                if (prop == null)
+                                    {
+                                    if (info.containsMultiMethod(m_sName))
                                         {
-                                        // already re-tried, so the result at this point is
-                                        // actually unknown
-                                        fRepeat = false;
+                                        // the multi-method structure does not actually exist on the
+                                        // class, but its methods exist in the TypeInfo
+                                        result = resolvedConstant(
+                                                pool.ensureMultiMethodConstant(id, m_sName));
                                         }
-                                    else
+                                    }
+                                else
+                                    {
+                                    result = resolvedConstant(prop.getIdentity());
+                                    }
+                                }
+                            else if (id instanceof PropertyConstant)
+                                {
+                                // first, look for a property of the given name inside the current
+                                // property
+                                PropertyConstant idProp = (PropertyConstant) id;
+                                PropertyInfo     prop   = info.ensureNestedPropertiesByName(idProp).get(m_sName);
+                                if (prop == null)
+                                    {
+                                    // second, look for any methods of the given name inside the
+                                    // current property
+                                    if (info.propertyContainsMultiMethod(idProp, m_sName))
                                         {
-                                        Constant idCaptured = node.resolveCapture(m_sName);
-                                        if (idCaptured != null)
-                                            {
-                                            result = resolvedConstant(idCaptured);
-
-                                            // we need to re-evaluate the result now that it may
-                                            // have changed
-                                            fRepeat = true;
-                                            }
+                                        // the multi-method structure does not actually exist on the
+                                        // class, but its methods exist in the TypeInfo
+                                        result = resolvedConstant(
+                                                pool.ensureMultiMethodConstant(id, m_sName));
                                         }
-                                    break;
-
-                                case RESOLVED:
-                                    // the component resolved the first name
-                                    break WalkUpToTheRoot;
-
-                                case ERROR:
-                                    m_stage = Stage.ERROR;
-                                    return Result.ERROR;
-
-                                case DEFERRED:
-                                    return Result.DEFERRED;
-
-                                default:
-                                    throw new IllegalStateException();
+                                    }
+                                else
+                                    {
+                                    result = resolvedConstant(prop.getIdentity());
+                                    }
+                                }
+                            else
+                                {
+                                assert id instanceof MethodConstant || id instanceof MultiMethodConstant;
                                 }
                             }
-                        while (fRepeat);
+
+                        // third attempt: ask the AST node if it knows what the name refers to
+                        if (result == ResolutionResult.UNKNOWN)
+                            {
+                            result = resolvedConstant(node.resolveCapture(m_sName));
+                            }
+
+                        switch (result)
+                            {
+                            case POSSIBLE:
+                                // formal types could not be resolved; keep walking up
+                                fPossibleFormal = true;
+                                // fall-through
+                            case UNKNOWN:
+                                break;
+
+                            case RESOLVED:
+                                // the component resolved the first name
+                                break WalkUpToTheRoot;
+
+                            case ERROR:
+                                m_stage = Stage.ERROR;
+                                return Result.ERROR;
+
+                            case DEFERRED:
+                                return Result.DEFERRED;
+
+                            default:
+                                throw new IllegalStateException();
+                            }
+
+                        // see if this was the last step on the "WalkUpToTheRoot" that had
+                        // private access to all members
+                        if (id == idOuter)
+                            {
+                            // in the top-most-class down, there is private access
+                            // above the top-most-class, there is public access
+                            access = Access.PUBLIC;
+                            }
                         }
 
                     // walk up towards the root
@@ -248,7 +339,7 @@ public class NameResolver
                 // last chance: check the implicitly imported names
                 if (m_constant == null)
                     {
-                    Component component = getPool().getImplicitlyImportedComponent(m_sName);
+                    Component component = pool.getImplicitlyImportedComponent(m_sName);
                     if (component == null)
                         {
                         if (fPossibleFormal)
@@ -335,151 +426,141 @@ public class NameResolver
         }
 
     /**
-     * Obtain the component for the specified node, but only if the node is ready to resolve names.
-     *
-     * @param node  a ComponentStatement
-     *
-     * @return the corresponding Component, iff the ComponentStatement is ready to resolve names
-     */
-    private static Component getResolvingComponent(AstNode node)
-        {
-        assert node.isComponentNode();
-        return node.canResolveNames()
-                ? node.getComponent()
-                : null;
-        }
-
-    /**
      * @return the component that is responsible for resolving the next name or null if an error
      *         has been reported
      */
     private Component ensurePartiallyResolvedComponent()
         {
-        assert m_component != null || (m_fTypeMode && m_constant != null);
-
-        if (m_fTypeMode)
+        Component component = m_component;
+        if (!m_fTypeMode)
             {
-            // once we get into the domain of type parameters, the "resolving component to use next"
-            // is not pre-loaded. the quintessential example is the type parameter "MapType extends
-            // Map", and then resolving "MapType.KeyType", where there is no actual type (or
-            // component) for MapType, but the "Map" component is used instead
-            Constant constParam = m_constant;
-            while (true)
+            if (component.getFormat().isDeadEnd())
                 {
-                TypeConstant constType;
-                switch (constParam.getFormat())
-                    {
-                    case Module:
-                    case Package:
-                    case Class:
-                        return ((IdentityConstant) constParam).getComponent();
-
-                    case Property:
-                        {
-                        PropertyConstant constProp  = (PropertyConstant) constParam;
-                        Component        structProp = constProp.getComponent();
-                        if (structProp instanceof PropertyStructure)
-                            {
-                            constType = ((PropertyStructure) structProp).getType();
-                            }
-                        else if (structProp instanceof CompositeComponent)
-                            {
-                            List<Component> listProps = ((CompositeComponent) structProp).components();
-                            constType = ((PropertyStructure) listProps.get(0)).getType();
-                            for (int i = 1, c = listProps.size(); i < c; ++i)
-                                {
-                                TypeConstant constTypeN = ((PropertyStructure) listProps.get(i)).getType();
-                                if (!constType.equals(constTypeN))
-                                    {
-                                    // eventual To-Do: we need to handle cases where composite
-                                    // components differ in substantial ways, such as type, but for
-                                    // now this is just an assertion that the type does not vary
-                                    throw new UnsupportedOperationException("non-uniform composite property type: "
-                                            + constProp + "; 0=" + constType + ", " + i + "=" + constTypeN);
-                                    }
-                                }
-                            }
-                        else
-                            {
-                            throw new IllegalStateException("property id=" + constProp
-                                    + ", property struct=" + structProp);
-                            }
-                        break;
-                        }
-
-                    case Typedef:
-                        {
-                        TypedefConstant constTypedef  = (TypedefConstant) constParam;
-                        Component       structTypedef = constTypedef.getComponent();
-                        if (structTypedef instanceof TypedefStructure)
-                            {
-                            constType = ((TypedefStructure) structTypedef).getType();
-                            }
-                        else if (structTypedef instanceof CompositeComponent)
-                            {
-                            List<Component> listTypedefs = ((CompositeComponent) structTypedef).components();
-                            constType = ((TypedefStructure) listTypedefs.get(0)).getType();
-                            for (int i = 1, c = listTypedefs.size(); i < c; ++i)
-                                {
-                                TypeConstant constTypeN = ((TypedefStructure) listTypedefs.get(i)).getType();
-                                if (!constType.equals(constTypeN))
-                                    {
-                                    // eventual To-Do: we need to handle cases where composite
-                                    // components differ in substantial ways, such as type, but for
-                                    // now this is just an assertion that the type does not vary
-                                    throw new UnsupportedOperationException("non-uniform composite typedef type: "
-                                            + constTypedef + "; 0=" + constType + ", " + i + "=" + constTypeN);
-                                    }
-                                }
-                            }
-                        else
-                            {
-                            throw new IllegalStateException("Typedef id=" + constTypedef
-                                    + ", Typedef struct=" + structTypedef);
-                            }
-                        break;
-                        }
-
-                    case TypeParameter:
-                        {
-                        TypeParameterConstant constTypeParam = (TypeParameterConstant) constParam;
-                        constType = constTypeParam.getMethod().getSignature().
-                                getRawParams()[constTypeParam.getRegister()];
-                        break;
-                        }
-
-                    case ThisClass:
-                    case ChildClass:
-                    case ParentClass:
-                        {
-                        PseudoConstant constClass = (PseudoConstant) constParam;
-                        return constClass.getDeclarationLevelClass().getComponent();
-                        }
-
-                    default:
-                        throw new IllegalStateException("illegal type param constant id: " + constParam);
-                    }
-
-                if (!constType.isA(getPool().typeType()))
-                    {
-                    m_errs.log(Severity.ERROR, Compiler.NOT_CLASS_TYPE,
-                            new Object[] {constParam.getValueString()}, m_component);
-                    m_stage = Stage.ERROR;
-                    return null;
-                    }
-
-                TypeConstant constParamType = constType.isParamsSpecified()
-                        ? constType.getParamTypesArray()[0]
-                        : getPool().typeObject();
-                if (!constParamType.isSingleDefiningConstant())
-                    {
-                    throw new IllegalStateException("not a single defining constant: " + constParamType);
-                    }
-                constParam = constParamType.getDefiningConstant();
+                // for methods (and multi-methods), it is not possible to further resolve the name,
+                // because methods are opaque from the outside, and multi-methods can only be
+                // resolved by analyzing signatures (not names)
+                m_node.log(m_errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, m_sName);
+                m_stage = Stage.ERROR;
+                return null;
+                }
+            else
+                {
+                return component;
                 }
             }
 
-        return m_component;
+        // once we get into the domain of type parameters, the "resolving component to use next"
+        // is not pre-loaded. the quintessential example is the type parameter "MapType extends
+        // Map", and then resolving "MapType.KeyType", where there is no actual type (or
+        // component) for MapType, but the "Map" component is used instead
+        Constant id = m_constant;
+        while (true)
+            {
+            TypeConstant type;
+            switch (id.getFormat())
+                {
+                case Module:
+                case Package:
+                case Class:
+                    return component;
+
+                case Property:
+                    if (component instanceof PropertyStructure)
+                        {
+                        type = ((PropertyStructure) component).getType();
+                        }
+                    else if (component instanceof CompositeComponent)
+                        {
+                        List<Component> listProps = ((CompositeComponent) component).components();
+                        type = ((PropertyStructure) listProps.get(0)).getType();
+                        for (int i = 1, c = listProps.size(); i < c; ++i)
+                            {
+                            TypeConstant constTypeN = ((PropertyStructure) listProps.get(i)).getType();
+                            if (!type.equals(constTypeN))
+                                {
+                                // eventual To-Do: we need to handle cases where composite
+                                // components differ in substantial ways, such as type, but for
+                                // now this is just an assertion that the type does not vary
+                                throw new UnsupportedOperationException("non-uniform composite property type: "
+                                        + id + "; 0=" + type + ", " + i + "=" + constTypeN);
+                                }
+                            }
+                        }
+                    else
+                        {
+                        throw new IllegalStateException("id=" + id + ", prop=" + component);
+                        }
+                    break;
+
+                case Typedef:
+                    if (component instanceof TypedefStructure)
+                        {
+                        type = ((TypedefStructure) component).getType();
+                        }
+                    else if (component instanceof CompositeComponent)
+                        {
+                        List<Component> listTypedefs = ((CompositeComponent) component).components();
+                        type = ((TypedefStructure) listTypedefs.get(0)).getType();
+                        for (int i = 1, c = listTypedefs.size(); i < c; ++i)
+                            {
+                            TypeConstant constTypeN = ((TypedefStructure) listTypedefs.get(i)).getType();
+                            if (!type.equals(constTypeN))
+                                {
+                                // eventual To-Do: we need to handle cases where composite
+                                // components differ in substantial ways, such as type, but for
+                                // now this is just an assertion that the type does not vary
+                                throw new UnsupportedOperationException("non-uniform composite typedef type: "
+                                        + id + "; 0=" + type + ", " + i + "=" + constTypeN);
+                                }
+                            }
+                        }
+                    else
+                        {
+                        throw new IllegalStateException("id=" + id + ", typedef=" + component);
+                        }
+                    break;
+
+                case TypeParameter:
+                    {
+                    TypeParameterConstant constTypeParam = (TypeParameterConstant) id;
+                    type = constTypeParam.getMethod().getSignature().
+                            getRawParams()[constTypeParam.getRegister()];
+                    break;
+                    }
+
+                case ThisClass:
+                case ChildClass:
+                case ParentClass:
+                    {
+                    PseudoConstant constClass = (PseudoConstant) id;
+                    return constClass.getDeclarationLevelClass().getComponent();
+                    }
+
+                default:
+                    throw new IllegalStateException("illegal type param constant id: " + id);
+                }
+
+            if (!type.isA(getPool().typeType()))
+                {
+                m_errs.log(Severity.ERROR, Compiler.NOT_CLASS_TYPE,
+                        new Object[] {id.getValueString()}, component);
+                m_stage = Stage.ERROR;
+                return null;
+                }
+
+            TypeConstant typeParam = type.isParamsSpecified()
+                    ? type.getParamTypesArray()[0]
+                    : getPool().typeObject();
+            if (typeParam.isSingleDefiningConstant())
+                {
+                id        = typeParam.getDefiningConstant();
+                component = id instanceof IdentityConstant ? ((IdentityConstant) id).getComponent() : null;
+                }
+            else
+                {
+                throw new IllegalStateException("not a single defining constant: " + typeParam);
+                }
+            }
         }
 
     /**
@@ -531,7 +612,7 @@ public class NameResolver
     public ResolutionResult resolvedComponent(Component component)
         {
         // it is possible that the name "resolved to" an ambiguous component, which is an error
-        IdentityConstant constId = component.getIdentityConstant();
+        IdentityConstant id = component.getIdentityConstant();
         if (component instanceof CompositeComponent && ((CompositeComponent) component).isAmbiguous())
             {
             m_node.log(m_errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, m_sName);
@@ -539,39 +620,69 @@ public class NameResolver
             return ResolutionResult.ERROR;
             }
 
-        switch (component.getFormat())
+        if (m_fTypeMode)
             {
-            case PROPERTY:
-            case TYPEDEF:
-                // while it resolved to a component, the component is a property, which indicates that
-                // the name resolved to a type parameter
-                return resolvedConstant(constId);
+            switch (component.getFormat())
+                {
+                case TYPEDEF:
+                    // typedef is allowed in type mode
+                    break;
 
-            default:
-                if (m_fTypeMode)
-                    {
-                    // can't switch from type mode to identity mode
+                case PROPERTY:
+                    // type params are allowed in type mode
+                    if (((PropertyStructure) component).isTypeParameter())
+                        {
+                        break;
+                        }
+                    // fall through
+                default:
+                    // nothing else is allowed in type mode (can't switch back to a value mode, i.e.
+                    // an "identity mode")
                     m_node.log(m_errs, Severity.ERROR, Compiler.NAME_MISSING, component.getName(), m_constant);
                     m_stage = Stage.ERROR;
                     return ResolutionResult.ERROR;
-                    }
-                else
-                    {
-                    m_component = component;
-                    m_constant  = constId;
-                    return ResolutionResult.RESOLVED;
-                    }
+                }
             }
+        else if (m_fTypeGoal)
+            {
+            // when resolving for a type name, encountering a typedef or a type parameter
+            // transitions the NameResolver into a "type mode", which is a one-way transition
+            switch (component.getFormat())
+                {
+                case PROPERTY:
+                    if (((PropertyStructure) component).isTypeParameter())
+                        {
+                        m_fTypeMode = true;
+                        }
+                    break;
+
+                case TYPEDEF:
+                    m_fTypeMode = true;
+                    break;
+                }
+            }
+
+        m_component = component;
+        m_constant  = id;
+        return ResolutionResult.RESOLVED;
         }
 
     @Override
     public ResolutionResult resolvedConstant(Constant constant)
         {
-        assert constant != null;
+        if (constant == null)
+            {
+            return ResolutionResult.UNKNOWN;
+            }
+
+        if (constant instanceof IdentityConstant)
+            {
+            return resolvedComponent(((IdentityConstant) constant).getComponent());
+            }
 
         m_constant  = constant;
         m_component = null;
-        m_fTypeMode = true;
+        m_fTypeMode = m_fTypeGoal;
 
         return ResolutionResult.RESOLVED;
         }
@@ -639,6 +750,20 @@ public class NameResolver
      * The component representing what the node has thus far resolved to.
      */
     private Component m_component;
+
+    /**
+     * If the necessary "this" for the current component scope is available.
+     */
+    private boolean m_fHasThis;
+
+    /**
+     * The goal of the NameResolver is either a type or a more general value (which itself might be
+     * a type).
+     * <p/>
+     * Name resolution can be completely generic ("I need any value, including a type or a
+     * multi-method"), or can be a bit more specific ("I am resolving for a type").
+     */
+    private boolean m_fTypeGoal;
 
     /**
      * Set to true when the resolution has switched into "type mode". This occurs once a type

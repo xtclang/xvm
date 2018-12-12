@@ -610,7 +610,22 @@ public class ClassStructure
     public boolean isAutoNarrowingAllowed()
         {
         // a class must not be a singleton
-        return !isSingleton();
+        if (isSingleton())
+            {
+            return false;
+            }
+
+        // inner classes inside a method (including anonymous inner classes) do not auto-narrow
+        // because they are effectively final
+        Component parent = getParent();
+        if (parent instanceof MethodStructure)
+            {
+            return false;
+            }
+
+        // otherwise, assuming that this not the "outermost" class, keep asking up the parent chain
+        return ((ClassConstant) getIdentityConstant()).getDepthFromOutermost() == 0
+                || parent.isAutoNarrowingAllowed();
         }
 
     @Override

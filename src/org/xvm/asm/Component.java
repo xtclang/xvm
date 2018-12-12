@@ -2397,6 +2397,14 @@ public abstract class Component
             }
 
         /**
+         * @return true iff a component of this format has no further ability to resolve by name
+         */
+        public boolean isDeadEnd()
+            {
+            return this.compareTo(PROPERTY) > 0;
+            }
+
+        /**
          * Look up a Format enum by its ordinal.
          *
          * @param i  the ordinal

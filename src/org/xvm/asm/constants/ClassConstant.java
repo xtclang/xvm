@@ -55,9 +55,66 @@ public class ClassConstant
     // ----- ClassConstant methods -----------------------------------------------------------------
 
     /**
-     * @return return the "outermost" class that represents an auto-narrowing base
+     * @return the "outermost" class
      */
     public ClassConstant getOutermost()
+        {
+        ClassConstant    outermost = this;
+        IdentityConstant parent    = outermost.getParentConstant();
+        while (true)
+            {
+            switch (parent.getFormat())
+                {
+                case Class:
+                    outermost = (ClassConstant) parent;
+                    break;
+
+                case Property:
+                case Method:
+                case MultiMethod:
+                    // ignored (we'll use its parent)
+                    break;
+
+                // packages and modules "terminate" this search
+                default:
+                    return outermost;
+                }
+
+            parent = parent.getParentConstant();
+            }
+        }
+
+    public int getDepthFromOutermost()
+        {
+        int cLevelsDown = 0;
+        IdentityConstant parent = getParentConstant();
+        while (true)
+            {
+            switch (parent.getFormat())
+                {
+                case Class:
+                    ++cLevelsDown;
+                    break;
+
+                case Property:
+                case Method:
+                case MultiMethod:
+                    ++cLevelsDown;
+                    break;
+
+                // packages and modules mean we've passed the outer-most
+                default:
+                    return cLevelsDown;
+                }
+
+            parent = parent.getParentConstant();
+            }
+        }
+
+    /**
+     * @return the class that represents an auto-narrowing base
+     */
+    public ClassConstant getAutoNarrowingBase()
         {
         ClassConstant    outermost = this;
         IdentityConstant parent    = outermost.getParentConstant();
@@ -82,20 +139,15 @@ public class ClassConstant
             }
         }
 
-    public int getDepthFromOutermost()
+    public int getDepthFromAutoNarrowingBase()
         {
         int cLevelsDown = 0;
-        ClassConstant    outermost = this;
-        IdentityConstant parent    = outermost.getParentConstant();
+        IdentityConstant parent = getParentConstant();
         while (true)
             {
             switch (parent.getFormat())
                 {
                 case Class:
-                    ++cLevelsDown;
-                    outermost = (ClassConstant) parent;
-                    break;
-
                 case Property:
                     ++cLevelsDown;
                     break;
@@ -121,6 +173,11 @@ public class ClassConstant
     public Constant calculateAutoNarrowingConstant(ClassConstant constThatClass)
         {
         ClassConstant constThisClass = this;
+        if (!constThisClass.getComponent().isAutoNarrowingAllowed() ||
+            !constThatClass.getComponent().isAutoNarrowingAllowed())
+            {
+            return constThatClass;
+            }
 
         // if "this:class" is the same as constId, then use ThisClassConstant(constId)
         if (constThisClass.equals(constThatClass))
@@ -128,51 +185,50 @@ public class ClassConstant
             return new ThisClassConstant(getConstantPool(), constThisClass);
             }
 
-        // get the "outermost class" for both "this:class" and constId
-        ClassConstant constThisOutermost = constThisClass.getOutermost();
-        ClassConstant constThatOutermost = constThatClass.getOutermost();
-        if (constThisOutermost.equals(constThatOutermost))
+        // check that the "outermost class" for both "this:class" and constId are the same
+        ClassConstant constThisOutermost = constThisClass.getAutoNarrowingBase();
+        ClassConstant constThatOutermost = constThatClass.getAutoNarrowingBase();
+        if (!constThisOutermost.equals(constThatOutermost))
             {
-            // the two classes are related, so figure out how to describe "that" in relation
-            // to "this"
-            ConstantPool     pool       = getConstantPool();
-            PseudoConstant   constPath  = pool.ensureThisClassConstant(constThisClass);
-            IdentityConstant constThis  = constThisClass;
-            IdentityConstant constThat  = constThatClass;
-            int              cThisDepth = constThisClass.getDepthFromOutermost();
-            int              cThatDepth = constThatClass.getDepthFromOutermost();
-            int              cReDescend = 0;
-            while (cThisDepth > cThatDepth)
-                {
-                constPath = pool.ensureParentClassConstant(constPath);
-                constThis = constThis.getParentConstant();
-                --cThisDepth;
-                }
-            while (cThatDepth > cThisDepth)
-                {
-                ++cReDescend;
-                constThat = constThat.getParentConstant();
-                --cThatDepth;
-                }
-            while (!constThis.equals(constThat))
-                {
-                assert cThisDepth == cThatDepth && cThisDepth >= 0;
-
-                ++cReDescend;
-                constPath = pool.ensureParentClassConstant(constPath);
-
-                constThis = constThis.getParentConstant();
-                constThat = constThat.getParentConstant();
-                --cThisDepth;
-                --cThatDepth;
-                }
-
-            return redescend(constPath, constThatClass, cReDescend);
+            return constThatClass;
             }
 
-        return constThatClass;
-        }
+        // the two classes are related, so figure out how to describe "that" in relation
+        // to "this"
+        ConstantPool     pool       = getConstantPool();
+        PseudoConstant   constPath  = pool.ensureThisClassConstant(constThisClass);
+        IdentityConstant constThis  = constThisClass;
+        IdentityConstant constThat  = constThatClass;
+        int              cThisDepth = constThisClass.getDepthFromAutoNarrowingBase();
+        int              cThatDepth = constThatClass.getDepthFromAutoNarrowingBase();
+        int              cReDescend = 0;
+        while (cThisDepth > cThatDepth)
+            {
+            constPath = pool.ensureParentClassConstant(constPath);
+            constThis = constThis.getParentConstant();
+            --cThisDepth;
+            }
+        while (cThatDepth > cThisDepth)
+            {
+            ++cReDescend;
+            constThat = constThat.getParentConstant();
+            --cThatDepth;
+            }
+        while (!constThis.equals(constThat))
+            {
+            assert cThisDepth == cThatDepth && cThisDepth >= 0;
 
+            ++cReDescend;
+            constPath = pool.ensureParentClassConstant(constPath);
+
+            constThis = constThis.getParentConstant();
+            constThat = constThat.getParentConstant();
+            --cThisDepth;
+            --cThatDepth;
+            }
+
+        return redescend(constPath, constThatClass, cReDescend);
+        }
 
     /**
      * Recursively build onto the passed path to navigate the specified number of levels down to the

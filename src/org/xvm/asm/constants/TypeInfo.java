@@ -1363,7 +1363,28 @@ public class TypeInfo
         {
         for (MethodConstant method : m_mapMethods.keySet())
             {
-            if (method.getName().equals(sName))
+            if (method.getNestedDepth() == 2 && method.getName().equals(sName))
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    /**
+     * See if any method has the specified name.
+     *
+     * @param sName  a method name
+     *
+     * @return true if the type contains at least one method (or function) by the specified name
+     */
+    public boolean propertyContainsMultiMethod(PropertyConstant idProp, String sName)
+        {
+        int cReqDepth = idProp.getNestedDepth() + 2;
+        for (MethodConstant method : m_mapMethods.keySet())
+            {
+            if (method.getNestedDepth() == cReqDepth && method.getName().equals(sName)
+                    && method.getNamespace().getNestedIdentity().equals(idProp.getNestedIdentity()))
                 {
                 return true;
                 }

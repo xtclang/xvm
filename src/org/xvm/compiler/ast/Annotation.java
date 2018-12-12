@@ -393,7 +393,7 @@ public class Annotation
         @Override
         protected Argument resolveRegularName(String sName, Token name, ErrorListener errs)
             {
-            return new NameResolver(Annotation.this, sName).forceResolve(errs);
+            return new NameResolver(Annotation.this, false, sName).forceResolve(errs);
             }
 
         @Override

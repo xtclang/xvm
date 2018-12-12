@@ -730,7 +730,7 @@ public class StatementBlock
                 if (arg == null)
                     {
                     // resolve the name from outside of this statement
-                    arg = new NameResolver(getStatementBlock(), sName)
+                    arg = new NameResolver(getStatementBlock(), isMethod() || isConstructor(), sName)
                             .forceResolve(errs == null ? ErrorListener.BLACKHOLE : errs);
                     }
 
