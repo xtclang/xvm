@@ -4,7 +4,6 @@ package org.xvm.runtime.template;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constants.Access;
 
-
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -84,6 +83,7 @@ public class xException
         ExceptionHandle hException = makeMutableStruct(INSTANCE.getCanonicalClass(), null, null);
 
         hException.setField("text", xString.makeHandle(sMessage));
+        hException.setField("cause", xNullable.NULL);
         hException.makeImmutable();
 
         return (ExceptionHandle) hException.ensureAccess(Access.PUBLIC);
@@ -99,7 +99,6 @@ public class xException
         Frame frame = ServiceContext.getCurrentContext().getCurrentFrame();
 
         hException.setField("stackTrace", xString.makeHandle(frame.getStackTrace()));
-        hException.setField("cause", hCause == null ? xNullable.NULL : hCause);
 
         return hException;
         }

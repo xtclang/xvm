@@ -345,9 +345,12 @@ module TestMisc.xqiz.it
     // TODO
     void testException()
         {
-        console.println("\n** tesException()");
+        console.println("\n** testException()");
 
         Exception e = new Exception("test");
+        console.println("e=" + e);
+
+        e = new IllegalArgumentException("test");
         console.println("e=" + e);
         }
 
