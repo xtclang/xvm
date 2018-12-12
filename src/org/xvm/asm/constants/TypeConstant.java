@@ -1697,7 +1697,7 @@ public abstract class TypeConstant
                 // for now perform a quick sanity check
                 IdentityConstant constExtends = typeExtends.getSingleUnderlyingClass(false);
                 ClassStructure   structExtends = (ClassStructure) constExtends.getComponent();
-                if (!ClassStructure.isExtendsLegal(struct.getFormat(), structExtends.getFormat()))
+                if (!struct.getFormat().isExtendsLegal(structExtends.getFormat()))
                     {
                     log(errs, Severity.ERROR, VE_EXTENDS_INCOMPATIBLE,
                             constId.getPathString(), struct.getFormat(),

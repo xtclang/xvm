@@ -774,38 +774,11 @@ public class ClassStructure
         }
 
     /**
-     * Validate that a format can legally extend another format.
-     *
-     * @param fmtSub    the format of the extending class (the "sub" class)
-     * @param fmtSuper  the format of the class being extended (the "super" class)
-     *
-     * @return true if legal; otherwise false
+     * @return true iff this class is an Exception
      */
-    public static boolean isExtendsLegal(Format fmtSub, Format fmtSuper)
+    public boolean isException()
         {
-        switch (fmtSub)
-            {
-            case CLASS:
-                return fmtSuper == Format.CLASS;
-
-            case CONST:
-            case ENUM:
-            case PACKAGE:
-            case MODULE:
-                return fmtSuper == Format.CONST || fmtSuper == Format.CLASS;
-
-            case ENUMVALUE:
-                return fmtSuper == Format.ENUM;
-
-            case MIXIN:
-                return fmtSuper == Format.MIXIN;
-
-            case SERVICE:
-                return fmtSuper == Format.SERVICE || fmtSuper == Format.CLASS;
-
-            default:
-                return false;
-            }
+        return extendsClass(getConstantPool().clzException());
         }
 
     /**

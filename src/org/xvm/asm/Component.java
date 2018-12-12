@@ -2288,6 +2288,40 @@ public abstract class Component
             }
 
         /**
+         * Validate that this format can legally extend another format.
+         *
+         * @param fmtSuper  the format of the class being extended (the "super" class)
+         *
+         * @return true if legal; otherwise false
+         */
+        public boolean isExtendsLegal(Format fmtSuper)
+            {
+            switch (this)
+                {
+                case CLASS:
+                    return fmtSuper == CLASS;
+
+                case CONST:
+                case ENUM:
+                case PACKAGE:
+                case MODULE:
+                    return fmtSuper == CONST || fmtSuper == CLASS;
+
+                case ENUMVALUE:
+                    return fmtSuper == ENUM;
+
+                case MIXIN:
+                    return fmtSuper == MIXIN;
+
+                case SERVICE:
+                    return fmtSuper == SERVICE || fmtSuper == CLASS;
+
+                default:
+                    return false;
+                }
+            }
+
+        /**
          * Instantiate a component as it is being read from a stream, reading its body (but NOT its
          * children).
          *
