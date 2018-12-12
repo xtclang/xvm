@@ -1068,19 +1068,6 @@ public class Frame
         return info.getType().getParamTypesArray()[0];
         }
 
-    // same as getArgumentClass, but treats the negative ids as "local-property" references
-    public TypeComposition getLocalClass(int iArg)
-        {
-        if (iArg >= 0)
-            {
-            return ensureClass(getVarInfo(iArg).getType());
-            }
-
-        // "local property"
-        TypeConstant typeProp = getConstant(iArg).getType();
-        return ensureClass(typeProp.resolveGenerics(poolContext(), getGenericsResolver()));
-        }
-
     public TypeComposition resolveClass(int iArg)
         {
         return ensureClass(resolveType(iArg));

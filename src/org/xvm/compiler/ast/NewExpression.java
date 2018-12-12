@@ -495,7 +495,7 @@ public class NewExpression
                     m_fTupleArg = true;
                     }
 
-                m_aconstDefault = collectDefaultArgs(m_constructor, listArgs.size());
+                m_aconstDefault = m_constructor.collectDefaultArgs(pool, listArgs.size());
                 }
             }
 

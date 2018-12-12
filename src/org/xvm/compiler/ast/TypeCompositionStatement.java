@@ -4,12 +4,12 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Format;
@@ -1423,8 +1423,8 @@ public class TypeCompositionStatement
             // add a default constructor that will invoke the necessary super class and mixin
             // constructors (if any)
             MethodStructure constructor = component.createMethod(true, Access.PUBLIC,
-                    org.xvm.asm.Annotation.NO_ANNOTATIONS, org.xvm.asm.Parameter.NO_PARAMS,
-                    "construct", org.xvm.asm.Parameter.NO_PARAMS, true, false);
+                org.xvm.asm.Annotation.NO_ANNOTATIONS, org.xvm.asm.Parameter.NO_PARAMS,
+                "construct", org.xvm.asm.Parameter.NO_PARAMS, true, false);
 
             // set the synthetic flag so that the constructor knows to provide its own
             // default implementation when it emits code
@@ -1469,102 +1469,195 @@ public class TypeCompositionStatement
         Format         format    = component.getFormat();
         if (format != Format.INTERFACE)
             {
-            Component constructors = component.getChild("construct");
+            MultiMethodStructure constructors = (MultiMethodStructure) component.getChild("construct");
             assert constructors != null;
-            for (MethodStructure constructor : (Collection<? extends MethodStructure>)
-                    ((MultiMethodStructure) constructors).children())
+
+            for (MethodStructure constructor : constructors.methods())
                 {
                 if (constructor.isSynthetic() && !constructor.ensureCode().hasOps())
                     {
-                    // the constructor has two responsibilities:
-                    // 1) set each property based on the parameter name, value passed in as an arg
-                    // 2) call same-signature super constructor
-                    Code code = constructor.ensureCode();
-
-                    List<org.xvm.asm.Parameter> params  = constructor.getParams();
-                    int                         cParams = params.size();
-                    Register[]                  aRegs   = new Register[cParams];
-                    for (int iParam = 0; iParam < cParams; ++iParam)
-                        {
-                        org.xvm.asm.Parameter param = params.get(iParam);
-                        Register              reg   = new Register(param.getType(), iParam);
-                        aRegs[iParam] = reg;
-
-                        if (args == null)
-                            {
-                            // REVIEW @see Point3d example in Test.x & Composition.Extends - need to do some prop sets and call a reduced-parameter super constructor
-
-                            // there must be a property by the same name
-                            String    sProp = param.getName();
-                            Component child = component.getChild(sProp);
-                            if (child.getFormat() == Format.PROPERTY)
-                                {
-                                PropertyStructure prop     = (PropertyStructure) child;
-                                TypeConstant      typeProp = prop.getType();
-                                TypeConstant      typeVal  = param.getType();
-                                if (param.getType().isA(prop.getType()))
-                                    {
-                                    code.add(new L_Set(prop.getIdentityConstant(), reg));
-                                    }
-                                else
-                                    {
-                                    log(errs, Severity.ERROR, Compiler.IMPLICIT_PROP_WRONG_TYPE,
-                                            sProp, typeVal.getValueString(), typeProp.getValueString());
-                                    }
-                                }
-                            else
-                                {
-                                log(errs, Severity.ERROR, Compiler.IMPLICIT_PROP_MISSING, sProp);
-                                }
-                            }
-                        }
-
-                    // call super constructor of the same signature
-                    ClassStructure clzSuper = component.getSuper();
-                    if (clzSuper != null)
-                        {
-                        StatementBlock blockBody = body;
-                        if (body == null)
-                            {
-                            blockBody = adopt(new StatementBlock(Collections.EMPTY_LIST));
-                            }
-                        RootContext    ctxConstr = blockBody.new RootContext(constructor);
-                        TypeInfo       infoSuper = clzSuper.getFormalType().ensureTypeInfo(errs);
-                        MethodConstant idSuper   = findMethod(ctxConstr.validatingContext(),
-                                infoSuper, "construct", args, false, true, null, errs);
-                        if (idSuper == null)
-                            {
-                            // an error has already been logged, but this is additional information
-                            log(errs, Severity.ERROR, Compiler.IMPLICIT_SUPER_CONSTRUCTOR_MISSING,
-                                    component.getIdentityConstant().getValueString(), clzSuper.getName());
-                            }
-                        else
-                            {
-                            if (args == null)
-                                {
-                                // this is a default constructor
-                                cParams = 0;
-                                }
-
-                            switch (cParams)
-                                {
-                                case 0:
-                                    code.add(new Construct_0(idSuper));
-                                    break;
-                                case 1:
-                                    code.add(new Construct_1(idSuper, aRegs[0]));
-                                    break;
-                                default:
-                                    code.add(new Construct_N(idSuper, aRegs));
-                                    break;
-                                }
-                            }
-                        }
-
-                    code.add(new Return_0());
+                    generateConstructor(component, constructor, errs);
                     }
                 }
             }
+        }
+
+    /**
+     * Emit the synthetic constructor's code.
+     */
+    private void generateConstructor(ClassStructure component, MethodStructure constructor,
+                                     ErrorListener errs)
+        {
+        // the constructor has two responsibilities:
+        // 1) set each property based on the parameter name, value passed in as an arg
+        // 2) call same-signature super constructor
+        Code           code    = constructor.ensureCode();
+        MethodConstant idSuper = null;
+
+        StatementBlock blockBody = body;
+        if (body == null)
+            {
+            blockBody = adopt(new StatementBlock(Collections.EMPTY_LIST));
+            }
+        RootContext ctxConstruct = blockBody.new RootContext(constructor);
+
+        // find super constructor of the same signature (must be there if args are specified)
+        ClassStructure clzSuper = component.getSuper();
+        if (clzSuper != null || args != null)
+            {
+            if (clzSuper != null)
+                {
+                TypeInfo infoSuper = clzSuper.getFormalType().ensureTypeInfo(errs);
+
+                idSuper = findMethod(ctxConstruct.validatingContext(),
+                        infoSuper, "construct", args, false, true, null, errs);
+                }
+            if (idSuper == null)
+                {
+                // if an error have already been logged, this is additional information
+                log(errs, Severity.ERROR, Compiler.IMPLICIT_SUPER_CONSTRUCTOR_MISSING,
+                        component.getIdentityConstant().getValueString(), clzSuper.getName());
+                return;
+                }
+            }
+
+        int        cSuperArgs;
+        Argument[] aSuperArgs;
+
+        if (args == null)
+            {
+            MethodStructure constructSuper;
+
+            if (idSuper == null)
+                {
+                constructSuper = null;
+                cSuperArgs     = -1;
+                aSuperArgs     = null;
+                }
+            else
+                {
+                constructSuper = (MethodStructure) idSuper.getComponent();
+                cSuperArgs     = constructSuper.getParamCount();
+                aSuperArgs     = new Argument[cSuperArgs];
+                }
+
+            // REVIEW @see Point3d example in Test.x & Composition.Extends - need to do some prop sets and call a reduced-parameter super constructor
+            // TODO: strictly speaking, the names of the parameters on the constructor and super constructor don't have to match...
+
+            List<org.xvm.asm.Parameter> params  = constructor.getParams();
+            int                         cParams = params.size();
+
+            for (int iParam = 0; iParam < cParams; ++iParam)
+                {
+                org.xvm.asm.Parameter param  = params.get(iParam);
+                String                sParam = param.getName();
+                Register              reg    = new Register(param.getType(), iParam);
+
+                // the parameter should be either a property or an argument to the super
+                org.xvm.asm.Parameter paramSuper = constructSuper == null
+                        ? null
+                        : constructSuper.getParam(sParam);
+                if (paramSuper == null)
+                    {
+                    // there must be a property by the same name
+                    Component child = component.getChild(sParam);
+                    if (child.getFormat() == Format.PROPERTY)
+                        {
+                        PropertyStructure prop     = (PropertyStructure) child;
+                        TypeConstant      typeProp = prop.getType();
+                        TypeConstant      typeVal  = param.getType();
+                        if (param.getType().isA(prop.getType()))
+                            {
+                            code.add(new L_Set(prop.getIdentityConstant(), reg));
+                            }
+                        else
+                            {
+                            log(errs, Severity.ERROR, Compiler.IMPLICIT_PROP_WRONG_TYPE,
+                                    sParam, typeVal.getValueString(), typeProp.getValueString());
+                            }
+                        }
+                    else
+                        {
+                        log(errs, Severity.ERROR, Compiler.IMPLICIT_PROP_MISSING, sParam);
+                        }
+                    }
+                else
+                    {
+                    aSuperArgs[paramSuper.getIndex()] = reg;
+                    }
+                }
+
+            // fill in the default values for not specified arguments
+            for (int i = 0; i < cSuperArgs; i++)
+                {
+                if (aSuperArgs[i] == null)
+                    {
+                    org.xvm.asm.Parameter paramSuper = constructSuper.getParam(i);
+                    if (paramSuper.hasDefaultValue())
+                        {
+                        aSuperArgs[i] = paramSuper.getDefaultValue();
+                        }
+                    else
+                        {
+                        // TODO: log an error
+                        throw new UnsupportedOperationException();
+                        }
+                    }
+                }
+            }
+        else
+            {
+            cSuperArgs = args.size();
+
+            boolean fValid = true;
+            for (int i = 0; i < cSuperArgs; i++)
+                {
+                Expression exprOld = args.get(i);
+                Expression exprNew = exprOld.validate(ctxConstruct, null, errs);
+                if (exprNew == null)
+                    {
+                    fValid = false;
+                    }
+                else if (exprNew != exprOld)
+                    {
+                    args.set(i, exprNew);
+                    }
+                }
+            if (!fValid)
+                {
+                // validation has failed
+                return;
+                }
+
+            Context ctxEmit = ctxConstruct.emittingContext(code);
+
+            aSuperArgs = new Argument[cSuperArgs];
+            for (int i = 0; i < cSuperArgs; i++)
+                {
+                aSuperArgs[i] = args.get(i).generateArgument(ctxEmit, code, false, false, errs);
+                }
+            }
+
+        switch (cSuperArgs)
+            {
+            case -1:
+                // there is no super
+                break;
+
+            case 0:
+                code.add(new Construct_0(idSuper));
+                break;
+
+            case 1:
+                code.add(new Construct_1(idSuper, aSuperArgs[0]));
+                break;
+
+            default:
+                code.add(new Construct_N(idSuper, aSuperArgs));
+                break;
+            }
+
+        code.add(new Return_0());
         }
 
     private void disallowTypeParams(ErrorListener errs)
@@ -1592,7 +1685,7 @@ public class TypeCompositionStatement
             // Parameter paramLast  = constructorParams.get(constructorParams.size() - 1);
 
             Token tokFirst = category == null ? name : category;
-            Token tokLast  = name == null ? category : name;
+            Token tokLast = name == null ? category : name;
             log(errs, Severity.ERROR, Compiler.CONSTRUCTOR_PARAMS_UNEXPECTED);
             }
         }
@@ -1608,7 +1701,7 @@ public class TypeCompositionStatement
                     {
                     // note: currently no way to determine the location of the parameter
                     Token tokFirst = category == null ? name : category;
-                    Token tokLast  = name == null ? category : name;
+                    Token tokLast = name == null ? category : name;
                     log(errs, Severity.ERROR, Compiler.CONSTRUCTOR_PARAM_DEFAULT_REQUIRED);
                     }
                 }

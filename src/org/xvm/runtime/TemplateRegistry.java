@@ -23,6 +23,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xModule;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
@@ -254,7 +255,9 @@ public class TemplateRegistry
                     break;
 
                 case CONST:
-                    template = new xConst(this, structClass, false);
+                    template = structClass.isException()
+                            ? new xException(this, structClass, false)
+                            : new xConst(this, structClass, false);
                     break;
 
                 case MODULE:

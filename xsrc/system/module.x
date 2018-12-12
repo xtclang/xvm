@@ -37,11 +37,6 @@ module Ecstasy.xtclang.org
     const DeadlockException(String? text = null, Exception? cause = null)
             extends Exception(text, cause)
         {
-        /**
-         * The stack traces of the various other threads-of-execution contributing to the deadlock,
-         * if any.
-         */
-        // @Inject Iterable<StackFrame>[] stackTraces;
         }
 
     /**
