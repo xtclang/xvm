@@ -595,7 +595,7 @@ public class InvocationExpression
                         {
                         MethodConstant  idMethod    = (MethodConstant) argMethod;
                         MethodStructure method      = m_method;
-                        TypeConstant[]  atypeParams = idMethod.getRawParams();
+                        TypeConstant[]  atypeArgs   = idMethod.getRawParams();
                         int             cTypeParams = method.getTypeParamCount();
                         int             cArgs       = args.size();
 
@@ -606,21 +606,21 @@ public class InvocationExpression
                             int            cParams = method.getParamCount() - cTypeParams;
                             TypeConstant[] atype   = new TypeConstant[cParams];
 
-                            System.arraycopy(atypeParams, cTypeParams, atype, 0, cParams);
+                            System.arraycopy(atypeArgs, cTypeParams, atype, 0, cParams);
 
-                            atypeParams = resolveTypes(
+                            atypeArgs = resolveTypes(
                                     makeTypeParameterResolver(ctx, method, atypeReturn), atype);
                             }
 
                         // test the "regular fit" first and Tuple afterwards
                         TypeConstant typeTuple = null;
-                        if (!testExpressions(ctx, args, atypeParams).isFit())
+                        if (!testExpressions(ctx, args, atypeArgs).isFit())
                             {
                             // otherwise, check the tuple based invoke (see Expression.findMethod)
                             if (cArgs == 1)
                                 {
                                 typeTuple = pool.ensureParameterizedTypeConstant(
-                                        pool.typeTuple(), atypeParams);
+                                        pool.typeTuple(), atypeArgs);
                                 if (!args.get(0).testFit(ctx, typeTuple).isFit())
                                     {
                                     // the regular "validateExpressions" call will report an error
@@ -631,11 +631,11 @@ public class InvocationExpression
 
                         if (typeTuple == null)
                             {
-                            atypeParams = validateExpressions(ctx, args, atypeParams, errs);
+                            atypeArgs = validateExpressions(ctx, args, atypeArgs, errs);
                             }
                         else
                             {
-                            atypeParams = validateExpressionsFromTuple(ctx, args, typeTuple, errs);
+                            atypeArgs = validateExpressionsFromTuple(ctx, args, typeTuple, errs);
                             m_fTupleArg = true;
                             }
 
@@ -645,13 +645,13 @@ public class InvocationExpression
                             }
 
                         ValidArgs:
-                        if (atypeParams != null)
+                        if (atypeArgs != null)
                             {
                             Map<String, TypeConstant> mapTypeParams = Collections.EMPTY_MAP;
                             if (cTypeParams > 0)
                                 {
                                 // re-resolve against the validated types
-                                mapTypeParams = method.resolveTypeParameters(atypeParams, atypeReturn);
+                                mapTypeParams = method.resolveTypeParameters(atypeArgs, atypeReturn);
                                 if (mapTypeParams.size() < cTypeParams)
                                     {
                                     // TODO: need a better error
@@ -668,7 +668,7 @@ public class InvocationExpression
                                 m_aargTypeParams = aargTypeParam;
                                 }
 
-                            m_aconstDefault = collectDefaultArgs(method, atypeParams.length);
+                            m_aconstDefault = method.collectDefaultArgs(pool, atypeArgs.length);
 
                             TypeConstant[] atypeResult;
                             if (m_fCall)

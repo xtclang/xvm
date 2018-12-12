@@ -416,6 +416,27 @@ public class MethodStructure
         }
 
     /**
+     * Get the Parameter structure that represents the parameter of the specified name.
+     *
+     * @param sName  a parameter name
+     *
+     * @return the parameter of the specified name or null if not found
+     */
+    public Parameter getParam(String sName)
+        {
+        Parameter[] aParam = m_aParams;
+        for (int i= 0, c = aParam.length; i < c; i++)
+            {
+            Parameter param = aParam[i];
+            if (param.getName().equals(sName))
+                {
+                return param;
+                }
+            }
+        return null;
+        }
+
+    /**
      * @return a list of Parameter structures that represent all parameters of the method
      */
     public List<Parameter> getParams()
@@ -1508,6 +1529,57 @@ public class MethodStructure
             {
             out.println(indentLines(ensureCode().toString(), nextIndent(sIndent)));
             }
+        }
+
+    /**
+     * Collect the default arguments for the specified method.
+     *
+     * @param pool   the ConstantPool to use
+     * @param cArgs  the number of explicitly specified arguments
+     *
+     * @return the array of constants or null if no defaults are needed
+     */
+    public Constant[] collectDefaultArgs(ConstantPool pool, int cArgs)
+        {
+        int cParamsAll  = getParamCount();
+        int cTypeParams = getTypeParamCount();
+        int cDefault    = cParamsAll - cTypeParams - cArgs;
+        if (cDefault == 0)
+            {
+            return null;
+            }
+
+        Constant[]   aconstDefault = new Constant[cDefault];
+        for (int i = 0; i < cDefault; i++)
+            {
+            Parameter param = getParam(cTypeParams + cArgs + i);
+            assert param.hasDefaultValue();
+
+            Constant constValue = param.getDefaultValue();
+            if (constValue == null)
+                {
+                // TODO: GG do it correctly
+                TypeConstant type = param.getType();
+                if (type.equals(pool.typeInt()))
+                    {
+                    constValue = pool.val0();
+                    }
+                else if (type.equals(pool.typeBoolean()))
+                    {
+                    constValue = pool.valFalse();
+                    }
+                else if (pool.typeNullable().isA(type))
+                    {
+                    constValue = pool.valNull();
+                    }
+                else
+                    {
+                    throw new UnsupportedOperationException();
+                    }
+                }
+            aconstDefault[i] = constValue;
+            }
+        return aconstDefault;
         }
 
 
