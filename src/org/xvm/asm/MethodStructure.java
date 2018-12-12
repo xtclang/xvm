@@ -1536,6 +1536,7 @@ public class MethodStructure
      *
      * @param pool   the ConstantPool to use
      * @param cArgs  the number of explicitly specified arguments
+     *               (must be no less than the number of non-default arguments)
      *
      * @return the array of constants or null if no defaults are needed
      */
@@ -1549,35 +1550,13 @@ public class MethodStructure
             return null;
             }
 
-        Constant[]   aconstDefault = new Constant[cDefault];
+        Constant[] aconstDefault = new Constant[cDefault];
         for (int i = 0; i < cDefault; i++)
             {
             Parameter param = getParam(cTypeParams + cArgs + i);
             assert param.hasDefaultValue();
 
-            Constant constValue = param.getDefaultValue();
-            if (constValue == null)
-                {
-                // TODO: GG do it correctly
-                TypeConstant type = param.getType();
-                if (type.equals(pool.typeInt()))
-                    {
-                    constValue = pool.val0();
-                    }
-                else if (type.equals(pool.typeBoolean()))
-                    {
-                    constValue = pool.valFalse();
-                    }
-                else if (pool.typeNullable().isA(type))
-                    {
-                    constValue = pool.valNull();
-                    }
-                else
-                    {
-                    throw new UnsupportedOperationException();
-                    }
-                }
-            aconstDefault[i] = constValue;
+            aconstDefault[i] = param.getDefaultValue();
             }
         return aconstDefault;
         }

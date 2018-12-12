@@ -197,7 +197,32 @@ public class Parameter
      */
     public Constant getDefaultValue()
         {
-        return m_constDefault;
+        Constant constValue = m_constDefault;
+        if (constValue == null)
+            {
+            ConstantPool pool = getConstantPool();
+
+            // TODO: GG do it correctly
+            TypeConstant type = getType();
+            if (type.equals(pool.typeInt()))
+                {
+                constValue = pool.val0();
+                }
+            else if (type.equals(pool.typeBoolean()))
+                {
+                constValue =  pool.valFalse();
+                }
+            else if (pool.typeNullable().isA(type))
+                {
+                constValue =  pool.valNull();
+                }
+            else
+                {
+                throw new UnsupportedOperationException();
+                }
+            m_constDefault = constValue;
+            }
+        return constValue;
         }
 
     /**
