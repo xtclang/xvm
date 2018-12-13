@@ -328,7 +328,7 @@ public class xArray
         }
 
     @Override
-    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
         int                c      = hArray.m_cSize;

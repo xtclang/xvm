@@ -1553,14 +1553,14 @@ public abstract class ClassTemplate
     /**
      * Build a String handle for a human readable representation of the target handle.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target
-     * @param iReturn    the register id to place a String result into
+     * @param frame    the current frame
+     * @param hTarget  the target
+     * @param iReturn  the register id to place a String result into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         return frame.assignValue(iReturn, xString.makeHandle(hTarget.toString()));
         }

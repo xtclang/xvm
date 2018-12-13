@@ -294,7 +294,7 @@ public abstract class xUnconstrainedInteger
         }
 
     @Override
-    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         PackedInteger pi = ((VarIntHandle) hTarget).getValue();
 

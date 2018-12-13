@@ -56,7 +56,7 @@ public class GuardAll
     @Override
     public int process(Frame frame, int iPC)
         {
-        int iScope = frame.enterScope();
+        int iScope = frame.enterScope(m_nNextVar);
 
         AllGuard guard = m_guard;
         if (guard == null)
@@ -72,7 +72,11 @@ public class GuardAll
     public void simulate(Scope scope)
         {
         scope.enter();
+
+        m_nNextVar = scope.getCurVars();
         }
+
+    private int m_nNextVar;
 
     private transient AllGuard m_guard; // cached struct
     }

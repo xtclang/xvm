@@ -8,12 +8,12 @@ import java.util.concurrent.CompletableFuture;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
 import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xRef.RefHandle;
@@ -104,41 +104,66 @@ public abstract class Utils
         }
 
 
-    // ----- hash.get() support -----
-
-    // call "hash.get" method for the given const value, placing the result into the frame local
-    // return R_EXCEPTION, R_NEXT or R_CALL
-    public static int callHash(Frame frame, ObjectHandle hConst)
-        {
-        TypeComposition clzConst = hConst.getComposition();
-        CallChain chain = clzConst.getPropertyGetterChain("hash");
-
-        if (chain.isNative())
-            {
-            xConst template = (xConst) clzConst.getTemplate();
-            return template.buildHashCode(frame, hConst, Op.A_STACK);
-            }
-
-        ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
-        return clzConst.getTemplate().invoke1(frame, chain, hConst, ahVar, Op.A_STACK);
-        }
-
-    // ----- to<String> support -----
-
-    // call "to<String>" method for the given value, placing the result into the frame local
-    // return R_EXCEPTION, R_NEXT or R_CALL
-    public static int callToString(Frame frame, ObjectHandle hValue)
+    /**
+     * Helper method for a "get property" invocation that pushes the result onto the frame's stack.
+     *
+     * @param frame   the current frame
+     * @param hValue  the value to get a property for
+     * @param sProp   the property name
+     *
+     * @return one of R_EXCEPTION, R_NEXT or R_CALL values
+     */
+    public static int callGetProperty(Frame frame, ObjectHandle hValue, String sProp)
         {
         TypeComposition clzValue = hValue.getComposition();
-        CallChain chain = clzValue.getMethodCallChain(frame.f_context.f_pool.sigToString());
+        CallChain       chain    = clzValue.getPropertyGetterChain(sProp);
 
         if (chain.isNative())
             {
-            return clzValue.getTemplate().buildStringValue(frame, hValue, Op.A_STACK);
+            return clzValue.getTemplate().invokeNativeGet(frame, sProp, hValue, Op.A_STACK);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
         return clzValue.getTemplate().invoke1(frame, chain, hValue, ahVar, Op.A_STACK);
+        }
+
+    /**
+     * Helper method for a method invocation that pushes the result onto the frame's stack.
+     *
+     * @param frame   the current frame
+     * @param hValue  the value to get a property for
+     * @param sig     the method signature
+     * @param ahArg   the method arguments
+     *
+     * @return one of R_EXCEPTION, R_NEXT or R_CALL values
+     */
+    public static int callMethod(Frame frame, ObjectHandle hValue, SignatureConstant sig,
+                                 ObjectHandle... ahArg)
+        {
+        TypeComposition clzValue = hValue.getComposition();
+        CallChain       chain    = clzValue.getMethodCallChain(sig);
+
+        if (chain.isNative())
+            {
+            return clzValue.getTemplate().invokeNativeN(frame, chain.getTop(), hValue, ahArg, Op.A_STACK);
+            }
+
+        ObjectHandle[] ahVar = ensureSize(ahArg, chain.getTop().getMaxVars());
+        return clzValue.getTemplate().invoke1(frame, chain, hValue, ahVar, Op.A_STACK);
+        }
+
+    /**
+     * Helper method for the "to<String>" method invocation that pushes the result onto the frame's
+     * stack.
+     *
+     * @param frame   the current frame
+     * @param hValue  the value to get a property for
+     *
+     * @return one of R_EXCEPTION, R_NEXT or R_CALL values
+     */
+    public static int callToString(Frame frame, ObjectHandle hValue)
+        {
+        return callMethod(frame, hValue, frame.f_context.f_pool.sigToString(), Utils.OBJECTS_NONE);
         }
 
 

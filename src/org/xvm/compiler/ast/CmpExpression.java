@@ -380,6 +380,7 @@ public class CmpExpression
 
             op.setCommonType(m_typeCommon);
             code.add(op);
+            return;
             }
 
         super.generateConditionalJump(ctx, code, label, fWhenTrue, errs);

@@ -457,7 +457,7 @@ public abstract class xConstrainedInteger
         }
 
     @Override
-    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         long l = ((JavaLong) hTarget).getValue();
 

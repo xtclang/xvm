@@ -337,7 +337,7 @@ public class xService
         }
 
     @Override
-    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
         return frame.assignValue(iReturn, xString.makeHandle(hService.m_context.toString()));

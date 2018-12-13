@@ -253,7 +253,7 @@ public class xCharArray
         }
 
     @Override
-    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         CharArrayHandle hArray = (CharArrayHandle) hTarget;
         int             c      = hArray.m_cSize;

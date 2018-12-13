@@ -461,7 +461,7 @@ public abstract class xBaseInt128
         }
 
     @Override
-    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         LongLong ll = ((LongLongHandle) hTarget).getValue();
 

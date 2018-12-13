@@ -6,18 +6,23 @@ import java.util.Iterator;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
+
+import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xString.StringHandle;
@@ -35,6 +40,11 @@ public class xConst
     // name of the synthetic property for cached hash value
     public static final String PROP_HASH = "@hash";
 
+    public static MethodStructure FN_ESTIMATE_LENGTH;
+    public static MethodStructure FN_APPEND_TO;
+    public static TypeComposition CLZ_STRINGS;
+    public static TypeComposition CLZ_OBJECTS;
+
     public xConst(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure);
@@ -50,8 +60,27 @@ public class xConst
         {
         if (this == INSTANCE)
             {
-            getCanonicalType().ensureTypeInfo().findEqualsFunction().setNative(true);
-            getCanonicalType().ensureTypeInfo().findCompareFunction().setNative(true);
+            TypeInfo infoConst = getCanonicalType().ensureTypeInfo();
+
+            infoConst.findEqualsFunction().setNative(true);
+            infoConst.findCompareFunction().setNative(true);
+
+            // Stringable support
+            ClassStructure clzHelper = f_templates.getClassStructure("_native.ConstHelper");
+
+            for (MethodStructure idMethod :
+                    ((MultiMethodStructure) clzHelper.getChild("estimateStringLength")).methods())
+                {
+                FN_ESTIMATE_LENGTH = idMethod;
+                }
+            for (MethodStructure idMethod :
+                    ((MultiMethodStructure) clzHelper.getChild("appendTo")).methods())
+                {
+                FN_APPEND_TO = idMethod;
+                }
+
+            CLZ_STRINGS = f_templates.resolveClass(f_templates.f_adapter.getClassType("collections.Array<String>", null));
+            CLZ_OBJECTS = f_templates.resolveClass(f_templates.f_adapter.getClassType("collections.Array<Object>", null));
             }
         }
 
@@ -66,6 +95,36 @@ public class xConst
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
+        }
+
+    @Override
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle hArg, int iReturn)
+        {
+        switch (method.getName())
+            {
+            case "appendTo":
+                {
+                return callAppendTo(frame, hTarget, hArg, iReturn);
+                }
+            }
+
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
+        {
+        switch (method.getName())
+            {
+            case "estimateStringLength":
+                {
+                return callEstimateLength(frame, hTarget, iReturn);
+                }
+            }
+
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
     @Override
@@ -106,7 +165,7 @@ public class xConst
         }
 
     @Override
-    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         GenericHandle hConst = (GenericHandle) hTarget;
 
@@ -114,13 +173,12 @@ public class xConst
           .append(hConst.getComposition().toString())
           .append('{');
 
-        return new ToString(hConst, sb,
-            hConst.getComposition().getFieldNames().iterator(), iReturn).doNext(frame);
+        return new ToString(hConst, sb, iReturn).doNext(frame);
         }
 
     // build the hashValue and assign it to the specified register
     // returns R_NEXT, R_CALL or R_EXCEPTION
-    public int buildHashCode(Frame frame, ObjectHandle hTarget, int iReturn)
+    protected int buildHashCode(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         GenericHandle hConst = (GenericHandle) hTarget;
 
@@ -130,9 +188,67 @@ public class xConst
             return frame.assignValue(iReturn, hHash);
             }
 
-        return new HashGet(hConst, new long[1],
-            hConst.getComposition().getFieldNames().iterator(), iReturn).doNext(frame);
+        return new HashCode(hConst, new long[1], iReturn).doNext(frame);
         }
+
+    /**
+     * Native implementation of the "estimateStringLength" method.
+     *
+     * @param frame    the frame
+     * @param hTarget  the target Const value
+     * @param iReturn  the register id to place the result of the call into
+     *
+     * @return one of R_NEXT, R_CALL or R_EXCEPTION
+     */
+    protected int callEstimateLength(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        GenericHandle   hConst = (GenericHandle) hTarget;
+        TypeComposition clz    = hConst.getComposition();
+
+        StringHandle[] ahNames  = clz.getFieldNameArray();
+        ObjectHandle[] ahFields = clz.getFieldValueArray(hConst);
+
+        ArrayHandle hNames  = xArray.INSTANCE.createArrayHandle(CLZ_STRINGS, ahNames);
+        ArrayHandle hValues = xArray.INSTANCE.createArrayHandle(CLZ_OBJECTS, ahFields);
+
+        // estimateStringLength(String[] names, Object[] fields)
+        ObjectHandle[] ahVars = new ObjectHandle[FN_ESTIMATE_LENGTH.getMaxVars()];
+        ahVars[0] = hNames;
+        ahVars[1] = hValues;
+
+        return frame.call1(FN_ESTIMATE_LENGTH, null, ahVars, iReturn);
+        }
+
+    /**
+     * Native implementation of the "appendTo" method.
+     *
+     * @param frame      the frame
+     * @param hTarget    the target Const value
+     * @param hAppender  the appender
+     * @param iReturn    the register id to place the result of the call into
+     *
+     * @return one of R_NEXT, R_CALL or R_EXCEPTION
+     */
+    protected int callAppendTo(Frame frame, ObjectHandle hTarget, ObjectHandle hAppender, int iReturn)
+        {
+        GenericHandle   hConst = (GenericHandle) hTarget;
+        TypeComposition clz    = hConst.getComposition();
+
+        StringHandle[] ahNames  = clz.getFieldNameArray();
+        ObjectHandle[] ahFields = clz.getFieldValueArray(hConst);
+
+        ArrayHandle hNames  = xArray.INSTANCE.createArrayHandle(CLZ_STRINGS, ahNames);
+        ArrayHandle hValues = xArray.INSTANCE.createArrayHandle(CLZ_OBJECTS, ahFields);
+
+        // appendTo(Appender<Char> appender, String[] names, Object[] fields)
+        ObjectHandle[] ahVars = new ObjectHandle[FN_APPEND_TO.getMaxVars()];
+        ahVars[0] = hAppender; // appender
+        ahVars[1] = hNames;
+        ahVars[2] = hValues;
+
+        return frame.call1(FN_APPEND_TO, null, ahVars, iReturn);
+        }
+
 
     // ----- helper classes -----
 
@@ -296,11 +412,11 @@ public class xConst
         final private int iReturn;
         private int cProps;
 
-        public ToString(GenericHandle hConst, StringBuilder sb, Iterator<String> iterFields, int iReturn)
+        public ToString(GenericHandle hConst, StringBuilder sb, int iReturn)
             {
             this.hConst = hConst;
             this.sb = sb;
-            this.iterFields = iterFields;
+            this.iterFields = hConst.getComposition().getFieldNames().iterator();
             this.iReturn = iReturn;
             }
 
@@ -367,7 +483,7 @@ public class xConst
     /**
      * Helper class for buildHashCode() implementation.
      */
-    protected static class HashGet
+    protected static class HashCode
             implements Frame.Continuation
         {
         final private GenericHandle hConst;
@@ -375,10 +491,10 @@ public class xConst
         final private Iterator<String> iterFields;
         final private int iReturn;
 
-        public HashGet(GenericHandle hConst, long[] holder, Iterator<String> iterFields, int iReturn)
+        public HashCode(GenericHandle hConst, long[] holder, int iReturn)
             {
             this.hConst = hConst;
-            this.iterFields = iterFields;
+            this.iterFields = hConst.getComposition().getFieldNames().iterator();
             this.holder = holder;
             this.iReturn = iReturn;
             }
@@ -403,14 +519,13 @@ public class xConst
                 String sProp = iterFields.next();
 
                 ObjectHandle hProp = hConst.getField(sProp);
-
                 if (hProp == null)
                     {
                     return frameCaller.raiseException(
                             xException.makeHandle("Unassigned property: \"" + sProp + '"'));
                     }
 
-                switch (Utils.callHash(frameCaller, hProp))
+                switch (Utils.callGetProperty(frameCaller, hProp, "hash"))
                     {
                     case Op.R_NEXT:
                         updateResult(frameCaller);
