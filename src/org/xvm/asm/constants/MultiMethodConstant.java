@@ -40,7 +40,7 @@ public class MultiMethodConstant
      * @param constParent  the module, package, class, property, or method that contains this
      *                     multi-method
      * @param sName        the method name
-     * @param info         optional TypeInfo
+     * @param info         optional TypeInfo TODO this has to go away
      */
     public MultiMethodConstant(ConstantPool pool, IdentityConstant constParent, String sName, TypeInfo info)
         {

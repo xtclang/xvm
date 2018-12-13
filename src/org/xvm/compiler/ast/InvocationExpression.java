@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Argument;
-import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -39,7 +38,6 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
-import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
 
@@ -1327,24 +1325,6 @@ public class InvocationExpression
             TypeConstant[] atypeReturn,
             ErrorListener  errs)
         {
-        // TODO remove
-        Argument argOld = resolveNameOld(ctx, fForce, typeLeft, atypeReturn, ErrorListener.BLACKHOLE);
-        Argument argNew = resolveNameNew(ctx, fForce, typeLeft, atypeReturn, errs);
-        if (!Handy.equals(argOld, argNew))
-            {
-            argNew = resolveNameNew(ctx, fForce, typeLeft, atypeReturn, ErrorListener.BLACKHOLE);
-            }
-        return argNew;
-        }
-
-    // TODO remove
-    protected Argument resolveNameOld(
-            Context        ctx,
-            boolean        fForce,
-            TypeConstant   typeLeft,
-            TypeConstant[] atypeReturn,
-            ErrorListener  errs)
-        {
         if (!fForce && m_argMethod != null)
             {
             return m_argMethod;
@@ -1384,239 +1364,10 @@ public class InvocationExpression
         // looking for a registered name, i.e. a local variable of that name, stopping once the
         // containing method/function (but <b>not</b> a lambda, since it has a permeable barrier to
         // enable local variable capture) is reached
-        NameExpression exprName  = (NameExpression) expr;
-        Token          tokName   = exprName.getNameToken();
-        String         sName     = exprName.getName();
-        Expression     exprLeft  = exprName.left;
-        if (exprLeft == null)
-            {
-            Argument reg = ctx.getVar(tokName, errs);
-            if (reg != null)
-                {
-                if (testFunction(ctx, reg.getType(), atypeReturn, errs) == null)
-                    {
-                    return null;
-                    }
-                else
-                    {
-                    m_argMethod = reg;
-                    return reg;
-                    }
-                }
-
-            // for a name without a left expression (which provides its scope), determine the
-            // sequence of scopes that will be searched for matching methods/functions. For example,
-            // the point from which the call is occurring could be inside a (i) lambda, inside a
-            // (ii) method, inside a (iii) property, inside a (iv) child class, inside a (v) static
-            // child class, inside a (vi) top level class, inside a (vii) package, inside a (viii)
-            // module; in this example, scope (i) is searched first for any matching methods and
-            // functions, then scope (ii), then scope (ii), (iii), (iv), and (v). Because scope (v)
-            // is a static child, when scope (vi) is searched, it is only searched for functions,
-            // unless the InvocationExpression is not performing a "call" (i.e. no "this" is
-            // required), in which case methods are included. The package and module are omitted
-            // from the search; we do not venture past the top level class barrier in the search
-            Component parent   = getComponent();
-            boolean   fHasThis = ctx.isMethod();
-
-            if (fHasThis)
-                {
-                // before we go through the scopes, check if "this" has been narrowed
-                Register     argThis  = (Register) ctx.getVar("this");
-                TypeConstant typeThis = argThis.getType();
-                if (!typeThis.equals(ctx.getThisType()))
-                    {
-                    // the type has been indeed narrowed
-                    TypeInfo         infoType   = typeThis.ensureTypeInfo(errs);
-                    IdentityConstant idCallable = findCallable(ctx, infoType, sName,
-                            true, false, atypeReturn, errs);
-                    if (idCallable != null)
-                        {
-                        m_argMethod   = idCallable;
-                        m_method      = getMethod(infoType, idCallable);
-                        m_fBindTarget = m_method != null && !m_method.isFunction();
-                        return idCallable;
-                        }
-                    }
-                }
-
-            boolean fLocal = true;
-            NextParent: while (parent != null)
-                {
-                IdentityConstant idParent = parent.getIdentityConstant();
-                switch (idParent.getFormat())
-                    {
-                    case Module:
-                    case Package:
-                    case Class:
-                    {
-                    ClassStructure clz  = (ClassStructure) parent;
-                    TypeConstant   type = pool.ensureAccessTypeConstant(clz.getFormalType(),
-                            Access.PRIVATE);
-
-                    TypeInfo         infoType   = type.ensureTypeInfo(errs);
-                    IdentityConstant idCallable = findCallable(ctx, infoType, sName,
-                            (fNoCall && fNoFBind) || fHasThis, true, atypeReturn, errs);
-                    if (idCallable != null)
-                        {
-                        m_argMethod   = idCallable;
-                        m_method      = getMethod(infoType, idCallable);
-                        m_fBindTarget = m_method != null && !m_method.isFunction();
-                        return idCallable;
-                        }
-
-                    // we're done once we have searched the top-level class
-                    if (parent instanceof ClassStructure && clz.isTopLevel())
-                        {
-                        break NextParent;
-                        }
-
-                    // if the class is a static child, then we lose the "this" when we go up to
-                    // the parent class
-                    if (clz.isStatic())
-                        {
-                        fHasThis = false;
-                        }
-                    break;
-                    }
-
-                    case Method:
-                    {
-                    if (fLocal)
-                        {
-                        MethodStructure method = (MethodStructure) parent;
-
-                        int iParam = method.findParameter(sName);
-                        if (iParam >= 0)
-                            {
-                            TypeConstant typeParam = method.getParam(iParam).getType();
-                            if (typeParam.isA(pool.typeFunction()))
-                                {
-                                return m_argMethod = new Register(typeParam, iParam);
-                                }
-                            else
-                                {
-                                // TODO: check for @Auto conv
-                                // TODO: log an error
-                                notImplemented();
-                                }
-                            }
-                        }
-                    break;
-                    }
-
-                    case Property:
-                        // Starting at the first scope, check for a property of that name; if one exists, treat it using
-                        // the rules from step 4 above: If a match is found, then that is the method/function to use,
-                        // and it is an error if the type of that property/constant is not a method, a function, or a
-                        // reference that has an @Auto conversion to a method or function. (Done.)</li>
-                        // TODO
-                        break;
-                    }
-
-                parent = parent.getParent();
-                fLocal = false;
-                }
-            }
-        else // there is a "left" expression for the name
-            {
-            if (tokName.isSpecial())
-                {
-                // TODO handle special names (e.g. ".this")
-                throw new UnsupportedOperationException("no handling yet for ." + sName);
-                }
-
-            // the left expression provides the scope to search for a matching method/function;
-            // if the left expression is itself a NameExpression, and it's in identity mode (i.e. a
-            // possible identity), then check the identity first
-            if (exprLeft instanceof NameExpression &&
-                    ((NameExpression) exprLeft).isIdentityMode(ctx, false))
-                {
-                // the left identity
-                // - methods are included because there is a left, but since it is to obtain a
-                //   method reference, there must not be any arg binding or actual invocation
-                // - functions are included because the left is identity-mode
-                TypeInfo infoLeft = ((NameExpression) exprLeft).getIdentity(ctx).ensureTypeInfo(errs);
-                Argument arg      = findCallable(ctx, infoLeft, sName, fNoFBind && fNoCall, true,
-                        atypeReturn, errs);
-
-                if (arg != null)
-                    {
-                    m_argMethod = arg;
-                    m_method    = getMethod(infoLeft, arg);
-                    return arg;
-                    }
-                }
-
-            // use the type of the left expression to get the TypeInfo that must contain the
-            // method/function to call
-            // - methods are included because there is a left and it is NOT identity-mode
-            // - functions are NOT included because the left is NOT identity-mode
-            TypeInfo infoLeft = typeLeft.ensureTypeInfo(errs);
-            Argument arg      = findCallable(ctx, infoLeft, sName, true, false, atypeReturn, errs);
-
-            if (arg != null)
-                {
-                m_argMethod   = arg;
-                m_method      = getMethod(infoLeft, arg);
-                assert m_method == null || !m_method.isFunction();
-                m_fBindTarget = m_method != null;
-                return arg;
-                }
-            }
-
-        return null;
-        }
-
-    protected Argument resolveNameNew(
-            Context        ctx,
-            boolean        fForce,
-            TypeConstant   typeLeft,
-            TypeConstant[] atypeReturn,
-            ErrorListener  errs)
-        {
-        if (!fForce && m_argMethod != null)
-            {
-            return m_argMethod;
-            }
-
-        boolean fNoFBind = !isAnyArgBound();
-        boolean fNoCall  = isSuppressCall();
-
-        m_argMethod   = null;
-        m_idConvert   = null;
-        m_fBindTarget = false;
-        m_fBindParams = !fNoFBind;
-        m_fCall       = !fNoCall;
-
-        ConstantPool pool = pool();
-        if (atypeReturn != null && fNoCall)
-            {
-            // "no call" means that we are expected to produce a function, but the code below
-            // treats atypeReturn as function return types
-            if (atypeReturn.length != 1)
-                {
-                log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, 1, atypeReturn.length);
-                return null;
-                }
-
-            TypeConstant typeFn = atypeReturn[0];
-
-            atypeReturn = pool.extractFunctionReturns(typeFn);
-            if (atypeReturn == null)
-                {
-                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, "Function", typeFn.getValueString());
-                return null;
-                }
-            }
-
-        // if the name does not have a left expression, then walk up the AST parent node chain
-        // looking for a registered name, i.e. a local variable of that name, stopping once the
-        // containing method/function (but <b>not</b> a lambda, since it has a permeable barrier to
-        // enable local variable capture) is reached
-        NameExpression exprName  = (NameExpression) expr;
-        Token          tokName   = exprName.getNameToken();
-        String         sName     = exprName.getName();
-        Expression     exprLeft  = exprName.left;
+        NameExpression exprName = (NameExpression) expr;
+        Token          tokName  = exprName.getNameToken();
+        String         sName    = exprName.getName();
+        Expression     exprLeft = exprName.left;
         if (exprLeft == null)
             {
             Argument arg = ctx.resolveName(tokName, errs);
@@ -1682,7 +1433,7 @@ public class InvocationExpression
                     }
 
                 // get the TypeInfo to search for the specific method to call
-                TypeInfo info     = ((MultiMethodConstant) arg).getTypeInfo();
+                TypeInfo info = ((MultiMethodConstant) arg).getTypeInfo();
                 if (info == null)
                     {
                     TypeConstant type;
