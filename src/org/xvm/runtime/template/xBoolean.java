@@ -82,7 +82,7 @@ public class xBoolean
         }
 
     @Override
-    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         return frame.assignValue(iReturn,
                 xString.makeHandle(hTarget == FALSE ? "False" : "True"));

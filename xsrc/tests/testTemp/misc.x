@@ -35,6 +35,7 @@ module TestMisc.xqiz.it
         testException();
         // testTupleConv();
         // testMap();
+        testConstants();
         }
 
     void testInts()
@@ -412,4 +413,17 @@ module TestMisc.xqiz.it
         f6 ||= false;
         console.println("f6=" + f6 + " (should be false)");
         }
+
+    void testConstants()
+        {
+        console.println("\n** testConstants()");
+
+        IntLiteral lit = 42;
+        console.println("lit=" + lit);
+
+        Point point = new Point(0, 1);
+        console.println("point=" + point);
+        }
+
+    const Point(Int x, Int y);
     }

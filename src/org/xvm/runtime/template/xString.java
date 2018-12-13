@@ -274,7 +274,7 @@ public class xString
         }
 
     @Override
-    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         return frame.assignValue(iReturn, (StringHandle) hTarget);
         }

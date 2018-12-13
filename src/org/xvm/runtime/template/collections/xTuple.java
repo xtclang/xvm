@@ -238,7 +238,7 @@ public class xTuple
         }
 
     @Override
-    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         TupleHandle hTuple = (TupleHandle) hTarget;
 

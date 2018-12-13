@@ -176,7 +176,7 @@ public class xIntLiteral
         }
 
     @Override
-    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         VarIntHandle hLiteral = (VarIntHandle) hTarget;
         return frame.assignValue(iReturn, xString.makeHandle(hLiteral.getValue().toString()));

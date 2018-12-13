@@ -19,6 +19,9 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.runtime.template.xString;
+import org.xvm.runtime.template.xString.StringHandle;
+
 import org.xvm.util.ListMap;
 
 
@@ -72,6 +75,9 @@ public class TypeComposition
 
     // cached map of fields (values are either nulls or TypeComposition for refs)
     private final Map<String, TypeComposition> f_mapFields;
+
+    // cached array of field name handles
+    private StringHandle[] m_ashFieldNames;
 
     /**
      * Construct the TypeComposition for a given "inception" type and a "revealed" type.
@@ -377,6 +383,46 @@ public class TypeComposition
         {
         Map mapCached = f_mapFields;
         return mapCached == null ? Collections.EMPTY_SET : mapCached.keySet();
+        }
+
+    // return an array of field name handles
+    public StringHandle[] getFieldNameArray()
+        {
+        StringHandle[] ashNames = m_ashFieldNames;
+        if (ashNames == null)
+            {
+            Set<String> setNames = getFieldNames();
+
+            ashNames = new StringHandle[setNames.size()];
+
+            int i = 0;
+            for (String sName : setNames)
+                {
+                ashNames[i++] = xString.makeHandle(sName);
+                }
+            m_ashFieldNames = ashNames;
+            }
+        return ashNames;
+        }
+
+    // return an array of field value handles
+    public ObjectHandle[] getFieldValueArray(ObjectHandle.GenericHandle hValue)
+        {
+        Set<String> setNames = getFieldNames();
+        if (setNames.isEmpty())
+            {
+            return Utils.OBJECTS_NONE;
+            }
+
+        ObjectHandle[] ahFields = new ObjectHandle[setNames.size()];
+
+        int i = 0;
+        for (String sName : setNames)
+            {
+            ahFields[i++] = hValue.getField(sName);
+            }
+
+        return ahFields;
         }
 
     // create unassigned (with a null value) entries for all fields

@@ -199,7 +199,7 @@ public class xUInt64
         }
 
     @Override
-    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         long l = ((ObjectHandle.JavaLong) hTarget).getValue();
 

@@ -168,7 +168,7 @@ public class xEnum
         }
 
     @Override
-    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         EnumHandle hEnum = (EnumHandle) hTarget;
 
