@@ -629,9 +629,9 @@ public class ClassStructure
         }
 
     @Override
-    public ResolutionResult resolveName(String sName, ResolutionCollector collector)
+    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector)
         {
-        return resolveContributedName(sName, collector, Access.PRIVATE, true);
+        return resolveContributedName(sName, access, collector, true);
         }
 
     /**
@@ -639,33 +639,33 @@ public class ClassStructure
      * for this class.
      *
      * @param sName       the name to resolve
+     * @param access      the accessiblity to use to determine if the name is visible
      * @param collector   the collector to which the potential name matches will be reported
      * @param fAllowInto  if false, the "into" contributions should not be looked at
      *
      * @return the resolution result is one of: RESOLVED, UNKNOWN or POSSIBLE
      */
-    public ResolutionResult resolveContributedName(String sName, ResolutionCollector collector,
-                                                   Access access, boolean fAllowInto)
+    public ResolutionResult resolveContributedName(
+            String sName, Access access, ResolutionCollector collector, boolean fAllowInto)
         {
         Component child = getChild(sName);
-        if (child != null)
+        if (child != null && child.canBeSeen(access))
             {
-            // TODO: check access
             collector.resolvedComponent(child);
             return ResolutionResult.RESOLVED;
             }
 
         // no child by that name; it could only be a formal type introduced by a contribution
-        for (Contribution contrib : getContributionsAsList())
+        NextContribution: for (Contribution contrib : getContributionsAsList())
             {
             switch (contrib.getComposition())
                 {
                 case Into:
                     if (!fAllowInto)
                         {
-                        continue;
+                        continue NextContribution;
                         }
-                    access = Access.PROTECTED;
+                    access = access.minOf(Access.PROTECTED);
                     break;
 
                 case Annotation:
@@ -675,12 +675,12 @@ public class ClassStructure
                     break;
 
                 case Extends:
-                    access = Access.PROTECTED;
+                    access = access.minOf(Access.PROTECTED);
                     break;
 
                 case Incorporates:
                     fAllowInto = false;
-                    access = Access.PROTECTED;
+                    access = access.minOf(Access.PROTECTED);
                     break;
 
                 default:
@@ -695,12 +695,8 @@ public class ClassStructure
 
             if (typeContrib.isSingleUnderlyingClass(true))
                 {
-                ClassStructure clzContrib = (ClassStructure)
-                    typeContrib.getSingleUnderlyingClass(true).getComponent();
-
-                ResolutionResult result = clzContrib.
-                    resolveContributedName(sName, collector, access, fAllowInto);
-
+                ClassStructure   clzContrib = (ClassStructure) typeContrib.getSingleUnderlyingClass(true).getComponent();
+                ResolutionResult result     = clzContrib.resolveContributedName(sName, access, collector, fAllowInto);
                 if (result != ResolutionResult.UNKNOWN)
                     {
                     return result;

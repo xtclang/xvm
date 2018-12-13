@@ -7,7 +7,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -174,6 +173,21 @@ public class MultiMethodStructure
             }
 
         return list;
+        }
+
+    @Override
+    protected boolean canBeSeen(Access access)
+        {
+        for (MethodConstant id : getMethodByConstantMap().keySet())
+            {
+            MethodStructure method = (MethodStructure) getChild(id);
+            if (method.canBeSeen(access))
+                {
+                return true;
+                }
+            }
+
+        return false;
         }
 
     @Override

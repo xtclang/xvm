@@ -1292,7 +1292,7 @@ public class MethodStructure
         }
 
     @Override
-    public ResolutionResult resolveName(String sName, ResolutionCollector collector)
+    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector)
         {
         for (int i = 0, c = m_cTypeParams; i < c; ++i)
             {
@@ -1302,11 +1302,11 @@ public class MethodStructure
             if (param.getName().equals(sName))
                 {
                 return collector.resolvedConstant(
-                    getConstantPool().ensureRegisterConstant(getIdentityConstant(), i));
+                        getConstantPool().ensureRegisterConstant(getIdentityConstant(), i));
                 }
             }
 
-        return super.resolveName(sName, collector);
+        return super.resolveName(sName, access, collector);
         }
 
     @Override

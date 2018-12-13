@@ -319,7 +319,7 @@ public class TerminalTypeConstant
                 ClassConstant constClz = (ClassConstant) constant;
 
                 return ((ClassStructure) constClz.getComponent()).
-                    resolveContributedName(sName, collector, Access.PUBLIC, true);
+                    resolveContributedName(sName, Access.PUBLIC, collector, true);
                 }
 
             case ThisClass:

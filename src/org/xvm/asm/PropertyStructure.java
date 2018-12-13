@@ -519,7 +519,7 @@ public class PropertyStructure
         }
 
     @Override
-    public ResolutionResult resolveName(String sName, ResolutionCollector collector)
+    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector)
         {
         // allow the property to resolve names based on the property type;
         // it comes handy in the context inference scenario, allowing us to write:

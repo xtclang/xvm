@@ -260,11 +260,11 @@ public class ModuleStructure
         }
 
     @Override
-    public ResolutionResult resolveName(String sName, ResolutionCollector collector)
+    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector)
         {
         return moduleActual == null
-                ? super.resolveName(sName, collector)
-                : moduleActual.resolveName(sName, collector);
+                ? super.resolveName(sName, access, collector)
+                : moduleActual.resolveName(sName, access, collector);
         }
 
     @Override

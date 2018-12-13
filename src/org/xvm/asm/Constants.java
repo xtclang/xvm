@@ -66,6 +66,16 @@ public interface Constants
             this.FLAGS = flags;
             }
 
+        public boolean canSee(Access that)
+            {
+            if (this == that || this == STRUCT || this == PRIVATE)
+                {
+                return true;
+                }
+
+            return this == PROTECTED && that == PUBLIC;
+            }
+
         public boolean isAsAccessibleAs(Access that)
             {
             return !isLessAccessibleThan(that);
