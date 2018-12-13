@@ -28,7 +28,6 @@ import org.xvm.asm.constants.TypeParameterConstant;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
-import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Severity;
 
@@ -473,7 +472,7 @@ public class Context
         {
         Map<String, Argument> map   = ensureNameMap();
         String                sName = tokName.getValueText();
-        if (map.containsKey(sName))
+        if (map.get(sName) instanceof Register)
             {
             tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_DEFINED, sName);
             }
@@ -559,7 +558,16 @@ public class Context
                 break;
             }
 
-        return reg == null ? getNameMap().get(sName) : reg;
+        if (reg == null)
+            {
+            Argument arg = getNameMap().get(sName);
+            if (arg instanceof Register)
+                {
+                reg = (Register) arg;
+                }
+            }
+
+        return reg;
         }
 
     /**
@@ -891,7 +899,7 @@ public class Context
             arg = resolveReservedName(sName, name, errs);
             if (arg == null)
                 {
-                arg = resolveRegularName(sName, name, errs);
+                arg = resolveRegularName(this, sName, name, errs);
                 }
             }
         return arg;
@@ -956,21 +964,22 @@ public class Context
      */
     public final Argument resolveRegularName(Token name, ErrorListener errs)
         {
-        return resolveRegularName(name.getValueText(), name, errs);
+        return resolveRegularName(this, name.getValueText(), name, errs);
         }
 
     /**
      * Resolve a name (other than a reserved name) to an argument.
      *
-     * @param sName  the name to resolve
-     * @param name   the name token for error reporting (optional)
-     * @param errs   the error list to log errors to (optional)
+     * @param ctxFrom  the context from which the name resolution began
+     * @param sName    the name to resolve
+     * @param name     the name token for error reporting (optional)
+     * @param errs     the error list to log errors to (optional)
      *
      * @return an Argument iff the name is registered to an argument; otherwise null
      */
-    protected Argument resolveRegularName(String sName, Token name, ErrorListener errs)
+    protected Argument resolveRegularName(Context ctxFrom, String sName, Token name, ErrorListener errs)
         {
-        return getOuterContext().resolveRegularName(sName, name, errs);
+        return getOuterContext().resolveRegularName(ctxFrom, sName, name, errs);
         }
 
     /**
@@ -1660,9 +1669,9 @@ public class Context
             }
 
         @Override
-        protected Argument resolveRegularName(String sName, Token name, ErrorListener errs)
+        protected Argument resolveRegularName(Context ctxFrom, String sName, Token name, ErrorListener errs)
             {
-            Argument arg = super.resolveRegularName(sName, name, errs);
+            Argument arg = super.resolveRegularName(ctxFrom, sName, name, errs);
             if (arg != null)
                 {
                 return arg;

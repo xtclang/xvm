@@ -696,7 +696,7 @@ public class StatementBlock
             }
 
         @Override
-        protected Argument resolveRegularName(String sName, Token name, ErrorListener errs)
+        protected Argument resolveRegularName(Context ctxFrom, String sName, Token name, ErrorListener errs)
             {
             checkValidating();
 
@@ -729,8 +729,10 @@ public class StatementBlock
 
                 if (arg == null)
                     {
-                    // resolve the name from outside of this statement
-                    arg = new NameResolver(getStatementBlock(), isMethod() || isConstructor(), sName)
+                    // we will attempt to resolve the name from outside of this statement
+                    boolean      fHasThis = isMethod() || isConstructor();
+                    TypeConstant typeThis = fHasThis ? ctxFrom.getVar("this").getType() : null;
+                    arg = new NameResolver(getStatementBlock(), fHasThis, typeThis, sName)
                             .forceResolve(errs == null ? ErrorListener.BLACKHOLE : errs);
                     }
 

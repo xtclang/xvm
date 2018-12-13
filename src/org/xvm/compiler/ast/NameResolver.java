@@ -45,14 +45,17 @@ public class NameResolver
      *
      * @param node      the node which is requesting the resolution of the name
      * @param fHasThis  if the "this" reference is available
+     * @param typeThis  the type of the "this", or null
      * @param sName     the name to resolve
      */
-    public NameResolver(AstNode node, boolean fHasThis, String sName)
+    public NameResolver(AstNode node, boolean fHasThis, TypeConstant typeThis, String sName)
         {
         m_node     = node;
         m_iter     = Collections.emptyIterator();
         m_sName    = sName;
         m_fHasThis = fHasThis;
+        m_typeThis = typeThis;
+        assert m_fHasThis == (m_typeThis != null);
         }
 
     /**
@@ -167,6 +170,8 @@ public class NameResolver
                 Access           access          = Access.PRIVATE;
                 IdentityConstant idOuter         = null;
                 ConstantPool     pool            = getPool();
+                boolean          fHasThis        = m_fHasThis;
+                TypeConstant     typeThis        = m_typeThis;
                 WalkUpToTheRoot: while (node != null)
                     {
                     // if the first name refers to an import, then ask that import to figure out
@@ -225,7 +230,7 @@ public class NameResolver
                             }
 
                         // first attempt: ask the component to resolve the name
-                        ResolutionResult result = componentResolver.resolveName(m_sName, this);
+                        ResolutionResult result = componentResolver.resolveName(m_sName, access, this);
 
                         // second attempt: ask the TypeInfo if it knows what the name refers to
                         if (result == ResolutionResult.UNKNOWN && !m_fTypeGoal
@@ -241,7 +246,8 @@ public class NameResolver
                                 {
                                 idPrev   = idClz;
                                 infoPrev = info = pool.ensureAccessTypeConstant(
-                                        idClz.getType(), access).ensureTypeInfo(errs);
+                                        typeThis == null ? idClz.getType() : typeThis, access)
+                                        .ensureTypeInfo(errs);
                                 }
 
                             if (id == idClz)
@@ -255,13 +261,16 @@ public class NameResolver
                                         // the multi-method structure does not actually exist on the
                                         // class, but its methods exist in the TypeInfo
                                         result = resolvedConstant(
-                                                pool.ensureMultiMethodConstant(id, m_sName));
+                                                new MultiMethodConstant(pool, id, m_sName, info));
                                         }
                                     }
                                 else
                                     {
                                     result = resolvedConstant(prop.getIdentity());
                                     }
+
+                                fHasThis &= !info.isStatic();
+                                typeThis  = null;
                                 }
                             else if (id instanceof PropertyConstant)
                                 {
@@ -372,7 +381,7 @@ public class NameResolver
                         return getResult();
                         }
 
-                    switch (component.resolveName(m_sName, this))
+                    switch (component.resolveName(m_sName, Access.PRIVATE, this))
                         {
                         case UNKNOWN:
                             // the component didn't know the name
@@ -677,7 +686,11 @@ public class NameResolver
 
         if (constant instanceof IdentityConstant)
             {
-            return resolvedComponent(((IdentityConstant) constant).getComponent());
+            Component component = ((IdentityConstant) constant).getComponent();
+            if (component != null)
+                {
+                return resolvedComponent(component);
+                }
             }
 
         m_constant  = constant;
@@ -755,6 +768,11 @@ public class NameResolver
      * If the necessary "this" for the current component scope is available.
      */
     private boolean m_fHasThis;
+
+    /**
+     * An override type for "this" if the type has been narrowed.
+     */
+    TypeConstant m_typeThis;
 
     /**
      * The goal of the NameResolver is either a type or a more general value (which itself might be

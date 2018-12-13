@@ -40,8 +40,9 @@ public class MultiMethodConstant
      * @param constParent  the module, package, class, property, or method that contains this
      *                     multi-method
      * @param sName        the method name
+     * @param info         optional TypeInfo
      */
-    public MultiMethodConstant(ConstantPool pool, IdentityConstant constParent, String sName)
+    public MultiMethodConstant(ConstantPool pool, IdentityConstant constParent, String sName, TypeInfo info)
         {
         super(pool, constParent, sName);
 
@@ -54,6 +55,19 @@ public class MultiMethodConstant
             {
             throw new IllegalArgumentException("parent module, package, class, or method required");
             }
+
+        m_info = info;
+        }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * @return a TypeInfo, if one was supplied during construction
+     */
+    public TypeInfo getTypeInfo()
+        {
+        return m_info;
         }
 
 
@@ -95,4 +109,9 @@ public class MultiMethodConstant
         {
         return "multimethod=" + getValueString();
         }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    private transient TypeInfo m_info;
     }

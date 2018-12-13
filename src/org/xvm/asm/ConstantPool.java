@@ -1236,7 +1236,7 @@ public class ConstantPool
      */
     public MultiMethodConstant ensureMultiMethodConstant(IdentityConstant constParent, String sName)
         {
-        return (MultiMethodConstant) register(new MultiMethodConstant(this, constParent, sName));
+        return (MultiMethodConstant) register(new MultiMethodConstant(this, constParent, sName, null));
         }
 
     /**

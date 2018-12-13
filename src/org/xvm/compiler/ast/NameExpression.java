@@ -1240,7 +1240,8 @@ public class NameExpression
                 NameExpression   exprLeft  = (NameExpression) left;
                 IdentityConstant idLeft    = exprLeft.getIdentity(ctx);
                 SimpleCollector  collector = new SimpleCollector();
-                if (idLeft.getComponent().resolveName(sName, collector) == ResolutionResult.RESOLVED)
+                // TODO this seems all wrong - why are we using the "id" instead of the TypeConstant.ensureTypeInfo() ???
+                if (idLeft.getComponent().resolveName(sName, Access.PUBLIC, collector) == ResolutionResult.RESOLVED)
                     {
                     Constant constant = collector.getResolvedConstant();
                     switch (constant.getFormat())

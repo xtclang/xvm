@@ -1566,20 +1566,26 @@ public abstract class Component
      * Request that the component determine what the specified name is referring to.
      *
      * @param sName      the name to resolve
+     * @param access     the accessibility to this component
      * @param collector  the collector to which the potential name matches will be reported
      *
      * @return the resolution result
      */
-    public ResolutionResult resolveName(String sName, ResolutionCollector collector)
+    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector)
         {
         Component component = getChild(sName);
-        if (component != null)
+        if (component != null && component.canBeSeen(access))
             {
             collector.resolvedComponent(component);
             return ResolutionResult.RESOLVED;
             }
 
         return ResolutionResult.UNKNOWN;
+        }
+
+    protected boolean canBeSeen(Access access)
+        {
+        return access.canSee(getAccess());
         }
 
     /**
@@ -2330,9 +2336,7 @@ public abstract class Component
          * @param nFlags     the flags that define the common attributes of the component
          * @param condition  the condition under which the component is present, or null
          *
-         * @return the component
-         *
-         * @throws IOException if something goes wrong reading from the stream
+         * @return the new component
          */
         Component instantiate(XvmStructure xsParent, Constant constId, int nFlags, ConditionalConstant condition)
             {
