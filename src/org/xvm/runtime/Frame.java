@@ -435,13 +435,11 @@ public class Frame
         }
 
     // create a new "current" scope
-    public int enterScope()
+    public int enterScope(int nNextVar)
         {
-        int[] anNextVar = f_anNextVar;
-
         int iScope = ++m_iScope;
 
-        anNextVar[iScope] = anNextVar[iScope-1];
+        f_anNextVar[iScope] = nNextVar;
 
         return iScope;
         }
@@ -451,8 +449,9 @@ public class Frame
         {
         int iScope = m_iScope--;
 
-        int iVarFrom = f_anNextVar[iScope - 1];
-        int iVarTo   = f_anNextVar[iScope] - 1;
+        int[] anNextVar = f_anNextVar;
+        int   iVarFrom  = anNextVar[iScope - 1];
+        int   iVarTo    = anNextVar[iScope] - 1;
 
         for (int i = iVarFrom; i <= iVarTo; i++)
             {
@@ -1237,15 +1236,7 @@ public class Frame
     public void introduceResolvedVar(int nVar, TypeConstant type, String sName,
                                      int nStyle, ObjectHandle hValue)
         {
-        // TODO: temporary check; nVar must be assigned by the verifier
-        if (nVar == -1)
-            {
-            nVar = f_anNextVar[m_iScope]++;
-            }
-        else
-            {
-            f_anNextVar[m_iScope] = Math.max(f_anNextVar[m_iScope], nVar + 1);
-            }
+        f_anNextVar[m_iScope] = Math.max(f_anNextVar[m_iScope], nVar + 1);
 
         VarInfo info = new VarInfo(type, nStyle);
         info.setName(sName);
@@ -1279,15 +1270,7 @@ public class Frame
      */
     public void introduceVar(int nVar, int nTypeId, int nNameId, int nStyle, ObjectHandle hValue)
         {
-        // TODO: temporary check; nVar must be assigned by the verifier
-        if (nVar == -1)
-            {
-            nVar = f_anNextVar[m_iScope]++;
-            }
-        else
-            {
-            f_anNextVar[m_iScope] = Math.max(f_anNextVar[m_iScope], nVar + 1);
-            }
+        f_anNextVar[m_iScope] = Math.max(f_anNextVar[m_iScope], nVar + 1);
 
         f_aInfo[nVar] = new VarInfo(nTypeId, nNameId, nStyle);
 
@@ -1333,15 +1316,7 @@ public class Frame
      */
     public void introduceVarCopy(int nVar, int nVarFrom)
         {
-        // TODO: temporary check; nVar must be assigned by the verifier
-        if (nVar == -1)
-            {
-            nVar = f_anNextVar[m_iScope]++;
-            }
-        else
-            {
-            f_anNextVar[m_iScope] = Math.max(f_anNextVar[m_iScope], nVar + 1);
-            }
+        f_anNextVar[m_iScope] = Math.max(f_anNextVar[m_iScope], nVar + 1);
 
         if (nVarFrom >= 0)
             {

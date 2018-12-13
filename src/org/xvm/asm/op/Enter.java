@@ -35,7 +35,7 @@ public class Enter
     @Override
     public int process(Frame frame, int iPC)
         {
-        frame.enterScope();
+        frame.enterScope(m_nNextVar);
 
         return iPC + 1;
         }
@@ -44,5 +44,9 @@ public class Enter
     public void simulate(Scope scope)
         {
         scope.enter();
+
+        m_nNextVar = scope.getCurVars();
         }
+
+    private int m_nNextVar;
     }

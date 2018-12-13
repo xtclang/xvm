@@ -130,7 +130,7 @@ public class GuardStart
     @Override
     public int process(Frame frame, int iPC)
         {
-        int iScope = frame.enterScope();
+        int iScope = frame.enterScope(m_nNextVar);
 
         MultiGuard guard = m_guard;
         if (guard == null)
@@ -147,6 +147,8 @@ public class GuardStart
     public void simulate(Scope scope)
         {
         scope.enter();
+
+        m_nNextVar = scope.getCurVars();
         }
 
     @Override
@@ -163,6 +165,8 @@ public class GuardStart
     private TypeConstant[] m_aTypeException;
     private StringConstant[] m_aConstName;
     private Op[] m_aOpCatch;
+
+    private int m_nNextVar;
 
     private transient MultiGuard m_guard; // cached struct
     }

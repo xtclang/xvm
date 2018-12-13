@@ -31,7 +31,7 @@ public class FinallyStart
         {
         frame.exitScope();
 
-        int iScope = frame.enterScope();
+        int iScope = frame.enterScope(m_nNextVar);
 
         // this op-code can only be reached by the normal flow of execution,
         // while upon an exception, the GuardAll would jump to the very next op
@@ -48,6 +48,11 @@ public class FinallyStart
         {
         scope.exit();
         scope.enter();
+
+        m_nNextVar = scope.getCurVars();
+
         scope.allocVar();
         }
+
+    private int m_nNextVar;
     }
