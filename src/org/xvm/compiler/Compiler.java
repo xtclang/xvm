@@ -1041,6 +1041,11 @@ public class Compiler
      */
     public static final String IMPLICIT_SUPER_CONSTRUCTOR_MISSING = "COMPILER-103";
     /**
+     * The "super" function has been used as if it were a normal object reference;
+     * it is normally used as a "super(...)" function call.
+     */
+    public static final String INVALID_SUPER_REFERENCE            = "COMPILER-104";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

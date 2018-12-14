@@ -1492,22 +1492,30 @@ public class InvocationExpression
             // the left expression provides the scope to search for a matching method/function;
             // if the left expression is itself a NameExpression, and it's in identity mode (i.e. a
             // possible identity), then check the identity first
-            if (exprLeft instanceof NameExpression &&
-                        ((NameExpression) exprLeft).isIdentityMode(ctx, false))
+            if (exprLeft instanceof NameExpression)
                 {
-                // the left identity
-                // - methods are included because there is a left, but since it is to obtain a
-                //   method reference, there must not be any arg binding or actual invocation
-                // - functions are included because the left is identity-mode
-                TypeInfo infoLeft = ((NameExpression) exprLeft).getIdentity(ctx).ensureTypeInfo(errs);
-                Argument arg      = findCallable(ctx, infoLeft, sName, fNoFBind && fNoCall, true,
-                        atypeReturn, errs);
-
-                if (arg != null)
+                NameExpression nameLeft = (NameExpression) exprLeft;
+                if (nameLeft.getName().equals("super"))
                     {
-                    m_argMethod = arg;
-                    m_method    = getMethod(infoLeft, arg);
-                    return arg;
+                    log(errs, Severity.ERROR, Compiler.INVALID_SUPER_REFERENCE);
+                    return null;
+                    }
+
+                if (nameLeft.isIdentityMode(ctx, false))
+                    {
+                    // the left identity
+                    // - methods are included because there is a left, but since it is to obtain a
+                    //   method reference, there must not be any arg binding or actual invocation
+                    // - functions are included because the left is identity-mode
+                    TypeInfo infoLeft = nameLeft.getIdentity(ctx).ensureTypeInfo(errs);
+                    Argument arg      = findCallable(ctx, infoLeft, sName, fNoFBind && fNoCall, true,
+                            atypeReturn, errs);
+                    if (arg != null)
+                        {
+                        m_argMethod = arg;
+                        m_method    = getMethod(infoLeft, arg);
+                        return arg;
+                        }
                     }
                 }
 
@@ -1516,8 +1524,7 @@ public class InvocationExpression
             // - methods are included because there is a left and it is NOT identity-mode
             // - functions are NOT included because the left is NOT identity-mode
             TypeInfo infoLeft = typeLeft.ensureTypeInfo(errs);
-            Argument arg = findCallable(ctx, infoLeft, sName, true, false, atypeReturn, errs);
-
+            Argument arg      = findCallable(ctx, infoLeft, sName, true, false, atypeReturn, errs);
             if (arg != null)
                 {
                 m_argMethod   = arg;
