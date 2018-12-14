@@ -1078,7 +1078,7 @@ public class Context
         if (typeNarrow != null)
             {
             String   sName = tokName.getValueText();
-            Argument arg   = getVar(sName);
+            Argument arg   = resolveName(sName);
 
             // we are only concerned with registers and type parameters;
             // properties and constants are ignored

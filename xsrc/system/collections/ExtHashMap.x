@@ -229,7 +229,7 @@ class ExtHashMap<KeyType, ValueType>
                 HashEntry?   nextEntry   = null;
                 Int          addSnapshot = ExtHashMap.this.addCount;
 
-                conditional KeyType next()  // TODO is the return type "EntryType" or "KeyType"???
+                conditional HashEntry next()
                     {
                     if (addSnapshot != ExtHashMap.this.addCount)
                         {
@@ -242,15 +242,13 @@ class ExtHashMap<KeyType, ValueType>
                         nextEntry = buckets[nextBucket++];
                         }
 
-                    if (nextEntry != null)
+                    HashEntry? entry = nextEntry;
+                    if (entry != null)
                         {
-                        // this is the entry to return
-                        HashEntry entry = nextEntry;
-
+                        // this is the entry to return;
                         // always load next one in the chain to avoid losing the position if/when
                         // the current entry is removed
                         nextEntry = entry.next;
-
                         return true, entry;
                         }
 

@@ -986,6 +986,11 @@ public class StatementBlock
          */
         public Context emittingContext(Code code)
             {
+            if (m_fEmitting)
+                {
+                return this;
+                }
+
             checkValidating();
             Context ctx = m_ctxValidating;
             if (ctx != null)
