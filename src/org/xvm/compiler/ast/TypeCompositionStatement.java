@@ -1545,30 +1545,6 @@ public class TypeCompositionStatement
             listArgs = args;
             }
 
-        // validate
-        if (listArgs != null)
-            {
-            boolean fValid = true;
-            for (int i = 0, c = listArgs.size(); i < c; i++)
-                {
-                Expression exprOld = listArgs.get(i);
-                Expression exprNew = exprOld.validate(ctxValidate, null, errs);
-                if (exprNew == null)
-                    {
-                    fValid = false;
-                    }
-                else if (exprNew != exprOld)
-                    {
-                    listArgs.set(i, exprNew);
-                    }
-                }
-            if (!fValid)
-                {
-                // validation has failed
-                return;
-                }
-            }
-
         if (clzSuper == null)
             {
             idSuper = null;
@@ -1581,6 +1557,31 @@ public class TypeCompositionStatement
                 // if an error have already been logged, this is additional information
                 log(errs, Severity.ERROR, Compiler.IMPLICIT_SUPER_CONSTRUCTOR_MISSING,
                         component.getIdentityConstant().getValueString(), clzSuper.getName());
+                return;
+                }
+            }
+
+        // validate
+        if (idSuper != null && listArgs != null)
+            {
+            TypeConstant[] atypeArgs = idSuper.getRawParams();
+            boolean        fValid    = true;
+            for (int i = 0, c = listArgs.size(); i < c; i++)
+                {
+                Expression exprOld = listArgs.get(i);
+                Expression exprNew = exprOld.validate(ctxValidate, atypeArgs[i], errs);
+                if (exprNew == null)
+                    {
+                    fValid = false;
+                    }
+                else if (exprNew != exprOld)
+                    {
+                    listArgs.set(i, exprNew);
+                    }
+                }
+            if (!fValid)
+                {
+                // validation has failed
                 return;
                 }
             }

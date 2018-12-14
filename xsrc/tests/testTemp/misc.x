@@ -431,7 +431,7 @@ module TestMisc.xqiz.it
     const Point(Int x, Int y);
 
     const NamedPoint(String name, Int x, Int y)
-            extends Point(x*2, y*2 + 1)
+            extends Point(2*x, y*2 + 1)
         {
         @Override
         Int estimateStringLength()
