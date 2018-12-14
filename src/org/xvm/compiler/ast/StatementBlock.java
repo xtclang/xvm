@@ -517,7 +517,7 @@ public class StatementBlock
                 {
                 parent = parent.getParent();
                 }
-            
+
             return parent.getParent() instanceof NewExpression;
             }
 
@@ -693,6 +693,13 @@ public class StatementBlock
                 }
 
             return false;
+            }
+
+        @Override
+        public boolean isVarHideable(String sName)
+            {
+            // TODO the var is hideable if it is a capture
+            return super.isVarHideable(sName);
             }
 
         @Override
@@ -972,9 +979,9 @@ public class StatementBlock
 
         /**
          * Generate an emitting context, and emit the preamble, if any.
-         * 
+         *
          * @param code  the code that is being emitted to
-         * 
+         *
          * @return a Context that can be used while emitting code
          */
         public Context emittingContext(Code code)

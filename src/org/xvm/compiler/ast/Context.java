@@ -825,6 +825,21 @@ public class Context
         }
 
     /**
+     * Determine if a variable of the specified name can be introduced.
+     *
+     * @param sName  the variable name to introduce
+     *
+     * @return true iff it is legal to introduce a variable of that name
+     */
+    public boolean isVarHideable(String sName)
+        {
+        Context ctxOuter = getOuterContext();
+        return ctxOuter == null
+                ? getVar(sName) == null
+                : ctxOuter.isVarHideable(sName);
+        }
+
+    /**
      * @return a read-only map containing definitely assigned variable names; never null
      */
     protected Map<String, Assignment> getDefiniteAssignments()
