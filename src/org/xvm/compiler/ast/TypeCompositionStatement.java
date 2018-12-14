@@ -24,7 +24,6 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
-import org.xvm.asm.Register;
 import org.xvm.asm.Version;
 import org.xvm.asm.VersionTree;
 
@@ -865,6 +864,7 @@ public class TypeCompositionStatement
                                         composition.getType().ensureTypeConstant());
                                 }
                             }
+                        m_compositionExtend = (Composition.Extends) composition;
                         }
                     break;
 
@@ -1490,28 +1490,92 @@ public class TypeCompositionStatement
         {
         // the constructor has two responsibilities:
         // 1) set each property based on the parameter name, value passed in as an arg
-        // 2) call same-signature super constructor
-        Code           code    = constructor.ensureCode();
-        MethodConstant idSuper = null;
-
+        // 2) call the super constructor
+        Code           code      = constructor.ensureCode();
         StatementBlock blockBody = body;
         if (body == null)
             {
             blockBody = adopt(new StatementBlock(Collections.EMPTY_LIST));
             }
         RootContext ctxConstruct = blockBody.new RootContext(constructor);
+        Context     ctxValidate  = ctxConstruct.validatingContext();
 
-        // find super constructor of the same signature (must be there if args are specified)
-        ClassStructure clzSuper = component.getSuper();
-        if (clzSuper != null || args != null)
+        ClassStructure clzSuper  = component.getSuper();
+        TypeInfo       infoSuper = clzSuper == null ? null : clzSuper.getFormalType().ensureTypeInfo(errs);
+        MethodConstant idSuper; // super constructor
+
+        List<Expression> listArgs;
+        if (args == null)
             {
-            if (clzSuper != null)
-                {
-                TypeInfo infoSuper = clzSuper.getFormalType().ensureTypeInfo(errs);
+            // Examples:
+            //    const DeadlockException(String? text = null, Exception? cause = null)
+            //        extends Exception(text, cause);
+            //
+            //    const Point3d(Int x, Int y, Int z = 0)
+            //        extends Point(x, y);
 
-                idSuper = findMethod(ctxConstruct.validatingContext(),
-                        infoSuper, "construct", args, false, true, null, errs);
+            Composition.Extends compExtend = m_compositionExtend;
+            if (compExtend == null)
+                {
+                listArgs = null;
                 }
+            else
+                {
+                assert clzSuper != null;
+
+                listArgs = compExtend.args;
+                }
+            }
+        else
+            {
+            // Examples:
+            //
+            //    enum Ordered(String symbol) { Lesser("<"), ... }
+            //
+            //    Entry<KeyType, ValueType> entry = new KeyBasedEntry<KeyType, ValueType>(key)
+            //          {
+            //          @Override
+            //          ValueType getValue()
+            //              {
+            //              ...
+            //              }
+            //          }
+
+            assert clzSuper != null;
+            listArgs = args;
+            }
+
+        // validate
+        if (listArgs != null)
+            {
+            boolean fValid = true;
+            for (int i = 0, c = listArgs.size(); i < c; i++)
+                {
+                Expression exprOld = listArgs.get(i);
+                Expression exprNew = exprOld.validate(ctxValidate, null, errs);
+                if (exprNew == null)
+                    {
+                    fValid = false;
+                    }
+                else if (exprNew != exprOld)
+                    {
+                    listArgs.set(i, exprNew);
+                    }
+                }
+            if (!fValid)
+                {
+                // validation has failed
+                return;
+                }
+            }
+
+        if (clzSuper == null)
+            {
+            idSuper = null;
+            }
+        else
+            {
+            idSuper = findMethod(ctxValidate, infoSuper, "construct", listArgs, false, true, null, errs);
             if (idSuper == null)
                 {
                 // if an error have already been logged, this is additional information
@@ -1521,43 +1585,20 @@ public class TypeCompositionStatement
                 }
             }
 
-        int        cSuperArgs;
-        Argument[] aSuperArgs;
-
+        // emit code
+        Context ctxEmit = ctxConstruct.emittingContext(code);
         if (args == null)
             {
-            MethodStructure constructSuper;
+            // parameters that don't exist on the super must be properties on "this"
+            // and we need to assign them
 
-            if (idSuper == null)
+            List<org.xvm.asm.Parameter> params = constructor.getParams();
+            for (int i = 0, c = params.size(); i < c; ++i)
                 {
-                constructSuper = null;
-                cSuperArgs     = -1;
-                aSuperArgs     = null;
-                }
-            else
-                {
-                constructSuper = (MethodStructure) idSuper.getComponent();
-                cSuperArgs     = constructSuper.getParamCount();
-                aSuperArgs     = new Argument[cSuperArgs];
-                }
-
-            // REVIEW @see Point3d example in Test.x & Composition.Extends - need to do some prop sets and call a reduced-parameter super constructor
-            // TODO: strictly speaking, the names of the parameters on the constructor and super constructor don't have to match...
-
-            List<org.xvm.asm.Parameter> params  = constructor.getParams();
-            int                         cParams = params.size();
-
-            for (int iParam = 0; iParam < cParams; ++iParam)
-                {
-                org.xvm.asm.Parameter param  = params.get(iParam);
+                org.xvm.asm.Parameter param  = params.get(i);
                 String                sParam = param.getName();
-                Register              reg    = new Register(param.getType(), iParam);
 
-                // the parameter should be either a property or an argument to the super
-                org.xvm.asm.Parameter paramSuper = constructSuper == null
-                        ? null
-                        : constructSuper.getParam(sParam);
-                if (paramSuper == null)
+                if (infoSuper == null || infoSuper.findProperty(sParam) == null)
                     {
                     // there must be a property by the same name
                     Component child = component.getChild(sParam);
@@ -1568,7 +1609,7 @@ public class TypeCompositionStatement
                         TypeConstant      typeVal  = param.getType();
                         if (param.getType().isA(prop.getType()))
                             {
-                            code.add(new L_Set(prop.getIdentityConstant(), reg));
+                            code.add(new L_Set(prop.getIdentityConstant(), ctxEmit.getVar(sParam)));
                             }
                         else
                             {
@@ -1581,16 +1622,24 @@ public class TypeCompositionStatement
                         log(errs, Severity.ERROR, Compiler.IMPLICIT_PROP_MISSING, sParam);
                         }
                     }
-                else
-                    {
-                    aSuperArgs[paramSuper.getIndex()] = reg;
-                    }
                 }
+            }
 
-            // fill in the default values for not specified arguments
+        if (idSuper != null)
+            {
+            MethodStructure constructSuper = (MethodStructure) idSuper.getComponent();
+            int             cSuperArgs     = constructSuper.getParamCount();
+            Argument[]      aSuperArgs     = new Argument[cSuperArgs];
+            int             cArgs          = listArgs == null ? 0 : listArgs.size();
+
+            // generate the super constructor arguments (filling in the default values)
             for (int i = 0; i < cSuperArgs; i++)
                 {
-                if (aSuperArgs[i] == null)
+                if (i < cArgs)
+                    {
+                    aSuperArgs[i] = listArgs.get(i).generateArgument(ctxEmit, code, true, true, errs);
+                    }
+                else
                     {
                     org.xvm.asm.Parameter paramSuper = constructSuper.getParam(i);
                     if (paramSuper.hasDefaultValue())
@@ -1604,57 +1653,21 @@ public class TypeCompositionStatement
                         }
                     }
                 }
-            }
-        else
-            {
-            cSuperArgs = args.size();
 
-            boolean fValid = true;
-            for (int i = 0; i < cSuperArgs; i++)
+            switch (cSuperArgs)
                 {
-                Expression exprOld = args.get(i);
-                Expression exprNew = exprOld.validate(ctxConstruct, null, errs);
-                if (exprNew == null)
-                    {
-                    fValid = false;
-                    }
-                else if (exprNew != exprOld)
-                    {
-                    args.set(i, exprNew);
-                    }
+                case 0:
+                    code.add(new Construct_0(idSuper));
+                    break;
+
+                case 1:
+                    code.add(new Construct_1(idSuper, aSuperArgs[0]));
+                    break;
+
+                default:
+                    code.add(new Construct_N(idSuper, aSuperArgs));
+                    break;
                 }
-            if (!fValid)
-                {
-                // validation has failed
-                return;
-                }
-
-            Context ctxEmit = ctxConstruct.emittingContext(code);
-
-            aSuperArgs = new Argument[cSuperArgs];
-            for (int i = 0; i < cSuperArgs; i++)
-                {
-                aSuperArgs[i] = args.get(i).generateArgument(ctxEmit, code, false, false, errs);
-                }
-            }
-
-        switch (cSuperArgs)
-            {
-            case -1:
-                // there is no super
-                break;
-
-            case 0:
-                code.add(new Construct_0(idSuper));
-                break;
-
-            case 1:
-                code.add(new Construct_1(idSuper, aSuperArgs[0]));
-                break;
-
-            default:
-                code.add(new Construct_N(idSuper, aSuperArgs));
-                break;
             }
 
         code.add(new Return_0());
@@ -2087,6 +2100,11 @@ public class TypeCompositionStatement
      * compilation, so it may be in the same "compiler pass" as this module for any given pass.
      */
     transient private ModuleStructure m_moduleImported;
+
+    /**
+     * Cached "extends" composition.
+     */
+    transient Composition.Extends m_compositionExtend;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TypeCompositionStatement.class,
             "condition", "annotations", "typeParams", "constructorParams", "typeArgs", "args",

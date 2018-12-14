@@ -423,7 +423,29 @@ module TestMisc.xqiz.it
 
         Point point = new Point(0, 1);
         console.println("point=" + point);
+
+        Point point2 = new NamedPoint("top-left", 1, 0);
+        console.println("point2=" + point2);
         }
 
     const Point(Int x, Int y);
+
+    const NamedPoint(String name, Int x, Int y)
+            extends Point(x*2, y*2 + 1)
+        {
+        @Override
+        Int estimateStringLength()
+            {
+            return super.estimateStringLength() + name.size;
+            }
+
+        @Override
+        void appendTo(Appender<Char> appender)
+            {
+            name.appendTo(appender.add('('));
+            x.appendTo(appender.add(": x="));
+            y.appendTo(appender.add(", y="));
+            appender.add(')');
+            }
+        }
     }
