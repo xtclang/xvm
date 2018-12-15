@@ -51,6 +51,7 @@ import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.LabeledStatement.LabelVar;
+
 import org.xvm.util.Severity;
 
 
@@ -377,7 +378,8 @@ public class NameExpression
      */
     public boolean hasAnySuppressDeref()
         {
-        return isSuppressDeref() || left instanceof NameExpression && ((NameExpression) left).hasAnySuppressDeref();
+        return isSuppressDeref() ||
+            left instanceof NameExpression && ((NameExpression) left).hasAnySuppressDeref();
         }
 
     /**
