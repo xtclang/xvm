@@ -1695,14 +1695,13 @@ public abstract class Expression
     /**
      * Generate a "this" or some other reserved register.
      *
-     *
      * @param code  the code block
      * @param nReg  the register identifier
      * @param errs  the error list to log to
      *
      * @return the reserved register
      */
-    protected Argument generateReserved(Code code, int nReg, ErrorListener errs)
+    protected Register generateReserved(Code code, int nReg, ErrorListener errs)
         {
         boolean         fNoFunction  = true;
         boolean         fNoConstruct = true;

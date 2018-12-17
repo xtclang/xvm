@@ -51,6 +51,7 @@ import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.LabeledStatement.LabelVar;
+
 import org.xvm.util.Severity;
 
 
@@ -377,7 +378,8 @@ public class NameExpression
      */
     public boolean hasAnySuppressDeref()
         {
-        return isSuppressDeref() || left instanceof NameExpression && ((NameExpression) left).hasAnySuppressDeref();
+        return isSuppressDeref() ||
+            left instanceof NameExpression && ((NameExpression) left).hasAnySuppressDeref();
         }
 
     /**
@@ -592,6 +594,7 @@ public class NameExpression
                                 break;
 
                             case OuterThis:
+                            case OuterRef:
                                 // not a constant
                                 break;
 
@@ -788,11 +791,33 @@ public class NameExpression
                     {
                     assert getMeaning() == Meaning.Class;
 
+                    // TODO: the instanceof ParenClassConstant check will go away (p.this for property p on Map will become this.Map.&p)
                     if (argRaw instanceof ParentClassConstant && argLVal instanceof Register)
                         {
                         int cSteps = ((ParentClassConstant) argRaw).getDepth();
 
                         code.add(new MoveThis(cSteps, (Register) argLVal));
+                        return;
+                        }
+                    break;
+                    }
+
+                case OuterRef:
+                    {
+                    assert getMeaning() == Meaning.Class;
+
+                    if (argLVal instanceof Register)
+                        {
+                        int cSteps = argRaw instanceof ThisClassConstant
+                                ? 0
+                                : ((ParentClassConstant) argRaw).getDepth();
+
+                        TypeConstant typeRef      = getType();
+                        TypeConstant typeReferent = typeRef.getParamTypesArray()[0];
+
+                        Register regTemp = createRegister(typeReferent, false);
+                        code.add(new MoveThis(cSteps, regTemp));
+                        code.add(new MoveRef(regTemp, (Register) argLVal));
                         return;
                         }
                     break;
@@ -884,6 +909,7 @@ public class NameExpression
                 {
                 assert getMeaning() == Meaning.Class;
 
+                // TODO: this scenario will go away (p.this for property p on Map will become this.Map.&p)
                 if (argRaw instanceof ThisClassConstant)
                     {
                     // it's just "this" (but note that it results in the public type)
@@ -892,8 +918,26 @@ public class NameExpression
 
                 int cSteps = ((ParentClassConstant) argRaw).getDepth();
 
-                Register regOuter = createRegister(argRaw.getType(), fUsedOnce);
+                Register regOuter = createRegister(getType(), fUsedOnce);
                 code.add(new MoveThis(cSteps, regOuter));
+                return regOuter;
+                }
+
+            case OuterRef:
+                {
+                assert getMeaning() == Meaning.Class;
+
+                int cSteps = argRaw instanceof ThisClassConstant
+                        ? 0
+                        : ((ParentClassConstant) argRaw).getDepth();
+
+                TypeConstant typeRef      = getType();
+                TypeConstant typeReferent = typeRef.getParamTypesArray()[0];
+
+                Register regOuter = createRegister(typeRef, fUsedOnce);
+                Register regTemp  = createRegister(typeReferent, false);
+                code.add(new MoveThis(cSteps, regTemp));
+                code.add(new MoveRef(regTemp, regOuter));
                 return regOuter;
                 }
 
@@ -1380,17 +1424,37 @@ public class NameExpression
         switch (constant.getFormat())
             {
             case ThisClass:
-                m_plan = Plan.None;
-                return pool.ensureAccessTypeConstant(
-                    constant.getType().adoptParameters(pool, ctx.getThisType()), Access.PRIVATE);
+                {
+                TypeConstant typeThis = pool.ensureAccessTypeConstant(
+                        constant.getType().adoptParameters(pool, ctx.getThisType()), Access.PRIVATE);
+                if (isSuppressDeref())
+                    {
+                    m_plan = Plan.OuterRef;
+                    return pool.ensureParameterizedTypeConstant(pool.typeRef(), typeThis);
+                    }
+                else
+                    {
+                    m_plan = Plan.None;
+                    return typeThis;
+                    }
+                }
 
             case ParentClass:
                 if (name.getValueText().equals("this"))
                     {
-                    assert left instanceof NameExpression;
-                    m_plan = Plan.OuterThis;
-                    return pool.ensureAccessTypeConstant(
-                        constant.getType().adoptParameters(pool, ctx.getThisType()), Access.PRIVATE);
+                    NameExpression exprLeft = (NameExpression) left;
+                    TypeConstant typeParent = pool.ensureAccessTypeConstant(
+                            constant.getType().adoptParameters(pool, ctx.getThisType()), Access.PRIVATE);
+                    if (exprLeft.isSuppressDeref())
+                        {
+                        m_plan = Plan.OuterRef;
+                        return pool.ensureParameterizedTypeConstant(pool.typeRef(), typeParent);
+                        }
+                    else
+                        {
+                        m_plan = Plan.OuterThis;
+                        return typeParent;
+                        }
                     }
                 // fall through
             // class ID
@@ -1441,6 +1505,7 @@ public class NameExpression
                     log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
                     }
 
+                // TODO: this scenario will go away (p.this for property p on Map will become this.Map.&p)
                 if (name.getValueText().equals("this"))
                     {
                     assert left instanceof NameExpression;
@@ -1798,7 +1863,7 @@ public class NameExpression
      * produce as part of compilation, if it is asked to produce an argument, an assignable, or an
      * assignment.
      */
-    enum Plan {None, OuterThis, RegisterRef, PropertyDeref, PropertyRef, TypeOfClass, TypeOfTypedef, Singleton}
+    enum Plan {None, OuterThis, OuterRef, RegisterRef, PropertyDeref, PropertyRef, TypeOfClass, TypeOfTypedef, Singleton}
 
     /**
      * Cached validation info: The raw argument that the name refers to.
