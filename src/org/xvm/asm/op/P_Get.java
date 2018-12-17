@@ -34,7 +34,7 @@ public class P_Get
      * @param argTarget      the target Argument
      * @param argReturn      the return Argument
      */
-    public P_Get(PropertyConstant constProperty, Argument argTarget,  Argument argReturn)
+    public P_Get(PropertyConstant constProperty, Argument argTarget, Argument argReturn)
         {
         super(constProperty);
 
