@@ -492,9 +492,8 @@ interface Stream<ElementType>
         {
         // the default behavior delegates to the Iterator, but an implementation that parallelizes
         // the stream will likely override this behavior
-        AccumulationType      container  = collector.supply();
-        Collector.Accumulator accumulate = collector.accumulate;
-        iterator().forEach(element -> accumulate(container, element));
+        AccumulationType container = collector.supply();
+        iterator().forEach(element -> collector.accumulate(container, element));
         return collector.finish(container);
         }
 

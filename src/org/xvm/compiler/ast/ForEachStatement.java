@@ -13,6 +13,8 @@ import org.xvm.asm.Assignment;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op;
+import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.IntervalConstant;
@@ -147,12 +149,7 @@ public class ForEachStatement
      */
     private TypeConstant getKeyType()
         {
-        assert m_plan == Plan.MAP;
-        assert m_exprRValue != null;
-        assert m_exprRValue.getType().isA(pool().typeMap());
-
-        TypeConstant type = m_exprRValue.getType().getGenericParamType("KeyType");
-        return type == null ? pool().typeObject() : type;
+        return getFormalMapType("KeyType");
         }
 
     /**
@@ -160,12 +157,31 @@ public class ForEachStatement
      */
     private TypeConstant getValueType()
         {
+        return getFormalMapType("ValueType");
+        }
+
+    /**
+     * @return the type of the ValueType type parameter if the plan is "Map"
+     */
+    private TypeConstant getFormalMapType(String sProp)
+        {
         assert m_plan == Plan.MAP;
         assert m_exprRValue != null;
         assert m_exprRValue.getType().isA(pool().typeMap());
 
-        TypeConstant type = m_exprRValue.getType().getGenericParamType("ValueType");
-        return type == null ? pool().typeObject() : type;
+        TypeConstant typeMap = m_exprRValue.getType();
+        if (typeMap.isFormalType())
+            {
+            // TODO: change this when FormalTypeConstant is introduced
+            PropertyConstant idProp = ((PropertyStructure) pool().clzMap().
+                getComponent().getChild(sProp)).getIdentityConstant();
+            return idProp.getFormalType();
+            }
+        else
+            {
+            TypeConstant type = typeMap.getGenericParamType(sProp);
+            return type == null ? pool().typeObject() : type;
+            }
         }
 
     /**
@@ -447,7 +463,7 @@ public class ForEachStatement
             }
 
         // regardless of the validity of the R-Value let's mark the L-Value as assigned
-        exprLVal.markAssignment(ctx, true, errs);
+        exprLVal.markAssignment(ctx, false, errs);
 
         // the statement block does not need its own scope (because the for() statement is a scope)
         StatementBlock blockOld = block;
@@ -560,16 +576,23 @@ public class ForEachStatement
         Register regIter = code.lastRegister();
         m_exprRValue.generateAssignment(ctx, code, m_exprRValue.new Assignable(regIter), errs);
 
-        return emitAnyIterator(regIter, ctx, fReachable, code, errs);
+        return emitAnyIterator(ctx, fReachable, code, regIter, errs);
         }
 
     /**
      * Helper that generates code using the passed Iterator register.
      */
-    private boolean emitAnyIterator(Register regIter, Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    private boolean emitAnyIterator(Context ctx, boolean fReachable, Code code, Register regIter,
+                                    ErrorListener errs)
         {
-        boolean      fCompletes = fReachable;
-        ConstantPool pool       = pool();
+        ConstantPool pool = pool();
+
+        TypeInfo       infoIter = pool.typeIterator().ensureTypeInfo(errs);
+        MethodConstant idNext   = findWellKnownMethod(infoIter, "next", errs);
+        if (idNext == null)
+            {
+            return false;
+            }
 
         // VAR_I   iter Iterator<T>         ; (passed in) hidden variable that holds the Iterator
         // MOV     xxx iter                 ; (passed in) however the iterator got assigned
@@ -589,23 +612,24 @@ public class ForEachStatement
         Register regCond = code.lastRegister();
 
         Assignable lvalVal  = m_exprLValue.generateAssignable(ctx, code, errs);
-        boolean    fValTemp = !lvalVal.isLocalArgument();
-        Argument   argVal   = fValTemp
-                ? m_exprLValue.createTempVar(code, lvalVal.getType(), true, errs).getLocalArgument()
+        boolean    fTempVal = !lvalVal.isLocalArgument();
+        Argument   argVal   = fTempVal
+                ? new Register(lvalVal.getType(), Op.A_STACK)
                 : lvalVal.getLocalArgument();
 
         Label labelRepeat = new Label("repeat_foreach_" + getLabelId());
         code.add(labelRepeat);
 
-        TypeInfo            infoIter = pool.typeIterator().ensureTypeInfo(errs);
-        Set<MethodConstant> setId    = infoIter.findMethods("next", 0, true, false);
-        assert setId.size() == 1;
-        code.add(new Invoke_0N(regIter, setId.iterator().next(), new Argument[] {regCond, argVal}));
+        code.add(new Invoke_0N(regIter, idNext, new Argument[] {regCond, argVal}));
         code.add(new JumpFalse(regCond, getEndLabel()));
+        if (fTempVal)
+            {
+            lvalVal.assign(argVal, code, errs);
+            }
 
         // we explicitly do NOT check the block completion, since our completion is not dependent on
         // the block's ability to complete (since the loop may execute zero times)
-        block.completes(ctx, fCompletes, code, errs);
+        block.completes(ctx, fReachable, code, errs);
 
         if (hasContinueLabel())
             {
@@ -621,7 +645,7 @@ public class ForEachStatement
             }
         code.add(new Jump(labelRepeat));
 
-        return fCompletes;
+        return fReachable;
         }
 
     /**
@@ -629,8 +653,6 @@ public class ForEachStatement
      */
     private boolean emitRange(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean fCompletes = fReachable;
-
         // code simplification for intrinsic sequential types
         if (m_exprRValue.isConstant())
             {
@@ -651,7 +673,7 @@ public class ForEachStatement
                 case "UInt64":
                 case "UInt128":
                 case "VarUInt":
-                    return emitConstantRange(ctx, fCompletes, code, errs);
+                    return emitConstantRange(ctx, fReachable, code, errs);
                 }
             }
 
@@ -664,18 +686,16 @@ public class ForEachStatement
         code.add(new Var(typeIter));
         Register regIter = code.lastRegister();
 
-        Argument            argAble  = m_exprRValue.generateArgument(ctx, code, true, true, errs);
-        TypeInfo            infoAble = typeRange.ensureTypeInfo(errs);
-        Set<MethodConstant> setId    = infoAble.findMethods("iterator", 0, true, false);
-
-        MethodConstant idIter = m_exprRValue.chooseBest(setId, typeRange, errs);
+        Argument       argAble  = m_exprRValue.generateArgument(ctx, code, true, true, errs);
+        TypeInfo       infoAble = typeRange.ensureTypeInfo(errs);
+        MethodConstant idIter   = findWellKnownMethod(infoAble, "iterator", errs);
         if (idIter == null)
             {
             return false;
             }
 
         code.add(new Invoke_01(argAble, idIter, regIter));
-        return emitAnyIterator(regIter, ctx, fReachable, code, errs);
+        return emitAnyIterator(ctx, fReachable, code, regIter, errs);
         }
 
     /**
@@ -683,8 +703,6 @@ public class ForEachStatement
      */
     private boolean emitConstantRange(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean fCompletes = fReachable;
-
         ConstantPool     pool    = pool();
         TypeConstant     typeSeq = getElementType();
         IntervalConstant range   = (IntervalConstant) m_exprRValue.toConstant();
@@ -721,7 +739,7 @@ public class ForEachStatement
 
         // we explicitly do NOT check the block completion, since our completion is not dependent on
         // the block's ability to complete (since the loop may execute zero times)
-        block.completes(ctx, fCompletes, code, errs);
+        block.completes(ctx, fReachable, code, errs);
 
         code.add(getContinueLabel());
         code.add(new JumpTrue(regLast, getEndLabel()));
@@ -736,7 +754,7 @@ public class ForEachStatement
             }
         code.add(new Jump(lblRepeat));
 
-        return fCompletes;
+        return fReachable;
         }
 
     /**
@@ -744,8 +762,6 @@ public class ForEachStatement
      */
     private boolean emitSequence(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean fCompletes = fReachable;
-
         ConstantPool     pool     = pool();
         TypeConstant     typeElem = getElementType();
         TypeConstant     typeSeq  = pool.ensureParameterizedTypeConstant(pool.typeSequence(), typeElem);
@@ -788,15 +804,9 @@ public class ForEachStatement
 
         Assignable lvalVal  = m_exprLValue.generateAssignable(ctx, code, errs);
         boolean    fTempVal = !lvalVal.isLocalArgument();
-        Argument   argVal;
-        if (fTempVal)
-            {
-            argVal = m_exprLValue.createTempVar(code, typeElem, true, errs).getLocalArgument();
-            }
-        else
-            {
-            argVal = lvalVal.getLocalArgument();
-            }
+        Argument   argVal   = fTempVal
+                ? new Register(typeElem, Op.A_STACK)
+                : lvalVal.getLocalArgument();
 
         Register regLast = m_regLast;
         if (regLast == null)
@@ -817,7 +827,7 @@ public class ForEachStatement
 
         // we explicitly do NOT check the block completion, since our completion is not dependent on
         // the block's ability to complete (since the loop may execute zero times)
-        block.completes(ctx, fCompletes, code, errs);
+        block.completes(ctx, fReachable, code, errs);
 
         code.add(getContinueLabel());
         code.add(new JumpTrue(regLast, getEndLabel()));
@@ -828,7 +838,7 @@ public class ForEachStatement
             }
         code.add(new Jump(lblRepeat));
 
-        return fCompletes;
+        return fReachable;
         }
 
     /**
@@ -836,12 +846,175 @@ public class ForEachStatement
      */
     private boolean emitMap(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean fCompletes = fReachable;
+        ConstantPool pool      = pool();
+        TypeConstant typeKey   = getKeyType();
+        TypeConstant typeValue = getValueType();
+        TypeConstant typeMap   = pool.ensureParameterizedTypeConstant(pool.typeMap(), typeKey, typeValue);
+        TypeConstant typeEntry = pool.ensureParameterizedTypeConstant(pool.typeEntry(), typeKey, typeValue);
+        TypeConstant typeAble  = pool.ensureParameterizedTypeConstant(pool.typeIterable(), typeEntry);
+        TypeConstant typeIter  = pool.ensureParameterizedTypeConstant(pool.typeIterator(), typeEntry);
 
-        // TODO
-        notImplemented();
+        TypeInfo         infoMap   = typeMap.ensureTypeInfo(errs);
+        PropertyConstant idKeys    = infoMap.findProperty("keys").getIdentity();
+        PropertyConstant idEntries = infoMap.findProperty("entries").getIdentity();
+        TypeInfo         infoEntry = typeEntry.ensureTypeInfo(errs);
+        PropertyConstant idKey     = infoEntry.findProperty("key").getIdentity();
+        PropertyConstant idValue   = infoEntry.findProperty("value").getIdentity();
 
-        return fCompletes;
+        TypeInfo       infoAble   = typeAble.ensureTypeInfo(errs);
+        MethodConstant idIterator = findWellKnownMethod(infoAble, "iterator", errs);
+        if (idIterator == null)
+            {
+            return false;
+            }
+        TypeInfo       infoIter = pool.typeIterator().ensureTypeInfo(errs);
+        MethodConstant idNext   = findWellKnownMethod(infoIter, "next", errs);
+        if (idNext == null)
+            {
+            return false;
+            }
+
+        Argument argMap = m_exprRValue.generateArgument(ctx, code, true, true, errs);
+
+        Label labelRepeat = new Label("repeat_foreach_" + getLabelId());
+        if (m_exprLValue.getValueCount() == 2 || m_regEntry != null)
+            {
+            // VAR     iter Iterator<Entry>     ; the entry Iterator
+            // P_GET   Map.entries, map -> set  ; get the "entries" property from the [RValue] map
+            // NVOK_01 set iterator() -> iter   ; get the iterator
+            //
+            // VAR     cond Boolean             ; hidden variable that holds the conditional result
+            // VAR     entry Entry              ; the entry
+            // VAR     key KeyType              ; the key
+            // VAR     value ValueType          ; the value
+            // Repeat:
+            // NVOK_0N iter Iterator.next() -> cond, entry ; assign the conditional result and the value
+            // JMP_F   cond, Exit               ; exit when the conditional result is false
+            // P_GET   Entry.key, entry -> key
+            // P_GET   Entry.value, entry -> value
+            // {...}                            ; body
+            // Continue:
+            // MOV False first                  ; (optional) no longer the L.first
+            // IP_INC count                     ; (optional) increment the L.count
+            // JMP Repeat                       ; loop
+            // Exit:
+
+            Register regSet = new Register(typeAble, Op.A_STACK);
+            code.add(new P_Get(idEntries, argMap, regSet));
+            code.add(new Var(typeIter));
+            Register regIter = code.lastRegister();
+            code.add(new Invoke_01(regSet, idIterator, regIter));
+
+            code.add(new Var(pool.typeBoolean()));
+            Register regCond = code.lastRegister();
+
+            code.add(labelRepeat);
+
+            Register regEntry = m_regEntry;
+            if (regEntry == null)
+                {
+                // the "entry" label is not used; create a temp var
+                code.add(new Var(typeEntry));
+                regEntry = code.lastRegister();
+                }
+
+            code.add(new Invoke_0N(regIter, idNext, new Argument[] {regCond, regEntry}));
+            code.add(new JumpFalse(regCond, getEndLabel()));
+
+            Assignable[] alval = m_exprLValue.generateAssignables(ctx, code, errs);
+
+            Assignable lvalKey  = alval[0];
+            boolean    fTempKey = !lvalKey.isLocalArgument();
+            Argument   argKey   = fTempKey
+                    ? new Register(typeKey, Op.A_STACK)
+                    : lvalKey.getLocalArgument();
+
+            code.add(new P_Get(idKey, regEntry, argKey));
+            if (fTempKey)
+                {
+                lvalKey.assign(argKey, code, errs);
+                }
+
+            if (alval.length == 2)
+                {
+                Assignable lvalVal  = alval[1];
+                boolean    fTempVal = !lvalVal.isLocalArgument();
+                Argument   argVal   = fTempVal
+                        ? new Register(typeValue, Op.A_STACK)
+                        : lvalVal.getLocalArgument();
+
+                code.add(new P_Get(idValue, regEntry, argVal));
+                if (fTempVal)
+                    {
+                    lvalVal.assign(argVal, code, errs);
+                    }
+                }
+            }
+        else
+            {
+            // VAR     iter Iterator<Entry>     ; the entry Iterator
+            // P_GET   Map.keys, map -> set     ; get the "keys" property from the [RValue] map
+            // NVOK_01 set iterator() -> iter   ; get the iterator
+            //
+            // VAR     cond Boolean             ; hidden variable that holds the conditional result
+            // VAR     key KeyType              ; the key
+            // Repeat:
+            // NVOK_0N iter Iterator.next() -> cond, key ; assign the conditional result and the value
+            // JMP_F   cond, Exit               ; exit when the conditional result is false
+            // P_GET   Entry.key, entry -> key
+            // {...}                            ; body
+            // Continue:
+            // MOV False first                  ; (optional) no longer the L.first
+            // IP_INC count                     ; (optional) increment the L.count
+            // JMP Repeat                       ; loop
+            // Exit:
+
+            Register regSet = new Register(typeAble, Op.A_STACK);
+            code.add(new P_Get(idKeys, argMap, regSet));
+            code.add(new Var(typeIter));
+            Register regIter = code.lastRegister();
+            code.add(new Invoke_01(regSet, idIterator, regIter));
+
+            code.add(new Var(pool.typeBoolean()));
+            Register regCond = code.lastRegister();
+
+            code.add(labelRepeat);
+
+            Assignable lvalKey = m_exprLValue.generateAssignable(ctx, code, errs);
+
+            boolean    fTempKey = !lvalKey.isLocalArgument();
+            Argument   argKey   = fTempKey
+                    ? new Register(typeKey, Op.A_STACK)
+                    : lvalKey.getLocalArgument();
+
+            code.add(new Invoke_0N(regIter, idNext, new Argument[] {regCond, argKey}));
+            code.add(new JumpFalse(regCond, getEndLabel()));
+
+            if (fTempKey)
+                {
+                lvalKey.assign(argKey, code, errs);
+                }
+            }
+
+        // we explicitly do NOT check the block completion, since our completion is not dependent on
+        // the block's ability to complete (since the loop may execute zero times)
+        block.completes(ctx, fReachable, code, errs);
+
+        if (hasContinueLabel())
+            {
+            code.add(getContinueLabel());
+            }
+        if (m_regFirst != null)
+            {
+            code.add(new Move(pool.valFalse(), m_regFirst));
+            }
+        if (m_regCount != null)
+            {
+            code.add(new IP_Inc(m_regCount));
+            }
+        code.add(new Jump(labelRepeat));
+
+        return fReachable;
         }
 
     /**
@@ -857,13 +1030,29 @@ public class ForEachStatement
         code.add(new Var(typeIter));
         Register regIter = code.lastRegister();
 
-        Argument            argAble  = m_exprRValue.generateArgument(ctx, code, true, true, errs);
-        TypeInfo            infoAble = typeAble.ensureTypeInfo(errs);
-        Set<MethodConstant> setId    = infoAble.findMethods("iterator", 0, true, false);
-        assert setId.size() == 1;
-        code.add(new Invoke_01(argAble, setId.iterator().next(), regIter));
+        Argument       argAble    = m_exprRValue.generateArgument(ctx, code, true, true, errs);
+        TypeInfo       infoAble   = typeAble.ensureTypeInfo(errs);
+        MethodConstant idIterator = findWellKnownMethod(infoAble, "iterator", errs);
+        if (idIterator == null)
+            {
+            return false;
+            }
 
-        return emitAnyIterator(regIter, ctx, fReachable, code, errs);
+        code.add(new Invoke_01(argAble, idIterator, regIter));
+
+        return emitAnyIterator(ctx, fReachable, code, regIter, errs);
+        }
+
+    /**
+     * Trivial helper.
+     */
+    private MethodConstant findWellKnownMethod(TypeInfo info, String sMethodName, ErrorListener errs)
+        {
+        Set<MethodConstant> setId = info.findMethods(sMethodName, 0, true, false);
+
+        return setId.isEmpty()
+                ? null
+                : chooseBest(setId, info.getType(), errs);
         }
 
 

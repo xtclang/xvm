@@ -1662,6 +1662,11 @@ public class MethodStructure
             if (!list.isEmpty())
                 {
                 Op op = list.get(list.size() - 1);  // TODO walk back until we find one
+
+                while (op instanceof Op.Prefix)
+                    {
+                    op = ((Op.Prefix) op).getNextOp();
+                    }
                 if (op instanceof OpVar)
                     {
                     return ((OpVar) op).getRegister();

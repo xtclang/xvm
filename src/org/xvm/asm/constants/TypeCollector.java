@@ -304,7 +304,8 @@ public class TypeCollector
         {
         if (!isMulti())
             {
-            TypeConstant type = inferSingle(atypeRequired == null ? null : atypeRequired[0]);
+            TypeConstant type = inferSingle(
+                    atypeRequired == null || atypeRequired.length == 0 ? null : atypeRequired[0]);
             return type == null
                     ? null
                     : new TypeConstant[] {type};
