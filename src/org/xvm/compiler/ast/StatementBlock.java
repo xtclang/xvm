@@ -10,6 +10,9 @@ import java.util.Map;
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.Component.ResolutionResult;
+import org.xvm.asm.Component.SimpleCollector;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
@@ -18,15 +21,21 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.Op.ConstantRegistry;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.Assignment;
 
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.TypedefConstant;
 
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
@@ -41,8 +50,8 @@ import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
+import org.xvm.compiler.ast.NameResolver.Result;
 import org.xvm.compiler.ast.NewExpression.AnonInnerClassContext;
-import org.xvm.compiler.ast.NewExpression.CaptureConstant;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
@@ -698,8 +707,11 @@ public class StatementBlock
         @Override
         public boolean isVarHideable(String sName)
             {
-            // TODO the var is hideable if it is a capture
-            return super.isVarHideable(sName);
+            // if the var name is not available, then there is already a variable of that same name
+            // registered in this context, which means that it is either an explicit parameter
+            // (unhideable) or a capture variable (hideable)
+            return super.isVarHideable(sName)
+                    || isAnonymousInnerClass() && getMethod().getParam(sName) == null;
             }
 
         @Override
@@ -711,69 +723,237 @@ public class StatementBlock
             // up and cached
             Map<String, Argument> mapByName = ensureNameMap();
             Argument              arg       = mapByName.get(sName);
-            if (arg == null)
+            if (arg != null)
                 {
-                if (isAnonymousInnerClass())
+                return arg instanceof TargetInfo
+                        ? ((TargetInfo) arg).id
+                        : arg;
+                }
+
+            // check if the name specifies a capture variable from an anonymous inner class to its
+            // enclosing method (the method containing the "new" expression that defines the
+            // anonymous inner class); this needs to be checked up front, because otherwise we will
+            // find the synthetic property of the same name as we walk up the component tree
+            if (isAnonymousInnerClass())
+                {
+                NewExpression exprNew = getAnonymousInnerClassExpression();
+                if (exprNew.isCapture(sName))
                     {
-                    NewExpression exprNew = getAnonymousInnerClassExpression();
-                    if (exprNew.isCapture(sName))
-                        {
-                        // the name refers to a capture variable, which was provided to the
-                        // anonymous inner class via a synthetic property
-                        PropertyStructure prop = (PropertyStructure) getEnclosingClass().getChild(sName);
-                        assert prop.isSynthetic();
+                    // the name refers to a capture variable, which was provided to the
+                    // anonymous inner class via a synthetic property
+                    PropertyStructure prop = (PropertyStructure) getEnclosingClass().getChild(sName);
+                    assert prop.isSynthetic();
 
-                        TypeConstant type = exprNew.getCaptureType(sName);
-                        Register     reg  = new Register(type);
+                    TypeConstant type = exprNew.getCaptureType(sName);
+                    Register     reg  = new Register(type);
+                    mapByName.put(sName, reg);
+                    ensureCaptureVars().put(sName, reg);
 
-                        ensureCaptureVars().put(sName, reg);
-                        arg = reg;
+                    // TODO we need to know the definite assignment of the variable at the point
+                    //      that it was captured, which is either what it was at that point (if it
+                    //      was effectively final) or the implied result of what it was plus the
+                    //      impact of NOT being effectively final
+                    ensureDefiniteAssignments().put(sName, Assignment.Assigned); // TODO wrong!!!
 
-                        // REVIEW should it be registered as a local variable? definite assignment etc.
-                        ensureDefiniteAssignments().put(sName, Assignment.Assigned);
-                        }
-                    }
-
-                if (arg == null)
-                    {
-                    // we will attempt to resolve the name from outside of this statement
-                    boolean      fHasThis = isMethod() || isConstructor();
-                    TypeConstant typeThis = fHasThis ? ctxFrom.getVar("this").getType() : null;
-                    arg = new NameResolver(getStatementBlock(), fHasThis, typeThis, sName)
-                            .forceResolve(errs == null ? ErrorListener.BLACKHOLE : errs);
-                    }
-
-                if (arg != null)
-                    {
-                    // it is possible that the argument indicates that we are responsible for
-                    // capturing a variable
-                    if (arg instanceof CaptureConstant)
-                        {
-                        // while it appears that we are doing a great deal of work at this point,
-                        // validating the AST and so on, it is all temporary and will be discarded;
-                        // the entire point of this validation is to determine the read/write nature
-                        // of the captured variables so we will know (when we're doing the actual
-                        // code generation) whether the captured variables need to be injected into
-                        // the inner class as a value of type T, as a Ref<T>, or as a Var<T>
-                        CaptureConstant capture = (CaptureConstant) arg;
-                        Register        reg     = new Register(capture.getType());
-                        super.registerVar(name, reg, errs);
-                        ensureDefiniteAssignments().put(sName, capture.getContext().getVarAssignment(sName));
-                        ensureCaptureConstants().put(sName, capture);
-
-                        // return the local register and not the CaptureConstant (which only serves
-                        // the purpose of communicating information from a CaptureContext through
-                        // various boundaries up to this RootContext)
-                        arg = reg;
-                        }
-                    else
-                        {
-                        mapByName.put(sName, arg);
-                        }
+                    return reg;
                     }
                 }
 
-            return arg;
+            // start with the current node, and one by one walk up to the root, asking at
+            // each level for the node to resolve the name
+            ConstantPool     pool      = pool();
+            AstNode          node      = getParent();
+            boolean          fSameFile = true;
+            boolean          fHasThis  = isMethod() || isConstructor();
+            TypeConstant     typeThis  = fHasThis ? ctxFrom.getVar("this").getType() : null;
+            int              cSteps    = 0;
+            Access           access    = Access.PRIVATE;
+            IdentityConstant idPrev    = null;
+            TypeInfo         infoPrev  = null;
+            IdentityConstant idOuter   = getEnclosingClass().getIdentityConstant();
+            if (idOuter instanceof ClassConstant)
+                {
+                idOuter = ((ClassConstant) idOuter).getOutermost();
+                }
+
+            WalkUpToTheRoot: while (node != null)
+                {
+                // otherwise, if the node has a component associated with it that is
+                // prepared to resolve names, then ask it to resolve the name
+                if (node.isComponentNode())
+                    {
+                    assert node.canResolveNames();
+
+                    Component component = node.getComponent();
+                    assert component != null;
+
+                    // the identity of the component corresponding to the current node as
+                    // we "WalkUpToTheRoot"
+                    IdentityConstant id    = component.getIdentityConstant();
+                    IdentityConstant idClz = id.getClassIdentity();
+
+                    // first attempt: ask the component to resolve the name
+                    // REVIEW - shouldn't all of this resolution info be present on the TypeInfo? i.e. shouldn't we rely on the TypeInfo instead of the Component?
+                    SimpleCollector collector = new SimpleCollector();
+                    if (component.resolveName(sName, access, collector) == ResolutionResult.RESOLVED)
+                        {
+                        // properties and methods will use the TypeInfo for resolution
+                        Constant constant = collector.getResolvedConstant();
+                        if (constant instanceof TypedefConstant || constant instanceof ClassConstant)
+                            {
+                            return constant;
+                            }
+                        }
+
+                    // second attempt: ask the TypeInfo if it knows what the name refers to
+                    // load the TypeInfo for the class that we are looking for names in
+                    TypeInfo info;
+                    if (idPrev != null && idClz == idPrev)
+                        {
+                        info = infoPrev;
+                        }
+                    else
+                        {
+                        idPrev   = idClz;
+                        infoPrev = info = pool.ensureAccessTypeConstant(
+                                typeThis == null ? idClz.getType() : typeThis, access)
+                                .ensureTypeInfo(errs);
+                        }
+
+                    if (id == idClz)
+                        {
+                        // we're at a class level
+                        IdentityConstant idResult = null;
+                        PropertyInfo     prop     = info.ensurePropertiesByName().get(sName);
+                        if (prop == null)
+                            {
+                            if (info.containsMultiMethod(sName))
+                                {
+                                // the multi-method structure does not actually exist on the
+                                // class, but its methods exist in the TypeInfo
+                                idResult = new MultiMethodConstant(pool, id, sName, info);
+                                }
+                            }
+                        else
+                            {
+                            idResult = prop.getIdentity();
+                            }
+
+                        if (idResult != null)
+                            {
+                            TargetInfo target = new TargetInfo(sName, idResult, fHasThis, info.getType(), cSteps, null);
+                            ensureNameMap().put(sName, target);
+                            return idResult;
+                            }
+
+                        fHasThis &= !info.isStatic();
+                        typeThis  = null;
+                        ++cSteps;
+                        }
+                    else if (id instanceof PropertyConstant)
+                        {
+                        // first, look for a property of the given name inside the current
+                        // property
+                        IdentityConstant idResult = null;
+                        PropertyConstant idProp   = (PropertyConstant) id;
+                        PropertyInfo     prop     = info.ensureNestedPropertiesByName(idProp).get(sName);
+                        if (prop == null)
+                            {
+                            // second, look for any methods of the given name inside the
+                            // current property
+                            if (info.propertyContainsMultiMethod(idProp, sName))
+                                {
+                                // the multi-method structure does not actually exist on the
+                                // class, but its methods exist in the TypeInfo
+                                idResult = pool.ensureMultiMethodConstant(id, sName);
+                                }
+                            }
+                        else
+                            {
+                            idResult = prop.getIdentity();
+                            }
+
+                        if (idResult != null)
+                            {
+                            TargetInfo target = new TargetInfo(sName, idResult, fHasThis, info.getType(), cSteps, idProp);
+                            ensureNameMap().put(sName, target);
+                            return idResult;
+                            }
+                        }
+                    else
+                        {
+                        assert id instanceof MethodConstant || id instanceof MultiMethodConstant;
+                        }
+
+                    // check if we are nested inside an anonymous inner class and attempting to
+                    // capture a variable from the context of the NewExpression
+                    if (node instanceof NewExpression)
+                        {
+                        AnonInnerClassContext ctx = ((NewExpression) node).getCaptureContext();
+                        if (ctx != null)
+                            {
+                            Argument argCapture = ctx.getVar(sName);
+                            if (argCapture != null)
+                                {
+                                // we are responsible for capturing a variable for code inside of an
+                                // anonymous inner class
+                                Register reg = new Register(argCapture.getType());
+                                super.registerVar(name, reg, errs);
+                                ensureDefiniteAssignments().put(sName, ctx.getVarAssignment(sName));
+                                ensureCaptureContexts().put(sName, ctx);
+                                return reg;
+                                }
+                            }
+                        }
+
+                    // see if this was the last step on the "WalkUpToTheRoot" that had
+                    // private access to all members
+                    if (id == idOuter)
+                        {
+                        // in the top-most-class down, there is private access
+                        // above the top-most-class, there is public access
+                        access = Access.PUBLIC;
+                        fHasThis = false;
+                        }
+                    else if (component.isStatic())
+                        {
+                        fHasThis = false;
+                        }
+                    }
+
+                if (fSameFile && node instanceof StatementBlock)
+                    {
+                    // the name may specify an import
+                    ImportStatement stmtImport = getImport(sName);
+                    if (stmtImport != null)
+                        {
+                        NameResolver resolver = stmtImport.getNameResolver();
+                        assert resolver.getResult() == Result.RESOLVED;
+                        return resolver.getConstant();
+                        }
+
+                    // see if we're crossing a source file boundary (because imports are only used
+                    // when they are local to the file in which they occur)
+                    if (((StatementBlock) node).isFileBoundary())
+                        {
+                        fSameFile = false;
+                        }
+                    }
+
+                // walk up towards the root
+                node = node.getParent();
+                }
+
+            // last chance: check the implicitly imported names
+            Component component = pool.getImplicitlyImportedComponent(sName);
+
+            if (component != null)
+                {
+                return component.getIdentityConstant();
+                }
+
+            log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
+            return null;
             }
 
         @Override
@@ -855,6 +1035,12 @@ public class StatementBlock
             arg = new Register(type, nReg);
             mapByName.put(sName, arg);
             return arg;
+            }
+
+        @Override
+        public TargetInfo resolveTarget(String sName)
+            {
+            return (TargetInfo) getNameMap().get(sName);
             }
 
         @Override
@@ -998,7 +1184,7 @@ public class StatementBlock
                 m_ctxValidating.exit();
                 m_ctxValidating = null;
 
-                if (m_mapCaptureConstants != null)
+                if (m_mapCaptureContexts != null)
                     {
                     // this is something like "exit()" processing, except that it's when the root
                     // context switches from validating (which may have captured some variables into
@@ -1006,11 +1192,10 @@ public class StatementBlock
                     // context for the anonymous inner class, so that it knows what has been read
                     // (assume everything captured is read) and written (assume anything whose
                     // assignment changed was written)
-                    for (Map.Entry<String, CaptureConstant> entry : m_mapCaptureConstants.entrySet())
+                    for (Map.Entry<String, AnonInnerClassContext> entry : m_mapCaptureContexts.entrySet())
                         {
                         String                sName      = entry.getKey();
-                        CaptureConstant       capture    = entry.getValue();
-                        AnonInnerClassContext ctxCapture = capture.getContext();
+                        AnonInnerClassContext ctxCapture = entry.getValue();
                         Assignment            asnOrig    = ctxCapture.getVarAssignment(sName);
                         boolean               fModified  = getVarAssignment(sName) != asnOrig;
                         ctxCapture.markVarRead(true, sName, null, null);
@@ -1019,7 +1204,7 @@ public class StatementBlock
                             ctxCapture.setVarAssignment(sName, asnOrig.applyAssignmentFromCapture());
                             }
                         }
-                    m_mapCaptureConstants = null;
+                    m_mapCaptureContexts = null;
                     }
 
                 if (m_mapCaptureVars != null)
@@ -1063,15 +1248,15 @@ public class StatementBlock
             }
 
         /**
-         * @return a map of capture constants being collected during validation that need to be
+         * @return a map of capture contexts being collected during validation that need to be
          *         reported out to the enclosing NewExpression
          */
-        private Map<String, CaptureConstant> ensureCaptureConstants()
+        private Map<String, AnonInnerClassContext> ensureCaptureContexts()
             {
-            Map<String, CaptureConstant> map = m_mapCaptureConstants;
+            Map<String, AnonInnerClassContext> map = m_mapCaptureContexts;
             if (map == null)
                 {
-                m_mapCaptureConstants = map = new ListMap<>();
+                m_mapCaptureContexts = map = new ListMap<>();
                 }
 
             return map;
@@ -1100,13 +1285,70 @@ public class StatementBlock
          * A lazily created mapping of captured variables that is collected during the validation
          * on a temporary (throw-away) copy of an inner class.
          */
-        private Map<String, CaptureConstant> m_mapCaptureConstants;
+        private Map<String, AnonInnerClassContext> m_mapCaptureContexts;
 
         /**
          * A lazily created mapping of variables that need to be created to implicitly dereference
          * capture-properties in an anonymous inner class.
          */
         private Map<String, Register> m_mapCaptureVars;
+        }
+
+
+    // ----- inner class: TargetInfo ---------------------------------------------------------------
+
+    /**
+     * Represents the information learned when resolving a name to a multi-method or property.
+     */
+    public static class TargetInfo
+            implements Argument
+        {
+        public TargetInfo(
+                String           name,
+                Constant         id,
+                boolean          hasThis,
+                TypeConstant     typeTarget,
+                int              stepsOut,
+                PropertyConstant idProp)
+            {
+            this.name       = name;
+            this.id         = id;
+            this.hasThis    = hasThis;
+            this.typeTarget = typeTarget;
+            this.stepsOut   = stepsOut;
+            this.idProp     = idProp;
+            }
+
+        @Override
+        public TypeConstant getType()
+            {
+            return id.getType();
+            }
+
+        @Override
+        public boolean isStack()
+            {
+            return false;
+            }
+
+        @Override
+        public Argument registerConstants(ConstantRegistry registry)
+            {
+            throw new IllegalStateException();
+            }
+
+        @Override
+        public String toString()
+            {
+            return name + "->" + id.getValueString();
+            }
+
+        public final String           name;
+        public final Constant         id;
+        public final boolean          hasThis;
+        public final TypeConstant     typeTarget;
+        public final int              stepsOut;
+        public final PropertyConstant idProp;
         }
 
 

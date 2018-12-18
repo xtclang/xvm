@@ -29,6 +29,8 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 
+import org.xvm.compiler.ast.StatementBlock.TargetInfo;
+
 import org.xvm.util.Severity;
 
 
@@ -472,7 +474,7 @@ public class Context
         {
         Map<String, Argument> map   = ensureNameMap();
         String                sName = tokName.getValueText();
-        if (map.get(sName) instanceof Register)
+        if (map.get(sName) instanceof Register && !isVarHideable(sName))
             {
             tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_DEFINED, sName);
             }
@@ -918,6 +920,23 @@ public class Context
                 }
             }
         return arg;
+        }
+
+    /**
+     * For a multi-method or property returned from resolveName(), obtain the corresponding
+     * TypeInfo.
+     *
+     * @param sName  the name previous resolved with resolveName(), that resulting in a multi-method
+     *               or property constant
+     *
+     * @return the TargetInfo for the specified name
+     */
+    public TargetInfo resolveTarget(String sName)
+        {
+        Context ctxOuter = getOuterContext();
+        return ctxOuter == null
+                ? null
+                : ctxOuter.resolveTarget(sName);
         }
 
     /**

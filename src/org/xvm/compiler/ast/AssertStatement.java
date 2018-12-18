@@ -131,7 +131,10 @@ public class AssertStatement
         return fCompletes;
         }
 
-
+    /**
+     * A custom context implementation to provide type-narrowing as a natural side-effect of an
+     * assertion.
+     */
     static class AssertContext
             extends Context
         {
@@ -169,6 +172,7 @@ public class AssertStatement
                 }
             }
         }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 

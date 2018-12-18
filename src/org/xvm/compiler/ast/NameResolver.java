@@ -301,12 +301,6 @@ public class NameResolver
                                 }
                             }
 
-                        // third attempt: ask the AST node if it knows what the name refers to
-                        if (result == ResolutionResult.UNKNOWN)
-                            {
-                            result = resolvedConstant(node.resolveCapture(m_sName));
-                            }
-
                         switch (result)
                             {
                             case POSSIBLE:
