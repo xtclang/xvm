@@ -212,22 +212,12 @@ public class NewExpression
         throw new IllegalStateException("invalid return from an anonymous inner class: " + this);
         }
 
-    @Override
-    protected Constant resolveCapture(String sName)
+    /**
+     * @return the AnonInnerClassContext, if captures are available from this expression, or null
+     */
+    public AnonInnerClassContext getCaptureContext()
         {
-        // there is only a capture context when we are in the middle of validating the NewExpression
-        // that instantiates an anonymous inner class
-        if (m_ctxCapture == null)
-            {
-            return null;
-            }
-
-        // check if some code inside an anonymous inner class is attempting to capture a variable
-        // from the context that contains this NewExpression
-        Argument arg = m_ctxCapture.getVar(sName);
-        return arg == null
-                ? null
-                : new CaptureConstant(pool(), m_ctxCapture, sName, arg);
+        return m_ctxCapture;
         }
 
 
@@ -1053,89 +1043,6 @@ public class NewExpression
         return body == null
                 ? s
                 : s + "{..}";
-        }
-
-
-    // ----- inner class: CaptureConstant ----------------------------------------------------------
-
-    /**
-     * A CaptureConstant is a fake constant that is used to expose local variable information across
-     * component boundaries that variables cannot normally cross -- or even be visible across. When
-     * code in an anonymous inner class attempts to find a variable that it needs to capture, it
-     * fails to do so locally, and thus the root context for that code will use a name resolver,
-     * which in turn climbs the AST / component ladder in order to resolve the name. If it reaches
-     * this currently-in-the-middle-of-validating NewExpression, and the validating context that the
-     * NewExpression exists within knows that variable name, then the information about the variable
-     * is sent back down to the code that needs to resolve that name via a CaptureContext, which is
-     * basically just an envelope for the information about the variable that needs to be captured.
-     */
-    public class CaptureConstant
-            extends PseudoConstant
-        {
-        /**
-         * Construct a CaptureConstant.
-         *
-         * @param pool   the constant pool
-         * @param ctx    the capture context
-         * @param sName  the captured variable name
-         * @param arg    the captured argument (contains type information, for example)
-         */
-        public CaptureConstant(ConstantPool pool, AnonInnerClassContext ctx, String sName, Argument arg)
-            {
-            super(pool);
-            m_ctx   = ctx;
-            m_sName = sName;
-            m_arg   = arg;
-            }
-
-        public AnonInnerClassContext getContext()
-            {
-            return m_ctx;
-            }
-
-        public String getName()
-            {
-            return m_sName;
-            }
-
-        public Argument getArgument()
-            {
-            return m_arg;
-            }
-
-        @Override
-        public Format getFormat()
-            {
-            return Format.CapturedVariable;
-            }
-
-        @Override
-        public TypeConstant getType()
-            {
-            return m_arg.getType();
-            }
-
-        @Override
-        public String getValueString()
-            {
-            return m_sName;
-            }
-
-        @Override
-        public String getDescription()
-            {
-            return "arg=" + m_arg;
-            }
-
-        @Override
-        protected int compareDetails(Constant that)
-            {
-            throw new IllegalStateException();
-            }
-
-        private AnonInnerClassContext m_ctx;
-        private String                m_sName;
-        private Argument              m_arg;
         }
 
 

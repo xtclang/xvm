@@ -5,7 +5,6 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
-import org.xvm.asm.Component;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.compiler.Compiler;
@@ -138,6 +137,22 @@ public class ImportStatement
             mgr.requestRevisit();
             return;
             }
+        }
+
+
+    // ----- compilation (Statement) --------------------------------------------------------------
+
+    @Override
+    protected Statement validateImpl(Context ctx, ErrorListener errs)
+        {
+        // TODO register the import into the context
+        // - make sure that the name is not taken (or if it is, that it is hideable)
+        // - resolve what the qualified name is in reference to
+        // Argument arg = ...
+        // - register the alias
+        // ctx.ensureNameMap().put(getAliasName(), arg);
+
+        return this;
         }
 
 

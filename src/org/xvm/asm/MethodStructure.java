@@ -141,7 +141,8 @@ public class MethodStructure
      */
     public boolean isConstructor()
         {
-        boolean fConstructor = getName().equals("construct");
+        String  sName        = getName();
+        boolean fConstructor = sName.equals("construct") || sName.equals("=");
         assert !fConstructor || isFunction();
         return fConstructor;
         }
