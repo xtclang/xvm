@@ -1314,7 +1314,7 @@ public class StatementBlock
         {
         public TargetInfo(
                 String           name,
-                Constant         id,
+                IdentityConstant id,
                 boolean          hasThis,
                 TypeConstant     typeTarget,
                 int              stepsOut,
@@ -1353,7 +1353,7 @@ public class StatementBlock
             }
 
         public final String           name;
-        public final Constant         id;
+        public final IdentityConstant id;
         public final boolean          hasThis;
         public final TypeConstant     typeTarget;
         public final int              stepsOut;

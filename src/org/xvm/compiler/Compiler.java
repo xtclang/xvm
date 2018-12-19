@@ -1054,6 +1054,14 @@ public class Compiler
      */
     public static final String IMPORT_NOT_IDENTITY                = "COMPILER-106";
     /**
+     * A "this" reference is required to access the {0} property of the {1} type.
+     */
+    public static final String NO_THIS_PROPERTY                   = "COMPILER-107";
+    /**
+     * A "this" reference is required to access the {0} method of the {1} type.
+     */
+    public static final String NO_THIS_METHOD                     = "COMPILER-108";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";
