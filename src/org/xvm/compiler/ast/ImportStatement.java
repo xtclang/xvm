@@ -5,7 +5,11 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure.Code;
+
+import org.xvm.asm.constants.IdentityConstant;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
@@ -79,6 +83,28 @@ public class ImportStatement
         return asName;
         }
 
+    /**
+     * @return the imported name as a dot-delimited name
+     */
+    public String getQualifiedNameString()
+        {
+        StringBuilder sb = new StringBuilder();
+        boolean first = true;
+        for (Token name : qualifiedName)
+            {
+            if (first)
+                {
+                first = false;
+                }
+            else
+                {
+                sb.append('.');
+                }
+            sb.append(name.getValueText());
+            }
+        return sb.toString();
+        }
+
     @Override
     public long getStartPosition()
         {
@@ -132,10 +158,20 @@ public class ImportStatement
             }
         ((StatementBlock) parent).registerImport(this, errs);
 
-        if (getNameResolver().resolve(errs) == Result.DEFERRED)
+        NameResolver resolver = getNameResolver();
+        switch (resolver.resolve(errs))
             {
-            mgr.requestRevisit();
-            return;
+            case DEFERRED:
+                mgr.requestRevisit();
+                return;
+
+            case RESOLVED:
+                // check that the resolved constant is something that an import is allowed to resolve to
+                if (!(resolver.getConstant() instanceof IdentityConstant))
+                    {
+                    log(errs, Severity.ERROR, Compiler.IMPORT_NOT_IDENTITY, getQualifiedNameString());
+                    }
+                break;
             }
         }
 
@@ -145,14 +181,30 @@ public class ImportStatement
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
-        // TODO register the import into the context
-        // - make sure that the name is not taken (or if it is, that it is hideable)
-        // - resolve what the qualified name is in reference to
-        // Argument arg = ...
-        // - register the alias
-        // ctx.ensureNameMap().put(getAliasName(), arg);
+        // make sure that the name is not taken (or if it is, that it is hideable)
+        String sName = getAliasName();
+        if (ctx.getVar(sName) != null && !ctx.isVarHideable(sName))
+            {
+            log(errs, Severity.ERROR, Compiler.IMPORT_NAME_COLLISION, sName);
+            }
+        else
+            {
+            // resolve what the qualified name is in reference to
+            NameResolver resolver = getNameResolver();
+            assert resolver.getResult() == Result.RESOLVED;
+            Constant constant = resolver.getConstant();
+
+            // register the import into the context
+            ctx.ensureNameMap().put(sName, constant);
+            }
 
         return this;
+        }
+
+    @Override
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+        {
+        return fReachable;
         }
 
 

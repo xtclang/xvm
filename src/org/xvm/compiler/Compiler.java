@@ -1046,6 +1046,14 @@ public class Compiler
      */
     public static final String INVALID_SUPER_REFERENCE            = "COMPILER-104";
     /**
+     * The import name {0} is the same as the name of an existing variable.
+     */
+    public static final String IMPORT_NAME_COLLISION              = "COMPILER-105";
+    /**
+     * The import {0} does not refer to an identity.
+     */
+    public static final String IMPORT_NOT_IDENTITY                = "COMPILER-106";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";
