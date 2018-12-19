@@ -36,7 +36,7 @@ interface SocketChannel
      *
      * @throw IOException if the operation fails to complete due to an unrecoverable IO error
      */
-    conditional Int read(Buffer<Byte> buffer, Int minBytes = Int.maxValue);
+    conditional Int read(Buffer<Byte> buffer, Int minBytes = Int.maxvalue);
 
     /**
      * Read a sequence of bytes from this channel into the specified buffers.
@@ -51,7 +51,7 @@ interface SocketChannel
      *         equal to the buffer array length) or false if the end-of-stream has been reached
      */
     // TODO compiler barfs at conditional (Int, Int)
-    conditional Tuple<Int, Int> read(Buffer<Byte>[] buffers, Int minBytes = Int.maxValue);
+    conditional Tuple<Int, Int> read(Buffer<Byte>[] buffers, Int minBytes = Int.maxvalue);
 
     /**
      * Write a sequence of bytes from the specified buffer into this channel.
