@@ -36,6 +36,7 @@ module TestMisc.xqiz.it
         // testTupleConv();
         // testMap();
         testConstants();
+        testImport();
         }
 
     void testInts()
@@ -447,5 +448,14 @@ module TestMisc.xqiz.it
             y.appendTo(appender.add(", y="));
             appender.add(')');
             }
+        }
+
+    void testImport()
+        {
+        console.println("\n** testImport()");
+
+        import Int as Q;
+        Q x = 42;
+        console.println("x=" + x);
         }
     }
