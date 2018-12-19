@@ -38,6 +38,8 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
+import org.xvm.compiler.ast.StatementBlock.TargetInfo;
+
 import org.xvm.util.Severity;
 
 
@@ -1333,6 +1335,7 @@ public class InvocationExpression
         boolean fNoFBind = !isAnyArgBound();
         boolean fNoCall  = isSuppressCall();
 
+        // TODO need a "target" reference -> or can we just stuff something into "left"?
         m_argMethod   = null;
         m_idConvert   = null;
         m_fBindTarget = false;
@@ -1371,6 +1374,69 @@ public class InvocationExpression
         if (exprLeft == null)
             {
             Argument arg = ctx.resolveName(tokName, errs);
+            if (arg instanceof TargetInfo)
+                {
+                TargetInfo target = (TargetInfo) arg;
+                info   = target.typeTarget.ensureTypeInfo(errs);
+                if (target.hasThis)
+                    {
+                    arg = null;
+                    }
+                else
+                    {
+                    // easy to obtain static property value
+                    arg = target.id;
+                    }
+
+                if (arg instanceof MultiMethodConstant)
+                    {
+                    // call to a static function only (no "this" available)
+                    // TODO
+
+                    // determine what target type is necessary to call the method
+                    MultiMethodConstant multi      = (MultiMethodConstant) arg;
+                    IdentityConstant    idClz      = multi.getClassIdentity();
+                    IdentityConstant    idCur      = ctx.getThisClass().getIdentityConstant();
+                    int                 cSteps     = 0;
+                    boolean             fConstruct = ctx.isConstructor();
+                    Access              accessOrig = fConstruct ? Access.STRUCT : Access.PRIVATE;
+                    Access              access     = accessOrig;
+
+                    // get the TypeInfo to search for the specific method to call
+                    TypeInfo info = null; // TODO
+                    if (info == null)
+                        {
+                        TypeConstant type;
+                        if (cSteps == 0)
+                            {
+                            type = fHasThis
+                                    ? ctx.getVar("this").getType()
+                                    : ctx.getThisType();
+                            }
+                        else // TODO need an exact "outer this type" as well!
+                            {
+                            type = idCur.getType();
+                            }
+
+                        type = pool.ensureAccessTypeConstant(type, access);
+                        info = type.ensureTypeInfo(errs);
+                        }
+
+                    // find the method based on the signature
+                    IdentityConstant idCallable = findCallable(ctx, info, sName,
+                            (fNoCall && fNoFBind) || fHasThis, true, atypeReturn, errs);
+                    if (idCallable != null)
+                        {
+                        m_argMethod   = idCallable;
+                        m_method      = getMethod(info, idCallable);
+                        m_fBindTarget = m_method != null && !m_method.isFunction();
+                        return idCallable;
+                        }
+
+                    return null;
+                    }
+                }
+
             if (arg instanceof Register || arg instanceof PropertyConstant)
                 {
                 if (testFunction(ctx, arg.getType(), atypeReturn, errs) == null)
@@ -1383,91 +1449,9 @@ public class InvocationExpression
                     return arg;
                     }
                 }
-            else if (arg instanceof MultiMethodConstant)
-                {
-                // determine what target type is necessary to call the method
-                MultiMethodConstant multi      = (MultiMethodConstant) arg;
-                IdentityConstant    idClz      = multi.getClassIdentity();
-                IdentityConstant    idCur      = ctx.getThisClass().getIdentityConstant();
-                int                 cSteps     = 0;
-                boolean             fConstruct = ctx.isConstructor();
-                Access              accessOrig = fConstruct ? Access.STRUCT : Access.PRIVATE;
-                Access              access     = accessOrig;
-                boolean             fHasThis   = ctx.isMethod() || fConstruct;
-                while (idCur != null && !idCur.equals(idClz) && !idCur.getType().isA(idClz.getType()))
-                    {
-                    ++cSteps;
-
-                    boolean fTopLevel = !(idCur instanceof ClassConstant)
-                            || ((ClassConstant) idCur).getDepthFromOutermost() == 0;
-
-                    // if we're in a constructor, then we lose the "this" immediately as we walk up
-                    // the tree (because it's a "this:struct", not a reference to a nested object);
-                    // otherwise, we lose the "this" when we cross a static boundary or leave the
-                    // outermost class
-                    fHasThis &= !fConstruct && !fTopLevel && !idCur.getComponent().isStatic();
-
-                    if (access == Access.STRUCT)
-                        {
-                        access = Access.PRIVATE;
-                        }
-
-                    if (fTopLevel)
-                        {
-                        access = Access.PROTECTED;
-                        }
-
-                    // walk up the component tree
-                    idCur = idCur.getParentConstant();
-                    if (idCur != null)
-                        {
-                        idCur = idCur.getClassIdentity();
-                        }
-                    }
-
-                // assume that no class hit implies a narrowed this
-                if (idCur == null)
-                    {
-                    cSteps = 0;
-                    access = accessOrig;
-                    }
-
-                // get the TypeInfo to search for the specific method to call
-                TypeInfo info = ((MultiMethodConstant) arg).getTypeInfo();
-                if (info == null)
-                    {
-                    TypeConstant type;
-                    if (cSteps == 0)
-                        {
-                        type = fHasThis
-                                ? ctx.getVar("this").getType()
-                                : ctx.getThisType();
-                        }
-                    else // TODO need an exact "outer this type" as well!
-                        {
-                        type = idCur.getType();
-                        }
-
-                    type = pool.ensureAccessTypeConstant(type, access);
-                    info = type.ensureTypeInfo(errs);
-                    }
-
-                // find the method based on the signature
-                IdentityConstant idCallable = findCallable(ctx, info, sName,
-                        (fNoCall && fNoFBind) || fHasThis, true, atypeReturn, errs);
-                if (idCallable != null)
-                    {
-                    m_argMethod   = idCallable;
-                    m_method      = getMethod(info, idCallable);
-                    m_fBindTarget = m_method != null && !m_method.isFunction();
-                    return idCallable;
-                    }
-
-                return null;
-                }
             else
                 {
-                // shouldn't have been possible to resolve to a method constant
+                // must NOT have resolved the name to a method constant (that should be impossible)
                 assert !(arg instanceof MethodConstant);
 
                 if (sName.equals("construct"))

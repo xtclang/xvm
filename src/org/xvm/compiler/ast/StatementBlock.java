@@ -725,9 +725,7 @@ public class StatementBlock
             Argument              arg       = mapByName.get(sName);
             if (arg != null)
                 {
-                return arg instanceof TargetInfo
-                        ? ((TargetInfo) arg).id
-                        : arg;
+                return arg;
                 }
 
             // check if the name specifies a capture variable from an anonymous inner class to its
@@ -829,9 +827,7 @@ public class StatementBlock
                             {
                             if (info.containsMultiMethod(sName))
                                 {
-                                // the multi-method structure does not actually exist on the
-                                // class, but its methods exist in the TypeInfo
-                                idResult = new MultiMethodConstant(pool, id, sName, info);
+                                idResult = new MultiMethodConstant(pool, id, sName);
                                 }
                             }
                         else
@@ -841,9 +837,7 @@ public class StatementBlock
 
                         if (idResult != null)
                             {
-                            TargetInfo target = new TargetInfo(sName, idResult, fHasThis, info.getType(), cSteps, null);
-                            ensureNameMap().put(sName, target);
-                            return idResult;
+                            return new TargetInfo(sName, idResult, fHasThis, info.getType(), cSteps, null);
                             }
 
                         fHasThis &= !info.isStatic();
@@ -875,9 +869,7 @@ public class StatementBlock
 
                         if (idResult != null)
                             {
-                            TargetInfo target = new TargetInfo(sName, idResult, fHasThis, info.getType(), cSteps, idProp);
-                            ensureNameMap().put(sName, target);
-                            return idResult;
+                            return new TargetInfo(sName, idResult, fHasThis, info.getType(), cSteps, idProp);
                             }
                         }
                     else
@@ -915,9 +907,32 @@ public class StatementBlock
                         access = Access.PUBLIC;
                         fHasThis = false;
                         }
-                    else if (component.isStatic())
+                    else
                         {
-                        fHasThis = false;
+                        switch (component.getFormat())
+                            {
+                            case ENUM:
+                            case ENUMVALUE:
+                            case PACKAGE:
+                            case MODULE:
+                            case TYPEDEF:
+                                fHasThis = false;
+                                break;
+
+                            case INTERFACE:
+                            case CLASS:
+                            case CONST:
+                            case MIXIN:
+                            case SERVICE:
+                            case PROPERTY:
+                                fHasThis &= !component.isStatic();
+                                break;
+
+                            case METHOD:
+                                MethodStructure method = (MethodStructure) component;
+                                fHasThis &= !method.isFunction();
+                                break;
+                            }
                         }
                     }
 
@@ -1035,12 +1050,6 @@ public class StatementBlock
             arg = new Register(type, nReg);
             mapByName.put(sName, arg);
             return arg;
-            }
-
-        @Override
-        public TargetInfo resolveTarget(String sName)
-            {
-            return (TargetInfo) getNameMap().get(sName);
             }
 
         @Override
