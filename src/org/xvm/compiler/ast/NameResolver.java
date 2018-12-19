@@ -18,13 +18,8 @@ import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.MultiMethodConstant;
-import org.xvm.asm.constants.PropertyConstant;
-import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.compiler.Compiler;
@@ -44,18 +39,13 @@ public class NameResolver
      * also be treated as if it were a value).
      *
      * @param node      the node which is requesting the resolution of the name
-     * @param fHasThis  if the "this" reference is available
-     * @param typeThis  the type of the "this", or null
      * @param sName     the name to resolve
      */
-    public NameResolver(AstNode node, boolean fHasThis, TypeConstant typeThis, String sName)
+    public NameResolver(AstNode node, String sName)
         {
         m_node     = node;
         m_iter     = Collections.emptyIterator();
         m_sName    = sName;
-        m_fHasThis = fHasThis;
-        m_typeThis = typeThis;
-        assert m_fHasThis == (m_typeThis != null);
         }
 
     /**
@@ -165,13 +155,8 @@ public class NameResolver
                 // each level for the node to resolve the name
                 boolean          fPossibleFormal = false;
                 AstNode          node            = m_node;
-                IdentityConstant idPrev          = null;
-                TypeInfo         infoPrev        = null;
                 Access           access          = Access.PRIVATE;
                 IdentityConstant idOuter         = null;
-                ConstantPool     pool            = getPool();
-                boolean          fHasThis        = m_fHasThis;
-                TypeConstant     typeThis        = m_typeThis;
                 WalkUpToTheRoot: while (node != null)
                     {
                     // if the first name refers to an import, then ask that import to figure out
@@ -229,79 +214,8 @@ public class NameResolver
                             idOuter = idClz instanceof ClassConstant ? ((ClassConstant) idClz).getOutermost() : idClz;
                             }
 
-                        // first attempt: ask the component to resolve the name
-                        ResolutionResult result = componentResolver.resolveName(m_sName, access, this);
-
-                        // second attempt: ask the TypeInfo if it knows what the name refers to
-                        if (result == ResolutionResult.UNKNOWN && !m_fTypeGoal
-                                && node.getStage().compareTo(Compiler.Stage.Resolved) >= 0)
-                            {
-                            // load the TypeInfo for the class that we are looking for names in
-                            TypeInfo info;
-                            if (idPrev != null && idClz == idPrev)
-                                {
-                                info = infoPrev;
-                                }
-                            else
-                                {
-                                idPrev   = idClz;
-                                infoPrev = info = pool.ensureAccessTypeConstant(
-                                        typeThis == null ? idClz.getType() : typeThis, access)
-                                        .ensureTypeInfo(errs);
-                                }
-
-                            if (id == idClz)
-                                {
-                                // we're at a class level
-                                PropertyInfo prop = info.ensurePropertiesByName().get(m_sName);
-                                if (prop == null)
-                                    {
-                                    if (info.containsMultiMethod(m_sName))
-                                        {
-                                        // the multi-method structure does not actually exist on the
-                                        // class, but its methods exist in the TypeInfo
-                                        result = resolvedConstant(
-                                                new MultiMethodConstant(pool, id, m_sName, info));
-                                        }
-                                    }
-                                else
-                                    {
-                                    result = resolvedConstant(prop.getIdentity());
-                                    }
-
-                                fHasThis &= !info.isStatic();
-                                typeThis  = null;
-                                }
-                            else if (id instanceof PropertyConstant)
-                                {
-                                // first, look for a property of the given name inside the current
-                                // property
-                                PropertyConstant idProp = (PropertyConstant) id;
-                                PropertyInfo     prop   = info.ensureNestedPropertiesByName(idProp).get(m_sName);
-                                if (prop == null)
-                                    {
-                                    // second, look for any methods of the given name inside the
-                                    // current property
-                                    if (info.propertyContainsMultiMethod(idProp, m_sName))
-                                        {
-                                        // the multi-method structure does not actually exist on the
-                                        // class, but its methods exist in the TypeInfo
-                                        result = resolvedConstant(
-                                                pool.ensureMultiMethodConstant(id, m_sName));
-                                        }
-                                    }
-                                else
-                                    {
-                                    result = resolvedConstant(prop.getIdentity());
-                                    }
-                                }
-                            else
-                                {
-                                assert id instanceof MethodConstant || id instanceof MultiMethodConstant;
-                                }
-                            }
-
-                        switch (result)
+                        // ask the component to resolve the name
+                        switch (componentResolver.resolveName(m_sName, access, this))
                             {
                             case POSSIBLE:
                                 // formal types could not be resolved; keep walking up
@@ -342,7 +256,7 @@ public class NameResolver
                 // last chance: check the implicitly imported names
                 if (m_constant == null)
                     {
-                    Component component = pool.getImplicitlyImportedComponent(m_sName);
+                    Component component = getPool().getImplicitlyImportedComponent(m_sName);
                     if (component == null)
                         {
                         if (fPossibleFormal)
@@ -757,16 +671,6 @@ public class NameResolver
      * The component representing what the node has thus far resolved to.
      */
     private Component m_component;
-
-    /**
-     * If the necessary "this" for the current component scope is available.
-     */
-    private boolean m_fHasThis;
-
-    /**
-     * An override type for "this" if the type has been narrowed.
-     */
-    TypeConstant m_typeThis;
 
     /**
      * The goal of the NameResolver is either a type or a more general value (which itself might be
