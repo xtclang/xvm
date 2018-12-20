@@ -127,6 +127,7 @@
 - introduce native functions
 
 - Type: by-method comparison
+
 - Move op-code: "safe wrapper" logic
 
 - ServiceContext - the "register..." APIs are "fiber local" -- unless called from the outside
@@ -142,6 +143,11 @@
 
 - implement default argument constant calculation (currently always zero value)
 
+- runtime support for property initializer "="
+
+- native optimization Stringable methods on xInt*, xUInt*, etc.
+
+- consider a FormalTypeConstant instead of TerminalType(PropertyConstant)
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
