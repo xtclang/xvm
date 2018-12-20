@@ -1086,21 +1086,29 @@ public class Context
                 {
                 narrowLocalRegister(sName, (Register) arg, branch, typeNarrow);
                 }
-            else if (arg instanceof PropertyConstant
-                    && ((PropertyConstant) arg).isTypeParameter())
+            else
                 {
-                assert sName.equals(((PropertyConstant) arg).getName());
+                if (arg instanceof StatementBlock.TargetInfo)
+                    {
+                    arg = ((StatementBlock.TargetInfo) arg).id;
+                    }
 
-                narrowFormalType(sName, (PropertyConstant) arg, branch, typeNarrow);
-                }
-            else if (arg instanceof TypeParameterConstant)
-                {
-                TypeParameterConstant contParam = (TypeParameterConstant) arg;
-                MethodConstant        idMethod  = contParam.getMethod();
-                int                   nParam    = contParam.getRegister();
-                MethodStructure       method    = (MethodStructure) idMethod.getComponent();
+                if (arg instanceof PropertyConstant
+                        && ((PropertyConstant) arg).isTypeParameter())
+                    {
+                    assert sName.equals(((PropertyConstant) arg).getName());
 
-                // narrowTypeParameter(sName, branch, typeNarrow);
+                    narrowFormalType(sName, (PropertyConstant) arg, branch, typeNarrow);
+                    }
+                else if (arg instanceof TypeParameterConstant)
+                    {
+                    TypeParameterConstant contParam = (TypeParameterConstant) arg;
+                    MethodConstant        idMethod  = contParam.getMethod();
+                    int                   nParam    = contParam.getRegister();
+                    MethodStructure       method    = (MethodStructure) idMethod.getComponent();
+
+                    // narrowTypeParameter(sName, branch, typeNarrow);
+                    }
                 }
             }
         }
