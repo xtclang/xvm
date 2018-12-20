@@ -605,12 +605,43 @@ public abstract class Expression
                 // was a type fit error)
                 fit        = TypeFit.NoFit;
                 typeActual = typeRequired;
-                if (constVal != null)
+                }
+            else if (constVal != null)
+                {
+                try
                     {
-                    // pretend that it was a constant
-                    constVal   = generateFakeConstant(typeRequired);
-                    typeActual = typeActual.ensureImmutable(pool());
+                    Constant constConv = constVal.convertTo(typeRequired);
+                    if (constConv != constVal)
+                        {
+                        if (constConv == null)
+                            {
+                            // there is no compile-time conversion available;
+                            // continue with run-time conversion
+                            // TODO: for now it's most likely our omission; remove the soft assert below
+                            System.err.println("No conversion found for " + constVal);
+                            }
+                        else
+                            {
+                            typeActual = constConv.getType().ensureImmutable(pool());
+                            assert typeActual.isA(typeRequired);
+                            }
+                        constVal = constConv;
+                        }
                     }
+                catch (ArithmeticException e)
+                    {
+                    // conversion failure due to range etc.
+                    log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, typeRequired,
+                            constVal.getValueString());
+                    fit = TypeFit.NoFit;
+                    }
+                }
+
+            if (!fit.isFit() && constVal != null)
+                {
+                // pretend that it was a constant
+                constVal   = generateFakeConstant(typeRequired);
+                typeActual = typeActual.ensureImmutable(pool());
                 }
             }
 

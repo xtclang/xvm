@@ -575,12 +575,12 @@ public class NameExpression
         // translate the raw argument into the appropriate contextual meaning
         TypeFit      fit      = TypeFit.NoFit;
         TypeConstant type     = planCodeGen(ctx, argRaw, atypeParams, typeRequired, errs);
-        Constant     constant = null;
+        Constant     constVal = null;
         if (type != null)
             {
             fit = TypeFit.Fit;
 
-            if (typeRequired == null || type.isA(typeRequired))
+            if (typeRequired == null || type.isAssignableTo(typeRequired))
                 {
                 switch (getMeaning())
                     {
@@ -590,7 +590,7 @@ public class NameExpression
                         switch (m_plan)
                             {
                             case None:
-                                constant = (Constant) argRaw;
+                                constVal = (Constant) argRaw;
                                 break;
 
                             case OuterThis:
@@ -602,7 +602,7 @@ public class NameExpression
                                 // the class could either be identified (in the raw) by an identity
                                 // constant, or a relative (pseudo) constant
                                 assert argRaw instanceof IdentityConstant || argRaw instanceof PseudoConstant;
-                                constant = pool.ensureTerminalTypeConstant((Constant) argRaw);
+                                constVal = pool.ensureTerminalTypeConstant((Constant) argRaw);
                                 break;
 
                             case Singleton:
@@ -612,7 +612,7 @@ public class NameExpression
                                 IdentityConstant idClass = argRaw instanceof PseudoConstant
                                         ? ((PseudoConstant) argRaw).getDeclarationLevelClass()
                                         : (IdentityConstant) argRaw;
-                                constant = pool.ensureSingletonConstConstant(idClass);
+                                constVal = pool.ensureSingletonConstConstant(idClass);
                                 break;
 
                             default:
@@ -628,11 +628,11 @@ public class NameExpression
                         PropertyStructure prop = (PropertyStructure) id.getComponent();
                         if (prop.isConstant() && m_plan == Plan.PropertyDeref)
                             {
-                            constant = prop.getInitialValue();
+                            constVal = prop.getInitialValue();
                             }
                         else if (!prop.isConstant() && m_plan == Plan.None)
                             {
-                            constant = id;
+                            constVal = id;
                             }
                         break;
                     }
@@ -680,7 +680,7 @@ public class NameExpression
                 }
             }
 
-        return finishValidation(typeRequired, type, fit, constant, errs);
+        return finishValidation(typeRequired, type, fit, constVal, errs);
         }
 
     @Override
@@ -779,7 +779,8 @@ public class NameExpression
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
-        if (LVal.isLocalArgument())
+        // constants are processed by generateArgument() method
+        if (LVal.isLocalArgument() && !isConstant())
             {
             // optimize the code for a couple of paths (see symmetrical logic at generateArgument())
             Argument argLVal = LVal.getLocalArgument();
@@ -837,18 +838,6 @@ public class NameExpression
                         break;
                         }
 
-                    PropertyConstant  idProp = (PropertyConstant) argRaw;
-                    PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
-                    if (prop.isConstant())
-                        {
-                        Constant constValue = prop.getInitialValue();
-                        if (constValue != null)
-                            {
-                            code.add(new Move(constValue, (Register) argLVal));
-                            return;
-                            }
-                        }
-
                     // TODO this is not complete; the "implicit this" covers both nested properties and outer properties
                     boolean fThisProp = left == null;  // TODO or left == this
                     if (fThisProp)
@@ -898,6 +887,11 @@ public class NameExpression
     public Argument generateArgument(
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
+        if (isConstant())
+            {
+            return toConstant();
+            }
+
         Argument argRaw = m_arg;
         switch (m_plan)
             {
@@ -953,17 +947,6 @@ public class NameExpression
                         }
                     }
 
-                PropertyConstant  idProp = (PropertyConstant) argRaw;
-                PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
-                if (prop.isConstant())
-                    {
-                    Constant constValue = prop.getInitialValue();
-                    if (constValue != null)
-                        {
-                        return constValue;
-                        }
-                    }
-
                 // TODO this is not complete; the "implicit this" covers both nested properties and outer properties
                 boolean fThisProp = left == null; // TODO or left == this
                 if (fThisProp && fLocalPropOk)
@@ -972,7 +955,8 @@ public class NameExpression
                     return argRaw;
                     }
 
-                Register reg = createRegister(getType(), fUsedOnce);
+                PropertyConstant idProp = (PropertyConstant) argRaw;
+                Register         reg    = createRegister(getType(), fUsedOnce);
                 if (fThisProp)
                     {
                     code.add(new L_Get(idProp, reg));

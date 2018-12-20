@@ -773,19 +773,19 @@ public class PackedInteger
     /**
      * Smallest 1-byte (8-bit) signed integer value.
      */
-    public static final PackedInteger SINT1_MIN  = valueOf(0x80L);
+    public static final PackedInteger SINT1_MIN  = valueOf(-0x80L);
     /**
      * Smallest 2-byte (16-bit) signed integer value.
      */
-    public static final PackedInteger SINT2_MIN  = valueOf(0x8000L);
+    public static final PackedInteger SINT2_MIN  = valueOf(-0x8000L);
     /**
      * Smallest 4-byte (32-bit) signed integer value.
      */
-    public static final PackedInteger SINT4_MIN  = valueOf(0x80000000L);
+    public static final PackedInteger SINT4_MIN  = valueOf(-0x80000000L);
     /**
      * Smallest 8-byte (64-bit) signed integer value.
      */
-    public static final PackedInteger SINT8_MIN  = valueOf(0x8000000000000000L);
+    public static final PackedInteger SINT8_MIN  = valueOf(-0x8000000000000000L);
     /**
      * Smallest 16-byte (128-bit) signed integer value.
      */
@@ -805,11 +805,11 @@ public class PackedInteger
     /**
      * Largest 4-byte (32-bit) signed integer value.
      */
-    public static final PackedInteger SINT4_MAX  = valueOf(0x7FFFFFFF);
+    public static final PackedInteger SINT4_MAX  = valueOf(0x7FFF_FFFF);
     /**
      * Largest 8-byte (64-bit) signed integer value.
      */
-    public static final PackedInteger SINT8_MAX  = valueOf(0x7FFFFFFFFFFFFFFL);
+    public static final PackedInteger SINT8_MAX  = valueOf(0x7FFF_FFFF_FFFF_FFFFL);
     /**
      * Largest 16-byte (128-bit) signed integer value.
      */
@@ -829,7 +829,7 @@ public class PackedInteger
     /**
      * Largest 4-byte (32-bit) unsigned integer value.
      */
-    public static final PackedInteger UINT4_MAX  = valueOf(0xFFFFFFFF);
+    public static final PackedInteger UINT4_MAX  = valueOf(0xFFFF_FFFFl);
     /**
      * Largest 8-byte (64-bit) unsigned integer value.
      */
