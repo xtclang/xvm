@@ -24,6 +24,7 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
+import org.xvm.asm.Register;
 import org.xvm.asm.Version;
 import org.xvm.asm.VersionTree;
 
@@ -1642,16 +1643,8 @@ public class TypeCompositionStatement
                     }
                 else
                     {
-                    org.xvm.asm.Parameter paramSuper = constructSuper.getParam(i);
-                    if (paramSuper.hasDefaultValue())
-                        {
-                        aSuperArgs[i] = paramSuper.getDefaultValue();
-                        }
-                    else
-                        {
-                        // TODO: log an error
-                        throw new UnsupportedOperationException();
-                        }
+                    assert constructSuper.getParam(i).hasDefaultValue();
+                    aSuperArgs[i] = Register.DEFAULT;
                     }
                 }
 

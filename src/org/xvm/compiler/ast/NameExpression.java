@@ -1393,8 +1393,7 @@ public class NameExpression
             boolean  fSuppressDeref = isSuppressDeref();
 
             // label variables do not actually exist
-            if (reg.isPredefined() && reg.getIndex() == Op.A_LABEL
-                    && (fSuppressDeref || !(getParent() instanceof NameExpression)))
+            if (reg.isLabel() && (fSuppressDeref || !(getParent() instanceof NameExpression)))
                 {
                 log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, getName());
                 }
@@ -1627,7 +1626,7 @@ public class NameExpression
             {
             Register reg = (Register) arg;
             return reg.isPredefined()
-                    ? reg.getIndex() == Op.A_LABEL
+                    ? reg.isLabel()
                             ? Meaning.Label
                             : Meaning.Reserved
                     : Meaning.Variable;

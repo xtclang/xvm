@@ -345,6 +345,9 @@ public class Frame
             case Op.A_STACK:
                 return popStack();
 
+            case Op.A_DEFAULT:
+                return ObjectHandle.DEFAULT;
+
             case Op.A_SUPER:
                 ObjectHandle hThis = f_hThis;
                 if (hThis == null)
@@ -1124,6 +1127,17 @@ public class Frame
             if (hValue == null)
                 {
                 throw xException.makeHandle("Unassigned value").getException();
+                }
+
+            if (hValue == ObjectHandle.DEFAULT)
+                {
+                Constant constValue = f_function.getParam(iArg).getDefaultValue();
+                if (constValue == null)
+                    {
+                    throw xException.makeHandle("Unknown default value for argument \"" +
+                        f_function.getParam(iArg).getName() + '"').getException();
+                    }
+                return f_context.f_heapGlobal.ensureConstHandle(this, constValue);
                 }
 
             if (info != null)
