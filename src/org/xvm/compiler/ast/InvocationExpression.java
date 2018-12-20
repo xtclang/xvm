@@ -1393,37 +1393,6 @@ public class InvocationExpression
                 IdentityConstant id     = target.id;
                 if (id instanceof MultiMethodConstant)
                     {
-//                    // call to a static function only (no "this" available)
-//
-//                    // determine what target type is necessary to call the method
-//                    MultiMethodConstant multi      = (MultiMethodConstant) arg;
-//                    IdentityConstant    idClz      = multi.getClassIdentity();
-//                    IdentityConstant    idCur      = ctx.getThisClass().getIdentityConstant();
-//                    int                 cSteps     = 0;
-//                    boolean             fConstruct = ctx.isConstructor();
-//                    Access              accessOrig = fConstruct ? Access.STRUCT : Access.PRIVATE;
-//                    Access              access     = accessOrig;
-//
-//                    // get the TypeInfo to search for the specific method to call
-//                    TypeInfo info = null; // TODO
-//                    if (info == null)
-//                        {
-//                        TypeConstant type;
-//                        if (cSteps == 0)
-//                            {
-//                            type = fHasThis
-//                                    ? ctx.getVar("this").getType()
-//                                    : ctx.getThisType();
-//                            }
-//                        else // TODO need an exact "outer this type" as well!
-//                            {
-//                            type = idCur.getType();
-//                            }
-//
-//                        type = pool.ensureAccessTypeConstant(type, access);
-//                        info = type.ensureTypeInfo(errs);
-//                        }
-
                     // find the method based on the signature
                     // TODO this only finds methods immediately contained within the class; does not find nested methods!!!
                     boolean fMethod = (fNoCall && fNoFBind) || target.hasThis;

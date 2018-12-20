@@ -793,7 +793,16 @@ public class TypeInfo
             return prop;
             }
 
-        prop = m_mapVirtProps.get(constId.resolveNestedIdentity(pool(), m_type));
+        if (constId.getNestedDepth() == 1)
+            {
+            prop = findProperty(constId.getName());
+            }
+        else
+            {
+            // TODO BUGBUG this won't find a constant that is nested
+            prop = m_mapVirtProps.get(constId.resolveNestedIdentity(pool(), m_type));
+            }
+
         return prop != null && prop.isIdentityValid(constId) ? prop : null;
         }
 
