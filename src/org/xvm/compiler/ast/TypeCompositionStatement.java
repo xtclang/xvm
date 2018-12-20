@@ -35,6 +35,7 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.TypeInfo.MethodType;
 import org.xvm.asm.op.Construct_0;
 import org.xvm.asm.op.Construct_1;
 import org.xvm.asm.op.Construct_N;
@@ -1552,7 +1553,7 @@ public class TypeCompositionStatement
             }
         else
             {
-            idSuper = findMethod(ctxValidate, infoSuper, "construct", listArgs, false, true, null, errs);
+            idSuper = findMethod(ctxValidate, infoSuper, "construct", listArgs, MethodType.Constructor, null, errs);
             if (idSuper == null)
                 {
                 // if an error have already been logged, this is additional information

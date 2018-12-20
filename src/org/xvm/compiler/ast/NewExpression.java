@@ -10,7 +10,6 @@ import java.util.Map.Entry;
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorList;
@@ -27,6 +26,7 @@ import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.TypeInfo.MethodType;
 
 import org.xvm.asm.op.Construct_0;
 import org.xvm.asm.op.Construct_1;
@@ -401,7 +401,7 @@ public class NewExpression
                 // any required dependency that it has one a super class constructor will be handled
                 // as if this were any other normal class)
                 ErrorList errsTarget = new ErrorList(10);
-                idMethod = findMethod(ctx, infoTarget, "construct", listArgs, false, true, null, errsTarget);
+                idMethod = findMethod(ctx, infoTarget, "construct", listArgs, MethodType.Constructor, null, errsTarget);
                 if (idMethod == null && !listArgs.isEmpty())
                     {
                     // the constructor that we're looking for is not on the anonymous inner class,
@@ -411,7 +411,7 @@ public class NewExpression
                     // replaced by a constructor with the same signature as the super's constructor
                     // (note: the automatic creation of the synthetic no-arg constructor in the
                     // absence of any explicit constructor must do this same check)
-                    MethodConstant idSuper = findMethod(ctx, infoSuper, "construct", listArgs, false, true, null, errs);
+                    MethodConstant idSuper = findMethod(ctx, infoSuper, "construct", listArgs, MethodType.Constructor, null, errs);
                     if (idSuper == null)
                         {
                         fValid = false;
@@ -440,7 +440,7 @@ public class NewExpression
                 }
             else
                 {
-                idMethod = findMethod(ctx, infoTarget, "construct", listArgs, false, true, null, errs);
+                idMethod = findMethod(ctx, infoTarget, "construct", listArgs, MethodType.Constructor, null, errs);
                 }
 
             if (idMethod == null)

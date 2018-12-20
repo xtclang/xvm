@@ -1503,15 +1503,13 @@ public class TypeInfo
     /**
      * Obtain all of the matching methods for the specified name and the number of parameters.
      *
-     * @param sName      the method name
-     * @param cParams    the number of parameters (-1 for any)
-     * @param fMethod    if true, include methods into the resulting set
-     * @param fFunction  if true, include functions into the resulting set
+     * @param sName       the method name
+     * @param cParams     the number of parameters (-1 for any)
+     * @param methodType  the category of methods to consider
      *
      * @return a set of zero or more method constants
      */
-    public Set<MethodConstant> findMethods(String sName, int cParams,
-                                           boolean fMethod, boolean fFunction)
+    public Set<MethodConstant> findMethods(String sName, int cParams, MethodType methodType)
         {
         Map<String, Set<MethodConstant>> mapMethods = m_mapMethodsByName;
         if (mapMethods == null)
@@ -1520,23 +1518,9 @@ public class TypeInfo
             }
 
         String sKey = cParams == 0 ? sName : sName + ';' + cParams;
-        if (fMethod)
+        if (methodType != MethodType.Method)
             {
-            if (fFunction)
-                {
-                sKey += "mf"; // both methods and functions are required
-                }
-            }
-        else
-            {
-            if (fFunction)
-                {
-                sKey += "f"; // only functions are required
-                }
-            else
-                {
-                throw new IllegalArgumentException("neither methods nor functions requested");
-                }
+            sKey += methodType.key;
             }
 
         Set<MethodConstant> setMethods = mapMethods.get(sKey);
@@ -1556,7 +1540,7 @@ public class TypeInfo
                     MethodInfo      info   = entry.getValue();
                     MethodStructure method = info.getTopmostMethodStructure(this);
 
-                    if (method.isFunction() ? !fFunction : !fMethod)
+                    if (!methodType.matches(method))
                         {
                         continue;
                         }
@@ -1953,6 +1937,32 @@ public class TypeInfo
             }
         }
 
+    public enum MethodType
+        {
+        Constructor("c"), Method("m"), Function("f"), Either("mf");
+
+        MethodType(String key)
+            {
+            this.key = key;
+            }
+
+        public final String key;
+
+        public boolean matches(MethodStructure method)
+            {
+            if (method.isConstructor())
+                {
+                return this == Constructor;
+                }
+
+            if (this == Either)
+                {
+                return true;
+                }
+
+            return method.isFunction() == (this == Function);
+            }
+        }
 
     /**
      * Represents the completeness of the TypeInfo.

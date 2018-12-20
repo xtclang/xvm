@@ -108,7 +108,7 @@ public class MethodInfo
     public MethodInfo layerOn(MethodInfo that, boolean fSelf, ErrorListener errs)
         {
         assert this.getIdentity().getName().equals(that.getIdentity().getName());
-        assert !this.isFunction() && !that.isFunction();
+        assert !this.isFunction() && !this.isConstructor() && !that.isFunction() && !that.isConstructor();
         assert this.getAccess().isAsAccessibleAs(Access.PROTECTED) && that.getAccess().isAsAccessibleAs(Access.PROTECTED);
 
         MethodBody[] aBase = this.m_aBody;
@@ -200,7 +200,7 @@ public class MethodInfo
         {
         // functions are, by definition, non-virtual, so they are not affected by yanking,
         // de-duping (they naturally de-dup by having a fixed identity), etc.
-        if (isFunction())
+        if (isFunction() || isConstructor())
             {
             return this;
             }
@@ -264,7 +264,7 @@ public class MethodInfo
         // param retained only to match PropertyInfo
         assert fNative;
 
-        if (isFunction())
+        if (isFunction() || isConstructor())
             {
             return this;
             }
@@ -327,7 +327,7 @@ public class MethodInfo
         {
         // basically, if the method is a function, it stays as-is; otherwise, it needs to be
         // "flattened" into a single implicit entry with the right signature
-        return isFunction()
+        return isFunction() || isConstructor()
                 ? this
                 : new MethodInfo(new MethodBody(getIdentity(), getSignature(), Implementation.Implicit));
         }
@@ -458,13 +458,21 @@ public class MethodInfo
         }
 
     /**
+     * @return true iff this is a function (not a method)
+     */
+    public boolean isConstructor()
+        {
+        return getHead().isConstructor();
+        }
+
+    /**
      * @return true iff the method can exist across multiple "glass panes" of the type's composition
      */
     public boolean isVirtual()
         {
         // it can only be virtual if it is non-private and non-function, and if it is not contained
         // within a method or a private property
-        if (isFunction() || getAccess() == Access.PRIVATE)
+        if (isFunction() || isConstructor() || getAccess() == Access.PRIVATE)
             {
             return false;
             }

@@ -20,7 +20,6 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 import org.xvm.asm.Component;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
@@ -32,6 +31,7 @@ import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.TypeInfo.MethodType;
 
 import org.xvm.asm.op.Label;
 
@@ -857,14 +857,13 @@ public abstract class AstNode
      * Given an array of expressions representing actual parameters and the TypeInfo of the target,
      * find the best matching method.
      *
-     * @param ctx          the compilation context
-     * @param infoTarget   the type info on which to search for the method
-     * @param sMethodName  the method name
-     * @param listExprArgs the expressions for arguments (which may not yet be validated)
-     * @param atypeReturn  (optional) the array of return types from the method
-     * @param fMethod      true to include methods in the search
-     * @param fFunction    true to include functions in the search
-     * @param errs         listener to log any errors to
+     * @param ctx           the compilation context
+     * @param infoTarget    the type info on which to search for the method
+     * @param sMethodName   the method name
+     * @param listExprArgs  the expressions for arguments (which may not yet be validated)
+     * @param methodType    the MethodType to search for
+     * @param atypeReturn   (optional) the array of return types from the method
+     * @param errs          listener to log any errors to
      *
      * @return the MethodConstant for the desired method, or null if an exact match was not found,
      *         in which case an error has been reported
@@ -874,8 +873,7 @@ public abstract class AstNode
             TypeInfo         infoTarget,
             String           sMethodName,
             List<Expression> listExprArgs,
-            boolean          fMethod,
-            boolean          fFunction,
+            MethodType       methodType,
             TypeConstant[]   atypeReturn,
             ErrorListener    errs)
         {
@@ -933,10 +931,10 @@ public abstract class AstNode
             }
 
         TypeConstant        typeTarget = infoTarget.getType();
-        Set<MethodConstant> setMethods = infoTarget.findMethods(sMethodName, cArgs, fMethod, fFunction);
+        Set<MethodConstant> setMethods = infoTarget.findMethods(sMethodName, cArgs, methodType);
         if (setMethods.isEmpty())
             {
-            if (sMethodName.equals("construct"))
+            if (methodType == MethodType.Constructor)
                 {
                 log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, typeTarget.getValueString());
                 }
@@ -968,7 +966,7 @@ public abstract class AstNode
         if (typeTupleArg != null)
             {
             atypeArgs  = typeTupleArg.getParamTypesArray();
-            setMethods = infoTarget.findMethods(sMethodName, atypeArgs.length, fMethod, fFunction);
+            setMethods = infoTarget.findMethods(sMethodName, atypeArgs.length, methodType);
 
             collectMatchingMethods(ctx, infoTarget, setMethods, null,
                     atypeArgs, mapNamedExpr, atypeReturn, setIs, setConvert);
@@ -985,7 +983,7 @@ public abstract class AstNode
             }
 
         // report a miss
-        if (sMethodName.equals("construct"))
+        if (methodType == MethodType.Constructor)
             {
             log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, typeTarget.getValueString());
             }

@@ -220,6 +220,23 @@ public class MethodConstant
         }
 
     /**
+     * Note: This is just a helper method; the "whether this refers to a constructor or not"
+     * question belongs to either the component or the type info, and not to the constant, but we
+     * need this information.
+     *
+     * @return true iff this method represents a constructor
+     */
+    boolean isConstructor()
+        {
+        assert !isNascent();
+        MethodStructure method = (MethodStructure) getComponent();
+
+        // we treat an absence of a component as a sign that the method is virtual
+        // (because when this code was written, that could only occur on a method "cap")
+        return method != null && method.isConstructor();
+        }
+
+    /**
      * If any of this method's signature components are auto-narrowing (or have any references to
      * auto-narrowing types), replace any auto-narrowing portion with an explicit class identity in
      * the context of the specified target.
@@ -235,7 +252,7 @@ public class MethodConstant
      */
     public SignatureConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget)
         {
-        assert !isFunction();
+        assert !isFunction() && !isConstructor();
         assert typeTarget == null ||
                typeTarget.isA(getClassIdentity().getType()) ||
                typeTarget.isFormalTypeSequence();
@@ -395,7 +412,7 @@ public class MethodConstant
     @Override
     public TypeConstant getRefType(TypeConstant typeTarget)
         {
-        if (isFunction())
+        if (isFunction() || isConstructor())
             {
             assert typeTarget == null;
             return getSignature().getRefType(null);

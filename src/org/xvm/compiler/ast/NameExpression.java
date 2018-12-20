@@ -34,6 +34,7 @@ import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.ThisClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.TypeInfo.MethodType;
 import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
@@ -1122,8 +1123,8 @@ public class NameExpression
                             Access.PRIVATE).ensureTypeInfo(errs);
 
                     // only include methods if this context is a method
-                    Collection<MethodConstant> colMethods =
-                            infoClz.findMethods(sName, -1, !ctx.isFunction(), true);
+                    Collection<MethodConstant> colMethods = infoClz.findMethods(
+                            sName, -1, ctx.isFunction() ? MethodType.Function : MethodType.Either);
                     assert !colMethods.isEmpty();
 
                     if (colMethods.size() == 1)
