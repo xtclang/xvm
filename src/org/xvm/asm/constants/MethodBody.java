@@ -184,12 +184,21 @@ public class MethodBody
         }
 
     /**
-     * @return true iff this is a function, not a method
+     * @return true iff this is a function, not a method or constructor
      */
     public boolean isFunction()
         {
         MethodStructure structMethod = getMethodStructure();
         return structMethod != null && structMethod.isFunction();
+        }
+
+    /**
+     * @return true iff this is a constructor, not a method or function
+     */
+    public boolean isConstructor()
+        {
+        MethodStructure structMethod = getMethodStructure();
+        return structMethod != null && structMethod.isConstructor();
         }
 
     /**
@@ -342,7 +351,7 @@ public class MethodBody
         {
         // must be a method (not a function)
         // the number of parameters must match
-        if (isFunction()
+        if (isFunction() || isConstructor()
                 || cParams >= 0 && m_id.getRawParams().length != cParams)
             {
             return false;

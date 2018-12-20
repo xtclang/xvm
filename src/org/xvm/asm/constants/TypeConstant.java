@@ -1251,7 +1251,7 @@ public abstract class TypeConstant
         for (Map.Entry<MethodConstant, MethodInfo> entry : infoPri.getMethods().entrySet())
             {
             MethodInfo method = entry.getValue();
-            if (method.isFunction())
+            if (method.isFunction() || method.isConstructor())
                 {
                 mapMethods.put(entry.getKey(), method);
                 }
@@ -1315,7 +1315,7 @@ public abstract class TypeConstant
                         for (Map.Entry<MethodConstant, MethodInfo> entry : infoContrib.getMethods().entrySet())
                             {
                             MethodInfo method = entry.getValue();
-                            assert method.isFunction();
+                            assert method.isFunction() || method.isConstructor();
                             mapMethods.putIfAbsent(entry.getKey(), method);
                             }
                         }
@@ -2716,7 +2716,7 @@ public abstract class TypeConstant
             MethodConstant idContrib     = entry.getKey();
             MethodInfo     methodContrib = entry.getValue();
             Object         nidContrib    = idContrib.resolveNestedIdentity(
-                                                pool, methodContrib.isFunction() ? null : this);
+                    pool, methodContrib.isFunction() || methodContrib.isConstructor() ? null : this);
 
             // the method is not virtual if it is a function, if it is private, or if it is
             // contained inside a method or some other structure (such as a property) that is

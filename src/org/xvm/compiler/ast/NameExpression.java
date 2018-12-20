@@ -34,6 +34,7 @@ import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.ThisClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.TypeInfo.MethodType;
 import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
@@ -51,6 +52,7 @@ import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.LabeledStatement.LabelVar;
+import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
 import org.xvm.util.Severity;
 
@@ -1067,46 +1069,16 @@ public class NameExpression
                 log(errs, Severity.ERROR, Compiler.NAME_MISSING,
                         sName, ctx.getMethod().getIdentityConstant().getValueString());
                 }
+            else if (arg instanceof Register)
+                {
+                m_arg         = arg;
+                m_fAssignable = ((Register) arg).isWritable();
+                }
             else if (arg instanceof Constant)
                 {
                 Constant constant = ((Constant) arg);
                 switch (constant.getFormat())
                     {
-                    case Property:
-                        {
-                        PropertyConstant idProp = (PropertyConstant) arg;
-                        if (idProp.isTypeSequenceTypeParameter())
-                            {
-                            m_arg         = idProp;
-                            m_fAssignable = false;
-                            }
-                        else
-                            {
-                            ClassStructure clzTop = (ClassStructure) idProp.getNamespace().getComponent();
-
-                            // we will use the private access info here since the access restrictions
-                            // must have been already checked by the "resolveName"
-                            TypeInfo infoClz = pool().ensureAccessTypeConstant(clzTop.getFormalType(),
-                                                        Access.PRIVATE).ensureTypeInfo(errs);
-
-                            PropertyInfo infoProp = infoClz.findProperty(idProp);
-
-                            // there is a possibility that the name was found by the resolver
-                            // (which is using the class structure contributions), but missing in the
-                            // info, which must have already reported the contribution problem
-                            if (infoProp == null)
-                                {
-                                log(errs, Severity.ERROR, Compiler.NAME_MISSING,
-                                        sName, ctx.getMethod().getIdentityConstant().getSignature());
-                                break;
-                                }
-                            m_arg         = infoProp.getIdentity();
-                            m_fAssignable = infoProp.isVar();
-                            }
-
-                        break;
-                        }
-
                     case Module:
                     case Package:
                     case Class:
@@ -1114,41 +1086,64 @@ public class NameExpression
                         m_arg = arg;
                         break;
 
-                    case MultiMethod:
-                        {
-                        MultiMethodConstant idMM   = (MultiMethodConstant) constant;
-                        ClassStructure      clzTop = (ClassStructure) idMM.getNamespace().getComponent();
-
-                        // we will use the private access info here since the access restrictions
-                        // must have been already checked by the "resolveName"
-                        TypeInfo     infoClz = pool().ensureAccessTypeConstant(clzTop.getFormalType(),
-                            Access.PRIVATE).ensureTypeInfo(errs);
-
-                        // only include methods if this context is a method
-                        Collection<MethodConstant> colMethods =
-                                infoClz.findMethods(sName, -1, !ctx.isFunction(), true);
-                        assert !colMethods.isEmpty();
-
-                        if (colMethods.size() == 1)
-                            {
-                            m_arg = colMethods.iterator().next();
-                            }
-                        else
-                            {
-                            log(errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, sName);
-                            }
-                        break;
-                        }
-
                     default:
                         throw new IllegalStateException("format=" + constant.getFormat()
                                 + ", constant=" + constant);
                     }
                 }
-            else if (arg instanceof Register)
+            else if (arg instanceof TargetInfo)
                 {
-                m_arg         = arg;
-                m_fAssignable = ((Register) arg).isWritable();
+                TargetInfo       target = (TargetInfo) arg;
+                TypeInfo         info   = target.typeTarget.ensureTypeInfo(errs);
+                IdentityConstant id     = target.id;
+                if (id instanceof MultiMethodConstant) // TODO still some work here to (i) save off the TargetInfo (ii) use it in code gen (iii) mark the this (and out this's) as being used
+                    {
+                    MultiMethodConstant idMM   = (MultiMethodConstant) id;
+                    ClassStructure      clzTop = (ClassStructure) idMM.getNamespace().getComponent();
+
+                    // we will use the private access info here since the access restrictions
+                    // must have been already checked by the "resolveName"
+                    TypeInfo     infoClz = pool().ensureAccessTypeConstant(clzTop.getFormalType(),
+                            Access.PRIVATE).ensureTypeInfo(errs);
+
+                    // only include methods if this context is a method
+                    Collection<MethodConstant> colMethods = infoClz.findMethods(
+                            sName, -1, ctx.isFunction() ? MethodType.Function : MethodType.Either);
+                    assert !colMethods.isEmpty();
+
+                    if (colMethods.size() == 1)
+                        {
+                        m_arg = colMethods.iterator().next();
+                        }
+                    else
+                        {
+                        log(errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, sName);
+                        }
+                    }
+                else if (id instanceof PropertyConstant) // TODO still some work here to (i) save off the TargetInfo (ii) use it in code gen (iii) mark the this (and out this's) as being used
+                    {
+                    PropertyInfo prop = info.findProperty((PropertyConstant) id);
+                    if (prop == null)
+                        {
+                        throw new IllegalStateException("missing property: " + id + " on " + target.typeTarget);
+                        }
+
+                    PropertyConstant idProp = (PropertyConstant) id;
+                    if (idProp.isTypeSequenceTypeParameter())
+                        {
+                        m_arg         = idProp;
+                        m_fAssignable = false;
+                        }
+                    else
+                        {
+                        m_arg         = prop.getIdentity();
+                        m_fAssignable = prop.isVar();
+                        }
+                    }
+                else
+                    {
+                    throw new IllegalStateException("unsupport constant format: " + id);
+                    }
                 }
             }
         else if (sName.equals("this"))

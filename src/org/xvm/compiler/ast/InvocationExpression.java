@@ -9,7 +9,6 @@ import java.util.Map;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
@@ -20,7 +19,6 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 import org.xvm.asm.Version;
 
-import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -31,12 +29,15 @@ import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.TypeInfo.MethodType;
 
 import org.xvm.asm.op.*;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
+
+import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
 import org.xvm.util.Severity;
 
@@ -386,13 +387,15 @@ public class InvocationExpression
 
                 if (m_fCall)
                     {
-                    if (m_method.isFunction())
+                    if (m_method.isFunction() || m_method.isConstructor())
                         {
                         return resolveTypes(resolver, idMethod.getSignature().getRawReturns());
                         }
                     if (typeLeft == null)
                         {
-                        typeLeft = ctx.getVar("this").getType(); // "this" could be narrowed
+                        typeLeft = m_targetinfo == null
+                                ? ctx.getVar("this").getType() // "this" could be narrowed
+                                : m_targetinfo.typeTarget;
                         }
                     return resolveTypes(resolver,
                             idMethod.resolveAutoNarrowing(pool, typeLeft).getRawReturns());
@@ -567,7 +570,7 @@ public class InvocationExpression
                             Component component = ((IdentityConstant) argMethod).getComponent();
                             if (component == null || !component.isStatic())
                                 {
-                                // there is a read of the implicit "this" variable
+                                // there is a read of the implicit "this" variable TODO use TargetInfo to figure out how many "this" steps there are
                                 Token tokName = exprName.getNameToken();
                                 long  lPos    = tokName.getStartPosition();
                                 Token tokThis = new Token(lPos, lPos, Id.THIS);
@@ -642,7 +645,9 @@ public class InvocationExpression
 
                         if (typeLeft == null && !m_method.isFunction())
                             {
-                            typeLeft = ctx.getVar("this").getType(); // "this" could be narrowed
+                            typeLeft = m_targetinfo == null
+                                    ? ctx.getVar("this").getType() // "this" could be narrowed
+                                    : m_targetinfo.typeTarget;
                             }
 
                         ValidArgs:
@@ -674,7 +679,7 @@ public class InvocationExpression
                             TypeConstant[] atypeResult;
                             if (m_fCall)
                                 {
-                                SignatureConstant sigRet = m_method.isFunction()
+                                SignatureConstant sigRet = m_method.isFunction() || m_method.isConstructor()
                                         ? idMethod.getSignature()
                                         : idMethod.resolveAutoNarrowing(pool, typeLeft);
                                 if (!mapTypeParams.isEmpty())
@@ -830,7 +835,7 @@ public class InvocationExpression
                 {
                 MethodConstant idMethod = (MethodConstant) m_argMethod;
 
-                if (m_method.isFunction())
+                if (m_method.isFunction() || m_method.isConstructor())
                     {
                     // use the function identity as the argument & drop through to the function handling
                     assert !m_fBindTarget && (exprLeft == null || !exprLeft.hasSideEffects());
@@ -846,9 +851,8 @@ public class InvocationExpression
                         Argument argTarget;
                         if (exprLeft == null)
                             {
-                            // use "this"
+                            // use "this" TODO
                             MethodStructure method = code.getMethodStructure();
-                            assert !method.isFunction();
                             argTarget = generateReserved(
                                     code, method.isConstructor() ? Op.A_STRUCT : Op.A_PRIVATE, errs);
                             }
@@ -1332,6 +1336,7 @@ public class InvocationExpression
         boolean fNoFBind = !isAnyArgBound();
         boolean fNoCall  = isSuppressCall();
 
+        m_targetinfo  = null;
         m_argMethod   = null;
         m_idConvert   = null;
         m_fBindTarget = false;
@@ -1363,14 +1368,15 @@ public class InvocationExpression
         // looking for a registered name, i.e. a local variable of that name, stopping once the
         // containing method/function (but <b>not</b> a lambda, since it has a permeable barrier to
         // enable local variable capture) is reached
-        NameExpression exprName = (NameExpression) expr;
-        Token          tokName  = exprName.getNameToken();
-        String         sName    = exprName.getName();
+        NameExpression exprName   = (NameExpression) expr;
+        Token          tokName    = exprName.getNameToken();
+        String         sName      = exprName.getName();
+        boolean        fConstruct = sName.equals("construct");
         Expression     exprLeft = exprName.left;
         if (exprLeft == null)
             {
             Argument arg = ctx.resolveName(tokName, errs);
-            if (arg instanceof Register || arg instanceof PropertyConstant)
+            if (arg instanceof Register)
                 {
                 if (testFunction(ctx, arg.getType(), atypeReturn, errs) == null)
                     {
@@ -1382,103 +1388,84 @@ public class InvocationExpression
                     return arg;
                     }
                 }
-            else if (arg instanceof MultiMethodConstant)
+
+            if (arg instanceof TargetInfo)
                 {
-                // determine what target type is necessary to call the method
-                MultiMethodConstant multi      = (MultiMethodConstant) arg;
-                IdentityConstant    idClz      = multi.getClassIdentity();
-                IdentityConstant    idCur      = ctx.getThisClass().getIdentityConstant();
-                int                 cSteps     = 0;
-                boolean             fConstruct = ctx.isConstructor();
-                Access              accessOrig = fConstruct ? Access.STRUCT : Access.PRIVATE;
-                Access              access     = accessOrig;
-                boolean             fHasThis   = ctx.isMethod() || fConstruct;
-                while (idCur != null && !idCur.equals(idClz) && !idCur.getType().isA(idClz.getType()))
+                TargetInfo       target = (TargetInfo) arg;
+                TypeInfo         info   = target.typeTarget.ensureTypeInfo(errs);
+                IdentityConstant id     = target.id;
+                if (id instanceof MultiMethodConstant)
                     {
-                    ++cSteps;
-
-                    boolean fTopLevel = !(idCur instanceof ClassConstant)
-                            || ((ClassConstant) idCur).getDepthFromOutermost() == 0;
-
-                    // if we're in a constructor, then we lose the "this" immediately as we walk up
-                    // the tree (because it's a "this:struct", not a reference to a nested object);
-                    // otherwise, we lose the "this" when we cross a static boundary or leave the
-                    // outermost class
-                    fHasThis &= !fConstruct && !fTopLevel && !idCur.getComponent().isStatic();
-
-                    if (access == Access.STRUCT)
+                    // find the method based on the signature
+                    // TODO this only finds methods immediately contained within the class; does not find nested methods!!!
+                    MethodType methodType = fConstruct ? MethodType.Constructor :
+                            (fNoCall && fNoFBind) || target.hasThis ? MethodType.Either : MethodType.Function;
+                    IdentityConstant idCallable = findCallable(ctx, info, sName, methodType, atypeReturn, errs);
+                    if (idCallable == null)
                         {
-                        access = Access.PRIVATE;
+                        // check to see if we would have found something had we included methods in
+                        // the search
+                        if (methodType == MethodType.Function && findCallable(ctx, info, sName,
+                                MethodType.Method, atypeReturn, ErrorListener.BLACKHOLE) != null)
+                            {
+                            exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_METHOD, sName, target.typeTarget);
+                            }
+                        return null;
                         }
-
-                    if (fTopLevel)
+                    else
                         {
-                        access = Access.PROTECTED;
-                        }
-
-                    // walk up the component tree
-                    idCur = idCur.getParentConstant();
-                    if (idCur != null)
-                        {
-                        idCur = idCur.getClassIdentity();
+                        m_targetinfo  = target; // (only used for non-constants)
+                        m_argMethod   = idCallable;
+                        m_method      = getMethod(info, idCallable);
+                        m_fBindTarget = m_method != null && !m_method.isFunction();
+                        return idCallable;
                         }
                     }
-
-                // assume that no class hit implies a narrowed this
-                if (idCur == null)
+                else if (id instanceof PropertyConstant)
                     {
-                    cSteps = 0;
-                    access = accessOrig;
-                    }
-
-                // get the TypeInfo to search for the specific method to call
-                TypeInfo info = ((MultiMethodConstant) arg).getTypeInfo();
-                if (info == null)
-                    {
-                    TypeConstant type;
-                    if (cSteps == 0)
+                    PropertyInfo prop = info.findProperty((PropertyConstant) id);
+                    if (prop == null)
                         {
-                        type = fHasThis
-                                ? ctx.getVar("this").getType()
-                                : ctx.getThisType();
-                        }
-                    else // TODO need an exact "outer this type" as well!
-                        {
-                        type = idCur.getType();
+                        throw new IllegalStateException("missing property: " + id + " on " + target.typeTarget);
                         }
 
-                    type = pool.ensureAccessTypeConstant(type, access);
-                    info = type.ensureTypeInfo(errs);
-                    }
-
-                // find the method based on the signature
-                IdentityConstant idCallable = findCallable(ctx, info, sName,
-                        (fNoCall && fNoFBind) || fHasThis, true, atypeReturn, errs);
-                if (idCallable != null)
-                    {
-                    m_argMethod   = idCallable;
-                    m_method      = getMethod(info, idCallable);
-                    m_fBindTarget = m_method != null && !m_method.isFunction();
-                    return idCallable;
-                    }
-
-                return null;
-                }
-            else
-                {
-                // shouldn't have been possible to resolve to a method constant
-                assert !(arg instanceof MethodConstant);
-
-                if (sName.equals("construct"))
-                    {
-                    log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, ctx.getThisType().getValueString());
+                    if (testFunction(ctx, prop.getType(), atypeReturn, errs) == null)
+                        {
+                        return null;
+                        }
+                    else if (prop.isConstant() || target.hasThis)
+                        {
+                        m_targetinfo = target; // (only used for non-constants)
+                        m_argMethod  = id;
+                        return id;
+                        }
+                    else
+                        {
+                        // the property requires a target, but there is no "left." before the prop
+                        // name, and there is no "this." (explicit or implicit) because there is no
+                        // this
+                        exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_PROPERTY, sName, target.typeTarget);
+                        return null;
+                        }
                     }
                 else
                     {
-                    log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sName);
+                    throw new IllegalStateException("unsupport constant format: " + id);
                     }
-                return null;
                 }
+
+            // must NOT have resolved the name to a method constant (that should be impossible)
+            assert !(arg instanceof MethodConstant);
+
+            if (sName.equals("construct"))
+                {
+                log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, ctx.getThisType().getValueString());
+                }
+            else
+                {
+                log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sName);
+                }
+            return null;
             }
         else // there is a "left" expression for the name
             {
@@ -1506,9 +1493,10 @@ public class InvocationExpression
                     // - methods are included because there is a left, but since it is to obtain a
                     //   method reference, there must not be any arg binding or actual invocation
                     // - functions are included because the left is identity-mode
-                    TypeInfo infoLeft = nameLeft.getIdentity(ctx).ensureTypeInfo(errs);
-                    Argument arg      = findCallable(ctx, infoLeft, sName, fNoFBind && fNoCall, true,
-                            atypeReturn, errs);
+                    TypeInfo   infoLeft   = nameLeft.getIdentity(ctx).ensureTypeInfo(errs);
+                    MethodType methodType = fConstruct ? MethodType.Constructor
+                            : fNoFBind && fNoCall ? MethodType.Either : MethodType.Function;
+                    Argument   arg        = findCallable(ctx, infoLeft, sName, methodType, atypeReturn, errs);
                     if (arg != null)
                         {
                         m_argMethod = arg;
@@ -1523,12 +1511,11 @@ public class InvocationExpression
             // - methods are included because there is a left and it is NOT identity-mode
             // - functions are NOT included because the left is NOT identity-mode
             TypeInfo infoLeft = typeLeft.ensureTypeInfo(errs);
-            Argument arg      = findCallable(ctx, infoLeft, sName, true, false, atypeReturn, errs);
+            Argument arg      = findCallable(ctx, infoLeft, sName, MethodType.Method, atypeReturn, errs);
             if (arg != null)
                 {
                 m_argMethod   = arg;
                 m_method      = getMethod(infoLeft, arg);
-                assert m_method == null || !m_method.isFunction();
                 m_fBindTarget = m_method != null;
                 return arg;
                 }
@@ -1559,8 +1546,7 @@ public class InvocationExpression
      * @param ctx         the context
      * @param infoParent  the TypeInfo to search for the method or function on
      * @param sName       the name of the method or function
-     * @param fMethod     true to include methods in the search
-     * @param fFunction   true to include functions in the search
+     * @param methodType  the categories of methods to include in the search
      * @param aRedundant  the redundant return type information (helps to clarify which method or
      *                    function to select)
      * @param errs        the error listener to log errors to
@@ -1571,8 +1557,7 @@ public class InvocationExpression
             Context        ctx,
             TypeInfo       infoParent,
             String         sName,
-            boolean        fMethod,
-            boolean        fFunction,
+            MethodType     methodType,
             TypeConstant[] aRedundant,
             ErrorListener  errs)
         {
@@ -1584,7 +1569,7 @@ public class InvocationExpression
             return prop.getIdentity();
             }
 
-        return findMethod(ctx, infoParent, sName, args, fMethod, fFunction, aRedundant, errs);
+        return findMethod(ctx, infoParent, sName, args, methodType, aRedundant, errs);
         }
 
     /**
@@ -1906,6 +1891,7 @@ public class InvocationExpression
     private transient boolean         m_fBindParams;     // do we need to bind any parameters
     private transient boolean         m_fCall;           // do we need to call/invoke
     private transient boolean         m_fTupleArg;       // indicates that arguments come from a tuple
+    private transient TargetInfo      m_targetinfo;      // for left==null with prop or method name
     private transient Argument        m_argMethod;
     private transient MethodStructure m_method;          // if m_fArgMethod is a MethodConstant,
                                                          // this holds the corresponding structure

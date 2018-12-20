@@ -133,7 +133,7 @@ public class MethodStructure
      */
     public boolean isFunction()
         {
-        return isStatic();
+        return isStatic() && !isConstructor();
         }
 
     /**
@@ -143,7 +143,6 @@ public class MethodStructure
         {
         String  sName        = getName();
         boolean fConstructor = sName.equals("construct") || sName.equals("=");
-        assert !fConstructor || isFunction();
         return fConstructor;
         }
 
@@ -787,7 +786,7 @@ public class MethodStructure
         {
         return getName().equals("=")
                 && getReturnCount() == 1 && getParamCount() == 0
-                && isFunction() && !isConditionalReturn();
+                && isConstructor() && !isConditionalReturn();
         }
 
     /**
@@ -1289,7 +1288,7 @@ public class MethodStructure
     @Override
     public boolean isAutoNarrowingAllowed()
         {
-        return !isFunction() && getParent().isAutoNarrowingAllowed();
+        return !isFunction() && !isConstructor() && getParent().isAutoNarrowingAllowed();
         }
 
     @Override

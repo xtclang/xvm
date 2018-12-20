@@ -1786,7 +1786,7 @@ public abstract class Expression
                 throw new IllegalArgumentException("nReg=" + nReg);
             }
 
-        if (fNoFunction && method.isFunction() && !method.isConstructor()
+        if (fNoFunction && method.isFunction()
                 || fNoConstruct && method.isConstructor())
             {
             log(errs, Severity.ERROR, Compiler.NO_THIS);

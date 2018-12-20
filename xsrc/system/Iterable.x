@@ -23,7 +23,7 @@ interface Iterable<ElementType>
         {
         return new Iterator<ElementType>()
             {
-            Iterator iter = iterator();
+            Iterator<ElementType> iter = iterator();
 
             @Override
             conditional ElementType next()

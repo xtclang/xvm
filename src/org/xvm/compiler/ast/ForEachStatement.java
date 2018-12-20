@@ -23,6 +23,7 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.TypeInfo.MethodType;
 
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
@@ -1048,7 +1049,7 @@ public class ForEachStatement
      */
     private MethodConstant findWellKnownMethod(TypeInfo info, String sMethodName, ErrorListener errs)
         {
-        Set<MethodConstant> setId = info.findMethods(sMethodName, 0, true, false);
+        Set<MethodConstant> setId = info.findMethods(sMethodName, 0, MethodType.Method);
 
         return setId.isEmpty()
                 ? null
