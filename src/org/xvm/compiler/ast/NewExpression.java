@@ -25,7 +25,6 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
-import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -390,6 +389,7 @@ public class NewExpression
         if (fValid)
             {
             List<Expression> listArgs = this.args;
+            int              cArgs    = listArgs == null ? 0 : listArgs.size();
             MethodConstant   idMethod = null;
             if (fAnon)
                 {
@@ -463,11 +463,11 @@ public class NewExpression
                 if (!testExpressions(ctx, listArgs, atypeArgs).isFit())
                     {
                     // otherwise, check the tuple based invoke (see Expression.findMethod)
-                    if (args.size() == 1)
+                    if (cArgs == 1)
                         {
                         typeTuple = pool.ensureParameterizedTypeConstant(
                                 pool.typeTuple(), atypeArgs);
-                        if (!args.get(0).testFit(ctx, typeTuple).isFit())
+                        if (!listArgs.get(0).testFit(ctx, typeTuple).isFit())
                             {
                             // the regular "validateExpressions" call will report an error
                             typeTuple = null;
@@ -485,7 +485,7 @@ public class NewExpression
                     m_fTupleArg = true;
                     }
 
-                m_aconstDefault = m_constructor.collectDefaultArgs(pool, listArgs.size());
+                m_cDefaults = m_constructor.getParamCount() - cArgs;
                 }
             }
 
@@ -605,10 +605,9 @@ public class NewExpression
         {
         MethodConstant idConstruct   = m_constructor.getIdentityConstant();
         TypeConstant   typeTarget    = argResult.getType();
-        Constant[]     aconstDefault = m_aconstDefault;
         int            cAll          = idConstruct.getRawParams().length;
         int            cArgs         = aArgs.length;
-        int            cDefaults     = aconstDefault == null ? 0 : aconstDefault.length;
+        int            cDefaults     = m_cDefaults;
 
         if (m_fTupleArg)
             {
@@ -619,16 +618,13 @@ public class NewExpression
             assert cArgs + cDefaults == cAll;
             if (cDefaults > 0)
                 {
-                if (cArgs == 0)
+                Argument[] aArgAll = new Argument[cAll];
+                System.arraycopy(aArgs, 0, aArgAll, 0, cArgs);
+                aArgs = aArgAll;
+
+                for (int i = 0; i < cDefaults; i++)
                     {
-                    aArgs = aconstDefault;
-                    }
-                else
-                    {
-                    Argument[] aArgAll = new Argument[cAll];
-                    System.arraycopy(aArgs, 0, aArgAll, 0, cArgs);
-                    System.arraycopy(aconstDefault, 0, aArgAll, cArgs, cDefaults);
-                    aArgs = aArgAll;
+                    aArgs[cArgs + i] = Register.DEFAULT;
                     }
                 }
 
@@ -1087,8 +1083,8 @@ public class NewExpression
     protected long                     lEndPos;
 
     private transient MethodStructure m_constructor;
-    private transient boolean         m_fTupleArg;     // indicates that arguments come from a tuple
-    private transient Constant[]      m_aconstDefault; // default arguments
+    private transient boolean         m_fTupleArg;  // indicates that arguments come from a tuple
+    private transient int             m_cDefaults;  // number of default arguments
 
     private transient TypeCompositionStatement m_anonActual;
     private transient ClassStructure           m_clzActual;

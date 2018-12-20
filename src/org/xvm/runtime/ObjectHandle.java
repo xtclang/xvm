@@ -26,6 +26,8 @@ public abstract class ObjectHandle
     protected TypeComposition m_clazz;
     protected boolean m_fMutable = false;
 
+    public static final ObjectHandle DEFAULT = new ObjectHandle(null) {};
+
     protected ObjectHandle(TypeComposition clazz)
         {
         m_clazz = clazz;

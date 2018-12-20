@@ -19,7 +19,7 @@ import org.xvm.asm.op.Var;
  * An type conversion expression. This converts a value from the sub-expression into a value of a
  * different type.
  */
-public  class ConvertExpression
+public class ConvertExpression
         extends SyntheticExpression
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -210,9 +210,10 @@ public  class ConvertExpression
     @Override
     public String toString()
         {
-        return getUnderlyingExpression().toString()
-                + '.' + m_idConv.getName()
-                + '<' + getType().getValueString() + ">()";
+        return getUnderlyingExpression().toString() + '.' + m_idConv.getName() +
+            (isValidated()
+                    ? '<' + getType().getValueString() + ">()"
+                    : "<?>()");
         }
 
 

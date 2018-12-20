@@ -626,7 +626,7 @@ public abstract class Expression
         // if we found an @Auto conversion, then create an expression that does the conversion work
         return idConv == null
                 ? this
-                : replaceThisWith(new ConvertExpression(this, 0, idConv, errs));
+                : new ConvertExpression(this, 0, idConv, errs);
         }
 
     /**
@@ -814,7 +814,7 @@ public abstract class Expression
                 MethodConstant idConv = aIdConv[i];
                 if (idConv != null)
                     {
-                    exprResult = replaceThisWith(new ConvertExpression(exprResult, i, idConv, errs));
+                    exprResult = new ConvertExpression(exprResult, i, idConv, errs);
                     }
                 }
             }

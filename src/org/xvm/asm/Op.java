@@ -1399,65 +1399,70 @@ public abstract class Op
     public static final int A_IGNORE    = -2;
 
     /**
+     * Pre-defined argument: an argument value to be retrieved from a method structure
+     */
+    public static final int A_DEFAULT   = -3;
+
+    /**
      * Pre-defined argument: {@code this:target}
      */
-    public static final int A_TARGET    = -3;
+    public static final int A_TARGET    = -4;
 
     /**
      * Pre-defined argument: {@code this:public}
      */
-    public static final int A_PUBLIC    = -4;
+    public static final int A_PUBLIC    = -5;
 
     /**
      * Pre-defined argument: {@code this:protected}
      */
-    public static final int A_PROTECTED = -5;
+    public static final int A_PROTECTED = -6;
 
     /**
      * Pre-defined argument: {@code this:private}
      */
-    public static final int A_PRIVATE   = -6;
+    public static final int A_PRIVATE   = -7;
 
     /**
      * Pre-defined argument: {@code this:struct}
      */
-    public static final int A_STRUCT    = -7;
+    public static final int A_STRUCT    = -8;
 
     /**
      * Pre-defined argument: {@code this:service}
      */
-    public static final int A_SERVICE   = -8;
+    public static final int A_SERVICE   = -9;
 
     /**
      * Pre-defined argument: {@code super} (function).
      */
-    public static final int A_SUPER     = -9;
+    public static final int A_SUPER     = -10;
 
     // TODO GG try to remove (or make "internal") all of the below
     /**
      * Pre-defined argument: {@code this:module}
      */
-    public static final int A_MODULE = -10;
+    public static final int A_MODULE    = -12;
     /**
      * Pre-defined argument: {@code this:type}
      */
-    public static final int A_TYPE = -11;
+    public static final int A_TYPE      = -13;
     /**
      * Pre-defined argument: a target for local invocation
      */
-    public static final int A_THIS = -12;
+    public static final int A_THIS      = -14;
     /**
      * Pre-defined argument: an indicator for "multiple return values" (internal)
      */
-    public final static int A_MULTI = -14;
+    public final static int A_MULTI     = -15;
     /**
      * Pre-defined argument: an indicator for a "tuple return" (internal)
      */
-    public final static int A_TUPLE = -15;
+    public final static int A_TUPLE     = -16;
     /**
      * Pre-defined and compile-time only argument: A label.
      */
-    public final static int A_LABEL = -16;
+    public final static int A_LABEL     = -17;
 
 
 
@@ -1523,5 +1528,5 @@ public abstract class Op
      * The first constant, constant #0, is at this index (which is a negative). For a constant whose
      * index is {@code i}, it is encoded as: {@code CONSTANT_OFFSET - i}
      */
-    public static final int CONSTANT_OFFSET = -17;
+    public static final int CONSTANT_OFFSET = -21;
     }

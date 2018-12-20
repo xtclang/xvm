@@ -671,7 +671,7 @@ public class InvocationExpression
                                 m_aargTypeParams = aargTypeParam;
                                 }
 
-                            m_aconstDefault = method.collectDefaultArgs(pool, atypeArgs.length);
+                            m_cDefaults = method.getParamCount() - cTypeParams - cArgs;
 
                             TypeConstant[] atypeResult;
                             if (m_fCall)
@@ -820,9 +820,8 @@ public class InvocationExpression
         fLocalPropOk &= cArgs == 0;
 
         Argument[] aargTypeParams = m_aargTypeParams;
-        Constant[] aconstDefault  = m_aconstDefault;
         int        cTypeParams    = aargTypeParams == null ? 0 : aargTypeParams.length;
-        int        cDefaults      = aconstDefault == null ? 0 : aconstDefault.length;
+        int        cDefaults      = m_cDefaults;
         boolean    fTargetOnStack = fUsedOnce && cArgs == 0;
 
         if (expr instanceof NameExpression)
@@ -889,7 +888,7 @@ public class InvocationExpression
                                     }
                                 else if (cDefaults == 1)
                                     {
-                                    arg = aconstDefault[0];
+                                    arg = Register.DEFAULT;
                                     }
                                 }
                             else
@@ -907,9 +906,9 @@ public class InvocationExpression
                                     aArgs[of + i] = args.get(i).generateArgument(ctx, code, false, fUsedOnce, errs);
                                     }
 
-                                if (cDefaults > 0)
+                                for (int i = 0, of = cTypeParams + cArgs; i < cDefaults; ++i)
                                     {
-                                    System.arraycopy(aconstDefault, 0, aArgs, cTypeParams + cArgs, cDefaults);
+                                    aArgs[of + i] = Register.DEFAULT;
                                     }
                                 }
 
@@ -1088,7 +1087,7 @@ public class InvocationExpression
                     }
                 else if (cDefaults == 1)
                     {
-                    arg = aconstDefault[0];
+                    arg = Register.DEFAULT;
                     }
                 }
             else
@@ -1106,9 +1105,9 @@ public class InvocationExpression
                     aArgs[of + i] = args.get(i).generateArgument(ctx, code, false, fUsedOnce, errs);
                     }
 
-                if (cDefaults > 0)
+                for (int i = 0, of = cTypeParams + cArgs; i < cDefaults; ++i)
                     {
-                    System.arraycopy(aconstDefault, 0, aArgs, cTypeParams + cArgs, cDefaults);
+                    aArgs[of + i] = Register.DEFAULT;
                     }
                 }
 
@@ -1229,7 +1228,7 @@ public class InvocationExpression
             else if (i >= ofDefault)
                 {
                 aiArg[iNext] = i;
-                aArg [iNext] = aconstDefault[i - ofDefault];
+                aArg [iNext] = Register.DEFAULT;
                 }
             else if (!args.get(i).isNonBinding())
                 {
@@ -1924,7 +1923,7 @@ public class InvocationExpression
     private transient MethodStructure m_method;          // if m_fArgMethod is a MethodConstant,
                                                          // this holds the corresponding structure
     private transient Argument[]      m_aargTypeParams;  // "hidden" type parameters
-    private transient Constant[]      m_aconstDefault;   // default arguments
+    private transient int             m_cDefaults;       // number of default arguments
     private transient MethodConstant  m_idConvert;       // conversion method
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(InvocationExpression.class, "expr", "args");

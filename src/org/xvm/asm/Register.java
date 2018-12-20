@@ -31,7 +31,7 @@ public class Register
      */
     public Register(TypeConstant type, int iArg)
         {
-        if (type == null && iArg != Op.A_IGNORE)
+        if (type == null && iArg != Op.A_DEFAULT)
             {
             throw new IllegalArgumentException("type required");
             }
@@ -224,6 +224,7 @@ public class Register
         {
         switch (iArg)
             {
+            case Op.A_DEFAULT:
             case Op.A_PUBLIC:
             case Op.A_PROTECTED:
             case Op.A_PRIVATE:
@@ -258,6 +259,14 @@ public class Register
     public boolean isTarget()
         {
         return m_iArg == Op.A_TARGET;
+        }
+
+    /**
+     * @return true iff the register represents a label
+     */
+    public boolean isLabel()
+        {
+        return m_iArg == Op.A_LABEL;
         }
 
     /**
@@ -385,6 +394,7 @@ public class Register
             {
             case Op.A_STACK:
             case Op.A_IGNORE:
+            case Op.A_DEFAULT:
             case Op.A_PUBLIC:
             case Op.A_PROTECTED:
             case Op.A_PRIVATE:
@@ -423,6 +433,9 @@ public class Register
 
             case Op.A_IGNORE:
                 return "_";
+
+            case Op.A_DEFAULT:
+                return "<default>";
 
             case Op.A_TARGET:
                 return "this:target";
@@ -599,6 +612,11 @@ public class Register
      * Empty array of registers.
      */
     public static final Register[] NO_REGS = new Register[0];
+
+    /**
+     * Register representing a default method argument.
+     */
+    public static final Register DEFAULT = new Register(null, Op.A_DEFAULT);
 
     /**
      * A reserved argument index that represents an unknown or otherwise unassigned index.

@@ -15,12 +15,12 @@ module TestSimple.xqiz.it
         console.println("Hello world!!!");
         }
 
-    void test2()
+    void test2(String s = "again!!!")
         {
         @Inject X.io.Console console;
         @Inject X.Clock runtimeClock;
 
-        console.println(runtimeClock.now.to<String>() + ": Hello again!!!");
+        console.println(runtimeClock.now.to<String>() + ": Hello " + s);
         }
 
     void test3()

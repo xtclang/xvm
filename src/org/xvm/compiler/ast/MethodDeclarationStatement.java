@@ -403,11 +403,9 @@ public class MethodDeclarationStatement
         // validateContent() stage
         mgr.processChildrenExcept((child) -> child == body | child == continuation);
 
-        Component component = getComponent();
-        if (component instanceof MethodStructure)
+        MethodStructure method = (MethodStructure) getComponent();
+        if (method != null)
             {
-            MethodStructure method = (MethodStructure) component;
-
             // sort out which annotations go on the method, and which belong to the return type
             if (!method.resolveAnnotations() || !method.resolveTypedefs())
                 {
@@ -421,38 +419,11 @@ public class MethodDeclarationStatement
         {
         // method children are all deferred up until this stage, so we have to "catch them up" at
         // this point, recreating the various compiler stages here
-        Component component = getComponent();
-        if (component == null || !catchUpChildren(errs))
+        MethodStructure method = (MethodStructure) getComponent();
+        if (method == null || !catchUpChildren(errs))
             {
             // we are in an error state; we choose not to proceed with compilation
             mgr.deferChildren();
-            return;
-            }
-
-        if (component instanceof MethodStructure)
-            {
-            MethodStructure method = (MethodStructure) component;
-
-            int cAllParams = method.getParamCount();
-            int cDefaults  = method.getDefaultParamCount();
-
-            for (int i = cAllParams - cDefaults; i < cAllParams; ++i)
-                {
-                org.xvm.asm.Parameter parameter = method.getParam(i);
-                assert parameter.hasDefaultValue();
-
-                Parameter param = params.get(i);
-
-                Expression value = param.value;
-                assert value != null;
-
-                // TODO: this needs to be wrapped into a statement (see PropertyDeclaration)
-                // TODO: if (value.isCompletable() && value.isRuntimeConstant())
-                if (value.isConstant())
-                    {
-                    parameter.setDefaultValue(value.toConstant());
-                    }
-                }
             }
         }
 
@@ -465,6 +436,43 @@ public class MethodDeclarationStatement
             // we are in an error state; we choose not to proceed with compilation
             mgr.deferChildren();
             return;
+            }
+
+        int cDefaults = method.getDefaultParamCount();
+        if (cDefaults > 0)
+            {
+            StatementBlock block = adopt(new StatementBlock(Collections.EMPTY_LIST));
+
+            StatementBlock.RootContext ctxMethod = block.new RootContext(method);
+            Context                    ctx       = ctxMethod.validatingContext();
+
+            int cParams = method.getParamCount();
+            for (int i = cParams - cDefaults; i < cParams; ++i)
+                {
+                org.xvm.asm.Parameter parameter = method.getParam(i);
+                assert parameter.hasDefaultValue();
+
+                TypeConstant typeParam = parameter.getType();
+                Parameter    param     = params.get(i);
+                Expression   value     = param.value;
+
+                Expression   valueNew;
+                ctx      = ctx.enterInferring(typeParam);
+                valueNew = value.validate(ctx, typeParam, errs);
+                ctx      = ctx.exit();
+
+                if (valueNew != null)
+                    {
+                    if (valueNew.isConstant())
+                        {
+                        parameter.setDefaultValue(value.toConstant());
+                        }
+                    else
+                        {
+                        value.log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+                        }
+                    }
+                }
             }
 
         if (body != null)
