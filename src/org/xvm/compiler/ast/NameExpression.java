@@ -39,7 +39,6 @@ import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
 import org.xvm.asm.op.L_Get;
-import org.xvm.asm.op.Move;
 import org.xvm.asm.op.MoveRef;
 import org.xvm.asm.op.MoveThis;
 import org.xvm.asm.op.MoveVar;
@@ -1011,13 +1010,16 @@ public class NameExpression
         {
         if (isAssignable())
             {
-            Argument arg = m_arg;
+            TargetInfo target = m_target;
+            Argument   arg     = m_arg;
             if (arg instanceof Register)
                 {
+                assert target == null;
                 return new Assignable((Register) arg);
                 }
             else if (arg instanceof PropertyConstant)
                 {
+                // TODO target
                 PropertyConstant idProp = (PropertyConstant) arg;
                 Argument         argTarget = left == null
                     ? new Register(ctx.getThisType(), Op.A_TARGET)
@@ -1053,6 +1055,7 @@ public class NameExpression
             return m_arg;
             }
 
+        m_target      = null;
         m_arg         = null;
         m_fAssignable = false;
 
@@ -1842,6 +1845,12 @@ public class NameExpression
      * assignment.
      */
     enum Plan {None, OuterThis, OuterRef, RegisterRef, PropertyDeref, PropertyRef, TypeOfClass, TypeOfTypedef, Singleton}
+
+    /**
+     * Cached validation info: The optional TargetInfo that provides context for the initial name,
+     * if the initial name is related to "this".
+     */
+    private transient TargetInfo m_target;
 
     /**
      * Cached validation info: The raw argument that the name refers to.
