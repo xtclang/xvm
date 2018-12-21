@@ -536,7 +536,7 @@ public class NamedTypeExpression
                     {
                     // see if the FormalType was narrowed
                     Argument arg = ctx.getVar(idProp.getName());
-                    if (arg instanceof Register)
+                    if (arg != null)
                         {
                         return arg.getType();
                         }

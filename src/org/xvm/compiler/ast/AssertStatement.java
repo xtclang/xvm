@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -150,14 +151,15 @@ public class AssertStatement
             }
 
         @Override
-        protected void promoteNarrowedType(String sName, Register register, boolean fWhenTrue)
+        protected void promoteNarrowedType(String sName, Argument arg, boolean fWhenTrue)
             {
             if (fWhenTrue)
                 {
-                if (getOuterContext().ensureNameMap().put(sName, register) != null)
+                if (getOuterContext().ensureNameMap().put(sName, arg) != null
+                        && arg instanceof Register)
                     {
                     // the narrowing register has replaced a local register; remember that fact
-                    register.markInPlace();
+                    ((Register) arg).markInPlace();
                     }
                 }
             }

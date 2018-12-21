@@ -837,7 +837,7 @@ public class StatementBlock
 
                         if (idResult != null)
                             {
-                            return new TargetInfo(sName, idResult, fHasThis, info.getType(), cSteps, null);
+                            return new TargetInfo(sName, idResult, fHasThis, info.getType(), cSteps);
                             }
 
                         fHasThis &= !info.isStatic();
@@ -869,7 +869,7 @@ public class StatementBlock
 
                         if (idResult != null)
                             {
-                            return new TargetInfo(sName, idResult, fHasThis, info.getType(), cSteps, idProp);
+                            return new TargetInfo(sName, idResult, fHasThis, info.getType(), cSteps);
                             }
                         }
                     else
@@ -1312,26 +1312,46 @@ public class StatementBlock
     public static class TargetInfo
             implements Argument
         {
+        /**
+         * Create a new TargetInfo.
+         */
         public TargetInfo(
                 String           name,
                 IdentityConstant id,
                 boolean          hasThis,
                 TypeConstant     typeTarget,
-                int              stepsOut,
-                PropertyConstant idProp)
+                int              stepsOut)
             {
             this.name       = name;
             this.id         = id;
             this.hasThis    = hasThis;
             this.typeTarget = typeTarget;
             this.stepsOut   = stepsOut;
-            this.idProp     = idProp;
+            this.typeNarrow = null;
+            }
+
+        /**
+         * Create a new TargetInfo by narrowing the type of the specified TargetInfo.
+         *
+         * @param that        the original info
+         * @param typeNarrow  the narrowing type
+         */
+        public TargetInfo(TargetInfo that, TypeConstant typeNarrow)
+            {
+            this.name       = that.name;
+            this.id         = that.id;
+            this.hasThis    = that.hasThis;
+            this.typeTarget = that.typeTarget;
+            this.stepsOut   = that.stepsOut;
+            this.typeNarrow = typeNarrow;
             }
 
         @Override
         public TypeConstant getType()
             {
-            return id.getType();
+            return typeNarrow == null
+                    ? id.getType()
+                    : typeNarrow;
             }
 
         @Override
@@ -1357,7 +1377,7 @@ public class StatementBlock
         public final boolean          hasThis;
         public final TypeConstant     typeTarget;
         public final int              stepsOut;
-        public final PropertyConstant idProp;
+        public final TypeConstant     typeNarrow;
         }
 
 
