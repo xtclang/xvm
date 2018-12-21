@@ -103,9 +103,14 @@ public class AssertV
             // TODO: combine all args
             assert m_nTest != A_STACK;
 
-            ObjectHandle   hTest   = frame.getArgument(m_nTest);
+            ObjectHandle hTest = frame.getArgument(m_nTest);
+            if (hTest == null)
+                {
+                return R_REPEAT;
+                }
+
             ObjectHandle[] ahValue = frame.getArguments(m_anValue, m_anValue.length);
-            if (hTest == null || ahValue == null)
+            if (ahValue == null)
                 {
                 return R_REPEAT;
                 }

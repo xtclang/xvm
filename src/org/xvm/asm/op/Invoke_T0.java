@@ -86,9 +86,13 @@ public class Invoke_T0
         try
             {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
-            ObjectHandle hArg = frame.getArgument(m_nArgTupleValue);
+            if (hTarget == null)
+                {
+                return R_REPEAT;
+                }
 
-            if (hTarget == null || hArg == null)
+            ObjectHandle hArg = frame.getArgument(m_nArgTupleValue);
+            if (hArg == null)
                 {
                 return R_REPEAT;
                 }

@@ -105,9 +105,13 @@ public class Invoke_1T
         try
             {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
-            ObjectHandle hArg = frame.getArgument(m_nArgValue);
+            if (hTarget == null)
+                {
+                return R_REPEAT;
+                }
 
-            if (hTarget == null || hArg == null)
+            ObjectHandle hArg = frame.getArgument(m_nArgValue);
+            if (hArg == null)
                 {
                 return R_REPEAT;
                 }
