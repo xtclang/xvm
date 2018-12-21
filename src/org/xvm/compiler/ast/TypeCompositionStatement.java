@@ -1501,6 +1501,42 @@ public class TypeCompositionStatement
             }
         RootContext ctxConstruct = blockBody.new RootContext(constructor);
         Context     ctxValidate  = ctxConstruct.validatingContext();
+        boolean     fValid       = true;
+
+        if (constructor.getDefaultParamCount() > 0)
+            {
+            // resolve the default values
+            org.xvm.asm.Parameter[] aParams = constructor.getParamArray();
+            for (int i = 0, cParams = aParams.length; i < cParams; ++i)
+                {
+                org.xvm.asm.Parameter param = aParams[i];
+                if (!param.hasDefaultValue())
+                    {
+                    continue;
+                    }
+
+                Expression exprOld = constructorParams.get(i).value;
+                Expression exprNew = exprOld.validate(ctxValidate, param.getType(), errs);
+                if (exprNew == null)
+                    {
+                    fValid = false;
+                    }
+                else if (exprNew.isConstant())
+                    {
+                    param.setDefaultValue(exprNew.toConstant());
+                    }
+                else
+                    {
+                    exprOld.log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+                    fValid = false;
+                    }
+                }
+
+            if (!fValid)
+                {
+                return;
+                }
+            }
 
         ClassStructure clzSuper  = component.getSuper();
         TypeInfo       infoSuper = clzSuper == null ? null : clzSuper.getFormalType().ensureTypeInfo(errs);
@@ -1567,7 +1603,6 @@ public class TypeCompositionStatement
         if (idSuper != null && listArgs != null)
             {
             TypeConstant[] atypeArgs = idSuper.getRawParams();
-            boolean        fValid    = true;
             for (int i = 0, c = listArgs.size(); i < c; i++)
                 {
                 Expression exprOld = listArgs.get(i);
@@ -1581,9 +1616,9 @@ public class TypeCompositionStatement
                     listArgs.set(i, exprNew);
                     }
                 }
+
             if (!fValid)
                 {
-                // validation has failed
                 return;
                 }
             }
