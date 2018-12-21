@@ -149,6 +149,9 @@
 
 - consider a FormalTypeConstant instead of TerminalType(PropertyConstant)
 
+-- review the argument generation approach (regarding stack, and local prop) for all ops that use
+   Frame.getArguments() similar to InvocationExpression and NewExpression
+
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
 - TemplateRegistry and TypeComposition could be mutated by different threads

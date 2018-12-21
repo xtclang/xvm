@@ -564,6 +564,12 @@ public class NewExpression
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
+        // 1. To avoid an out-of-order execution, we cannot allow the use of local properties
+        //    except for the parent when there are no arguments
+        // 2. The arguments are allowed to be pushed on the stack since the run-time knows to load
+        //    them up in the inverse order; however, the parent (for the NEWC_* ops should not be
+        //    put on the stack unless there are no arguments
+
         assert m_constructor != null;
 
         if (LVal.isLocalArgument())
@@ -579,7 +585,7 @@ public class NewExpression
             Argument[]       aArgs    = new Argument[cArgs];
             for (int i = 0; i < cArgs; ++i)
                 {
-                aArgs[i] = listArgs.get(i).generateArgument(ctx, code, true, true, errs);
+                aArgs[i] = listArgs.get(i).generateArgument(ctx, code, false, true, errs);
                 }
 
             if (anon != null)
