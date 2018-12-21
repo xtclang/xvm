@@ -491,8 +491,9 @@ public class ArrayAccessExpression
                     }
                 else
                     {
-                    constVal = evalConst((ArrayConstant) exprArray.toConstant(), (IntConstant)
-                            convertConstant(aexprIndexes[0].toConstant(), pool.typeInt()), errs);
+                    IntConstant constIndex = (IntConstant)
+                            validateAndConvertConstant(aexprIndexes[0].toConstant(), pool.typeInt(), errs);
+                    constVal = evalConst((ArrayConstant) exprArray.toConstant(), constIndex, errs);
                     }
                 }
             else if (typeArray.isA(pool.typeIndexed()))

@@ -600,48 +600,26 @@ public abstract class Expression
                 // cannot provide the required type
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                         typeRequired.getValueString(), typeActual.getValueString());
-
-                // pretend that we were able to do the necessary conversion (but note that there
-                // was a type fit error)
-                fit        = TypeFit.NoFit;
-                typeActual = typeRequired;
+                fit = TypeFit.NoFit;
                 }
             else if (constVal != null)
                 {
-                try
+                // an "out-of-range" error may be logged there, but we'll continue as a "fit"
+                // nevertheless
+                Constant constConv = convertConstant(constVal, typeRequired, errs);
+                if (constConv == null)
                     {
-                    Constant constConv = constVal.convertTo(typeRequired);
-                    if (constConv != constVal)
-                        {
-                        if (constConv == null)
-                            {
-                            // there is no compile-time conversion available;
-                            // continue with run-time conversion
-                            // TODO: for now it's most likely our omission; remove the soft assert below
-                            System.err.println("No conversion found for " + constVal);
-                            }
-                        else
-                            {
-                            typeActual = constConv.getType().ensureImmutable(pool());
-                            assert typeActual.isA(typeRequired);
-                            }
-                        constVal = constConv;
-                        }
+                    // there is no compile-time conversion available;
+                    // continue with run-time conversion
+                    // TODO: for now it's most likely our omission; remove the soft assert below
+                    System.err.println("No conversion found for " + constVal);
                     }
-                catch (ArithmeticException e)
+                else
                     {
-                    // conversion failure due to range etc.
-                    log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, typeRequired,
-                            constVal.getValueString());
-                    fit = TypeFit.NoFit;
+                    typeActual = constConv.getType().ensureImmutable(pool());
+                    idConv     = null;
                     }
-                }
-
-            if (!fit.isFit() && constVal != null)
-                {
-                // pretend that it was a constant
-                constVal   = generateFakeConstant(typeRequired);
-                typeActual = typeActual.ensureImmutable(pool());
+                constVal = constConv;
                 }
             }
 
@@ -781,28 +759,30 @@ public abstract class Expression
                         // cannot provide the required type
                         log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                                 typeRequired.getValueString(), typeActual.getValueString());
-
-                        // pretend that we were able to do the necessary conversion (but note that there
-                        // was a type fit error)
-                        fit        = TypeFit.NoFit;
-                        typeActual = typeRequired;
-                        if (aconstVal != null && aconstVal[i] != null)
-                            {
-                            // pretend that it was a constant
-                            aconstVal[i] = generateFakeConstant(typeRequired);
-                            typeActual   = typeActual.ensureImmutable(pool);
-                            }
-
-                        if (fCloneActual)
-                            {
-                            atypeActual  = atypeActual.clone();
-                            fCloneActual = false;
-                            }
-                        atypeActual[i] = typeActual;
+                        fit = TypeFit.NoFit;
                         }
                     else
                         {
-                        if (aIdConv == null)
+                        Constant constVal = aconstVal == null ? null : aconstVal[i];
+                        if (constVal != null)
+                            {
+                            Constant constConv = convertConstant(constVal, typeRequired, errs);
+                            if (constConv == null)
+                                {
+                                // there is no compile-time conversion available;
+                                // continue with run-time conversion
+                                // TODO: for now it's most likely our omission; remove the soft assert below
+                                System.err.println("No conversion found for " + constVal);
+                                }
+                            else
+                                {
+                                idConv         = null;
+                                atypeActual[i] = constConv.getType().ensureImmutable(pool());
+                                }
+                            aconstVal[i] = constConv;
+                            }
+
+                        if (aIdConv == null && idConv != null)
                             {
                             aIdConv = new MethodConstant[cActual];
                             }
@@ -1675,12 +1655,11 @@ public abstract class Expression
      *
      * @param constIn  the constant that needs to be validated as assignable
      * @param typeOut  the type that the constant must be assignable to
-     * @param errs     the error list to log any errors to, for example if the constant cannot be
-     *                 coerced in a manner to make it assignable
+     * @param errs     the error list to log any errors to
      *
-     * @return the constant to use
+     * @return the constant to use or null if the compile-time conversion is not possible
      */
-    protected Constant validateAndConvertConstant(Constant constIn, TypeConstant typeOut, ErrorListener errs)
+    protected Constant convertConstant(Constant constIn, TypeConstant typeOut, ErrorListener errs)
         {
         TypeConstant typeIn = constIn.getType();
         if (typeIn.isA(typeOut))
@@ -1689,10 +1668,9 @@ public abstract class Expression
             return constIn;
             }
 
-        Constant constOut;
         try
             {
-            constOut = constIn.convertTo(typeOut);
+            return constIn.convertTo(typeOut);
             }
         catch (ArithmeticException e)
             {
@@ -1701,11 +1679,26 @@ public abstract class Expression
                     constIn.getValueString());
             return generateFakeConstant(typeOut);
             }
+        }
 
+    /**
+     * Given an constant, verify that it can be assigned to (or somehow converted to) the specified
+     * type, and do so.
+     *
+     * @param constIn  the constant that needs to be validated as assignable
+     * @param typeOut  the type that the constant must be assignable to
+     * @param errs     the error list to log any errors to, for example if the constant cannot be
+     *                 coerced in a manner to make it assignable
+     *
+     * @return the constant to use (never null)
+     */
+    protected Constant validateAndConvertConstant(Constant constIn, TypeConstant typeOut, ErrorListener errs)
+        {
+        Constant constOut = convertConstant(constIn, typeOut, errs);
         if (constOut == null)
             {
             // conversion apparently was not possible
-            log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeOut, typeIn);
+            log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeOut, constIn.getType());
             constOut = generateFakeConstant(typeOut);
             }
 

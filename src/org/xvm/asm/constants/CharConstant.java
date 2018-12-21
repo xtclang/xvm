@@ -174,6 +174,25 @@ public class CharConstant
         }
 
     @Override
+    public Constant convertTo(TypeConstant typeOut)
+        {
+        switch (typeOut.getEcstasyClassName())
+            {
+            case "String":
+                {
+                int ch = m_chVal;
+                if (ch >= Character.MIN_VALUE && ch <= Character.MAX_VALUE)
+                    {
+                    return getConstantPool().
+                        ensureStringConstant(Character.valueOf((char) ch).toString());
+                    }
+                }
+            }
+
+        return super.convertTo(typeOut);
+        }
+
+    @Override
     public TypeConstant getType()
         {
         return getConstantPool().typeChar();
