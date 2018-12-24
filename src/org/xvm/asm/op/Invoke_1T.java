@@ -113,6 +113,10 @@ public class Invoke_1T
             ObjectHandle hArg = frame.getArgument(m_nArgValue);
             if (hArg == null)
                 {
+                if (m_nTarget == A_STACK)
+                    {
+                    frame.pushStack(hTarget);
+                    }
                 return R_REPEAT;
                 }
 

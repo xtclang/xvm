@@ -119,6 +119,10 @@ public class Invoke_N0
                 ahVar = frame.getArguments(m_anArgValue, chain.getTop().getMaxVars());
                 if (ahVar == null)
                     {
+                    if (m_nTarget == A_STACK)
+                        {
+                        frame.pushStack(hTarget);
+                        }
                     return R_REPEAT;
                     }
                 }

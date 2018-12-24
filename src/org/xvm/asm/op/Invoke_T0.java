@@ -94,6 +94,10 @@ public class Invoke_T0
             ObjectHandle hArg = frame.getArgument(m_nArgTupleValue);
             if (hArg == null)
                 {
+                if (m_nTarget == A_STACK)
+                    {
+                    frame.pushStack(hTarget);
+                    }
                 return R_REPEAT;
                 }
 

@@ -304,6 +304,11 @@ public abstract class Op
         {
         for (ObjectHandle h : aHandle)
             {
+            if (h == null)
+                {
+                // we reached the "tail"
+                return false;
+                }
             if (h instanceof DeferredCallHandle)
                 {
                 return true;
