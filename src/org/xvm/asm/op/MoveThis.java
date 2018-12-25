@@ -12,17 +12,17 @@ import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
 
-import org.xvm.runtime.template.xRef.RefHandle;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
+
+import org.xvm.runtime.template.xException;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * <pre><code>
  * MOV_THIS #, lvalue-dest ; # (an inline unsigned byte) specifies the count of this-to-outer-this
  *                         ; steps (0=this, 1=ImmediatelyOuter.this, etc.)
- * </code></pre>
  */
 public class MoveThis
         extends Op
@@ -35,6 +35,8 @@ public class MoveThis
      */
     public MoveThis(int cSteps, Register regDest)
         {
+        assert cSteps >= 0;
+
         m_cSteps = cSteps;
         m_regTo  = regDest;
         }
@@ -81,17 +83,26 @@ public class MoveThis
     @Override
     public int process(Frame frame, int iPC)
         {
-        RefHandle hRef = null; // TODO m_cSteps==0 -> this; m_cSteps==1 -> Outer.this; etc.
-
-        if (frame.isNextRegister(m_nToValue))
+        try
             {
-            // TODO frame.introduceResolvedVar(clzRef.getType());
+            GenericHandle hOuter = (GenericHandle) frame.getThis();
+            for (int c = m_cSteps; c > 0; c--)
+                {
+                hOuter = (GenericHandle) hOuter.getField(GenericHandle.OUTER);
+                }
+
+            int nToValue = m_nToValue;
+            if (frame.isNextRegister(nToValue))
+                {
+                frame.introduceResolvedVar(nToValue, hOuter.getType());
+                }
+
+            return frame.assignValue(nToValue, hOuter);
             }
-
-        // the destination type must be the same as the source
-        frame.f_ahVar[m_nToValue] = hRef;
-
-        return iPC + 1;
+        catch (ClassCastException | NullPointerException e)
+            {
+            return frame.raiseException(xException.makeHandle("Unknown outer"));
+            }
         }
 
     protected int m_cSteps;

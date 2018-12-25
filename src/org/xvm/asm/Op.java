@@ -892,6 +892,9 @@ public abstract class Op
             case OP_NEWG_1:      return new NewG_1      (in, aconst);
             case OP_NEWG_N:      return new NewG_N      (in, aconst);
             case OP_NEWG_T:      return new NewG_T      (in, aconst);
+            case OP_NEWC_0:      return new NewC_0      (in, aconst);
+            case OP_NEWC_1:      return new NewC_1      (in, aconst);
+            case OP_NEWC_N:      return new NewC_N      (in, aconst);
 
             case OP_CONSTR_0:    return new Construct_0 (in, aconst);
             case OP_CONSTR_1:    return new Construct_1 (in, aconst);
@@ -1084,6 +1087,10 @@ public abstract class Op
             case OP_NEWG_1:      return "NEWG_1";
             case OP_NEWG_N:      return "NEWG_N";
             case OP_NEWG_T:      return "NEWG_T";
+            case OP_NEWC_0:      return "NEWC_0";
+            case OP_NEWC_1:      return "NEWC_1";
+            case OP_NEWC_N:      return "NEWC_N";
+            case OP_NEWC_T:      return "NEWC_T";
             case OP_CONSTR_0:    return "CONSTR_0";
             case OP_CONSTR_1:    return "CONSTR_1";
             case OP_CONSTR_N:    return "CONSTR_N";

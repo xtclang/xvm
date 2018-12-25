@@ -366,7 +366,7 @@ public abstract class ClassTemplate
      *
      * The following steps are to be performed:
      * <ul>
-     *   <li>Invoke the default constructor for the "inception" type;
+     *   <li>Invoke the auto-generated initializer for the "inception" type;
      *   <li>Invoke the specified constructor, potentially calling some super constructors
      *       passing "this:struct" as a target
      *   <li>Invoke all finalizers in the inheritance chain starting at the base passing
@@ -376,16 +376,22 @@ public abstract class ClassTemplate
      * @param frame        the current frame
      * @param constructor  the MethodStructure for the constructor
      * @param clazz        the target class
+     * @param hParent      (optional) parent instance
      * @param ahVar        the construction parameters
      * @param iReturn      the register id to place the created handle into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int construct(Frame frame, MethodStructure constructor,
-                         TypeComposition clazz, ObjectHandle[] ahVar, int iReturn)
+    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
+                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         ObjectHandle hStruct = createStruct(frame, clazz);
+
+        if (hParent != null)
+            {
+            ((GenericHandle) hStruct).setField(GenericHandle.OUTER, hParent);
+            }
 
         // assume that we have class D with an auto-generated initializer (ID), a constructor (CD),
         // and a finalizer (FD) that extends B with a constructor (CB) and a finalizer (FB)

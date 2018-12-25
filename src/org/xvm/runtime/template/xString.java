@@ -73,8 +73,8 @@ public class xString
         }
 
     @Override
-    public int construct(Frame frame, MethodStructure constructor,
-                         TypeComposition clazz, ObjectHandle[] ahVar, int iReturn)
+    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
+                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         CharArrayHandle hCharArray = (CharArrayHandle) ahVar[0];
         hCharArray.makeImmutable();

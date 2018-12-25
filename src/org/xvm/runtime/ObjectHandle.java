@@ -269,6 +269,8 @@ public abstract class ObjectHandle
             {
             return Objects.equals(m_mapFields, ((GenericHandle) obj).m_mapFields);
             }
+
+        public final static String OUTER = "$outer";
         }
 
     public static class ExceptionHandle

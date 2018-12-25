@@ -9,7 +9,6 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
-
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 
@@ -20,31 +19,28 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
-import static org.xvm.util.Handy.checkElementsNonNull;
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * NEW_N CONSTRUCT, #params:(rvalue), lvalue-return
+ * NEWC_0 CONSTRUCT, rvalue-parent, lvalue ; virtual "new" for child classes
  */
-public class New_N
+public class NewC_0
         extends OpCallable
     {
     /**
-     * Construct a NEW_1 op based on the passed arguments.
+     * Construct a NEWC_0 op based on the passed arguments.
      *
      * @param constMethod  the constructor method
-     * @param aArgValue    the array of value Arguments
+     * @param argParent    the parent Argument
      * @param argReturn    the return Argument
      */
-    public New_N(MethodConstant constMethod, Argument[] aArgValue, Argument argReturn)
+    public NewC_0(MethodConstant constMethod, Argument argParent, Argument argReturn)
         {
         super(constMethod);
 
-        checkElementsNonNull(aArgValue);
-
-        m_aArgValue = aArgValue;
+        m_argParent = argParent;
         m_argReturn = argReturn;
         }
 
@@ -54,12 +50,12 @@ public class New_N
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public New_N(DataInput in, Constant[] aconst)
+    public NewC_0(DataInput in, Constant[] aconst)
             throws IOException
         {
         super(in, aconst);
 
-        m_anArgValue = readIntArray(in);
+        m_nParentValue = readPackedInt(in);
         m_nRetValue = readPackedInt(in);
         }
 
@@ -69,52 +65,44 @@ public class New_N
         {
         super.write(out, registry);
 
-        if (m_aArgValue != null)
+        if (m_argParent != null)
             {
-            m_anArgValue = encodeArguments(m_aArgValue, registry);
+            m_nParentValue = encodeArgument(m_argParent, registry);
             m_nRetValue = encodeArgument(m_argReturn, registry);
             }
 
-        writeIntArray(out, m_anArgValue);
+        writePackedLong(out, m_nParentValue);
         writePackedLong(out, m_nRetValue);
         }
 
     @Override
     public int getOpCode()
         {
-        return OP_NEW_N;
+        return OP_NEWC_0;
         }
 
     @Override
     public int process(Frame frame, int iPC)
         {
-        MethodStructure constructor = getMethodStructure(frame);
-
         try
             {
-            ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, constructor.getMaxVars());
-            if (ahVar == null)
+            ObjectHandle hParent = frame.getArgument(m_nParentValue);
+            if (hParent == null)
                 {
                 return R_REPEAT;
                 }
 
-            IdentityConstant constClz = constructor.getParent().getParent().getIdentityConstant();
-            ClassTemplate template = frame.ensureTemplate(constClz);
-            TypeComposition clzTarget = template.getCanonicalClass();
+            MethodStructure constructor = getVirtualConstructor(frame, hParent);
 
-            if (frame.isNextRegister(m_nRetValue))
+            if (isDeferred(hParent))
                 {
-                frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
-                }
-
-            if (anyDeferred(ahVar))
-                {
+                ObjectHandle[] ahHolder = new ObjectHandle[] {hParent};
                 Frame.Continuation stepNext = frameCaller ->
-                    template.construct(frame, constructor, clzTarget, null, ahVar, m_nRetValue);
+                    constructChild(frameCaller, constructor, ahHolder[0]);
 
-                return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahHolder, stepNext).doNext(frame);
                 }
-            return template.construct(frame, constructor, clzTarget, null, ahVar, m_nRetValue);
+            return constructChild(frame, constructor, hParent);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -122,15 +110,29 @@ public class New_N
             }
         }
 
+    protected int constructChild(Frame frame, MethodStructure constructor, ObjectHandle hParent)
+        {
+        IdentityConstant constClz = constructor.getParent().getParent().getIdentityConstant();
+        ClassTemplate template = frame.ensureTemplate(constClz);
+        TypeComposition clzTarget = template.getCanonicalClass();
+
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
+            }
+
+        return template.construct(frame, constructor, clzTarget, hParent, Utils.OBJECTS_NONE, m_nRetValue);
+        }
+
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
         super.registerConstants(registry);
 
-        registerArguments(m_aArgValue, registry);
+        m_argParent = registerArgument(m_argParent, registry);
         }
 
-    private int[] m_anArgValue;
+    private int m_nParentValue;
 
-    private Argument[] m_aArgValue;
+    private Argument m_argParent;
     }

@@ -128,11 +128,11 @@ public class ClassStructure
         }
 
     /**
-     * Note: A child class is a class that is instantiated using the "NEWC_*" op codes.
+     * Note: An instance child class is a class that is instantiated using the "NEWC_*" op codes.
      *
-     * @return true iff this class is a child class, which means that it is nested under a class
+     * @return true iff this class is an instance child class
      */
-    public boolean isChild()
+    public boolean isInstanceChild()
         {
         switch (getFormat())
             {
@@ -146,12 +146,17 @@ public class ClassStructure
             case CLASS:
             case CONST:
             case SERVICE:
-                {
-                Format format = getParent().getFormat();
-                // neither a top-level class nor a local class inside a method are considered child
-                // classes
-                return format != Format.MODULE && format != Format.PACKAGE && format != Format.METHOD;
-                }
+                if (isStatic())
+                    {
+                    return false;
+                    }
+                else
+                    {
+                    Format format = getParent().getFormat();
+                    // neither a top-level class nor a local class inside a method are considered child
+                    // classes
+                    return format != Format.MODULE && format != Format.PACKAGE && format != Format.METHOD;
+                    }
 
             case ENUMVALUE:
                 // enum values are always a child of an enum
@@ -188,7 +193,7 @@ public class ClassStructure
      */
     public ClassStructure getInstanceParent()
         {
-        if (isChild() && !isStatic() && getFormat() != Format.INTERFACE)
+        if (isInstanceChild())
             {
             Component parent = getParent();
             if (parent instanceof ClassStructure && parent.getFormat() != Format.INTERFACE)
@@ -215,6 +220,31 @@ public class ClassStructure
             clzParent = clzParent.getInstanceParent();
             }
         return false;
+        }
+
+    /**
+     * Get an instance child by the specified name on this class or any of the super classes.
+     *
+     * @param sName  the child class name
+     *
+     * @return a child structure or null if not found
+     */
+    public ClassStructure getInstanceChild(String sName)
+        {
+        Component child = getChild(sName);
+        if (child instanceof ClassStructure)
+            {
+            return (ClassStructure) child;
+            }
+
+        if (child != null)
+            {
+            // not a class
+            return null;
+            }
+
+        ClassStructure clzSuper = getSuper();
+        return clzSuper == null ? null : clzSuper.getInstanceChild(sName);
         }
 
     /**
@@ -639,7 +669,7 @@ public class ClassStructure
      * for this class.
      *
      * @param sName       the name to resolve
-     * @param access      the accessiblity to use to determine if the name is visible
+     * @param access      the accessibility to use to determine if the name is visible
      * @param collector   the collector to which the potential name matches will be reported
      * @param fAllowInto  if false, the "into" contributions should not be looked at
      *
