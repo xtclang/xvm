@@ -99,6 +99,10 @@ public class NewC_N
                 }
 
             MethodStructure constructor = getVirtualConstructor(frame, hParent);
+            if (constructor == null)
+                {
+                return frame.raiseException(reportMissingConstructor(frame, hParent));
+                }
 
             ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, constructor.getMaxVars());
             if (ahVar == null)

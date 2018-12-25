@@ -6,14 +6,17 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.asm.constants.TypeInfo;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+
+import org.xvm.runtime.template.xException;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -146,6 +149,18 @@ public abstract class OpCallable extends Op
         m_idParent    = idParentR;
         m_constructor = constructor;
         return constructor;
+        }
+
+    /**
+     * @return an exception handle
+     */
+    protected ExceptionHandle reportMissingConstructor(Frame frame, ObjectHandle hParent)
+        {
+        ClassConstant     idParentR      = hParent.getTemplate().getClassConstant();
+        SignatureConstant sigConstructor = getMethodStructure(frame).getIdentityConstant().getSignature();
+
+        return xException.makeHandle("Missing constructor \"" + sigConstructor.getValueString() +
+                                     "\" at class " + idParentR.getValueString());
         }
 
     @Override
