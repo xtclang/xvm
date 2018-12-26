@@ -470,8 +470,8 @@ module TestMisc.xqiz.it
         Order.OrderLine line = order.addLine("item-5");
         console.println("line=" + line);
 
-        order = new EnhancedOrder("Order-17");
-        line = order.addLine("item-5");
+        order = new EnhancedOrder("Order-18");
+        line = order.addLine("item-6");
         console.println("line=" + line);
         }
 

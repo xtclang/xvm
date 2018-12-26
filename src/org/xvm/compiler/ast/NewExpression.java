@@ -657,19 +657,26 @@ public class NewExpression
 
             if (typeTarget.isParamsSpecified())
                 {
-                switch (cAll)
+                if (argOuter == null)
                     {
-                    case 0:
-                        code.add(new NewG_0(idConstruct, typeTarget, argResult));
-                        break;
+                    switch (cAll)
+                        {
+                        case 0:
+                            code.add(new NewG_0(idConstruct, typeTarget, argResult));
+                            break;
 
-                    case 1:
-                        code.add(new NewG_1(idConstruct, typeTarget, aArgs[0], argResult));
-                        break;
+                        case 1:
+                            code.add(new NewG_1(idConstruct, typeTarget, aArgs[0], argResult));
+                            break;
 
-                    default:
-                        code.add(new NewG_N(idConstruct, typeTarget, aArgs, argResult));
-                        break;
+                        default:
+                            code.add(new NewG_N(idConstruct, typeTarget, aArgs, argResult));
+                            break;
+                        }
+                    }
+                else
+                    {
+                    notImplemented();
                     }
                 }
             else
