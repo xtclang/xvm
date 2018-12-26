@@ -5,10 +5,18 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+
+import org.xvm.runtime.template.xException;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -97,6 +105,62 @@ public abstract class OpCallable extends Op
             {
             m_argReturn = registerArgument(m_argReturn, registry);
             }
+        }
+
+    /**
+     * This Op holds a constant for the constructor of a child of the compile-time parent.
+     * The run-time type of the parent could extend the compile-time type and that parent
+     * may have a corresponding child extension.
+     *
+     * @return a child constructor for the specified parent
+     */
+    protected MethodStructure getVirtualConstructor(Frame frame, ObjectHandle hParent)
+        {
+        // suffix "C" indicates the compile-time constants; "R" - the run-time
+        ClassConstant idParentR = hParent.getTemplate().getClassConstant();
+        if (m_constructor != null)
+            {
+            if (m_idParent.equals(idParentR))
+                {
+                // cached constructor fits the parent's class
+                return m_constructor;
+                }
+            }
+
+        MethodStructure constructor = getMethodStructure(frame);
+        ClassStructure  clzTargetC  = (ClassStructure) constructor.getParent().getParent();
+        ClassStructure  clzParentC  = (ClassStructure) clzTargetC.getParent();
+        ClassConstant   idParentC   = (ClassConstant) clzParentC.getIdentityConstant();
+
+        if (!idParentR.equals(idParentC))
+            {
+            // find the run-time target's constructor;
+            // note that we don't need to resolve the actual types
+            String         sChild      = clzTargetC.getSimpleName();
+            ClassStructure clzParentR  = (ClassStructure) idParentR.getComponent();
+            ClassStructure clzChild    = clzParentR.getInstanceChild(sChild);
+            TypeInfo       infoTarget  = clzChild.getFormalType().ensureTypeInfo();
+
+            MethodInfo info = infoTarget.getMethodBySignature(
+                constructor.getIdentityConstant().getSignature());
+            constructor = info.getTopmostMethodStructure(infoTarget);
+            }
+
+        m_idParent    = idParentR;
+        m_constructor = constructor;
+        return constructor;
+        }
+
+    /**
+     * @return an exception handle
+     */
+    protected ExceptionHandle reportMissingConstructor(Frame frame, ObjectHandle hParent)
+        {
+        ClassConstant     idParentR      = hParent.getTemplate().getClassConstant();
+        SignatureConstant sigConstructor = getMethodStructure(frame).getIdentityConstant().getSignature();
+
+        return xException.makeHandle("Missing constructor \"" + sigConstructor.getValueString() +
+                                     "\" at class " + idParentR.getValueString());
         }
 
     @Override
@@ -247,4 +311,7 @@ public abstract class OpCallable extends Op
 
     private TypeConstant m_typeRetReg;     // cached return register type
     private TypeConstant[]  m_atypeRetReg; // cached return registers types
+
+    private ClassConstant   m_idParent;    // the parent's class id for the cached constructor
+    private MethodStructure m_constructor; // cached constructor
     }

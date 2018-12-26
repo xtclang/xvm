@@ -181,8 +181,8 @@ public class xArray
         }
 
     @Override
-    public int construct(Frame frame, MethodStructure constructor,
-                         TypeComposition clzArray, ObjectHandle[] ahVar, int iReturn)
+    public int construct(Frame frame, MethodStructure constructor, TypeComposition clzArray,
+                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         // this is a native constructor
         JavaLong hCapacity = (JavaLong) ahVar[0];

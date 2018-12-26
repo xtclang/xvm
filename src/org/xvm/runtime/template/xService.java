@@ -63,12 +63,12 @@ public class xService
     public int constructSync(Frame frame, MethodStructure constructor,
                              TypeComposition clazz, ObjectHandle[] ahArg, int iReturn)
         {
-        return super.construct(frame, constructor, clazz, ahArg, iReturn);
+        return super.construct(frame, constructor, clazz, null, ahArg, iReturn);
         }
 
     @Override
-    public int construct(Frame frame, MethodStructure constructor,
-                         TypeComposition clazz, ObjectHandle[] ahArg, int iReturn)
+    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
+                         ObjectHandle hParent, ObjectHandle[] ahArg, int iReturn)
         {
         ServiceContext contextNew = frame.f_context.createContext(f_sName);
 

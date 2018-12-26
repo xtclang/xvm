@@ -526,7 +526,7 @@ public class TypeInfo
      */
     public boolean isChild()
         {
-        return isClass() && m_struct.isChild();
+        return isClass() && m_struct.isInstanceChild();
         }
 
     /**

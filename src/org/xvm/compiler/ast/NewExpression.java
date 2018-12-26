@@ -34,6 +34,9 @@ import org.xvm.asm.op.Construct_N;
 import org.xvm.asm.op.L_Set;
 import org.xvm.asm.op.MoveRef;
 import org.xvm.asm.op.MoveVar;
+import org.xvm.asm.op.NewC_0;
+import org.xvm.asm.op.NewC_1;
+import org.xvm.asm.op.NewC_N;
 import org.xvm.asm.op.NewG_0;
 import org.xvm.asm.op.NewG_1;
 import org.xvm.asm.op.NewG_N;
@@ -326,6 +329,10 @@ public class NewExpression
                 }
             else if (fNestMate)
                 {
+                ClassStructure clzTarget = (ClassStructure)
+                    typeTarget.getSingleUnderlyingClass(false).getComponent();
+                m_fInstanceChild = clzTarget.isInstanceChild();
+
                 // since we are new-ing a class that is a nest-mate of the current class, we can
                 // increase visibility from the public default all the way to private
                 typeTarget = pool.ensureAccessTypeConstant(typeTarget, Access.PRIVATE);
@@ -564,6 +571,12 @@ public class NewExpression
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
+        // 1. To avoid an out-of-order execution, we cannot allow the use of local properties
+        //    except for the parent when there are no arguments
+        // 2. The arguments are allowed to be pushed on the stack since the run-time knows to load
+        //    them up in the inverse order; however, the parent (for the NEWC_* ops should not be
+        //    put on the stack unless there are no arguments
+
         assert m_constructor != null;
 
         if (LVal.isLocalArgument())
@@ -579,7 +592,7 @@ public class NewExpression
             Argument[]       aArgs    = new Argument[cArgs];
             for (int i = 0; i < cArgs; ++i)
                 {
-                aArgs[i] = listArgs.get(i).generateArgument(ctx, code, true, true, errs);
+                aArgs[i] = listArgs.get(i).generateArgument(ctx, code, false, true, errs);
                 }
 
             if (anon != null)
@@ -587,7 +600,7 @@ public class NewExpression
                 aArgs = addCaptures(code, aArgs);
                 }
 
-            generateNew(code, aArgs, LVal.getLocalArgument());
+            generateNew(ctx, code, aArgs, LVal.getLocalArgument(), errs);
             }
         else
             {
@@ -601,7 +614,8 @@ public class NewExpression
     /**
      * Generate the NEW_* op-code
      */
-    private void generateNew(Code code, Argument[] aArgs, Argument argResult)
+    private void generateNew(Context ctx, Code code, Argument[] aArgs, Argument argResult,
+                             ErrorListener errs)
         {
         MethodConstant idConstruct   = m_constructor.getIdentityConstant();
         TypeConstant   typeTarget    = argResult.getType();
@@ -628,6 +642,19 @@ public class NewExpression
                     }
                 }
 
+            Argument argOuter = null;
+            if (anon == null && m_fInstanceChild)
+                {
+                if (left == null)
+                    {
+                    argOuter = new Register(ctx.getThisType(), Op.A_THIS);
+                    }
+                else
+                    {
+                    argOuter = left.generateArgument(ctx, code, true, true, errs);
+                    }
+                }
+
             if (typeTarget.isParamsSpecified())
                 {
                 switch (cAll)
@@ -647,19 +674,39 @@ public class NewExpression
                 }
             else
                 {
-                switch (cAll)
+                if (argOuter == null)
                     {
-                    case 0:
-                        code.add(new New_0(idConstruct, argResult));
-                        break;
+                    switch (cAll)
+                        {
+                        case 0:
+                            code.add(new New_0(idConstruct, argResult));
+                            break;
 
-                    case 1:
-                        code.add(new New_1(idConstruct, aArgs[0], argResult));
-                        break;
+                        case 1:
+                            code.add(new New_1(idConstruct, aArgs[0], argResult));
+                            break;
 
-                    default:
-                        code.add(new New_N(idConstruct, aArgs, argResult));
-                        break;
+                        default:
+                            code.add(new New_N(idConstruct, aArgs, argResult));
+                            break;
+                        }
+                    }
+                else
+                    {
+                    switch (cAll)
+                        {
+                        case 0:
+                            code.add(new NewC_0(idConstruct, argOuter, argResult));
+                            break;
+
+                        case 1:
+                            code.add(new NewC_1(idConstruct, argOuter, aArgs[0], argResult));
+                            break;
+
+                        default:
+                            code.add(new NewC_N(idConstruct, argOuter, aArgs, argResult));
+                            break;
+                        }
                     }
                 }
             }

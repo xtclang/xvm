@@ -124,7 +124,7 @@ public class NewG_T
             frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
             }
 
-        return clzTarget.getTemplate().construct(frame, constructor, clzTarget,
+        return clzTarget.getTemplate().construct(frame, constructor, clzTarget, null,
             Utils.ensureSize(ahArg, constructor.getMaxVars()), m_nRetValue);
         }
 

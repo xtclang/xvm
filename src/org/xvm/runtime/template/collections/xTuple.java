@@ -114,8 +114,8 @@ public class xTuple
         }
 
     @Override
-    public int construct(Frame frame, MethodStructure constructor,
-                         TypeComposition clazz, ObjectHandle[] ahVar, int iReturn)
+    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
+                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         ObjectHandle hSequence = ahVar[0];
         IndexSupport support = (IndexSupport) hSequence.getOpSupport();

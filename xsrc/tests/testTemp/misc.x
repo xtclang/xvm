@@ -37,6 +37,7 @@ module TestMisc.xqiz.it
         // testMap();
         testConstants();
         testImport();
+        testChild();
         }
 
     void testInts()
@@ -457,5 +458,61 @@ module TestMisc.xqiz.it
         import Int as Q;
         Q x = 42;
         console.println("x=" + x);
+        }
+
+    void testChild()
+        {
+        console.println("\n** testChild()");
+
+        Order order = new Order("Order-17");
+        console.println("order=" + order);
+
+        Order.OrderLine line = order.addLine("item-5");
+        console.println("line=" + line);
+
+        order = new EnhancedOrder("Order-17");
+        line = order.addLine("item-5");
+        console.println("line=" + line);
+        }
+
+    class Order(String id)
+        {
+        Int lineCount;
+
+        @Override
+        String to<String>()
+            {
+            return id;
+            }
+
+        OrderLine addLine(String descr)
+            {
+            return new OrderLine(++lineCount, descr);
+            }
+
+        class OrderLine(Int lineNumber, String descr)
+            {
+            @Override
+            String to<String>()
+                {
+                return Order.this.to<String>() +
+                    ": " + descr;
+                }
+            }
+        }
+
+    class EnhancedOrder(String id)
+            extends Order(id)
+        {
+        class OrderLine(Int lineNumber, String descr)
+                extends Order.OrderLine(lineNumber, descr)
+            {
+            @Override
+            String to<String>()
+                {
+                return EnhancedOrder.this.to<String>() +
+                    ": " + lineNumber + ") " + descr;
+                }
+            }
         }
     }

@@ -91,6 +91,6 @@ public class New_0
             frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
             }
 
-        return template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
+        return template.construct(frame, constructor, clzTarget, null, ahVar, m_nRetValue);
         }
     }

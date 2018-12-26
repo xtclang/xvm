@@ -20,29 +20,29 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.collections.xTuple.TupleHandle;
-
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * NEW_1 CONSTRUCT, rvalue-tparams, lvalue-return
+ * NEWC_1 CONSTRUCT, rvalue-parent, rvalue-param, lvalue ; virtual "new" for child classes
  */
-public class New_T
+public class NewC_1
         extends OpCallable
     {
     /**
-     * Construct a NEW_T op based on the passed arguments.
+     * Construct a NEWC_1 op based on the passed arguments.
      *
      * @param constMethod  the constructor method
+     * @param argParent    the parent Argument
      * @param argValue     the value Argument
      * @param argReturn    the return Argument
      */
-    public New_T(MethodConstant constMethod, Argument argValue, Argument argReturn)
+    public NewC_1(MethodConstant constMethod, Argument argParent, Argument argValue, Argument argReturn)
         {
         super(constMethod);
 
+        m_argParent = argParent;
         m_argValue = argValue;
         m_argReturn = argReturn;
         }
@@ -53,12 +53,13 @@ public class New_T
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public New_T(DataInput in, Constant[] aconst)
+    public NewC_1(DataInput in, Constant[] aconst)
             throws IOException
         {
         super(in, aconst);
 
-        m_nArgTupleValue = readPackedInt(in);
+        m_nParentValue = readPackedInt(in);
+        m_nArgValue = readPackedInt(in);
         m_nRetValue = readPackedInt(in);
         }
 
@@ -68,20 +69,22 @@ public class New_T
         {
         super.write(out, registry);
 
-        if (m_argValue != null)
+        if (m_argParent != null)
             {
-            m_nArgTupleValue = encodeArgument(m_argValue, registry);
+            m_nParentValue = encodeArgument(m_argParent, registry);
+            m_nArgValue = encodeArgument(m_argValue, registry);
             m_nRetValue = encodeArgument(m_argReturn, registry);
             }
 
-        writePackedLong(out, m_nArgTupleValue);
+        writePackedLong(out, m_nParentValue);
+        writePackedLong(out, m_nArgValue);
         writePackedLong(out, m_nRetValue);
         }
 
     @Override
     public int getOpCode()
         {
-        return OP_NEW_T;
+        return OP_NEWC_1;
         }
 
     @Override
@@ -89,22 +92,39 @@ public class New_T
         {
         try
             {
-            ObjectHandle hArg = frame.getArgument(m_nArgTupleValue);
-            if (hArg == null)
+            ObjectHandle hParent = frame.getArgument(m_nParentValue);
+            if (hParent == null)
                 {
                 return R_REPEAT;
                 }
 
-            if (isDeferred(hArg))
+            MethodStructure constructor = getVirtualConstructor(frame, hParent);
+            if (constructor == null)
                 {
-                ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
-                Frame.Continuation stepNext = frameCaller ->
-                    complete(frameCaller, ((TupleHandle) ahArg[0]).m_ahValue);
-
-                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
+                return frame.raiseException(reportMissingConstructor(frame, hParent));
                 }
 
-            return complete(frame, ((TupleHandle) hArg).m_ahValue);
+            ObjectHandle[] ahVar = frame.getArguments(
+                    new int[]{m_nArgValue}, constructor.getMaxVars());
+            if (ahVar == null)
+                {
+                if (m_nParentValue == A_STACK)
+                    {
+                    frame.pushStack(hParent);
+                    }
+                return R_REPEAT;
+                }
+
+            if (isDeferred(hParent))
+                {
+                ObjectHandle[] ahHolder = new ObjectHandle[] {hParent};
+                Frame.Continuation stepNext = frameCaller ->
+                        collectArgs(frameCaller, constructor, ahHolder[0], ahVar);
+
+                return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
+                }
+
+            return constructChild(frame, constructor, hParent, ahVar);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -112,10 +132,21 @@ public class New_T
             }
         }
 
-    protected int complete(Frame frame, ObjectHandle[] ahArg)
+    protected int collectArgs(Frame frame, MethodStructure constructor, ObjectHandle hParent, ObjectHandle[] ahVar)
         {
-        MethodStructure constructor = getMethodStructure(frame);
+        if (anyDeferred(ahVar))
+            {
+            Frame.Continuation stepNext = frameCaller ->
+                constructChild(frameCaller, constructor, hParent, ahVar);
 
+            return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
+            }
+
+        return constructChild(frame, constructor, hParent, ahVar);
+        }
+
+    protected int constructChild(Frame frame, MethodStructure constructor, ObjectHandle hParent, ObjectHandle[] ahVar)
+        {
         IdentityConstant constClz = constructor.getParent().getParent().getIdentityConstant();
         ClassTemplate template = frame.ensureTemplate(constClz);
         TypeComposition clzTarget = template.getCanonicalClass();
@@ -125,8 +156,7 @@ public class New_T
             frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
             }
 
-        return template.construct(frame, constructor, clzTarget, null,
-            Utils.ensureSize(ahArg, constructor.getMaxVars()), m_nRetValue);
+        return template.construct(frame, constructor, clzTarget, hParent, ahVar, m_nRetValue);
         }
 
     @Override
@@ -134,10 +164,13 @@ public class New_T
         {
         super.registerConstants(registry);
 
+        m_argParent = registerArgument(m_argParent, registry);
         m_argValue = registerArgument(m_argValue, registry);
         }
 
-    private int m_nArgTupleValue;
+    private int m_nParentValue;
+    private int m_nArgValue;
 
+    private Argument m_argParent;
     private Argument m_argValue;
     }

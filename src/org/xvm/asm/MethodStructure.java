@@ -1121,7 +1121,7 @@ public class MethodStructure
                             }
 
                         template.construct(frame, constructor,
-                            template.getCanonicalClass(), Utils.OBJECTS_NONE, Op.A_STACK);
+                            template.getCanonicalClass(), null, Utils.OBJECTS_NONE, Op.A_STACK);
                         frame.m_frameNext.setContinuation(frameCaller ->
                             {
                             constSingleton.setHandle(frameCaller.popStack());

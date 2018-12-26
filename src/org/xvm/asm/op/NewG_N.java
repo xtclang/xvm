@@ -110,11 +110,11 @@ public class NewG_N
             if (anyDeferred(ahVar))
                 {
                 Frame.Continuation stepNext = frameCaller ->
-                    template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
+                    template.construct(frame, constructor, clzTarget, null, ahVar, m_nRetValue);
 
                 return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                 }
-            return template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
+            return template.construct(frame, constructor, clzTarget, null, ahVar, m_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

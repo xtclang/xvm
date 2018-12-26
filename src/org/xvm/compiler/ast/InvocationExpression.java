@@ -812,7 +812,7 @@ public class InvocationExpression
         // 1. NameExpression cannot (must not!) attempt to resolve method / function names; it is an
         //    assertion or error if it tries; that is the responsibility of InvocationExpression
         // 2. To avoid an out-of-order execution, we cannot allow the use of local properties
-        //    unless there are no arguments
+        //    except for the target when there are no arguments
         // 3. The arguments are allowed to be pushed on the stack since the run-time knows to load
         //    them up in the inverse order; however, the target itself or the function should not be
         //    put on the stack unless there are no arguments

@@ -91,10 +91,18 @@ public class Invoke_TT
         try
             {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
-            ObjectHandle hArg = frame.getArgument(m_nArgTupleValue);
-
-            if (hTarget == null || hArg == null)
+            if (hTarget == null)
                 {
+                return R_REPEAT;
+                }
+
+            ObjectHandle hArg = frame.getArgument(m_nArgTupleValue);
+            if (hArg == null)
+                {
+                if (m_nTarget == A_STACK)
+                    {
+                    frame.pushStack(hTarget);
+                    }
                 return R_REPEAT;
                 }
 

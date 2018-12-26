@@ -81,10 +81,18 @@ public class Invoke_10
         try
             {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
-            ObjectHandle hArg = frame.getArgument(m_nArgValue);
-
-            if (hTarget == null || hArg == null)
+            if (hTarget == null)
                 {
+                return R_REPEAT;
+                }
+
+            ObjectHandle hArg = frame.getArgument(m_nArgValue);
+            if (hArg == null)
+                {
+                if (m_nTarget == A_STACK)
+                    {
+                    frame.pushStack(hTarget);
+                    }
                 return R_REPEAT;
                 }
 
