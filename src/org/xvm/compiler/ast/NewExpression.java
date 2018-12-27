@@ -581,12 +581,6 @@ public class NewExpression
 
         if (LVal.isLocalArgument())
             {
-            if (left != null)
-                {
-                // TODO construct child class
-                notImplemented();
-                }
-
             List<Expression> listArgs = args;
             int              cArgs    = listArgs.size();
             Argument[]       aArgs    = new Argument[cArgs];
@@ -625,7 +619,7 @@ public class NewExpression
 
         if (m_fTupleArg)
             {
-            notImplemented();
+            throw notImplemented();
             }
         else
             {
@@ -643,7 +637,7 @@ public class NewExpression
                 }
 
             Argument argOuter = null;
-            if (anon == null && m_fInstanceChild)
+            if (m_fInstanceChild)
                 {
                 if (left == null)
                     {
@@ -676,7 +670,7 @@ public class NewExpression
                     }
                 else
                     {
-                    notImplemented();
+                    throw notImplemented();
                     }
                 }
             else
