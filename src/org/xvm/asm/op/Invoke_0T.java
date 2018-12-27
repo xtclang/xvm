@@ -108,7 +108,7 @@ public class Invoke_0T
         CallChain chain = getCallChain(frame, hTarget);
         MethodStructure method = chain.getTop();
 
-        checkReturnTupleRegister(frame, method, hTarget);
+        checkReturnTupleRegister(frame, hTarget);
 
         if (chain.isNative())
             {

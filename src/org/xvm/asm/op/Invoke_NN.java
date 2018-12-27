@@ -128,7 +128,7 @@ public class Invoke_NN
         CallChain chain = getCallChain(frame, hTarget);
         MethodStructure method = chain.getTop();
 
-        checkReturnRegisters(frame, method, hTarget);
+        checkReturnRegisters(frame, hTarget);
 
         ObjectHandle[] ahVar;
         if (ahArg == null)

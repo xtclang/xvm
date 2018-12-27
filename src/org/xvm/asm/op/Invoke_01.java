@@ -108,7 +108,7 @@ public class Invoke_01
         CallChain chain = getCallChain(frame, hTarget);
         MethodStructure method = chain.getTop();
 
-        checkReturnRegister(frame, method, hTarget);
+        checkReturnRegister(frame, hTarget);
 
         if (chain.isNative())
             {

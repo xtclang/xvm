@@ -43,8 +43,8 @@ public abstract class OpInvocable extends Op
     protected OpInvocable(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nTarget     = readPackedInt(in);
-        m_nMethodId   = readPackedInt(in);
+        m_nTarget   = readPackedInt(in);
+        m_nMethodId = readPackedInt(in);
 
         // for debugging support
         m_constMethod = (MethodConstant) aconst[m_nMethodId];
@@ -123,17 +123,33 @@ public abstract class OpInvocable extends Op
         }
 
     // check if a register for the return value needs to be allocated
-    protected void checkReturnRegister(Frame frame, MethodStructure method, ObjectHandle hTarget)
+    protected void checkReturnRegister(Frame frame, ObjectHandle hTarget)
         {
         assert !isMultiReturn();
 
         if (frame.isNextRegister(m_nRetValue))
             {
+            // TODO: there are a number of things that are not quite right with this approach:
+            // 1) The type of the target may not be the same as the target we used to cache the
+            //    "auto" register type and may need to be re-calculated
+            // 2) The calculation of the type uses the compile-time method return type;
+            //    while it's more correct than the run-time return type (that we used to use).
+            //    it may still be narrower than the compiler assumed. Unfortunately, the correct
+            //    compile-time type knowledge that existed in the corresponding Register, has been
+            //    dropped when the {@link #simulate()} and later {@link #write} are called.
+            //    We need to consider retaining/persisting that information on the Op itself.
+            //
+            // That same issue is clearly applicable to other "checkReturn" methods here.
+            // All that said, at the moment of this writing (12/27/18), none of the generated code
+            // is using the "auto" return registers, hence the fix for this issue is deferred.
             TypeConstant typeRet = m_typeRetReg;
             if (typeRet == null)
                 {
-                typeRet = m_typeRetReg = method.getReturnTypes()[0].
-                    resolveGenerics(frame.poolContext(), frame.getLocalType(m_nTarget, hTarget));
+                ConstantPool   pool        = frame.poolContext();
+                MethodConstant constMethod = (MethodConstant) frame.getConstant(m_nMethodId);
+
+                typeRet = m_typeRetReg = constMethod.getSignature().getRawReturns()[0].
+                        resolveGenerics(pool, frame.getLocalType(m_nTarget, hTarget));
                 }
 
             frame.introduceResolvedVar(m_nRetValue, typeRet);
@@ -141,7 +157,7 @@ public abstract class OpInvocable extends Op
         }
 
     // check if a register for the return Tuple value needs to be allocated
-    protected void checkReturnTupleRegister(Frame frame, MethodStructure method, ObjectHandle hTarget)
+    protected void checkReturnTupleRegister(Frame frame, ObjectHandle hTarget)
         {
         assert !isMultiReturn();
 
@@ -150,10 +166,11 @@ public abstract class OpInvocable extends Op
             TypeConstant typeRet = m_typeRetReg;
             if (typeRet == null)
                 {
-                ConstantPool pool = frame.poolContext();
+                ConstantPool   pool        = frame.poolContext();
+                MethodConstant constMethod = (MethodConstant) frame.getConstant(m_nMethodId);
 
                 typeRet = m_typeRetReg = pool.ensureParameterizedTypeConstant(
-                    pool.typeTuple(), method.getReturnTypes()).
+                    pool.typeTuple(), constMethod.getSignature().getRawReturns()).
                         resolveGenerics(pool, frame.getLocalType(m_nTarget, hTarget));
                 }
 
@@ -162,11 +179,9 @@ public abstract class OpInvocable extends Op
         }
 
     // check if any registers for the return values need to be allocated
-    protected void checkReturnRegisters(Frame frame, MethodStructure method, ObjectHandle hTarget)
+    protected void checkReturnRegisters(Frame frame, ObjectHandle hTarget)
         {
         assert isMultiReturn();
-
-        ConstantPool pool = frame.poolContext();
 
         int[] anRet = m_anRetValue;
         for (int i = 0, c = anRet.length; i < c; i++)
@@ -176,7 +191,10 @@ public abstract class OpInvocable extends Op
                 TypeConstant[] atypeRet = m_atypeRetReg;
                 if (atypeRet == null)
                     {
-                    atypeRet = m_atypeRetReg = method.getReturnTypes(); // a clone
+                    ConstantPool   pool        = frame.poolContext();
+                    MethodConstant constMethod = (MethodConstant) frame.getConstant(m_nMethodId);
+
+                    atypeRet = m_atypeRetReg = constMethod.getSignature().getRawReturns().clone();
                     for (int j = 0, cRet = atypeRet.length; j < cRet; j++)
                         {
                         atypeRet[j] = atypeRet[j].resolveGenerics(pool,
@@ -192,7 +210,8 @@ public abstract class OpInvocable extends Op
     @Override
     public String toString()
         {
-        return super.toString() + ' ' + getTargetString() + '.' + getMethodString() + '(' + getParamsString() + ") -> " + getReturnsString();
+        return super.toString() + ' ' + getTargetString() + '.' + getMethodString() +
+                '(' + getParamsString() + ") -> " + getReturnsString();
         }
     protected String getTargetString()
         {

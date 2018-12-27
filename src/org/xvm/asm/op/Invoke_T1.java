@@ -147,7 +147,7 @@ public class Invoke_T1
             return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
             }
 
-        checkReturnRegister(frame, method, hTarget);
+        checkReturnRegister(frame, hTarget);
 
         return chain.isNative()
             ? hTarget.getTemplate().invokeNativeN(frame, method, hTarget, ahArg, m_nRetValue)
