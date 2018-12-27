@@ -185,8 +185,9 @@ public class xArray
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         // this is a native constructor
-        JavaLong hCapacity = (JavaLong) ahVar[0];
-        long     cCapacity = hCapacity == null ? 0 : hCapacity.getValue();
+        ObjectHandle hCapacity = ahVar[0];
+        long         cCapacity = hCapacity == ObjectHandle.DEFAULT ?
+                                    0 : ((JavaLong) hCapacity).getValue();
 
         if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
             {
