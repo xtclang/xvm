@@ -1,8 +1,10 @@
 module TestMisc.xqiz.it
     {
     import X.IllegalArgumentException;
+    import X.DateTime;
 
     @Inject X.io.Console console;
+    @Inject X.Clock runtimeClock;
 
     void run()
         {
@@ -478,6 +480,7 @@ module TestMisc.xqiz.it
     class Order(String id)
         {
         Int lineCount;
+        DateTime date = runtimeClock.now;
 
         @Override
         String to<String>()
@@ -511,7 +514,7 @@ module TestMisc.xqiz.it
             String to<String>()
                 {
                 return EnhancedOrder.this.to<String>() +
-                    ": " + lineNumber + ") " + descr;
+                    ": " + lineNumber + ") " + descr + " @ " + date;
                 }
             }
         }
