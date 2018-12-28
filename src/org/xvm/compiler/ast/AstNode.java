@@ -1011,14 +1011,17 @@ public abstract class AstNode
             Set<MethodConstant>     setIs,
             Set<MethodConstant>     setConvert)
         {
-        int cArgs    = atypeArgs.length;
-        int cNamed   = mapNamedExpr == null ? 0 : mapNamedExpr.size();
-        int cUnnamed = cArgs - cNamed;
+        ConstantPool pool     = pool();
+        int          cArgs    = atypeArgs.length;
+        int          cReturns = atypeReturn == null ? 0 : atypeReturn.length;
+        int          cNamed   = mapNamedExpr == null ? 0 : mapNamedExpr.size();
+        int          cUnnamed = cArgs - cNamed;
 
         NextMethod: for (MethodConstant idMethod : setMethods)
             {
-            MethodInfo      infoMethod = infoTarget.getMethodById(idMethod);
-            MethodStructure method     = infoMethod.getTopmostMethodStructure(infoTarget);
+            MethodInfo        infoMethod = infoTarget.getMethodById(idMethod);
+            MethodStructure   method     = infoMethod.getTopmostMethodStructure(infoTarget);
+            SignatureConstant sigMethod  = idMethod.getSignature();
 
             int cAllParams  = method.getParamCount();
             int cTypeParams = method.getTypeParamCount();
@@ -1026,39 +1029,36 @@ public abstract class AstNode
             int cVisible    = cAllParams - cTypeParams;
             int cRequired   = cAllParams - cTypeParams - cDefaults;
 
-            if (cArgs < cRequired || cArgs > cVisible)
+            if (cArgs < cRequired || cArgs > cVisible
+                    || sigMethod.getRawReturns().length < cReturns)
                 {
-                continue NextMethod;
+                // invalid number of arguments or return values
+                continue;
                 }
 
             // named args could change method to method; we may need to clone the
             // array of args to prevent its contamination
             TypeConstant[] atypeAllArgs = atypeArgs;
-            TypeConstant[] atypeParam   = idMethod.getRawParams();
-            boolean        fConvert     = false;
-            for (int i = 0; i < cArgs; ++i)
-                {
-                TypeConstant typeMethodParam = atypeParam[cTypeParams + i];
-                if (cTypeParams > 0)
-                    {
-                    // resolve the type parameters down to their constraints
-                    typeMethodParam = typeMethodParam.resolveGenerics(pool(), method);
-                    }
 
-                TypeConstant typeArg;
-                Expression   exprArg;
-                if (i < cUnnamed)
+            // add the named expressions to the list of expressions in the correct order
+            if (cNamed > 0)
+                {
+                if (listExprArgs == null)
                     {
-                    typeArg = atypeAllArgs[i];
-                    exprArg = listExprArgs == null ? null : listExprArgs.get(i);
+                    listExprArgs = new ArrayList<>(cNamed);
                     }
-                else
+                assert listExprArgs.size() == cUnnamed;
+
+                for (int i = cUnnamed; i < cArgs; ++i)
                     {
-                    exprArg = mapNamedExpr.get(method.getParam(i).getName());
-                    typeArg = exprArg.isValidated()
+                    Expression exprArg = mapNamedExpr.get(method.getParam(i).getName());
+
+                    listExprArgs.set(i, exprArg);
+
+                    TypeConstant typeArg = exprArg.isValidated()
                             ? exprArg.getType()
                             : exprArg.getImplicitType(ctx);
-                    if (typeArg != null)
+                    if (typeArg != null && !typeArg.equals(atypeAllArgs[i]))
                         {
                         if (atypeAllArgs == atypeArgs)
                             {
@@ -1067,25 +1067,49 @@ public abstract class AstNode
                         atypeAllArgs[i] = typeArg;
                         }
                     }
+                }
+
+            // now let's assume that the method fits and based on that resolve the type parameters
+            // and the method signature
+            if (cTypeParams > 0)
+                {
+                ListMap<String, TypeConstant> mapTypeParams =
+                        method.resolveTypeParameters(atypeAllArgs, atypeReturn);
+                if (mapTypeParams.size() < cTypeParams)
+                    {
+                    // different arguments/returns cause the formal type to resolve into
+                    // incompatible types
+                    continue;
+                    }
+                sigMethod = sigMethod.resolveGenericTypes(pool, mapTypeParams::get);
+                }
+
+            TypeConstant[] atypeParam = sigMethod.getRawParams();
+            boolean        fConvert   = false;
+            for (int i = 0; i < cArgs; ++i)
+                {
+                TypeConstant typeParam = atypeParam[cTypeParams + i];
+                TypeConstant typeArg   = atypeAllArgs[i];
+                Expression   exprArg   = listExprArgs == null ? null : listExprArgs.get(i);
 
                 if (exprArg == null)
                     {
-                    if (!typeArg.isA(typeMethodParam))
+                    if (typeArg.isAssignableTo(typeParam))
                         {
-                        if (typeArg.getConverterTo(typeMethodParam) != null)
+                        if (!typeArg.isA(typeParam))
                             {
                             fConvert = true;
                             }
-                        else
-                            {
-                            continue NextMethod;
-                            }
+                        }
+                    else
+                        {
+                        continue NextMethod;
                         }
                     }
                 else
                     {
                     // check if the method's parameter type fits the argument expression
-                    TypeFit fit = exprArg.testFit(ctx, typeMethodParam);
+                    TypeFit fit = exprArg.testFit(ctx, typeParam);
                     if (fit.isFit())
                         {
                         if (fit.isConverting())
@@ -1128,49 +1152,39 @@ public abstract class AstNode
                     }
                 }
 
-            ListMap<String, TypeConstant> mapTypeParams = null;
             if (cTypeParams > 0)
                 {
-                mapTypeParams = method.resolveTypeParameters(atypeAllArgs, atypeReturn);
+                // re-resolve the type parameters since we could have narrowed some
+                ListMap<String, TypeConstant> mapTypeParams =
+                        method.resolveTypeParameters(atypeAllArgs, atypeReturn);
                 if (mapTypeParams.size() < cTypeParams)
                     {
                     // different arguments/returns cause the formal type to resolve into
                     // incompatible types
-                    continue NextMethod;
+                    continue;
                     }
+                sigMethod = idMethod.getSignature().resolveGenericTypes(pool, mapTypeParams::get);
                 }
 
-            if (atypeReturn != null)
+            if (cReturns > 0)
                 {
-                int            cReturns          = atypeReturn.length;
-                TypeConstant[] atypeMethodReturn = idMethod.getRawReturns();
+                TypeConstant[] atypeMethodReturn = sigMethod.getRawReturns();
 
-                if (atypeMethodReturn.length < cReturns)
-                    {
-                    // not enough return values
-                    continue NextMethod;
-                    }
-
-                for (int i = 0, c = cReturns; i < c; i++)
+                for (int i = 0; i < cReturns; i++)
                     {
                     TypeConstant typeReturn       = atypeReturn[i];
                     TypeConstant typeMethodReturn = atypeMethodReturn[i];
-                    if (mapTypeParams != null)
-                        {
-                        // resolve the method return types against the resolved formal types
-                        typeMethodReturn = typeMethodReturn.resolveGenerics(pool(), mapTypeParams::get);
-                        }
 
-                    if (!typeMethodReturn.isA(typeReturn))
+                    if (typeMethodReturn.isAssignableTo(typeReturn))
                         {
-                        if (typeMethodReturn.getConverterTo(typeReturn) != null)
+                        if (!typeMethodReturn.isA(typeReturn))
                             {
                             fConvert = true;
                             }
-                        else
-                            {
-                            continue NextMethod;
-                            }
+                        }
+                    else
+                        {
+                        continue NextMethod;
                         }
                     }
                 }
