@@ -335,7 +335,6 @@ module TestMisc.xqiz.it
         console.println("i=" + i);
         }
 
-    // TODO
     void testInterval()
         {
         console.println("\n** testInterval()");
@@ -343,11 +342,12 @@ module TestMisc.xqiz.it
         Int a = 2;
         Int b = 5;
         Object c = a..b;
-        // Range<Int> c = a..b;
         console.println("range=" + c);
+
+        Range<Int> r = a+1..b+1;
+        console.println("range=" + r);
         }
 
-    // TODO
     void testException()
         {
         console.println("\n** testException()");
@@ -507,6 +507,7 @@ module TestMisc.xqiz.it
     class EnhancedOrder(String id)
             extends Order(id)
         {
+        // TODO: the "extend" clause could be replaced with an @Override annotation
         class OrderLine(Int lineNumber, String descr)
                 extends Order.OrderLine(lineNumber, descr)
             {
