@@ -390,6 +390,9 @@ public abstract class ClassTemplate
 
         if (hParent != null)
             {
+            // strictly speaking a static child doesn't need to hold the parent's ref,
+            // but that decision (not to hold) could be deferred or even statistically implemented,
+            // since there could be benefits (e.g. during debugging) for knowing the parent
             ((GenericHandle) hStruct).setField(GenericHandle.OUTER, hParent);
             }
 

@@ -275,7 +275,7 @@ public class NameResolver
 
                 // first name has been resolved
                 m_stage = Stage.RESOLVE_DOT_NAME;
-                m_sName  = m_iter.hasNext() ? m_iter.next() : null;
+                m_sName = m_iter.hasNext() ? m_iter.next() : null;
                 // fall through
 
             case RESOLVE_DOT_NAME:
