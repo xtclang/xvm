@@ -1801,7 +1801,7 @@ public abstract class Expression
      */
     protected Register generateBlackHole(TypeConstant type)
         {
-        return new Register(type, Op.A_IGNORE);
+        return new Register(type == null ? pool().typeObject() : type, Op.A_IGNORE);
         }
 
     /**
@@ -2105,7 +2105,7 @@ public abstract class Expression
             switch (m_form)
                 {
                 case BlackHole:
-                    return new Register(pool().typeObject(), Op.A_IGNORE);
+                    return generateBlackHole(null);
 
                 case LocalVar:
                     return getRegister();

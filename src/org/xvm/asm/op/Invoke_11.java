@@ -137,7 +137,7 @@ public class Invoke_11
         CallChain chain = getCallChain(frame, hTarget);
         MethodStructure method = chain.getTop();
 
-        checkReturnRegister(frame, method, hTarget);
+        checkReturnRegister(frame, hTarget);
 
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
         ahVar[0] = hArg;

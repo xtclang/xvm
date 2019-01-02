@@ -9,6 +9,7 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.MethodStructure;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -205,7 +206,10 @@ public class TypeParameterConstant
     @Override
     public String getValueString()
         {
-        return m_constMethod.getName() + "<#" + m_iReg + ">";
+        MethodStructure method = (MethodStructure) m_constMethod.getComponent();
+        return method == null
+                ? m_constMethod.getName() + "<#" + m_iReg + ">"
+                : m_constMethod.getName() + "." + method.getParam(m_iReg).getName();
         }
 
 

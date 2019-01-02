@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
@@ -103,6 +104,14 @@ public class MoveThis
             {
             return frame.raiseException(xException.makeHandle("Unknown outer"));
             }
+        }
+
+    @Override
+    public String toString()
+        {
+        return super.toString()
+                + " #" + m_cSteps
+                + ", " + Argument.toIdString(m_regTo, m_nToValue);
         }
 
     protected int m_cSteps;

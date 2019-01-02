@@ -21,6 +21,7 @@ import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
@@ -28,6 +29,8 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeConstant.Relation;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.asm.op.Break;
+import org.xvm.asm.op.Call_01;
 import org.xvm.asm.op.L_Set;
 import org.xvm.asm.op.Return_0;
 
@@ -1910,14 +1913,29 @@ public class ClassStructure
             {
             if (infoProp.hasField())
                 {
-                Constant constValue = infoProp.getInitialValue();
-                if (constValue == null)
+                PropertyConstant idField = infoProp.getFieldIdentity();
+                MethodConstant   idInit  = null;
+                Constant         constInit;
+                if (infoProp.isInitialized())
                     {
-                    constValue = infoProp.getDefaultValue();
+                    constInit = infoProp.getInitialValue();
+                    if (constInit == null)
+                        {
+                        idInit = infoProp.getInitializer();
+                        }
                     }
-                if (constValue != null)
+                else
                     {
-                    code.add(new L_Set(infoProp.getIdentity(), constValue));
+                    constInit = infoProp.getDefaultValue();
+                    }
+
+                if (constInit != null)
+                    {
+                    code.add(new L_Set(idField, constInit));
+                    }
+                else if (idInit != null)
+                    {
+                    code.add(new Call_01(idInit, idField));
                     }
                 }
             }

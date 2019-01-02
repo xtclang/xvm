@@ -581,12 +581,6 @@ public class NewExpression
 
         if (LVal.isLocalArgument())
             {
-            if (left != null)
-                {
-                // TODO construct child class
-                notImplemented();
-                }
-
             List<Expression> listArgs = args;
             int              cArgs    = listArgs.size();
             Argument[]       aArgs    = new Argument[cArgs];
@@ -625,7 +619,7 @@ public class NewExpression
 
         if (m_fTupleArg)
             {
-            notImplemented();
+            throw notImplemented();
             }
         else
             {
@@ -643,7 +637,7 @@ public class NewExpression
                 }
 
             Argument argOuter = null;
-            if (anon == null && m_fInstanceChild)
+            if (m_fInstanceChild)
                 {
                 if (left == null)
                     {
@@ -657,19 +651,26 @@ public class NewExpression
 
             if (typeTarget.isParamsSpecified())
                 {
-                switch (cAll)
+                if (argOuter == null)
                     {
-                    case 0:
-                        code.add(new NewG_0(idConstruct, typeTarget, argResult));
-                        break;
+                    switch (cAll)
+                        {
+                        case 0:
+                            code.add(new NewG_0(idConstruct, typeTarget, argResult));
+                            break;
 
-                    case 1:
-                        code.add(new NewG_1(idConstruct, typeTarget, aArgs[0], argResult));
-                        break;
+                        case 1:
+                            code.add(new NewG_1(idConstruct, typeTarget, aArgs[0], argResult));
+                            break;
 
-                    default:
-                        code.add(new NewG_N(idConstruct, typeTarget, aArgs, argResult));
-                        break;
+                        default:
+                            code.add(new NewG_N(idConstruct, typeTarget, aArgs, argResult));
+                            break;
+                        }
+                    }
+                else
+                    {
+                    throw notImplemented();
                     }
                 }
             else

@@ -3849,7 +3849,7 @@ public abstract class TypeConstant
                 // 3. r-value (this) = T (formal parameter type), constrained by U (real type)
                 //    l-value (that) = V (real type), where U "is a" V
                 PropertyConstant idRight = (PropertyConstant) constIdRight;
-                if (typeLeft.isFormalType() && constIdLeft.getFormat() == Format.Property &&
+                if (constIdLeft.getFormat() == Format.Property &&
                     (((PropertyConstant) constIdLeft).getName().equals(idRight.getName())))
                     {
                     return Relation.IS_A;
@@ -3872,9 +3872,14 @@ public abstract class TypeConstant
                 // 3. r-value (this) = T (type parameter type), constrained by U (real type)
                 //    l-value (that) = V (real type), where U "is a" V
                 TypeParameterConstant idRight = (TypeParameterConstant) constIdRight;
-                if (typeLeft.isFormalType() && constIdLeft.getFormat() == Format.TypeParameter &&
+                if (constIdLeft.getFormat() == Format.TypeParameter &&
                     (((TypeParameterConstant) constIdLeft).getRegister() == idRight.getRegister()))
                     {
+                    // Note: it's quite opportunistic to assume that type parameters with the same
+                    // register are compatible regardless of the enclosing method, but we need to
+                    // assume that the caller has already (or will have) checked for the compatibility
+                    // all other elements of the containing method and the only thing left is the
+                    // register itself
                     return Relation.IS_A;
                     }
 

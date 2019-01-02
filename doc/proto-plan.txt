@@ -141,9 +141,9 @@
 
 - create native xBitArray
 
-- implement default argument constant calculation (currently always zero value)
++ implement default argument constant calculation (currently always zero value)
 
-- runtime support for property initializer "="
++ runtime support for property initializer "="
 
 - native optimization Stringable methods on xInt*, xUInt*, etc.
 

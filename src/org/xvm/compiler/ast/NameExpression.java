@@ -839,16 +839,35 @@ public class NameExpression
                         break;
                         }
 
-                    // TODO this is not complete; the "implicit this" covers both nested properties and outer properties
-                    boolean fThisProp = left == null;  // TODO or left == this
-                    if (fThisProp)
+                    PropertyConstant idProp = (PropertyConstant) argRaw;
+                    switch (calculatePropertyAccess())
                         {
-                        code.add(new L_Get((PropertyConstant) argRaw, argLVal));
-                        }
-                    else
-                        {
-                        Argument argLeft = left.generateArgument(ctx, code, false, false, errs);
-                        code.add(new P_Get((PropertyConstant) argRaw, argLeft, argLVal));
+                        case Singleton:
+                            {
+                            IdentityConstant idSingleton = idProp.getComponent().getParent().getIdentityConstant();
+                            code.add(new P_Get(idProp, idSingleton, argLVal));
+                            break;
+                            }
+
+                        case Outer:
+                            {
+                            int      cSteps   = m_targetInfo.stepsOut;
+                            Register regOuter = createRegister(m_targetInfo.getType(), true);
+                            code.add(new MoveThis(cSteps, regOuter));
+                            code.add(new P_Get(idProp, regOuter, argLVal));
+                            break;
+                            }
+
+                        case This:
+                            code.add(new L_Get(idProp, argLVal));
+                            break;
+
+                        case Left:
+                            {
+                            Argument argLeft = left.generateArgument(ctx, code, false, false, errs);
+                            code.add(new P_Get(idProp, argLeft, argLVal));
+                            break;
+                            }
                         }
                     return;
                     }
@@ -948,26 +967,42 @@ public class NameExpression
                         }
                     }
 
-                // TODO this is not complete; the "implicit this" covers both nested properties and outer properties
-                boolean fThisProp = left == null; // TODO or left == this
-                if (fThisProp && fLocalPropOk)
+                PropertyConstant idProp  = (PropertyConstant) argRaw;
+                Register         regTemp = createRegister(getType(), fUsedOnce);
+                switch (calculatePropertyAccess())
                     {
-                    // local property mode
-                    return argRaw;
-                    }
+                    case Singleton:
+                        {
+                        IdentityConstant idSingleton = idProp.getComponent().getParent().getIdentityConstant();
+                        code.add(new P_Get(idProp, idSingleton, regTemp));
+                        break;
+                        }
 
-                PropertyConstant idProp = (PropertyConstant) argRaw;
-                Register         reg    = createRegister(getType(), fUsedOnce);
-                if (fThisProp)
-                    {
-                    code.add(new L_Get(idProp, reg));
+                    case Outer:
+                        {
+                        int      cSteps   = m_targetInfo.stepsOut;
+                        Register regOuter = createRegister(m_targetInfo.getType(), true);
+                        code.add(new MoveThis(cSteps, regOuter));
+                        code.add(new P_Get(idProp, regOuter, regTemp));
+                        break;
+                        }
+
+                    case This:
+                        if (fLocalPropOk)
+                            {
+                            return idProp;
+                            }
+                        code.add(new L_Get(idProp, regTemp));
+                        break;
+
+                    case Left:
+                        {
+                        Argument argLeft = left.generateArgument(ctx, code, false, false, errs);
+                        code.add(new P_Get(idProp, argLeft, regTemp));
+                        break;
+                        }
                     }
-                else
-                    {
-                    Argument argLeft = left.generateArgument(ctx, code, false, false, errs);
-                    code.add(new P_Get(idProp, argLeft, reg));
-                    }
-                return reg;
+                return regTemp;
                 }
 
             case PropertyRef:
@@ -1096,7 +1131,7 @@ public class NameExpression
                 }
             else if (arg instanceof TargetInfo)
                 {
-                TargetInfo       target = (TargetInfo) arg;
+                TargetInfo       target = m_targetInfo = (TargetInfo) arg;
                 TypeInfo         info   = target.typeTarget.ensureTypeInfo(errs);
                 IdentityConstant id     = target.id;
                 if (id instanceof MultiMethodConstant) // TODO still some work here to (i) save off the TargetInfo (ii) use it in code gen (iii) mark the this (and out this's) as being used
@@ -1131,6 +1166,19 @@ public class NameExpression
                         throw new IllegalStateException("missing property: " + id + " on " + target.typeTarget);
                         }
 
+                    if (info.isStatic())
+                        {
+                        m_propAccessPlan = PropertyAccess.Singleton;
+                        }
+                    else if (target.stepsOut == 0)
+                        {
+                        m_propAccessPlan = PropertyAccess.This;
+                        }
+                    else
+                        {
+                        m_propAccessPlan = PropertyAccess.Outer;
+                        }
+
                     PropertyConstant idProp = (PropertyConstant) id;
                     if (idProp.isTypeSequenceTypeParameter())
                         {
@@ -1145,7 +1193,7 @@ public class NameExpression
                     }
                 else
                     {
-                    throw new IllegalStateException("unsupport constant format: " + id);
+                    throw new IllegalStateException("unsupported constant format: " + id);
                     }
                 }
             }
@@ -1769,6 +1817,18 @@ public class NameExpression
         return null;
         }
 
+    protected PropertyAccess calculatePropertyAccess()
+        {
+        if (m_propAccessPlan != null)
+            {
+            return m_propAccessPlan;
+            }
+
+        return left == null ||
+              (left instanceof NameExpression && ((NameExpression) left).getName().equals("this"))
+                ? PropertyAccess.This
+                : PropertyAccess.Left;
+        }
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -1862,6 +1922,30 @@ public class NameExpression
      * to implement the behavior implied by the name.
      */
     private transient Plan m_plan = Plan.None;
+
+    /**
+     * There are three possible scenarios getting to a property represented by this expression:
+     *
+     * 1) the property is on a singleton parent (module, package or singleton class)
+     *    (left must be null)
+     * 2) the property is on an instance parent
+     *    (left must be null)
+     * 3) the property is on this
+     *    (left must be null)
+     * 4) the property is on "left"
+     *    (left must be not null)
+     */
+    enum PropertyAccess {Singleton, Outer, This, Left}
+
+    /**
+     * The chosen property access plan.
+     */
+    private PropertyAccess m_propAccessPlan;
+
+    /**
+     * Cached target info
+     */
+    private TargetInfo m_targetInfo;
 
     /**
      * Cached validation info: Can the name be used as an "L value"?

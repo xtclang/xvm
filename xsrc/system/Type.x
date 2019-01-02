@@ -295,6 +295,20 @@ const Type<DataType>
         TODO <=>
         }
 
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        return 0;
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        appender.add("Methods: not implemented");
+        }
+
     // ----- ConstAble interface -------------------------------------------------------------------
 
 // REVIEW: Cam, this makes no sense since Type is const; did you mean to create an immutable Type?
