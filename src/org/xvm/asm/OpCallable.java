@@ -138,7 +138,7 @@ public abstract class OpCallable extends Op
             // note that we don't need to resolve the actual types
             String         sChild      = clzTargetC.getSimpleName();
             ClassStructure clzParentR  = (ClassStructure) idParentR.getComponent();
-            ClassStructure clzChild    = clzParentR.getInstanceChild(sChild);
+            ClassStructure clzChild    = clzParentR.getVirtualChild(sChild);
             TypeInfo       infoTarget  = clzChild.getFormalType().ensureTypeInfo();
 
             MethodInfo info = infoTarget.getMethodBySignature(

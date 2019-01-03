@@ -196,12 +196,12 @@ class ExtHashMap<KeyType, ValueType>
         }
 
     @Override
-    public/private HashEntrySet entries = new HashEntrySet();
+    public/private HashEntrySet<KeyType, ValueType> entries = new HashEntrySet();
 
     @Override
     @Lazy public/private Collection<ValueType> values.calc()
         {
-        return new EntryBasedValuesCollection<ValueType>();
+        return new EntryBasedValuesCollection<KeyType, ValueType>();
         }
 
     @Override
@@ -218,6 +218,7 @@ class ExtHashMap<KeyType, ValueType>
      */
     class HashEntrySet
             extends KeyBasedEntrySet<KeyType, ValueType>
+            implements Set<HashEntry>
         {
         @Override
         Iterator<HashEntry> iterator()
@@ -258,7 +259,7 @@ class ExtHashMap<KeyType, ValueType>
             }
 
         // @Override
-        HashEntrySet remove(HashEntry entry)
+        HashEntrySet<KeyType, ValueType> remove(HashEntry entry)
             {
             HashEntry?[] buckets   = ExtHashMap.this.buckets;
             Int          keyhash   = entry.keyhash;
@@ -301,7 +302,7 @@ class ExtHashMap<KeyType, ValueType>
             }
 
         // @Override
-        conditional HashEntrySet removeIf(function Boolean (HashEntry) shouldRemove)
+        conditional HashEntrySet<KeyType, ValueType> removeIf(function Boolean (HashEntry) shouldRemove)
             {
             Boolean      modified    = false;
             HashEntry?[] buckets     = ExtHashMap.this.buckets;
@@ -339,6 +340,18 @@ class ExtHashMap<KeyType, ValueType>
 
             return modified ? (true, this) : false;
             }
+
+        @Override
+        Stream<HashEntry> stream()
+            {
+            TODO
+            }
+
+        @Override
+        HashEntrySet<KeyType, ValueType> clone()
+            {
+            return this;
+            }
         }
 
     // ----- HashEntry implementation --------------------------------------------------------------
@@ -346,7 +359,7 @@ class ExtHashMap<KeyType, ValueType>
     /**
      * This is the Entry implementation used to store the ExtHashMap's keys and values.
      */
-    protected static class ExtEntry<KeyType, ValueType>
+    protected static class ExtEntry
             implements Entry<KeyType, ValueType>
         {
         construct(KeyType key, Int keyhash, ValueType value, ExtEntry<KeyType, ValueType>? next = null)
@@ -379,7 +392,7 @@ class ExtHashMap<KeyType, ValueType>
      * to the actual map (i.e. it is not a real HashEntry), but it reifies to a real HashEntry.
      */
     protected class ProcessableHashEntry
-            extends Map.KeyBasedEntry<KeyType, ValueType>
+            extends KeyBasedEntry<KeyType, ValueType>
         {
         construct(KeyType key)
             {

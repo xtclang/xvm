@@ -812,8 +812,8 @@ public class ArrayAccessExpression
                 }
             else
                 {
-                boolean fOldBetter = idOp.getSignature().isSubstitutableFor(idBest.getSignature(), typeTarget);
-                boolean fNewBetter = idBest.getSignature().isSubstitutableFor(idOp.getSignature(), typeTarget);
+                boolean fOldBetter = idOp.getSignature().isSubstitutableFor(idBest.getSignature());
+                boolean fNewBetter = idBest.getSignature().isSubstitutableFor(idOp.getSignature());
                 if (fOldBetter ^ fNewBetter)
                     {
                     if (fNewBetter)

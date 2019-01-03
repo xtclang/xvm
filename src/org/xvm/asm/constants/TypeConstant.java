@@ -2124,7 +2124,7 @@ public abstract class TypeConstant
                                             paramContrib.getActualType().getValueString());
                                     }
                                 }
-                            else if (!paramContrib.getActualType().equals(paramCurr.getActualType()))
+                            else if (!paramCurr.getActualType().isA(paramContrib.getActualType()))
                                 {
                                 log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_CONTRIB,
                                         this.getValueString(), nid,
@@ -2865,7 +2865,7 @@ public abstract class TypeConstant
             if (IdentityConstant.isNestedSibling(nidSub, nidCandidate))
                 {
                 SignatureConstant sigCandidate = entry.getValue().getSignature(); // resolved
-                if (sigSub.isSubstitutableFor(sigCandidate, this))
+                if (sigSub.isSubstitutableFor(sigCandidate))
                     {
                     if (listMatch == null)
                         {
@@ -2904,19 +2904,24 @@ public abstract class TypeConstant
 
         // REVIEW could this be updated to use selectBest() ?
         // if multiple candidates exist, then one must be obviously better than the rest
-        SignatureConstant sigBest = null;
+        ConstantPool      pool     = ConstantPool.getCurrentPool();
+        SignatureConstant sigBest  = null;
+        SignatureConstant sigBestR = null; // resolved
         nextCandidate: for (int iCur = 0, cCandidates = listMatch.size();
                 iCur < cCandidates; ++iCur)
             {
-            Object            nidCandidate = listMatch.get(iCur);
-            SignatureConstant sigCandidate = mapSupers.get(nidCandidate).getSignature();
+            Object            nidCandidate  = listMatch.get(iCur);
+            SignatureConstant sigCandidate  = mapSupers.get(nidCandidate).getSignature();
+            SignatureConstant sigCandidateR = sigCandidate.resolveAutoNarrowing(pool, this);
             if (nidBest == null) // that means that "best" is ambiguous thus far
                 {
                 // have to back-test all the ones in front of us to make sure that
                 for (int iPrev = 0; iPrev < iCur; ++iPrev)
                     {
-                    SignatureConstant sigPrev = mapSupers.get(listMatch.get(iPrev)).getSignature();
-                    if (!sigPrev.isSubstitutableFor(sigCandidate, this))
+                    SignatureConstant sigPrev  = mapSupers.get(listMatch.get(iPrev)).getSignature();
+                    SignatureConstant sigPrevR = sigPrev.resolveAutoNarrowing(pool, this);
+                    if (!sigPrev.isSubstitutableFor(sigCandidate) &&
+                        !sigPrevR.isSubstitutableFor(sigCandidateR))
                         {
                         // still ambiguous
                         continue nextCandidate;
@@ -2924,20 +2929,23 @@ public abstract class TypeConstant
                     }
 
                 // so far, this candidate is the best
-                nidBest = nidCandidate;
-                sigBest = sigCandidate;
+                nidBest  = nidCandidate;
+                sigBest  = sigCandidate;
+                sigBestR = sigCandidate.resolveAutoNarrowing(pool, this);
                 }
-            else if (sigBest.isSubstitutableFor(sigCandidate, this))
+            else if (sigBest.isSubstitutableFor(sigCandidate) ||
+                    sigBestR.isSubstitutableFor(sigCandidateR))
                 {
                 // this assumes that "best" is a transitive concept, i.e. we're not going to back-
                 // test all of the other candidates
-                nidBest = nidCandidate;
-                sigBest = sigCandidate;
+                nidBest  = nidCandidate;
+                sigBest  = sigCandidate;
+                sigBestR = sigCandidateR;
                 }
-            else if (!sigCandidate.isSubstitutableFor(sigBest, this))
+            else if (!sigCandidate.isSubstitutableFor(sigBest) &&
+                     !sigCandidateR.isSubstitutableFor(sigBestR))
                 {
                 nidBest = null;
-                sigBest = null;
                 }
             }
 
@@ -2969,7 +2977,7 @@ public abstract class TypeConstant
                 for (int iPrev = 0; iPrev < iCandidate; ++iPrev)
                     {
                     SignatureConstant sigPrev = aSig[iPrev];
-                    if (!sigPrev.isSubstitutableFor(sigCandidate, this))
+                    if (!sigPrev.isSubstitutableFor(sigCandidate))
                         {
                         // still ambiguous
                         continue nextCandidate;
@@ -2979,13 +2987,13 @@ public abstract class TypeConstant
                 // so far, this candidate is the best
                 sigBest = sigCandidate;
                 }
-            else if (sigBest.isSubstitutableFor(sigCandidate, this))
+            else if (sigBest.isSubstitutableFor(sigCandidate))
                 {
                 // this assumes that "best" is a transitive concept, i.e. we're not going to back-
                 // test all of the other candidates
                 sigBest = sigCandidate;
                 }
-            else if (!sigCandidate.isSubstitutableFor(sigBest, this))
+            else if (!sigCandidate.isSubstitutableFor(sigBest))
                 {
                 sigBest = null;
                 }
@@ -3023,9 +3031,9 @@ public abstract class TypeConstant
                 }
             }
 
-        ClassStructure parent = struct.getInstanceParent();
-        if (parent != null)
+        if (struct.isVirtualChild())
             {
+            ClassStructure parent = (ClassStructure) struct.getParent();
             collectSelfTypeParameters(parent, mapTypeParams, mapProps);
             }
         }
