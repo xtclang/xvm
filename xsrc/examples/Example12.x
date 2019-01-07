@@ -1890,3 +1890,28 @@ static <TP1 extends Map<Int, String>, TP2 extends TP1.KeyType> (TP1, TP2, TP1.Va
 Map<Int, String> m = ...;
 Int x;
 (m, x, String s) = bar(m, opt=false);
+
+//
+
+interface Map<KeyType, ValueType>
+    {
+    static interface Entry
+        {
+        @RO KeyType key;
+        ValueType value;
+        }
+    }
+
+// note: this class can only exist outside of a class that implements Map because Entry is declared
+//       as static
+class SimpleEntry<X, Y> // could be KeyType, ValueType
+        implements Map<X, Y>.Entry
+    {
+    // ...
+    }
+
+// TODO
+mixin MapMixin into Map
+    {
+    mixin EntryMixin into Entry
+    }
