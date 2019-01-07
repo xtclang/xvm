@@ -121,23 +121,50 @@ public abstract class IdentityConstant
         }
 
     /**
-     * Test for sharing a parent. Two classes are said to be "nest mates" if they have the same
-     * outermost underlying class.
+     * Test for a virtual child visibility. This virtual child (A) is said to be a "nest mate" of
+     * the specified class (B) iff
+     * <ul>
+     *   <li> both A and B have have the same outermost underlying class, or
+     *   <li> the outermost underlying class of A extends the outermost underlying class of B
+     * </ul>
+     * In other words, this class is a nest mate of the specified class if this class is "visible"
+     * from the context of the specified class and could be virtually constructed in that context
+     * (given an appropriate parent instance).
      *
-     * @param constClass  the class to test nest sharing with
+     * @param idClass  the class to test nest the visibility from
      *
-     * @return true if this class has the same outermost parent class as the specified one
+     * @return true if this class is a virtual child visible from the specified class context
      */
-    public boolean isNestMate(IdentityConstant constClass)
+    public boolean isNestMateOf(IdentityConstant idClass)
         {
-        if (getFormat() == Format.Class && constClass.getFormat() == Format.Class)
+        if (this.equals(idClass))
             {
-            ClassConstant idThis = (ClassConstant) this;
-            ClassConstant idThat = (ClassConstant) constClass;
-            return idThis.getOutermost().equals(idThat.getOutermost());
+            return true;
             }
 
-        return this.equals(constClass);
+        if (getFormat() == Format.Class && idClass.getFormat() == Format.Class)
+            {
+            ClassConstant idThis = (ClassConstant) this;
+            ClassConstant idThat = (ClassConstant) idClass;
+
+            ClassStructure clzThis = (ClassStructure) idThis.getComponent();
+            if (!clzThis.isTopLevel() && !clzThis.isVirtualChild())
+                {
+                // not top level, not virtual - must be an anonymous class
+                return false;
+                }
+
+            ClassConstant idOutermostThis = idThis.getOutermost();
+            ClassConstant idOutermostThat = idThat.getOutermost();
+            if (idOutermostThis.equals(idOutermostThat))
+                {
+                return true;
+                }
+
+            ClassStructure clzOutermostThat = (ClassStructure) idOutermostThat.getComponent();
+            return clzOutermostThat.hasContribution(idOutermostThis, true);
+            }
+        return false;
         }
 
     /**

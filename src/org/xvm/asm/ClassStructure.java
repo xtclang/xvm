@@ -756,15 +756,15 @@ public class ClassStructure
     // ----- type comparison support ---------------------------------------------------------------
 
     /**
-     * Test for sub-classing.
+     * Check if this class extends the specified class.
      *
-     * @param constClass  the class to test if this type represents an extension of
+     * @param idClass  the class to test if this class represents an extension of
      *
      * @return true if this type represents a sub-classing of the specified class
      */
-    public boolean extendsClass(IdentityConstant constClass)
+    public boolean extendsClass(IdentityConstant idClass)
         {
-        if (constClass.equals(getConstantPool().clzObject()))
+        if (idClass.equals(getConstantPool().clzObject()))
             {
             // everything is considered to extend Object (even interfaces)
             return true;
@@ -776,7 +776,7 @@ public class ClassStructure
             return false;
             }
 
-        if (constClass.equals(getIdentityConstant()))
+        if (idClass.equals(getIdentityConstant()))
             {
             // while a class cannot technically extend itself, this does satisfy the "is-a" test
             return true;
@@ -794,7 +794,7 @@ public class ClassStructure
                     // extended)
                     ClassConstant constSuper = (ClassConstant)
                         contrib.getTypeConstant().getSingleUnderlyingClass(false);
-                    if (constClass.equals(constSuper))
+                    if (idClass.equals(constSuper))
                         {
                         return true;
                         }
@@ -806,6 +806,65 @@ public class ClassStructure
 
             return false;
             }
+        }
+
+    /**
+     * Check if this class has the specified class as any of its contributions (recursively).
+     *
+     * @param idClass  the class to test if this class has a contribution of
+     *
+     * @return true if this type has a contribution of the specified class
+     */
+    public boolean hasContribution(IdentityConstant idClass, boolean fAllowInto)
+        {
+        if (idClass.equals(getConstantPool().clzObject()))
+            {
+            // everything is considered to contain the Object (even interfaces)
+            return true;
+            }
+
+        if (idClass.equals(getIdentityConstant()))
+            {
+            return true;
+            }
+
+        for (Contribution contrib : getContributionsAsList())
+            {
+            TypeConstant typeContrib = contrib.getTypeConstant();
+
+            if (   typeContrib.containsUnresolved()           // this question cannot be answered yet
+               || !typeContrib.isSingleUnderlyingClass(true)) // disregard relational type contributions
+                {
+                continue;
+                }
+
+            switch (contrib.getComposition())
+                {
+                case Into:
+                    if (!fAllowInto)
+                        {
+                        break;
+                        }
+                    // fall through
+                case Annotation:
+                case Implements:
+                case Incorporates:
+                case Extends:
+                case Delegates:
+                    ClassStructure clzContrib = (ClassStructure)
+                            typeContrib.getSingleUnderlyingClass(true).getComponent();
+                    if (clzContrib.hasContribution(idClass, false))
+                        {
+                        return true;
+                        }
+
+                default:
+                    // ignore any other contributions
+                    break;
+                }
+            }
+
+        return false;
         }
 
     /**

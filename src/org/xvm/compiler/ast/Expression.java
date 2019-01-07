@@ -1713,7 +1713,7 @@ public abstract class Expression
         return !type.isFormalType() &&
                 type.isSingleUnderlyingClass(false) &&
                 type.getSingleUnderlyingClass(false).
-                    isNestMate(ctx.getThisClass().getIdentityConstant());
+                    isNestMateOf(ctx.getThisClass().getIdentityConstant());
         }
 
     /**
