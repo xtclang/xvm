@@ -72,7 +72,7 @@ interface Buffer<DataType extends Const>
      * @throws BufferException if the specified position is beyond the buffer's limit or this buffer
      *                         is read-only
      */
-    @Override @Op("setElement")
+    @Op("setElement")
     void put(Int ix, DataType el);
 
     /**

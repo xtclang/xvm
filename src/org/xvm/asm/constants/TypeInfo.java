@@ -526,7 +526,7 @@ public class TypeInfo
      */
     public boolean isChild()
         {
-        return isClass() && m_struct.isInstanceChild();
+        return isClass() && m_struct.isVirtualChild();
         }
 
     /**
@@ -882,7 +882,7 @@ public class TypeInfo
             for (MethodBody body : methodTest.getChain())
                 {
                 SignatureConstant sigTest = body.getIdentity().getSignature();
-                if (sigTest.equals(sig) || sigTest.isSubstitutableFor(sig, typeThis))
+                if (sigTest.equals(sig) || sigTest.isSubstitutableFor(sig))
                     {
                     mapBySig.putIfAbsent(sig, methodTest);
                     return methodTest;
@@ -890,7 +890,7 @@ public class TypeInfo
 
                 SignatureConstant sigResolved =
                         resolveMethodConstant(body.getIdentity(), methodTest).getSignature();
-                if (sigResolved.equals(sig) || sigResolved.isSubstitutableFor(sig, typeThis))
+                if (sigResolved.equals(sig) || sigResolved.isSubstitutableFor(sig))
                     {
                     mapBySig.putIfAbsent(sig, methodTest);
                     return methodTest;

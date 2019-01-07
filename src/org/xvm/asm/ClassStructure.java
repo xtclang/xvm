@@ -21,6 +21,7 @@ import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
@@ -28,6 +29,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeConstant.Relation;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.asm.op.Call_01;
 import org.xvm.asm.op.L_Set;
 import org.xvm.asm.op.Return_0;
 
@@ -128,39 +130,37 @@ public class ClassStructure
         }
 
     /**
-     * Note: An instance child class is a class that is instantiated using the "NEWC_*" op codes.
+     * Note: A virtual child class is a child class that is instantiated using the "NEWC_*" op codes.
      *
-     * @return true iff this class is an instance child class
+     * @return true iff this class is a virtual child class
      */
-    public boolean isInstanceChild()
+    public boolean isVirtualChild()
         {
         switch (getFormat())
             {
-            case INTERFACE:
             case MODULE:
             case PACKAGE:
             case MIXIN:
             case ENUM:
+            case ENUMVALUE:
                 return false;
 
+            case INTERFACE:
             case CLASS:
             case CONST:
             case SERVICE:
-                if (isStatic())
+                {
+                if (isSynthetic())
                     {
+                    // anonymous classes are not virtual
                     return false;
                     }
-                else
-                    {
-                    Format format = getParent().getFormat();
-                    // neither a top-level class nor a local class inside a method are considered child
-                    // classes
-                    return format != Format.MODULE && format != Format.PACKAGE && format != Format.METHOD;
-                    }
 
-            case ENUMVALUE:
-                // enum values are always a child of an enum
-                return true;
+                Format format = getParent().getFormat();
+                // neither a top-level class nor a local class inside a method are considered child
+                // classes
+                return format != Format.MODULE && format != Format.PACKAGE && format != Format.METHOD;
+                }
 
             default:
                 throw new IllegalStateException();
@@ -187,54 +187,48 @@ public class ClassStructure
         }
 
     /**
-     * If this class is an instance child class of a class, return the parent's structure.
-     *
-     * @return the instance parent structure or null
+     * @return true iff the specified class is a virtual descendant of this class
      */
-    public ClassStructure getInstanceParent()
+    public boolean isVirtualDescendant(ClassStructure clzChild)
         {
-        if (isInstanceChild())
+        if (!clzChild.isVirtualChild())
             {
-            Component parent = getParent();
-            if (parent instanceof ClassStructure && parent.getFormat() != Format.INTERFACE)
-                {
-                return (ClassStructure) parent;
-                }
+            return false;
             }
-        return null;
-        }
 
-    /**
-     * @return true iff the specified class is an instance ascendant of this class
-     */
-    public boolean isInstanceAscendant(ClassStructure clzChild)
-        {
         IdentityConstant idThis    = getIdentityConstant();
-        ClassStructure   clzParent = clzChild.getInstanceParent();
+        ClassStructure   clzParent = (ClassStructure) clzChild.getParent();
         while (clzParent != null)
             {
             if (clzParent.getIdentityConstant().equals(idThis))
                 {
                 return true;
                 }
-            clzParent = clzParent.getInstanceParent();
+
+            if (!clzParent.isVirtualChild())
+                {
+                return false;
+                }
+
+            clzParent = (ClassStructure) clzParent.getParent();
             }
         return false;
         }
 
     /**
-     * Get an instance child by the specified name on this class or any of the super classes.
+     * Get a virtual child class by the specified name on this class or any of its super classes.
      *
      * @param sName  the child class name
      *
      * @return a child structure or null if not found
      */
-    public ClassStructure getInstanceChild(String sName)
+    public ClassStructure getVirtualChild(String sName)
         {
         Component child = getChild(sName);
         if (child instanceof ClassStructure)
             {
-            return (ClassStructure) child;
+            ClassStructure clzChild = (ClassStructure) child;
+            return clzChild.isVirtualChild() ? clzChild : null;
             }
 
         if (child != null)
@@ -244,7 +238,7 @@ public class ClassStructure
             }
 
         ClassStructure clzSuper = getSuper();
-        return clzSuper == null ? null : clzSuper.getInstanceChild(sName);
+        return clzSuper == null ? null : clzSuper.getVirtualChild(sName);
         }
 
     /**
@@ -252,11 +246,15 @@ public class ClassStructure
      */
     public int getTypeParamCount()
         {
-        ClassStructure                    parent  = getInstanceParent();
-        Map<StringConstant, TypeConstant> mapThis = m_mapParams;
+        Map mapThis = m_mapParams;
+        int cParams = mapThis == null ? 0 : mapThis.size();
 
-        return (parent == null  ? 0 : parent.getTypeParamCount()) +
-               (mapThis == null ? 0 : mapThis.size());
+        if (isVirtualChild())
+            {
+            cParams += ((ClassStructure) getParent()).getTypeParamCount();
+            }
+
+        return cParams;
         }
 
     /**
@@ -267,10 +265,9 @@ public class ClassStructure
      */
     public Map<StringConstant, TypeConstant> getTypeParams()
         {
-        ClassStructure                    parent    = getInstanceParent();
-        Map<StringConstant, TypeConstant> mapParent = parent == null
-            ? Collections.EMPTY_MAP
-            : parent.getTypeParams();
+        Map<StringConstant, TypeConstant> mapParent = isVirtualChild()
+                ? ((ClassStructure) getParent()).getTypeParams()
+                : Collections.EMPTY_MAP;
 
         Map<StringConstant, TypeConstant> mapThis = m_mapParams;
         if (mapThis == null)
@@ -300,10 +297,9 @@ public class ClassStructure
      */
     public List<Map.Entry<StringConstant, TypeConstant>> getTypeParamsAsList()
         {
-        ClassStructure                                parent     = getInstanceParent();
-        List<Map.Entry<StringConstant, TypeConstant>> listParent = parent == null
-            ? Collections.EMPTY_LIST
-            : parent.getTypeParamsAsList();
+        List<Map.Entry<StringConstant, TypeConstant>> listParent = isVirtualChild()
+                ? ((ClassStructure) getParent()).getTypeParamsAsList()
+                : Collections.EMPTY_LIST;
 
         ListMap<StringConstant, TypeConstant> mapThis = m_mapParams;
         if (mapThis == null)
@@ -366,13 +362,8 @@ public class ClassStructure
      */
     public boolean isParameterized()
         {
-        if (m_mapParams != null)
-            {
-            return true;
-            }
-
-        ClassStructure parent = getInstanceParent();
-        return parent != null && parent.isParameterized();
+        return m_mapParams != null ||
+            isVirtualChild() && ((ClassStructure) getParent()).isParameterized();
         }
 
     /**
@@ -388,11 +379,14 @@ public class ClassStructure
             if (isParameterized())
                 {
                 TypeConstant[] aTypes = null;
-                ClassStructure parent = getInstanceParent();
-                if (parent != null && parent.isParameterized())
+                if (isVirtualChild())
                     {
-                    // prepend the list of parent's generic params
-                    aTypes = parent.getFormalType().getParamTypesArray();
+                    ClassStructure parent = (ClassStructure) getParent();
+                    if (parent.isParameterized())
+                        {
+                        // prepend the list of parent's generic params
+                        aTypes = parent.getFormalType().getParamTypesArray();
+                        }
                     }
 
                 ConstantPool                      pool    = getConstantPool();
@@ -1806,7 +1800,7 @@ public class ClassStructure
                         SignatureConstant sigMethod = method.getIdentityConstant().getSignature().
                                                         resolveAutoNarrowing(pool, null).
                                                         resolveGenericTypes(pool, resolver);
-                        if (sigMethod.isSubstitutableFor(signature, idClass.getType()))
+                        if (sigMethod.isSubstitutableFor(signature))
                             {
                             return true;
                             }
@@ -1910,14 +1904,29 @@ public class ClassStructure
             {
             if (infoProp.hasField())
                 {
-                Constant constValue = infoProp.getInitialValue();
-                if (constValue == null)
+                PropertyConstant idField = infoProp.getFieldIdentity();
+                MethodConstant   idInit  = null;
+                Constant         constInit;
+                if (infoProp.isInitialized())
                     {
-                    constValue = infoProp.getDefaultValue();
+                    constInit = infoProp.getInitialValue();
+                    if (constInit == null)
+                        {
+                        idInit = infoProp.getInitializer();
+                        }
                     }
-                if (constValue != null)
+                else
                     {
-                    code.add(new L_Set(infoProp.getIdentity(), constValue));
+                    constInit = infoProp.getDefaultValue();
+                    }
+
+                if (constInit != null)
+                    {
+                    code.add(new L_Set(idField, constInit));
+                    }
+                else if (idInit != null)
+                    {
+                    code.add(new Call_01(idInit, idField));
                     }
                 }
             }

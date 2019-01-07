@@ -316,10 +316,9 @@ public class SignatureConstant
      *
      * Note: both "this" and "that" signatures must be resolved.
      *
-     * @param that     the signature of the matching method
-     * @param typeCtx  the type within which this signature is used  (TODO: remove as unused)
+     * @param that  the signature of the matching method
      */
-    public boolean isSubstitutableFor(SignatureConstant that, TypeConstant typeCtx)
+    public boolean isSubstitutableFor(SignatureConstant that)
         {
         /*
          * From Method.x # isSubstitutableFor() (where m2 == this and m1 == that)
@@ -390,8 +389,8 @@ public class SignatureConstant
                                                   TypeConstant typeSub)
         {
         // these assertions can eventually be removed
-        assert this.isSubstitutableFor(sigSub, typeSub);
-        assert that.isSubstitutableFor(sigSub, typeSub);
+        assert this.isSubstitutableFor(sigSub);
+        assert that.isSubstitutableFor(sigSub);
 
         // TODO handle auto-narrowing
 

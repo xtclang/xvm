@@ -641,11 +641,11 @@ public class RelOpExpression
                         SignatureConstant sigMethod = method.getSignature();
                         if (!sigOp.equals(sigMethod))
                             {
-                            if (sigMethod.isSubstitutableFor(sigOp, type1))
+                            if (sigMethod.isSubstitutableFor(sigOp))
                                 {
                                 continue;
                                 }
-                            if (sigOp.isSubstitutableFor(sigMethod, type1))
+                            if (sigOp.isSubstitutableFor(sigMethod))
                                 {
                                 idOp = method;
                                 continue;
@@ -725,64 +725,68 @@ public class RelOpExpression
             return;
             }
 
+        Argument argLVal = LVal.getLocalArgument();
+
         // evaluate the sub-expressions
+        // (Note: all the ops used below know to inverse the order of args on the stack)
         Argument arg1 = expr1.generateArgument(ctx, code, true, true, errs);
-        Argument arg2 = expr2.generateArgument(ctx, code, true, !arg1.isStack(), errs);
+        Argument arg2 = expr2.generateArgument(ctx, code, true, true, errs);
 
         // generate the op that combines the two sub-expressions
         switch (operator.getId())
             {
             case BIT_OR:
-                code.add(new GP_Or(arg1, arg2, LVal.getLocalArgument()));
+                code.add(new GP_Or(arg1, arg2, argLVal));
                 return;
 
             case BIT_XOR:
-                code.add(new GP_Xor(arg1, arg2, LVal.getLocalArgument()));
+                code.add(new GP_Xor(arg1, arg2, argLVal));
                 return;
 
             case BIT_AND:
-                code.add(new GP_And(arg1, arg2, LVal.getLocalArgument()));
+                code.add(new GP_And(arg1, arg2, argLVal));
                 return;
 
             case DOTDOT:
-                code.add(new GP_DotDot(arg1, arg2, LVal.getLocalArgument()));
+                code.add(new GP_DotDot(arg1, arg2, argLVal));
                 return;
 
             case SHL:
-                code.add(new GP_Shl(arg1, arg2, LVal.getLocalArgument()));
+                code.add(new GP_Shl(arg1, arg2, argLVal));
                 return;
 
             case SHR:
-                code.add(new GP_Shr(arg1, arg2, LVal.getLocalArgument()));
+                code.add(new GP_Shr(arg1, arg2, argLVal));
                 return;
 
             case USHR:
-                code.add(new GP_ShrAll(arg1, arg2, LVal.getLocalArgument()));
+                code.add(new GP_ShrAll(arg1, arg2, argLVal));
                 return;
 
             case ADD:
-                code.add(new GP_Add(arg1, arg2, LVal.getLocalArgument()));
+                code.add(new GP_Add(arg1, arg2, argLVal));
                 return;
 
             case SUB:
-                code.add(new GP_Sub(arg1, arg2, LVal.getLocalArgument()));
+                code.add(new GP_Sub(arg1, arg2, argLVal));
                 return;
 
             case MUL:
-                code.add(new GP_Mul(arg1, arg2, LVal.getLocalArgument()));
+                code.add(new GP_Mul(arg1, arg2, argLVal));
                 return;
 
             case DIVMOD:
-                // "/%" needs one real register and one black hole
-                generateAssignments(ctx, code, new Assignable[] {LVal, new Assignable()}, errs);
+                // "/%" with a single return needs a black hole for the second one
+                code.add(new GP_DivMod(arg1, arg2,
+                        new Argument[]{argLVal, generateBlackHole(null)}));
                 return;
 
             case DIV:
-                code.add(new GP_Div(arg1, arg2, LVal.getLocalArgument()));
+                code.add(new GP_Div(arg1, arg2, argLVal));
                 return;
 
             case MOD:
-                code.add(new GP_Mod(arg1, arg2, LVal.getLocalArgument()));
+                code.add(new GP_Mod(arg1, arg2, argLVal));
                 return;
 
             default:
@@ -807,7 +811,7 @@ public class RelOpExpression
                 if (aLVal[0].isLocalArgument() && aLVal[1].isLocalArgument())
                     {
                     Argument arg1 = expr1.generateArgument(ctx, code, true, true, errs);
-                    Argument arg2 = expr2.generateArgument(ctx, code, true, !arg1.isStack(), errs);
+                    Argument arg2 = expr2.generateArgument(ctx, code, true, true, errs);
                     code.add(new GP_DivMod(arg1, arg2, new Argument[]
                             {aLVal[0].getLocalArgument(), aLVal[1].getLocalArgument()}));
                     }

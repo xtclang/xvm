@@ -178,7 +178,12 @@ public class ParameterizedTypeConstant
         TypeConstant constResolved = constOriginal.resolveTypedefs();
         boolean      fDiff         = constOriginal != constResolved;
 
-        assert !constResolved.isParamsSpecified();
+        if (constResolved.isParamsSpecified())
+            {
+            // TODO: this needs to be logged
+            System.out.println("Unexpected type parameters for " + constOriginal.getValueString());
+            return constResolved;
+            }
 
         TypeConstant[] aconstOriginal = m_atypeParams;
         TypeConstant[] aconstResolved = aconstOriginal;

@@ -1,8 +1,10 @@
 module TestMisc.xqiz.it
     {
     import X.IllegalArgumentException;
+    import X.DateTime;
 
     @Inject X.io.Console console;
+    @Inject X.Clock runtimeClock;
 
     void run()
         {
@@ -333,7 +335,6 @@ module TestMisc.xqiz.it
         console.println("i=" + i);
         }
 
-    // TODO
     void testInterval()
         {
         console.println("\n** testInterval()");
@@ -341,11 +342,12 @@ module TestMisc.xqiz.it
         Int a = 2;
         Int b = 5;
         Object c = a..b;
-        // Range<Int> c = a..b;
         console.println("range=" + c);
+
+        Range<Int> r = a+1..b+1;
+        console.println("range=" + r);
         }
 
-    // TODO
     void testException()
         {
         console.println("\n** testException()");
@@ -470,14 +472,15 @@ module TestMisc.xqiz.it
         Order.OrderLine line = order.addLine("item-5");
         console.println("line=" + line);
 
-        order = new EnhancedOrder("Order-17");
-        line = order.addLine("item-5");
+        order = new EnhancedOrder("Order-18");
+        line = order.addLine("item-6");
         console.println("line=" + line);
         }
 
     class Order(String id)
         {
         Int lineCount;
+        DateTime date = runtimeClock.now;
 
         @Override
         String to<String>()
@@ -504,6 +507,7 @@ module TestMisc.xqiz.it
     class EnhancedOrder(String id)
             extends Order(id)
         {
+        // TODO: the "extend" clause could be replaced with an @Override annotation
         class OrderLine(Int lineNumber, String descr)
                 extends Order.OrderLine(lineNumber, descr)
             {
@@ -511,7 +515,7 @@ module TestMisc.xqiz.it
             String to<String>()
                 {
                 return EnhancedOrder.this.to<String>() +
-                    ": " + lineNumber + ") " + descr;
+                    ": " + lineNumber + ") " + descr + " @ " + date;
                 }
             }
         }

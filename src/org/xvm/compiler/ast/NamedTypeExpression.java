@@ -10,8 +10,8 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ChildClassConstant;
 import org.xvm.asm.constants.ClassConstant;
@@ -340,8 +340,9 @@ public class NamedTypeExpression
     @Override
     public void resolveNames(StageMgr mgr, ErrorListener errs)
         {
+        ErrorList    errsTemp = new ErrorList(100);
         NameResolver resolver = getNameResolver();
-        switch (resolver.resolve(errs))
+        switch (resolver.resolve(errsTemp))
             {
             case DEFERRED:
                 mgr.requestRevisit();
@@ -358,6 +359,7 @@ public class NamedTypeExpression
                 Constant constId = resolver.getConstant();
                 if (!constId.getFormat().isTypable())
                     {
+                    errsTemp.logTo(errs);
                     log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE, constId.getValueString());
                     // cannot proceed
                     mgr.deferChildren();
@@ -366,7 +368,7 @@ public class NamedTypeExpression
 
                 // now that we have the resolved constId, update the unresolved m_constId to point to
                 // the resolved one (just in case anyone is holding the wrong one
-                Constant constIdNew = m_constId = inferAutoNarrowing(constId, errs);
+                Constant constIdNew = m_constId = inferAutoNarrowing(constId, errsTemp);
 
                 if (m_constUnresolved != null)
                     {
@@ -388,6 +390,12 @@ public class NamedTypeExpression
                 }
 
             case ERROR:
+                if (names.size() > 1 && access == null && immutable == null && paramTypes == null)
+                    {
+                    // assume that the type is "dynamic", for example: "that.ElementType"
+                    return;
+                    }
+
                 // cannot proceed
                 mgr.deferChildren();
                 break;
@@ -405,7 +413,23 @@ public class NamedTypeExpression
         if (m_constId == null || m_constId.containsUnresolved())
             {
             // this can only mean that the name resolution ended in an error
-            return null;
+            // and has been deferred
+
+            NameExpression exprOld = new NameExpression(names.get(0));
+
+            for (int i = 1, cNames = names.size(); i < cNames; i++)
+                {
+                NameExpression exprNext = new NameExpression(exprOld, null, names.get(i), null, lEndPos);
+                exprNext.adopt(exprOld);
+                exprOld = exprNext;
+                }
+
+            getParent().adopt(exprOld);
+
+            Expression exprNew = exprOld.validate(ctx, pool().typeType(), errs);
+            return exprNew == null
+                    ? null
+                    : finishValidation(typeRequired, exprNew.getType(), TypeFit.Fit, null, errs);
             }
 
         if (listParams == null)
@@ -575,12 +599,12 @@ public class NamedTypeExpression
                     }
                 else if (idFormalTarget.isNestMate(idClass))
                     {
-                    if (clzClass.isInstanceAscendant(clzTarget))
+                    if (clzClass.isVirtualDescendant(clzTarget))
                         {
                         // scenario (2, 3)
                         fUseFormal = true;
                         }
-                    else if (clzTarget.isInstanceAscendant(clzClass))
+                    else if (clzTarget.isVirtualDescendant(clzClass))
                         {
                         // scenario (4)
                         fUseFormal = true;

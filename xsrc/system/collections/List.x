@@ -19,7 +19,7 @@ interface List<ElementType>
      * the values of elements in the list, insert or append new elements into the list, or delete
      * elements from the list.
      */
-    interface Cursor<ElementType>
+    interface Cursor
         {
         /**
          * The containing list.
@@ -276,7 +276,7 @@ interface List<ElementType>
     /**
      * A SimpleCursor delegates all operations back to the List that created it.
      */
-    class SimpleCursor<ElementType>
+    class SimpleCursor
             implements Cursor<ElementType>
         {
         /**

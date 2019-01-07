@@ -469,7 +469,7 @@ interface Stream<ElementType>
      */
     <ResultType> ResultType collect(
                     function ResultType supply(),
-                    function ResultType accumulate(ResultType, ElementType),
+                    function Boolean accumulate(ResultType, ElementType),
                     function ResultType combine(ResultType, ResultType))
         {
         return collect(Collector.of(supply, accumulate, combine));
@@ -501,7 +501,7 @@ interface Stream<ElementType>
      * The Collector interface encapsulates the functionality of all of the various stages of
      * reduction, including support for parallelization.
      */
-    interface Collector<ElementType, AccumulationType, ResultType>
+    interface Collector<AccumulationType, ResultType>
         {
         typedef function AccumulationType () Supplier;
         typedef function Boolean (AccumulationType, ElementType) Accumulator;
@@ -541,13 +541,13 @@ interface Stream<ElementType>
          *         {@code accumulate}, and {@code combine} functions assuming that
          *         the ResultType is the same as the AccumulationType
          */
-        static <ElementType, AccumulationType, ResultType>
-            Collector<ElementType, AccumulationType, ResultType> of(
+        static <ElementType, AccumulationType>
+            Collector<ElementType, AccumulationType, AccumulationType> of(
                 function AccumulationType ()                                   supply,     // Supplier
                 function Boolean (AccumulationType, ElementType)               accumulate, // Accumulator
                 function AccumulationType (AccumulationType, AccumulationType) combine)    // Combiner
             {
-            return new SimpleCollector<ElementType, AccumulationType, ResultType>(
+            return new SimpleCollector<ElementType, AccumulationType, AccumulationType>(
                     supply, accumulate, combine, result -> result);
             }
 
@@ -577,7 +577,7 @@ interface Stream<ElementType>
         /**
          * Trivial Collector.
          */
-        static const SimpleCollector<ElementType, AccumulationType, ResultType>(
+        static const SimpleCollector(
                 function AccumulationType ()                                   supply,     // Supplier
                 function Boolean (AccumulationType, ElementType)               accumulate, // Accumulator
                 function AccumulationType (AccumulationType, AccumulationType) combine,    // Combiner

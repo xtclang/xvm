@@ -331,7 +331,7 @@ public class NewExpression
                 {
                 ClassStructure clzTarget = (ClassStructure)
                     typeTarget.getSingleUnderlyingClass(false).getComponent();
-                m_fInstanceChild = clzTarget.isInstanceChild();
+                m_fVirtualChild = clzTarget.isVirtualChild();
 
                 // since we are new-ing a class that is a nest-mate of the current class, we can
                 // increase visibility from the public default all the way to private
@@ -581,12 +581,6 @@ public class NewExpression
 
         if (LVal.isLocalArgument())
             {
-            if (left != null)
-                {
-                // TODO construct child class
-                notImplemented();
-                }
-
             List<Expression> listArgs = args;
             int              cArgs    = listArgs.size();
             Argument[]       aArgs    = new Argument[cArgs];
@@ -625,7 +619,7 @@ public class NewExpression
 
         if (m_fTupleArg)
             {
-            notImplemented();
+            throw notImplemented();
             }
         else
             {
@@ -643,7 +637,7 @@ public class NewExpression
                 }
 
             Argument argOuter = null;
-            if (anon == null && m_fInstanceChild)
+            if (m_fVirtualChild)
                 {
                 if (left == null)
                     {
@@ -657,19 +651,27 @@ public class NewExpression
 
             if (typeTarget.isParamsSpecified())
                 {
-                switch (cAll)
+                if (argOuter == null)
                     {
-                    case 0:
-                        code.add(new NewG_0(idConstruct, typeTarget, argResult));
-                        break;
+                    switch (cAll)
+                        {
+                        case 0:
+                            code.add(new NewG_0(idConstruct, typeTarget, argResult));
+                            break;
 
-                    case 1:
-                        code.add(new NewG_1(idConstruct, typeTarget, aArgs[0], argResult));
-                        break;
+                        case 1:
+                            code.add(new NewG_1(idConstruct, typeTarget, aArgs[0], argResult));
+                            break;
 
-                    default:
-                        code.add(new NewG_N(idConstruct, typeTarget, aArgs, argResult));
-                        break;
+                        default:
+                            code.add(new NewG_N(idConstruct, typeTarget, aArgs, argResult));
+                            break;
+                        }
+                    }
+                else
+                    {
+                    // use NewGC_ op-codes
+                    throw notImplemented();
                     }
                 }
             else
@@ -1149,6 +1151,10 @@ public class NewExpression
      * A map from variable name to register, built by the anonymous inner class context.
      */
     private transient Map<String, Register> m_mapRegisters;
+    /**
+     * True if the class is a virtual child and needs to be constructed using a NEWC_ op-code.
+     */
+    private transient boolean               m_fVirtualChild;
     /**
      * True if the inner class captures "this" (i.e. not static).
      */

@@ -40,7 +40,7 @@ interface Map<KeyType, ValueType>
      * *must* call {@link reify} on each entry that will be held beyond the scope of the current
      * iteration.
      */
-    interface Entry<KeyType, ValueType>
+    interface Entry
         {
         /**
          * The key represented by the entry.
@@ -87,7 +87,7 @@ interface Map<KeyType, ValueType>
      * did not exist) by assigning a value, to change the value of an entry that does exist, and to
      * remove the entry if it exists.
      */
-    interface ProcessableEntry<KeyType, ValueType>
+    interface ProcessableEntry
             extends Entry<KeyType, ValueType>
         {
         /**
@@ -575,7 +575,7 @@ interface Map<KeyType, ValueType>
      * An implementation of the Set for the {@link Map.keys} property that delegates back
      * to the map and to the map's {@link Map.entries entries}.
      */
-    class EntryBasedKeySet<KeyType>
+    class EntryBasedKeySet
             implements Set<KeyType>
         {
         @Override
@@ -595,7 +595,7 @@ interface Map<KeyType, ValueType>
             {
             return new Iterator()
                 {
-                Iterator entryIterator = Map.this.entries.iterator();
+                Iterator<Entry<KeyType, ValueType>> entryIterator = Map.this.entries.iterator();
 
                 conditional KeyType next()
                     {
@@ -651,7 +651,7 @@ interface Map<KeyType, ValueType>
      * An implementation of the Set for the {@link Map.entries} property that delegates back to the
      * map and to the map's {@link Map.keys keys}.
      */
-    class KeyBasedEntrySet<KeyType, ValueType>
+    class KeyBasedEntrySet
             implements Set<Entry<KeyType, ValueType>>
         {
         @Override
@@ -779,7 +779,7 @@ interface Map<KeyType, ValueType>
     /**
      * The primordial implementation of a simple Entry.
      */
-    static class SimpleEntry<KeyType, ValueType>(KeyType key, ValueType value)
+    static class SimpleEntry(KeyType key, ValueType value)
             implements Entry<KeyType, ValueType>
         {
         @Override
@@ -792,7 +792,7 @@ interface Map<KeyType, ValueType>
     /**
      * An implementation of ProcessableEntry that delegates back to the map for a specified key.
      */
-    class KeyBasedEntry<KeyType, ValueType>(KeyType key)
+    class KeyBasedEntry(KeyType key)
             implements ProcessableEntry<KeyType, ValueType>
         {
         @Override
@@ -836,7 +836,7 @@ interface Map<KeyType, ValueType>
      * An implementation of ProcessableEntry that can be used as a cursor over any number of keys,
      * and delegates back to the map for its functionality.
      */
-    class KeyBasedCursorEntry<KeyType, ValueType>
+    class KeyBasedCursorEntry
             extends KeyBasedEntry<KeyType, ValueType>
         {
         construct(KeyType key)
@@ -872,7 +872,7 @@ interface Map<KeyType, ValueType>
      * An implementation of the Collection for the {@link Map.values} property that delegates back
      * to the map and to the map's {@link Map.entries entries}.
      */
-    class EntryBasedValuesCollection<ValueType>
+    class EntryBasedValuesCollection
             implements Collection<ValueType>
         {
         @Override
@@ -892,7 +892,7 @@ interface Map<KeyType, ValueType>
             {
             return new Iterator()
                 {
-                Iterator entryIterator = Map.this.entries.iterator();
+                Iterator<Entry<KeyType, ValueType>> entryIterator = Map.this.entries.iterator();
 
                 conditional ValueType next()
                     {
@@ -954,7 +954,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        EntryBasedValuesCollection<ValueType> clone()
+        EntryBasedValuesCollection<KeyType, ValueType> clone()
             {
             return this;
             }
@@ -964,7 +964,7 @@ interface Map<KeyType, ValueType>
      * An implementation of the Collection for the {@link Map.values} property that delegates back
      * to the map and to the map's {@link Map.keys keys}.
      */
-    class KeyBasedValuesCollection<ValueType>
+    class KeyBasedValuesCollection
             implements Collection<ValueType>
         {
         @Override
@@ -984,7 +984,7 @@ interface Map<KeyType, ValueType>
             {
             return new Iterator()
                 {
-                Iterator keyIterator = Map.this.keys.iterator();
+                Iterator<KeyType> keyIterator = Map.this.keys.iterator();
 
                 conditional ValueType next()
                     {
@@ -999,14 +999,15 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        conditional Collection<ValueType> remove(ValueType value)
+        conditional KeyBasedValuesCollection<KeyType, ValueType> remove(ValueType value)
             {
-            Boolean modified = Map.this.keys.iterator().untilAny(key ->
+            Map<KeyType, ValueType> map = Map.this;
+            Boolean modified = map.keys.iterator().untilAny(key ->
                 {
-                if (ValueType keyvalue : Map.this.get(key) && keyvalue == value)
+                if (ValueType keyvalue : map.get(key) && keyvalue == value)
                     {
-                    Map newMap = Map.this.remove(key);
-                    assert Ref.equals(Map.this, newMap);
+                    Map newMap = map.remove(key);
+                    assert Ref.equals(map, newMap);
                     return true;
                     }
                 return false;
@@ -1016,15 +1017,16 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        conditional Collection<ValueType> removeIf(function Boolean (ValueType) shouldRemove)
+        conditional KeyBasedValuesCollection<KeyType, ValueType> removeIf(function Boolean (ValueType) shouldRemove)
             {
-            if (Set<KeyType> newKeys : Map.this.keys.removeIf(key ->
+            Map<KeyType, ValueType> map = Map.this;
+            if (Set<KeyType> newKeys : map.keys.removeIf(key ->
                     {
-                    assert ValueType value : Map.this.get(key);
+                    assert ValueType value : map.get(key);
                     return shouldRemove(value);
                     }))
                 {
-                assert Ref.equals(Map.this.keys, newKeys);
+                assert Ref.equals(map.keys, newKeys);
                 return true, this;
                 }
 
@@ -1032,7 +1034,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        conditional Collection<ValueType> clear()
+        conditional KeyBasedValuesCollection<KeyType, ValueType> clear()
             {
             Map newMap = Map.this.clear();
 

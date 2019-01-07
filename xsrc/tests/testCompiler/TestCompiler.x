@@ -1,8 +1,6 @@
 import X.Number;
 
-class TestCompiler<TestType1 extends Number,
-                   TestType2 extends TestType1,
-                   TestType3 extends TestType2>
+class TestCompiler
     {
     interface MyMap<KM, VM>
         {
@@ -256,9 +254,7 @@ class TestCompiler<TestType1 extends Number,
         return i;
         }
 
-//    TestType1 extends Number,
-//    TestType2 extends TestType1,
-//    TestType3 extends TestType2
+    <TestType1 extends Number, TestType2 extends TestType1, TestType3 extends TestType2>
     void test3(TestType1 t1,
                TestType2 t2,
                TestType3 t3,
@@ -281,6 +277,7 @@ class TestCompiler<TestType1 extends Number,
         PC<TestType1> pct1 = pct3;
         }
 
+    <TestType1 extends Number, TestType2 extends TestType1, TestType3 extends TestType2>
     void test3ExpectedFailure1(TestType3 tF3)
         {
         Int n = tF3;

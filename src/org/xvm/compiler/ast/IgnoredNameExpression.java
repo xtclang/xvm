@@ -71,7 +71,7 @@ public class IgnoredNameExpression
     public Argument generateArgument(Context ctx, Code code,
                                      boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        return new Register(pool().typeObject(), Op.A_IGNORE);
+        return generateBlackHole(null);
         }
 
     // ----- debugging assistance ------------------------------------------------------------------

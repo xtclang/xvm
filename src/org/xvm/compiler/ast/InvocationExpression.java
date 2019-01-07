@@ -806,9 +806,34 @@ public class InvocationExpression
         }
 
     @Override
-    public Argument[] generateArguments(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
+        int cLVals = aLVal.length;
+        int cRVals = getValueCount();
+
+        assert cLVals <= cRVals;
+
+        Argument[] aargResult = new Argument[cRVals];
+        for (int i = 0; i < cRVals; i++)
+            {
+            if (i < cLVals)
+                {
+                Assignable LVal = aLVal[i];
+                if (!LVal.isLocalArgument())
+                    {
+                    // create a temp register for every assignable
+                    super.generateAssignments(ctx, code, aLVal, errs);
+                    return;
+                    }
+
+                aargResult[i] = LVal.getLocalArgument();
+                }
+            else
+                {
+                aargResult[i] = generateBlackHole(null);
+                }
+            }
+
         // 1. NameExpression cannot (must not!) attempt to resolve method / function names; it is an
         //    assertion or error if it tries; that is the responsibility of InvocationExpression
         // 2. To avoid an out-of-order execution, we cannot allow the use of local properties
@@ -816,16 +841,17 @@ public class InvocationExpression
         // 3. The arguments are allowed to be pushed on the stack since the run-time knows to load
         //    them up in the inverse order; however, the target itself or the function should not be
         //    put on the stack unless there are no arguments
-        int      cArgs      = args.size();
-        boolean  fConstruct = false;
-        Argument argFn;
 
-        fLocalPropOk &= cArgs == 0;
+        int      cArgs        = args.size();
+        int      cRets        = aargResult.length;
+        boolean  fConstruct   = false;
+        boolean  fLocalPropOk = cArgs == 0;
+        Argument argFn;
 
         Argument[] aargTypeParams = m_aargTypeParams;
         int        cTypeParams    = aargTypeParams == null ? 0 : aargTypeParams.length;
         int        cDefaults      = m_cDefaults;
-        boolean    fTargetOnStack = fUsedOnce && cArgs == 0;
+        boolean    fTargetOnStack = cArgs == 0;
 
         if (expr instanceof NameExpression)
             {
@@ -882,7 +908,7 @@ public class InvocationExpression
                                 chArgs = '1';
                                 if (cArgs == 1)
                                     {
-                                    arg = args.get(0).generateArgument(ctx, code, false, fUsedOnce, errs);
+                                    arg = args.get(0).generateArgument(ctx, code, false, true, errs);
                                     }
                                 else if (cTypeParams == 1)
                                     {
@@ -905,7 +931,7 @@ public class InvocationExpression
 
                                 for (int i = 0, of = cTypeParams; i < cArgs; ++i)
                                     {
-                                    aArgs[of + i] = args.get(i).generateArgument(ctx, code, false, fUsedOnce, errs);
+                                    aArgs[of + i] = args.get(i).generateArgument(ctx, code, false, true, errs);
                                     }
 
                                 for (int i = 0, of = cTypeParams + cArgs; i < cDefaults; ++i)
@@ -914,26 +940,14 @@ public class InvocationExpression
                                     }
                                 }
 
-                            // generate registers for the return values
-                            TypeConstant[] atypeRets = idMethod.getRawReturns();
-                            int            cRets     = atypeRets.length;
-                            char           chRets    = '0';
-                            Register       ret       = null;
-                            Register[]     aRets     = Register.NO_REGS;
+                            char chRets = '0';
                             if (cRets == 1)
                                 {
                                 chRets = '1';
-                                ret    = new Register(atypeRets[0]);
-                                aRets  = new Register[] {ret};
                                 }
                             else if (cRets > 1)
                                 {
                                 chRets = 'N';
-                                aRets  = new Register[cRets];
-                                for (int i = 0; i < cRets; ++i)
-                                    {
-                                    aRets[i] = new Register(atypeRets[i]);
-                                    }
                                 }
 
                             switch (combine(chArgs, chRets))
@@ -958,48 +972,48 @@ public class InvocationExpression
                                     break;
 
                                 case _01:
-                                    code.add(new Invoke_01(argTarget, idMethod, ret));
+                                    code.add(new Invoke_01(argTarget, idMethod, aargResult[0]));
                                     break;
 
                                 case _11:
                                     if (m_fTupleArg)
                                         {
-                                        code.add(new Invoke_T1(argTarget, idMethod, arg, ret));
+                                        code.add(new Invoke_T1(argTarget, idMethod, arg, aargResult[0]));
                                         }
                                     else
                                         {
-                                        code.add(new Invoke_11(argTarget, idMethod, arg, ret));
+                                        code.add(new Invoke_11(argTarget, idMethod, arg, aargResult[0]));
                                         }
                                     break;
 
                                 case _N1:
-                                    code.add(new Invoke_N1(argTarget, idMethod, aArgs, ret));
+                                    code.add(new Invoke_N1(argTarget, idMethod, aArgs, aargResult[0]));
                                     break;
 
                                 case _0N:
-                                    code.add(new Invoke_0N(argTarget, idMethod, aRets));
+                                    code.add(new Invoke_0N(argTarget, idMethod, aargResult));
                                     break;
 
                                 case _1N:
                                     if (m_fTupleArg)
                                         {
-                                        code.add(new Invoke_TN(argTarget, idMethod, arg, aRets));
+                                        code.add(new Invoke_TN(argTarget, idMethod, arg, aargResult));
                                         }
                                     else
                                         {
-                                        code.add(new Invoke_1N(argTarget, idMethod, arg, aRets));
+                                        code.add(new Invoke_1N(argTarget, idMethod, arg, aargResult));
                                         }
                                     break;
 
                                 case _NN:
-                                    code.add(new Invoke_NN(argTarget, idMethod, aArgs, aRets));
+                                    code.add(new Invoke_NN(argTarget, idMethod, aArgs, aargResult));
                                     break;
 
                                 default:
                                     throw new UnsupportedOperationException("TODO method invocation");
                                 }
 
-                            return aRets;
+                            return;
                             }
                         else // _NOT_ m_fCall
                             {
@@ -1013,7 +1027,11 @@ public class InvocationExpression
                         {
                         // the method instance itself is the result, e.g. "Method m = Frog.&jump();"
                         assert m_idConvert == null && !m_fBindParams && !m_fCall;
-                        return new Argument[] {m_argMethod};
+                        if (cLVals > 0)
+                            {
+                            aLVal[0].assign(m_argMethod, code, errs);
+                            }
+                        return;
                         }
                     }
                 }
@@ -1054,7 +1072,11 @@ public class InvocationExpression
         if (!m_fCall && !m_fBindParams)
             {
             // not binding anything; not calling anything; just returning the function itself
-            return new Argument[] {argFn};
+            if (cLVals > 0)
+                {
+                aLVal[0].assign(argFn, code, errs);
+                }
+            return;
             }
 
         TypeConstant[] atypeSub    = typeFn.getParamTypesArray();
@@ -1065,9 +1087,9 @@ public class InvocationExpression
 
         if (m_fCall)
             {
-            Argument  arg   = null;
-            Argument[]aArgs = null;
-            char      chArgs;
+            Argument   arg   = null;
+            Argument[] aArgs = null;
+            char       chArgs;
 
             assert !m_fBindParams || cArgs > 0;
 
@@ -1081,7 +1103,7 @@ public class InvocationExpression
                 chArgs = '1';
                 if (cArgs == 1)
                     {
-                    arg = args.get(0).generateArgument(ctx, code, false, fUsedOnce, errs);
+                    arg = args.get(0).generateArgument(ctx, code, false, true, errs);
                     }
                 else if (cTypeParams == 1)
                     {
@@ -1104,7 +1126,7 @@ public class InvocationExpression
 
                 for (int i = 0, of = cTypeParams; i < cArgs; ++i)
                     {
-                    aArgs[of + i] = args.get(i).generateArgument(ctx, code, false, fUsedOnce, errs);
+                    aArgs[of + i] = args.get(i).generateArgument(ctx, code, false, true, errs);
                     }
 
                 for (int i = 0, of = cTypeParams + cArgs; i < cDefaults; ++i)
@@ -1134,29 +1156,18 @@ public class InvocationExpression
                     default:
                         throw new UnsupportedOperationException("TODO constructor");
                     }
-                return Register.NO_REGS;
+                return;
                 }
 
             // generate registers for the return values
-            TypeConstant[] atypeRets = atypeSub[F_RETS].getParamTypesArray();
-            int            cRets     = atypeRets.length;
-            char           chRets    = '0';
-            Register       ret       = null;
-            Register[]     aRets     = Register.NO_REGS;
+            char chRets = '0';
             if (cRets == 1)
                 {
                 chRets = '1';
-                ret    = new Register(atypeRets[0]);
-                aRets  = new Register[] {ret};
                 }
             else if (cRets > 1)
                 {
                 chRets = 'N';
-                aRets  = new Register[cRets];
-                for (int i = 0; i < cRets; ++i)
-                    {
-                    aRets[i] = new Register(atypeRets[i]);
-                    }
                 }
 
             switch (combine(chArgs, chRets))
@@ -1174,34 +1185,33 @@ public class InvocationExpression
                     break;
 
                 case _01:
-                    code.add(new Call_01(argFn, ret));
+                    code.add(new Call_01(argFn, aargResult[0]));
                     break;
 
                 case _11:
-                    code.add(new Call_11(argFn, arg, ret));
+                    code.add(new Call_11(argFn, arg, aargResult[0]));
                     break;
 
                 case _N1:
-                    code.add(new Call_N1(argFn, aArgs, ret));
+                    code.add(new Call_N1(argFn, aArgs, aargResult[0]));
                     break;
 
                 case _0N:
-                    code.add(new Call_0N(argFn, aRets));
+                    code.add(new Call_0N(argFn, aargResult));
                     break;
 
                 case _1N:
-                    code.add(new Call_1N(argFn, arg, aRets));
+                    code.add(new Call_1N(argFn, arg, aargResult));
                     break;
 
                 case _NN:
-                    code.add(new Call_NN(argFn, aArgs, aRets));
+                    code.add(new Call_NN(argFn, aArgs, aargResult));
                     break;
 
                 default:
                     throw new UnsupportedOperationException("TODO method invocation");
                 }
-
-            return aRets;
+            return;
             }
 
         // bind (or partially bind) the function
@@ -1235,14 +1245,19 @@ public class InvocationExpression
             else if (!args.get(i).isNonBinding())
                 {
                 aiArg[iNext] = i;
-                aArg [iNext] = args.get(i).generateArgument(ctx, code, false, fUsedOnce, errs);
+                aArg [iNext] = args.get(i).generateArgument(ctx, code, false, true, errs);
                 }
             }
 
         Register regFn = new Register(getType());
         code.add(new FBind(argFn, aiArg, aArg, regFn));
-        return new Argument[] {regFn};
+
+        if (cLVals > 0)
+            {
+            aLVal[0].assign(regFn, code, errs);
+            }
         }
+
 
 
     // ----- method resolution helpers -------------------------------------------------------------
