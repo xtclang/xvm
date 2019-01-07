@@ -2,6 +2,8 @@
  * An interval specifies a lower bound and an upper bound.
  */
 const Interval<ElementType extends Orderable>
+// TODO this should be: Interval<ElementType extends Orderable+Stringable>
+// and all casts to <Stringable> removed
         incorporates conditional Range<ElementType extends Sequential>
     {
     construct(ElementType first, ElementType last)
@@ -99,15 +101,15 @@ const Interval<ElementType extends Orderable>
     @Override
     Int estimateStringLength()
         {
-        return lowerBound.to<Const>().estimateStringLength() +
-               upperBound.to<Const>().estimateStringLength() + 2;
+        return lowerBound.as(Stringable).estimateStringLength() +
+               upperBound.as(Stringable).estimateStringLength() + 2;
         }
 
     @Override
     void appendTo(Appender<Char> appender)
         {
-        lowerBound.to<Const>().appendTo(appender);
+        lowerBound.as(Stringable).appendTo(appender);
         appender.add("..");
-        upperBound.to<Const>().appendTo(appender);
+        upperBound.as(Stringable).appendTo(appender);
         }
     }

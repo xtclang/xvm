@@ -71,14 +71,13 @@ const Char
      * Note: The current version 9 of Unicode limits code points to 0x10FFFF, which
      * means that all UTF-8 encoding will use between 1-4 bytes.
      */
-    @Override
-    Byte[] to<Byte[]>()
+    immutable Byte[] utf()
         {
         Int    length = calcUtf8Length();
         Byte[] bytes  = new Byte[length];
         Int    actual = formatUtf8(bytes, 0);
         assert:always actual == length;
-        return bytes;
+        return bytes.makeImmutable();
         }
 
     UInt32 to<UInt32>()
