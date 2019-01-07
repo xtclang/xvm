@@ -868,8 +868,6 @@ public class TypeInfo
             return method;
             }
 
-        TypeConstant typeThis = getType();
-
         mapBySig = ensureMethodsBySignature();
 
         for (MethodInfo methodTest : m_mapMethods.values())
