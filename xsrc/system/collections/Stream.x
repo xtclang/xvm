@@ -501,7 +501,7 @@ interface Stream<ElementType>
      * The Collector interface encapsulates the functionality of all of the various stages of
      * reduction, including support for parallelization.
      */
-    interface Collector<ElementType, AccumulationType, ResultType>
+    interface Collector<AccumulationType, ResultType>
         {
         typedef function AccumulationType () Supplier;
         typedef function Boolean (AccumulationType, ElementType) Accumulator;
@@ -577,7 +577,7 @@ interface Stream<ElementType>
         /**
          * Trivial Collector.
          */
-        static const SimpleCollector<ElementType, AccumulationType, ResultType>(
+        static const SimpleCollector(
                 function AccumulationType ()                                   supply,     // Supplier
                 function Boolean (AccumulationType, ElementType)               accumulate, // Accumulator
                 function AccumulationType (AccumulationType, AccumulationType) combine,    // Combiner

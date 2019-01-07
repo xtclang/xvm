@@ -150,6 +150,7 @@ public class TypeCompositionStatement
         this.compositions = compositions;
         this.args         = args;
         this.body         = body;
+        this.anonymous    = true;
 
         setParent(parent);
         introduceParentage();
@@ -438,6 +439,10 @@ public class TypeCompositionStatement
                         }
 
                     component = container.createClass(getDefaultAccess(), format, sName, constCond);
+                    if (anonymous)
+                        {
+                        component.setSynthetic(true);
+                        }
                     }
                 else
                     {
@@ -2123,6 +2128,8 @@ public class TypeCompositionStatement
     protected StatementBlock       body;
     protected Token                doc;
     protected StatementBlock       enclosed;
+    protected boolean              anonymous;
+
 
     /**
      * For a package that imports a module, this is the actual module that is imported (not just the

@@ -45,7 +45,7 @@ interface Collector<ElementType, AccumulationType, ResultType>
     /**
      * Trivial Collector.
      */
-    static const SimpleCollector<ElementType, AccumulationType, ResultType>
+    static const SimpleCollector
         (Supplier supply, Accumulator accumulate, Combiner combine, Finisher finish)
             implements Collector<ElementType, AccumulationType, ResultType>;
     }

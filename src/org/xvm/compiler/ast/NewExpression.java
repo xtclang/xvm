@@ -331,7 +331,7 @@ public class NewExpression
                 {
                 ClassStructure clzTarget = (ClassStructure)
                     typeTarget.getSingleUnderlyingClass(false).getComponent();
-                m_fInstanceChild = clzTarget.isInstanceChild();
+                m_fVirtualChild = clzTarget.isVirtualChild();
 
                 // since we are new-ing a class that is a nest-mate of the current class, we can
                 // increase visibility from the public default all the way to private
@@ -637,7 +637,7 @@ public class NewExpression
                 }
 
             Argument argOuter = null;
-            if (m_fInstanceChild)
+            if (m_fVirtualChild)
                 {
                 if (left == null)
                     {
@@ -670,6 +670,7 @@ public class NewExpression
                     }
                 else
                     {
+                    // use NewGC_ op-codes
                     throw notImplemented();
                     }
                 }
@@ -1150,6 +1151,10 @@ public class NewExpression
      * A map from variable name to register, built by the anonymous inner class context.
      */
     private transient Map<String, Register> m_mapRegisters;
+    /**
+     * True if the class is a virtual child and needs to be constructed using a NEWC_ op-code.
+     */
+    private transient boolean               m_fVirtualChild;
     /**
      * True if the inner class captures "this" (i.e. not static).
      */

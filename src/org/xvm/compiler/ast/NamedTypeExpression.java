@@ -599,12 +599,12 @@ public class NamedTypeExpression
                     }
                 else if (idFormalTarget.isNestMate(idClass))
                     {
-                    if (clzClass.isInstanceAscendant(clzTarget))
+                    if (clzClass.isVirtualDescendant(clzTarget))
                         {
                         // scenario (2, 3)
                         fUseFormal = true;
                         }
-                    else if (clzTarget.isInstanceAscendant(clzClass))
+                    else if (clzTarget.isVirtualDescendant(clzClass))
                         {
                         // scenario (4)
                         fUseFormal = true;
