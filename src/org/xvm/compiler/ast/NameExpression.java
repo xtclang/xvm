@@ -1197,7 +1197,7 @@ public class NameExpression
                     }
                 }
             }
-        else if (sName.equals("this"))
+        else if (sName.equals("this")) // TODO
             {
             if (ctx.isFunction())
                 {

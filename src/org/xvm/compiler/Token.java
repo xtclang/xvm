@@ -450,6 +450,7 @@ public class Token
         MIXIN        ("mixin"          ),
         MODULE       ("module"         ),
         NEW          ("new"            ),
+        OUTER        ("outer"          , true, true),
         PACKAGE      ("package"        ),
         PREFER       ("prefer"         , true),
         PRIVATE      ("private"        ),
