@@ -484,6 +484,14 @@ public class TypeInfo
         }
 
     /**
+     * @return true if this type represents a singleton instance of a class
+     */
+    public boolean isSynthetic()
+        {
+        return m_struct != null && m_struct.isSynthetic();
+        }
+
+    /**
      * @return true iff this is a class type, which is not an interface type or a mixin type
      */
     public boolean isClass()
@@ -521,12 +529,47 @@ public class TypeInfo
         }
 
     /**
+     * @return true iff this class is either a virtual child class, or an anonymous inner class
+     */
+    public boolean isInnerClass()
+        {
+        return isVirtualChild() || isAnonInnerClass();
+        }
+
+    /**
      * @return true iff this class is scoped within another class, such that it requires a parent
      *         reference in order to be instantiated
      */
-    public boolean isChild()
+    public boolean isVirtualChild()
         {
         return isClass() && m_struct.isVirtualChild();
+        }
+
+    /**
+     * @return true iff this class is an anonymous inner class
+     */
+    public boolean isAnonInnerClass()
+        {
+        return isClass() && isSynthetic()
+                && m_struct.getIdentityConstant().getParentConstant() instanceof MethodConstant;
+        }
+
+    /**
+     * @return true iff this is an inner class with a reference to an "outer this"
+     */
+    public boolean hasOuter()
+        {
+        return isInnerClass() && !isStatic();
+        }
+
+    /**
+     * @return the type of the "outer this"
+     */
+    public TypeConstant getOuterType()
+        {
+        // TODO verify that this will work for annotated and relational types
+        assert isInnerClass();
+        return ;
         }
 
     /**

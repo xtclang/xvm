@@ -519,7 +519,7 @@ public class StatementBlock
          * @return true iff the code that is being compiled belongs to a class that is an anonymous
          *         inner class
          */
-        public boolean isAnonymousInnerClass()
+        public boolean isAnonInnerClass()
             {
             AstNode parent = getStatementBlock();
             while (!(parent instanceof TypeCompositionStatement))
@@ -711,7 +711,7 @@ public class StatementBlock
             // registered in this context, which means that it is either an explicit parameter
             // (unhideable) or a capture variable (hideable)
             return super.isVarHideable(sName)
-                    || isAnonymousInnerClass() && getMethod().getParam(sName) == null;
+                    || isAnonInnerClass() && getMethod().getParam(sName) == null;
             }
 
         @Override
@@ -732,7 +732,7 @@ public class StatementBlock
             // enclosing method (the method containing the "new" expression that defines the
             // anonymous inner class); this needs to be checked up front, because otherwise we will
             // find the synthetic property of the same name as we walk up the component tree
-            if (isAnonymousInnerClass())
+            if (isAnonInnerClass())
                 {
                 NewExpression exprNew = getAnonymousInnerClassExpression();
                 if (exprNew.isCapture(sName))
@@ -1220,7 +1220,7 @@ public class StatementBlock
                     {
                     // REVIEW arguably, it would have been cleaner to put this with the code in StatementBlock.emit()
                     // emit the pre-amble that provides captured variables as local variables
-                    assert isAnonymousInnerClass();
+                    assert isAnonInnerClass();
                     NewExpression  exprNew = getAnonymousInnerClassExpression();
                     ClassStructure clzAnon = getEnclosingClass();
                     for (Map.Entry<String, Register> entry : m_mapCaptureVars.entrySet())
