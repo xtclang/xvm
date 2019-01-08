@@ -84,9 +84,19 @@ public class MoveCast
     protected int complete(Frame frame, ObjectHandle hValue)
         {
         TypeConstant typeFrom = hValue.getType();
-        TypeConstant typeTo   = frame.getArgumentType(m_nToValue);
+        TypeConstant typeTo;
 
-        // typeTo could be null if the "to" argument is on the stack
+        if (frame.isNextRegister(m_nToValue))
+            {
+            frame.introduceResolvedVar(m_nToValue, typeFrom);
+            typeTo = null; // same as typeFrom
+            }
+        else
+            {
+            // typeTo could be null if the "to" argument is on the stack
+            typeTo = frame.getArgumentType(m_nToValue);
+            }
+
         return typeTo == null || typeFrom.isA(typeTo)
             ? frame.assignValue(m_nToValue, hValue)
             : frame.raiseException(xException.makeHandle(typeFrom.getValueString())); // TODO: use a stock exception
