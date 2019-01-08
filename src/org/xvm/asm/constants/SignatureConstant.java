@@ -316,9 +316,10 @@ public class SignatureConstant
      *
      * Note: both "this" and "that" signatures must be resolved.
      *
-     * @param that  the signature of the matching method
+     * @param that     the signature of the matching method
+     * @param typeCtx  the type within which "this" signature is used
      */
-    public boolean isSubstitutableFor(SignatureConstant that)
+    public boolean isSubstitutableFor(SignatureConstant that, TypeConstant typeCtx)
         {
         /*
          * From Method.x # isSubstitutableFor() (where m2 == this and m1 == that)
@@ -367,48 +368,6 @@ public class SignatureConstant
         for (int i = 0, c = aP1.length; i < c; i++)
             {
             if (!aP1[i].isA(aP2[i]))
-                {
-                return false;
-                }
-            }
-
-        return true;
-        }
-
-    /**
-     * Determine if this SignatureConstant is an unambiguously better fit as a "super" of the
-     * specified SignatureConstant when compared to another potential "super" SignatureConstant.
-     *
-     * @param that     the other potential "super" SignatureConstant
-     * @param sigSub   the SignatureConstant of the method that is calling super
-     * @param typeSub  the type within which the potential super call would occur
-     *
-     * @return true iff this signature is an unambiguously better "super" than that signature
-     */
-    public boolean isUnambiguouslyBetterSuperThan(SignatureConstant that, SignatureConstant sigSub,
-                                                  TypeConstant typeSub)
-        {
-        // these assertions can eventually be removed
-        assert this.isSubstitutableFor(sigSub);
-        assert that.isSubstitutableFor(sigSub);
-
-        // TODO handle auto-narrowing
-
-        TypeConstant[] aThisParam = this.getRawParams();
-        TypeConstant[] aThatParam = that.getRawParams();
-        for (int i = 0, c = aThisParam.length; i < c; ++i)
-            {
-            if (!aThisParam[i].isA(aThatParam[i]))
-                {
-                return false;
-                }
-            }
-
-        TypeConstant[] aThisReturn = this.getRawReturns();
-        TypeConstant[] aThatReturn = that.getRawReturns();
-        for (int i = 0, c = aThisReturn.length; i < c; ++i)
-            {
-            if (!aThisReturn[i].isA(aThatReturn[i]))
                 {
                 return false;
                 }

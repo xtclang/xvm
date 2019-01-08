@@ -868,6 +868,8 @@ public class TypeInfo
             return method;
             }
 
+        TypeConstant typeThis = getType();
+
         mapBySig = ensureMethodsBySignature();
 
         for (MethodInfo methodTest : m_mapMethods.values())
@@ -880,7 +882,7 @@ public class TypeInfo
             for (MethodBody body : methodTest.getChain())
                 {
                 SignatureConstant sigTest = body.getIdentity().getSignature();
-                if (sigTest.equals(sig) || sigTest.isSubstitutableFor(sig))
+                if (sigTest.equals(sig) || sigTest.isSubstitutableFor(sig, typeThis))
                     {
                     mapBySig.putIfAbsent(sig, methodTest);
                     return methodTest;
@@ -888,7 +890,7 @@ public class TypeInfo
 
                 SignatureConstant sigResolved =
                         resolveMethodConstant(body.getIdentity(), methodTest).getSignature();
-                if (sigResolved.equals(sig) || sigResolved.isSubstitutableFor(sig))
+                if (sigResolved.equals(sig) || sigResolved.isSubstitutableFor(sig, typeThis))
                     {
                     mapBySig.putIfAbsent(sig, methodTest);
                     return methodTest;

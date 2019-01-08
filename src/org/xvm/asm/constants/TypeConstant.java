@@ -2865,7 +2865,7 @@ public abstract class TypeConstant
             if (IdentityConstant.isNestedSibling(nidSub, nidCandidate))
                 {
                 SignatureConstant sigCandidate = entry.getValue().getSignature(); // resolved
-                if (sigSub.isSubstitutableFor(sigCandidate))
+                if (sigSub.isSubstitutableFor(sigCandidate, this))
                     {
                     if (listMatch == null)
                         {
@@ -2920,8 +2920,8 @@ public abstract class TypeConstant
                     {
                     SignatureConstant sigPrev  = mapSupers.get(listMatch.get(iPrev)).getSignature();
                     SignatureConstant sigPrevR = sigPrev.resolveAutoNarrowing(pool, this);
-                    if (!sigPrev.isSubstitutableFor(sigCandidate) &&
-                        !sigPrevR.isSubstitutableFor(sigCandidateR))
+                    if (!sigPrev.isSubstitutableFor(sigCandidate, this) &&
+                        !sigPrevR.isSubstitutableFor(sigCandidateR, this))
                         {
                         // still ambiguous
                         continue nextCandidate;
@@ -2933,8 +2933,8 @@ public abstract class TypeConstant
                 sigBest  = sigCandidate;
                 sigBestR = sigCandidate.resolveAutoNarrowing(pool, this);
                 }
-            else if (sigBest.isSubstitutableFor(sigCandidate) ||
-                    sigBestR.isSubstitutableFor(sigCandidateR))
+            else if (sigBest.isSubstitutableFor(sigCandidate, this) ||
+                    sigBestR.isSubstitutableFor(sigCandidateR, this))
                 {
                 // this assumes that "best" is a transitive concept, i.e. we're not going to back-
                 // test all of the other candidates
@@ -2942,8 +2942,8 @@ public abstract class TypeConstant
                 sigBest  = sigCandidate;
                 sigBestR = sigCandidateR;
                 }
-            else if (!sigCandidate.isSubstitutableFor(sigBest) &&
-                     !sigCandidateR.isSubstitutableFor(sigBestR))
+            else if (!sigCandidate.isSubstitutableFor(sigBest, this) &&
+                     !sigCandidateR.isSubstitutableFor(sigBestR, this))
                 {
                 nidBest = null;
                 }
@@ -2977,7 +2977,7 @@ public abstract class TypeConstant
                 for (int iPrev = 0; iPrev < iCandidate; ++iPrev)
                     {
                     SignatureConstant sigPrev = aSig[iPrev];
-                    if (!sigPrev.isSubstitutableFor(sigCandidate))
+                    if (!sigPrev.isSubstitutableFor(sigCandidate, this))
                         {
                         // still ambiguous
                         continue nextCandidate;
@@ -2987,13 +2987,13 @@ public abstract class TypeConstant
                 // so far, this candidate is the best
                 sigBest = sigCandidate;
                 }
-            else if (sigBest.isSubstitutableFor(sigCandidate))
+            else if (sigBest.isSubstitutableFor(sigCandidate, this))
                 {
                 // this assumes that "best" is a transitive concept, i.e. we're not going to back-
                 // test all of the other candidates
                 sigBest = sigCandidate;
                 }
-            else if (!sigCandidate.isSubstitutableFor(sigBest))
+            else if (!sigCandidate.isSubstitutableFor(sigBest, this))
                 {
                 sigBest = null;
                 }

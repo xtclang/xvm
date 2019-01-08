@@ -90,7 +90,7 @@ public class PrefixExpression
      *         be chosen
      */
     protected TypeConstant findBestOp(Context ctx, TypeConstant typeRequired,
-                                       TypeConstant typeRight, String sMethod, String sOp, ErrorListener errs)
+                                      TypeConstant typeRight, String sMethod, String sOp, ErrorListener errs)
         {
         Expression exprRight = expr.validate(ctx, typeRight, errs);
 
@@ -128,8 +128,8 @@ public class PrefixExpression
                     SignatureConstant sigNew  = infoMethod.getSignature();
                     SignatureConstant sigBest = infoBest.getSignature();
 
-                    boolean fNewBetter = sigNew.isSubstitutableFor(sigBest);
-                    boolean fOldBetter = sigBest.isSubstitutableFor(sigNew);
+                    boolean fNewBetter = sigNew.isSubstitutableFor(sigBest, typeRight);
+                    boolean fOldBetter = sigBest.isSubstitutableFor(sigNew, typeRight);
                     if (fOldBetter ^ fNewBetter)
                         {
                         if (fNewBetter)
