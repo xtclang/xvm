@@ -1915,3 +1915,12 @@ mixin MapMixin into Map
     {
     mixin EntryMixin into Entry
     }
+
+// somewhere on an Entry
+Map mapThis = this.Map;
+Map mapThat = that.Map;
+
+// explicit, as if it were a property:
+this.Map.put(k, v);
+// "reference to the Map" style:
+&Map.put(k, v);
