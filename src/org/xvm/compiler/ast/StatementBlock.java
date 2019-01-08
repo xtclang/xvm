@@ -814,7 +814,9 @@ public class StatementBlock
                         {
                         idPrev   = idClz;
                         infoPrev = info = pool.ensureAccessTypeConstant(
-                                typeThis == null ? idClz.getType() : typeThis, access)
+                                typeThis == null ?
+                                    ((ClassStructure) idClz.getComponent()).getFormalType()
+                                    : typeThis, access)
                                 .ensureTypeInfo(errs);
                         }
 

@@ -1850,8 +1850,6 @@ public class ClassStructure
                 GenericTypeResolver resolver = listParams.isEmpty() ? null :
                     new SimpleTypeResolver(listParams);
 
-                signature = signature.resolveGenericTypes(pool, resolver);
-
                 for (MethodStructure method : mms.methods())
                     {
                     if (!method.isStatic() && method.isAccessible(access))
