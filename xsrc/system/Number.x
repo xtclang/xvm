@@ -178,7 +178,7 @@ interface Number
     /**
      * Obtain the number as an array of bytes.
      */
-    Byte[] to<Byte[]>()
+    immutable Byte[] bytes()
         {
         // make sure the bit length is at least 8, and also a power-of-two
         assert:always bitLength == (bitLength & ~0x7).leftmostBit;

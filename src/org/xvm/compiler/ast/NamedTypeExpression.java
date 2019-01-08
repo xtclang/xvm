@@ -490,7 +490,7 @@ public class NamedTypeExpression
     protected TypeConstant calculateDefaultType(Context ctx, Constant constTarget)
         {
         // in a context of "this compilation unit", an absence of type parameters
-        // is treated as "formal types" (but only for instance children).
+        // is treated as "formal types" (only for virtual children).
         // Consider an example:
         //
         //  class Parent<T0>
@@ -520,15 +520,6 @@ public class NamedTypeExpression
         //         Parent p;  // (4) means Parent<T0>
         //         Child2 c2; // (5) means Child1<Parent<T0>, T2>
         //         Child1 c1; // (7) means Child1<Parent<T0>>
-        //         }
-        //      }
-        //
-        //    static class Child3<T3>
-        //      {
-        //      void foo()
-        //         {
-        //         Parent p; // (8) means "naked" Parent type
-        //         Child3 c; // (9) means Child3<T3>
         //         }
         //      }
         //    }
@@ -588,30 +579,10 @@ public class NamedTypeExpression
             ClassStructure clzTarget = (ClassStructure) idFormalTarget.getComponent();
             if (clzTarget.isParameterized())
                 {
-                ClassStructure   clzClass   = getComponent().getContainingClass();
-                IdentityConstant idClass    = clzClass.getIdentityConstant();
-                boolean          fUseFormal = false;
+                ClassStructure   clzClass = getComponent().getContainingClass();
+                IdentityConstant idClass  = clzClass.getIdentityConstant();
 
-                if (idFormalTarget.equals(idClass))
-                    {
-                    // scenarios (1), (5) and (9)
-                    fUseFormal = true;
-                    }
-                else if (idFormalTarget.isNestMate(idClass))
-                    {
-                    if (clzClass.isVirtualDescendant(clzTarget))
-                        {
-                        // scenario (2, 3)
-                        fUseFormal = true;
-                        }
-                    else if (clzTarget.isVirtualDescendant(clzClass))
-                        {
-                        // scenario (4)
-                        fUseFormal = true;
-                        }
-                    // TODO: scenarios (6), (7)
-                    }
-                if (fUseFormal)
+                if (idFormalTarget.isNestMateOf(idClass))
                     {
                     // TODO: for child classes create ParameterizedTC(ChildTC(typeParent, clzChild))
                     typeTarget = pool.ensureParameterizedTypeConstant(typeTarget,

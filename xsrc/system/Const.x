@@ -21,17 +21,6 @@ interface Const
         return value1 == value2;
         }
 
-    /**
-     * TODO:
-     *
-     * Note: this method does NOT have a super; it does NOT narrow to<Object[]>()
-     */
-    Byte[] to<Byte[]>();
-
-    // this declaration is necessary so that the non-override to<Byte[]>() method is allowed
-    @Override
-    Const[] to<Const[]>();
-
     @Override
     String to<String>()
         {

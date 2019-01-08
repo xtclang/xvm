@@ -367,6 +367,11 @@ public class MethodInfo
         }
 
     /**
+     * Get the topmost MethodStructure for the call chain represented by this MethodInfo.
+     * Note, that the TypeInfo is necessary to be passed only if this method can be a "capped" one.
+     *
+     * @param infoType  the enclosing TypeInfo
+     *
      * @return the first non-null MethodStructure for bodies in the call chain
      */
     public MethodStructure getTopmostMethodStructure(TypeInfo infoType)
