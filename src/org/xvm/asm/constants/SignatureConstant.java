@@ -311,8 +311,8 @@ public class SignatureConstant
         }
 
     /**
-     * Check if the specified signature could be called via this signature. In other words,
-     * check that the specified signature is "narrower" than this one.
+     * Check if a method with this signature could be called via the specified signature.
+     * In other words, check that this signature is "narrower" than the specified one.
      *
      * Note: both "this" and "that" signatures must be resolved.
      *
