@@ -278,16 +278,9 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public TypeConstant inferAutoNarrowing(ConstantPool pool, IdentityConstant constThisClass)
+    public boolean isNarrowedFrom(TypeConstant typeSuper, TypeConstant typeCtx)
         {
-        TypeConstant constOriginal1 = m_constType1;
-        TypeConstant constOriginal2 = m_constType2;
-        TypeConstant constInferred1 = constOriginal1.inferAutoNarrowing(pool, constThisClass);
-        TypeConstant constInferred2 = constOriginal2.inferAutoNarrowing(pool, constThisClass);
-
-        return constInferred1 == constOriginal1 && constInferred2 == constOriginal2
-                ? this
-                : cloneRelational(pool, constInferred1, constInferred2);
+        return false;
         }
 
     @Override

@@ -509,27 +509,42 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public TypeConstant inferAutoNarrowing(ConstantPool pool, IdentityConstant constThisClass)
+    public boolean isNarrowedFrom(TypeConstant typeSuper, TypeConstant typeCtx)
         {
+        assert typeSuper.isAutoNarrowing();
+
+        if (!(typeSuper instanceof TerminalTypeConstant))
+            {
+            return false;
+            }
+
         if (!isSingleDefiningConstant())
             {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return constId.getReferredToType().inferAutoNarrowing(pool, constThisClass);
+            return false;
             }
 
-        Constant constId = getDefiningConstant();
-        if (constId.getFormat() == Format.Class)
+        Constant constSuper = typeSuper.getDefiningConstant();
+        if (constSuper instanceof PseudoConstant)
             {
-            ClassConstant constClass = (ClassConstant) constId;
-            if (constThisClass.equals(constClass))
-                {
-                return pool.ensureThisTypeConstant(constClass, null);
-                }
+            // this type represents a type in the D rows below, the super type represents the B rows
+            // and the context type has the identity of D;
+            // E extends D extends C extends B; X may extend B, but is not "related" to D
+            //
+            // valid scenarios
+            // -----------  -------  --------  --------  ---------  -------  --------
+            // Derived (D)  D        this:D     D        this:D     C        E
+            // Base (B)     B        this:B     this:B   B          this:B   this:B
 
-            // TODO: parents & children
+            // invalid scenarios
+            // ---------    --------  --------
+            // Derived (D)  X          X
+            // Base (B)     this:B     B
+
+            TypeConstant typeSuperR = ((PseudoConstant) constSuper).resolveClass(null).getType();
+            return this.isA(typeSuperR) && (this.isA(typeCtx) || typeCtx.isA(this));
             }
-        return this;
+        return false;
         }
 
     @Override
