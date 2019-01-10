@@ -21,7 +21,7 @@ const ContextToken<TokenType extends immutable Object>
     /**
      * The {@code ContextToken} that this contextToken replaced, if any.
      */
-    ContextToken? previousContextToken;
+    ContextToken!? previousContextToken;
 
     /**
      * The name of the token.
