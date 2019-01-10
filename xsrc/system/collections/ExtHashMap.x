@@ -230,6 +230,7 @@ class ExtHashMap<KeyType, ValueType>
                 HashEntry?   nextEntry   = null;
                 Int          addSnapshot = ExtHashMap.this.addCount;
 
+                @Override
                 conditional HashEntry next()
                     {
                     if (addSnapshot != ExtHashMap.this.addCount)
