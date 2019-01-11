@@ -471,13 +471,14 @@ public class TerminalTypeConstant
             {
             case ThisClass:
                 {
-                IdentityConstant idClass = ((ThisClassConstant) constant).getDeclarationLevelClass();
-                if (typeTarget == null || !typeTarget.isSingleUnderlyingClass(true))
+                IdentityConstant idClass  = ((ThisClassConstant) constant).getDeclarationLevelClass();
+                TypeConstant     typeDecl = idClass.getType();
+                if (typeTarget == null
+                        || !typeTarget.isSingleUnderlyingClass(true)
+                        || !typeTarget.isA(typeDecl))
                     {
-                    return idClass.getType();
+                    return typeDecl;
                     }
-
-                assert typeTarget.isA(idClass.getType());
 
                 // strip the immutability and access modifiers
                 while (typeTarget instanceof ImmutableTypeConstant ||
