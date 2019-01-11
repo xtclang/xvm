@@ -109,6 +109,15 @@ public class ImmutableTypeConstant
         }
 
     @Override
+    public TypeConstant getOuterType()
+        {
+        TypeConstant outer = getUnderlyingType().getOuterType();
+        return outer == null
+                ? null
+                : getConstantPool().ensureImmutableTypeConstant(outer);
+        }
+
+    @Override
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
         // the "immutable" keyword does not affect the TypeInfo, even though the type itself is

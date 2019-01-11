@@ -55,6 +55,30 @@ public class ClassConstant
     // ----- ClassConstant methods -----------------------------------------------------------------
 
     /**
+     * @return the next outer class, or null if there is none
+     */
+    public ClassConstant getOuterClass()
+        {
+        IdentityConstant parent = getNamespace();
+        while (true)
+            {
+            switch (parent.getFormat())
+                {
+                case Method:
+                case Property:
+                    parent = parent.getNamespace();
+                    break;
+
+                case Class:
+                    return (ClassConstant) parent;
+
+                default:
+                    return null;
+                }
+            }
+        }
+
+    /**
      * @return the "outermost" class
      */
     public ClassConstant getOutermost()
@@ -71,7 +95,6 @@ public class ClassConstant
 
                 case Property:
                 case Method:
-                case MultiMethod:
                     // ignored (we'll use its parent)
                     break;
 
@@ -80,7 +103,7 @@ public class ClassConstant
                     return outermost;
                 }
 
-            parent = parent.getParentConstant();
+            parent = parent.getNamespace();
             }
         }
 

@@ -125,6 +125,26 @@ public class AccessTypeConstant
         }
 
     @Override
+    public TypeConstant getOuterType()
+        {
+        TypeConstant outer = getUnderlyingType().getOuterType();
+        if (outer == null)
+            {
+            return null;
+            }
+
+        Access access = getAccess();
+        if (access == Access.STRUCT)
+            {
+            // the outer is already constructed, so the reference to the outer is "private" instead
+            // of "struct"
+            access = Access.PRIVATE;
+            }
+
+        return getConstantPool().ensureAccessTypeConstant(outer, access);
+        }
+
+    @Override
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
         // since the immutable modifier is not allowed, it can be assumed that the first

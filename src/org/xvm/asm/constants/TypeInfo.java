@@ -484,6 +484,14 @@ public class TypeInfo
         }
 
     /**
+     * @return true if this type represents a singleton instance of a class
+     */
+    public boolean isSynthetic()
+        {
+        return m_struct != null && m_struct.isSynthetic();
+        }
+
+    /**
      * @return true iff this is a class type, which is not an interface type or a mixin type
      */
     public boolean isClass()
@@ -521,12 +529,83 @@ public class TypeInfo
         }
 
     /**
+     * @return true iff this class is a virtual child class, or an anonymous inner class, or some
+     *         other inner class such as a named class inside a method
+     */
+    public boolean isInnerClass()
+        {
+        return m_struct != null && m_struct.isInnerClass();
+        }
+
+    /**
      * @return true iff this class is scoped within another class, such that it requires a parent
      *         reference in order to be instantiated
      */
-    public boolean isChild()
+    public boolean isVirtualChild()
         {
-        return isClass() && m_struct.isVirtualChild();
+        return m_struct != null && m_struct.isVirtualChild();
+        }
+
+    /**
+     * @return true iff this class is an anonymous inner class
+     */
+    public boolean isAnonInnerClass()
+        {
+        return m_struct != null && m_struct.isAnonInnerClass();
+        }
+
+    /**
+     * @return true iff this is an inner class with a reference to an "outer this"
+     */
+    public boolean hasOuter()
+        {
+        return m_struct != null && m_struct.hasOuter();
+        }
+
+    /**
+     * @return the type of the "outer this" for any TypeInfo that {@link #hasOuter()}
+     */
+    public TypeConstant getOuterType()
+        {
+        assert hasOuter();
+        return getType().getOuterType();
+        }
+
+    /**
+     * Test if this TypeInfo would represent an identifiable reference using the specified name.
+     * For example, within a <tt>Map.Entry</tt>, the <tt>Map</tt> reference would be identifiable
+     * as "<tt>this.Map</tt>".
+     *
+     * @param sName  the name to test, as used in the form "this.OuterName"
+     *
+     * @return true iff this TypeInfo, acting as an "outer" TypeInfo, would identify itself using
+     *         the specified name
+     */
+    public boolean hasOuterName(String sName)
+        {
+        // everything is an Object, so that doesn't help identify anything in particular
+        if (sName.equals("Object"))
+            {
+            return false;
+            }
+
+        for (IdentityConstant id : getClassChain().keySet())
+            {
+            if (id.getName().equals(sName))
+                {
+                return true;
+                }
+            }
+
+        for (IdentityConstant id : getDefaultChain().keySet())
+            {
+            if (id.getName().equals(sName))
+                {
+                return true;
+                }
+            }
+
+        return false;
         }
 
     /**
@@ -592,6 +671,32 @@ public class TypeInfo
     public ListMap<IdentityConstant, Origin> getDefaultChain()
         {
         return m_listmapDefaultChain;
+        }
+
+    /**
+     * Look up a nested type by its name.
+     *
+     * @param sName  the name of the child
+     *
+     * @return the type of the child iff it exists and is visible; null otherwise
+     */
+    public TypeConstant getChildType(String sName)
+        {
+        // TODO
+        return null;
+        }
+
+    /**
+     * Look up a nested typedef by its name.
+     *
+     * @param sName  the name of the typedef
+     *
+     * @return the type of the typedef iff it exists and is visible; null otherwise
+     */
+    public TypeConstant getTypedefType(String sName)
+        {
+        // TODO
+        return null;
         }
 
     /**

@@ -471,6 +471,19 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public TypeConstant getOuterType()
+        {
+        TypeConstant typeOuter = getUnderlyingType().getOuterType();
+        if (typeOuter == null)
+            {
+            return null;
+            }
+
+        // TODO GG
+        return getConstantPool().ensureParameterizedTypeConstant(typeOuter, getParamTypesArray());
+        }
+
+    @Override
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
         if (m_constType.isTuple())
