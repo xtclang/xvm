@@ -185,7 +185,7 @@ public class ElvisExpression
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
-        if (isConstant() || !LVal.isNormalVariableOrStack() || !pool().typeNull().isA(LVal.getType()))
+        if (isConstant() || !LVal.isLocalArgument() || !pool().typeNull().isA(LVal.getType()))
             {
             super.generateAssignment(ctx, code, LVal, errs);
             return;
@@ -194,7 +194,7 @@ public class ElvisExpression
         Label labelEnd = new Label("end_?:_" + m_nLabel);
 
         expr1.generateAssignment(ctx, code, LVal, errs);
-        code.add(new JumpNotNull(LVal.getRegister(), labelEnd));
+        code.add(new JumpNotNull(LVal.getLocalArgument(), labelEnd));
         expr2.generateAssignment(ctx, code, LVal, errs);
         code.add(labelEnd);
         }

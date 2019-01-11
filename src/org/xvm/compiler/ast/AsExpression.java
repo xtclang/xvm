@@ -101,16 +101,16 @@ public class AsExpression
         Argument argBefore = expr1.generateArgument(ctx, code, true, true, errs);
         Register regAfter  = createRegister(getType(), fUsedOnce);
         code.add(new MoveCast(argBefore, regAfter));
-        return code.lastRegister();
+        return regAfter;
         }
 
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
-        if (LVal.isNormalVariableOrStack())
+        if (LVal.isLocalArgument())
             {
             Argument argTarget = expr1.generateArgument(ctx, code, true, true, errs);
-            code.add(new MoveCast(argTarget, LVal.getRegister()));
+            code.add(new MoveCast(argTarget, LVal.getLocalArgument()));
             }
         else
             {

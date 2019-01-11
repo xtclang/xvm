@@ -7,7 +7,6 @@ import java.io.IOException;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpMove;
-import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -29,11 +28,11 @@ public class MoveCast
      * Construct a CAST op for the passed arguments.
      *
      * @param argFrom  the Register to move from
-     * @param regTo  the Register to move to
+     * @param argTo    the Argument to move to
      */
-    public MoveCast(Argument argFrom, Register regTo)
+    public MoveCast(Argument argFrom, Argument argTo)
         {
-        super(argFrom, regTo);
+        super(argFrom, argTo);
         }
 
     /**

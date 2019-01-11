@@ -794,11 +794,11 @@ public class NameExpression
                     assert getMeaning() == Meaning.Class;
 
                     // TODO: the instanceof ParenClassConstant check will go away (p.this for property p on Map will become this.Map.&p)
-                    if (argRaw instanceof ParentClassConstant && argLVal instanceof Register)
+                    if (argRaw instanceof ParentClassConstant)
                         {
                         int cSteps = ((ParentClassConstant) argRaw).getDepth();
 
-                        code.add(new MoveThis(cSteps, (Register) argLVal));
+                        code.add(new MoveThis(cSteps, argLVal));
                         return;
                         }
                     break;
@@ -808,21 +808,17 @@ public class NameExpression
                     {
                     assert getMeaning() == Meaning.Class;
 
-                    if (argLVal instanceof Register)
-                        {
-                        int cSteps = argRaw instanceof ThisClassConstant
-                                ? 0
-                                : ((ParentClassConstant) argRaw).getDepth();
+                    int cSteps = argRaw instanceof ThisClassConstant
+                            ? 0
+                            : ((ParentClassConstant) argRaw).getDepth();
 
-                        TypeConstant typeRef      = getType();
-                        TypeConstant typeReferent = typeRef.getParamTypesArray()[0];
+                    TypeConstant typeRef      = getType();
+                    TypeConstant typeReferent = typeRef.getParamTypesArray()[0];
 
-                        Register regTemp = createRegister(typeReferent, false);
-                        code.add(new MoveThis(cSteps, regTemp));
-                        code.add(new MoveRef(regTemp, (Register) argLVal));
-                        return;
-                        }
-                    break;
+                    Register regTemp = createRegister(typeReferent, false);
+                    code.add(new MoveThis(cSteps, regTemp));
+                    code.add(new MoveRef(regTemp, argLVal));
+                    return;
                     }
 
                 case PropertyDeref:
@@ -886,17 +882,14 @@ public class NameExpression
                     }
 
                 case RegisterRef:
-                    if (argLVal instanceof Register)
-                        {
-                        Register regLVal = (Register) argLVal;
-                        Register regRVal = (Register) argRaw;
+                    {
+                    Register regRVal = (Register) argRaw;
 
-                        code.add(m_fAssignable
-                                ? new MoveVar(regRVal, regLVal)
-                                : new MoveRef(regRVal, regLVal));
-                        return;
-                        }
-                    break;
+                    code.add(m_fAssignable
+                            ? new MoveVar(regRVal, argLVal)
+                            : new MoveRef(regRVal, argLVal));
+                    return;
+                    }
                 }
             }
 

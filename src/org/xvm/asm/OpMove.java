@@ -19,12 +19,12 @@ public abstract class OpMove
      * Construct an op for the passed arguments.
      *
      * @param argFrom  the Argument to move from
-     * @param regTo  the Register to move to
+     * @param argTo    the Argument to move to
      */
-    protected OpMove(Argument argFrom, Register regTo)
+    protected OpMove(Argument argFrom, Argument argTo)
         {
         m_argFrom = argFrom;
-        m_regTo   = regTo;
+        m_argTo   = argTo;
         }
 
     /**
@@ -47,7 +47,7 @@ public abstract class OpMove
         if (m_argFrom != null)
             {
             m_nFromValue = encodeArgument(m_argFrom, registry);
-            m_nToValue   = encodeArgument(m_regTo, registry);
+            m_nToValue   = encodeArgument(m_argTo, registry);
             }
 
         out.writeByte(getOpCode());
@@ -55,26 +55,17 @@ public abstract class OpMove
         writePackedLong(out, m_nToValue);
         }
 
-    /**
-     * Note: Used only during compilation.
-     *
-     * @return the Register that holds the destination value
-     */
-    public Register getRegister()
-        {
-        return m_regTo;
-        }
-
     @Override
     public void simulate(Scope scope)
         {
-        checkNextRegister(scope, m_regTo);
+        checkNextRegister(scope, m_argTo);
         }
 
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
         m_argFrom = registerArgument(m_argFrom, registry);
+        m_argTo   = registerArgument(m_argTo, registry);
         }
 
     @Override
@@ -82,12 +73,12 @@ public abstract class OpMove
         {
         return super.toString()
                 + ' ' + Argument.toIdString(m_argFrom, m_nFromValue)
-                + ", " + Argument.toIdString(m_regTo, m_nToValue);
+                + ", " + Argument.toIdString(m_argTo, m_nToValue);
         }
 
     protected int m_nFromValue;
     protected int m_nToValue;
 
     private Argument m_argFrom;
-    private Register m_regTo;
+    private Argument m_argTo;
     }

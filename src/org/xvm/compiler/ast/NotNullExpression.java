@@ -151,14 +151,14 @@ public class NotNullExpression
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
-        if (isConstant() || !LVal.isNormalVariableOrStack() || !pool().typeNull().isA(LVal.getType()))
+        if (isConstant() || !LVal.isLocalArgument() || !pool().typeNull().isA(LVal.getType()))
             {
             super.generateAssignment(ctx, code, LVal, errs);
             return;
             }
 
         expr.generateAssignment(ctx, code, LVal, errs);
-        code.add(new JumpNull(LVal.getRegister(), m_labelShort));
+        code.add(new JumpNull(LVal.getLocalArgument(), m_labelShort));
         }
 
 
