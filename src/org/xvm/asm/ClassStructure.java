@@ -1925,7 +1925,7 @@ public class ClassStructure
                         SignatureConstant sigMethod = method.getIdentityConstant().getSignature().
                                                         resolveAutoNarrowing(pool, null).
                                                         resolveGenericTypes(pool, resolver);
-                        if (sigMethod.isSubstitutableFor(signature))
+                        if (sigMethod.isSubstitutableFor(signature, idClass.getType()))
                             {
                             return true;
                             }

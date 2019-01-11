@@ -311,14 +311,17 @@ public class SignatureConstant
         }
 
     /**
-     * Check if a method with this signature could be called via the specified signature.
+     * Check if a method with this signature could be called via the specified signature
+     * (it also means that a method with this signature could "super" to the specified method).
+     *
      * In other words, check that this signature is "narrower" than the specified one.
      *
      * Note: both "this" and "that" signatures must be resolved.
      *
-     * @param that  the signature of the matching method
+     * @param that     the signature of the matching method
+     * @param typeCtx  the type within which "this" signature is used
      */
-    public boolean isSubstitutableFor(SignatureConstant that)
+    public boolean isSubstitutableFor(SignatureConstant that, TypeConstant typeCtx)
         {
         /*
          * From Method.x # isSubstitutableFor() (where m2 == this and m1 == that)
@@ -349,15 +352,34 @@ public class SignatureConstant
             return false;
             }
 
+        ConstantPool      pool  = ConstantPool.getCurrentPool();
         SignatureConstant sigM1 = that;
         SignatureConstant sigM2 = this;
+        boolean           fAuto = sigM1.isAutoNarrowing();
+
+        if (fAuto)
+            {
+            sigM1 = sigM1.resolveAutoNarrowing(pool, typeCtx);
+            sigM2 = sigM2.resolveAutoNarrowing(pool, typeCtx);
+            }
 
         TypeConstant[] aR1 = sigM1.getRawReturns();
         TypeConstant[] aR2 = sigM2.getRawReturns();
         for (int i = 0, c = aR1.length; i < c; i++)
             {
-            if (!aR2[i].isA(aR1[i]))
+            TypeConstant type1 = aR1[i];
+            TypeConstant type2 = aR2[i];
+            if (!type2.isA(type1))
                 {
+                if (fAuto)
+                    {
+                    // check the auto-narrowing sub for the non-resolved type
+                    TypeConstant typeOrg = that.getRawReturns()[i];
+                    if (typeOrg.isAutoNarrowing() && type2.isNarrowedFrom(typeOrg, typeCtx))
+                        {
+                        continue;
+                        }
+                    }
                 return false;
                 }
             }
@@ -366,49 +388,9 @@ public class SignatureConstant
         TypeConstant[] aP2 = sigM2.getRawParams();
         for (int i = 0, c = aP1.length; i < c; i++)
             {
-            if (!aP1[i].isA(aP2[i]))
-                {
-                return false;
-                }
-            }
-
-        return true;
-        }
-
-    /**
-     * Determine if this SignatureConstant is an unambiguously better fit as a "super" of the
-     * specified SignatureConstant when compared to another potential "super" SignatureConstant.
-     *
-     * @param that     the other potential "super" SignatureConstant
-     * @param sigSub   the SignatureConstant of the method that is calling super
-     * @param typeSub  the type within which the potential super call would occur
-     *
-     * @return true iff this signature is an unambiguously better "super" than that signature
-     */
-    public boolean isUnambiguouslyBetterSuperThan(SignatureConstant that, SignatureConstant sigSub,
-                                                  TypeConstant typeSub)
-        {
-        // these assertions can eventually be removed
-        assert this.isSubstitutableFor(sigSub);
-        assert that.isSubstitutableFor(sigSub);
-
-        // TODO handle auto-narrowing
-
-        TypeConstant[] aThisParam = this.getRawParams();
-        TypeConstant[] aThatParam = that.getRawParams();
-        for (int i = 0, c = aThisParam.length; i < c; ++i)
-            {
-            if (!aThisParam[i].isA(aThatParam[i]))
-                {
-                return false;
-                }
-            }
-
-        TypeConstant[] aThisReturn = this.getRawReturns();
-        TypeConstant[] aThatReturn = that.getRawReturns();
-        for (int i = 0, c = aThisReturn.length; i < c; ++i)
-            {
-            if (!aThisReturn[i].isA(aThatReturn[i]))
+            TypeConstant type1 = aP1[i];
+            TypeConstant type2 = aP2[i];
+            if (!type1.isA(type2))
                 {
                 return false;
                 }

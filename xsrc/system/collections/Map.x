@@ -597,9 +597,10 @@ interface Map<KeyType, ValueType>
                 {
                 Iterator<Entry<KeyType, ValueType>> entryIterator = Map.this.entries.iterator();
 
+                @Override
                 conditional KeyType next()
                     {
-                    if (Entry<KeyType, KeyType> entry : entryIterator)
+                    if (Entry<KeyType, ValueType> entry : entryIterator.next())
                         {
                         return true, entry.key;
                         }
@@ -619,8 +620,9 @@ interface Map<KeyType, ValueType>
         @Override
         conditional EntryBasedKeySet<KeyType> removeIf(function Boolean (KeyType) shouldRemove)
             {
-            Map newMap = Map.this.entries.removeIf(entry -> shouldRemove(entry.key));
-            assert Ref.equals(Map.this, newMap);
+            Set<KeyType> oldKeys = Map.this.keys;
+            oldKeys.removeIf(shouldRemove);
+            assert Ref.equals(Map.this.keys, oldKeys);
             return true, this;
             }
 
@@ -671,11 +673,12 @@ interface Map<KeyType, ValueType>
             {
             return new Iterator()
                 {
-                Iterator keyIterator = Map.this.keys.iterator(); // TODO verify this is a private prop
+                Iterator<KeyType> keyIterator = Map.this.keys.iterator(); // TODO verify this is a private prop
 
+                @Override
                 conditional KeyType next()
                     {
-                    if (KeyType key : keyIterator)
+                    if (KeyType key : keyIterator.next())
                         {
                         // TODO verify this is private (a private property on the anon inner class)
                         static KeyBasedCursorEntry<KeyType, ValueType> entry = new KeyBasedCursorEntry(key);
@@ -894,9 +897,10 @@ interface Map<KeyType, ValueType>
                 {
                 Iterator<Entry<KeyType, ValueType>> entryIterator = Map.this.entries.iterator();
 
+                @Override
                 conditional ValueType next()
                     {
-                    if (Entry<KeyType, ValueType> entry : entryIterator)
+                    if (Entry<KeyType, ValueType> entry : entryIterator.next())
                         {
                         return true, entry.value;
                         }
@@ -986,9 +990,10 @@ interface Map<KeyType, ValueType>
                 {
                 Iterator<KeyType> keyIterator = Map.this.keys.iterator();
 
+                @Override
                 conditional ValueType next()
                     {
-                    if (KeyType key : keyIterator)
+                    if (KeyType key : keyIterator.next())
                         {
                         return Map.this.get(key);
                         }

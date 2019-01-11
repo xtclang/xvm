@@ -628,29 +628,26 @@ public abstract class TypeConstant
         }
 
     /**
-     * Assuming the "ThisClass" of A, the inference rules are:
-     * <ul>
-     *   <li>A&lt;T&gt; => TC(A)&lt;T&gt;
-     *   <li>B&lt;A&gt; => B&lt;TC(A)&gt;
+     * Check if this type ia a valid extension ("sub") of the specified auto-narrowing "super" type
+     * in the context of the specified type.
      *
-     *   //TODO: children and parents
-     * </ul>
-     * where TC is ThisClassConstant
+     * @param typeSuper  the auto-narrowing type to extend
+     * @param typeCtx    the context in which the auto-narrowing occurs
      *
-     * @param pool            the ConstantPool to place a potentially created new constant into
-     * @param constThisClass  the class "context" in which the inference is calculated
-     *
-     * @return this same type, but with the underlying class of "this" replaced with the
-     *         {@link ThisClassConstant}
+     * @return true iff this type is narrowed from the super type
      */
-    public TypeConstant inferAutoNarrowing(ConstantPool pool, IdentityConstant constThisClass)
+    public boolean isNarrowedFrom(TypeConstant typeSuper, TypeConstant typeCtx)
         {
-        TypeConstant constOriginal = getUnderlyingType();
-        TypeConstant constInferred = constOriginal.inferAutoNarrowing(pool, constThisClass);
+        assert typeSuper.isAutoNarrowing();
 
-        return constInferred == constOriginal
-                ? this
-                : cloneSingle(pool, constInferred);
+        // for now, the types must have the identical topology
+        // (the only exception is ParameterizedTypeConstant, that allows some flexibility)
+        if (getClass() != typeSuper.getClass())
+            {
+            return false;
+            }
+
+        return getUnderlyingType().isNarrowedFrom(typeSuper.getUnderlyingType(), typeCtx);
         }
 
     /**
@@ -1499,7 +1496,7 @@ public abstract class TypeConstant
                         {
                         log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
                                 typeMixin.getValueString(), this.getValueString());
-                        typeMixin = typeMixin.resolveAutoNarrowing(getConstantPool(), null);
+                        typeMixin = typeMixin.resolveAutoNarrowing(pool, null);
                         }
 
                     // the annotation could be a mixin "into Class", which means that it's a
@@ -1630,7 +1627,7 @@ public abstract class TypeConstant
                     {
                     log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
                             typeAnno.getValueString(), this.getValueString());
-                    typeAnno = typeAnno.resolveAutoNarrowing(getConstantPool(), null);
+                    typeAnno = typeAnno.resolveAutoNarrowing(pool, null);
                     }
                 // apply annotation
                 listProcess.add(new Contribution(annotation,
@@ -1823,7 +1820,7 @@ public abstract class TypeConstant
                 {
                 log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
                         typeContribOrig.getValueString(), this.getValueString());
-                typeContrib = typeContribOrig.resolveAutoNarrowing(getConstantPool(), null);
+                typeContrib = typeContribOrig.resolveAutoNarrowing(pool, null);
                 }
             else
                 {
@@ -2001,7 +1998,7 @@ public abstract class TypeConstant
                 {
                 log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
                         typeExtends.getValueString(), this.getValueString());
-                typeExtends = typeExtends.resolveAutoNarrowing(getConstantPool(), null);
+                typeExtends = typeExtends.resolveAutoNarrowing(pool, null);
                 }
             listProcess.add(new Contribution(Composition.Extends,
                     pool.ensureAccessTypeConstant(typeExtends, Access.PROTECTED)));
@@ -2012,7 +2009,7 @@ public abstract class TypeConstant
                 {
                 log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
                         typeInto.getValueString(), this.getValueString());
-                typeInto = typeInto.resolveAutoNarrowing(getConstantPool(), null);
+                typeInto = typeInto.resolveAutoNarrowing(pool, null);
                 }
             if (!typeInto.isAccessSpecified() && typeInto.isSingleDefiningConstant())
                 {
@@ -2724,9 +2721,10 @@ public abstract class TypeConstant
         Map<Object, Set<Object>> mapNarrowedNids = null;
         for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
             {
-            MethodConstant idContrib     = entry.getKey();
-            MethodInfo     methodContrib = entry.getValue();
-            Object         nidContrib    = idContrib.resolveNestedIdentity(
+            MethodConstant    idContrib     = entry.getKey();
+            MethodInfo        methodContrib = entry.getValue();
+            SignatureConstant sigContrib    = methodContrib.getSignature();
+            Object            nidContrib    = idContrib.resolveNestedIdentity(
                     pool, methodContrib.isFunction() || methodContrib.isConstructor() ? null : this);
 
             // the method is not virtual if it is a function, if it is private, or if it is
@@ -2739,7 +2737,7 @@ public abstract class TypeConstant
                 // TODO we'll also have to check similar conditions below
 
                 // skip super constructors
-                if (fSelf || !methodContrib.getSignature().getName().equals("construct"))
+                if (fSelf || !sigContrib.getName().equals("construct"))
                     {
                     mapMethods.put((MethodConstant)
                             constId.appendNestedIdentity(pool, nidContrib), methodContrib);
@@ -2749,22 +2747,83 @@ public abstract class TypeConstant
 
             // look for a method of the same signature (using its nested identity); only
             // virtual methods are registered using their nested identities
-            MethodInfo methodBase   = mapVirtMethods.get(nidContrib);
             MethodInfo methodResult = methodContrib;
-            if (methodBase == null)
+
+            if (methodContrib.getTail().isOverride())
                 {
-                if (methodContrib.getTail().isOverride())
+                // the @Override tag gives us permission to look for a method with a
+                // different signature that can be narrowed to the signature of the
+                // contribution (because @Override means there MUST be a super method)
+
+                List<Object> listMatches = collectPotentialSuperMethods(
+                    nidContrib, sigContrib, mapVirtMethods);
+
+                if (listMatches.isEmpty())
                     {
-                    // the @Override tag gives us permission to look for a method with a
-                    // different signature that can be narrowed to the signature of the
-                    // contribution (because @Override means there MUST be a super method)
-                    Object nidBase = findRequiredSuper(
-                            nidContrib, methodContrib.getSignature(), mapVirtMethods, errs);
+                    log(errs, Severity.ERROR, VE_SUPER_MISSING,
+                            sigContrib.getValueString(), getValueString());
+                    }
+                else
+                    {
+                    Object     nidBase = null;
+                    MethodInfo methodBase;
+
+                    if (listMatches.size() == 1)
+                        {
+                        nidBase      = listMatches.get(0);
+                        methodBase   = mapVirtMethods.get(nidBase);
+                        methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
+                        }
+                    else
+                        {
+                        // now we need find a method that would be the unambiguously best choice;
+                        // collect the signatures into an array and a lookup map (sig->nid)
+                        int                            cMatches = listMatches.size();
+                        SignatureConstant[]            aSig     = new SignatureConstant[cMatches];
+                        Map<SignatureConstant, Object> mapNids  = new HashMap<>(cMatches);
+                        for (int i = 0; i < cMatches; i++)
+                            {
+                            Object            nid = listMatches.get(i);
+                            SignatureConstant sig = mapVirtMethods.get(nid).getSignature();
+
+                            aSig[i] = sig;
+                            mapNids.put(sig, nid);
+                            }
+
+                        SignatureConstant sigBest = selectBest(aSig);
+                        if (sigBest == null)
+                            {
+                            log(errs, Severity.ERROR, VE_SUPER_AMBIGUOUS, sigContrib.getValueString());
+                            }
+                        else
+                            {
+                            nidBase      = mapNids.get(sigBest);
+                            methodBase   = mapVirtMethods.get(nidBase);
+                            methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
+
+                            // there are multiple non-ambiguous "super" methods;
+                            for (int i = 0; i < cMatches; i++)
+                                {
+                                Object nid = listMatches.get(i);
+                                if (nid.equals(nidBase))
+                                    {
+                                    continue;
+                                    }
+
+                                MethodInfo method = mapVirtMethods.get(nid);
+                                if (method.isAbstract())
+                                    {
+                                    // we have an abstract method on the super that is covered
+                                    // by this method; let's reflect this fact
+                                    method = method.layerOn(methodContrib, fSelf, errs);
+                                    mapVirtMods.put(nid, method);
+                                    }
+                                }
+                            }
+                        }
+
                     if (nidBase != null)
                         {
-                        methodBase = mapVirtMethods.get(nidBase);
-                        assert methodBase != null;
-
                         // there exists a method that this method will narrow, so add this
                         // method to the set of methods that are narrowing the super method
                         if (mapNarrowedNids == null)
@@ -2780,15 +2839,23 @@ public abstract class TypeConstant
                         setNarrowing.add(nidContrib);
                         }
                     }
-                else if (fSelf)
-                    {
-                    // TODO: report existing overridden methods
-                    }
                 }
-
-            if (methodBase != null)
+            else
                 {
-                methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
+                // override is not specified
+                MethodInfo methodBase = mapVirtMethods.get(nidContrib);
+                if (methodBase != null)
+                    {
+                    if (fSelf && !methodBase.getIdentity().equals(methodContrib.getIdentity()))
+                        {
+                        log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
+                            getValueString(),
+                            methodBase.getIdentity(),
+                            methodContrib.getIdentity().getNamespace().getValueString()
+                            );
+                        }
+                    methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
+                    }
                 }
 
             mapVirtMods.put(nidContrib, methodResult);
@@ -2844,6 +2911,36 @@ public abstract class TypeConstant
         }
 
     /**
+     * Collect all methods that could be the "super" of the specified method signature.
+     *
+     * @param nidSub     the nested identity of the method that is searching for a super
+     * @param mapSupers  map of super methods to select from
+     *
+     * @return a list of all matching nested identities
+     */
+    protected List<Object> collectPotentialSuperMethods(
+            Object                  nidSub,
+            SignatureConstant       sigSub,
+            Map<Object, MethodInfo> mapSupers)
+
+        {
+        List<Object> listMatch = new ArrayList<>();
+        for (Entry<Object, MethodInfo> entry : mapSupers.entrySet())
+            {
+            Object nidCandidate = entry.getKey();
+            if (IdentityConstant.isNestedSibling(nidSub, nidCandidate))
+                {
+                SignatureConstant sigCandidate  = entry.getValue().getSignature(); // resolved
+                if (sigSub.isSubstitutableFor(sigCandidate, this))
+                    {
+                    listMatch.add(nidCandidate);
+                    }
+                }
+            }
+        return listMatch;
+        }
+
+    /**
      * Find the method that would be the "super" of the specified method signature. A super is
      * required to exist, and one super must be the unambiguously best choice, otherwise an error
      * will be logged.
@@ -2876,7 +2973,7 @@ public abstract class TypeConstant
             if (IdentityConstant.isNestedSibling(nidSub, nidCandidate))
                 {
                 SignatureConstant sigCandidate = entry.getValue().getSignature(); // resolved
-                if (sigSub.isSubstitutableFor(sigCandidate))
+                if (sigSub.isSubstitutableFor(sigCandidate, this))
                     {
                     if (listMatch == null)
                         {
@@ -2913,63 +3010,34 @@ public abstract class TypeConstant
             return nidBest;
             }
 
-        // REVIEW could this be updated to use selectBest() ?
-        // if multiple candidates exist, then one must be obviously better than the rest
-        ConstantPool      pool     = ConstantPool.getCurrentPool();
-        SignatureConstant sigBest  = null;
-        SignatureConstant sigBestR = null; // resolved
-        nextCandidate: for (int iCur = 0, cCandidates = listMatch.size();
-                iCur < cCandidates; ++iCur)
+        // collect the signatures and create an inverse lookup map
+        int                            cMatches = listMatch.size();
+        SignatureConstant[]            aSig     = new SignatureConstant[cMatches];
+        Map<SignatureConstant, Object> mapNids  = new HashMap<>(cMatches);
+        for (int i = 0; i < cMatches; i++)
             {
-            Object            nidCandidate  = listMatch.get(iCur);
-            SignatureConstant sigCandidate  = mapSupers.get(nidCandidate).getSignature();
-            SignatureConstant sigCandidateR = sigCandidate.resolveAutoNarrowing(pool, this);
-            if (nidBest == null) // that means that "best" is ambiguous thus far
-                {
-                // have to back-test all the ones in front of us to make sure that
-                for (int iPrev = 0; iPrev < iCur; ++iPrev)
-                    {
-                    SignatureConstant sigPrev  = mapSupers.get(listMatch.get(iPrev)).getSignature();
-                    SignatureConstant sigPrevR = sigPrev.resolveAutoNarrowing(pool, this);
-                    if (!sigPrev.isSubstitutableFor(sigCandidate) &&
-                        !sigPrevR.isSubstitutableFor(sigCandidateR))
-                        {
-                        // still ambiguous
-                        continue nextCandidate;
-                        }
-                    }
+            Object            nidMatch = listMatch.get(i);
+            SignatureConstant sig      = mapSupers.get(nidMatch).getSignature();
 
-                // so far, this candidate is the best
-                nidBest  = nidCandidate;
-                sigBest  = sigCandidate;
-                sigBestR = sigCandidate.resolveAutoNarrowing(pool, this);
-                }
-            else if (sigBest.isSubstitutableFor(sigCandidate) ||
-                    sigBestR.isSubstitutableFor(sigCandidateR))
-                {
-                // this assumes that "best" is a transitive concept, i.e. we're not going to back-
-                // test all of the other candidates
-                nidBest  = nidCandidate;
-                sigBest  = sigCandidate;
-                sigBestR = sigCandidateR;
-                }
-            else if (!sigCandidate.isSubstitutableFor(sigBest) &&
-                     !sigCandidateR.isSubstitutableFor(sigBestR))
-                {
-                nidBest = null;
-                }
+            assert sig != null;
+
+            aSig[i] = sig;
+            mapNids.put(sig, nidMatch);
             }
 
-        if (nidBest == null)
+        SignatureConstant sigBest = selectBest(aSig);
+        if (sigBest == null)
             {
             log(errs, Severity.ERROR, VE_SUPER_AMBIGUOUS, sigSub.getValueString());
             }
 
-        return nidBest;
+        // return the corresponding nid
+        return mapNids.get(sigBest);
         }
 
     /**
-     * Helper to select the "best" signature from an array of signatures.
+     * Helper to select the "best" signature from an array of signatures; in other words, choose
+     * the one that any other signature could "super" to.
      *
      * @param aSig  an array of signatures
      *
@@ -2988,7 +3056,7 @@ public abstract class TypeConstant
                 for (int iPrev = 0; iPrev < iCandidate; ++iPrev)
                     {
                     SignatureConstant sigPrev = aSig[iPrev];
-                    if (!sigPrev.isSubstitutableFor(sigCandidate))
+                    if (!sigPrev.isSubstitutableFor(sigCandidate, this))
                         {
                         // still ambiguous
                         continue nextCandidate;
@@ -2998,13 +3066,13 @@ public abstract class TypeConstant
                 // so far, this candidate is the best
                 sigBest = sigCandidate;
                 }
-            else if (sigBest.isSubstitutableFor(sigCandidate))
+            else if (sigBest.isSubstitutableFor(sigCandidate, this))
                 {
                 // this assumes that "best" is a transitive concept, i.e. we're not going to back-
                 // test all of the other candidates
                 sigBest = sigCandidate;
                 }
-            else if (!sigCandidate.isSubstitutableFor(sigBest))
+            else if (!sigCandidate.isSubstitutableFor(sigBest, this))
                 {
                 sigBest = null;
                 }
@@ -3912,7 +3980,7 @@ public abstract class TypeConstant
             case ChildClass:
                 {
                 PseudoConstant idRight = (PseudoConstant) constIdRight;
-                if (constIdLeft != null && constIdLeft.getFormat() == format
+                if (constIdLeft.getFormat() == format
                         && idRight.isCongruentWith((PseudoConstant) constIdLeft))
                     {
                     // without any additional context, it should be assignable in some direction
@@ -4766,7 +4834,7 @@ public abstract class TypeConstant
     /**
      * Used during "potential call chain" creation.
      */
-    class Origin
+    public class Origin
         {
         public Origin(boolean fAnchored)
             {

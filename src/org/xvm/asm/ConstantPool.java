@@ -3098,7 +3098,14 @@ public class ConstantPool
             Collections.EMPTY_LIST, new ListMap<>(), new ListMap<>(),
             Collections.EMPTY_MAP, Collections.EMPTY_MAP,
             Collections.EMPTY_MAP, Collections.EMPTY_MAP,
-            Progress.Building);
+            Progress.Building)
+        {
+        @Override
+        public String toString()
+            {
+            return "Placeholder";
+            }
+        };
 
     /**
      * A special "chicken and egg" list of TypeConstants that need to have their TypeInfos rebuilt.

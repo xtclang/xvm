@@ -212,7 +212,7 @@ class Array<ElementType>
         }
 
     @Override
-    ElementType[] to<ElementType[]>()
+    Array<ElementType> to<Array<ElementType>>()
         {
         return this;
         }

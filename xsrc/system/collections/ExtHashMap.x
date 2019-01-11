@@ -8,8 +8,6 @@
 class ExtHashMap<KeyType, ValueType>
         implements Map<KeyType, ValueType>
     {
-    typedef ExtEntry<KeyType, ValueType> HashEntry;
-
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -89,7 +87,7 @@ class ExtHashMap<KeyType, ValueType>
         }
 
     @Override
-    ExtHashMap<KeyType, ValueType> put(KeyType key, ValueType value)
+    ExtHashMap put(KeyType key, ValueType value)
         {
         Int        keyhash  = hasher.hashOf(key);
         Int        bucketId = keyhash % buckets.size;
@@ -111,7 +109,7 @@ class ExtHashMap<KeyType, ValueType>
         }
 
     @Override
-    Map<KeyType, ValueType> putAll(Map<KeyType, ValueType> that)
+    ExtHashMap putAll(Map that)
         {
         // check the capacity up front (to avoid multiple resizes); the worst case is that we end
         // up a bit bigger than we want
@@ -119,7 +117,7 @@ class ExtHashMap<KeyType, ValueType>
 
         HashEntry?[] buckets     = this.buckets;
         Int          bucketCount = buckets.size;
-        NextPut: for (Entry<KeyType, ValueType> entry : that.entries)
+        NextPut: for (Entry entry : that.entries)
             {
             KeyType    key       = entry.key;
             Int        keyhash   = hasher.hashOf(key);
@@ -144,7 +142,7 @@ class ExtHashMap<KeyType, ValueType>
         }
 
     @Override
-    ExtHashMap<KeyType, ValueType> remove(KeyType key)
+    ExtHashMap remove(KeyType key)
         {
         Int        keyhash   = hasher.hashOf(key);
         Int        bucketId  = keyhash % buckets.size;
@@ -176,7 +174,7 @@ class ExtHashMap<KeyType, ValueType>
         }
 
     @Override
-    ExtHashMap<KeyType, ValueType> clear()
+    ExtHashMap clear()
         {
         Int entryCount = size;
         if (entryCount > 0)
@@ -196,17 +194,17 @@ class ExtHashMap<KeyType, ValueType>
         }
 
     @Override
-    public/private HashEntrySet<KeyType, ValueType> entries = new HashEntrySet();
+    public/private HashEntrySet entries = new HashEntrySet();
 
     @Override
     @Lazy public/private Collection<ValueType> values.calc()
         {
-        return new EntryBasedValuesCollection<KeyType, ValueType>();
+        return new EntryBasedValuesCollection();
         }
 
     @Override
     <ResultType> ResultType process(KeyType key,
-            function ResultType (ProcessableEntry<KeyType, ValueType>) compute)
+            function ResultType (ProcessableEntry) compute)
         {
         return compute(new ProcessableHashEntry(key));
         }
@@ -217,7 +215,7 @@ class ExtHashMap<KeyType, ValueType>
      * A representation of all of the HashEntry objects in the Map.
      */
     class HashEntrySet
-            extends KeyBasedEntrySet<KeyType, ValueType>
+            extends KeyBasedEntrySet
             implements Set<HashEntry>
         {
         @Override
@@ -230,6 +228,7 @@ class ExtHashMap<KeyType, ValueType>
                 HashEntry?   nextEntry   = null;
                 Int          addSnapshot = ExtHashMap.this.addCount;
 
+                @Override
                 conditional HashEntry next()
                     {
                     if (addSnapshot != ExtHashMap.this.addCount)
@@ -259,7 +258,7 @@ class ExtHashMap<KeyType, ValueType>
             }
 
         // @Override
-        HashEntrySet<KeyType, ValueType> remove(HashEntry entry)
+        HashEntrySet remove(HashEntry entry)
             {
             HashEntry?[] buckets   = ExtHashMap.this.buckets;
             Int          keyhash   = entry.keyhash;
@@ -302,7 +301,7 @@ class ExtHashMap<KeyType, ValueType>
             }
 
         // @Override
-        conditional HashEntrySet<KeyType, ValueType> removeIf(function Boolean (HashEntry) shouldRemove)
+        conditional HashEntrySet removeIf(function Boolean (HashEntry) shouldRemove)
             {
             Boolean      modified    = false;
             HashEntry?[] buckets     = ExtHashMap.this.buckets;
@@ -348,7 +347,7 @@ class ExtHashMap<KeyType, ValueType>
             }
 
         @Override
-        HashEntrySet<KeyType, ValueType> clone()
+        HashEntrySet clone()
             {
             return this;
             }
@@ -359,10 +358,10 @@ class ExtHashMap<KeyType, ValueType>
     /**
      * This is the Entry implementation used to store the ExtHashMap's keys and values.
      */
-    protected static class ExtEntry
-            implements Entry<KeyType, ValueType>
+    protected static class HashEntry
+            implements Entry
         {
-        construct(KeyType key, Int keyhash, ValueType value, ExtEntry<KeyType, ValueType>? next = null)
+        construct(KeyType key, Int keyhash, ValueType value, HashEntry? next = null)
             {
             this.key     = key;
             this.keyhash = keyhash;
@@ -382,9 +381,9 @@ class ExtHashMap<KeyType, ValueType>
         public ValueType value;
 
         /**
-         * HashedEntry objects form a linked list within a hash bucket.
+         * HashEntry objects form a linked list within a hash bucket.
          */
-        private ExtEntry<KeyType, ValueType>? next;
+        private HashEntry? next;
         }
 
     /**
@@ -392,7 +391,7 @@ class ExtHashMap<KeyType, ValueType>
      * to the actual map (i.e. it is not a real HashEntry), but it reifies to a real HashEntry.
      */
     protected class ProcessableHashEntry
-            extends KeyBasedEntry<KeyType, ValueType>
+            extends KeyBasedEntry
         {
         construct(KeyType key)
             {
