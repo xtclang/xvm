@@ -7,7 +7,6 @@ import java.io.IOException;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpMove;
-import org.xvm.asm.Register;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -25,11 +24,11 @@ public class Move
      * Construct a MOV op for the passed arguments.
      *
      * @param argFrom  the Argument to move from
-     * @param regTo  the Register to move to
+     * @param argTo    the Argument to move to
      */
-    public Move(Argument argFrom, Register regTo)
+    public Move(Argument argFrom, Argument argTo)
         {
-        super(argFrom, regTo);
+        super(argFrom, argTo);
         }
 
     /**
@@ -60,8 +59,8 @@ public class Move
 
             if (!frame.isAssigned(nFrom))
                 {
-                // Move is the only op that allows an unassigned argument, if which case
-                // it's a no-op
+                // Move is the only op that allows an unassigned argument,
+                // in which case it's a no-op
                 return iPC + 1;
                 }
 

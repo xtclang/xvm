@@ -8,7 +8,6 @@ import java.io.IOException;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
-import org.xvm.asm.Register;
 import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
@@ -32,14 +31,14 @@ public class MoveThis
      * Construct a MOV_THIS op for the passed arguments.
      *
      * @param cSteps   the count of this-to-outer-this steps (0=this, 1=ImmediatelyOuter.this, etc.)
-     * @param regDest  the destination Register
+     * @param argDest  the destination Argument
      */
-    public MoveThis(int cSteps, Register regDest)
+    public MoveThis(int cSteps, Argument argDest)
         {
         assert cSteps >= 0;
 
         m_cSteps = cSteps;
-        m_regTo  = regDest;
+        m_argTo = argDest;
         }
 
     /**
@@ -59,9 +58,9 @@ public class MoveThis
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        if (m_regTo != null)
+        if (m_argTo != null)
             {
-            m_nToValue = encodeArgument(m_regTo, registry);
+            m_nToValue = encodeArgument(m_argTo, registry);
             }
 
         out.writeByte(getOpCode());
@@ -78,7 +77,13 @@ public class MoveThis
     @Override
     public void simulate(Scope scope)
         {
-        checkNextRegister(scope, m_regTo);
+        checkNextRegister(scope, m_argTo);
+        }
+
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        m_argTo = registerArgument(m_argTo, registry);
         }
 
     @Override
@@ -111,11 +116,11 @@ public class MoveThis
         {
         return super.toString()
                 + " #" + m_cSteps
-                + ", " + Argument.toIdString(m_regTo, m_nToValue);
+                + ", " + Argument.toIdString(m_argTo, m_nToValue);
         }
 
     protected int m_cSteps;
     protected int m_nToValue;
 
-    private Register m_regTo;
+    private Argument m_argTo;
     }

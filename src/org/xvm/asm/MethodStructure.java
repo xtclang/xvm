@@ -1670,10 +1670,6 @@ public class MethodStructure
                     {
                     return ((OpVar) op).getRegister();
                     }
-                if (op instanceof OpMove)
-                    {
-                    return ((OpMove) op).getRegister();
-                    }
                 // TODO else some op that could have gen'd a new register
                 }
             throw new IllegalStateException();
