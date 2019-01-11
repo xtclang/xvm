@@ -130,6 +130,14 @@ public class ClassStructure
         }
 
     /**
+     * @return true iff this class is an inner class
+     */
+    public boolean isInnerClass()
+        {
+        return !isTopLevel();
+        }
+
+    /**
      * Note: A virtual child class is a child class that is instantiated using the "NEWC_*" op codes.
      *
      * @return true iff this class is a virtual child class
@@ -164,6 +172,66 @@ public class ClassStructure
 
             default:
                 throw new IllegalStateException();
+            }
+        }
+
+    /**
+     * @return true iff this class is an anonymous inner class
+     */
+    public boolean isAnonInnerClass()
+        {
+        return isInnerClass() && isSynthetic()
+                && getIdentityConstant().getParentConstant() instanceof MethodConstant;
+        }
+
+    /**
+     * @return true iff this is an inner class with a reference to an "outer this"
+     */
+    public boolean hasOuter()
+        {
+        // a class that is static can not have an outer
+        // a class that is NOT an inner class can not have an outer (i.e. MUST be an inner class)
+        if (isStatic() || !isInnerClass())
+            {
+            return false;
+            }
+
+        // if this class is nested directly under the outer class, then it does have an outer, but
+        // if there are properties and/or methods interposed between the outer class and this class,
+        // then each of those interposed components MUST be non-static in order for this class to
+        // have an outer reference
+        Component parent = getParent();
+        while (true)
+            {
+            switch (parent.getFormat())
+                {
+                case MULTIMETHOD:
+                    // ignore multi-methods; only properties and methods matter in this
+                    // determination
+                    break;
+
+                case METHOD:
+                case PROPERTY:
+                    if (parent.isStatic())
+                        {
+                        return false;
+                        }
+                    break;
+
+                case INTERFACE:
+                case CLASS:
+                case CONST:
+                case SERVICE:
+                case ENUM:
+                case ENUMVALUE:
+                case MIXIN:
+                    return true;
+
+                default:
+                    throw new IllegalStateException(parent.getIdentityConstant() + " format=" + parent.getFormat());
+                }
+
+            parent = parent.getParent();
             }
         }
 

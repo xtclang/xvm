@@ -805,6 +805,17 @@ public abstract class TypeConstant
         }
 
     /**
+     * For an inner class that has a reference to its outer class, calculate the type of that
+     * reference to that outer class.
+     *
+     * @return the type of the outer class, or null
+     */
+    public TypeConstant getOuterType()
+        {
+        return null;
+        }
+
+    /**
      * Return an argument for this type constant. For all concrete types, this simply returns a
      * type of this type. The only TypeConstant that treats it differently is a formal type
      * parameter, which would return a corresponding register
