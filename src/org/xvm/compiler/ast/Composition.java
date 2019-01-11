@@ -202,6 +202,7 @@ public abstract class Composition
             {
             this(null, new Token(annotation.getStartPosition(), annotation.getStartPosition(),
                     Token.Id.INCORPORATES), annotation.type, annotation.args, null);
+            fAnnotation = true;
             }
 
         /**
@@ -211,6 +212,14 @@ public abstract class Composition
         public boolean isConditional()
             {
             return constraints != null;
+            }
+
+        /**
+         * @return true iff this clause represents a class annotation
+         */
+        public boolean isAnnotation()
+            {
+            return fAnnotation;
             }
 
         /**
@@ -304,6 +313,8 @@ public abstract class Composition
 
         protected List<Expression> args;
         protected List<Parameter>  constraints;
+
+        private boolean fAnnotation;
 
         private static final Field[] CHILD_FIELDS = fieldsForNames(Incorporates.class,
                 "condition", "type", "args", "constraints");
