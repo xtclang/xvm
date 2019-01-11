@@ -363,34 +363,58 @@ public class ParameterizedTypeConstant
             }
         }
 
-
     @Override
-    public TypeConstant inferAutoNarrowing(ConstantPool pool, IdentityConstant constThisClass)
+    public boolean isNarrowedFrom(TypeConstant typeSuper, TypeConstant typeCtx)
         {
-        TypeConstant constOriginal = m_constType;
-        TypeConstant constInferred = constOriginal.inferAutoNarrowing(pool, constThisClass);
-        boolean      fDiff         = constOriginal != constInferred;
+        assert typeSuper.isAutoNarrowing();
 
-        TypeConstant[] aconstOriginal = m_atypeParams;
-        TypeConstant[] aconstInferred = aconstOriginal;
-        for (int i = 0, c = aconstOriginal.length; i < c; ++i)
+        // there is one exception from the "congruent topology" requirement:
+        //  this  = immutable Tuple<ElementTypes>
+        //  super = this:FixedSizeAble
+        if (typeSuper instanceof TerminalTypeConstant)
             {
-            TypeConstant constParamOriginal = aconstOriginal[i];
-            TypeConstant constParamInferred = constParamOriginal.inferAutoNarrowing(pool, constThisClass);
-            if (constParamOriginal != constParamInferred)
+            return m_constType.isNarrowedFrom(typeSuper, typeCtx);
+            }
+
+        if (!(typeSuper instanceof ParameterizedTypeConstant))
+            {
+            return false;
+            }
+
+        ParameterizedTypeConstant that = (ParameterizedTypeConstant) typeSuper;
+
+        TypeConstant constThis = this.m_constType;
+        TypeConstant constThat = that.m_constType;
+
+        if (constThat.isAutoNarrowing())
+            {
+            // the base is auto-narrowing; don't need to check the type parameters
+            return constThis.isNarrowedFrom(constThat, typeCtx);
+            }
+
+        if (!constThis.isA(constThat))
+            {
+            return false;
+            }
+
+        TypeConstant[] aconstThis = this.m_atypeParams;
+        TypeConstant[] aconstThat = that.m_atypeParams;
+        for (int i = 0, c = aconstThis.length; i < c; ++i)
+            {
+            constThis = aconstThis[i];
+            constThat = aconstThat[i];
+
+            if (constThat.isAutoNarrowing() && !constThis.isNarrowedFrom(constThat, typeCtx))
                 {
-                if (aconstInferred == aconstOriginal)
-                    {
-                    aconstInferred = aconstOriginal.clone();
-                    }
-                aconstInferred[i] = constParamInferred;
-                fDiff = true;
+                return false;
+                }
+            else if (!constThis.isA(constThat))
+                {
+                return false;
                 }
             }
 
-        return fDiff
-            ? pool.ensureParameterizedTypeConstant(constInferred, aconstInferred)
-            : this;
+        return true;
         }
 
     @Override
@@ -444,6 +468,19 @@ public class ParameterizedTypeConstant
     protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
         return pool.ensureParameterizedTypeConstant(type, m_atypeParams);
+        }
+
+    @Override
+    public TypeConstant getOuterType()
+        {
+        TypeConstant typeOuter = getUnderlyingType().getOuterType();
+        if (typeOuter == null)
+            {
+            return null;
+            }
+
+        // TODO GG
+        return getConstantPool().ensureParameterizedTypeConstant(typeOuter, getParamTypesArray());
         }
 
     @Override

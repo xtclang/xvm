@@ -71,7 +71,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * compile-time type of the returned tuple is known; otherwise, an explicit cast to a
      * compile-time type is required to regain the compile-time type.
      */
-    @Op Tuple!<> add(Tuple that);
+    @Op Tuple!<> add(Tuple! that);
 
     /**
      * Modify the value of the specified element in the tuple, returning the resultant tuple.
@@ -83,7 +83,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * tuple is returned; otherwise, a new tuple with the change is returned, and this tuple is left
      * unchanged.
      */
-    Tuple<ElementTypes> replace(Int index, Object value);
+    Tuple! replace(Int index, Object value);
 
     /**
      * Obtain a portion of the tuple as a tuple.

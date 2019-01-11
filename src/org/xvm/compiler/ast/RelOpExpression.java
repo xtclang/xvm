@@ -641,11 +641,11 @@ public class RelOpExpression
                         SignatureConstant sigMethod = method.getSignature();
                         if (!sigOp.equals(sigMethod))
                             {
-                            if (sigMethod.isSubstitutableFor(sigOp))
+                            if (sigMethod.isSubstitutableFor(sigOp, type1))
                                 {
                                 continue;
                                 }
-                            if (sigOp.isSubstitutableFor(sigMethod))
+                            if (sigOp.isSubstitutableFor(sigMethod, type1))
                                 {
                                 idOp = method;
                                 continue;

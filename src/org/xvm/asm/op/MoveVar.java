@@ -25,11 +25,11 @@ public class MoveVar
      * Construct a MOV_VAR op for the passed arguments.
      *
      * @param regSrc   the source Register
-     * @param regDest  the destination Register
+     * @param argDest  the destination Argument
      */
-    public MoveVar(Register regSrc, Register regDest)
+    public MoveVar(Register regSrc, Argument argDest)
         {
-        super(regSrc, regDest);
+        super(regSrc, argDest);
         }
 
     /**

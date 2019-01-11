@@ -25,6 +25,7 @@ service Container
             {
             collections.Set<String> moduleNames = Set:{moduleName};
 
+            @Override
             immutable Byte[] getModule(String name)
                 {
                 assert:always(name == moduleName);

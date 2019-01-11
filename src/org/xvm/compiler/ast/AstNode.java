@@ -1227,8 +1227,8 @@ public abstract class AstNode
                 }
             else
                 {
-                boolean fOldBetter = sigMethod.isSubstitutableFor(sigBest);
-                boolean fNewBetter = sigBest.isSubstitutableFor(sigMethod);
+                boolean fOldBetter = sigMethod.isSubstitutableFor(sigBest, typeTarget);
+                boolean fNewBetter = sigBest.isSubstitutableFor(sigMethod, typeTarget);
                 if (fOldBetter ^ fNewBetter)
                     {
                     if (fNewBetter)

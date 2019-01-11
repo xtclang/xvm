@@ -98,8 +98,9 @@
  VAR_MN     TYPE, STRING, #entries:(rvalue, rvalue) ; initialized ("N"=) named ("M"=) Map variable
 
 // "move" operations
-// - does NOT support "local property" mode;
-// - for MOV and REF the lvalue-dest can be a next unallocated register
+// - rvalues do NOT support "local property" mode;
+// - the lvalue can be a register or a local-property indicator (PROPERTY)
+// - lvalue-dest can be a next unallocated register
 // - for MOV the source could be unassigned
 +MOV        rvalue-src, lvalue-dest                 ; copy source to destination ("protection" proxy may be generated)
 +MOV_VAR    rvalue-src, lvalue-dest                 ; move ("R"=) Var-to-source to destination

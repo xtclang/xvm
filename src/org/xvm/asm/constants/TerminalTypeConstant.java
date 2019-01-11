@@ -471,13 +471,14 @@ public class TerminalTypeConstant
             {
             case ThisClass:
                 {
-                IdentityConstant idClass = ((ThisClassConstant) constant).getDeclarationLevelClass();
-                if (typeTarget == null || !typeTarget.isSingleUnderlyingClass(true))
+                IdentityConstant idClass  = ((ThisClassConstant) constant).getDeclarationLevelClass();
+                TypeConstant     typeDecl = idClass.getType();
+                if (typeTarget == null
+                        || !typeTarget.isSingleUnderlyingClass(true)
+                        || !typeTarget.isA(typeDecl))
                     {
-                    return idClass.getType();
+                    return typeDecl;
                     }
-
-                assert typeTarget.isA(idClass.getType());
 
                 // strip the immutability and access modifiers
                 while (typeTarget instanceof ImmutableTypeConstant ||
@@ -509,27 +510,42 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public TypeConstant inferAutoNarrowing(ConstantPool pool, IdentityConstant constThisClass)
+    public boolean isNarrowedFrom(TypeConstant typeSuper, TypeConstant typeCtx)
         {
+        assert typeSuper.isAutoNarrowing();
+
+        if (!(typeSuper instanceof TerminalTypeConstant))
+            {
+            return false;
+            }
+
         if (!isSingleDefiningConstant())
             {
             // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return constId.getReferredToType().inferAutoNarrowing(pool, constThisClass);
+            return false;
             }
 
-        Constant constId = getDefiningConstant();
-        if (constId.getFormat() == Format.Class)
+        Constant constSuper = typeSuper.getDefiningConstant();
+        if (constSuper instanceof PseudoConstant)
             {
-            ClassConstant constClass = (ClassConstant) constId;
-            if (constThisClass.equals(constClass))
-                {
-                return pool.ensureThisTypeConstant(constClass, null);
-                }
+            // this type represents a type in the D rows below, the super type represents the B rows
+            // and the context type has the identity of D;
+            // E extends D extends C extends B; X may extend B, but is not "related" to D
+            //
+            // valid scenarios
+            // -----------  -------  --------  --------  ---------  -------  --------
+            // Derived (D)  D        this:D     D        this:D     C        E
+            // Base (B)     B        this:B     this:B   B          this:B   this:B
 
-            // TODO: parents & children
+            // invalid scenarios
+            // ---------    --------  --------
+            // Derived (D)  X          X
+            // Base (B)     this:B     B
+
+            TypeConstant typeSuperR = ((PseudoConstant) constSuper).resolveClass(null).getType();
+            return this.isA(typeSuperR) && (this.isA(typeCtx) || typeCtx.isA(this));
             }
-        return this;
+        return false;
         }
 
     @Override
@@ -617,6 +633,57 @@ public class TerminalTypeConstant
 
         return idClz.equals(getConstantPool().clzTuple()) ||
                 ((ClassStructure) idClz.getComponent()).isTuple();
+        }
+
+    @Override
+    public TypeConstant getOuterType()
+        {
+        if (!isSingleDefiningConstant())
+            {
+            return null;
+            }
+
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Module:
+            case Package:
+            case NativeClass:
+            case Property:
+            case TypeParameter:
+                return null;
+
+            case Class:
+                {
+                ClassConstant outer = ((ClassConstant) constant).getOuterClass();
+                return outer == null
+                        ? null
+                        : getConstantPool().ensureTerminalTypeConstant(outer);
+                }
+
+            case ThisClass:
+            case ParentClass:
+                {
+                IdentityConstant idChild = ((PseudoConstant) constant).getDeclarationLevelClass();
+                if (idChild instanceof ClassConstant)
+                    {
+                    ClassConstant outer = ((ClassConstant) idChild).getOuterClass();
+                    if (outer != null)
+                        {
+                        ConstantPool pool = getConstantPool();
+                        return pool.ensureTerminalTypeConstant(
+                                pool.ensureParentClassConstant((PseudoConstant) constant));
+                        }
+                    }
+                return null;
+                }
+
+            case ChildClass:
+                return getConstantPool().ensureTerminalTypeConstant(((ChildClassConstant) constant).getParent());
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            }
         }
 
     @Override

@@ -167,7 +167,7 @@ public class ElseExpression
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
-        if (isConstant() || !LVal.isNormalVariableOrStack())
+        if (isConstant())
             {
             super.generateAssignment(ctx, code, LVal, errs);
             return;
