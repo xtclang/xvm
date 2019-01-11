@@ -322,17 +322,39 @@ public class TypeCompositionStatement
             }
 
         // create the structure for this module, package, or class (etc.)
-        String              sName     = (String) name.getValue();
-        Access              access    = getDefaultAccess();
-        Component           container = parent == null ? null : parent.getComponent();
-        ConstantPool        pool      = pool();
-        ConditionalConstant constCond = condition == null ? null : condition.toConditionalConstant();
-        if (container instanceof ModuleStructure && sName.equals(X_PKG_IMPORT))
+        String              sName        = (String) name.getValue();
+        Access              access       = getDefaultAccess();
+        Component           container    = parent == null ? null : parent.getComponent();
+        ClassStructure      containerClz = null;
+        ConstantPool        pool         = pool();
+        ConditionalConstant constCond    = condition == null ? null : condition.toConditionalConstant();
+        if (container != null)
             {
-            // it is illegal to take the "Ecstasy" namespace, because doing so would effectively
-            // hide the Ecstasy core module
-            name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_COLLISION, X_PKG_IMPORT);
+            if (container instanceof ModuleStructure && sName.equals(X_PKG_IMPORT))
+                {
+                // it is illegal to take the "Ecstasy" namespace, because doing so would effectively
+                // hide the Ecstasy core module
+                name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_COLLISION, X_PKG_IMPORT);
+                }
+
+            Component containerTmp = container;
+            while (true)
+                {
+                if (containerTmp instanceof ClassStructure)
+                    {
+                    containerClz = (ClassStructure) containerTmp;
+                    break;
+                    }
+
+                containerTmp = containerTmp.getParent();
+                }
             }
+
+        // TODO containerTmp of not-module/-package indicates virtual inner (container is not a method) or inner (is method)
+        // TODO @Override on child implies that parent has same-name child, so auto-add "extends" (error if already there)
+        // TODO no @Override on child implies no same-name child on parent super (error if there), default extends to Object
+        // TODO child with extends clause cannot extend virtual child
+        // TODO rules for class child vs. interface child vs. mixin child
 
         ClassStructure component = null;
         switch (category.getId())
@@ -732,7 +754,9 @@ public class TypeCompositionStatement
                 }
             for (int i = annotations.size()-1; i >= 0; --i)
                 {
-                compositions.add(new Composition.Incorporates(annotations.get(i)));
+                Annotation annotation = annotations.get(i);
+                annotation.ensureAnnotation(pool);
+                compositions.add(new Composition.Incorporates(annotation));
                 }
             }
 

@@ -9,7 +9,7 @@ module TestNesting.xqiz.it
         testSimple();
         }
 
-    class BOuter
+    class BOuter extends Something
         {
         void bar()
             {
