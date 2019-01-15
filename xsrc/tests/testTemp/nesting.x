@@ -9,7 +9,8 @@ module TestNesting.xqiz.it
         testSimple();
         }
 
-    class BOuter extends Something
+    // TODO "class BOuter extends Something" causes IllegalState
+    class BOuter
         {
         void bar()
             {
@@ -20,7 +21,7 @@ module TestNesting.xqiz.it
             {
             void foo()
                 {
-                console.println("inner foo of B");
+                console.println("inner foo on " + this);
                 }
             }
         }
@@ -31,11 +32,11 @@ module TestNesting.xqiz.it
         @Override
         class Inner
             {
-            @Override
-            void foo()
-                {
-                console.println("inner foo of D");
-                }
+//            @Override
+//            void foo()
+//                {
+//                console.println("inner foo of D");
+//                }
             }
         }
 

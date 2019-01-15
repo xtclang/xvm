@@ -336,17 +336,21 @@ public class TypeCompositionStatement
                 // hide the Ecstasy core module
                 name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_COLLISION, X_PKG_IMPORT);
                 }
-
-            Component containerTmp = container;
-            while (true)
+            else
                 {
-                if (containerTmp instanceof ClassStructure)
+// TODO use container.id to find the parent and what class contains this one (and if it's a module or package)
+// TODO if this is a not an enum/enumvalue/module/package and if the container class is not a module or package, then this is an inner class
+                Component containerTmp = container;
+                while (true)
                     {
-                    containerClz = (ClassStructure) containerTmp;
-                    break;
-                    }
+                    if (containerTmp instanceof ClassStructure)
+                        {
+                        containerClz = (ClassStructure) containerTmp;
+                        break;
+                        }
 
-                containerTmp = containerTmp.getParent();
+                    containerTmp = containerTmp.getParent();
+                    }
                 }
             }
 
