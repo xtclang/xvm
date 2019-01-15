@@ -425,7 +425,7 @@ public class TypeInfo
 
     /**
      * @return the ClassStructure, or null if none is available; a non-abstract type will always
-     *         have a ClassStructure
+     *         have a ClassStructure (unless it's a virtual child "projection")
      */
     public ClassStructure getClassStructure()
         {
@@ -682,8 +682,15 @@ public class TypeInfo
      */
     public TypeConstant getChildType(String sName)
         {
-        // TODO
-        return null;
+        ClassStructure struct = m_struct;
+        if (struct == null)
+            {
+            // TODO: if this info represents a virtual child, there must be a way to get the parent
+            return null;
+            }
+
+        // for now assume that the children are never generic
+        return struct.getVirtualChild(sName).getFormalType().resolveGenerics(pool(), m_type);
         }
 
     /**

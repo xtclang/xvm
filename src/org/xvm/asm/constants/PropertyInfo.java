@@ -676,6 +676,10 @@ public class PropertyInfo
                 return propDefault.getInitialValue();
                 }
             }
+        else if (type.isNullable())
+            {
+            return pool().valNull();
+            }
 
         return null;
         }
