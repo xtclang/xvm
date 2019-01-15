@@ -34,6 +34,9 @@ import org.xvm.asm.op.Construct_N;
 import org.xvm.asm.op.L_Set;
 import org.xvm.asm.op.MoveRef;
 import org.xvm.asm.op.MoveVar;
+import org.xvm.asm.op.NewCG_0;
+import org.xvm.asm.op.NewCG_1;
+import org.xvm.asm.op.NewCG_N;
 import org.xvm.asm.op.NewC_0;
 import org.xvm.asm.op.NewC_1;
 import org.xvm.asm.op.NewC_N;
@@ -45,7 +48,6 @@ import org.xvm.asm.op.New_1;
 import org.xvm.asm.op.New_N;
 import org.xvm.asm.op.Return_0;
 
-import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Constants;
 import org.xvm.compiler.Token;
@@ -267,14 +269,67 @@ public class NewExpression
         if (fAnon)
             {
             ensureInnerClass(false, errs);
+            assert left == null;
             }
 
-        // validate the expression that occurs _before_ the new, e.g. x in "x.new Y()", which
-        // specifies an "outer this" that provides support for virtual construction
-        Expression   exprLeftOld = this.left;
-        TypeConstant typeLeft    = null;
-        if (exprLeftOld != null)
+        ConstantPool pool       = pool();
+        TypeConstant typeTarget = null;
+        TypeInfo     infoSuper  = null;
+        if (left == null)
             {
+            // we intentionally don't pass the required type to the TypeExpression; instead, let's take
+            // whatever type it produces and later validate the resulting type against the required type
+            TypeExpression exprTypeOld = this.type;
+            TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx, null, errs);
+            TypeConstant   typeSuper   = null;
+            if (exprTypeNew == null)
+                {
+                fValid = false;
+                }
+            else
+                {
+                this.type = exprTypeNew;
+
+                typeTarget = exprTypeNew.ensureTypeConstant().resolveAutoNarrowing(pool, null);
+                if (typeRequired != null)
+                    {
+                    TypeConstant typeInferred = inferTypeFromRequired(typeTarget, typeRequired);
+                    if (typeInferred != null)
+                        {
+                        typeTarget = typeInferred;
+                        }
+                    }
+
+                boolean fNestMate = isNestMate(ctx, typeTarget);
+                if (fAnon)
+                    {
+                    // since we are going to be extending the specified type, increase visibility from
+                    // the public default to protected, which we get when a class "extends" another;
+                    // the real target, though, is not the specified type being "new'd", but rather the
+                    // anonymous inner class
+                    typeSuper  = pool.ensureAccessTypeConstant(typeTarget, fNestMate ? Access.PRIVATE : Access.PROTECTED);
+                    infoSuper  = typeSuper.ensureTypeInfo(errs);
+                    typeTarget = getAnonymousInnerClassType();
+                    // REVIEW GG - causes warning: "Suspicious assignment from: testSimple(?)#Object:1 to: testSimple(?)#Object:1:private"
+                    // typeTarget = pool.ensureAccessTypeConstant(getAnonymousInnerClassType(), Access.PRIVATE);
+                    }
+                else if (fNestMate)
+                    {
+                    ClassStructure clzTarget = (ClassStructure)
+                        typeTarget.getSingleUnderlyingClass(false).getComponent();
+                    m_fVirtualChild = clzTarget.isVirtualChild();
+
+                    // since we are new-ing a class that is a nest-mate of the current class, we can
+                    // increase visibility from the public default all the way to private
+                    typeTarget = pool.ensureAccessTypeConstant(typeTarget, Access.PRIVATE);
+                    }
+                }
+            }
+        else // left != null
+            {
+            // validate the expression that occurs _before_ the new, e.g. x in "x.new Y()", which
+            // specifies an "outer this" that provides support for virtual construction
+            Expression exprLeftOld = this.left;
             Expression exprLeftNew = exprLeftOld.validate(ctx, null, errs);
             if (exprLeftNew == null)
                 {
@@ -283,61 +338,38 @@ public class NewExpression
             else
                 {
                 this.left = exprLeftNew;
-                typeLeft  = exprLeftNew.getType();
-                }
-            }
 
-        // we intentionally don't pass the required type to the TypeExpression; instead, let's take
-        // whatever type it produces and later validate the resulting type against the required type
-        TypeExpression exprTypeOld = this.type;
-        TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx, null, errs);
-        TypeConstant   typeTarget  = null;
-        TypeInfo       infoTarget  = null;
-        TypeConstant   typeSuper   = null;
-        TypeInfo       infoSuper   = null;
-        ConstantPool   pool        = pool();
-        if (exprTypeNew == null)
-            {
-            fValid = false;
-            }
-        else
-            {
-            this.type = exprTypeNew;
+                TypeConstant typeLeft = exprLeftNew.getType();
+                TypeInfo     infoLeft = typeLeft.ensureTypeInfo(errs);
 
-            typeTarget = exprTypeNew.ensureTypeConstant();
-            if (typeRequired != null)
-                {
-                TypeConstant typeInferred = inferTypeFromRequired(typeTarget, typeRequired);
-                if (typeInferred != null)
+                TypeExpression exprType = this.type;
+                if (exprType instanceof NamedTypeExpression)
                     {
-                    typeTarget = typeInferred;
+                    String sChild = ((NamedTypeExpression) exprType).getName();
+
+                    typeTarget = infoLeft.getChildType(sChild);
+                    if (typeTarget == null)
+                        {
+                        log(errs, Severity.ERROR, Constants.VE_NEW_UNRELATED_PARENT,
+                                sChild, typeLeft.getValueString());
+                        fValid = false;
+                        }
+                    else
+                        {
+                        m_fVirtualChild = true;
+                        }
+                    }
+                else
+                    {
+                    // TODO: log an error
+                    throw notImplemented();
                     }
                 }
+            }
 
-            boolean fNestMate = isNestMate(ctx, typeTarget);
-            if (fAnon)
-                {
-                // since we are going to be extending the specified type, increase visibility from
-                // the public default to protected, which we get when a class "extends" another;
-                // the real target, though, is not the specified type being "new'd", but rather the
-                // anonymous inner class
-                typeSuper  = pool.ensureAccessTypeConstant(typeTarget, fNestMate ? Access.PRIVATE : Access.PROTECTED);
-                infoSuper  = typeSuper.ensureTypeInfo(errs);
-                typeTarget = getAnonymousInnerClassType();
-                // REVIEW GG - causes warning: "Suspicious assignment from: testSimple(?)#Object:1 to: testSimple(?)#Object:1:private"
-                // typeTarget = pool.ensureAccessTypeConstant(getAnonymousInnerClassType(), Access.PRIVATE);
-                }
-            else if (fNestMate)
-                {
-                ClassStructure clzTarget = (ClassStructure)
-                    typeTarget.getSingleUnderlyingClass(false).getComponent();
-                m_fVirtualChild = clzTarget.isVirtualChild();
-
-                // since we are new-ing a class that is a nest-mate of the current class, we can
-                // increase visibility from the public default all the way to private
-                typeTarget = pool.ensureAccessTypeConstant(typeTarget, Access.PRIVATE);
-                }
-
+        TypeInfo infoTarget = null;
+        if (fValid)
+            {
             // the target type must be new-able
             infoTarget = typeTarget.ensureTypeInfo(errs);
             if (!infoTarget.isNewable())
@@ -378,17 +410,6 @@ public class NewExpression
                                 });
                     }
 
-                fValid = false;
-                }
-            else if (left != null)
-                {
-                // TODO GG :-)
-                // figure out the relationship between the type of "left" and the type being
-                // constructed; they must both belong to the same "localized class tree", and the
-                // type being instantiated must either be a static child class, the top level class,
-                // or an instance class directly nested under the class specified by the "left" type
-                // TODO detect & log errors: VE_NEW_REQUIRES_PARENT VE_NEW_DISALLOWS_PARENT VE_NEW_UNRELATED_PARENT
-                log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED, "Instantiation of child classes");
                 fValid = false;
                 }
             }
@@ -535,7 +556,14 @@ public class NewExpression
             m_fInstanceChild = ctxAnon.isInstanceChild();
             }
 
-        Expression exprResult = finishValidation(typeRequired, typeTarget, fValid ? TypeFit.Fit : TypeFit.NoFit, null, errs);
+        // remove the access modifier
+        if (typeTarget.isAccessSpecified())
+            {
+            typeTarget = typeTarget.getUnderlyingType();
+            }
+
+        Expression exprResult = finishValidation(typeRequired, typeTarget,
+                fValid ? TypeFit.Fit : TypeFit.NoFit, null, errs);
         clearAnonTypeInfos();
         return exprResult;
         }
@@ -611,11 +639,11 @@ public class NewExpression
     private void generateNew(Context ctx, Code code, Argument[] aArgs, Argument argResult,
                              ErrorListener errs)
         {
-        MethodConstant idConstruct   = m_constructor.getIdentityConstant();
-        TypeConstant   typeTarget    = argResult.getType();
-        int            cAll          = idConstruct.getRawParams().length;
-        int            cArgs         = aArgs.length;
-        int            cDefaults     = m_cDefaults;
+        MethodConstant idConstruct = m_constructor.getIdentityConstant();
+        TypeConstant   typeTarget  = getType();
+        int            cAll        = idConstruct.getRawParams().length;
+        int            cArgs       = aArgs.length;
+        int            cDefaults   = m_cDefaults;
 
         if (m_fTupleArg)
             {
@@ -670,8 +698,20 @@ public class NewExpression
                     }
                 else
                     {
-                    // use NewGC_ op-codes
-                    throw notImplemented();
+                    switch (cAll)
+                        {
+                        case 0:
+                            code.add(new NewCG_0(idConstruct, argOuter, typeTarget, argResult));
+                            break;
+
+                        case 1:
+                            code.add(new NewCG_1(idConstruct, argOuter, typeTarget, aArgs[0], argResult));
+                            break;
+
+                        default:
+                            code.add(new NewCG_N(idConstruct, argOuter, typeTarget, aArgs, argResult));
+                            break;
+                        }
                     }
                 }
             else

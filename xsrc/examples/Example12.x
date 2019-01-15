@@ -1924,3 +1924,66 @@ Map mapThat = that.Map;
 this.Map.put(k, v);
 // "reference to the Map" style:
 &Map.put(k, v);
+
+// --- "value" class discussion
+
+const Order
+        // means: implements ConstAble, MutableAble
+    {
+    List<OrderLine> lines;
+
+    Order:struct addOrderLine(OrderLine line)
+        {
+        Order orderNew = ensureMutable();
+        orderNew.lines += line;
+        return orderNew;
+        }
+
+    construct (Order that, List<OrderLine> lines)
+        {
+        construct Order(that.meta.struct_); // const always has one of these constructors e.g. for deser
+        this.lines = lines;
+        }
+
+    Order addOrderLine(OrderLine line)
+        {
+        Order:struct order = &meta.struct_.ensureFixedSize(); // i.e. ensureMutableContents();
+        order.lines = this.lines.add(line);
+        oder.date = now;
+        return new Order(order);
+
+        return new Order(this, this.lines.add(line));
+        }
+
+    Order removeOrderLine(Int lineNumber) {...}
+
+    List<Order> orderLines {...}
+    }
+
+
+// --- "shared mutable" discussion
+
+service ConcurrentHashMap
+    {
+    @Atomic Int version;
+    @Atomic Int bucketCount;
+
+    Bucket bucketFor(Int n) {...}
+
+    void addListener(Listener listener) {...}
+
+    interface Listener
+        {
+        void newVersion(Int version);
+        }
+    }
+
+service Bucket
+    {
+    }
+
+const PartitionInfo
+    {
+    Int partitionCount;
+    Bucket[] buckets;
+    }

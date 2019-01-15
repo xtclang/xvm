@@ -65,7 +65,7 @@ public class AsExpression
         else
             {
             expr2 = exprType;
-            type  = exprType.ensureTypeConstant();
+            type  = exprType.ensureTypeConstant().resolveAutoNarrowing(pool, null);
 
             // it would be nice if the expression could provide us the type without any additional
             // work!

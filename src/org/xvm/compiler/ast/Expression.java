@@ -1710,10 +1710,7 @@ public abstract class Expression
      */
     protected boolean isNestMate(Context ctx, TypeConstant type)
         {
-        return !type.isFormalType() &&
-                type.isSingleUnderlyingClass(false) &&
-                type.getSingleUnderlyingClass(false).
-                    isNestMateOf(ctx.getThisClass().getIdentityConstant());
+        return type.isNestMateOf(ctx.getThisClass().getIdentityConstant());
         }
 
     /**
