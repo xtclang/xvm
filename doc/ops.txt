@@ -307,9 +307,9 @@
 +NEWC_1     CONSTRUCT, rvalue-parent, rvalue-param, lvalue
 +NEWC_N     CONSTRUCT, rvalue-parent, #:(rvalue), lvalue
  NEWC_T     CONSTRUCT, rvalue-parent, rvalue-tparams, lvalue
- NEWCG_0    CONSTRUCT, rvalue-parent, TYPE, lvalue                  ; virtual generic-type "new" for child classes
- NEWCG_1    CONSTRUCT, rvalue-parent, TYPE, rvalue-param, lvalue
- NEWCG_N    CONSTRUCT, rvalue-parent, TYPE, #:(rvalue), lvalue
++NEWCG_0    CONSTRUCT, rvalue-parent, TYPE, lvalue                  ; virtual generic-type "new" for child classes
++NEWCG_1    CONSTRUCT, rvalue-parent, TYPE, rvalue-param, lvalue
++NEWCG_N    CONSTRUCT, rvalue-parent, TYPE, #:(rvalue), lvalue
  NEWCG_T    CONSTRUCT, rvalue-parent, TYPE, rvalue-tparams, lvalue
 
 // construct calls

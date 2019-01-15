@@ -824,6 +824,16 @@ public abstract class TypeConstant
         return getType();
         }
 
+    /**
+     * Check whether or not this type represents a "nest mate" of the specified class.
+     */
+    public boolean isNestMateOf(IdentityConstant idClass)
+        {
+        return !isFormalType() &&
+                isSingleUnderlyingClass(false) &&
+                getSingleUnderlyingClass(false).isNestMateOf(idClass);
+        }
+
 
     // ----- TypeInfo support ----------------------------------------------------------------------
 
