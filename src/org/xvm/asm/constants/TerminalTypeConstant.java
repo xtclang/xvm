@@ -25,14 +25,8 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
 
-import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.OpSupport;
 import org.xvm.runtime.TemplateRegistry;
-import org.xvm.runtime.TypeComposition;
-
-import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.util.Severity;
 
@@ -1244,8 +1238,8 @@ public class TerminalTypeConstant
             return constId.getReferredToType().checkConsumption(sTypeName, access, listParams);
             }
 
-        Constant constIdThis = getDefiningConstant();
-        switch (constIdThis.getFormat())
+        Constant constId = getDefiningConstant();
+        switch (constId.getFormat())
             {
             case Module:
             case Package:
@@ -1268,27 +1262,25 @@ public class TerminalTypeConstant
                     }
                 else if (!listParams.isEmpty())
                     {
-                    ConstantPool   pool    = ConstantPool.getCurrentPool();
-                    ClassStructure clzThis = (ClassStructure)
-                        ((IdentityConstant) constIdThis).getComponent();
+                    ClassStructure clz = (ClassStructure) ((IdentityConstant) constId).getComponent();
 
-                    Map<StringConstant, TypeConstant> mapFormal = clzThis.getTypeParams();
+                    Map<StringConstant, TypeConstant> mapFormal = clz.getTypeParams();
 
-                    listParams = clzThis.normalizeParameters(pool, listParams);
+                    listParams = clz.normalizeParameters(ConstantPool.getCurrentPool(), listParams);
 
-                    Iterator<TypeConstant> iterParams = listParams.iterator();
-                    Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
+                    Iterator<TypeConstant>   iterParams = listParams.iterator();
+                    Iterator<StringConstant> iterNames  = mapFormal.keySet().iterator();
 
                     while (iterParams.hasNext())
                         {
                         TypeConstant constParam = iterParams.next();
-                        String sFormal = iterNames.next().getValue();
+                        String       sFormal    = iterNames.next().getValue();
 
                         if (constParam.consumesFormalType(sTypeName, access)
-                                && clzThis.producesFormalType(sFormal, access, listParams)
+                                && clz.producesFormalType(sFormal, access, listParams)
                             ||
                             constParam.producesFormalType(sTypeName, access)
-                                && clzThis.consumesFormalType(sFormal, access, listParams))
+                                && clz.consumesFormalType(sFormal, access, listParams))
                             {
                             return Usage.YES;
                             }
@@ -1297,17 +1289,17 @@ public class TerminalTypeConstant
                 return Usage.NO;
 
             case TypeParameter:
-                return ((TypeParameterConstant) constIdThis).getReferredToType().
+                return ((TypeParameterConstant) constId).getReferredToType().
                     checkConsumption(sTypeName, access, listParams);
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                return ((PseudoConstant) constIdThis).getDeclarationLevelClass().getType().
+                return ((PseudoConstant) constId).getDeclarationLevelClass().getType().
                     checkConsumption(sTypeName, access, listParams);
 
             default:
-                throw new IllegalStateException("unexpected constant: " + constIdThis);
+                throw new IllegalStateException("unexpected constant: " + constId);
             }
         }
 
@@ -1321,8 +1313,8 @@ public class TerminalTypeConstant
             return constId.getReferredToType().checkProduction(sTypeName, access, listParams);
             }
 
-        Constant constIdThis = getDefiningConstant();
-        switch (constIdThis.getFormat())
+        Constant constId = getDefiningConstant();
+        switch (constId.getFormat())
             {
             case Module:
             case Package:
@@ -1330,7 +1322,7 @@ public class TerminalTypeConstant
                 return Usage.NO;
 
             case Property:
-                return Usage.valueOf(((PropertyConstant) constIdThis).getName().equals(sTypeName));
+                return Usage.valueOf(((PropertyConstant) constId).getName().equals(sTypeName));
 
             case Class:
                 if (isTuple())
@@ -1348,27 +1340,25 @@ public class TerminalTypeConstant
                     }
                 else if (!listParams.isEmpty())
                     {
-                    ConstantPool   pool    = ConstantPool.getCurrentPool();
-                    ClassStructure clzThis = (ClassStructure)
-                        ((IdentityConstant) constIdThis).getComponent();
+                    ClassStructure clz = (ClassStructure) ((IdentityConstant) constId).getComponent();
 
-                    Map<StringConstant, TypeConstant> mapFormal = clzThis.getTypeParams();
+                    Map<StringConstant, TypeConstant> mapFormal = clz.getTypeParams();
 
-                    listParams = clzThis.normalizeParameters(pool, listParams);
+                    listParams = clz.normalizeParameters(ConstantPool.getCurrentPool(), listParams);
 
-                    Iterator<TypeConstant> iterParams = listParams.iterator();
-                    Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
+                    Iterator<TypeConstant>   iterParams = listParams.iterator();
+                    Iterator<StringConstant> iterNames  = mapFormal.keySet().iterator();
 
                     while (iterParams.hasNext())
                         {
                         TypeConstant constParam = iterParams.next();
-                        String sFormal = iterNames.next().getValue();
+                        String       sFormal    = iterNames.next().getValue();
 
                         if (constParam.producesFormalType(sTypeName, access)
-                                && clzThis.producesFormalType(sFormal, access, listParams)
+                                && clz.producesFormalType(sFormal, access, listParams)
                             ||
                             constParam.consumesFormalType(sTypeName, access)
-                                && clzThis.consumesFormalType(sFormal, access, listParams))
+                                && clz.consumesFormalType(sFormal, access, listParams))
                             {
                             return Usage.YES;
                             }
@@ -1379,11 +1369,11 @@ public class TerminalTypeConstant
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                return ((PseudoConstant) constIdThis).getDeclarationLevelClass().getType().
+                return ((PseudoConstant) constId).getDeclarationLevelClass().getType().
                     checkProduction(sTypeName, access, listParams);
 
             default:
-                throw new IllegalStateException("unexpected constant: " + constIdThis);
+                throw new IllegalStateException("unexpected constant: " + constId);
             }
         }
 
@@ -1421,30 +1411,6 @@ public class TerminalTypeConstant
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constIdThis);
             }
-        }
-
-    @Override
-    public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        if (hValue1 == hValue2)
-            {
-            return frame.assignValue(iReturn, xBoolean.TRUE);
-            }
-
-        TypeComposition clz = frame.ensureClass(this);
-        return clz.getTemplate().callEquals(frame, clz, hValue1, hValue2, iReturn);
-        }
-
-    @Override
-    public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        if (hValue1 == hValue2)
-            {
-            return frame.assignValue(iReturn, xOrdered.EQUAL);
-            }
-
-        TypeComposition clz = frame.ensureClass(this);
-        return clz.getTemplate().callCompare(frame, clz, hValue1, hValue2, iReturn);
         }
 
 

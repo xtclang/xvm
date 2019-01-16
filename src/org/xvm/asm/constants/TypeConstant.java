@@ -45,7 +45,10 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.OpSupport;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xType;
 import org.xvm.runtime.template.xType.TypeHandle;
 
@@ -4685,7 +4688,13 @@ public abstract class TypeConstant
      */
     public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        return getUnderlyingType().callEquals(frame, hValue1, hValue2, iReturn);
+        if (hValue1 == hValue2)
+            {
+            return frame.assignValue(iReturn, xBoolean.TRUE);
+            }
+
+        TypeComposition clz = frame.ensureClass(this);
+        return clz.getTemplate().callEquals(frame, clz, hValue1, hValue2, iReturn);
         }
 
     /**
@@ -4700,7 +4709,13 @@ public abstract class TypeConstant
      */
     public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        return getUnderlyingType().callCompare(frame, hValue1, hValue2, iReturn);
+        if (hValue1 == hValue2)
+            {
+            return frame.assignValue(iReturn, xOrdered.EQUAL);
+            }
+
+        TypeComposition clz = frame.ensureClass(this);
+        return clz.getTemplate().callCompare(frame, clz, hValue1, hValue2, iReturn);
         }
 
 
