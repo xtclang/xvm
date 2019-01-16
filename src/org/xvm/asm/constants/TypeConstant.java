@@ -611,20 +611,35 @@ public abstract class TypeConstant
      *
      * Note that the target identity must be a sub-type of this type.
      *
-     * @param pool        the ConstantPool to place a potentially created new constant into
-     * @param typeTarget  the context target type
+     * @param pool           the ConstantPool to place a potentially created new constant into
+     * @param fRetainParams  if true, don't attempt to resolve the type parameters
+     * @param typeTarget     the context target type
      *
      * @return the TypeConstant with explicit identities swapped in for any auto-narrowing
      *         identities
      */
-    public TypeConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget)
+    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams, TypeConstant typeTarget)
         {
         TypeConstant constOriginal = getUnderlyingType();
-        TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, typeTarget);
+        TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, fRetainParams, typeTarget);
 
         return constResolved == constOriginal
             ? this
             : cloneSingle(pool, constResolved);
+        }
+
+    /**
+     * Helper method that replaces an auto-narrowing "base" portion of the type, but doesn't
+     * resolve any of the type parameters.
+     *
+     * @param pool  the ConstantPool to place a potentially created new constant into
+     *
+     * @return the TypeConstant with explicit base identity swapped in for an auto-narrowing
+     *         base identity
+     */
+    public TypeConstant resolveAutoNarrowingBase(ConstantPool pool)
+        {
+        return resolveAutoNarrowing(pool, true, null);
         }
 
     /**
@@ -724,7 +739,7 @@ public abstract class TypeConstant
         TypeConstant constThis = resolveTypedefs();
         assert !constThis.containsUnresolved();
 
-        constThis = constThis.resolveAutoNarrowing(pool, null);
+        constThis = constThis.resolveAutoNarrowingBase(pool);
         return     constThis.isEcstasy("String")
                 || constThis.isEcstasy("Array")
                 || constThis.isEcstasy("List")
@@ -747,8 +762,8 @@ public abstract class TypeConstant
         {
         assert that != null;
 
-        TypeConstant typeThis = this.resolveAutoNarrowing(pool, null);
-        TypeConstant typeThat = that.resolveAutoNarrowing(pool, null);
+        TypeConstant typeThis = this.resolveAutoNarrowing(pool, false, null);
+        TypeConstant typeThat = that.resolveAutoNarrowing(pool, false, null);
 
         // when the types are the same, then the values are comparable; in the case that the value
         // is a constant, it's allowed to be of a wider type; for example:
@@ -790,8 +805,8 @@ public abstract class TypeConstant
         {
         assert that != null;
 
-        TypeConstant typeThis = this.resolveAutoNarrowing(pool, null);
-        TypeConstant typeThat = that.resolveAutoNarrowing(pool, null);
+        TypeConstant typeThis = this.resolveAutoNarrowing(pool, false, null);
+        TypeConstant typeThat = that.resolveAutoNarrowing(pool, false, null);
 
         if (typeThis.equals(typeThat) || fThatIsConstant && typeThat.isA(typeThis))
             {
@@ -883,7 +898,7 @@ public abstract class TypeConstant
             // - resolve the auto-narrowing;
             // - normalize the type to make sure that all formal parameters are filled in
             typeResolved = typeResolved.
-                                resolveAutoNarrowing(pool, null).
+                                resolveAutoNarrowing(pool, false, null).
                                 normalizeParameters(pool);
             if (typeResolved != this)
                 {
@@ -1506,7 +1521,7 @@ public abstract class TypeConstant
                         {
                         log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
                                 typeMixin.getValueString(), this.getValueString());
-                        typeMixin = typeMixin.resolveAutoNarrowing(pool, null);
+                        typeMixin = typeMixin.resolveAutoNarrowing(pool, false, null);
                         }
 
                     // the annotation could be a mixin "into Class", which means that it's a
@@ -1637,7 +1652,7 @@ public abstract class TypeConstant
                     {
                     log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
                             typeAnno.getValueString(), this.getValueString());
-                    typeAnno = typeAnno.resolveAutoNarrowing(pool, null);
+                    typeAnno = typeAnno.resolveAutoNarrowing(pool, false, null);
                     }
                 // apply annotation
                 listProcess.add(new Contribution(annotation,
@@ -1830,7 +1845,7 @@ public abstract class TypeConstant
                 {
                 log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
                         typeContribOrig.getValueString(), this.getValueString());
-                typeContrib = typeContribOrig.resolveAutoNarrowing(pool, null);
+                typeContrib = typeContribOrig.resolveAutoNarrowing(pool, false, null);
                 }
             else
                 {
@@ -2008,7 +2023,7 @@ public abstract class TypeConstant
                 {
                 log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
                         typeExtends.getValueString(), this.getValueString());
-                typeExtends = typeExtends.resolveAutoNarrowing(pool, null);
+                typeExtends = typeExtends.resolveAutoNarrowing(pool, false, null);
                 }
             listProcess.add(new Contribution(Composition.Extends,
                     pool.ensureAccessTypeConstant(typeExtends, Access.PROTECTED)));
@@ -2019,7 +2034,7 @@ public abstract class TypeConstant
                 {
                 log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
                         typeInto.getValueString(), this.getValueString());
-                typeInto = typeInto.resolveAutoNarrowing(pool, null);
+                typeInto = typeInto.resolveAutoNarrowing(pool, false, null);
                 }
             if (!typeInto.isAccessSpecified() && typeInto.isSingleDefiningConstant())
                 {
@@ -2460,7 +2475,7 @@ public abstract class TypeConstant
 
         if (typeProp.isAutoNarrowing())
             {
-            typeProp = typeProp.resolveAutoNarrowing(pool, this);
+            typeProp = typeProp.resolveAutoNarrowing(pool, false, this);
             }
 
         TypeConstant typeInto = pool.ensureAccessTypeConstant(
@@ -3994,8 +4009,8 @@ public abstract class TypeConstant
                         && idRight.isCongruentWith((PseudoConstant) constIdLeft))
                     {
                     // without any additional context, it should be assignable in some direction
-                    typeRight = typeRight.resolveAutoNarrowing(pool, null);
-                    typeLeft  = typeLeft.resolveAutoNarrowing(pool, null);
+                    typeRight = typeRight.resolveAutoNarrowing(pool, false, null);
+                    typeLeft  = typeLeft.resolveAutoNarrowing(pool, false, null);
 
                     Relation relRightIsLeft = typeRight.calculateRelation(typeLeft);
                     return relRightIsLeft == Relation.INCOMPATIBLE
@@ -4114,8 +4129,8 @@ public abstract class TypeConstant
                 {
                 // to allow assignment of this:class(X) to this:class(Function),
                 // X should be a Function or an Object
-                typeRight = typeRight.resolveAutoNarrowing(pool, null);
-                typeLeft  = typeLeft.resolveAutoNarrowing(pool, null);
+                typeRight = typeRight.resolveAutoNarrowing(pool, false, null);
+                typeLeft  = typeLeft.resolveAutoNarrowing(pool, false, null);
 
                 if (typeRight.equals(pool.typeObject()))
                     {

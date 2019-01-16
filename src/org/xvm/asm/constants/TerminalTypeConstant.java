@@ -457,13 +457,13 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget)
+    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams, TypeConstant typeTarget)
         {
         if (!isSingleDefiningConstant())
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return constId.getReferredToType().resolveAutoNarrowing(pool, typeTarget);
+            return constId.getReferredToType().resolveAutoNarrowing(pool, fRetainParams, typeTarget);
             }
 
         Constant constant = getDefiningConstant();
@@ -708,19 +708,11 @@ public class TerminalTypeConstant
             case Property:
                 {
                 TypeConstant typeConstraint = ((PropertyConstant) constant).getReferredToType();
-                if (typeConstraint.isAutoNarrowing())
-                    {
-                    typeConstraint = typeConstraint.resolveAutoNarrowing(getConstantPool(), null);
-                    }
                 return new TypeInfo(this, typeConstraint.ensureTypeInfoInternal(errs));
                 }
             case TypeParameter:
                 {
                 TypeConstant typeConstraint = ((TypeParameterConstant) constant).getReferredToType();
-                if (typeConstraint.isAutoNarrowing())
-                    {
-                    typeConstraint = typeConstraint.resolveAutoNarrowing(getConstantPool(), null);
-                    }
                 return new TypeInfo(this, typeConstraint.ensureTypeInfoInternal(errs));
                 }
             case ThisClass:

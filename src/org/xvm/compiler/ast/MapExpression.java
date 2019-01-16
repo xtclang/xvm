@@ -161,7 +161,7 @@ public class MapExpression
                     {
                     type = exprNewType;
                     }
-                typeActual = exprNewType.ensureTypeConstant().resolveAutoNarrowing(pool, null);
+                typeActual = exprNewType.ensureTypeConstant().resolveAutoNarrowingBase(pool);
 
                 TypeConstant typeKeyTemp = typeActual.getGenericParamType("KeyType");
                 if (typeKeyTemp != null)

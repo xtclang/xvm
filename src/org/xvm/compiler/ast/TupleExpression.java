@@ -236,7 +236,7 @@ public class TupleExpression
 
                 // the specified type must be a tuple, since a tuple does not have any @Auto conversions
                 // REVIEW many more checks, e.g. generally should not be relational, immutable actually means something, what annotations are allowed, etc.
-                TypeConstant typeSpecified = exprNew.ensureTypeConstant().resolveAutoNarrowing(pool, null);
+                TypeConstant typeSpecified = exprNew.ensureTypeConstant().resolveAutoNarrowingBase(pool);
                 if (typeSpecified.isTuple())
                     {
                     // the specified tuple type may have any of the field types specified as well
