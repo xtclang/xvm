@@ -45,7 +45,7 @@ class ListSet<ElementType extends Hashable>
      *         nor vice versa
      */
     @Override
-    ListSet<ElementType> clone()
+    ListSet clone()
         {
         TODO;
         }

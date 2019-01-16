@@ -9,7 +9,7 @@ mixin Range<ElementType extends Sequential>
     /**
      * A RangeIterator is an Iterator that knows when it is reaching the end of its range.
      */
-    interface RangeIterator<ElementType>
+    interface RangeIterator
             extends Iterator<ElementType>
         {
         @RO Boolean hasNext;
@@ -34,11 +34,11 @@ mixin Range<ElementType extends Sequential>
      * value first, then the values from the iterator will be in descending order.
      */
     @Override
-    RangeIterator<ElementType> iterator()
+    RangeIterator iterator()
         {
         if (reversed)
             {
-            return new RangeIterator<ElementType>()
+            return new RangeIterator()
                 {
                 private ElementType nextValue = upperBound;
 
@@ -70,7 +70,7 @@ mixin Range<ElementType extends Sequential>
             }
         else
             {
-            return new RangeIterator<ElementType>()
+            return new RangeIterator()
                 {
                 private ElementType nextValue = lowerBound;
 
@@ -159,7 +159,7 @@ mixin Range<ElementType extends Sequential>
      * Two ranges adjoin iff the union of all of the values from both ranges forms a single
      * contiguous Range.
      */
-    Boolean adjoins(Range<ElementType> that)
+    Boolean adjoins(Range that)
         {
         if (this.upperBound < that.lowerBound)
             {
@@ -180,7 +180,7 @@ mixin Range<ElementType extends Sequential>
     /**
      * Two ranges that are contiguous or overlap can be joined together to form a larger range.
      */
-    conditional Range<ElementType> union(Range<ElementType> that)
+    conditional Range union(Range that)
         {
         if (!this.adjoins(that))
             {

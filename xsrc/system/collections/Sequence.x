@@ -29,7 +29,7 @@ interface Sequence<ElementType>
      *         this sequence
      */
     @Op("[..]")
-    Sequence<ElementType> slice(Range<Int> range);
+    Sequence slice(Range<Int> range);
 
     /**
      * Obtain a Sequence of the same length and that contains the same values as this Sequence, but
@@ -46,7 +46,7 @@ interface Sequence<ElementType>
      *
      * @return a reified sequence
      */
-    Sequence<ElementType> reify()
+    Sequence reify()
         {
         // this must be overridden by any implementation that can represent a slice of another
         // sequence

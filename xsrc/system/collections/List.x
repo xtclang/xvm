@@ -24,7 +24,7 @@ interface List<ElementType>
         /**
          * The containing list.
          */
-        @RO List<ElementType> list;
+        @RO List list;
 
         /**
          * The current index of the cursor within the list, which is a value between {@code 0}
@@ -107,9 +107,9 @@ interface List<ElementType>
      * @throws BoundsException  if the specified index is outside of range {@code 0} (inclusive) to
      *         {@code size} (inclusive)
      */
-    Cursor<ElementType> cursor(Int index = 0)
+    Cursor cursor(Int index = 0)
         {
-        return new SimpleCursor<ElementType>(index);
+        return new SimpleCursor(index);
         }
 
     /**
@@ -129,7 +129,7 @@ interface List<ElementType>
      * @throws BoundsException  if the specified index is outside of range {@code 0} (inclusive) to
      *         {@code size} (inclusive)
      */
-    List<ElementType> insert(Int index, ElementType value)
+    List insert(Int index, ElementType value)
         {
         TODO element addition is not supported
         }
@@ -151,12 +151,12 @@ interface List<ElementType>
      * @throws BoundsException  if the specified index is outside of range {@code 0} (inclusive) to
      *         {@code size} (inclusive)
      */
-    List<ElementType> insertAll(Int index, Sequence<ElementType> | Collection<ElementType> values)
+    List insertAll(Int index, Sequence<ElementType> | Collection<ElementType> values)
         {
         // this implementation should be overridden by any non-mutable implementation of List, and
         // by any implementation that is able to insert multiple elements efficiently
-        Int i = index;
-        List<ElementType> result = this;
+        Int  i      = index;
+        List result = this;
         for (ElementType value : values)
             {
             result = result.insert(i++, value);
@@ -179,7 +179,7 @@ interface List<ElementType>
      * @throws BoundsException  if the specified index is outside of range {@code 0} (inclusive) to
      *         {@code size} (exclusive)
      */
-    List<ElementType> delete(Int index)
+    List delete(Int index)
         {
         TODO element removal is not supported
         }
@@ -199,13 +199,13 @@ interface List<ElementType>
      * @throws BoundsException  if the specified index is outside of range {@code 0} (inclusive) to
      *         {@code size} (exclusive)
      */
-    List<ElementType> delete(Range<Int> range)
+    List delete(Range<Int> range)
         {
         // this implementation should be overridden by any non-mutable implementation of List, and
         // by any implementation that is able to delete multiple elements efficiently
-        List<ElementType> result = this;
-        Int index = range.lowerBound;
-        Int count = range.upperBound - index + 1;
+        List result = this;
+        Int  index  = range.lowerBound;
+        Int  count  = range.upperBound - index + 1;
         while (count-- > 0)
             {
             result = result.delete(index);
@@ -221,7 +221,7 @@ interface List<ElementType>
      *
      * @throws
      */
-    List<ElementType> sort(Comparator<ElementType>? comparator = null)
+    List sort(Comparator<ElementType>? comparator = null)
         {
         // this implementation must be overridden; it assumes a mutable implementation of List, and
         // it is a bubble sort
@@ -365,7 +365,7 @@ interface List<ElementType>
                     }
                 else
                     {
-                    if (List<ElementType> newList : List.this.add(value))
+                    if (List newList : List.this.add(value))
                         {
                         assert &newList == &List.this;
                         internalIndex = size;
@@ -377,9 +377,9 @@ interface List<ElementType>
         @Override
         void insert(ElementType value)
             {
-            Int i    = internalIndex;
-            Int size = List.this.size;
-            List<ElementType> newList;
+            Int  i    = internalIndex;
+            Int  size = List.this.size;
+            List newList;
             if (i < size)
                 {
                 newList = List.this.insert(i, value);
@@ -400,7 +400,7 @@ interface List<ElementType>
             Int i = index;
             if (i < List.this.size)
                 {
-                List<ElementType> newList = List.this.delete(i);
+                List newList = List.this.delete(i);
                 assert &newList == &List.this;
                 }
             }
