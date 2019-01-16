@@ -1623,6 +1623,13 @@ public class ClassStructure
                     }
                 }
             }
+
+        if (isVirtualChild() && !isStatic())
+            {
+            return ((ClassStructure) getParent()).
+                 consumesFormalTypeImpl(sName, access, listActual, false);
+            }
+
         return false;
         }
 
@@ -1770,6 +1777,13 @@ public class ClassStructure
                     }
                 }
             }
+
+        if (isVirtualChild() && !isStatic())
+            {
+            return ((ClassStructure) getParent()).
+                 producesFormalTypeImpl(sName, access, listActual, false);
+            }
+
         return false;
         }
 

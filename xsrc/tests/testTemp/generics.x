@@ -58,11 +58,14 @@ module TestGenerics.xqiz.it
             console.println("c4=" + c4);
             }
 
-        void createChildTestExpectedFailure()
+        void createChildTestExpectedFailure1()
             {
             Base<Int> bi = new Base<Int>();
             Child ci = bi.new Child(); // compile time error; type is B<Int>.C; not assignable to B<T>.C
+            }
 
+        void createChildTestExpectedFailure2()
+            {
             Base<> b = createBase();
             Child c = b.new Child(); // compile time error; type is B<Object>.C; not assignable to B<T>.C
             }
