@@ -154,15 +154,15 @@ public abstract class IdentityConstant
                 return false;
                 }
 
-            ClassConstant idOutermostThis = idThis.getOutermost();
-            ClassConstant idOutermostThat = idThat.getOutermost();
-            if (idOutermostThis.equals(idOutermostThat))
+            ClassConstant idBaseThis = idThis.getAutoNarrowingBase();
+            ClassConstant idBaseThat = idThat.getAutoNarrowingBase();
+            if (idBaseThis.equals(idBaseThat))
                 {
                 return true;
                 }
 
-            ClassStructure clzOutermostThat = (ClassStructure) idOutermostThat.getComponent();
-            return clzOutermostThat.hasContribution(idOutermostThis, true);
+            ClassStructure clzOutermostThat = (ClassStructure) idBaseThat.getComponent();
+            return clzOutermostThat.hasContribution(idBaseThis, true);
             }
         return false;
         }
@@ -564,6 +564,19 @@ public abstract class IdentityConstant
             }
 
         throw new UnsupportedOperationException("constant-class=" + getClass().getSimpleName());
+        }
+
+    /**
+     * @return a formal type for the class represented by this constant
+     */
+    public TypeConstant getFormalType()
+        {
+        Component component = getComponent();
+        if (component instanceof ClassStructure)
+            {
+            return ((ClassStructure) component).getFormalType();
+            }
+        throw new IllegalStateException("not a class type: " + this);
         }
 
 
