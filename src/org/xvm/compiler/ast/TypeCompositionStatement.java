@@ -12,6 +12,7 @@ import java.util.Map;
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.ComponentBifurcator;
 import org.xvm.asm.ConstantPool;
@@ -30,6 +31,7 @@ import org.xvm.asm.VersionTree;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -150,7 +152,7 @@ public class TypeCompositionStatement
         this.compositions = compositions;
         this.args         = args;
         this.body         = body;
-        this.anonymous    = true;
+        this.m_fAnon      = true;
 
         setParent(parent);
         introduceParentage();
@@ -321,13 +323,13 @@ public class TypeCompositionStatement
             introduceParentage();
             }
 
-        // create the structure for this module, package, or class (etc.)
-        String              sName        = (String) name.getValue();
-        Access              access       = getDefaultAccess();
-        Component           container    = parent == null ? null : parent.getComponent();
-        ClassStructure      containerClz = null;
-        ConstantPool        pool         = pool();
-        ConditionalConstant constCond    = condition == null ? null : condition.toConditionalConstant();
+        // determine if this is an inner class, etc.
+        String              sName     = (String) name.getValue();
+        Access              access    = getDefaultAccess();
+        Component           container = parent == null ? null : parent.getComponent();
+        boolean             fInner    = false;
+        ConstantPool        pool      = pool();
+        ConditionalConstant constCond = condition == null ? null : condition.toConditionalConstant();
         if (container != null)
             {
             if (container instanceof ModuleStructure && sName.equals(X_PKG_IMPORT))
@@ -338,28 +340,59 @@ public class TypeCompositionStatement
                 }
             else
                 {
-// TODO use container.id to find the parent and what class contains this one (and if it's a module or package)
-// TODO if this is a not an enum/enumvalue/module/package and if the container class is not a module or package, then this is an inner class
-                Component containerTmp = container;
-                while (true)
+                switch (category.getId())
                     {
-                    if (containerTmp instanceof ClassStructure)
-                        {
-                        containerClz = (ClassStructure) containerTmp;
+                    case MODULE:
+                    case PACKAGE:
+                    case ENUM:
+                    case ENUM_VAL:
+                        // none of these is an inner class
                         break;
-                        }
 
-                    containerTmp = containerTmp.getParent();
+                    default:
+                        IdentityConstant idParent = container.getIdentityConstant();
+                        ProveVirtChild: while (true)
+                            {
+                            switch (idParent.getFormat())
+                                {
+                                case Module:
+                                case Package:
+                                    // not a virtual child (it's nested under a module or package)
+                                    break ProveVirtChild;
+
+                                case Method:
+                                    // it's inside a method, so it is an inner class, but it's not
+                                    // a virtual child
+                                    fInner = true;
+                                    break ProveVirtChild;
+
+                                case Property:
+                                    // it's inside a property, so it is an inner class, but keep
+                                    // going up
+                                    fInner   = true;
+                                    idParent = idParent.getParentConstant();
+                                    break;
+
+                                case Class:
+                                    // it is a virtual child because the class was contained within
+                                    // a class, with no method barrier interposed
+                                    fInner       = true;
+                                    m_fVirtChild = true;
+                                    break ProveVirtChild;
+
+                                default:
+                                    throw new IllegalStateException("idParent=" + idParent);
+                                }
+                            }
+                        break;
                     }
                 }
             }
 
-        // TODO containerTmp of not-module/-package indicates virtual inner (container is not a method) or inner (is method)
-        // TODO @Override on child implies that parent has same-name child, so auto-add "extends" (error if already there)
-        // TODO no @Override on child implies no same-name child on parent super (error if there), default extends to Object
-        // TODO child with extends clause cannot extend virtual child
-        // TODO rules for class child vs. interface child vs. mixin child
+        // anonymous inner classes must evaluate to inner but never virtual
+        assert !m_fAnon || fInner && !m_fVirtChild;
 
+        // create the structure for this module, package, or class (etc.)
         ClassStructure component = null;
         switch (category.getId())
             {
@@ -465,7 +498,7 @@ public class TypeCompositionStatement
                         }
 
                     component = container.createClass(getDefaultAccess(), format, sName, constCond);
-                    if (anonymous)
+                    if (m_fAnon)
                         {
                         component.setSynthetic(true);
                         }
@@ -803,34 +836,41 @@ public class TypeCompositionStatement
         boolean       fAlreadyExtends   = false;
         boolean       fAlreadyImports   = false;
         boolean       fAlreadyIntos     = false;
-        ClassConstant constDefaultSuper = OBJECT_CLASS;
+        ClassConstant constDefaultSuper = null;
         ClassConstant constDefaultInto  = null;
-        switch (component.getFormat())
+        if (!m_fVirtChild)
             {
-            case CLASS:
-                if (component.getIdentityConstant().equals(OBJECT_CLASS))
-                    {
+            switch (component.getFormat())
+                {
+                default:
+                    constDefaultSuper = OBJECT_CLASS;
+                    break;
+
+                case CLASS:
                     // Object has no super
+                    if (!component.getIdentityConstant().equals(OBJECT_CLASS))
+                        {
+                        constDefaultSuper = OBJECT_CLASS;
+                        }
+                    break;
+
+                case INTERFACE:
+                    // interface has no super
                     constDefaultSuper = null;
-                    }
-                break;
+                    break;
 
-            case INTERFACE:
-                // interface has no super
-                constDefaultSuper = null;
-                break;
+                case ENUMVALUE:
+                    // enum values extend their abstract enum class
+                    assert container != null && container.getFormat() == Format.ENUM;
+                    constDefaultSuper = (ClassConstant) container.getIdentityConstant();
+                    break;
 
-            case ENUMVALUE:
-                // enum values extend their abstract enum class
-                assert container != null && container.getFormat() == Format.ENUM;
-                constDefaultSuper = (ClassConstant) container.getIdentityConstant();
-                break;
-
-            case MIXIN:
-                // mixins apply to ("mix into") any Object by default
-                constDefaultSuper = null;
-                constDefaultInto  = OBJECT_CLASS;
-                break;
+                case MIXIN:
+                    // mixins apply to ("mix into") any Object by default
+                    constDefaultSuper = null;
+                    constDefaultInto  = OBJECT_CLASS;
+                    break;
+                }
             }
 
         int                 cImports      = 0;
@@ -867,11 +907,11 @@ public class TypeCompositionStatement
                     // interface is allowed to have any number of "extends"
                     if (format == Format.INTERFACE)
                         {
+                        TypeConstant type = composition.getType().ensureTypeConstant();
                         for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                             {
                             // when an interface "extends" an interface, it is actually implementing
-                            struct.addContribution(ClassStructure.Composition.Implements,
-                                    composition.getType().ensureTypeConstant());
+                            struct.addContribution(ClassStructure.Composition.Implements, type);
                             }
                         }
                     else
@@ -892,11 +932,11 @@ public class TypeCompositionStatement
                             // analysis of conditional clauses (we can't evaluate conditions yet)
                             fAlreadyExtends = composition.condition == null;
 
+                            TypeConstant type = composition.getType().ensureTypeConstant();
                             for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                                 {
                                 // register the class that the component extends
-                                struct.addContribution(ClassStructure.Composition.Extends,
-                                        composition.getType().ensureTypeConstant());
+                                struct.addContribution(ClassStructure.Composition.Extends, type);
                                 }
                             }
                         m_compositionExtend = (Composition.Extends) composition;
@@ -1270,10 +1310,21 @@ public class TypeCompositionStatement
     @Override
     public void resolveNames(StageMgr mgr, ErrorListener errs)
         {
-        ClassStructure component     = (ClassStructure) getComponent();
-        Format         format        = component.getFormat();
-        boolean        fModuleImport = false;
+        ClassStructure component = (ClassStructure) getComponent();
+        if (m_fVirtChild)
+            {
+            // all of the contributions need to be resolved before we can proceed
+            for (Contribution contrib : component.getContributionsAsList())
+                {
+                if (!contrib.getTypeConstant().isResolved())
+                    {
+                    mgr.requestRevisit();
+                    return;
+                    }
+                }
+            }
 
+        Format format = component.getFormat();
         if (format == Format.MODULE)
             {
             // the upstream modules were all linked in the previous pass, so this pass is able to
@@ -1281,6 +1332,7 @@ public class TypeCompositionStatement
             component.getConstantPool().buildValidPoolSet();
             }
 
+        boolean fModuleImport = false;
         if (format == Format.PACKAGE && m_moduleImported == null)
             {
             for (Composition composition : compositions)
@@ -1313,6 +1365,15 @@ public class TypeCompositionStatement
                         break;
                     }
                 }
+            }
+
+        if (m_fVirtChild)
+            {
+            // TODO containerTmp of not-module/-package indicates virtual inner (container is not a method) or inner (is method)
+            // TODO @Override on child implies that parent has same-name child, so auto-add "extends" (error if already there)
+            // TODO no @Override on child implies no same-name child on parent super (error if there), default extends to Object
+            // TODO child with extends clause cannot extend virtual child
+            // TODO rules for class child vs. interface child vs. mixin child
             }
 
         mgr.processChildren();
@@ -2156,8 +2217,16 @@ public class TypeCompositionStatement
     protected StatementBlock       body;
     protected Token                doc;
     protected StatementBlock       enclosed;
-    protected boolean              anonymous;
 
+    /**
+     * True iff this is an anonymous inner class.
+     */
+    private boolean m_fAnon;
+
+    /**
+     * True iff this is a virtual child class.
+     */
+    private boolean m_fVirtChild;
 
     /**
      * For a package that imports a module, this is the actual module that is imported (not just the
