@@ -48,7 +48,7 @@ const Interval<ElementType extends Orderable>
     /**
      * This interval contains that interval iff every value within that interval is also in this interval.
      */
-    Boolean contains(Interval<ElementType> that)
+    Boolean contains(Interval that)
         {
         return this.lowerBound <= that.lowerBound && this.upperBound >= that.upperBound;
         }
@@ -56,7 +56,7 @@ const Interval<ElementType extends Orderable>
     /**
      * That interval contains this interval iff every value within this interval is also in that interval.
      */
-    Boolean isContainedBy(Interval<ElementType> that)
+    Boolean isContainedBy(Interval that)
         {
         return that.contains(this);
         }
@@ -64,7 +64,7 @@ const Interval<ElementType extends Orderable>
     /**
      * Two intervals overlap iff there exists at least one value that is within both intervals.
      */
-    Boolean overlaps(Interval<ElementType> that)
+    Boolean overlaps(Interval that)
         {
         return this.upperBound >= that.lowerBound && this.lowerBound <= that.upperBound;
         }
@@ -73,7 +73,7 @@ const Interval<ElementType extends Orderable>
      * The intersection of this interval and that interval is the interval that contains all of the values
      * that exist within both this interval and that interval.
      */
-    conditional Interval<ElementType> intersection(Interval<ElementType> that)
+    conditional Interval intersection(Interval that)
         {
         if (!this.overlaps(that))
             {
@@ -86,7 +86,7 @@ const Interval<ElementType extends Orderable>
     /**
      * Two intervals that are contiguous or overlap can be joined together to form a larger interval.
      */
-    conditional Interval<ElementType> union(Interval<ElementType> that)
+    conditional Interval union(Interval that)
         {
         if (!this.overlaps(that))
             {

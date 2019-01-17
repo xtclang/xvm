@@ -290,7 +290,7 @@ public class NewExpression
                 {
                 this.type = exprTypeNew;
 
-                typeTarget = exprTypeNew.ensureTypeConstant().resolveAutoNarrowing(pool, null);
+                typeTarget = exprTypeNew.ensureTypeConstant().resolveAutoNarrowingBase(pool);
                 if (typeRequired != null)
                     {
                     TypeConstant typeInferred = inferTypeFromRequired(typeTarget, typeRequired);

@@ -6,7 +6,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -65,7 +64,7 @@ public class AsExpression
         else
             {
             expr2 = exprType;
-            type  = exprType.ensureTypeConstant().resolveAutoNarrowing(pool, null);
+            type  = exprType.ensureTypeConstant().resolveAutoNarrowingBase(pool);
 
             // it would be nice if the expression could provide us the type without any additional
             // work!

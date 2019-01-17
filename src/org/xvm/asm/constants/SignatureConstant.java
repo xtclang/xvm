@@ -254,7 +254,7 @@ public class SignatureConstant
         for (int i = 0, c = aconstParamOriginal.length; i < c; ++i)
             {
             TypeConstant constOriginal = aconstParamOriginal[i];
-            TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, typeTarget);
+            TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, false, typeTarget);
             if (constOriginal != constResolved)
                 {
                 if (aconstParamResolved == aconstParamOriginal)
@@ -271,7 +271,7 @@ public class SignatureConstant
         for (int i = 0, c = aconstReturnOriginal.length; i < c; ++i)
             {
             TypeConstant constOriginal = aconstReturnOriginal[i];
-            TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, typeTarget);
+            TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, false, typeTarget);
             if (constOriginal != constResolved)
                 {
                 if (aconstReturnResolved == aconstReturnOriginal)
