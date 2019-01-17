@@ -18,7 +18,7 @@ interface Stream<ElementType>
      *
      * @return a new stream representing the concatenation of the two input streams
      */
-    Stream<ElementType> concat(Stream!<ElementType> that);
+    Stream concat(Stream! that);
 
     /**
      * Returns a stream consisting of the elements of this stream that match the given predicate.
@@ -29,7 +29,7 @@ interface Stream<ElementType>
      *
      * @return a new stream representing the filtered contents of this stream
      */
-    Stream<ElementType> filter(function Boolean (ElementType) include);
+    Stream filter(function Boolean (ElementType) include);
 
     /**
      * Returns a stream consisting of the results of applying the given function to the elements of
@@ -68,7 +68,7 @@ interface Stream<ElementType>
      *
      * @return a new stream representing only the distinct set of elements from this stream
      */
-    Stream<ElementType> distinct();
+    Stream distinct();
 
     /**
      * Returns a stream representing the same elements of this stream, but in a sorted order.
@@ -78,7 +78,7 @@ interface Stream<ElementType>
      *
      * @return a new stream representing the same elements from this stream in a sorted order
      */
-    Stream<ElementType> sort(Comparator<ElementType>? comparator = null);
+    Stream sort(Comparator<ElementType>? comparator = null);
 
     /**
      * Returns a stream representing the same elements of this stream, but in reverse order. (A
@@ -87,7 +87,7 @@ interface Stream<ElementType>
      *
      * @return a new stream representing the same elements from this stream, but in reverse order
      */
-    Stream<ElementType> reverse();
+    Stream reverse();
 
     /**
      * Returns a stream representing the same elements as exist in this stream, but additionally
@@ -101,7 +101,7 @@ interface Stream<ElementType>
      *
      * @return a new stream with the specified functionality attached to it
      */
-    Stream<ElementType> peek(function void accept(ElementType));
+    Stream peek(function void accept(ElementType));
 
     /**
      * Returns a stream representing only the first {@code count} elements of this stream.
@@ -112,7 +112,7 @@ interface Stream<ElementType>
      *
      * @return a new stream that only includes up to the first {@code count} elements of this stream
      */
-    Stream<ElementType> limit(Int count);
+    Stream limit(Int count);
 
     /**
      * Returns a stream representing only the remaining elements of this stream after discarding the
@@ -124,7 +124,7 @@ interface Stream<ElementType>
      *
      * @return a new stream that does not include the first {@code count} elements of this stream
      */
-    Stream<ElementType> skip(Int count);
+    Stream skip(Int count);
 
     // ----- terminal operations -------------------------------------------------------------------
 

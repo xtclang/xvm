@@ -1322,7 +1322,7 @@ public class ClassStructure
             case ParentClass:
             case ChildClass:
                 assert typeLeft.isAutoNarrowing();
-                return findContribution(typeLeft.resolveAutoNarrowing(pool, null), listRight, fAllowInto);
+                return findContribution(typeLeft.resolveAutoNarrowing(pool, false, null), listRight, fAllowInto);
 
             default:
                 throw new IllegalStateException("unexpected constant: " + constIdLeft);

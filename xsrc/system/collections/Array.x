@@ -33,15 +33,15 @@ class Array<ElementType>
         {
         construct Array(size);
 
-        Element<ElementType>? head = null;
+        Element? head = null;
         if (size > 0)
             {
-            Element<ElementType> tail = new Element(supply(0));
+            Element tail = new Element(supply(0));
             head = tail;
 
             for (Int i : 1..size)
                 {
-                Element<ElementType> node = new Element(supply(i));
+                Element node = new Element(supply(i));
                 tail.next = node;
                 tail      = node;
                 }
@@ -102,7 +102,7 @@ class Array<ElementType>
         }
 
     @Override
-    @Op Array!<ElementType> slice(Range<Int> range)
+    @Op Array! slice(Range<Int> range)
         {
         Int from = range.lowerBound;
         Int to   = range.upperBound;
@@ -114,12 +114,12 @@ class Array<ElementType>
         }
 
     @Override
-    Array!<ElementType> reify()
+    Array! reify()
         {
         return this;
         }
 
-    @Op("+") Array!<ElementType> addElement(ElementType element)
+    @Op("+") Array! addElement(ElementType element)
         {
         switch (mutability)
             {
@@ -155,7 +155,7 @@ class Array<ElementType>
             }
         }
 
-    @Op("+") Array!<ElementType> addElements(Array!<ElementType> that)
+    @Op("+") Array! addElements(Array! that)
         {
         switch (mutability)
             {
@@ -182,7 +182,7 @@ class Array<ElementType>
             }
         }
 
-    @Op Array!<ElementType> replace(Int index, ElementType value)
+    @Op Array! replace(Int index, ElementType value)
         {
         switch (mutability)
             {
@@ -212,7 +212,7 @@ class Array<ElementType>
         }
 
     @Override
-    Array<ElementType> to<Array<ElementType>>()
+    Array to<Array>()
         {
         return this;
         }
@@ -224,7 +224,7 @@ class Array<ElementType>
         }
 
     @Override
-    Array<ElementType> clone()
+    Array clone()
         {
         TODO;
         }
@@ -343,7 +343,7 @@ class Array<ElementType>
         }
 
     @Override
-    Array!<ElementType> ensureMutable()
+    Array! ensureMutable()
         {
         switch (mutability)
             {
@@ -366,7 +366,7 @@ class Array<ElementType>
      * contents as this array. If this array is already a fixed-size array, then _this_ is returned.
      */
     @Override
-    Array!<ElementType> ensureFixedSize(Boolean inPlace = false)
+    Array! ensureFixedSize(Boolean inPlace = false)
         {
         if (inPlace)
             {
@@ -410,7 +410,7 @@ class Array<ElementType>
      * using the {@link replace} method; instead, calls to {@link replace} will return a new array.
      */
     @Override
-    Array!<ElementType> ensurePersistent(Boolean inPlace = false)
+    Array! ensurePersistent(Boolean inPlace = false)
         {
         if (inPlace)
             {
@@ -457,7 +457,7 @@ class Array<ElementType>
      *         {@link ConstAble}
      */
     @Override
-    immutable Array!<ElementType> ensureConst(Boolean inPlace = false)
+    immutable Array! ensureConst(Boolean inPlace = false)
         {
         if (mutability == Constant)
             {
@@ -486,7 +486,7 @@ class Array<ElementType>
         }
 
     @Override
-    immutable Array<ElementType> makeImmutable()
+    immutable Array makeImmutable()
         {
         // the "mutability" property has to be set before calling super, since no changes will be
         // allowed afterwards

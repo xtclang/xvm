@@ -163,11 +163,11 @@ public class UnresolvedTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget)
+    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams, TypeConstant typeTarget)
         {
         if (isTypeResolved())
             {
-            return getResolvedType().resolveAutoNarrowing(pool, typeTarget);
+            return getResolvedType().resolveAutoNarrowing(pool, fRetainParams, typeTarget);
             }
         throw new IllegalStateException();
         }

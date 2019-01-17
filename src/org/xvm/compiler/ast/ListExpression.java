@@ -161,7 +161,7 @@ public class ListExpression
                     {
                     type = exprNewType;
                     }
-                typeActual = exprNewType.ensureTypeConstant().resolveAutoNarrowing(pool, null);
+                typeActual = exprNewType.ensureTypeConstant().resolveAutoNarrowingBase(pool);
 
                 TypeConstant typeElementTemp = typeActual.getGenericParamType("ElementType");
                 if (typeElementTemp == null)

@@ -72,7 +72,7 @@ class HashSet<ElementType>
         }
 
     @Override
-    HashSet<ElementType> clone()
+    HashSet clone()
         {
         return new HashSet(this);
         }

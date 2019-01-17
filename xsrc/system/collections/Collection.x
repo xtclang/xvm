@@ -91,7 +91,7 @@ interface Collection<ElementType>
      *
      * @return {@code true} iff the specified values all exist in this collection
      */
-    Boolean containsAll(Collection!<ElementType> values)
+    Boolean containsAll(Collection! values)
         {
         return values.iterator().whileEach(contains(?));
         }
@@ -136,7 +136,7 @@ interface Collection<ElementType>
      * @return a Collection such that changes to this Collection do not appear in that collection,
      *         nor vice versa
      */
-    Collection<ElementType> clone();
+    Collection clone();
 
     // ----- write operations ----------------------------------------------------------------------
 
@@ -151,7 +151,7 @@ interface Collection<ElementType>
      * @return the resultant collection, which is the same as {@code this} for a mutable collection,
      *         and Boolean true iff the method resulted in a modification
      */
-    conditional Collection<ElementType> add(ElementType value)
+    conditional Collection add(ElementType value)
         {
         TODO element addition is not supported
         }
@@ -167,13 +167,13 @@ interface Collection<ElementType>
      * @return the resultant collection, which is the same as {@code this} for a mutable collection,
      *         and Boolean true iff the method resulted in a modification
      */
-    conditional Collection<ElementType> addAll(Collection!<ElementType> values)
+    conditional Collection addAll(Collection! values)
         {
         // this naive implementation is likely to be overridden in cases where optimizations can be
         // made with knowledge of either this collection and/or the passed in values, for example
         // if both are ordered; it must obviously be overridden for non-mutable collections
-        Collection<ElementType> result   = this;
-        Boolean                 modified = false;
+        Collection result   = this;
+        Boolean    modified = false;
         for (ElementType value : values)
             {
             if (result : result.add(value))
@@ -195,7 +195,7 @@ interface Collection<ElementType>
      * @return the resultant collection, which is the same as {@code this} for a mutable collection,
      *         and Boolean true iff the method resulted in a modification
      */
-    conditional Collection<ElementType> remove(ElementType value)
+    conditional Collection remove(ElementType value)
         {
         TODO element removal is not supported
         }
@@ -211,13 +211,13 @@ interface Collection<ElementType>
      * @return the resultant collection, which is the same as {@code this} for a mutable collection,
      *         and Boolean true iff the method resulted in a modification
      */
-    conditional Collection<ElementType> removeAll(Collection!<ElementType> values)
+    conditional Collection removeAll(Collection! values)
         {
         // this naive implementation is likely to be overridden in cases where optimizations can be
         // made with knowledge of either this collection and/or the passed in values, for example
         // if both are ordered; it must obviously be overridden for non-mutable collections
-        Collection<ElementType> result   = this;
-        Boolean                 modified = false;
+        Collection result   = this;
+        Boolean    modified = false;
         for (ElementType value : values)
             {
             if (result : result.remove(value))
@@ -241,12 +241,12 @@ interface Collection<ElementType>
      * @return the resultant collection, which is the same as {@code this} for a mutable collection,
      *         and Boolean true iff the method resulted in a modification
      */
-    conditional Collection<ElementType> removeIf(function Boolean (ElementType) shouldRemove)
+    conditional Collection removeIf(function Boolean (ElementType) shouldRemove)
         {
         // this naive implementation does require that the iterator be stable despite removes
         // occurring during iteration; it must obviously be overridden for non-mutable collections
-        Collection<ElementType> result   = this;
-        Boolean                 modified = false;
+        Collection result   = this;
+        Boolean    modified = false;
         for (ElementType value : this)
             {
             if (shouldRemove(value))
@@ -271,7 +271,7 @@ interface Collection<ElementType>
      * @return the resultant collection, which is the same as {@code this} for a mutable collection,
      *         and Boolean true iff the method resulted in a modification
      */
-    conditional Collection<ElementType> retainAll(Collection!<ElementType> values)
+    conditional Collection retainAll(Collection! values)
         {
         // this naive implementation is likely to be overridden in cases where optimizations can be
         // made with knowledge of either this collection and/or the passed in values, for example
@@ -288,7 +288,7 @@ interface Collection<ElementType>
      * @return the resultant collection, which is the same as {@code this} for a mutable collection,
      *         and Boolean true iff the method resulted in a modification
      */
-    conditional Collection<ElementType> clear()
+    conditional Collection clear()
         {
         // this naive implementation is likely to be overridden for obvious reasons
         return removeIf(value -> true);

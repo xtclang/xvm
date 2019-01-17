@@ -76,7 +76,7 @@ interface Matrix<ElementType>
      * @throws BoundsException if the specified ranges exceed either the lower or upper bounds of
      *         the dimensions of this Matrix
      */
-    @Op("[..]") Matrix<ElementType> slice(Range<Int> colRange, Range<Int> rowRange);
+    @Op("[..]") Matrix slice(Range<Int> colRange, Range<Int> rowRange);
 
     /**
      * Obtain a Matrix of the same dimensions and that contains the same values as this Matrix, but
@@ -93,7 +93,7 @@ interface Matrix<ElementType>
      *
      * @return a reified Matrix
      */
-    Matrix<ElementType> reify()
+    Matrix reify()
         {
         // this must be overridden by any implementation that can represent a Matrix based on the
         // contents of (via a reference to) another Matrix

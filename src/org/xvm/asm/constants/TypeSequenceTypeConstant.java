@@ -45,7 +45,7 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget)
+    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams, TypeConstant typeTarget)
         {
         return this;
         }

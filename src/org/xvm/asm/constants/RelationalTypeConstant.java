@@ -265,12 +265,12 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget)
+    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams, TypeConstant typeTarget)
         {
         TypeConstant constOriginal1 = m_constType1;
         TypeConstant constOriginal2 = m_constType2;
-        TypeConstant constResolved1 = constOriginal1.resolveAutoNarrowing(pool, typeTarget);
-        TypeConstant constResolved2 = constOriginal2.resolveAutoNarrowing(pool, typeTarget);
+        TypeConstant constResolved1 = constOriginal1.resolveAutoNarrowing(pool, fRetainParams, typeTarget);
+        TypeConstant constResolved2 = constOriginal2.resolveAutoNarrowing(pool, fRetainParams, typeTarget);
 
         return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
                 ? this

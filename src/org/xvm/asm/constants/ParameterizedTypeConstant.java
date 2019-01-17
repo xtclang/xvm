@@ -258,7 +258,7 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget)
+    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams, TypeConstant typeTarget)
         {
         // there are a number of scenarios to consider here;
         // let's assume there a class C<T>, which has a number of auto-narrowing methods:
@@ -290,7 +290,14 @@ public class ParameterizedTypeConstant
         // so here we only need to deal with 3, 4 and 5
 
         TypeConstant constOriginal = m_constType;
-        TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, typeTarget);
+        TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, fRetainParams, typeTarget);
+
+        if (fRetainParams)
+            {
+            return constOriginal == constResolved
+                    ? this
+                    : pool.ensureParameterizedTypeConstant(constResolved, m_atypeParams);
+            }
 
         if (constOriginal == constResolved)
             {
@@ -301,7 +308,7 @@ public class ParameterizedTypeConstant
             for (int i = 0, c = aconstOriginal.length; i < c; ++i)
                 {
                 TypeConstant constParamOriginal = aconstOriginal[i];
-                TypeConstant constParamResolved = constParamOriginal.resolveAutoNarrowing(pool, typeTarget);
+                TypeConstant constParamResolved = constParamOriginal.resolveAutoNarrowing(pool, false, typeTarget);
                 if (constParamOriginal != constParamResolved)
                     {
                     if (aconstResolved == aconstOriginal)

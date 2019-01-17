@@ -1097,7 +1097,7 @@ public class Frame
         type = type.resolveGenerics(pool, getGenericsResolver());
         if (type.isAutoNarrowing() && f_hThis != null)
             {
-            type = type.resolveAutoNarrowing(pool, f_hThis.getType());
+            type = type.resolveAutoNarrowing(pool, false, f_hThis.getType());
             }
         return type;
         }
