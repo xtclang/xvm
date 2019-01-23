@@ -44,6 +44,7 @@ import org.xvm.asm.op.Construct_N;
 import org.xvm.asm.op.L_Set;
 import org.xvm.asm.op.Return_0;
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
@@ -1313,15 +1314,36 @@ public class TypeCompositionStatement
         ClassStructure component = (ClassStructure) getComponent();
         if (m_fVirtChild)
             {
-            // all of the contributions need to be resolved before we can proceed
-            for (Contribution contrib : component.getContributionsAsList())
+            // all of the contributions need to be resolved before we can proceed (because we're
+            // going to have to "follow" those contributions
+            ClassStructure clz = component;
+            do
                 {
-                if (!contrib.getTypeConstant().isResolved())
+                if (clz.containsUnresolvedContribution())
                     {
                     mgr.requestRevisit();
                     return;
                     }
+
+                clz = clz.getContainingClass();
                 }
+            while (clz != null);
+
+            // all of our containing AST nodes needs to finish resolving as well (because we're
+            // going to need to rely on the "@Override" and "extends" data from those nodes if we're
+            // recursively nested inside of another virtual child, for example)
+            AstNode parent = getParent();
+            do
+                {
+                if (!parent.getStage().isAtLeast(Stage.Resolved))
+                    {
+                    mgr.requestRevisit();
+                    return;
+                    }
+
+                parent = parent.getParent();
+                }
+            while (parent != null);
             }
 
         Format format = component.getFormat();
@@ -1369,11 +1391,34 @@ public class TypeCompositionStatement
 
         if (m_fVirtChild)
             {
-            // TODO containerTmp of not-module/-package indicates virtual inner (container is not a method) or inner (is method)
-            // TODO @Override on child implies that parent has same-name child, so auto-add "extends" (error if already there)
-            // TODO no @Override on child implies no same-name child on parent super (error if there), default extends to Object
-            // TODO child with extends clause cannot extend virtual child
-            // TODO rules for class child vs. interface child vs. mixin child
+            switch (component.getFormat())
+                {
+                case INTERFACE:
+                    // determine if there is an implied super-interface (or a set thereof), which is any
+                    // child interface of the same name on any super interface of the parent of this
+                    // interface
+
+                    // same name on the TODO
+                    break;
+
+                case MIXIN:
+                    // TODO eventually support inner mix-ins ... but disallow for now
+                    category.log(errs, getSource(), Severity.ERROR, Compiler.CLASS_UNEXPECTED,
+                            component.getContainingClass().getName());
+                    break;
+
+                case CLASS:
+                case CONST:
+                case SERVICE:
+                    // TODO
+                    // TODO @Override on child implies that parent has same-name child, so auto-add "extends" (error if already there)
+                    // TODO no @Override on child implies no same-name child on parent super (error if there), default extends to Object
+                    // TODO child with extends clause cannot extend virtual child
+                    break;
+                    
+                default:
+                    throw new IllegalStateException();
+                }
             }
 
         mgr.processChildren();
