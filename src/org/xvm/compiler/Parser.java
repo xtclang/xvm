@@ -4293,10 +4293,15 @@ public class Parser
         List<TypeExpression> types = null;
         if (match(Id.COMP_LT, required) != null)
             {
-            types = peek().getId() == Id.COMP_GT
-                    ? Collections.EMPTY_LIST
-                    : parseTypeExpressionList();
-            expect(Id.COMP_GT);
+            if (match(Id.COMP_GT) != null)
+                {
+                types = Collections.EMPTY_LIST;
+                }
+            else
+                {
+                types = parseTypeExpressionList();
+                expect(Id.COMP_GT);
+                }
             }
         return types;
         }

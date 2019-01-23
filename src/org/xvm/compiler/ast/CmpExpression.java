@@ -182,7 +182,10 @@ public class CmpExpression
                 TypeConstant typeCommon = m_typeCommon = Op.selectCommonType(type1, type2, errs);
                 if (typeCommon == null)
                     {
-                    fValid = false;
+                    // equality check for any Ref objects is allowed
+                    fValid = usesEquals()
+                            && type1 != null && type1.isA(pool.typeRef())
+                            && type2 != null && type2.isA(pool.typeRef());
                     }
                 else
                     {
