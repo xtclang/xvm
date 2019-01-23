@@ -47,4 +47,70 @@ module TestNesting.xqiz.it
         new DOuter().bar();
         // new BOuter().new Inner().foo();
         }
+
+    class PB
+        {
+        class C
+            {
+            }
+        }
+
+    interface BI
+        {
+        class P extends PB
+            {
+            // implied class C
+            //     {
+            //     }
+            }
+        }
+    interface DI1 extends BI
+        {
+        // implied class P
+        //    {
+        //    implied class C
+        //        {
+        //        }
+        //    }
+        }
+
+    interface DI2 extends BI
+        {
+        @Override class P
+            {
+            // implied class C
+            //     {
+            //     }
+            }
+        }
+
+    interface DI3 extends BI
+        {
+        @Override class P
+            {
+            @Override class C
+                {
+                }
+            }
+        }
+
+    class BC /* implied extends Object */ implements DI1
+        {
+        // implied class P
+        //    {
+        //    implied class C
+        //        {
+        //        }
+        //    }
+        }
+
+    class DC extends BC
+        {
+        @Override class P
+            {
+            @Override class C
+                {
+                }
+            }
+        }
     }

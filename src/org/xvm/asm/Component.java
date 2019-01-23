@@ -490,6 +490,14 @@ public abstract class Component
         return list;
         }
 
+    public boolean containsUnresolvedContribution()
+        {
+        return m_listContribs
+                .stream()
+                .map(Contribution::getTypeConstant)
+                .anyMatch(Constant::containsUnresolved);
+        }
+
     /**
      * Find a contribution of a specified type.
      *
@@ -1425,6 +1433,61 @@ public abstract class Component
             ofEnd   = sPath.indexOf('.', ofStart);
             }
         return parent.getChild(sPath.substring(ofStart));
+        }
+
+    public Format collectVirtualChildren(NamedConstant path, int cSegments)
+        {
+        switch (getFormat())
+            {
+            case INTERFACE:
+            case CLASS:
+            case CONST:
+            case MIXIN:
+            case SERVICE:
+                // any of these could be a virtual child, or contain a virtual child
+                if (cSegments == 0)
+                    {
+                    return getFormat();
+                    }
+                break;
+
+            case ENUM:
+            case ENUMVALUE:
+            case PROPERTY:
+                // any of these could contain a virtual child, but cannot be a virtual child
+                if (cSegments == 0)
+                    {
+                    return null;
+                    }
+                break;
+
+            case PACKAGE:
+            case MODULE:
+            case TYPEDEF:
+            case METHOD:
+            case MULTIMETHOD:
+            default:
+                // these formats cannot contain a virtual child
+                return null;
+            }
+
+        NamedConstant segment = path;
+        for (int i = 1; i < cSegments; ++i)
+            {
+            IdentityConstant parent = segment.getParentConstant();
+            if (parent instanceof NamedConstant)
+                {
+                segment = (NamedConstant) parent;
+                }
+            else
+                {
+                return null;
+                }
+            }
+        String sName = segment.getName();
+
+        Component child = getChild(sName);
+        if (child != null)
         }
 
     /**
