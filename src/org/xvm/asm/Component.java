@@ -490,6 +490,9 @@ public abstract class Component
         return list;
         }
 
+    /**
+     * @return false iff all of the contributions have fully resolved types
+     */
     public boolean containsUnresolvedContribution()
         {
         return m_listContribs
