@@ -1314,6 +1314,21 @@ public class TypeCompositionStatement
         ClassStructure component = (ClassStructure) getComponent();
         if (m_fVirtChild)
             {
+            // all of the enclosing component containers must have resolved, because we will depend
+            // on their contributions all being fully evaluated and registered onto their
+            // corresponding components (just like we will do in this method)
+            AstNode parent = getParent();
+            while (parent != null)
+                {
+                if (parent instanceof ComponentStatement && !parent.getStage().isAtLeast(Stage.Resolved))
+                    {
+                    mgr.requestRevisit();
+                    return;
+                    }
+
+                parent = parent.getParent();
+                }
+
             // all of the contributions need to be resolved before we can proceed (because we're
             // going to have to "follow" those contributions
             ClassStructure clz = component;
@@ -1328,22 +1343,6 @@ public class TypeCompositionStatement
                 clz = clz.getContainingClass();
                 }
             while (clz != null);
-
-            // all of our containing AST nodes needs to finish resolving as well (because we're
-            // going to need to rely on the "@Override" and "extends" data from those nodes if we're
-            // recursively nested inside of another virtual child, for example)
-            AstNode parent = getParent();
-            do
-                {
-                if (!parent.getStage().isAtLeast(Stage.Resolved))
-                    {
-                    mgr.requestRevisit();
-                    return;
-                    }
-
-                parent = parent.getParent();
-                }
-            while (parent != null);
             }
 
         Format format = component.getFormat();
@@ -1415,7 +1414,7 @@ public class TypeCompositionStatement
                     // TODO no @Override on child implies no same-name child on parent super (error if there), default extends to Object
                     // TODO child with extends clause cannot extend virtual child
                     break;
-                    
+
                 default:
                     throw new IllegalStateException();
                 }
