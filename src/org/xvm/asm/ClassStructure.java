@@ -1089,9 +1089,8 @@ public class ClassStructure
                 continue;
                 }
 
-            List<TypeConstant> listContribTypes =
-                contrib.transformActualTypes(pool, this, listActual);
-            if (listContribTypes == null)
+            TypeConstant typeResolved = contrib.resolveType(pool, this, listActual);
+            if (typeResolved == null)
                 {
                 // conditional incorporation
                 continue;
@@ -1111,7 +1110,7 @@ public class ClassStructure
                 case Extends:
                     ClassStructure clzContrib = (ClassStructure)
                             typeContrib.getSingleUnderlyingClass(true).getComponent();
-                    type = clzContrib.getGenericParamTypeImpl(pool, sName, listContribTypes, false);
+                    type = clzContrib.getGenericParamTypeImpl(pool, sName, typeResolved.getParamTypes(), false);
                     if (type != null)
                         {
                         return type;
@@ -1385,12 +1384,11 @@ public class ClassStructure
                         continue;
                         }
 
-                    List<TypeConstant> listContribActual =
-                        contrib.transformActualTypes(pool, this, listRight);
-                    if (listContribActual != null)
+                    TypeConstant typeResolved = contrib.resolveType(pool, this, listRight);
+                    if (typeResolved != null)
                         {
                         relation = relation.bestOf(((ClassStructure) constContrib.getComponent()).
-                            findContribution(typeLeft, listContribActual, false));
+                            findContribution(typeLeft, typeResolved.getParamTypes(), false));
                         if (relation == Relation.IS_A)
                             {
                             return Relation.IS_A;
@@ -1409,9 +1407,9 @@ public class ClassStructure
 
     /**
      * For this class structure representing an R-Value, find a contribution assignable to the
-     * specified L-Value type.
+     * specified L-Value intersection type.
      *
-     * @param typeLeft    the L-Value type
+     * @param typeLeft    the L-Value intersection type
      * @param listRight   the list of actual generic parameters for this class
      *
      * @return the relation
@@ -1442,11 +1440,10 @@ public class ClassStructure
                         continue;
                         }
 
-                    List<TypeConstant> listContribActual =
-                        contrib.transformActualTypes(pool, this, listRight);
+                    TypeConstant typeResolved = contrib.resolveType(pool, this, listRight);
 
                     relation = relation.bestOf(((ClassStructure) constContrib.getComponent()).
-                        findIntersectionContribution(typeLeft, listContribActual));
+                        findIntersectionContribution(typeLeft, typeResolved.getParamTypes()));
                     if (relation == Relation.IS_A)
                         {
                         return Relation.IS_A;
@@ -1577,10 +1574,8 @@ public class ClassStructure
 
             if (typeContrib.isSingleDefiningConstant())
                 {
-                List<TypeConstant> listContribActual =
-                    contrib.transformActualTypes(pool, this, listActual);
-
-                if (listContribActual == null || listContribActual.isEmpty())
+                TypeConstant typeResolved = contrib.resolveType(pool, this, listActual);
+                if (typeResolved == null || !typeResolved.isParamsSpecified())
                     {
                     // conditional incorporation didn't apply to the actual type
                     // or the contribution is not parameterized
@@ -1593,6 +1588,7 @@ public class ClassStructure
                 Map<StringConstant, TypeConstant> mapFormal = clzContrib.getTypeParams();
                 List<TypeConstant> listContribParams = clzContrib.normalizeParameters(
                     pool, typeContrib.getParamTypes());
+                List<TypeConstant> listContribActual = typeResolved.getParamTypes();
 
                 Iterator<TypeConstant> iterParams = listContribParams.iterator();
                 Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
@@ -1731,10 +1727,8 @@ public class ClassStructure
 
             if (typeContrib.isSingleDefiningConstant())
                 {
-                List<TypeConstant> listContribActual =
-                    contrib.transformActualTypes(pool, this, listActual);
-
-                if (listContribActual == null || listContribActual.isEmpty())
+                TypeConstant typeResolved = contrib.resolveType(pool, this, listActual);
+                if (typeResolved == null || !typeResolved.isParamsSpecified())
                     {
                     // conditional incorporation didn't apply to the actual type
                     // or the contribution is not parameterized
@@ -1747,6 +1741,7 @@ public class ClassStructure
                 Map<StringConstant, TypeConstant> mapFormal = clzContrib.getTypeParams();
                 List<TypeConstant> listContribParams = clzContrib.normalizeParameters(
                     pool, typeContrib.getParamTypes());
+                List<TypeConstant> listContribActual = typeResolved.getParamTypes();
 
                 Iterator<TypeConstant> iterParams = listContribParams.iterator();
                 Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
@@ -1872,16 +1867,15 @@ public class ClassStructure
             {
             if (contrib.getComposition() == Composition.Extends)
                 {
-                List<TypeConstant> listSuperActual =
-                    contrib.transformActualTypes(pool, this, listLeft);
+                TypeConstant typeResolved = contrib.resolveType(pool, this, listLeft);
 
                 ClassStructure clzSuper = (ClassStructure)
-                    contrib.getTypeConstant().getSingleUnderlyingClass(true).getComponent();
+                    typeResolved.getSingleUnderlyingClass(true).getComponent();
 
                 assert (clzSuper.getFormat() == Component.Format.INTERFACE);
 
                 setMiss.addAll(
-                    clzSuper.isInterfaceAssignableFrom(typeRight, accessLeft, listSuperActual));
+                    clzSuper.isInterfaceAssignableFrom(typeRight, accessLeft, typeResolved.getParamTypes()));
                 }
             }
         return setMiss;
@@ -1979,16 +1973,14 @@ public class ClassStructure
 
             if (typeContrib.isSingleDefiningConstant())
                 {
-                List<TypeConstant> listContribActual =
-                    contrib.transformActualTypes(pool, this, listParams);
-
-                if (listContribActual != null)
+                TypeConstant typeResolved = contrib.resolveType(pool, this, listParams);
+                if (typeResolved != null)
                     {
                     ClassStructure clzContrib = (ClassStructure)
-                        contrib.getTypeConstant().getSingleUnderlyingClass(true).getComponent();
+                        typeResolved.getSingleUnderlyingClass(true).getComponent();
 
                     if (clzContrib.containsSubstitutableMethodImpl(signature,
-                            access, listContribActual, idClass, false))
+                            access, typeResolved.getParamTypes(), idClass, false))
                         {
                         return true;
                         }
