@@ -5,7 +5,7 @@
 class ListMap<KeyType extends immutable Hashable, ValueType>
          implements Map<KeyType, ValueType>
     {
-    private Entry<KeyType, ValueType>[] array;
+    private Entry[] array;
 
     // ----- constructors --------------------------------------------------------------------------
 
@@ -23,7 +23,7 @@ class ListMap<KeyType extends immutable Hashable, ValueType>
         }
 
     @Override
-    conditional Entry<KeyType, ValueType> getEntry(KeyType key)
+    conditional Entry getEntry(KeyType key)
         {
         if (Int index : indexOf(key))
             {
@@ -39,7 +39,7 @@ class ListMap<KeyType extends immutable Hashable, ValueType>
         }
 
     @Override
-    @RO Set<Entry<KeyType, ValueType>> entries.get()
+    @RO Set<Entry> entries.get()
         {
         TODO
         }
@@ -51,7 +51,7 @@ class ListMap<KeyType extends immutable Hashable, ValueType>
         }
 
     @Override
-    ListMap<KeyType, ValueType> put(KeyType key, ValueType value)
+    ListMap put(KeyType key, ValueType value)
         {
         if (Int index : indexOf(key))
             {
@@ -65,13 +65,13 @@ class ListMap<KeyType extends immutable Hashable, ValueType>
         }
 
     @Override
-    ListMap<KeyType, ValueType> remove(KeyType key)
+    ListMap remove(KeyType key)
         {
         TODO
         }
 
     @Override
-    ListMap<KeyType, ValueType> clear()
+    ListMap clear()
         {
         array = new Array(1);
         return this;
@@ -79,7 +79,7 @@ class ListMap<KeyType extends immutable Hashable, ValueType>
 
     @Override
     <ResultType> ResultType process(KeyType key,
-            function ResultType (ProcessableEntry<KeyType, ValueType>) compute)
+            function ResultType (ProcessableEntry) compute)
         {
         TODO
         }
@@ -89,7 +89,7 @@ class ListMap<KeyType extends immutable Hashable, ValueType>
     protected conditional Int indexOf(KeyType key)
         {
         AllEntries:
-        for (Entry<KeyType, ValueType> entry : array)
+        for (Entry entry : array)
             {
             if (entry.key == key)
                 {

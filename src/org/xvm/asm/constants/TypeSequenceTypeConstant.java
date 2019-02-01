@@ -39,7 +39,7 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
-    public boolean isAutoNarrowing()
+    public boolean isAutoNarrowing(boolean fAllowVirtChild)
         {
         return false;
         }

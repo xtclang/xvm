@@ -6,14 +6,14 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -146,16 +146,17 @@ public class NewC_N
 
     protected int constructChild(Frame frame, MethodStructure constructor, ObjectHandle hParent, ObjectHandle[] ahVar)
         {
-        IdentityConstant constClz = constructor.getParent().getParent().getIdentityConstant();
-        ClassTemplate template = frame.ensureTemplate(constClz);
-        TypeComposition clzTarget = template.getCanonicalClass();
+        ClassStructure  structChild = (ClassStructure) constructor.getParent().getParent();
+        TypeConstant    typeChild   = hParent.getComposition().getCanonicalChildType(structChild.getName());
+        TypeComposition clzTarget   = frame.ensureClass(typeChild);
 
         if (frame.isNextRegister(m_nRetValue))
             {
             frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
             }
 
-        return template.construct(frame, constructor, clzTarget, hParent, ahVar, m_nRetValue);
+        return clzTarget.getTemplate().construct(
+                frame, constructor, clzTarget, hParent, ahVar, m_nRetValue);
         }
 
     @Override

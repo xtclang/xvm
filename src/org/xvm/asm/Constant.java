@@ -839,6 +839,7 @@ public abstract class Constant
         AnnotatedType,
         ParameterizedType,
         TurtleType,
+        VirtualChildType,
         UnionType,
         IntersectionType,
         DifferenceType,

@@ -426,14 +426,14 @@ public class SignatureConstant
             {
             return true;
             }
-        for (Constant constant : m_aconstParams)
+        for (TypeConstant constant : m_aconstParams)
             {
             if (constant.containsUnresolved())
                 {
                 return true;
                 }
             }
-        for (Constant constant : m_aconstReturns)
+        for (TypeConstant constant : m_aconstReturns)
             {
             if (constant.containsUnresolved())
                 {
@@ -446,7 +446,7 @@ public class SignatureConstant
     @Override
     public boolean isAutoNarrowing()
         {
-        for (Constant constant : m_aconstParams)
+        for (TypeConstant constant : m_aconstParams)
             {
             if (constant.isAutoNarrowing())
                 {
@@ -454,7 +454,7 @@ public class SignatureConstant
                 }
             }
 
-        for (Constant constant : m_aconstReturns)
+        for (TypeConstant constant : m_aconstReturns)
             {
             if (constant.isAutoNarrowing())
                 {

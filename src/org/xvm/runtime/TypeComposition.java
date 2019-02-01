@@ -449,6 +449,13 @@ public class TypeComposition
         return mapFields;
         }
 
+    // return a canonical child type
+    public TypeConstant getCanonicalChildType(String sName)
+        {
+        ConstantPool pool = f_typeRevealed.getConstantPool();
+        return pool.ensureVirtualChildTypeConstant(f_typeRevealed, sName);
+        }
+
     /**
      * Create a map of fields that serves as a prototype for all instances of this class.
      *

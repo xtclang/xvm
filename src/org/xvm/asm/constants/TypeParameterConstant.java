@@ -115,6 +115,13 @@ public class TypeParameterConstant
 
     // ----- Constant methods ----------------------------------------------------------------------
 
+
+    @Override
+    public TypeConstant getType()
+        {
+        return getConstantPool().ensureTerminalTypeConstant(this);
+        }
+
     @Override
     public Format getFormat()
         {

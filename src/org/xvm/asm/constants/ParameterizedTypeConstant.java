@@ -82,9 +82,10 @@ public class ParameterizedTypeConstant
             {
             throw new IllegalArgumentException("type is already parameterized");
             }
-        if (!(constType instanceof TerminalTypeConstant))
+        if (!(constType instanceof TerminalTypeConstant ||
+              constType instanceof VirtualChildTypeConstant))
             {
-            throw new IllegalArgumentException("must refer to a terminal type");
+            throw new IllegalArgumentException("must refer to a terminal or instance child type");
             }
         if (constTypeParams == null)
             {
@@ -137,16 +138,16 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public boolean isAutoNarrowing()
+    public boolean isAutoNarrowing(boolean fAllowVirtChild)
         {
-        if (m_constType.isAutoNarrowing())
+        if (m_constType.isAutoNarrowing(fAllowVirtChild))
             {
             return true;
             }
 
         for (int i = 0, c = m_atypeParams.length; i < c; ++i)
             {
-            if (m_atypeParams[i].isAutoNarrowing())
+            if (m_atypeParams[i].isAutoNarrowing(fAllowVirtChild))
                 {
                 return true;
                 }
@@ -252,7 +253,8 @@ public class ParameterizedTypeConstant
         {
         TypeConstant constOriginal = m_constType;
 
-        assert constOriginal instanceof TerminalTypeConstant;
+        assert constOriginal instanceof TerminalTypeConstant ||
+               constOriginal instanceof VirtualChildTypeConstant;
 
         return constOriginal.adoptParameters(pool, atypeParams == null ? m_atypeParams : atypeParams);
         }

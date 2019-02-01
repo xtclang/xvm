@@ -213,7 +213,7 @@ public class TerminalTypeConstant
                 {
                 // examine the structure to determine if it represents a class or interface
                 ClassStructure clz = (ClassStructure) ((ClassConstant) constant).getComponent();
-                return clz.getTypeParams().size();
+                return clz.getTypeParamCount();
                 }
 
             case ThisClass:
@@ -222,7 +222,7 @@ public class TerminalTypeConstant
                 {
                 ClassStructure clz = (ClassStructure) ((PseudoConstant) constant)
                         .getDeclarationLevelClass().getComponent();
-                return clz.getTypeParams().size();
+                return clz.getTypeParamCount();
                 }
 
             default:
@@ -235,6 +235,13 @@ public class TerminalTypeConstant
         {
         TypeConstant type = resolveTypedefs();
         return type != this && type.isAnnotated();
+        }
+
+    @Override
+    public boolean isVirtualChild()
+        {
+        TypeConstant type = resolveTypedefs();
+        return type != this && type.isVirtualChild();
         }
 
     @Override
@@ -281,7 +288,7 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public boolean isAutoNarrowing()
+    public boolean isAutoNarrowing(boolean fAllowVirtChild)
         {
         return ensureResolvedConstant().isAutoNarrowing();
         }

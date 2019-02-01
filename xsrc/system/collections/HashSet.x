@@ -35,7 +35,7 @@ class HashSet<ElementType>
 
     private class Entry(ElementType value, Entry? next);
 
-    private Entry<ElementType>?[] buckets; // TODO
+    private Entry?[] buckets;
 
     @Override
     public/private Int size;
@@ -46,7 +46,7 @@ class HashSet<ElementType>
         Int nHash   = hasher.hashOf(value);
         Int nBucket = nHash % buckets.size;
 
-        Entry<ElementType>? entry = buckets[nBucket];
+        Entry? entry = buckets[nBucket];
         while (entry != null)
             {
             if (hasher.areEqual(value, entry.value))

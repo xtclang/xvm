@@ -682,15 +682,11 @@ public class TypeInfo
      */
     public TypeConstant getChildType(String sName)
         {
-        ClassStructure struct = m_struct;
-        if (struct == null)
-            {
-            // TODO: if this info represents a virtual child, there must be a way to get the parent
-            return null;
-            }
-
-        // for now assume that the children are never generic
-        return struct.getVirtualChild(sName).getFormalType().resolveGenerics(pool(), m_type);
+        // TODO: if this info represents a virtual child by itself (m_struct == null),
+        // there must be a way to confirm the child existence
+        return m_struct == null || m_struct.getVirtualChild(sName) == null
+                ? null
+                : pool().ensureVirtualChildTypeConstant(m_type, sName);
         }
 
     /**

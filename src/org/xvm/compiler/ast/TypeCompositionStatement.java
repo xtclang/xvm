@@ -667,7 +667,7 @@ public class TypeCompositionStatement
                 // number of type arguments must match the number of the enum's type parameters
                 assert container instanceof ClassStructure && container.getFormat() == Format.ENUM;
                 ClassStructure enumeration = (ClassStructure) container;
-                if (enumeration.getTypeParams().size() != (typeArgs == null ? 0 : typeArgs.size()))
+                if (enumeration.getTypeParamCount() != (typeArgs == null ? 0 : typeArgs.size()))
                     {
                     log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_MISMATCH);
                     }

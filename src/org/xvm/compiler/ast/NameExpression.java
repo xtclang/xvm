@@ -448,7 +448,45 @@ public class NameExpression
     @Override
     public TypeExpression toTypeExpression()
         {
-        return new NamedTypeExpression(null, collectNameTokens(1), null, null, params, lEndPos);
+        NameExpressions:
+        if (left instanceof NameExpression)
+            {
+            // we're going to split a chain of name expression (A).(B<T>).(C).(D<U>) into
+            // a chain of NamedTypeExpressions (A.B<T>).(C.D<U>)
+            List<Token> tokens = new ArrayList<>();
+            tokens.add(name);
+
+            // moving to the left, find any previous parameterized named expression
+            NameExpression exprLeft = (NameExpression) left;
+            NameExpression exprPrev;
+
+            while (true)
+                {
+                if (exprLeft.params != null)
+                    {
+                    exprPrev = exprLeft;
+                    break;
+                    }
+
+                tokens.add(0, exprLeft.name);
+
+                Expression expr = exprLeft.left;
+                if (!(expr instanceof NameExpression))
+                    {
+                    // if expr is null, there is no left named type and therefore no reason to split
+                    // this into a chain of NamedTypeExpressions;
+                    // otherwise this should be an error and if will be reported later
+                    break NameExpressions;
+                    }
+                exprLeft = (NameExpression) expr;
+                }
+
+            NamedTypeExpression exprLeftType = (NamedTypeExpression) exprPrev.toTypeExpression();
+
+            return new NamedTypeExpression(exprLeftType, tokens, params, lEndPos);
+            }
+
+        return new NamedTypeExpression(null, getNameTokens(), null, null, params, lEndPos);
         }
 
     @Override
@@ -1464,9 +1502,12 @@ public class NameExpression
             case ParentClass:
                 if (name.getValueText().equals("this"))
                     {
-                    NameExpression exprLeft = (NameExpression) left;
+                    // TODO GG: that needs to be calculated; it can be a VirtualChildTypeConstant
                     TypeConstant typeParent = pool.ensureAccessTypeConstant(
-                            constant.getType().adoptParameters(pool, ctx.getThisType()), Access.PRIVATE);
+                        ((ParentClassConstant) constant).getDeclarationLevelClass().getFormalType(),
+                        Access.PRIVATE);
+
+                    NameExpression exprLeft = (NameExpression) left;
                     if (exprLeft.isSuppressDeref())
                         {
                         m_plan = Plan.OuterRef;

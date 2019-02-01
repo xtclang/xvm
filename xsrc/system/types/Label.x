@@ -61,5 +61,5 @@ interface Label<KeyType, ValueType>
      * For a non-loop Label, or a Label that identifies a loop in which there is no current Entry,
      * an attempt to access this property is illegal.
      */
-    @RO Entry<KeyType, ValueType> entry;
+    @RO Map<KeyType, ValueType>.Entry entry;
     }

@@ -339,30 +339,22 @@ public class NewExpression
                 {
                 this.left = exprLeftNew;
 
-                TypeConstant typeLeft = exprLeftNew.getType();
-                TypeInfo     infoLeft = typeLeft.ensureTypeInfo(errs);
-
-                TypeExpression exprType = this.type;
-                if (exprType instanceof NamedTypeExpression)
+                TypeExpression exprTypeOld = this.type;
+                TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx, null, errs);
+                if (exprTypeNew == null)
                     {
-                    String sChild = ((NamedTypeExpression) exprType).getName();
-
-                    typeTarget = infoLeft.getChildType(sChild);
-                    if (typeTarget == null)
-                        {
-                        log(errs, Severity.ERROR, Constants.VE_NEW_UNRELATED_PARENT,
-                                sChild, typeLeft.getValueString());
-                        fValid = false;
-                        }
-                    else
-                        {
-                        m_fVirtualChild = true;
-                        }
+                    fValid = false;
                     }
                 else
                     {
-                    // TODO: log an error
-                    throw notImplemented();
+                    this.type       = exprTypeNew;
+                    m_fVirtualChild = true;
+                    typeTarget      = exprTypeNew.ensureTypeConstant();
+
+                    if (isNestMate(ctx, typeTarget))
+                        {
+                        typeTarget = pool.ensureAccessTypeConstant(typeTarget, Access.PRIVATE);
+                        }
                     }
                 }
             }
