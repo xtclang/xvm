@@ -355,6 +355,23 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff this type represents a virtual child type
+     */
+    public boolean isVirtualChild()
+        {
+        return isModifyingType() && getUnderlyingType().isVirtualChild();
+        }
+
+    /**
+     * @return return the virtual child type's parent type
+     */
+    public TypeConstant getParentType()
+        {
+        assert isVirtualChild();
+        return getUnderlyingType().getParentType();
+        }
+
+    /**
      * @return true iff there is a single defining constant, which means that the type does not
      *         contain any relational type constants
      */
@@ -374,11 +391,16 @@ public abstract class TypeConstant
         }
 
     /**
+     * Check if this type contains any auto-narrowing portion.
+     *
+     * @param fAllowVirtChild  if false, the virtual child constant should not be considered
+     *                         as auto-narrowing
+     *
      * @return true iff this TypeConstant represents an auto-narrowing type
      */
-    public boolean isAutoNarrowing()
+    public boolean isAutoNarrowing(boolean fAllowVirtChild)
         {
-        return getUnderlyingType().isAutoNarrowing();
+        return getUnderlyingType().isAutoNarrowing(fAllowVirtChild);
         }
 
     /**
@@ -646,7 +668,7 @@ public abstract class TypeConstant
         }
 
     /**
-     * Check if this type ia a valid extension ("sub") of the specified auto-narrowing "super" type
+     * Check if this type is a valid extension ("sub") of the specified auto-narrowing "super" type
      * in the context of the specified type.
      *
      * @param typeSuper  the auto-narrowing type to extend
@@ -1173,7 +1195,7 @@ public abstract class TypeConstant
                         : info.limitAccess(Access.PUBLIC);
             }
 
-        assert !isAutoNarrowing();
+        assert !isAutoNarrowing(false);
 
         // this implementation only deals with modifying (not including immutable) and terminal type
         // constants (not including typedefs, type parameters, auto-narrowing types, and unresolved
@@ -1396,11 +1418,25 @@ public abstract class TypeConstant
             }
         else
             {
+            if (isVirtualChild())
+                {
+                // virtual child has access to the parent's type parameters
+                TypeInfo infoParent = getParentType().ensureTypeInfo(errs);
+
+                for (ParamInfo param : infoParent.getTypeParams().values())
+                    {
+                    if (!(param.getNestedIdentity() instanceof NestedIdentity))
+                        {
+                        mapTypeParams.put(param.getName(), param);
+                        }
+                    }
+                }
+
             // obtain the type parameters encoded in this type constant
             TypeConstant[] atypeParams = getParamTypesArray();
             int            cTypeParams = atypeParams.length;
 
-            // obtain the type parameters declared by the class and its instance parent
+            // obtain the type parameters declared by the class
             List<Entry<StringConstant, TypeConstant>> listClassParams = struct.getTypeParamsAsList();
             int                                       cClassParams    = listClassParams.size();
 
@@ -1496,6 +1532,7 @@ public abstract class TypeConstant
                 {
                 case ParameterizedType:
                 case TerminalType:
+                case VirtualChildType:
                     // we found the class specification (with optional parameters) at the end of the
                     // type constant chain
                     break NextTypeInChain;
@@ -1520,7 +1557,7 @@ public abstract class TypeConstant
                                 typeMixin.getValueString());
                         break;
                         }
-                    if (typeMixin.isAutoNarrowing())
+                    if (typeMixin.isAutoNarrowing(false))
                         {
                         log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
                                 typeMixin.getValueString(), this.getValueString());
@@ -1651,7 +1688,7 @@ public abstract class TypeConstant
             else
                 {
                 TypeConstant typeAnno = annotation.getAnnotationType();
-                if (typeAnno.isAutoNarrowing())
+                if (typeAnno.isAutoNarrowing(false))
                     {
                     log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
                             typeAnno.getValueString(), this.getValueString());
@@ -1844,7 +1881,7 @@ public abstract class TypeConstant
             TypeConstant typeContribOrig = contrib.resolveGenerics(pool, this);
             TypeConstant typeContrib;      // needs to be effectively final
 
-            if (typeContribOrig != null && typeContribOrig.isAutoNarrowing())
+            if (typeContribOrig != null && typeContribOrig.isAutoNarrowing(false))
                 {
                 log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
                         typeContribOrig.getValueString(), this.getValueString());
@@ -2022,7 +2059,7 @@ public abstract class TypeConstant
             }
         if (typeExtends != null)
             {
-            if (typeExtends.isAutoNarrowing())
+            if (typeExtends.isAutoNarrowing(false))
                 {
                 log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
                         typeExtends.getValueString(), this.getValueString());
@@ -2033,7 +2070,7 @@ public abstract class TypeConstant
             }
         if (typeInto != null)
             {
-            if (typeInto.isAutoNarrowing())
+            if (typeInto.isAutoNarrowing(false))
                 {
                 log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
                         typeInto.getValueString(), this.getValueString());
@@ -2162,6 +2199,12 @@ public abstract class TypeConstant
                                 }
                             else if (!paramCurr.getActualType().isA(paramContrib.getActualType()))
                                 {
+                                if (isVirtualChild())
+                                    {
+                                    // TODO: how to validate that we can safely override?
+                                    mapTypeParams.put(nid, paramContrib);
+                                    continue;
+                                    }
                                 log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_CONTRIB,
                                         this.getValueString(), nid,
                                         paramCurr.getActualType().getValueString(),
@@ -3123,6 +3166,12 @@ public abstract class TypeConstant
         {
         ConstantPool pool = getConstantPool();
 
+        if (struct.isVirtualChild())
+            {
+            ClassStructure parent = (ClassStructure) struct.getParent();
+            collectSelfTypeParameters(parent, mapTypeParams, mapProps);
+            }
+
         for (Component child : struct.children())
             {
             if (child instanceof PropertyStructure)
@@ -3136,12 +3185,6 @@ public abstract class TypeConstant
                                         mapTypeParams.get(id.getName()))));
                     }
                 }
-            }
-
-        if (struct.isVirtualChild())
-            {
-            ClassStructure parent = (ClassStructure) struct.getParent();
-            collectSelfTypeParameters(parent, mapTypeParams, mapProps);
             }
         }
 
@@ -3736,6 +3779,12 @@ public abstract class TypeConstant
 
             String       sParam = param.getName();
             PropertyInfo prop   = mapProps.get(sParam);
+            if (prop == null && isVirtualChild())
+                {
+                // virtual child is allowed to see the parent's type parameters
+                prop = getParentType().ensureTypeInfo(errs).findProperty(sParam);
+                }
+
             if (prop == null)
                 {
                 log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_MISSING,
@@ -3949,7 +3998,7 @@ public abstract class TypeConstant
                     ((IdentityConstant) constIdRight).getComponent();
 
                 // continue recursively with the right side analysis
-                return clzRight.findContribution(typeLeft, typeRight.getParamTypes(), true);
+                return clzRight.findContribution(typeLeft, typeRight, true);
                 }
 
             case Property:
@@ -4023,7 +4072,7 @@ public abstract class TypeConstant
 
                 ClassStructure clzRight = (ClassStructure)
                         idRight.getDeclarationLevelClass().getComponent();
-                return clzRight.findContribution(typeLeft, typeRight.getParamTypes(), true);
+                return clzRight.findContribution(typeLeft, typeRight, true);
                 }
 
             default:
@@ -4729,6 +4778,12 @@ public abstract class TypeConstant
         {
         ConstantPool pool = getConstantPool();
         return pool.ensureParameterizedTypeConstant(pool.typeType(), this);
+        }
+
+    @Override
+    public boolean isAutoNarrowing()
+        {
+        return isAutoNarrowing(true);
         }
 
     @Override

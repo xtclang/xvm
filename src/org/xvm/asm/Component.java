@@ -3000,23 +3000,23 @@ public abstract class Component
             typeContrib = typeContrib.resolveGenerics(pool, resolver);
 
             return getComposition() != Composition.Incorporates ||
-                    checkConditionalIncorporate(typeContrib.getParamTypes()) ?
+                    checkConditionalIncorporate(typeContrib.getParamTypesArray()) ?
                 typeContrib : null;
             }
 
         /**
-         * Transform the specified list of actual types for the specified class based on
-         * this contribution definition.
+         * Resolve the type of this contribution based on the specified list of actual types for
+         * the specified class based on this contribution definition.
          *
          * @param pool        the ConstantPool to place a potentially created new constant into
          * @param clzParent   the parent class structure
          * @param listActual  the actual type list
          *
-         * @return the transformed list of types or null if the conditional incorporation
+         * @return the resolved contribution type or null if the conditional incorporation
          *         does not apply for the specified types
          */
-        public List<TypeConstant> transformActualTypes(ConstantPool pool, ClassStructure clzParent,
-                                                       List<TypeConstant> listActual)
+        public TypeConstant resolveType(ConstantPool pool, ClassStructure clzParent,
+                                        List<TypeConstant> listActual)
             {
             TypeConstant typeContrib = getTypeConstant();
 
@@ -3025,33 +3025,36 @@ public abstract class Component
             typeContrib = typeContrib.normalizeParameters(pool);
             if (!typeContrib.isParamsSpecified())
                 {
-                return Collections.emptyList();
+                return typeContrib;
                 }
+
+            GenericTypeResolver resolver  = clzParent.new SimpleTypeResolver(listActual);
 
             TypeConstant[] aContribParam = typeContrib.getParamTypesArray();
-            List<TypeConstant> listContribActual = new ArrayList<>(aContribParam.length);
+            TypeConstant[] atypeResolved = new TypeConstant[aContribParam.length];
 
-            GenericTypeResolver resolver = clzParent.new SimpleTypeResolver(listActual);
-
+            int ix = 0;
             for (TypeConstant typeContribParam : aContribParam)
                 {
-                listContribActual.add(typeContribParam.resolveGenerics(pool, resolver));
+                atypeResolved[ix++] = typeContribParam.resolveGenerics(pool, resolver);
                 }
 
+            IdentityConstant idContrib = typeContrib.getSingleUnderlyingClass(true);
             return getComposition() != Composition.Incorporates ||
-                    checkConditionalIncorporate(listContribActual) ?
-                listContribActual : null;
+                        checkConditionalIncorporate(atypeResolved)
+                    ? pool.ensureClassTypeConstant(idContrib, null, atypeResolved)
+                    : null;
             }
 
         /**
          * Check if this "incorporate" contribution is conditional and if so,
          * whether or not it applies to this type
          *
-         * @param listParams  actual parameter types
+         * @param atypeParams  actual parameter types
          *
          * @return true iff the contribution is unconditional or applies to this type
          */
-        protected boolean checkConditionalIncorporate(List<TypeConstant> listParams)
+        protected boolean checkConditionalIncorporate(TypeConstant[] atypeParams)
             {
             assert getComposition() == Composition.Incorporates;
 
@@ -3059,13 +3062,11 @@ public abstract class Component
             if (mapConditional != null && !mapConditional.isEmpty())
                 {
                 // conditional incorporation; check if the actual parameters apply
-                assert listParams.size() == mapConditional.size();
+                assert atypeParams.length == mapConditional.size();
 
-                Iterator<TypeConstant> iterParamType = listParams.iterator();
                 Iterator<TypeConstant> iterConstraint = mapConditional.values().iterator();
-                while (iterParamType.hasNext())
+                for (TypeConstant typeParam : atypeParams)
                     {
-                    TypeConstant typeParam      = iterParamType.next();
                     TypeConstant typeConstraint = iterConstraint.next();
 
                     if (!typeParam.isA(typeConstraint))
