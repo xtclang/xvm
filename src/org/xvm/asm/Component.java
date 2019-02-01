@@ -19,6 +19,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import java.util.Set;
 import java.util.function.Consumer;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -1438,7 +1439,8 @@ public abstract class Component
         return parent.getChild(sPath.substring(ofStart));
         }
 
-    public Format collectVirtualChildren(NamedConstant path, int cSegments)
+    // TODO
+    protected Object locateVirtualSuper(NamedConstant path, int cSegments, boolean fExcludeChildren, Set<IdentityConstant> setExclude, Set<ClassStructure> setContinuations)
         {
         switch (getFormat())
             {
@@ -1490,7 +1492,8 @@ public abstract class Component
         String sName = segment.getName();
 
         Component child = getChild(sName);
-        if (child != null)
+        //if (child != null)
+        return null;
         }
 
     /**

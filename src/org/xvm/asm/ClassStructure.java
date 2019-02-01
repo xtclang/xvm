@@ -20,6 +20,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.NamedConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
@@ -34,6 +35,7 @@ import org.xvm.asm.op.L_Set;
 import org.xvm.asm.op.Return_0;
 
 import org.xvm.util.ListMap;
+import org.xvm.util.ListSet;
 
 
 /**
@@ -148,12 +150,12 @@ public class ClassStructure
             {
             case MODULE:
             case PACKAGE:
-            case MIXIN:
             case ENUM:
             case ENUMVALUE:
                 return false;
 
             case INTERFACE:
+            case MIXIN:
             case CLASS:
             case CONST:
             case SERVICE:
@@ -164,7 +166,13 @@ public class ClassStructure
                     return false;
                     }
 
-                Format format = getParent().getFormat();
+                Component parent = getParent();
+                Format    format = parent.getFormat();
+                while (format == Format.PROPERTY)
+                    {
+                    parent = parent.getParent();
+                    format = parent.getFormat();
+                    }
                 // neither a top-level class nor a local class inside a method are considered child
                 // classes
                 return format != Format.MODULE && format != Format.PACKAGE && format != Format.METHOD;
@@ -172,6 +180,47 @@ public class ClassStructure
 
             default:
                 throw new IllegalStateException();
+            }
+        }
+
+    /**
+     * @return the parent class for this virtual child, or null
+     */
+    public ClassStructure getVirtualParent()
+        {
+        if (!isVirtualChild())
+            {
+            return null;
+            }
+
+        Component parent = getParent();
+        while (true)
+            {
+            switch (parent.getFormat())
+                {
+                case MODULE:
+                case PACKAGE:
+                case METHOD:
+                    return null;
+
+                case ENUM:
+                case ENUMVALUE:
+                case INTERFACE:
+                case CLASS:
+                case CONST:
+                case SERVICE:
+                    return (ClassStructure) parent;
+
+                case PROPERTY:
+                    parent = parent.getParent();
+                    break;
+
+                case FILE:
+                case TYPEDEF:
+                case MULTIMETHOD:
+                default:
+                    throw new IllegalStateException();
+                }
             }
         }
 
@@ -993,6 +1042,65 @@ public class ClassStructure
                 }
             }
         return null;
+        }
+
+    /**
+     * For a "virtual child" ClassStructure component that is still being resolved during the
+     * compilation process, determine if there is a "virtual child super" for this virtual child,
+     * and automatically register that virtual child as the "super" of this virtual child if there
+     * is. (Note that this will do so even for an interface, if there is a "super" virtual child of
+     * a class or mixing type, which will ultimately result in a verifier error.)
+     *
+     * @return false iff some unresolved structure was encountered that may have prevented the
+     *         determination of a virtual child super; the return valued does NOT imply the presence
+     *         or the absence of a virtual child super
+     */
+    public boolean resolveVirtualSuper()
+        {
+        boolean        fFirst = true;
+        ClassStructure first  = getVirtualParent();
+        assert first != null;
+        Set<ClassStructure> setContinuations = new ListSet<>();
+        setContinuations.add(first);
+
+        while (!setContinuations.isEmpty())
+            {
+            Set<ClassStructure> setPrev = setContinuations;
+            setContinuations.clear();
+            for (ClassStructure clz : setContinuations)
+                {
+
+                }
+            }
+//        protected Object locateVirtualSuper(NamedConstant
+//        path, int cSegments, boolean fExcludeChildren, Set<IdentityConstant> setExclude, Set<ClassStructure> setContinuations)
+
+        // TODO
+
+        return false;
+        }
+
+    /**
+     * For a "virtual child" ClassStructure component that is still being resolved during the
+     * compilation process, determine if there are any "virtual child super interfaces" for this
+     * virtual child, and automatically register those virtual child interfaces as the "super"
+     * interfaces of this virtual child.
+     *
+     * @param setSuper  a mutable set that the discovered virtual child super interface identities
+     *                  will be placed into
+     *
+     * @return false iff some unresolved structure was encountered that may have prevented the
+     *         determination of a virtual child super interfaces; the return valued does NOT imply
+     *         the presence or the absence of any virtual child super interfaces
+     */
+    public boolean resolveVirtualSuperInterfaces(Set<IdentityConstant> setSuper)
+        {
+        assert isVirtualChild();
+        assert getFormat() == Format.INTERFACE;
+
+        // TODO
+        
+        return false;
         }
 
     /**
@@ -2224,26 +2332,7 @@ public class ClassStructure
         }
 
 
-    // ----- fields --------------------------------------------------------------------------------
-
-    /**
-     * The name-to-type information for type parameters. The type constant is used to specify a
-     * type constraint for the parameter.
-     */
-    private ListMap<StringConstant, TypeConstant> m_mapParams;
-
-    /**
-     * Cached formal type.
-     */
-    private transient TypeConstant m_typeFormal;
-
-    /**
-     * Cached canonical type.
-     */
-    private transient TypeConstant m_typeCanonical;
-
-
-    // ----- inner classes ------------------------------------------------------------------
+    // ----- inner class: SimpleTypeResolver -------------------------------------------------------
 
     /**
      * Generic type resolver based on the actual parameter list.
@@ -2306,4 +2395,23 @@ public class ClassStructure
 
         private List<TypeConstant> m_listActual;
         }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * The name-to-type information for type parameters. The type constant is used to specify a
+     * type constraint for the parameter.
+     */
+    private ListMap<StringConstant, TypeConstant> m_mapParams;
+
+    /**
+     * Cached formal type.
+     */
+    private transient TypeConstant m_typeFormal;
+
+    /**
+     * Cached canonical type.
+     */
+    private transient TypeConstant m_typeCanonical;
     }

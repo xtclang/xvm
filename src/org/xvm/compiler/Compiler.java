@@ -1062,6 +1062,26 @@ public class Compiler
      */
     public static final String NO_THIS_METHOD                     = "COMPILER-108";
     /**
+     * Missing @Override annotation on {0}: This virtual child has a super virtual child.
+     */
+    public static final String VIRTUAL_CHILD_OVERRIDE_MISSING     = "COMPILER-109";
+    /**
+     * Invalid @Override annotation on {0}: This virtual child does not have a super virtual child.
+     */
+    public static final String VIRTUAL_CHILD_OVERRIDE_ILLEGAL     = "COMPILER-110";
+    /**
+     * Illegal "extends" clause on {0}: This virtual child has a super virtual child.
+     */
+    public static final String VIRTUAL_CHILD_EXTENDS_ILLEGAL      = "COMPILER-111";
+    /**
+     * Illegal "extends" clause on {0}: A super virtual child class exists of the same name.
+     */
+    public static final String VIRTUAL_CHILD_EXTENDS_CLASS        = "COMPILER-112";
+    /**
+     * Illegal explicit "extends" clause on {0}: The virtual child super is implicit.
+     */
+    public static final String VIRTUAL_CHILD_EXTENDS_IMPLICIT     = "COMPILER-113";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

@@ -48,10 +48,31 @@ module TestNesting.xqiz.it
         // new BOuter().new Inner().foo();
         }
 
-    class PB
+    class PB                // P is for "parent" and B is for Base
         {
-        class C
+        Int size
             {
+            Int get() {...}
+
+            class A             // A is for "abstract"
+                {
+                void foo() {...}
+                }
+
+            interface I
+                {
+                void foo() {...}
+                }
+
+            mixin M
+                {
+                void foo() {...}
+                }
+
+            @M class C extends A implements I   // C is for "child"
+                {
+                void foo() {...}
+                }
             }
         }
 
@@ -59,11 +80,40 @@ module TestNesting.xqiz.it
         {
         class P extends PB
             {
-            // implied class C
+            @Override class A
+                {
+                void foo() {...}
+                void bar() {...}
+                }
+
+            // implied class A
             //     {
             //     }
+
+            // implied mixin M
+            //     {
+            //     }
+
+            // implied interface I
+            //     {
+            //     }
+
+            // implied class C extends PB.C extends BI.P.A extends PB.A
+            //     {
+            //     }
+
+            // a call to C.foo() has the following potential call chain:
+            // 1) BI.P.M.foo()
+            // 2) PB.M.foo()
+            // 1) BI.P.C.foo()
+            // 2) PB.C.foo()
+            // 3) BI.P.A.foo()
+            // 4) PB.A.foo()
+            // 5) Object.foo() (doesn't exist)
+            // 6) <default> I.foo()
             }
         }
+
     interface DI1 extends BI
         {
         // implied class P
@@ -108,9 +158,17 @@ module TestNesting.xqiz.it
         {
         @Override class P
             {
-            @Override class C
+            @Override class A
+                {
+                // we need a name on all sub-classes
+                String name;
+                }
+
+            @Override class C // CANNOT SAY: extends BC.P.C
                 {
                 }
+
+            case XYZ extends Number {}
             }
         }
     }

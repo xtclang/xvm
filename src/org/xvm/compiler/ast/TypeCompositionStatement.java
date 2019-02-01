@@ -9,12 +9,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import java.util.Set;
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.ComponentBifurcator;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
@@ -49,6 +51,7 @@ import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 
+import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.Composition.Default;
 
 import org.xvm.compiler.ast.StatementBlock.RootContext;
@@ -1390,34 +1393,201 @@ public class TypeCompositionStatement
 
         if (m_fVirtChild)
             {
+            // a virtual child either is a natural extension of its super virtual child, in which
+            // case it must be marked by an "@Override" and it must NOT explicitly extend its super
+            // virtual child (and if it is a class, it must NOT extend anything), or it does not
+            // have a super virtual child, in which case it must NOT be marked by an "@Override",
+            // and in the case of a class, it may explicitly extend some class; in the case of an
+            // interface, it may naturally extend more than one super virtual child interface, which
+            // requires an "@Override" designation, but whether nor not it extends any virtual child
+            // interfaces, it is permitted to extend additional interfaces; however, the rule still
+            // holds that it must NOT explicitly extend any of its super virtual child interfaces
+
+            Contribution contribOld = component.findContribution(Component.Composition.Extends);
+            if (!component.resolveVirtualSuper())
+                {
+                mgr.requestRevisit();
+                return;
+                }
+            Contribution contribNew = component.findContribution(Component.Composition.Extends);
+
+            boolean fReqOverride   = false;
+            boolean fAlreadyLogged = false;
             switch (component.getFormat())
                 {
                 case INTERFACE:
+                    {
+                    assert contribOld == null;
+                    if (contribNew != null)
+                        {
+                        // there is a super virtual child, so it is illegal to define an interface
+                        // of this name
+                        category.log(errs, getSource(), Severity.ERROR, Compiler.VIRTUAL_CHILD_EXTENDS_CLASS,
+                                name.getValueText());
+                        fAlreadyLogged = true;
+                        break;
+                        }
+
+                    Set<IdentityConstant> setExtends = new HashSet<>();
+                    if (!component.resolveVirtualSuperInterfaces(setExtends))
+                        {
+                        mgr.requestRevisit();
+                        return;
+                        }
+
                     // determine if there is an implied super-interface (or a set thereof), which is any
                     // child interface of the same name on any super interface of the parent of this
                     // interface
+                    if (setExtends.isEmpty())
+                        {
+                        fReqOverride = false;
+                        }
+                    else
+                        {
+                        // verify that none of the virtual child super interfaces was implemented
+                        // explicitly
+                        for (Composition composition : compositions)
+                            {
+                            if (composition.keyword.getId() == Id.EXTENDS && setExtends.contains(
+                                    composition.getType().ensureTypeConstant().getSingleUnderlyingClass(true)))
+                                {
+                                composition.log(errs, Severity.ERROR,
+                                        Compiler.VIRTUAL_CHILD_EXTENDS_IMPLICIT,
+                                        name.getValueText());
+                                fAlreadyLogged = true;
+                                break;
+                                }
+                            }
 
-                    // same name on the TODO
+                        fReqOverride = true;
+                        }
                     break;
+                    }
 
                 case MIXIN:
-                    // TODO eventually support inner mix-ins ... but disallow for now
-                    category.log(errs, getSource(), Severity.ERROR, Compiler.CLASS_UNEXPECTED,
-                            component.getContainingClass().getName());
-                    break;
-
                 case CLASS:
                 case CONST:
                 case SERVICE:
-                    // TODO
-                    // TODO @Override on child implies that parent has same-name child, so auto-add "extends" (error if already there)
-                    // TODO no @Override on child implies no same-name child on parent super (error if there), default extends to Object
-                    // TODO child with extends clause cannot extend virtual child
+                    {
+                    if (contribOld == null)
+                        {
+                        if (contribNew == null)
+                            {
+                            // there is no super virtual child, and the virtual child does not have
+                            // an "extends" clause, so add "extends Object" to the class
+                            // REVIEW GG - note that I want to change the MIXIN to *NOT* "extends Object" (what was I thinking?!?)
+                            component.addContribution(Component.Composition.Extends, pool().typeObject());
+
+                            // @Override should NOT exist
+                            fReqOverride = false;
+                            }
+                        else
+                            {
+                            // there is a virtual super, so @Override is required
+                            fReqOverride = true;
+                            }
+                        }
+                    else
+                        {
+                        // shouldn't have been a case in which the "extends" would have been removed
+                        assert contribNew != null;
+
+                        if (contribOld.equals(contribNew))
+                            {
+                            // no change to the "extends" by resolving virtual super, but we must
+                            // check to make sure that the "extends" clause was not an explicit
+                            // "extends" of a virtual child super
+                            IdentityConstant idThis  = component.getIdentityConstant();
+                            IdentityConstant idSuper = contribNew.getTypeConstant()
+                                    .getSingleUnderlyingClass(false);
+                            while (true)
+                                {
+                                idThis  = idThis.getParentConstant();
+                                idSuper = idSuper.getParentConstant();
+                                if (idThis.getFormat() != idSuper.getFormat())
+                                    {
+                                    // if they were both referring to the same virtual child path,
+                                    // then that path would contain identical constant forms
+                                    break;
+                                    }
+
+                                if (idThis instanceof ClassConstant)
+                                    {
+                                    ClassStructure clzSuper = ((ClassStructure) idThis.getComponent()).getSuper();
+                                    if (clzSuper.getIdentityConstant().equals(idSuper))
+                                        {
+                                        for (Composition composition : compositions)
+                                            {
+                                            if (composition.keyword.getId() == Id.EXTENDS)
+                                                {
+                                                composition.log(errs, Severity.ERROR,
+                                                        Compiler.VIRTUAL_CHILD_EXTENDS_IMPLICIT,
+                                                        name.getValueText());
+                                                fAlreadyLogged = true;
+                                                break;
+                                                }
+                                            }
+                                        }
+                                    break;
+                                    }
+                                }
+
+                            fReqOverride = false;
+                            }
+                        else
+                            {
+                            // the "extends" was modified by resolving the virtual child super, so
+                            // that means that the previous value was wrong, and there should have
+                            // been an "@Override"
+                            for (Composition composition : compositions)
+                                {
+                                if (composition.keyword.getId() == Id.EXTENDS)
+                                    {
+                                    composition.log(errs, Severity.ERROR,
+                                            Compiler.VIRTUAL_CHILD_EXTENDS_ILLEGAL,
+                                            name.getValueText());
+                                    fAlreadyLogged = true;
+                                    break;
+                                    }
+                                }
+                            fReqOverride = true;
+                            }
+                        }
                     break;
+                    }
 
                 default:
                     throw new IllegalStateException();
                 }
+
+            if (!fAlreadyLogged)
+                {
+                boolean       fHasOverride = false;
+                ClassConstant clzOverride  = pool().clzOverride();
+                for (Annotation annotation : annotations)
+                    {
+                    if (Handy.equals(clzOverride, annotation.getType().ensureTypeConstant()
+                            .getSingleUnderlyingClass(false)))
+                        {
+                        fHasOverride = true;
+                        if (!fReqOverride)
+                            {
+                            // there is an @Override but one should not exist
+                            annotation.log(errs, Severity.ERROR, Compiler.VIRTUAL_CHILD_OVERRIDE_ILLEGAL,
+                                    name.getValueText());
+                            }
+                        break;
+                        }
+                    }
+
+                if (fReqOverride && !fHasOverride)
+                    {
+                    // @Override is required but none was specified
+                    name.log(errs, getSource(), Severity.ERROR, Compiler.VIRTUAL_CHILD_OVERRIDE_MISSING,
+                            name.getValueText());
+                    }
+                }
+
             }
 
         mgr.processChildren();
