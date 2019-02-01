@@ -1,0 +1,428 @@
+Exception on set# 0 in step# 416: expected:<false> but was:<true>
+java.lang.AssertionError: expected:<false> but was:<true>
+	at org.junit.Assert.fail(Assert.java:88)
+	at org.junit.Assert.failNotEquals(Assert.java:834)
+	at org.junit.Assert.assertEquals(Assert.java:118)
+	at org.junit.Assert.assertEquals(Assert.java:144)
+	at org.xvm.util.SetTest$OpAdd.test(SetTest.java:344)
+	at org.xvm.util.SetTest.randomTest(SetTest.java:104)
+	at org.xvm.util.SetTest.main(SetTest.java:76)
+
+Test steps:
+[0] add E -> true
+[1] remove E -> true
+[2] add EQ -> true
+[3] add C -> true
+[4] add FD -> true
+[5] add P -> true
+[6] add C -> false
+[7] add PU -> true
+[8] add FQ -> true
+[9] add E -> true
+[10] size -> 7
+[11] remove O -> false
+[12] iterate -> 7
+[13] add N -> true
+[14] add E -> false
+[15] add P -> false
+[16] remove M -> false
+[17] remove EQ -> true
+[18] remove EQ -> false
+[19] remove E -> true
+[20] add PZ -> true
+[21] iterate -> 7
+[22] add N -> false
+[23] remove PZ -> true
+[24] add N -> false
+[25] add M -> true
+[26] remove N -> true
+[27] add PU -> false
+[28] add E -> true
+[29] size -> 7
+[30] remove O -> false
+[31] remove M -> true
+[32] remove FQ -> true
+[33] add PZ -> true
+[34] add M -> true
+[35] add FD -> false
+[36] add P -> false
+[37] remove C -> true
+[38] size -> 6
+[39] add PU -> false
+[40] add PZ -> false
+[41] add FD -> false
+[42] remove PZ -> true
+[43] remove M -> true
+[44] remove PZ -> false
+[45] add J -> true
+[46] add PU -> false
+[47] size -> 5
+[48] add PU -> false
+[49] add O -> true
+[50] iterate -> 6
+[51] remove FQ -> false
+[52] add PU -> false
+[53] add FD -> false
+[54] add CE -> true
+[55] remove FD -> true
+[56] add J -> false
+[57] add N -> true
+[58] size -> 7
+[59] add J -> false
+[60] iterate -> 7
+[61] size -> 7
+[62] remove P -> true
+[63] add EQ -> true
+[64] iterate -> 7
+[65] add EQ -> false
+[66] iterate -> 7
+[67] add J -> false
+[68] size -> 7
+[69] iterate -> 7
+[70] remove FQ -> false
+[71] remove J -> true
+[72] iterate -> 6
+[73] iterate -> 6
+[74] remove N -> true
+[75] add P -> true
+[76] add C -> true
+[77] remove C -> true
+[78] add PZ -> true
+[79] iterate -> 7
+[80] add CE -> false
+[81] remove CE -> true
+[82] size -> 6
+[83] add J -> true
+[84] iterate -> 7
+[85] add PU -> false
+[86] remove O -> true
+[87] add E -> false
+[88] add M -> true
+[89] remove M -> true
+[90] add F -> true
+[91] iterate -> 7
+[92] remove J -> true
+[93] size -> 6
+[94] size -> 6
+[95] remove P -> true
+[96] iterate -> 5
+[97] remove E -> true
+[98] size -> 4
+[99] add CE -> true
+[100] add M -> true
+[101] remove M -> true
+[102] add CE -> false
+[103] remove EQ -> true
+[104] add F -> false
+[105] add EQ -> true
+[106] size -> 5
+[107] add J -> true
+[108] add CE -> false
+[109] add P -> true
+[110] iterate -> 7
+[111] add O -> true
+[112] add FD -> true
+[113] add F -> false
+[114] add FQ -> true
+[115] remove EQ -> true
+[116] remove F -> true
+[117] iterate -> 8
+[118] iterate -> 8
+[119] iterate -> 8
+[120] add O -> false
+[121] add E -> true
+[122] add E -> false
+[123] add FQ -> false
+[124] remove O -> true
+[125] add J -> false
+[126] iterate -> 8
+[127] iterate -> 8
+[128] size -> 8
+[129] add C -> true
+[130] add EQ -> true
+[131] remove C -> true
+[132] add CE -> false
+[133] remove J -> true
+[134] add M -> true
+[135] add C -> true
+[136] remove C -> true
+[137] add PU -> false
+[138] add J -> true
+[139] add CE -> false
+[140] add EQ -> false
+[141] add PU -> false
+[142] remove FD -> true
+[143] add FQ -> false
+[144] add N -> true
+[145] add FD -> true
+[146] add PZ -> false
+[147] add J -> false
+[148] add PZ -> false
+[149] add N -> false
+[150] add C -> true
+[151] add FQ -> false
+[152] add N -> false
+[153] add EQ -> false
+[154] remove PU -> true
+[155] remove PZ -> true
+[156] add CE -> false
+[157] add F -> true
+[158] add CE -> false
+[159] iterate -> 11
+[160] size -> 11
+[161] add F -> false
+[162] add C -> false
+[163] add P -> false
+[164] add O -> true
+[165] remove P -> true
+[166] add PZ -> true
+[167] add O -> false
+[168] add EQ -> false
+[169] add O -> false
+[170] add O -> false
+[171] add FQ -> false
+[172] add O -> false
+[173] add M -> false
+[174] iterate -> 12
+[175] size -> 12
+[176] add J -> false
+[177] add EQ -> false
+[178] remove N -> true
+[179] size -> 11
+[180] size -> 11
+[181] add FQ -> false
+[182] remove M -> true
+[183] remove FQ -> true
+[184] add PU -> true
+[185] remove CE -> true
+[186] add FQ -> true
+[187] size -> 10
+[188] add M -> true
+[189] remove FQ -> true
+[190] add N -> true
+[191] add J -> false
+[192] remove E -> true
+[193] add F -> false
+[194] remove P -> false
+[195] size -> 10
+[196] remove F -> true
+[197] add FQ -> true
+[198] add O -> false
+[199] remove EQ -> true
+[200] remove F -> false
+[201] add F -> true
+[202] iterate -> 10
+[203] add PU -> false
+[204] add PZ -> false
+[205] remove F -> true
+[206] add F -> true
+[207] remove F -> true
+[208] add P -> true
+[209] size -> 10
+[210] add PZ -> false
+[211] size -> 10
+[212] size -> 10
+[213] add CE -> true
+[214] add FQ -> false
+[215] remove J -> true
+[216] add FD -> false
+[217] size -> 10
+[218] iterate -> 10
+[219] remove FQ -> true
+[220] iterate -> 9
+[221] size -> 9
+[222] remove PU -> true
+[223] add N -> false
+[224] add FD -> false
+[225] remove P -> true
+[226] add N -> false
+[227] remove CE -> true
+[228] add J -> true
+[229] add N -> false
+[230] add J -> false
+[231] add J -> false
+[232] remove O -> true
+[233] remove O -> false
+[234] add PZ -> false
+[235] iterate -> 6
+[236] size -> 6
+[237] remove FD -> true
+[238] size -> 5
+[239] add CE -> true
+[240] size -> 6
+[241] iterate -> 6
+[242] add O -> true
+[243] add FQ -> true
+[244] add PU -> true
+[245] add N -> false
+[246] remove N -> true
+[247] add C -> false
+[248] add P -> true
+[249] add PZ -> false
+[250] size -> 9
+[251] add PU -> false
+[252] remove FQ -> true
+[253] size -> 8
+[254] add PZ -> false
+[255] add E -> true
+[256] remove O -> true
+[257] remove P -> true
+[258] add N -> true
+[259] iterate -> 8
+[260] add CE -> false
+[261] remove CE -> true
+[262] add F -> true
+[263] add C -> false
+[264] iterate -> 8
+[265] remove N -> true
+[266] add CE -> true
+[267] iterate -> 8
+[268] remove FQ -> false
+[269] add PZ -> false
+[270] iterate -> 8
+[271] add PZ -> false
+[272] size -> 8
+[273] add EQ -> true
+[274] add C -> false
+[275] add EQ -> false
+[276] add EQ -> false
+[277] remove C -> true
+[278] iterate -> 8
+[279] add C -> true
+[280] size -> 9
+[281] iterate -> 9
+[282] add PZ -> false
+[283] add N -> true
+[284] remove M -> true
+[285] size -> 9
+[286] add CE -> false
+[287] remove E -> true
+[288] remove J -> true
+[289] add C -> false
+[290] remove EQ -> true
+[291] remove PZ -> true
+[292] add F -> false
+[293] add CE -> false
+[294] add EQ -> true
+[295] remove EQ -> true
+[296] iterate -> 5
+[297] add PU -> false
+[298] add FD -> true
+[299] add FQ -> true
+[300] remove FQ -> true
+[301] add PZ -> true
+[302] add E -> true
+[303] remove PZ -> true
+[304] add M -> true
+[305] add PZ -> true
+[306] iterate -> 9
+[307] add M -> false
+[308] add CE -> false
+[309] remove EQ -> false
+[310] add PZ -> false
+[311] iterate -> 9
+[312] add M -> false
+[313] iterate -> 9
+[314] remove M -> true
+[315] add F -> false
+[316] add PU -> false
+[317] add E -> false
+[318] add E -> false
+[319] remove CE -> true
+[320] add C -> false
+[321] add N -> false
+[322] remove F -> true
+[323] iterate -> 6
+[324] add PZ -> false
+[325] add E -> false
+[326] remove PZ -> true
+[327] remove P -> false
+[328] add E -> false
+[329] remove PU -> true
+[330] add CE -> true
+[331] remove C -> true
+[332] iterate -> 4
+[333] add CE -> false
+[334] add CE -> false
+[335] remove FQ -> false
+[336] size -> 4
+[337] size -> 4
+[338] size -> 4
+[339] add E -> false
+[340] add CE -> false
+[341] remove E -> true
+[342] remove N -> true
+[343] remove O -> false
+[344] remove P -> false
+[345] size -> 2
+[346] add CE -> false
+[347] remove N -> false
+[348] remove O -> false
+[349] iterate -> 2
+[350] add CE -> false
+[351] iterate -> 2
+[352] iterate -> 2
+[353] add CE -> false
+[354] iterate -> 2
+[355] add FD -> false
+[356] add FQ -> true
+[357] add PU -> true
+[358] add CE -> false
+[359] add PZ -> true
+[360] add FQ -> false
+[361] remove FQ -> true
+[362] add C -> true
+[363] add PZ -> false
+[364] add CE -> false
+[365] add N -> true
+[366] add E -> true
+[367] add PZ -> false
+[368] size -> 7
+[369] add J -> true
+[370] iterate -> 8
+[371] add CE -> false
+[372] iterate -> 8
+[373] add J -> false
+[374] iterate -> 8
+[375] remove J -> true
+[376] add N -> false
+[377] add M -> true
+[378] remove PU -> true
+[379] add FD -> false
+[380] add M -> false
+[381] remove F -> false
+[382] size -> 7
+[383] remove FD -> true
+[384] remove P -> false
+[385] add CE -> false
+[386] add EQ -> true
+[387] add PZ -> false
+[388] add M -> false
+[389] iterate -> 7
+[390] iterate -> 7
+[391] add E -> false
+[392] size -> 7
+[393] remove PU -> false
+[394] add EQ -> false
+[395] add PZ -> false
+[396] add M -> false
+[397] size -> 7
+[398] remove CE -> true
+[399] remove J -> false
+[400] add P -> true
+[401] iterate -> 7
+[402] add N -> false
+[403] remove PZ -> true
+[404] add FQ -> true
+[405] add C -> false
+[406] add O -> true
+[407] add O -> false
+[408] iterate -> 8
+[409] add E -> false
+[410] add E -> false
+[411] add FD -> true
+[412] remove CE -> false
+[413] add N -> false
+[414] add PU -> true
+[415] add CE -> true
+[416] add P -> false
