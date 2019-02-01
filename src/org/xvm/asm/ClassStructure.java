@@ -12,6 +12,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -1057,27 +1058,78 @@ public class ClassStructure
      */
     public boolean resolveVirtualSuper()
         {
-        boolean        fFirst = true;
-        ClassStructure first  = getVirtualParent();
-        assert first != null;
-        Set<ClassStructure> setContinuations = new ListSet<>();
-        setContinuations.add(first);
+        assert isVirtualChild();
 
-        while (!setContinuations.isEmpty())
+        // prevent circularity and repeatedly checking the same components
+        Set<IdentityConstant> setVisited = new HashSet<>();
+        IdentityConstant      idThis     = getIdentityConstant();
+        setVisited.add(idThis);
+
+        // we have to go to our parent (and maybe its parent and so on), to then go to its super
+        // (and maybe its super and so on) -- and maybe it will need to go to its parent, its super,
+        // and so on -- to eventually navigate the virtual child path back down to the same-named
+        // child as this virtual child class; start by collecting a set of initial nodes to begin
+        // a breadth-first search from, which are all of the virtual parents of this virtual child
+        Map<Component, Integer> mapQueued = new ListMap<>();
+        collectVirtualParents(0, mapQueued, setVisited);
+
+        // starting from those initial nodes point, follow all of the contributions that could
+        // contain the virtual child super (which child obviously cannot be found in the first
+        // iteration of the search, since we haven't yet left the hierarchy containing the child
+        // whose super we're searching for)
+        boolean fFirst = true;
+        while (!mapQueued.isEmpty())
             {
-            Set<ClassStructure> setPrev = setContinuations;
-            setContinuations.clear();
-            for (ClassStructure clz : setContinuations)
+            Map<Component, Integer> mapProcess = mapQueued;
+            mapQueued = new ListMap<>();
+
+            for (Entry<Component, Integer> entry : mapProcess.entrySet())
                 {
+                Component component = entry.getKey();
+                int       cDepth    = entry.getValue();
+                if (setVisited.add(component.getIdentityConstant()))
+                    {
+                    component.locateVirtualSuper()
+                    // first, attempt to navigate down the virtual hierarchy by name to find the
+                    // virtual super (if it is reachable here)
+                    // TODO
+                    }
 
+                // collect contributions
+                // TODO
+
+                // collect parents
                 }
-            }
-//        protected Object locateVirtualSuper(NamedConstant
-//        path, int cSegments, boolean fExcludeChildren, Set<IdentityConstant> setExclude, Set<ClassStructure> setContinuations)
 
-        // TODO
+            fFirst = false;
+            }
 
         return false;
+        }
+
+    private void collectVirtualParents(int cDepth, Map<Component, Integer> mapQueued, Set<IdentityConstant> setVisited)
+        {
+        Component parent = getParent();
+        ++cDepth;
+        while (true)
+            {
+            // avoid circular / repetitive checks
+            IdentityConstant id = parent.getIdentityConstant();
+            if (setVisited.contains(id))
+                {
+                return;
+                }
+
+            mapQueued.put(parent, cDepth);
+
+            // keep walking up the parent tree until we've gotten to the class that is the root of
+            // the virtual child hierarchy
+            parent = parent.getParent();
+            if (parent instanceof ClassStructure && !((ClassStructure) parent).isVirtualChild())
+                {
+                return;
+                }
+            }
         }
 
     /**
@@ -1099,7 +1151,7 @@ public class ClassStructure
         assert getFormat() == Format.INTERFACE;
 
         // TODO
-        
+
         return false;
         }
 

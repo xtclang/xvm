@@ -17,6 +17,8 @@ module TestNesting.xqiz.it
             new Inner().foo();
             }
 
+        Bouter!.Inner zoo() {new Bouter().new Inner()}
+
         class Inner
             {
             void foo()
@@ -29,6 +31,8 @@ module TestNesting.xqiz.it
     class DOuter
             extends BOuter
         {
+        Bouter.Inner zoo() {...}
+
         @Override
         class Inner
             {

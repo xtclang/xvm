@@ -814,6 +814,7 @@ public class TypeCompositionStatement
         // enum-value       [5]     n           n           n
         // mixin        0/1 [6]     n           n           n                         0/1 [7]
         // interface    n   [8]     n [8]       n [9]
+        // REVIEW GG - note that I want to change the MIXIN to *NOT* "extends Object" (what was I thinking?!?)
         //
         // [1] module/package/const/enum may explicitly extend a class or a const; otherwise extends
         //     Object
@@ -1403,6 +1404,11 @@ public class TypeCompositionStatement
             // interfaces, it is permitted to extend additional interfaces; however, the rule still
             // holds that it must NOT explicitly extend any of its super virtual child interfaces
 
+            // the first step is to see what the explicit "extends" is stamped on the class, and
+            // then request the class to search for and resolve its natural inner class super (which
+            // will modify the class if a virtual child super is found); note that we do this work
+            // even for interfaces, although they cannot / must not have a super class, thus an
+            // interface that finds a natural virtual child super will be detected as an error below
             Contribution contribOld = component.findContribution(Component.Composition.Extends);
             if (!component.resolveVirtualSuper())
                 {
@@ -1417,17 +1423,27 @@ public class TypeCompositionStatement
                 {
                 case INTERFACE:
                     {
+                    // the registerStructures() pass should never put an "extends" contribution into
+                    // an interface
                     assert contribOld == null;
+
+                    // check if there is a virtual child super class (!!) found for this interface
                     if (contribNew != null)
                         {
-                        // there is a super virtual child, so it is illegal to define an interface
-                        // of this name
+                        // there exists a super virtual child, so it is illegal to define an
+                        // interface of this name
                         category.log(errs, getSource(), Severity.ERROR, Compiler.VIRTUAL_CHILD_EXTENDS_CLASS,
                                 name.getValueText());
                         fAlreadyLogged = true;
                         break;
                         }
 
+                    // when an interface says "extends", it really means "implements interfaces";
+                    // collect the set of virtual child super interfaces that are naturally implied
+                    // for this child interface; like the resolveVirtualSuper() call, this will
+                    // update the class structure if it is finds virtual child super(s), but no
+                    // modifications are made if the necessary components are not ready (not yet
+                    // resolved), which allows us to safely re-queue this processing
                     Set<IdentityConstant> setExtends = new HashSet<>();
                     if (!component.resolveVirtualSuperInterfaces(setExtends))
                         {
@@ -1435,9 +1451,8 @@ public class TypeCompositionStatement
                         return;
                         }
 
-                    // determine if there is an implied super-interface (or a set thereof), which is any
-                    // child interface of the same name on any super interface of the parent of this
-                    // interface
+                    // if there is an implied super-interface (or a set thereof), then @Override is
+                    // required; otherwise, it must NOT be present
                     if (setExtends.isEmpty())
                         {
                         fReqOverride = false;
@@ -1475,8 +1490,10 @@ public class TypeCompositionStatement
                             {
                             // there is no super virtual child, and the virtual child does not have
                             // an "extends" clause, so add "extends Object" to the class
-                            // REVIEW GG - note that I want to change the MIXIN to *NOT* "extends Object" (what was I thinking?!?)
-                            component.addContribution(Component.Composition.Extends, pool().typeObject());
+                            if (component.getFormat() != Format.MIXIN)
+                                {
+                                component.addContribution(Component.Composition.Extends, pool().typeObject());
+                                }
 
                             // @Override should NOT exist
                             fReqOverride = false;
@@ -1489,9 +1506,11 @@ public class TypeCompositionStatement
                         }
                     else
                         {
-                        // shouldn't have been a case in which the "extends" would have been removed
+                        // a previously-present "extends" might be modified, but it is never removed
                         assert contribNew != null;
 
+                        // check if the resolution of the virtual child super modified the "extends"
+                        // contribution
                         if (contribOld.equals(contribNew))
                             {
                             // no change to the "extends" by resolving virtual super, but we must
@@ -1560,8 +1579,13 @@ public class TypeCompositionStatement
                     throw new IllegalStateException();
                 }
 
+            // the reason for keeping track of whether we've already logged an error is that it will
+            // be quite common to have two errors from the same cause, e.g. not realizing that a
+            // child class has a same-name virtual child super, in which case @Override will be
+            // missing AND the virtual child may have specified a super class
             if (!fAlreadyLogged)
                 {
+                // scan for an @Override annotation
                 boolean       fHasOverride = false;
                 ClassConstant clzOverride  = pool().clzOverride();
                 for (Annotation annotation : annotations)
@@ -1587,7 +1611,6 @@ public class TypeCompositionStatement
                             name.getValueText());
                     }
                 }
-
             }
 
         mgr.processChildren();
