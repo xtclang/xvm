@@ -2857,7 +2857,7 @@ public class Parser
      *     PostfixExpression ArrayIndex
      *     PostfixExpression NoWhitespace "?"
      *     PostfixExpression "." Name
-     *     PostfixExpression ".new" ArgumentList
+     *     PostfixExpression ".new" TypeExpression ArgumentList
      *     PostfixExpression ".instanceof" "(" TypeExpression ")"
      *     PostfixExpression ".as" "(" TypeExpression ")"
      *
@@ -2965,7 +2965,16 @@ public class Parser
                                     }
                                 catch (CompilerException e) {}
                                 }
-                            expr = new NameExpression(expr, noDeRef, name, params, lEndPos);
+
+                            if (expr instanceof NamedTypeExpression)
+                                {
+                                expr = new NamedTypeExpression((NamedTypeExpression) expr,
+                                        Collections.singletonList(name), params, lEndPos);
+                                }
+                            else
+                                {
+                                expr = new NameExpression(expr, noDeRef, name, params, lEndPos);
+                                }
                             break;
                             }
 
@@ -3973,8 +3982,9 @@ public class Parser
     /**
      * Parse a type expression in the form:
      *
-     *   "immutable name.name.name!<param, param>"
+     *   "immutable name.name.name<param, param>.name!<param, param>"
      *
+     * REVIEW BNF changes for virtual child NamedTypeExpression
      * <p/><code><pre>
      * NamedTypeExpression
      *     QualifiedName TypeAccessModifier-opt NoAutoNarrowModifier-opt TypeParameterTypeList-opt
@@ -3993,40 +4003,67 @@ public class Parser
         {
         Token immutable = match(Id.IMMUTABLE);
 
-        // QualifiedName
-        List<Token> names = parseQualifiedName();
-
-        // TypeAccessModifier
-        Token tokAccess = null;
-        Token tokNext   = peek();
-        if (tokNext.getId() == Id.COLON && !tokNext.hasLeadingWhitespace() && !tokNext.hasTrailingWhitespace())
+        NamedTypeExpression expr = null;
+        do
             {
-            Token tokColon = current();
-            switch ((tokNext = peek()).getId())
-                {
-                case PUBLIC:
-                case PROTECTED:
-                case PRIVATE:
-                case STRUCT:
-                    // use expect() to make sure that getLastMatch() is set correctly
-                    tokAccess = expect(tokNext.getId());
-                    break;
+            // QualifiedName
+            List<Token> names = parseQualifiedName();
 
-                default:
-                    putBack(tokColon);
-                    break;
+            // TypeAccessModifier
+            Token tokAccess = null;
+            Token tokNext   = peek();
+            if (tokNext.getId() == Id.COLON && !tokNext.hasLeadingWhitespace() && !tokNext.hasTrailingWhitespace())
+                {
+                Token tokColon = current();
+                switch ((tokNext = peek()).getId())
+                    {
+                    case PUBLIC:
+                    case PROTECTED:
+                    case PRIVATE:
+                    case STRUCT:
+                        // use expect() to make sure that getLastMatch() is set correctly
+                        tokAccess = expect(tokNext.getId());
+                        break;
+
+                    default:
+                        putBack(tokColon);
+                        break;
+                    }
+                }
+
+            if (tokAccess != null && expr != null)
+                {
+                log(Severity.ERROR, REPEAT_MODIFIER, tokAccess.getStartPosition(),
+                        tokAccess.getEndPosition(), tokAccess);
+                }
+
+            // NoAutoNarrowModifier
+            Token tokNarrow = !peek().hasLeadingWhitespace()
+                    ? match(Id.NOT)
+                    : null;
+
+            if (tokNarrow != null && expr != null)
+                {
+                log(Severity.ERROR, REPEAT_MODIFIER, tokNarrow.getStartPosition(),
+                        tokNarrow.getEndPosition(), tokNarrow);
+                }
+
+            // TypeParameterTypeList
+            List<TypeExpression> params = parseTypeParameterTypeList(false);
+
+            if (expr == null)
+                {
+                expr = new NamedTypeExpression(immutable, names, tokAccess, tokNarrow,
+                        params, getLastMatch().getEndPosition());
+                }
+            else
+                {
+                expr = new NamedTypeExpression(expr, names, params, getLastMatch().getEndPosition());
                 }
             }
+        while (match(Id.DOT) != null);
 
-        // NoAutoNarrowModifier
-        Token tokNarrow = !peek().hasLeadingWhitespace()
-                ? match(Id.NOT)
-                : null;
-
-        // TypeParameterTypeList
-        List<TypeExpression> params = parseTypeParameterTypeList(false);
-
-        return new NamedTypeExpression(immutable, names, tokAccess, tokNarrow, params, getLastMatch().getEndPosition());
+        return expr;
         }
 
     /**

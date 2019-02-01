@@ -66,7 +66,7 @@ interface Map<KeyType, ValueType>
          * @return an Entry object that can be retained indefinitely; changes to the values in the
          *         map may or may not be reflected in the returned Entry
          */
-        Entry<KeyType, ValueType> reify()
+        Entry reify()
             {
             return this;
             }
@@ -88,7 +88,7 @@ interface Map<KeyType, ValueType>
      * remove the entry if it exists.
      */
     interface ProcessableEntry
-            extends Entry<KeyType, ValueType>
+            extends Entry
         {
         /**
          * True iff the entry is existent in its map. An entry does not exist in its map before its
@@ -135,7 +135,7 @@ interface Map<KeyType, ValueType>
          *         map may or may not be reflected in the returned Entry
          */
         @Override
-        Entry<KeyType, ValueType> reify()
+        Entry reify()
             {
             return this;
             }
@@ -168,7 +168,7 @@ interface Map<KeyType, ValueType>
      *
      * @return the conditional Entry if the key exists in the Map
      */
-    conditional Entry<KeyType, ValueType> getEntry(KeyType key);
+    conditional Entry getEntry(KeyType key);
 
     /**
      * Obtain the value associated with the specified key, iff that key is present in the map. If
@@ -181,7 +181,7 @@ interface Map<KeyType, ValueType>
      */
     conditional ValueType get(KeyType key)
         {
-        if (Entry<KeyType, ValueType> entry : getEntry(key))
+        if (Entry entry : getEntry(key))
             {
             return true, entry.value;
             }
@@ -258,7 +258,7 @@ interface Map<KeyType, ValueType>
      * The returned set is expected to support mutation operations iff the map is _mutable_; the
      * returned set is not expected to support the {@code add} or {@code addAll} operations.
      */
-    @RO Set<Entry<KeyType, ValueType>> entries;
+    @RO Set<Entry> entries;
 
     /**
      * Obtain the collection of all values (one for each key) in the map.
@@ -284,7 +284,7 @@ interface Map<KeyType, ValueType>
      *
      * @return the resultant map, which is the same as {@code this} for a mutable map
      */
-    Map<KeyType, ValueType> put(KeyType key, ValueType value);
+    Map put(KeyType key, ValueType value);
 
     /**
      * Store in this map each of the mappings of key and values specified in another map, regardless
@@ -298,10 +298,10 @@ interface Map<KeyType, ValueType>
      *
      * @return the resultant map, which is the same as {@code this} for a mutable map
      */
-    Map<KeyType, ValueType> putAll(Map!<KeyType, ValueType> that)
+    Map putAll(Map! that)
         {
-        Map<KeyType, ValueType> result = this;
-        for (Entry<KeyType, ValueType> entry : that.entries)
+        Map result = this;
+        for (Entry entry : that.entries)
             {
             result = result.put(entry.key, entry.value);
             }
@@ -315,7 +315,7 @@ interface Map<KeyType, ValueType>
      *
      * @return the resultant map, which is the same as {@code this} for a mutable map
      */
-    Map<KeyType, ValueType> remove(KeyType key);
+    Map remove(KeyType key);
 
     /**
      * Remove all key/value mappings from the map.
@@ -325,7 +325,7 @@ interface Map<KeyType, ValueType>
      *
      * @return the resultant map, which is the same as {@code this} for a mutable map
      */
-    Map<KeyType, ValueType> clear();
+    Map clear();
 
     /**
      * Map the specified key to the specified value, iff that key is *not* currently present in the
@@ -341,7 +341,7 @@ interface Map<KeyType, ValueType>
      * @return a conditional true and the resultant map if the key did not previously exist in the
      *         map; otherwise a conditional false
      */
-    conditional Map<KeyType, ValueType> putIfAbsent(KeyType key, ValueType value)
+    conditional Map putIfAbsent(KeyType key, ValueType value)
         {
         if (keys.contains(key))
             {
@@ -362,7 +362,7 @@ interface Map<KeyType, ValueType>
      * @return a conditional true and the resultant map if the key did exist in the map and was
      *         associated with the previous value; otherwise a conditional false
      */
-    conditional Map<KeyType, ValueType> replace(KeyType key, ValueType valueOld, ValueType valueNew)
+    conditional Map replace(KeyType key, ValueType valueOld, ValueType valueNew)
         {
         if (ValueType valueCur : get(key))
             {
@@ -385,7 +385,7 @@ interface Map<KeyType, ValueType>
      * @return a conditional true and the resultant map if the key did in the map and was
      *         associated with the specified value; otherwise a conditional false
      */
-    conditional Map<KeyType, ValueType> remove(KeyType key, ValueType value)
+    conditional Map remove(KeyType key, ValueType value)
         {
         if (ValueType valueOld : get(key))
             {
@@ -417,7 +417,7 @@ interface Map<KeyType, ValueType>
      *         not _mutable_, or to modify an entry in a map that is not _mutable_ or _fixed size_
      */
     <ResultType> ResultType process(KeyType key,
-            function ResultType (ProcessableEntry<KeyType, ValueType>) compute);
+            function ResultType (ProcessableEntry) compute);
 
     /**
      * Apply the specified function to the entry for the specified key, iff such an entry exists in
@@ -434,7 +434,7 @@ interface Map<KeyType, ValueType>
      *         _mutable_ or _fixed size_
      */
     <ResultType> conditional ResultType processIfPresent(KeyType key,
-            function ResultType (ProcessableEntry<KeyType, ValueType>) compute)
+            function ResultType (ProcessableEntry) compute)
         {
         // this implementation can be overridden to combine the containsKey() and process() into
         // a single step
@@ -523,15 +523,15 @@ interface Map<KeyType, ValueType>
     @Op void setElement(KeyType index, ValueType value)
         {
         // this must be overridden by map implementations that are not of the "mutable" variety
-        Map<KeyType, ValueType> map    = this;
-        Map<KeyType, ValueType> newMap = map.put(index, value);
+        Map map    = this;
+        Map newMap = map.put(index, value);
         assert &map == &newMap;
         }
 
     // ----- ConstAble -----------------------------------------------------------------------------
 
     @Override
-    immutable Map<KeyType, ValueType> ensureConst(Boolean inPlace = false)
+    immutable Map ensureConst(Boolean inPlace = false)
         {
         if (inPlace)
             {
@@ -595,12 +595,12 @@ interface Map<KeyType, ValueType>
             {
             return new Iterator()
                 {
-                Iterator<Entry<KeyType, ValueType>> entryIterator = Map.this.entries.iterator();
+                Iterator<Entry> entryIterator = Map.this.entries.iterator();
 
                 @Override
                 conditional KeyType next()
                     {
-                    if (Entry<KeyType, ValueType> entry : entryIterator.next())
+                    if (Entry entry : entryIterator.next())
                         {
                         return true, entry.key;
                         }
@@ -654,7 +654,7 @@ interface Map<KeyType, ValueType>
      * map and to the map's {@link Map.keys keys}.
      */
     class KeyBasedEntrySet
-            implements Set<Entry<KeyType, ValueType>>
+            implements Set<Entry>
         {
         @Override
         Int size.get()
@@ -669,7 +669,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        Iterator<Entry<KeyType, ValueType>> iterator()
+        Iterator<Entry> iterator()
             {
             return new Iterator()
                 {
@@ -681,7 +681,7 @@ interface Map<KeyType, ValueType>
                     if (KeyType key : keyIterator.next())
                         {
                         // TODO verify this is private (a private property on the anon inner class)
-                        static KeyBasedCursorEntry<KeyType, ValueType> entry = new KeyBasedCursorEntry(key);
+                        static KeyBasedCursorEntry entry = new KeyBasedCursorEntry(key);
                         return true, entry.advance(key);
                         }
 
@@ -691,7 +691,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        conditional KeyBasedEntrySet<KeyType, ValueType> remove(Entry<KeyType, ValueType> entry)
+        conditional KeyBasedEntrySet remove(Entry entry)
             {
             // value is an Entry; remove the requested entry from the map only if the specified
             // entry's key/value pair exists in the map
@@ -708,13 +708,13 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        conditional KeyBasedEntrySet<KeyType, ValueType> removeIf(
-                function Boolean (Entry<KeyType, ValueType>) shouldRemove)
+        conditional KeyBasedEntrySet removeIf(
+                function Boolean (Entry) shouldRemove)
             {
             Set<KeyType> oldKeys = Map.this.keys;
 
             // temp fix, part 1 of 2:
-            KeyBasedCursorEntry<KeyType, ValueType> entry;
+            KeyBasedCursorEntry entry;
             Set<KeyType> newKeys = oldKeys.removeIf(key ->
                 {
                 // REVIEW this line of code is possibly "so wrong" in so many ways:
@@ -736,12 +736,12 @@ interface Map<KeyType, ValueType>
                 //       lambda, as if it were declared outside of this lambda and then captured?
                 // 2) "lazy" says "just the first time, initialize it", which could conceivably be
                 //    an implicit thing, written as:
-                // static @Lazy KeyBasedCursorEntry<KeyType, ValueType> entry.calc()
+                // static @Lazy KeyBasedCursorEntry entry.calc()
                 //     {
                 //     return new KeyBasedCursorEntry(key);
                 //    }
                 // or better yet (not yet supported, but with implicit @Lazy):
-                // static KeyBasedCursorEntry<KeyType, ValueType> entry = new KeyBasedCursorEntry(key);
+                // static KeyBasedCursorEntry entry = new KeyBasedCursorEntry(key);
 
                 // temp fix, part 2 of 2:
                 if (&entry.assigned)
@@ -757,7 +757,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        conditional KeyBasedEntrySet<KeyType, ValueType> clear()
+        conditional KeyBasedEntrySet clear()
             {
             Map newMap = Map.this.clear();
             assert Ref.equals(Map.this, newMap);
@@ -765,13 +765,13 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        Stream<Entry<KeyType, ValueType>> stream()
+        Stream<Entry> stream()
             {
             TODO
             }
 
         @Override
-        KeyBasedEntrySet<KeyType, ValueType> clone()
+        KeyBasedEntrySet clone()
             {
             return this;
             }
@@ -783,7 +783,7 @@ interface Map<KeyType, ValueType>
      * The primordial implementation of a simple Entry.
      */
     static class SimpleEntry(KeyType key, ValueType value)
-            implements Entry<KeyType, ValueType>
+            implements Entry
         {
         @Override
         public/private KeyType key;
@@ -796,7 +796,7 @@ interface Map<KeyType, ValueType>
      * An implementation of ProcessableEntry that delegates back to the map for a specified key.
      */
     class KeyBasedEntry(KeyType key)
-            implements ProcessableEntry<KeyType, ValueType>
+            implements ProcessableEntry
         {
         @Override
         public/protected KeyType key;
@@ -840,7 +840,7 @@ interface Map<KeyType, ValueType>
      * and delegates back to the map for its functionality.
      */
     class KeyBasedCursorEntry
-            extends KeyBasedEntry<KeyType, ValueType>
+            extends KeyBasedEntry
         {
         construct(KeyType key)
             {
@@ -854,18 +854,18 @@ interface Map<KeyType, ValueType>
          *
          * @return this Entry
          */
-        KeyBasedCursorEntry<KeyType, ValueType> advance(KeyType key)
+        KeyBasedCursorEntry advance(KeyType key)
             {
             this.key = key;
             return this;
             }
 
         @Override
-        ProcessableEntry<KeyType, ValueType> reify()
+        Entry reify()
             {
             // this entry class is re-usable for different keys, so return an entry whose key cannot
             // be modified
-            return new KeyBasedEntry<KeyType, ValueType>(key);
+            return new KeyBasedEntry(key);
             }
         }
 
@@ -895,12 +895,12 @@ interface Map<KeyType, ValueType>
             {
             return new Iterator()
                 {
-                Iterator<Entry<KeyType, ValueType>> entryIterator = Map.this.entries.iterator();
+                Iterator<Entry> entryIterator = Map.this.entries.iterator();
 
                 @Override
                 conditional ValueType next()
                     {
-                    if (Entry<KeyType, ValueType> entry : entryIterator.next())
+                    if (Entry entry : entryIterator.next())
                         {
                         return true, entry.value;
                         }
@@ -929,7 +929,7 @@ interface Map<KeyType, ValueType>
         @Override
         conditional Collection<ValueType> removeIf(function Boolean (ValueType) shouldRemove)
             {
-            if (Set<Entry<KeyType, ValueType>> newEntries :
+            if (Set<Entry> newEntries :
                     Map.this.entries.removeIf(entry -> shouldRemove(entry.value)))
                 {
                 assert Ref.equals(Map.this.entries, newEntries);
@@ -958,7 +958,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        EntryBasedValuesCollection<KeyType, ValueType> clone()
+        EntryBasedValuesCollection clone()
             {
             return this;
             }
@@ -1004,9 +1004,9 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        conditional KeyBasedValuesCollection<KeyType, ValueType> remove(ValueType value)
+        conditional KeyBasedValuesCollection remove(ValueType value)
             {
-            Map<KeyType, ValueType> map = Map.this;
+            Map map = Map.this;
             Boolean modified = map.keys.iterator().untilAny(key ->
                 {
                 if (ValueType keyvalue : map.get(key) && keyvalue == value)
@@ -1022,9 +1022,9 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        conditional KeyBasedValuesCollection<KeyType, ValueType> removeIf(function Boolean (ValueType) shouldRemove)
+        conditional KeyBasedValuesCollection removeIf(function Boolean (ValueType) shouldRemove)
             {
-            Map<KeyType, ValueType> map = Map.this;
+            Map map = Map.this;
             if (Set<KeyType> newKeys : map.keys.removeIf(key ->
                     {
                     assert ValueType value : map.get(key);
@@ -1039,7 +1039,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        conditional KeyBasedValuesCollection<KeyType, ValueType> clear()
+        conditional KeyBasedValuesCollection clear()
             {
             Map newMap = Map.this.clear();
 

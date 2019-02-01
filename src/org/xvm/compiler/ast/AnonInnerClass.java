@@ -233,8 +233,8 @@ public class AnonInnerClass
                 exprType.log(getErrorListener(true), Severity.ERROR, Compiler.ANON_CLASS_EXTENDS_INTERSECTION);
                 return;
 
-            default:
-                throw new IllegalStateException("type=" + type);
+            case VirtualChildType:  // treat it as a terminal type
+                break;
 
             case DifferenceType:    // treat it as an interface
             case AccessType:        // treat it as an interface
@@ -242,6 +242,9 @@ public class AnonInnerClass
             case ParameterizedType: // whatever is parameterized, drop through and handle it
                 // fall out of this switch
                 break;
+
+            default:
+                throw new IllegalStateException("type=" + type);
             }
 
         // handling for all class & mixin types

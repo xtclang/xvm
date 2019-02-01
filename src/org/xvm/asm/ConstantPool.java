@@ -1476,6 +1476,19 @@ public class ConstantPool
         }
 
     /**
+     * Given the specified type, obtain a TypeConstant representing a virtual child of that type.
+     *
+     * @param constParent  the parent's TypeConstant (can be parameterized)
+     * @param sName        the child name
+     *
+     * @return the TypeConstant of the instance child type
+     */
+    public TypeConstant ensureVirtualChildTypeConstant(TypeConstant constParent, String sName)
+        {
+        return (TypeConstant) register(new VirtualChildTypeConstant(this, constParent, sName));
+        }
+
+    /**
      * Obtain an auto-narrowing constant that represents the class of "this".
      *
      * @return an auto-narrowing constant that represents the class of "this"
@@ -1592,7 +1605,7 @@ public class ConstantPool
      */
     public TypeConstant ensureParentTypeConstant(TypeConstant constChild)
         {
-        if (constChild == null || !constChild.isAutoNarrowing()
+        if (constChild == null || !constChild.isAutoNarrowing(false)
                 || !constChild.isSingleDefiningConstant() || constChild.isParamsSpecified())
             {
             throw new IllegalArgumentException("single, auto-narrowing, non-parameterized child required");
@@ -1625,7 +1638,7 @@ public class ConstantPool
      */
     public TypeConstant ensureChildTypeConstant(TypeConstant constParent, String sChild)
         {
-        if (constParent == null || !constParent.isAutoNarrowing()
+        if (constParent == null || !constParent.isAutoNarrowing(false)
                 || !constParent.isSingleDefiningConstant() || constParent.isParamsSpecified())
             {
             throw new IllegalArgumentException("single, auto-narrowing, non-parameterized parent required");
@@ -1914,7 +1927,6 @@ public class ConstantPool
     public TypeConstant      typeMatrix()       {TypeConstant      c = m_typeMatrix;      if (c == null) {m_typeMatrix      = c = ensureTerminalTypeConstant(clzMatrix()                     );} return c;}
     public TypeConstant      typeList()         {TypeConstant      c = m_typeList;        if (c == null) {m_typeList        = c = ensureTerminalTypeConstant(clzList()                       );} return c;}
     public TypeConstant      typeMap()          {TypeConstant      c = m_typeMap;         if (c == null) {m_typeMap         = c = ensureTerminalTypeConstant(clzMap()                        );} return c;}
-    public TypeConstant      typeEntry()        {TypeConstant      c = m_typeEntry;       if (c == null) {m_typeEntry       = c = ensureTerminalTypeConstant(clzEntry()                      );} return c;}
     public TypeConstant      typeSequence()     {TypeConstant      c = m_typeSequence;    if (c == null) {m_typeSequence    = c = ensureTerminalTypeConstant(clzSequence()                   );} return c;}
     public TypeConstant      typeOrderable()    {TypeConstant      c = m_typeOrderable;   if (c == null) {m_typeOrderable   = c = ensureTerminalTypeConstant(clzOrderable()                  );} return c;}
     public TypeConstant      typeSequential()   {TypeConstant      c = m_typeSequential;  if (c == null) {m_typeSequential  = c = ensureTerminalTypeConstant(clzSequential()                 );} return c;}
@@ -2637,7 +2649,6 @@ public class ConstantPool
         m_typeMatrix      = null;
         m_typeList        = null;
         m_typeMap         = null;
-        m_typeEntry       = null;
         m_typeSequence    = null;
         m_typeOrderable   = null;
         m_typeSequential  = null;
@@ -3066,7 +3077,6 @@ public class ConstantPool
     private transient TypeConstant      m_typeMatrix;
     private transient TypeConstant      m_typeList;
     private transient TypeConstant      m_typeMap;
-    private transient TypeConstant      m_typeEntry;
     private transient TypeConstant      m_typeSequence;
     private transient TypeConstant      m_typeOrderable;
     private transient TypeConstant      m_typeSequential;

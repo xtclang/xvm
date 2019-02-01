@@ -131,7 +131,8 @@ public abstract class IdentityConstant
      * from the context of the specified class and could be virtually constructed in that context
      * (given an appropriate parent instance).
      *
-     * @param idClass  the class to test nest the visibility from
+     * @param idClass  the class to test nest the visibility from; note that it can represent
+     *                 a non virtual (e.g. anonymous) inner class
      *
      * @return true if this class is a virtual child visible from the specified class context
      */
@@ -155,7 +156,7 @@ public abstract class IdentityConstant
                 }
 
             ClassConstant idBaseThis = idThis.getAutoNarrowingBase();
-            ClassConstant idBaseThat = idThat.getAutoNarrowingBase();
+            ClassConstant idBaseThat = idThat.getOutermost();
             if (idBaseThis.equals(idBaseThat))
                 {
                 return true;

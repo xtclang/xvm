@@ -399,7 +399,7 @@ class ExtHashMap<KeyType, ValueType>
             }
 
         @Override
-        HashEntry reify()
+        Entry reify()
             {
             if (HashEntry entry : ExtHashMap.this.getEntry(key))
                 {
