@@ -676,7 +676,7 @@ interface Map<KeyType, ValueType>
                 Iterator<KeyType> keyIterator = Map.this.keys.iterator(); // TODO verify this is a private prop
 
                 @Override
-                conditional KeyType next()
+                conditional Entry next()
                     {
                     if (KeyType key : keyIterator.next())
                         {
