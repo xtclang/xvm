@@ -18,8 +18,8 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
-
 import java.util.Set;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -496,7 +496,7 @@ public abstract class Component
      */
     public boolean containsUnresolvedContribution()
         {
-        return m_listContribs
+        return m_listContribs != null && m_listContribs
                 .stream()
                 .map(Contribution::getTypeConstant)
                 .anyMatch(Constant::containsUnresolved);
@@ -1439,18 +1439,89 @@ public abstract class Component
         return parent.getChild(sPath.substring(ofStart));
         }
 
-    // TODO
-    protected ClassStructure locateVirtualSuper(
+    /**
+     * @return an iterator of any contributions that could contain virtual children
+     */
+    protected Iterator<IdentityConstant> potentialVirtualChildContributors()
+        {
+        throw new IllegalStateException();
+        }
+
+    /**
+     * Starting from this component, search for the child that is a super of the specified virtual
+     * child.
+     *
+     * @param idVirtChild  the ide of the virtual child whose super (class or interface) we are
+     *                     searching for
+     * @param cDepth       the current depth
+     * @param setVisited   TODO
+     *
+     * @return TODO
+     */
+    protected Object findVirtualChildSuper(
             IdentityConstant        idVirtChild,
             int                     cDepth,
-
-            boolean                 fExcludeParents,
-            boolean                 fExcludeChildren,
-            Map<Component, Integer> mapInProgress,
-            Map<Component, Integer> mapQueued,
             Set<IdentityConstant>   setVisited)
         {
-        throw new IllegalStateException("at: " + getIdentityConstant());
+        if (!setVisited.add(getIdentityConstant()))
+            {
+            // already checked this component node
+            return null;
+            }
+
+        if (cDepth == 0)
+            {
+            return this;
+            }
+
+        // first, attempt to navigate down to the desired child
+        IdentityConstant idChild = idVirtChild;
+        for (int i = 1; i < cDepth; ++i)
+            {
+            idChild = idChild.getParentConstant();
+            }
+        Component child = getChild(idChild.getName());
+        if (child != null)
+            {
+            // TODO verify visibility
+            // TODO verify compatibility of the two components, e.g. must be either class or property, property must match property, can't have interface->class, etc.
+            // TODO the possibility of compatibility issues probably implies that an error listener should be passed in
+            Object oResult = child.findVirtualChildSuper(idVirtChild, cDepth-1, setVisited);
+            if (oResult != null)
+                {
+                return oResult;
+                }
+            }
+
+        // second, attempt to follow the path to a virtual super child via any contributions
+        Iterator<IdentityConstant> iter = potentialVirtualChildContributors();
+        if (iter == null)
+            {
+            return false;
+            }
+
+        Object oResult = null;
+        while (iter.hasNext())
+            {
+            IdentityConstant idContrib = iter.next();
+            if (idContrib.containsUnresolved())
+                {
+                oResult = false;
+                continue;
+                }
+
+            Component component = idContrib.getComponent();
+            if (component != null)
+                {
+                Object o = component.findVirtualChildSuper(idVirtChild, cDepth, setVisited);
+                if (o != null)
+                    {
+                    return o;
+                    }
+                }
+            }
+
+        return oResult;
         }
 
     /**

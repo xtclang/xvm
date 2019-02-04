@@ -6,6 +6,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -569,6 +571,35 @@ public class PropertyStructure
         return result;
         }
 
+    @Override
+    protected Iterator<IdentityConstant> potentialVirtualChildContributors()
+        {
+        List<IdentityConstant> list = null;
+
+        for (Contribution contrib : getContributionsAsList())
+            {
+            if (contrib.getComposition() == Composition.Annotation)
+                {
+                TypeConstant typeAnno = contrib.getTypeConstant();
+                if (typeAnno.containsUnresolved())
+                    {
+                    return null;
+                    }
+                if (typeAnno.isIntoVariableType())
+                    {
+                    if (list == null)
+                        {
+                        list = new ArrayList<>();
+                        }
+                    list.add(typeAnno.getSingleUnderlyingClass(true));
+                    }
+                }
+            }
+
+        return list == null
+                ? Collections.emptyIterator()
+                : list.iterator();
+        }
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

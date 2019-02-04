@@ -12,7 +12,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -21,7 +20,6 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.NamedConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
@@ -36,7 +34,6 @@ import org.xvm.asm.op.L_Set;
 import org.xvm.asm.op.Return_0;
 
 import org.xvm.util.ListMap;
-import org.xvm.util.ListSet;
 
 
 /**
@@ -1005,112 +1002,139 @@ public class ClassStructure
 
     /**
      * For a "virtual child" ClassStructure component that is still being resolved during the
-     * compilation process, determine if there is a "virtual child super" for this virtual child,
-     * and automatically register that virtual child as the "super" of this virtual child if there
-     * is. (Note that this will do so even for an interface, if there is a "super" virtual child of
-     * a class or mixing type, which will ultimately result in a verifier error.)
+     * compilation process, determine the set of "virtual child super" classes and interfaces for
+     * this virtual child.
+     *
+     * @param setContribs  the set to collect implicit contributions (extends/implements) in
      *
      * @return false iff some unresolved structure was encountered that may have prevented the
      *         determination of a virtual child super; the return valued does NOT imply the presence
      *         or the absence of a virtual child super
      */
-    public boolean resolveVirtualSuper()
+    public boolean resolveVirtualSuper(Set<Contribution> setContribs)
         {
         assert isVirtualChild();
 
         // prevent circularity and repeatedly checking the same components
         Set<IdentityConstant> setVisited = new HashSet<>();
-        IdentityConstant      idThis     = getIdentityConstant();
+        IdentityConstant idThis = getIdentityConstant();
         setVisited.add(idThis);
 
-        // we have to go to our parent (and maybe its parent and so on), to then go to its super
-        // (and maybe its super and so on) -- and maybe it will need to go to its parent, its super,
-        // and so on -- to eventually navigate the virtual child path back down to the same-named
-        // child as this virtual child class; start by collecting a set of initial nodes to begin
-        // a breadth-first search from, which are all of the virtual parents of this virtual child
-        Map<Component, Integer> mapQueued = new ListMap<>();
-        collectVirtualParents(0, mapQueued, setVisited);
-
-        // starting from those initial nodes point, follow all of the contributions that could
-        // contain the virtual child super (which child obviously cannot be found in the first
-        // iteration of the search, since we haven't yet left the hierarchy containing the child
-        // whose super we're searching for)
-        boolean fFirst = true;
-        while (!mapQueued.isEmpty())
-            {
-            Map<Component, Integer> mapProcess = mapQueued;
-            mapQueued = new ListMap<>();
-
-            for (Entry<Component, Integer> entry : mapProcess.entrySet())
-                {
-                Component component = entry.getKey();
-                int       cDepth    = entry.getValue();
-                if (setVisited.add(component.getIdentityConstant()))
-                    {
-                    component.locateVirtualSuper()
-                    // first, attempt to navigate down the virtual hierarchy by name to find the
-                    // virtual super (if it is reachable here)
-                    // TODO
-                    }
-
-                // collect contributions
-                // TODO
-
-                // collect parents
-                }
-
-            fFirst = false;
-            }
-
-        return false;
-        }
-
-    private void collectVirtualParents(int cDepth, Map<Component, Integer> mapQueued, Set<IdentityConstant> setVisited)
-        {
         Component parent = getParent();
-        ++cDepth;
+        int       cDepth = 1;
         while (true)
             {
             // avoid circular / repetitive checks
-            IdentityConstant id = parent.getIdentityConstant();
-            if (setVisited.contains(id))
+            if (setVisited.add(parent.getIdentityConstant()))
                 {
-                return;
+                Iterator<IdentityConstant> iter = parent.potentialVirtualChildContributors();
+                if (iter == null)
+                    {
+                    return false;
+                    }
+                while (iter.hasNext())
+                    {
+                    IdentityConstant idContrib = iter.next();
+                    if (idContrib.containsUnresolved())
+                        {
+                        return false;
+                        }
+
+                    Component component = idContrib.getComponent();
+                    if (component != null)
+                        {
+                        Object o = component.findVirtualChildSuper(idThis, cDepth, setVisited);
+                        if (o != null)
+                            {
+                            if (o instanceof Boolean)
+                                {
+                                // something necessary hasn't resolved yet
+                                assert !((Boolean) o);
+                                return false;
+                                }
+
+                            // we found a virtual child super, which may be a super interface
+                            // (implying "implements") or class (implying "extends"); the identity
+                            // of the super is created relative to the contributed identity, instead
+                            // of just using the identity of the class that we found, because the
+                            // actual super type may be a phantom (it might not have a structure)
+                            IdentityConstant idSuper     = idThis.appendTrailingPathTo(idContrib, cDepth);
+                            ClassStructure   clzSuper    = (ClassStructure) o;
+                            Composition      composition = clzSuper.getFormat() == Format.INTERFACE
+                                    ? Composition.Implements : Composition.Extends;
+                            // REVIEW GG type parameters (must align)
+                            setContribs.add(new Contribution(composition, idSuper.getType()));
+                            }
+                        }
+                    }
                 }
 
-            mapQueued.put(parent, cDepth);
-
-            // keep walking up the parent tree until we've gotten to the class that is the root of
-            // the virtual child hierarchy
-            parent = parent.getParent();
+            // we are finished walking up the parent chain AFTER we have processed the first class
+            // in that chain that is NOT a virtual child class
             if (parent instanceof ClassStructure && !((ClassStructure) parent).isVirtualChild())
                 {
-                return;
+                break;
                 }
+
+            parent = parent.getParent();
+            ++cDepth;
             }
+
+        return true;
         }
 
-    /**
-     * For a "virtual child" ClassStructure component that is still being resolved during the
-     * compilation process, determine if there are any "virtual child super interfaces" for this
-     * virtual child, and automatically register those virtual child interfaces as the "super"
-     * interfaces of this virtual child.
-     *
-     * @param setSuper  a mutable set that the discovered virtual child super interface identities
-     *                  will be placed into
-     *
-     * @return false iff some unresolved structure was encountered that may have prevented the
-     *         determination of a virtual child super interfaces; the return valued does NOT imply
-     *         the presence or the absence of any virtual child super interfaces
-     */
-    public boolean resolveVirtualSuperInterfaces(Set<IdentityConstant> setSuper)
+    @Override
+    protected Object findVirtualChildSuper(
+            IdentityConstant        idVirtChild,
+            int                     cDepth,
+            Set<IdentityConstant>   setVisited)
         {
-        assert isVirtualChild();
-        assert getFormat() == Format.INTERFACE;
+        Object oResult = super.findVirtualChildSuper(idVirtChild, cDepth, setVisited);
 
-        // TODO
+        if (oResult == null && isVirtualChild())
+            {
+            // classes also walk up the parent chain (as long as the chain corresponds to a chain of
+            // virtual children and the parent containing them) to find contributions that can lead
+            // to the virtual child super
+            oResult = getParent().findVirtualChildSuper(idVirtChild, cDepth+1, setVisited);
+            }
 
-        return false;
+        return oResult;
+        }
+
+    @Override
+    protected Iterator<IdentityConstant> potentialVirtualChildContributors()
+        {
+        List<IdentityConstant> list = null;
+
+        for (Contribution contrib : getContributionsAsList())
+            {
+            switch (contrib.getComposition())
+                {
+                case Extends:
+                case Incorporates:
+                case Annotation:
+                case Implements:
+                    TypeConstant type = contrib.getTypeConstant();
+                    if (type.containsUnresolved())
+                        {
+                        return null;
+                        }
+                    if (type.isSingleUnderlyingClass(true))
+                        {
+                        if (list == null)
+                            {
+                            list = new ArrayList<>();
+                            }
+
+                        list.add(type.getSingleUnderlyingClass(true));
+                        }
+                }
+            }
+
+        return list == null
+                ? Collections.emptyIterator()
+                : list.iterator();
         }
 
     /**

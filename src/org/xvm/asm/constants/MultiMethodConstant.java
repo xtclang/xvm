@@ -87,6 +87,12 @@ public class MultiMethodConstant
                 getParentConstant().ensureNestedIdentity(pool, that), getName());
         }
 
+    @Override
+    public IdentityConstant appendTrailingSegmentTo(IdentityConstant that)
+        {
+        return that.getConstantPool().ensureMultiMethodConstant(that, getName());
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

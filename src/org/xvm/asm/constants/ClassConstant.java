@@ -293,6 +293,12 @@ public class ClassConstant
         return true;
         }
 
+    @Override
+    public IdentityConstant appendTrailingSegmentTo(IdentityConstant that)
+        {
+        return that.getConstantPool().ensureClassConstant(that, getName());
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

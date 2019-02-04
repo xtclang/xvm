@@ -335,6 +335,12 @@ public class MethodConstant
         }
 
     @Override
+    public IdentityConstant appendTrailingSegmentTo(IdentityConstant that)
+        {
+        return that.getConstantPool().ensureMethodConstant(that, m_constSig);
+        }
+
+    @Override
     public TypeConstant getType()
         {
         TypeConstant type = m_type;

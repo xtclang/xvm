@@ -65,6 +65,12 @@ public class PackageConstant
         return true;
         }
 
+    @Override
+    public IdentityConstant appendTrailingSegmentTo(IdentityConstant that)
+        {
+        return that.getConstantPool().ensurePackageConstant(that, getName());
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
