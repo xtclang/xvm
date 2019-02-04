@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -228,6 +229,23 @@ public class TerminalTypeConstant
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constant);
             }
+        }
+
+    @Override
+    public TypeConstant getGenericParamType(String sName)
+        {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return constId.getReferredToType().getGenericParamType(sName);
+            }
+
+        // because isA() uses this method, there is a chicken-and-egg problem, so instead of
+        // materializing the TypeInfo at this point, just answer the question without it
+        ClassStructure clz = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
+
+        return clz.getGenericParamType(getConstantPool(), sName, Collections.EMPTY_LIST);
         }
 
     @Override

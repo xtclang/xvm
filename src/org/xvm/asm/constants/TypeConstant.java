@@ -334,16 +334,9 @@ public abstract class TypeConstant
      */
     public TypeConstant getGenericParamType(String sName)
         {
-        if (isSingleUnderlyingClass(true))
-            {
-            // because isA() uses this method, there is a chicken-and-egg problem, so instead of
-            // materializing the TypeInfo at this point, just answer the question without it
-            ClassStructure clz = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
-
-            return clz.getGenericParamType(getConstantPool(), sName, getParamTypes());
-            }
-
-        return null;
+        return isModifyingType()
+                ? getUnderlyingType().getGenericParamType(sName)
+                : null;
         }
 
     /**
@@ -360,6 +353,34 @@ public abstract class TypeConstant
     public boolean isVirtualChild()
         {
         return isModifyingType() && getUnderlyingType().isVirtualChild();
+        }
+
+    /**
+     * A virtual child type is said to be a "phantom" if it represents a child with a non-existing
+     * structure. For example, let's say we have classes:
+     *
+     * <pre><code>
+     *   class B
+     *       {
+     *       class C // child of B
+     *            {
+     *            }
+     *       }
+     *   class D
+     *       extends B
+     *       {
+     *       }
+     * </code></pre>
+     *
+     * In this case virtual child type VCT(D, "C") is a phantom virtual child type, but VCT(B, "C")
+     * is not.
+     *
+     * @return whether or not this type represents a phantom virtual child
+     */
+    public boolean isPhantom()
+        {
+        assert isVirtualChild();
+        return getUnderlyingType().isPhantom();
         }
 
     /**
@@ -1418,20 +1439,6 @@ public abstract class TypeConstant
             }
         else
             {
-            if (isVirtualChild())
-                {
-                // virtual child has access to the parent's type parameters
-                TypeInfo infoParent = getParentType().ensureTypeInfo(errs);
-
-                for (ParamInfo param : infoParent.getTypeParams().values())
-                    {
-                    if (!(param.getNestedIdentity() instanceof NestedIdentity))
-                        {
-                        mapTypeParams.put(param.getName(), param);
-                        }
-                    }
-                }
-
             // obtain the type parameters encoded in this type constant
             TypeConstant[] atypeParams = getParamTypesArray();
             int            cTypeParams = atypeParams.length;
@@ -2285,7 +2292,7 @@ public abstract class TypeConstant
                 mapContribProps   = new HashMap<>();
                 mapContribMethods = new HashMap<>();
 
-                collectSelfTypeParameters(struct, mapTypeParams, mapContribProps);
+                collectSelfTypeParameters(struct, mapTypeParams, mapContribProps, errs);
 
                 ArrayList<PropertyConstant> listExplode = new ArrayList<>();
                 if (!createMemberInfo(constId, isInterface(constId, struct),
@@ -3164,14 +3171,25 @@ public abstract class TypeConstant
     private void collectSelfTypeParameters(
             ClassStructure                      struct,
             Map<Object, ParamInfo>              mapTypeParams,
-            Map<PropertyConstant, PropertyInfo> mapProps)
+            Map<PropertyConstant, PropertyInfo> mapProps,
+            ErrorListener                       errs)
         {
         ConstantPool pool = getConstantPool();
 
-        if (struct.isVirtualChild())
+        assert isVirtualChild() == struct.isVirtualChild();
+
+        if (isVirtualChild())
             {
-            ClassStructure parent = (ClassStructure) struct.getParent();
-            collectSelfTypeParameters(parent, mapTypeParams, mapProps);
+            // virtual child has access to the parent's type parameters
+            TypeInfo infoParent = getParentType().ensureTypeInfo(errs);
+
+            for (ParamInfo param : infoParent.getTypeParams().values())
+                {
+                if (!(param.getNestedIdentity() instanceof NestedIdentity))
+                    {
+                    mapTypeParams.put(param.getName(), param);
+                    }
+                }
             }
 
         for (Component child : struct.children())

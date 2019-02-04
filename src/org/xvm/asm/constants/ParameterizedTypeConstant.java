@@ -83,7 +83,8 @@ public class ParameterizedTypeConstant
             throw new IllegalArgumentException("type is already parameterized");
             }
         if (!(constType instanceof TerminalTypeConstant ||
-              constType instanceof VirtualChildTypeConstant))
+              constType instanceof VirtualChildTypeConstant ||
+              constType instanceof UnresolvedTypeConstant))
             {
             throw new IllegalArgumentException("must refer to a terminal or instance child type");
             }
@@ -129,6 +130,21 @@ public class ParameterizedTypeConstant
     public TypeConstant[] getParamTypesArray()
         {
         return m_atypeParams;
+        }
+
+    @Override
+    public TypeConstant getGenericParamType(String sName)
+        {
+        if (isSingleUnderlyingClass(true))
+            {
+            // because isA() uses this method, there is a chicken-and-egg problem, so instead of
+            // materializing the TypeInfo at this point, just answer the question without it
+            ClassStructure clz = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
+
+            return clz.getGenericParamType(getConstantPool(), sName, getParamTypes());
+            }
+
+        return null;
         }
 
     @Override
@@ -251,12 +267,7 @@ public class ParameterizedTypeConstant
     @Override
     public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
         {
-        TypeConstant constOriginal = m_constType;
-
-        assert constOriginal instanceof TerminalTypeConstant ||
-               constOriginal instanceof VirtualChildTypeConstant;
-
-        return constOriginal.adoptParameters(pool, atypeParams == null ? m_atypeParams : atypeParams);
+        return m_constType.adoptParameters(pool, atypeParams == null ? m_atypeParams : atypeParams);
         }
 
     @Override

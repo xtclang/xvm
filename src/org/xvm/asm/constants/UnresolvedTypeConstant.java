@@ -118,7 +118,11 @@ public class UnresolvedTypeConstant
     @Override
     public Constant getDefiningConstant()
         {
-        return isTypeResolved() ? getResolvedType().getDefiningConstant() : m_constId.getResolvedConstant();
+        return isTypeResolved()
+                ? getResolvedType().getDefiningConstant()
+                : m_constId.isNameResolved()
+                        ? m_constId.getResolvedConstant()
+                        : m_constId;
         }
 
     @Override

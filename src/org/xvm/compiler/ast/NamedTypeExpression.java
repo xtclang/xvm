@@ -346,11 +346,8 @@ public class NamedTypeExpression
         TypeConstant type;
         if (left == null)
             {
-            if (listParams == null)
-                {
-                type = calculateDefaultType(null, constId);
-                }
-            else
+            type = calculateDefaultType(null, constId);
+            if (listParams != null)
                 {
                 int            cParams     = listParams.size();
                 TypeConstant[] atypeParams = new TypeConstant[cParams];
@@ -358,21 +355,8 @@ public class NamedTypeExpression
                     {
                     atypeParams[i] = listParams.get(i).ensureTypeConstant();
                     }
-                type = pool.ensureParameterizedTypeConstant(
-                        pool.ensureTerminalTypeConstant(constId), atypeParams);
 
-                if (!constId.containsUnresolved() && type.isSingleUnderlyingClass(true))
-                    {
-                    IdentityConstant id  = type.getSingleUnderlyingClass(true);
-                    ClassStructure   clz = (ClassStructure) id.getComponent();
-                    if (clz.isVirtualChild())
-                        {
-                        ClassConstant  idBase  = ((ClassConstant) id).getAutoNarrowingBase();
-                        ClassStructure clzBase = (ClassStructure) idBase.getComponent();
-
-                        type = createVirtualTypeConstant(clzBase, clz, false);
-                        }
-                    }
+                type = pool.ensureParameterizedTypeConstant(type, atypeParams);
                 }
 
             // unlike the parametrization, we shouldn't modify unresolved types; doing so can cause
@@ -488,16 +472,14 @@ public class NamedTypeExpression
                     m_constUnresolved = null;
                     }
 
-                // update the type constant
-
-                resetTypeConstant();
-                TypeConstant typeNew = ensureTypeConstant();
-
                 if (m_typeUnresolved != null)
                     {
-                    m_typeUnresolved.resolve(typeNew);
+                    m_typeUnresolved.resolve(calculateDefaultType(null, constIdNew));
                     m_typeUnresolved = null;
                     }
+
+                // reset the type constant
+                resetTypeConstant();
                 break;
                 }
 
@@ -763,9 +745,11 @@ public class NamedTypeExpression
                     }
                 else
                     {
-                    // target is the base class itself or it's contribution
-                    // (e.g. ExtHashMap or Map if we are inside of ExtHashMap)
-                    if (clzTarget.isParameterized())
+                    // the target is the base class itself or some of it's contributions
+                    // (e.g. ExtHashMap or Map if we are inside of ExtHashMap);
+                    // default to the formal type unless the type parameters are explicitly
+                    // specified by this expression
+                    if (clzTarget.isParameterized() && paramTypes == null)
                         {
                         typeTarget = pool.ensureParameterizedTypeConstant(typeTarget,
                             clzTarget.getFormalType().getParamTypesArray());
