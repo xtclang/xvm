@@ -48,7 +48,7 @@ interface Collector<ElementType, AccumulationType, ResultType>
             function Boolean (AccumulationType, ElementType)               accumulate, // Accumulator
             function AccumulationType (AccumulationType, AccumulationType) combine)    // Combiner
         {
-        return new SimpleCollector<ElementType, AccumulationType, AccumulationType>(
+        return new Collector<ElementType, AccumulationType, AccumulationType>.SimpleCollector(
                 supply, accumulate, combine, result -> result);
         }
 
@@ -65,13 +65,14 @@ interface Collector<ElementType, AccumulationType, ResultType>
      *         {@code accumulate}, {@code combine} and {@code finish} functions
      */
     static <ElementType, AccumulationType, ResultType>
-        Collector<ElementType, AccumulationType, ResultType> ofTest(
+        Collector<ElementType, AccumulationType, ResultType> of(
             function AccumulationType ()                                   supply,     // Supplier
             function Boolean (AccumulationType, ElementType)               accumulate, // Accumulator
             function AccumulationType (AccumulationType, AccumulationType) combine,    // Combiner
             function ResultType (AccumulationType)                         finish)     // Finisher
         {
-        return new SimpleCollector(supply, accumulate, combine, finish);
+        return new Collector<ElementType, AccumulationType, ResultType>.SimpleCollector(
+                supply, accumulate, combine, finish);
         }
 
     /**

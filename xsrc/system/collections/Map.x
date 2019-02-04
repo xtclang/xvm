@@ -610,7 +610,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        conditional EntryBasedKeySet<KeyType> remove(KeyType key)
+        conditional EntryBasedKeySet remove(KeyType key)
             {
             Map newMap = Map.this.remove(key);
             assert Ref.equals(Map.this, newMap);
@@ -618,7 +618,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        conditional EntryBasedKeySet<KeyType> removeIf(function Boolean (KeyType) shouldRemove)
+        conditional EntryBasedKeySet removeIf(function Boolean (KeyType) shouldRemove)
             {
             Set<KeyType> oldKeys = Map.this.keys;
             oldKeys.removeIf(shouldRemove);
@@ -627,7 +627,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        conditional EntryBasedKeySet<KeyType> clear()
+        conditional EntryBasedKeySet clear()
             {
             Map newMap = Map.this.clear();
             assert Ref.equals(Map.this, newMap);
@@ -641,7 +641,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        EntryBasedKeySet<KeyType> clone()
+        EntryBasedKeySet clone()
             {
             return this;
             }

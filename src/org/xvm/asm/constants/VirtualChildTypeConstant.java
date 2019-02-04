@@ -184,6 +184,21 @@ public class VirtualChildTypeConstant
         }
 
     @Override
+    public boolean isPhantom()
+        {
+        TypeConstant typeParent = m_typeParent;
+        if (typeParent.isVirtualChild() && typeParent.isPhantom())
+            {
+            // a child of a phantom is a phantom
+            return true;
+            }
+
+        ClassStructure parent = (ClassStructure)
+                typeParent.getSingleUnderlyingClass(true).getComponent();
+        return parent.getChild(getChildName()) == null;
+        }
+
+    @Override
     public TypeConstant getParentType()
         {
         return m_typeParent;

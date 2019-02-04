@@ -2216,7 +2216,7 @@ public class ClassStructure
                 int cActual = listActual.size();
                 if (cFormal < cActual)
                     {
-                    // soft assert; this should be reported by the parser
+                    // soft assert; this should have already been reported
                     System.err.println("Too many parameters: " + listActual +
                                        " passed to " + ClassStructure.this);
                     }
