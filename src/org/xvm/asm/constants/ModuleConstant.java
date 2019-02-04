@@ -169,6 +169,12 @@ public class ModuleConstant
         return trailingSegmentEquals(that);
         }
 
+    @Override
+    public IdentityConstant appendTrailingSegmentTo(IdentityConstant that)
+        {
+        throw new IllegalStateException(this.toString());
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

@@ -9,14 +9,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
-import java.util.Set;
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.ComponentBifurcator;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
@@ -37,26 +35,28 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodType;
+
 import org.xvm.asm.op.Construct_0;
 import org.xvm.asm.op.Construct_1;
 import org.xvm.asm.op.Construct_N;
 import org.xvm.asm.op.L_Set;
 import org.xvm.asm.op.Return_0;
+
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
-
 import org.xvm.compiler.Token.Id;
-import org.xvm.compiler.ast.Composition.Default;
 
+import org.xvm.compiler.ast.Composition.Default;
 import org.xvm.compiler.ast.StatementBlock.RootContext;
+
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
+import org.xvm.util.ListSet;
 import org.xvm.util.Severity;
 
 import static org.xvm.compiler.Constants.ECSTASY_MODULE;
@@ -1409,13 +1409,12 @@ public class TypeCompositionStatement
             // will modify the class if a virtual child super is found); note that we do this work
             // even for interfaces, although they cannot / must not have a super class, thus an
             // interface that finds a natural virtual child super will be detected as an error below
-            Contribution contribOld = component.findContribution(Component.Composition.Extends);
-            if (!component.resolveVirtualSuper())
+            ListSet<Contribution> setContrib = new ListSet<>();
+            if (!component.resolveVirtualSuper(setContrib))
                 {
                 mgr.requestRevisit();
                 return;
                 }
-            Contribution contribNew = component.findContribution(Component.Composition.Extends);
 
             boolean fReqOverride   = false;
             boolean fAlreadyLogged = false;
@@ -1423,12 +1422,8 @@ public class TypeCompositionStatement
                 {
                 case INTERFACE:
                     {
-                    // the registerStructures() pass should never put an "extends" contribution into
-                    // an interface
-                    assert contribOld == null;
-
                     // check if there is a virtual child super class (!!) found for this interface
-                    if (contribNew != null)
+                    if (setContrib.stream().anyMatch(contrib -> contrib.getComposition() == Component.Composition.Extends))
                         {
                         // there exists a super virtual child, so it is illegal to define an
                         // interface of this name
@@ -1438,22 +1433,9 @@ public class TypeCompositionStatement
                         break;
                         }
 
-                    // when an interface says "extends", it really means "implements interfaces";
-                    // collect the set of virtual child super interfaces that are naturally implied
-                    // for this child interface; like the resolveVirtualSuper() call, this will
-                    // update the class structure if it is finds virtual child super(s), but no
-                    // modifications are made if the necessary components are not ready (not yet
-                    // resolved), which allows us to safely re-queue this processing
-                    Set<IdentityConstant> setExtends = new HashSet<>();
-                    if (!component.resolveVirtualSuperInterfaces(setExtends))
-                        {
-                        mgr.requestRevisit();
-                        return;
-                        }
-
                     // if there is an implied super-interface (or a set thereof), then @Override is
                     // required; otherwise, it must NOT be present
-                    if (setExtends.isEmpty())
+                    if (setContrib.isEmpty())
                         {
                         fReqOverride = false;
                         }
@@ -1463,8 +1445,8 @@ public class TypeCompositionStatement
                         // explicitly
                         for (Composition composition : compositions)
                             {
-                            if (composition.keyword.getId() == Id.EXTENDS && setExtends.contains(
-                                    composition.getType().ensureTypeConstant().getSingleUnderlyingClass(true)))
+                            if (composition.keyword.getId() == Id.EXTENDS && setContrib.stream().anyMatch(
+                                    contrib -> contrib.getTypeConstant().equals(composition.getType())))
                                 {
                                 composition.log(errs, Severity.ERROR,
                                         Compiler.VIRTUAL_CHILD_EXTENDS_IMPLICIT,
@@ -1484,9 +1466,33 @@ public class TypeCompositionStatement
                 case CONST:
                 case SERVICE:
                     {
-                    if (contribOld == null)
+                    Contribution contribExplicit = component.findContribution(Component.Composition.Extends);
+                    Contribution contribImplicit = null;
+                    for (Contribution contrib : setContrib)
                         {
-                        if (contribNew == null)
+                        if (contrib.getComposition() == Component.Composition.Extends)
+                            {
+                            if (contribImplicit != null)
+                                {
+                                name.log(errs, getSource(), Severity.ERROR, Compiler.VIRTUAL_CHILD_EXTENDS_MULTIPLE,
+                                        name.getValueText());
+                                fAlreadyLogged = true;
+                                break;
+                                }
+
+                            contribImplicit = contrib;
+                            }
+                        else if (!fAlreadyLogged)
+                            {
+                            name.log(errs, getSource(), Severity.ERROR, Compiler.VIRTUAL_CHILD_EXTENDS_INTERFACE,
+                                    name.getValueText());
+                            fAlreadyLogged = true;
+                            }
+                        }
+
+                    if (contribExplicit == null)
+                        {
+                        if (contribImplicit == null)
                             {
                             // there is no super virtual child, and the virtual child does not have
                             // an "extends" clause, so add "extends Object" to the class
@@ -1504,20 +1510,17 @@ public class TypeCompositionStatement
                             fReqOverride = true;
                             }
                         }
-                    else
+                    else if (contribImplicit != null)
                         {
-                        // a previously-present "extends" might be modified, but it is never removed
-                        assert contribNew != null;
-
                         // check if the resolution of the virtual child super modified the "extends"
                         // contribution
-                        if (contribOld.equals(contribNew))
+                        if (contribExplicit.equals(contribImplicit))
                             {
                             // no change to the "extends" by resolving virtual super, but we must
                             // check to make sure that the "extends" clause was not an explicit
                             // "extends" of a virtual child super
                             IdentityConstant idThis  = component.getIdentityConstant();
-                            IdentityConstant idSuper = contribNew.getTypeConstant()
+                            IdentityConstant idSuper = contribImplicit.getTypeConstant()
                                     .getSingleUnderlyingClass(false);
                             while (true)
                                 {
@@ -1586,21 +1589,24 @@ public class TypeCompositionStatement
             if (!fAlreadyLogged)
                 {
                 // scan for an @Override annotation
-                boolean       fHasOverride = false;
-                ClassConstant clzOverride  = pool().clzOverride();
-                for (Annotation annotation : annotations)
+                boolean fHasOverride = false;
+                if (annotations != null)
                     {
-                    if (Handy.equals(clzOverride, annotation.getType().ensureTypeConstant()
-                            .getSingleUnderlyingClass(false)))
+                    ClassConstant clzOverride  = pool().clzOverride();
+                    for (Annotation annotation : annotations)
                         {
-                        fHasOverride = true;
-                        if (!fReqOverride)
+                        if (Handy.equals(clzOverride, annotation.getType().ensureTypeConstant()
+                                .getSingleUnderlyingClass(false)))
                             {
-                            // there is an @Override but one should not exist
-                            annotation.log(errs, Severity.ERROR, Compiler.VIRTUAL_CHILD_OVERRIDE_ILLEGAL,
-                                    name.getValueText());
+                            fHasOverride = true;
+                            if (!fReqOverride)
+                                {
+                                // there is an @Override but one should not exist
+                                annotation.log(errs, Severity.ERROR, Compiler.VIRTUAL_CHILD_OVERRIDE_ILLEGAL,
+                                        name.getValueText());
+                                }
+                            break;
                             }
-                        break;
                         }
                     }
 
@@ -1609,6 +1615,12 @@ public class TypeCompositionStatement
                     // @Override is required but none was specified
                     name.log(errs, getSource(), Severity.ERROR, Compiler.VIRTUAL_CHILD_OVERRIDE_MISSING,
                             name.getValueText());
+                    }
+
+                // add the implicit contributions to the virtual child
+                for (Contribution contrib : setContrib)
+                    {
+                    component.addContribution(contrib.getComposition(), contrib.getTypeConstant());
                     }
                 }
             }

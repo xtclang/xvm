@@ -1074,13 +1074,21 @@ public class Compiler
      */
     public static final String VIRTUAL_CHILD_EXTENDS_ILLEGAL      = "COMPILER-111";
     /**
-     * Illegal "extends" clause on {0}: A super virtual child class exists of the same name.
+     * Illegal "extends" clause on interface {0}: A super virtual child class exists with the same name.
      */
     public static final String VIRTUAL_CHILD_EXTENDS_CLASS        = "COMPILER-112";
     /**
      * Illegal explicit "extends" clause on {0}: The virtual child super is implicit.
      */
     public static final String VIRTUAL_CHILD_EXTENDS_IMPLICIT     = "COMPILER-113";
+    /**
+     * A super virtual child interface exists of the same name {0}, and a class may not extend an interface.
+     */
+    public static final String VIRTUAL_CHILD_EXTENDS_INTERFACE    = "COMPILER-114";
+    /**
+     * Multiple super virtual child classes exists of the same name {0}, and a class may not extend multiple classes.
+     */
+    public static final String VIRTUAL_CHILD_EXTENDS_MULTIPLE     = "COMPILER-115";
     /**
      * {0} is not yet implemented.
      */

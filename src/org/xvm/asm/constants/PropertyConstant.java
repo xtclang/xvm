@@ -199,6 +199,12 @@ public class PropertyConstant
                 getParentConstant().ensureNestedIdentity(pool, that), getName());
         }
 
+    @Override
+    public IdentityConstant appendTrailingSegmentTo(IdentityConstant that)
+        {
+        return that.getConstantPool().ensurePropertyConstant(that, getName());
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

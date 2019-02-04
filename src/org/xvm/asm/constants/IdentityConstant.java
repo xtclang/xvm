@@ -75,6 +75,22 @@ public abstract class IdentityConstant
         }
 
     /**
+     * @return the number of elements in the identity constant path
+     */
+    public int getPathElementCount()
+        {
+        int c = 0;
+        IdentityConstant id = this;
+        do
+            {
+            ++c;
+            id = id.getParentConstant();
+            }
+        while (id != null);
+        return c;
+        }
+
+    /**
      * @return a List of IdentityConstants that makes up the path to this IdentityConstant
      */
     public List<IdentityConstant> getPath()
@@ -454,6 +470,31 @@ public abstract class IdentityConstant
         }
 
     /**
+     * Append the last {@code cSegments} segments of this IdentityConstant to the passed in
+     * IdentityConstant.
+     *
+     * @param that       another IdentityConstant
+     * @param cSegments  the number of segments to append
+     *
+     * @return the resulting IdentityConstant
+     */
+    public IdentityConstant appendTrailingPathTo(IdentityConstant that, int cSegments)
+        {
+        switch (cSegments)
+            {
+            default:
+                assert cSegments > 0;
+                that = appendTrailingPathTo(that, cSegments - 1);
+                // fall through
+            case 1:
+                return appendTrailingSegmentTo(that);
+
+            case 0:
+                return that;
+            }
+        }
+
+    /**
      * Considering the IdentityConstant as a path of identity segments, determine if the last
      * segment of this IdentityConstant is the same as the last segment of another specified
      * IdentityConstant.
@@ -466,6 +507,17 @@ public abstract class IdentityConstant
         {
         return this.getClass() == that.getClass() && this.getName().equals(that.getName());
         }
+
+    /**
+     * Append the last segment from this IdentityConstant to the end of the passed in
+     * IdentityConstant.
+     *
+     * @param that  another IdentityConstant
+     *
+     * @return the IdentityConstant that results from appending the last segment from this
+     *         IdentityConstant to the end of the passed in IdentityConstant
+     */
+    public abstract IdentityConstant appendTrailingSegmentTo(IdentityConstant that);
 
     /**
      * @return the Component structure that is identified by this IdentityConstant

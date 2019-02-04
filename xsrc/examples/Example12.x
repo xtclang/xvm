@@ -1987,3 +1987,43 @@ const PartitionInfo
     Int partitionCount;
     Bucket[] buckets;
     }
+
+// -- complications for nested virtual child super
+
+class D3 extends D1
+    {
+    @Override class C1
+        {
+        @Override class C2
+            {
+            @Override class C3
+                {
+                @Override class C4
+                }
+            }
+        }
+    }
+
+class D1 extends B
+    {
+    @Override class C1
+        {
+        @Override class C2
+            {
+            }
+        }
+    }
+
+class B
+    {
+    class C1
+        {
+        class C2
+            {
+            class C3
+                {
+                class C4
+                }
+            }
+        }
+    }

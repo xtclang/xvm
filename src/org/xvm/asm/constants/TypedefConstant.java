@@ -103,6 +103,12 @@ public class TypedefConstant
                 getParentConstant().ensureNestedIdentity(pool, that), getName());
         }
 
+    @Override
+    public IdentityConstant appendTrailingSegmentTo(IdentityConstant that)
+        {
+        return that.getConstantPool().ensureTypedefConstant(that, getName());
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
