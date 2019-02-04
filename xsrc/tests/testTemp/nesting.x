@@ -14,11 +14,10 @@ module TestNesting.xqiz.it
         console.println("\n** testSimple()");
         new BOuter().bar();
         new DOuter().bar();
-        // new BOuter().new Inner().foo();
+        new BOuter().new Inner().foo();
         }
 
-    // TODO "class BOuter extends Something" causes IllegalState
-    class BOuter
+    class BOuter // TODO unrelated compiler bug: "class BOuter extends Something" causes IllegalState
         {
         void bar()
             {

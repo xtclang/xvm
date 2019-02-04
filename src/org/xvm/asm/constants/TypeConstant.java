@@ -1949,30 +1949,32 @@ public abstract class TypeConstant
                         break;
                         }
 
-                    // the mixin must be compatible with this type, as specified by its "into"
-                    // clause; note: not 100% correct because the presence of this mixin may affect
-                    // the answer, so this requires an eventual fix
                     TypeConstant typeRequire = typeContrib.getExplicitClassInto();
-                    if (typeRequire != null && !this.isA(typeRequire))
+                    if (!typeRequire.isIntoClassType())
                         {
-                        log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE,
-                                constId.getPathString(),
-                                typeContrib.getValueString(),
-                                this.getValueString(),
-                                typeRequire.getValueString());
-                        break;
-                        }
+                        // the mixin must be compatible with this type, as specified by its "into"
+                        // clause; note: not 100% correct because the presence of this mixin may affect
+                        // the answer, so this requires an eventual fix
+                        if (typeRequire != null && !this.isA(typeRequire))
+                            {
+                            log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE,
+                                    constId.getPathString(),
+                                    typeContrib.getValueString(),
+                                    this.getValueString(),
+                                    typeRequire.getValueString());
+                            break;
+                            }
 
-                    // check for duplicate mixin (not exact match!!!)
-                    if (listProcess.stream().anyMatch(contribPrev ->
-                            contribPrev.getComposition() == Composition.Incorporates &&
-                            contribPrev.getTypeConstant().equals(typeContrib)))
-                        {
-                        log(errs, Severity.ERROR, VE_DUP_INCORPORATES,
-                                constId.getPathString(), typeContrib.getValueString());
-                        }
-                    else
-                        {
+                        // check for duplicate mixin (not exact match!!!)
+                        if (listProcess.stream().anyMatch(contribPrev ->
+                                contribPrev.getComposition() == Composition.Incorporates &&
+                                contribPrev.getTypeConstant().equals(typeContrib)))
+                            {
+                            log(errs, Severity.ERROR, VE_DUP_INCORPORATES,
+                                    constId.getPathString(), typeContrib.getValueString());
+                            break;
+                            }
+
                         listProcess.add(new Contribution(Composition.Incorporates,
                                 pool.ensureAccessTypeConstant(typeContrib, Access.PROTECTED)));
                         }
