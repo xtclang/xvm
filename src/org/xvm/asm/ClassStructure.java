@@ -1064,9 +1064,14 @@ public class ClassStructure
                             TypeConstant     typeSuper;
                             if (compSuper == null)
                                 {
+                                ConstantPool pool = getConstantPool();
                                 clzSuper  = (ClassStructure) o;
-                                typeSuper = getConstantPool().ensureVirtualChildTypeConstant(
+                                typeSuper = pool.ensureVirtualChildTypeConstant(
                                         ((ClassStructure) component).getFormalType(), idThis.getName());
+                                if (clzSuper.isParameterized())
+                                    {
+                                    typeSuper = typeSuper.adoptParameters(pool, clzSuper.getFormalType());
+                                    }
                                 }
                             else
                                 {

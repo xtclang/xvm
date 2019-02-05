@@ -377,7 +377,7 @@ public class NewExpression
                     }
                 else
                     {
-                    final int[] aiCount = new int[] {3}; // limit reporting to a small number of errors
+                    final int[] aiCount = new int[] {1}; // limit reporting to a small number of errors
 
                     infoTarget.getProperties().values().stream()
                             .filter(PropertyInfo::isExplicitlyAbstract)
