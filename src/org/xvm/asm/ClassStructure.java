@@ -1058,12 +1058,24 @@ public class ClassStructure
                             // of the super is created relative to the contributed identity, instead
                             // of just using the identity of the class that we found, because the
                             // actual super type may be a phantom (it might not have a structure)
-                            IdentityConstant idSuper     = idThis.appendTrailingPathTo(idContrib, cDepth);
-                            ClassStructure   clzSuper    = (ClassStructure) o;
-                            Composition      composition = clzSuper.getFormat() == Format.INTERFACE
+                            IdentityConstant idSuper   = idThis.appendTrailingPathTo(idContrib, cDepth);
+                            Component        compSuper = idSuper.getComponent();
+                            ClassStructure   clzSuper;
+                            TypeConstant     typeSuper;
+                            if (compSuper == null)
+                                {
+                                clzSuper  = (ClassStructure) o;
+                                typeSuper = getConstantPool().ensureVirtualChildTypeConstant(
+                                        ((ClassStructure) component).getFormalType(), idThis.getName());
+                                }
+                            else
+                                {
+                                clzSuper  = (ClassStructure) compSuper;
+                                typeSuper = clzSuper.getFormalType();
+                                }
+                            Composition composition = clzSuper.getFormat() == Format.INTERFACE
                                     ? Composition.Implements : Composition.Extends;
-                            // REVIEW GG type parameters (must align)
-                            setContribs.add(new Contribution(composition, idSuper.getType()));
+                            setContribs.add(new Contribution(composition, typeSuper));
                             }
                         }
                     }

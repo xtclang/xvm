@@ -52,6 +52,7 @@ module TestNesting.xqiz.it
         {
         console.println("\n** testInsane()");
         new PB().new C().foo();
+        new DC().new P().new C().foo();
         }
 
     class PB                // P is for "parent" and B is for Base
@@ -163,31 +164,39 @@ module TestNesting.xqiz.it
             }
         }
 
-//    class BC /* implied extends Object */ implements DI1
-//        {
-//        // implied class P
-//        //    {
-//        //    implied class C
-//        //        {
-//        //        }
-//        //    }
-//        }
-//
-//    class DC extends BC
-//        {
-//        @Override class P
-//            {
-//            @Override class A
-//                {
-//                // we need a name on all sub-classes
-//                String name;
-//                }
-//
-//            @Override class C // CANNOT SAY: extends BC.P.C
-//                {
-//                }
-//
-//            case XYZ extends Number {}
-//            }
-//        }
+    class BC /* implied extends Object */ implements DI1
+        {
+        // implied class P
+        //    {
+        //    implied class C
+        //        {
+        //        }
+        //    }
+        }
+
+    class DC extends BC
+        {
+        @Override class P
+            {
+            @Override class A
+                {
+                @Override
+                void foo()
+                    {
+                    console.println("DC.P.A.foo() this=" + this);
+                    super();
+                    }
+                }
+
+            @Override class C // CANNOT SAY: extends BC.P.C
+                {
+                @Override
+                void foo()
+                    {
+                    console.println("DC.P.C.foo() this=" + this);
+                    super();
+                    }
+                }
+            }
+        }
     }
