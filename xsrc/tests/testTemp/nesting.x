@@ -7,6 +7,7 @@ module TestNesting.xqiz.it
         console.println("hello world! (nested class tests)");
 
         testSimple();
+        testInsane();
         }
 
     void testSimple()
@@ -47,103 +48,121 @@ module TestNesting.xqiz.it
             }
         }
 
-//
-//    class PB                // P is for "parent" and B is for Base
-//        {
-//        Int size
-//            {
-//            Int get() {...}
-//
-//            class A             // A is for "abstract"
-//                {
-//                void foo() {...}
-//                }
-//
-//            interface I
-//                {
-//                void foo() {...}
-//                }
-//
-//            mixin M
-//                {
-//                void foo() {...}
-//                }
-//
-//            @M class C extends A implements I   // C is for "child"
-//                {
-//                void foo() {...}
-//                }
-//            }
-//        }
-//
-//    interface BI
-//        {
-//        class P extends PB
-//            {
-//            @Override class A
-//                {
-//                void foo() {...}
-//                void bar() {...}
-//                }
-//
-//            // implied class A
-//            //     {
-//            //     }
-//
-//            // implied mixin M
-//            //     {
-//            //     }
-//
-//            // implied interface I
-//            //     {
-//            //     }
-//
-//            // implied class C extends PB.C extends BI.P.A extends PB.A
-//            //     {
-//            //     }
-//
-//            // a call to C.foo() has the following potential call chain:
-//            // 1) BI.P.M.foo()
-//            // 2) PB.M.foo()
-//            // 1) BI.P.C.foo()
-//            // 2) PB.C.foo()
-//            // 3) BI.P.A.foo()
-//            // 4) PB.A.foo()
-//            // 5) Object.foo() (doesn't exist)
-//            // 6) <default> I.foo()
-//            }
-//        }
-//
-//    interface DI1 extends BI
-//        {
-//        // implied class P
-//        //    {
-//        //    implied class C
-//        //        {
-//        //        }
-//        //    }
-//        }
-//
-//    interface DI2 extends BI
-//        {
-//        @Override class P
-//            {
-//            // implied class C
-//            //     {
-//            //     }
-//            }
-//        }
-//
-//    interface DI3 extends BI
-//        {
-//        @Override class P
-//            {
-//            @Override class C
-//                {
-//                }
-//            }
-//        }
-//
+    void testInsane()
+        {
+        console.println("\n** testInsane()");
+        new PB().new C().foo();
+        }
+
+    class PB                // P is for "parent" and B is for Base
+        {
+        class A             // A is for "abstract"
+            {
+            void foo()
+                {
+                console.println("PB.A.foo() this=" + this);
+                }
+            }
+
+        interface I
+            {
+            void foo()
+                {
+                console.println("PB.I.foo() this=" + this);
+                }
+            }
+
+        mixin M
+            {
+            void foo()
+                {
+                console.println("PB.M.foo() this=" + this);
+                }
+            }
+
+        // TODO @M
+        class C extends A implements I   // C is for "child"
+            {
+            @Override
+            void foo()
+                {
+                console.println("PB.C.foo() this=" + this);
+                super();
+                }
+            }
+        }
+
+    interface BI
+        {
+        class P extends PB
+            {
+            @Override class A
+                {
+                @Override
+                void foo()
+                    {
+                    console.println("BI.P.A.foo() this=" + this);
+                    }
+                }
+
+            // implied class A
+            //     {
+            //     }
+
+            // implied mixin M
+            //     {
+            //     }
+
+            // implied interface I
+            //     {
+            //     }
+
+            // implied class C extends PB.C extends BI.P.A extends PB.A
+            //     {
+            //     }
+
+            // a call to C.foo() has the following potential call chain:
+            // 1) BI.P.M.foo()
+            // 2) PB.M.foo()
+            // 1) BI.P.C.foo()
+            // 2) PB.C.foo()
+            // 3) BI.P.A.foo()
+            // 4) PB.A.foo()
+            // 5) Object.foo() (doesn't exist)
+            // 6) <default> I.foo()
+            }
+        }
+
+    interface DI1 extends BI
+        {
+        // implied class P
+        //    {
+        //    implied class C
+        //        {
+        //        }
+        //    }
+        }
+
+    interface DI2 extends BI
+        {
+        @Override class P
+            {
+            // implied class C
+            //     {
+            //     }
+            }
+        }
+
+    interface DI3 extends BI
+        {
+        @Override class P
+            {
+            @Override class C
+                {
+                }
+            }
+        }
+
 //    class BC /* implied extends Object */ implements DI1
 //        {
 //        // implied class P
