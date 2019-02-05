@@ -3176,7 +3176,7 @@ public abstract class TypeConstant
         {
         ConstantPool pool = getConstantPool();
 
-        assert isVirtualChild() == struct.isVirtualChild();
+        // REVIEW GG - assert isVirtualChild() == (struct == null || struct.isVirtualChild());
 
         if (isVirtualChild())
             {
