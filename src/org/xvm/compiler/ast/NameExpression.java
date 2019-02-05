@@ -4,8 +4,8 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -528,35 +528,30 @@ public class NameExpression
             return null;
             }
 
-        // apply the "trailing type parameters"
-        TypeConstant[] aParams = null;
-        if (hasTrailingTypeParams())
-            {
-            List<TypeExpression> params = getTrailingTypeParams();
-            if (params.isEmpty())
-                {
-                aParams = TypeConstant.NO_TYPES;
-                }
-            else
-                {
-                int                     cParams   = params.size();
-                ArrayList<TypeConstant> listTypes = new ArrayList<>(cParams);
-                for (int i = 0; i < cParams; ++i)
-                    {
-                    TypeConstant typeParam = params.get(i).getImplicitType(ctx);
-                    if (typeParam == null)
-                        {
-                        break;
-                        }
-                    listTypes.add(typeParam);
-                    }
+        // figure out how we would translate the raw argument to a finished (RVal) argument
+        return planCodeGen(ctx, arg,
+                getImplicitTrailingTypeParameters(ctx), null, ErrorListener.BLACKHOLE);
+        }
 
-                aParams = listTypes.toArray(new TypeConstant[cParams]);
-                }
+    @Override
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
+        {
+        checkDepth();
+
+        if (typeRequired == null)
+            {
+            return TypeFit.Fit;
             }
 
-        // figure out how we would translate the raw argument to a finished (RVal) argument
-        return planCodeGen(ctx, arg, aParams, null, ErrorListener.BLACKHOLE);
+        Argument arg = resolveRawArgument(ctx, true, ErrorListener.BLACKHOLE);
+        if (arg == null)
+            {
+            return TypeFit.NoFit;
+            }
+
+        TypeConstant typeActual = planCodeGen(ctx, arg,
+                getImplicitTrailingTypeParameters(ctx), typeRequired, ErrorListener.BLACKHOLE);
+        return calcFit(ctx, typeActual, typeRequired);
         }
 
     @Override
@@ -1106,6 +1101,32 @@ public class NameExpression
     // ----- name resolution helpers ---------------------------------------------------------------
 
     /**
+     * @return an array of trailing or nul if there are none
+     */
+    protected TypeConstant[] getImplicitTrailingTypeParameters(Context ctx)
+        {
+        if (hasTrailingTypeParams())
+            {
+            int                     cParams   = params.size();
+            ArrayList<TypeConstant> listTypes = new ArrayList<>(cParams);
+            for (int i = 0; i < cParams; ++i)
+                {
+                TypeConstant typeParam = params.get(i).getImplicitType(ctx);
+                if (typeParam == null)
+                    {
+                    break;
+                    }
+                listTypes.add(typeParam);
+                }
+            return listTypes.toArray(new TypeConstant[cParams]);
+            }
+        else
+            {
+            return null;
+            }
+        }
+
+    /**
      * Resolve the expression to obtain a "raw" argument. Responsible for setting {@link #m_arg}.
      *
      * @param ctx     the compiler context
@@ -1172,21 +1193,22 @@ public class NameExpression
 
                     // we will use the private access info here since the access restrictions
                     // must have been already checked by the "resolveName"
-                    TypeInfo     infoClz = pool().ensureAccessTypeConstant(clzTop.getFormalType(),
+                    TypeInfo infoClz = pool().ensureAccessTypeConstant(clzTop.getFormalType(),
                             Access.PRIVATE).ensureTypeInfo(errs);
 
                     // only include methods if this context is a method
-                    Collection<MethodConstant> colMethods = infoClz.findMethods(
+                    Set<MethodConstant> setMethods = infoClz.findMethods(
                             sName, -1, ctx.isFunction() ? MethodType.Function : MethodType.Either);
-                    assert !colMethods.isEmpty();
+                    assert !setMethods.isEmpty();
 
-                    if (colMethods.size() == 1)
+                    if (setMethods.size() == 1)
                         {
-                        m_arg = colMethods.iterator().next();
+                        m_arg = setMethods.iterator().next();
                         }
                     else
                         {
-                        log(errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, sName);
+                        // return the MultiMethod; the caller will decide which to use
+                        m_arg = setMethods.iterator().next().getParentConstant();
                         }
                     }
                 else if (id instanceof PropertyConstant) // TODO still some work here to (i) save off the TargetInfo (ii) use it in code gen (iii) mark the this (and out this's) as being used
@@ -1396,10 +1418,27 @@ public class NameExpression
                     PropertyInfo infoProp = infoType.findProperty(sName);
                     if (infoProp == null)
                         {
-                        // TODO typedefs
+                        Set<MethodConstant> setMethods = infoType.findMethods(
+                                sName, -1, ctx.isFunction() ? MethodType.Function : MethodType.Either);
+                        switch (setMethods.size())
+                            {
+                            case 0:
+                                // TODO typedefs
+                                name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_MISSING,
+                                    sName, typeLeft.getValueString());
+                                break;
 
-                        name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_MISSING,
-                            sName, typeLeft.getValueString());
+                            case 1:
+                                // there's just a single method by that name
+                                m_arg = setMethods.iterator().next();
+                                break;
+
+                            default:
+                                // there are more then one method by that name;
+                                // return the MultiMethod; let the caller decide
+                                m_arg = setMethods.iterator().next().getParentConstant();
+                                break;
+                            }
                         }
                     else
                         {
@@ -1669,6 +1708,17 @@ public class NameExpression
                 m_plan = Plan.None;
                 return constant.getType();
 
+            case MultiMethod:
+                // the constant refers to a method or function
+                m_plan = Plan.None;
+                if (typeDesired != null)
+                    {
+                    // TODO: find the match
+                    }
+                log(errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS,
+                        ((MultiMethodConstant) constant).getName());
+                return null;
+
             default:
                 throw new IllegalStateException("constant=" + constant);
             }
@@ -1712,6 +1762,10 @@ public class NameExpression
 
                 case Property:
                     return Meaning.Property;
+
+                case Method:
+                case MultiMethod:
+                    return Meaning.Method;
 
                 case Typedef:
                     return Meaning.Typedef;
@@ -1931,7 +1985,7 @@ public class NameExpression
     /**
      * Represents the category of argument that the expression yields.
      */
-    enum Meaning {Unknown, Reserved, Variable, Property, Class, Typedef, Label}
+    enum Meaning {Unknown, Reserved, Variable, Property, Method, Class, Typedef, Label}
 
     /**
      * Represents the necessary argument/assignable transformation that the expression will have to
