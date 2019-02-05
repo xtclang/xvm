@@ -841,9 +841,14 @@ public class TypeCompositionStatement
         boolean       fAlreadyExtends   = false;
         boolean       fAlreadyImports   = false;
         boolean       fAlreadyIntos     = false;
-        ClassConstant constDefaultSuper = null;
         ClassConstant constDefaultInto  = null;
-        if (!m_fVirtChild)
+        ClassConstant constDefaultSuper;
+        if (m_fVirtChild)
+            {
+            // virtual child super is analyzed/resolved by resolveNames()
+            constDefaultSuper = null;
+            }
+        else
             {
             switch (component.getFormat())
                 {
@@ -853,10 +858,9 @@ public class TypeCompositionStatement
 
                 case CLASS:
                     // Object has no super
-                    if (!component.getIdentityConstant().equals(OBJECT_CLASS))
-                        {
-                        constDefaultSuper = OBJECT_CLASS;
-                        }
+                    constDefaultSuper = component.getIdentityConstant().equals(OBJECT_CLASS)
+                            ? null
+                            : OBJECT_CLASS;
                     break;
 
                 case INTERFACE:
