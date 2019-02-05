@@ -470,6 +470,10 @@ SwitchStatement
     switch "(" SwitchCondition-opt ")" "{" SwitchBlocks "}"
 
 SwitchCondition
+    SwitchConditionExpression
+    SwitchCondition "," SwitchConditionExpression
+
+SwitchConditionExpression
     VariableInitializer
     Expression
 
@@ -477,7 +481,7 @@ SwitchBlocks
     SwitchBlock
     SwitchBlocks SwitchBlock
 
-# the SwitchBlockFinish is required unless the SwitchBlock does not complete (e.g. from a "throw")
+# the SwitchBlockFinish is required unless the SwitchBlock does not complete (e.g. ends with a "throw")
 SwitchBlock
     SwitchLabels Statements SwitchBlockFinish-opt
 
@@ -486,11 +490,24 @@ SwitchLabels
     SwitchLabels SwitchLabel
 
 # 1) for a SwitchStatement with a SwitchCondition, each "case" expression must be a
-#    "constant expression", i.e. compiler has to be able to determine the value
+#    "constant expression", i.e. compiler has to be able to determine the value (or a constant that
+#    points to a value that is constant at run-time, e.g. a property constant for a static property)
 # 2) for a SwitchStatement without a SwitchCondition, each "case" expression must be of type Boolean
-# 3) parse for TernaryExpression; cannot parse for Expression, because it has a possible trailing ':'
+#    and is not required to be a constant
+# 3) for a SwitchStatement with a SwitchCondition, a case may specify a list of values, which is
+#    semantically identical to having that same number of "case" labels each with one of those values.
+# 4) for a SwitchStatement with multiple SwitchConditionExpressions in the SwitchCondition or with
+#    a single SwitchConditionExpression of a tuple type, each "case" value must be either:
+#    (a) a parenthesized list of expressions (a compatible tuple constant), or
+#    (b) a constant expression of a compatible tuple type
+# 5) each "case" expression may be any of:
+#    (a) the type of the corresponding expression (or tuple field value) in the SwitchCondition;
+#    (b) an Interval of that type; or
+#    (c) the wild-card "_" (compiled as the "blackhole" constant)
+#    a CaseExpressionList of all wild-cards is semantically equivalent to the use of a "default"
+#    label, and would predictably conflict with the same if both were specified.
 SwitchLabel
-    "case" TernaryExpressionList ":"
+    "case" CaseOptionList ":"
     "default" ":"
 
 SwitchBlockFinish:
@@ -503,9 +520,26 @@ BreakStatement:
 ContinueStatement:
     "continue" Name-opt ";"
 
-TernaryExpressionList:
+CaseOptionList:
+    CaseOption
+    CaseOptionList "," CaseOption
+
+CaseOption:
+    "(" CaseExpressionList "," CaseExpression ")"
+    SafeCaseExpression
+
+CaseExpressionList:
+    CaseExpression
+    CaseExpressionList "," CaseExpression
+
+CaseExpression:
+    "_"
+    Expression
+
+# parse for "case TernaryExpression:" because Expression parsing looks for a possible trailing ':'
+SafeCaseExpression:
+    "_"
     TernaryExpression
-    TernaryExpressionList "," TernaryExpression
 
 TryStatement
     "try" ResourceDeclaration-opt StatementBlock TryFinish
