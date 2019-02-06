@@ -2072,3 +2072,21 @@ switch (x)
         ...
         break;
     }
+
+// multi-value result
+(x, y) = switch (x, y)
+    {
+    case (0, 1): 1, 1;
+    case (1, 1): 1, 0;
+    case (1, 0): 0, 0;
+    case (0, 0): 0, 1;
+    }
+
+// tuple result
+(x, y) = switch (x, y)
+    {
+    case (0, 1): (1, 1);
+    case (1, 1): (1, 0);
+    case (1, 0): (0, 0);
+    case (0, 0): (0, 1);
+    }

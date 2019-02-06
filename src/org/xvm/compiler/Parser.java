@@ -2165,25 +2165,44 @@ public class Parser
         ArrayList<Expression> listCaseOptions = new ArrayList<>();
         do
             {
-            if (match(Id.L_PAREN) == null)
+            // check for possible tuple form: "(" CaseExpressionList "," CaseExpression ")"
+            if (peek().getId() == Id.L_PAREN)
                 {
-                // single SafeCaseExpression
-                listCaseOptions.add(peek().getId() == Id.IGNORED
+                Mark mark = mark();
+                long lStart = expect(Id.L_PAREN).getStartPosition();
+
+                Expression expr = peek().getId() == Id.IGNORED
                         ? new IgnoredNameExpression(current())
-                        : parseTernaryExpression());
-                }
-            else
-                {
-                ArrayList<Expression> listTupleValues = new ArrayList<>();
-                do
+                        : parseExpression();
+
+                // if the expression is followed by a comma, then our guess was correct; otherwise,
+                // we shouldn't be here (must back up and assume that the opening parenthesis is the
+                // beginning of a single expression CaseOption)
+                if (peek().getId() == Id.COMMA)
                     {
-                    listTupleValues.add(peek().getId() == Id.IGNORED
-                            ? new IgnoredNameExpression(current())
-                            : parseExpression());
+                    ArrayList<Expression> listTupleValues = new ArrayList<>();
+                    listTupleValues.add(expr);
+                    while (match(Id.COMMA) != null);
+                        {
+                        listTupleValues.add(peek().getId() == Id.IGNORED
+                                ? new IgnoredNameExpression(current())
+                                : parseExpression());
+                        }
+                    long lEnd = expect(Id.R_PAREN).getEndPosition();
+                    listCaseOptions.add(new TupleExpression(null,  listTupleValues, lStart, lEnd));
+
+                    // process next case option
+                    continue;
                     }
-                while (match(Id.COMMA) != null);
-                expect(Id.R_PAREN);
+
+                // revert and assume that the case option is a single ternary expression
+                restore(mark);
                 }
+
+            // single SafeCaseExpression
+            listCaseOptions.add(peek().getId() == Id.IGNORED
+                    ? new IgnoredNameExpression(current())
+                    : parseTernaryExpression());
             }
         while (match(Id.COMMA) != null);
 

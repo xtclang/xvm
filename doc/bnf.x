@@ -769,7 +769,7 @@ SwitchExpressionBlocks
     SwitchExpressionBlocks SwitchExpressionBlock
 
 SwitchExpressionBlock
-    SwitchLabels Expression ;
+    SwitchLabels ExpressionList ;
 
 LambdaExpression
     LambdaInputs "->" LambdaBody

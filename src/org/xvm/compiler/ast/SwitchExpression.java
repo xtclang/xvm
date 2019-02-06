@@ -75,51 +75,34 @@ public class SwitchExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
-    // TODO multi
-    // @Override
-    // protected boolean hasSingleValueImpl()
-    //     {
-    //     return false;
-    //     }
-    //
-    // @Override
-    // protected boolean hasMultiValueImpl()
-    //     {
-    //     return true;
-    //     }
+    @Override
+    protected boolean hasSingleValueImpl()
+        {
+        return false;
+        }
 
     @Override
-    public TypeConstant getImplicitType(Context ctx)
+    protected boolean hasMultiValueImpl()
+        {
+        return true;
+        }
+
+    @Override
+    public TypeConstant[] getImplicitTypes(Context ctx)
         {
         TypeCollector collector = new TypeCollector(pool());
         for (AstNode node : contents)
             {
             if (node instanceof Expression)
                 {
-                collector.add(((Expression) node).getImplicitType(ctx));
+                collector.add(((Expression) node).getImplicitTypes(ctx));
                 }
             }
-        return collector.inferSingle(null);
+        return collector.inferMulti(null);
         }
 
-    // TODO multi
-    // @Override
-    // public TypeConstant[] getImplicitTypes(Context ctx)
-    //     {
-    //     TypeCollector collector = new TypeCollector(pool());
-    //     for (AstNode node : contents)
-    //         {
-    //         if (node instanceof Expression)
-    //             {
-    //             collector.add(((Expression) node).getImplicitTypes(ctx));
-    //             }
-    //         }
-    //     return collector.inferMulti();
-    //     }
-
-    // TODO multi
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         boolean      fValid    = true;
         boolean      fScope    = false;
@@ -440,9 +423,8 @@ public class SwitchExpression
         return finishValidation(typeRequired, typeActual, fValid ? TypeFit.Fit : TypeFit.NoFit, constVal, errs);
         }
 
-    // TODO multi
     @Override
-    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
         if (isConstant())
             {
