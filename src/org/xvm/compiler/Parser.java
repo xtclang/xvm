@@ -3455,6 +3455,7 @@ public class Parser
      *     "case" Expression ":"
      *     "default" ":"
      * </pre></code>
+     * TODO update BNF here
      *
      * @return a SwitchExpression
      */
@@ -3462,7 +3463,7 @@ public class Parser
         {
         Token keyword = expect(Id.SWITCH);
         expect(Id.L_PAREN);
-        AstNode cond = parseSwitchCondition();
+        List<AstNode> cond = parseSwitchCondition(); // TODO list
         expect(Id.R_PAREN);
 
         List<AstNode> contents = new ArrayList<>();
@@ -3473,6 +3474,7 @@ public class Parser
             switch (peek().getId())
                 {
                 case CASE:
+                    // TODO - "_" and "(list)"
                     contents.add(new CaseStatement(current(), parseTernaryExpressionList(), expect(Id.COLON)));
                     break;
 

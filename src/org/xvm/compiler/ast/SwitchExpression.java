@@ -37,20 +37,17 @@ import static org.xvm.util.Handy.indentLines;
 
 /**
  * A "switch" expression.
- *
- * <p/>REVIEW does switch handle multiple values? (and could they be easily treated as tuples?)
- * <p/>REVIEW consider adding support for case expressions of Range&lt;T&gt; for switch(T)
  */
 public class SwitchExpression
         extends Expression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public SwitchExpression(Token keyword, AstNode cond, List<AstNode> contents, long lEndPos)
+    public SwitchExpression(Token keyword, List<AstNode> cond, List<AstNode> contents, long lEndPos)
         {
         this.keyword  = keyword;
-        this.cond     = cond;
-        this.contents = contents;
+        this.cond     = cond;        // TODO list
+        this.contents = contents;    // TODO could this be an array of blocks?
         this.lEndPos  = lEndPos;
         }
 
