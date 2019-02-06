@@ -33,4 +33,4 @@ caused by a failure to correctly init a parameter with "markInitialValue"
     @Override
     Number[] to<Number[]>();
 
-
+-- "this.new Child()"" doesn't parse correctly, while "x.new Child()" does

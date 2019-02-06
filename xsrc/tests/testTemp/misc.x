@@ -39,7 +39,7 @@ module TestMisc.xqiz.it
         // testMap();
         testConstants();
         testImport();
-        // TODO GG bug in testChild();
+        testChild();
         }
 
     void testInts()
@@ -509,8 +509,6 @@ module TestMisc.xqiz.it
         {
         @Override
         class OrderLine(Int lineNumber, String descr)
-        // TODO GG bug infinite loop
-        //        extends Order.OrderLine(lineNumber, descr)
             {
             @Override
             String to<String>()

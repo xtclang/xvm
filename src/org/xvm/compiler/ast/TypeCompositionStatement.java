@@ -948,7 +948,7 @@ public class TypeCompositionStatement
                                 struct.addContribution(ClassStructure.Composition.Extends, type);
                                 }
                             }
-                        m_compositionExtend = (Composition.Extends) composition;
+                        m_listExtendArgs = ((Composition.Extends) composition).args;
                         }
                     break;
 
@@ -1485,6 +1485,19 @@ public class TypeCompositionStatement
                                 }
 
                             contribImplicit = contrib;
+
+                            // copy this constructor's arguments
+                            List<Parameter> listParams = constructorParams;
+                            if (listParams != null)
+                                {
+                                int              cArgs    = listParams.size();
+                                List<Expression> listArgs = new ArrayList(cArgs);
+                                for (int i = 0; i < cArgs; i++)
+                                    {
+                                    listArgs.add(new NameExpression(this, listParams.get(i).name, null));
+                                    }
+                                m_listExtendArgs = listArgs;
+                                }
                             }
                         else if (!fAlreadyLogged)
                             {
@@ -1899,17 +1912,7 @@ public class TypeCompositionStatement
             //    const Point3d(Int x, Int y, Int z = 0)
             //        extends Point(x, y);
 
-            Composition.Extends compExtend = m_compositionExtend;
-            if (compExtend == null)
-                {
-                listArgs = null;
-                }
-            else
-                {
-                assert clzSuper != null;
-
-                listArgs = compExtend.args;
-                }
+            listArgs = m_listExtendArgs;
             }
         else
             {
@@ -1925,9 +1928,12 @@ public class TypeCompositionStatement
             //              ...
             //              }
             //          }
-
-            assert clzSuper != null;
             listArgs = args;
+            }
+
+        if (listArgs != null)
+            {
+            assert clzSuper != null;
             }
 
         if (clzSuper == null)
@@ -2489,9 +2495,9 @@ public class TypeCompositionStatement
     transient private ModuleStructure m_moduleImported;
 
     /**
-     * Cached "extends" composition.
+     * Cached list of the "extends" composition arguments.
      */
-    transient Composition.Extends m_compositionExtend;
+    transient private List<Expression> m_listExtendArgs;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TypeCompositionStatement.class,
             "condition", "annotations", "typeParams", "constructorParams", "typeArgs", "args",

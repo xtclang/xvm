@@ -734,6 +734,9 @@ public class ClassStructure
     /**
      * Determine if the specified name is referring to a name introduced by any of the contributions
      * for this class.
+     * <p/>
+     * Note, that this method is used *before* the integrity of the structures is validated,
+     * so must be ready for "infinite recursions", that will be reported later.
      *
      * @param sName       the name to resolve
      * @param access      the accessibility to use to determine if the name is visible
@@ -752,9 +755,15 @@ public class ClassStructure
             return ResolutionResult.RESOLVED;
             }
 
-        // no child by that name; it could only be a formal type introduced by a contribution
+        // no child by that name; check if it was introduced by a contribution
         NextContribution: for (Contribution contrib : getContributionsAsList())
             {
+            TypeConstant typeContrib = contrib.getTypeConstant();
+            if (typeContrib.containsUnresolved())
+                {
+                return ResolutionResult.POSSIBLE;
+                }
+
             switch (contrib.getComposition())
                 {
                 case Into:
@@ -784,16 +793,22 @@ public class ClassStructure
                     throw new IllegalStateException();
                 }
 
-            TypeConstant typeContrib = contrib.getTypeConstant();
-            if (typeContrib.containsUnresolved())
-                {
-                return ResolutionResult.POSSIBLE;
-                }
-
             if (typeContrib.isSingleUnderlyingClass(true))
                 {
-                ClassStructure   clzContrib = (ClassStructure) typeContrib.getSingleUnderlyingClass(true).getComponent();
-                ResolutionResult result     = clzContrib.resolveContributedName(sName, access, collector, fAllowInto);
+                ClassStructure clzContrib =
+                        (ClassStructure) typeContrib.getSingleUnderlyingClass(true).getComponent();
+
+                if (m_fVisited)
+                    {
+                    // recursive contribution; it will be reported later
+                    return ResolutionResult.UNKNOWN;
+                    }
+
+                m_fVisited = true;
+                ResolutionResult result =
+                        clzContrib.resolveContributedName(sName, access, collector, fAllowInto);
+                m_fVisited = false;
+
                 if (result != ResolutionResult.UNKNOWN)
                     {
                     return result;
@@ -2439,6 +2454,11 @@ public class ClassStructure
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * Recursion check for {@link #resolveContributedName}. Not thread-safe.
+     */
+    private boolean m_fVisited;
 
     /**
      * The name-to-type information for type parameters. The type constant is used to specify a
