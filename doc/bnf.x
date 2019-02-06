@@ -51,10 +51,11 @@ Arguments
 Argument
     NamedArgument-opt ArgumentExpression
 
-# note: the "?" argument allows functions to specify arguments that they are NOT binding
+# note: the "_" argument allows functions to specify arguments that they are NOT binding
+# TODO modify ArgumentExpression from '?' -> '_'
 ArgumentExpression
-    "?"
-    "<" TypeExpression ">" "?"
+    "_"
+    "<" TypeExpression ">" "_"
     Expression
 
 NamedArgument

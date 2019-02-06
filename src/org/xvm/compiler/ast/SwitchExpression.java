@@ -46,8 +46,8 @@ public class SwitchExpression
     public SwitchExpression(Token keyword, List<AstNode> cond, List<AstNode> contents, long lEndPos)
         {
         this.keyword  = keyword;
-        this.cond     = cond;        // TODO list
-        this.contents = contents;    // TODO could this be an array of blocks?
+        this.cond     = cond;
+        this.contents = contents;
         this.lEndPos  = lEndPos;
         }
 
@@ -621,7 +621,7 @@ public class SwitchExpression
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token         keyword;
-    protected AstNode       cond;
+    protected List<AstNode> cond;
     protected List<AstNode> contents;
     protected long          lEndPos;
 

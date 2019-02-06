@@ -2029,3 +2029,46 @@ class B
             }
         }
     }
+
+// -- switch again
+
+// case "match" expressions
+switch (a,b,c)
+    {
+    case ("hello", 2, false), ("bye", 7, true):
+        foo();
+        break;
+
+    case ("ugh", 3..5, _):
+    }
+
+switch (i)
+switch (i, s)
+switch (Int i = foo())
+switch ((Int i, String s) = foo())
+    {
+    case (1, "hello"):
+    case ((1, "hello")):    // this works, but is definitely NOT required
+    }
+switch (Int i = foo(), String s = bar())    // ???
+switch (i, String s = bar())                // ???
+switch (foo(), String s = bar())            // ???
+switch (x, (Int i, String s) = foo(), y)    // ???
+switch (x, (Int i, String s) = (foo(), y))  // ???
+    {
+    // we must pick one of these:
+    case (1, 2, "hello"):                   // flattening
+    case (1, (2, "hello")):                 //
+    }
+
+switch (x)
+    {
+    case 0, 1, 2:
+    case 3, 4, 5:
+        ...
+        continue;
+
+    case 7:
+        ...
+        break;
+    }

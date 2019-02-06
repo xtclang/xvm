@@ -3,6 +3,8 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.List;
+
 import org.xvm.compiler.Token;
 
 import static org.xvm.util.Handy.indentLines;
@@ -16,7 +18,7 @@ public class SwitchStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public SwitchStatement(Token keyword, AstNode cond, StatementBlock block)
+    public SwitchStatement(Token keyword, List<AstNode> cond, StatementBlock block)
         {
         this.keyword = keyword;
         this.cond    = cond;
@@ -56,15 +58,30 @@ public class SwitchStatement
     @Override
     public String toString()
         {
-        return "switch (" + (cond == null ? "" : cond) + ")\n"
-                + indentLines(block.toString(), "    ");
+        StringBuilder sb = new StringBuilder();
+        sb.append("switch (");
+
+        if (cond != null)
+            {
+            sb.append(cond.get(0));
+            for (int i = 1, c = cond.size(); i < c; ++i)
+                {
+                sb.append(", ")
+                  .append(cond.get(i));
+                }
+            }
+
+        sb.append(")\n")
+          .append(indentLines(block.toString(), "    "));
+
+        return sb.toString();
         }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token          keyword;
-    protected AstNode        cond;
+    protected List<AstNode>  cond;
     protected StatementBlock block;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchStatement.class, "cond", "block");

@@ -1887,15 +1887,11 @@ public class Parser
      * SwitchStatement
      *     switch "(" SwitchCondition-opt ")" "{" SwitchBlocks "}"
      *
-     * SwitchCondition
-     *     VariableInitializer
-     *     Expression
-     *
      * SwitchBlocks
      *     SwitchBlock
      *     SwitchBlocks SwitchBlock
      *
-     * # the SwitchBlockFinish is required unless the SwitchBlock does not complete (e.g. from a "throw")
+     * # the SwitchBlockFinish is required unless the SwitchBlock does not complete (e.g. ends with a "throw")
      * SwitchBlock
      *     SwitchLabels Statements SwitchBlockFinish-opt
      *
@@ -1904,11 +1900,24 @@ public class Parser
      *     SwitchLabels SwitchLabel
      *
      * # 1) for a SwitchStatement with a SwitchCondition, each "case" expression must be a
-     * #    "constant expression", i.e. compiler has to be able to determine the value
+     * #    "constant expression", i.e. compiler has to be able to determine the value (or a constant that
+     * #    points to a value that is constant at run-time, e.g. a property constant for a static property)
      * # 2) for a SwitchStatement without a SwitchCondition, each "case" expression must be of type Boolean
-     * # 3) parse for TernaryExpression; cannot parse for Expression, because it has a possible trailing ':'
+     * #    and is not required to be a constant
+     * # 3) for a SwitchStatement with a SwitchCondition, a case may specify a list of values, which is
+     * #    semantically identical to having that same number of "case" labels each with one of those values.
+     * # 4) for a SwitchStatement with multiple SwitchConditionExpressions in the SwitchCondition or with
+     * #    a single SwitchConditionExpression of a tuple type, each "case" value must be either:
+     * #    (a) a parenthesized list of expressions (a compatible tuple constant), or
+     * #    (b) a constant expression of a compatible tuple type
+     * # 5) each "case" expression may be any of:
+     * #    (a) the type of the corresponding expression (or tuple field value) in the SwitchCondition;
+     * #    (b) an Interval of that type; or
+     * #    (c) the wild-card "_" (compiled as the "blackhole" constant)
+     * #    a CaseExpressionList of all wild-cards is semantically equivalent to the use of a "default"
+     * #    label, and would predictably conflict with the same if both were specified.
      * SwitchLabel
-     *     "case" TernaryExpressionList ":"
+     *     "case" CaseOptionList ":"
      *     "default" ":"
      *
      * SwitchBlockFinish:
@@ -1928,7 +1937,7 @@ public class Parser
         {
         Token keyword = expect(Id.SWITCH);
         expect(Id.L_PAREN);
-        AstNode cond = parseSwitchCondition();
+        List<AstNode> cond = parseSwitchCondition();
         expect(Id.R_PAREN);
 
         Token           tokLCurly = expect(Id.L_CURLY);
@@ -1959,7 +1968,7 @@ public class Parser
                         return fDefault;
                         }
 
-                    stmts.add(new CaseStatement(current(), parseTernaryExpressionList(), expect(Id.COLON)));
+                    stmts.add(new CaseStatement(current(), parseCaseOptionList(), expect(Id.COLON)));
                     fAnyLabels = true;
                     break;
 
@@ -2017,10 +2026,11 @@ public class Parser
      * Parse a "switch" condition.
      *
      * <p/><code><pre>
-     * SwitchStatement
-     *     switch "(" SwitchCondition-opt ")" "{" SwitchBlocks-opt SwitchLabels-opt "}"
-     *
      * SwitchCondition
+     *     SwitchConditionExpression
+     *     SwitchCondition "," SwitchConditionExpression
+     *
+     * SwitchConditionExpression
      *     VariableInitializer
      *     Expression
      *
@@ -2047,14 +2057,34 @@ public class Parser
      *
      * @return a switch condition, or null if there is none
      */
-    AstNode parseSwitchCondition()
+    private List<AstNode> parseSwitchCondition()
         {
-        // switch() means that each case statement is a boolean expression (a "ladder" if)
+        // no condition expression
         if (peek().getId() == Id.R_PAREN)
             {
             return null;
             }
 
+        // a single condition expression
+        AstNode expr = parseSwitchConditionExpression();
+        if (peek().getId() != Id.COMMA)
+            {
+            return Collections.singletonList(expr);
+            }
+
+        // multi-condition expression
+        List<AstNode> list = new ArrayList<>();
+        list.add(expr);
+        do
+            {
+            list.add(parseSwitchConditionExpression());
+            }
+        while (match(Id.COMMA) != null);
+        return list;
+        }
+
+    private AstNode parseSwitchConditionExpression()
+        {
         // there's only one real left-to-right challenge here, which is an expression that begins
         // with a parenthesized expression, such as "(x+y)*2", because the opening parenthesis are
         // shared with the list form of the VariableInitializer; after parsing the first expression
@@ -2096,6 +2126,68 @@ public class Parser
             }
 
         return new AssignmentStatement(LVal, expect(Id.ASN), parseExpression(), false);
+        }
+
+    /**
+     * Parse an expression list for a case label, but one that does not look for a trailing ':'.
+     *
+     * <p/><code><pre>
+     * SwitchLabel
+     *     "case" CaseOptionList ":"
+     *     "default" ":"
+     *
+     * CaseOptionList:
+     *     CaseOption
+     *     CaseOptionList "," CaseOption
+     *
+     * CaseOption:
+     *     "(" CaseExpressionList "," CaseExpression ")"
+     *     SafeCaseExpression
+     *
+     * CaseExpressionList:
+     *     CaseExpression
+     *     CaseExpressionList "," CaseExpression
+     *
+     * CaseExpression:
+     *     "_"
+     *     Expression
+     *
+     * # parse for "case TernaryExpression:" because Expression parsing looks for a possible trailing ':'
+     * SafeCaseExpression:
+     *     "_"
+     *     TernaryExpression
+     * </pre></code>
+     *
+     * @return
+     */
+    private List<Expression> parseCaseOptionList()
+        {
+        ArrayList<Expression> listCaseOptions = new ArrayList<>();
+        do
+            {
+            if (match(Id.L_PAREN) == null)
+                {
+                // single SafeCaseExpression
+                listCaseOptions.add(peek().getId() == Id.IGNORED
+                        ? new IgnoredNameExpression(current())
+                        : parseTernaryExpression());
+                }
+            else
+                {
+                ArrayList<Expression> listTupleValues = new ArrayList<>();
+                do
+                    {
+                    listTupleValues.add(peek().getId() == Id.IGNORED
+                            ? new IgnoredNameExpression(current())
+                            : parseExpression());
+                    }
+                while (match(Id.COMMA) != null);
+                expect(Id.R_PAREN);
+                }
+            }
+        while (match(Id.COMMA) != null);
+
+        return listCaseOptions;
         }
 
     /**
@@ -2445,35 +2537,6 @@ public class Parser
             expr = new ElseExpression(expr, current(), parseExpression());
             }
         return expr;
-        }
-
-    /**
-     * Parse an expression list, but one that does not look for a trailing ':'.
-     *
-     * <p/><code><pre>
-     * TernaryExpressionList:
-     *     TernaryExpression
-     *     TernaryExpressionList "," TernaryExpression
-     * </pre></code>
-     *
-     * @return
-     */
-    List<Expression> parseTernaryExpressionList()
-        {
-        Expression expr = parseTernaryExpression();
-        if (peek().getId() != Id.COMMA)
-            {
-            return Collections.singletonList(expr);
-            }
-
-        ArrayList<Expression> list = new ArrayList<>();
-        list.add(expr);
-        while (match(Id.COMMA) != null)
-            {
-            list.add(parseTernaryExpression());
-            }
-
-        return list;
         }
 
     /**
@@ -3436,10 +3499,6 @@ public class Parser
      * SwitchExpression
      *     switch "(" SwitchCondition-opt ")" "{" SwitchExpressionBlocks "}"
      *
-     * SwitchCondition
-     *     VariableInitializer
-     *     Expression
-     *
      * SwitchExpressionBlocks
      *     SwitchExpressionBlock
      *     SwitchExpressionBlocks SwitchExpressionBlock
@@ -3463,7 +3522,7 @@ public class Parser
         {
         Token keyword = expect(Id.SWITCH);
         expect(Id.L_PAREN);
-        List<AstNode> cond = parseSwitchCondition(); // TODO list
+        List<AstNode> cond = parseSwitchCondition();
         expect(Id.R_PAREN);
 
         List<AstNode> contents = new ArrayList<>();
@@ -3474,8 +3533,7 @@ public class Parser
             switch (peek().getId())
                 {
                 case CASE:
-                    // TODO - "_" and "(list)"
-                    contents.add(new CaseStatement(current(), parseTernaryExpressionList(), expect(Id.COLON)));
+                    contents.add(new CaseStatement(current(), parseCaseOptionList(), expect(Id.COLON)));
                     break;
 
                 case DEFAULT:
@@ -3502,6 +3560,7 @@ public class Parser
                     break;
 
                 case R_CURLY:
+                    // TODO if the last thing in "contents" is a CaseStatement, then log error: missing expression!
                     return new SwitchExpression(keyword, cond, contents, expect(Id.R_CURLY).getEndPosition());
                 }
             }
