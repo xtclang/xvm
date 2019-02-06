@@ -734,6 +734,9 @@ public class ClassStructure
     /**
      * Determine if the specified name is referring to a name introduced by any of the contributions
      * for this class.
+     * <p/>
+     * Note, that this method is used *before* the integrity of the structures is validated,
+     * so must be ready for "infinite recursions", that will be reported later.
      *
      * @param sName       the name to resolve
      * @param access      the accessibility to use to determine if the name is visible
@@ -792,8 +795,20 @@ public class ClassStructure
 
             if (typeContrib.isSingleUnderlyingClass(true))
                 {
-                ClassStructure   clzContrib = (ClassStructure) typeContrib.getSingleUnderlyingClass(true).getComponent();
-                ResolutionResult result     = clzContrib.resolveContributedName(sName, access, collector, fAllowInto);
+                ClassStructure clzContrib =
+                        (ClassStructure) typeContrib.getSingleUnderlyingClass(true).getComponent();
+
+                if (m_fVisited)
+                    {
+                    // recursive contribution; it will be reported later
+                    return ResolutionResult.UNKNOWN;
+                    }
+
+                m_fVisited = true;
+                ResolutionResult result =
+                        clzContrib.resolveContributedName(sName, access, collector, fAllowInto);
+                m_fVisited = false;
+
                 if (result != ResolutionResult.UNKNOWN)
                     {
                     return result;
@@ -2439,6 +2454,11 @@ public class ClassStructure
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * Recursion check for {@link #resolveContributedName}. Not thread-safe.
+     */
+    private boolean m_fVisited;
 
     /**
      * The name-to-type information for type parameters. The type constant is used to specify a
