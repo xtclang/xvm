@@ -716,6 +716,8 @@ switch (x, y)
     case (0, 1):
     case (1, 0):
     case (2,4), (5,7):
+    case a:                         // MUST BE OF TYPE TUPLE
+    case b, c:                      // MUST BOTH (!!) BE OF TYPE TUPLE
     }
 
 case 'a': case 'b': case 'c': ...   // bad
