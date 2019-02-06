@@ -752,9 +752,15 @@ public class ClassStructure
             return ResolutionResult.RESOLVED;
             }
 
-        // no child by that name; it could only be a formal type introduced by a contribution
+        // no child by that name; check if it was introduced by a contribution
         NextContribution: for (Contribution contrib : getContributionsAsList())
             {
+            TypeConstant typeContrib = contrib.getTypeConstant();
+            if (typeContrib.containsUnresolved())
+                {
+                return ResolutionResult.POSSIBLE;
+                }
+
             switch (contrib.getComposition())
                 {
                 case Into:
@@ -782,12 +788,6 @@ public class ClassStructure
 
                 default:
                     throw new IllegalStateException();
-                }
-
-            TypeConstant typeContrib = contrib.getTypeConstant();
-            if (typeContrib.containsUnresolved())
-                {
-                return ResolutionResult.POSSIBLE;
                 }
 
             if (typeContrib.isSingleUnderlyingClass(true))
