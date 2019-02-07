@@ -315,16 +315,17 @@ public class TypeCollector
         m_FConditional = false;
 
         List<TypeConstant[]> listTypes = getMulti();
-        int                  cElements = listTypes.size();
-        if (cElements == 0)
+        int                  cHeight   = listTypes.size();
+        if (cHeight == 0)
             {
             return null;
             }
 
-        // do a quick scan to determine the "shape" of the result
-        int          cHeight      = 0;
-        int          cWidth       = -1;
-        boolean      fConditional = true;
+        // do a quick scan to determine the "shape" of the result, keeping in mind that some of the
+        // values may represent a "conditional False" value
+        int     cWidth       = -1;
+        boolean fConditional = true;
+        int     cCondFalse   = 0;
         for (TypeConstant[] aTypes : m_listMulti)
             {
             if (aTypes == null)
@@ -332,112 +333,117 @@ public class TypeCollector
                 return null;
                 }
 
+            // it is permissible for a single "False" value to be returned if the multi-type is
+            // a "conditional" type
             int cTypes = aTypes.length;
-            if (cTypes == 1)
+            if (cTypes == 1 && aTypes[0].equals(f_pool.typeFalse()))
                 {
-                // the only possibility for a one-column multi is a "conditional" type, so if that
-                // is not the case, then we're done
-                if (!fConditional || !aTypes[0].equals(f_pool.typeFalse()))
-                    {
-                    return null;
-                    }
+                ++cCondFalse;
                 }
             else
                 {
-                if (cWidth < 0)
+                // since this isn't a "conditional false", anything less than two elements
+                // automatically means that this cannot be a conditional result
+                if (cTypes <= 1)
                     {
-                    if (cTypes == 0)
-                        {
-                        fConditional = false;
-                        }
+                    fConditional = false;
+                    }
 
+                // the width of the results is the smallest number of results present guaranteed to
+                // be available
+                if (cWidth < 0 || cWidth > cTypes)
+                    {
                     cWidth = cTypes;
                     }
-                else if (cTypes != cWidth)
-                    {
-                    // illegal variation in the number of types
-                    return null;
-                    }
-
-                ++cHeight;
                 }
             }
 
-        // a void return is easy to recognize
-        if (cWidth == 0)
+        // check for void
+        if (cWidth == 0 && cCondFalse < cHeight)
             {
-            return cHeight == cElements
-                    ? TypeConstant.NO_TYPES
-                    : null;
+            return TypeConstant.NO_TYPES;
             }
 
-        // at this point, we know the width and height of the result types, and whether a
-        // conditional type is still a possibility
-        int            cRequired = atypeRequired == null ? 0 : atypeRequired.length;
-        TypeConstant[] aResult   = new TypeConstant[cWidth];
-        if (cHeight < cElements)
+        TypeConstant[] aResult;
+        int            cReqTypes = atypeRequired == null ? 0 : atypeRequired.length;
+        if (cHeight == cCondFalse)
             {
-            assert fConditional;
-
-            // test the type of the first column; it must be boolean (otherwise the result cannot
-            // be conditional)
-            TypeConstant[] aColType = new TypeConstant[cElements];
-            for (int iRow = 0; iRow < cElements; ++iRow)
-                {
-                aColType[iRow] = listTypes.get(iRow)[0];
-                }
-
-            // conditional results MUST be a boolean for the first value
-            TypeConstant typeResult = inferFrom(aColType, f_pool);
-            if (typeResult == null || !typeResult.equals(f_pool.typeBoolean()))
-                {
-                return null;
-                }
-            aResult[0] = typeResult;
-
-            // determine the types of each of the other columns
-            aColType = new TypeConstant[cHeight];
-            for (int iCol = 1; iCol < cWidth; ++iCol)
-                {
-                for (int iElement = 0, iRow = 0; iElement < cElements; ++iElement)
-                    {
-                    TypeConstant[] aRowType = listTypes.get(iElement);
-                    if (aRowType.length != 1)
-                        {
-                        aColType[iRow++] = aRowType[iCol];
-                        }
-                    }
-
-                typeResult = inferFrom(aColType, f_pool);
-                if (typeResult == null)
-                    {
-                    return null;
-                    }
-                TypeConstant typeRequired = iCol < cRequired ? atypeRequired[iCol] : null;
-                aResult[iCol] = Op.selectCommonType(typeResult, typeRequired, ErrorListener.BLACKHOLE);
-                }
+            // all of the return values were conditional false
+            aResult = new TypeConstant[] {f_pool.typeBoolean()};
             }
         else
             {
-            fConditional = false;
+            // determine if the result is conditional
+            boolean fDone = false;
+            aResult = new TypeConstant[cWidth];
+            if (fConditional && cCondFalse > 0)
+                {
+                // determine the types of each column
+                int            cNonFalse = cHeight - cCondFalse;
+                TypeConstant[] aColType  = new TypeConstant[cNonFalse];
+                for (int iCol = 0; iCol < cWidth; ++iCol)
+                    {
+                    int iRow = 0;
+                    for (TypeConstant[] aRowType : listTypes)
+                        {
+                        if (aRowType.length > 1)
+                            {
+                            aColType[iRow++] = aRowType[iCol];
+                            }
+                        }
+                    assert iRow == cNonFalse;
 
-            // determine the types for each column
-            TypeConstant[] aColType = new TypeConstant[cHeight];
+                    // infer the column type
+                    TypeConstant typeResult = inferFrom(aColType, f_pool);
+                    if (typeResult == null)
+                        {
+                        return null;
+                        }
+
+                    // the first column type must be boolean for this to be conditional
+                    if (iCol == 0 && !typeResult.equals(f_pool.typeBoolean()))
+                        {
+                        // it's not a conditional result; it's just a one-column result
+                        cWidth       = 1;
+                        break;
+                        }
+
+                    aResult[iCol] = typeResult;
+                    }
+
+                fDone = true;
+                }
+
+            // handle the non-conditional case
+            if (!fDone)
+                {
+                fConditional = false;
+
+                // determine the types for each column
+                TypeConstant[] aColType = new TypeConstant[cHeight];
+                for (int iCol = 0; iCol < cWidth; ++iCol)
+                    {
+                    for (int iRow = 0; iRow < cHeight; ++iRow)
+                        {
+                        aColType[iRow++] = listTypes.get(iRow)[iCol];
+                        }
+                    TypeConstant typeResult = inferFrom(aColType, f_pool);
+                    if (typeResult == null)
+                        {
+                        return null;
+                        }
+                    aResult[iCol] = typeResult;
+
+                    TypeConstant typeRequired = iCol < cReqTypes ? atypeRequired[iCol] : null;
+                    aResult[iCol] = Op.selectCommonType(typeResult, typeRequired, ErrorListener.BLACKHOLE);
+                    }
+                }
+
+            // apply knowledge or required types
             for (int iCol = 0; iCol < cWidth; ++iCol)
                 {
-                for (int iRow = 0; iRow < cHeight; ++iRow)
-                    {
-                    aColType[iRow++] = listTypes.get(iRow)[iCol];
-                    }
-                TypeConstant typeResult = inferFrom(aColType, f_pool);
-                if (typeResult == null)
-                    {
-                    return null;
-                    }
-                aResult[iCol] = typeResult;
-
-                TypeConstant typeRequired = iCol < cRequired ? atypeRequired[iCol] : null;
-                aResult[iCol] = Op.selectCommonType(typeResult, typeRequired, ErrorListener.BLACKHOLE);
+                TypeConstant typeRequired = iCol < cReqTypes ? atypeRequired[iCol] : null;
+                aResult[iCol] = Op.selectCommonType(aResult[iCol], typeRequired, ErrorListener.BLACKHOLE);
                 }
             }
 
