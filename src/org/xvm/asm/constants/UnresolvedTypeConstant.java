@@ -116,6 +116,19 @@ public class UnresolvedTypeConstant
         }
 
     @Override
+    public boolean isTuple()
+        {
+        if (isTypeResolved())
+            {
+            return getResolvedType().isTuple();
+            }
+        String sName = m_constId.isNameResolved()
+                        ? m_constId.getResolvedConstant().getValueString()
+                        : m_constId.getValueString();
+        return sName.equals("Tuple");
+        }
+
+    @Override
     public Constant getDefiningConstant()
         {
         return isTypeResolved()

@@ -31,6 +31,7 @@ import org.xvm.asm.constants.ParentClassConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.PseudoConstant;
+import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.ThisClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -45,6 +46,7 @@ import org.xvm.asm.op.MoveVar;
 import org.xvm.asm.op.P_Get;
 import org.xvm.asm.op.P_Ref;
 import org.xvm.asm.op.P_Var;
+import org.xvm.asm.op.Var_I;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
@@ -873,8 +875,10 @@ public class NameExpression
                         {
                         case Singleton:
                             {
-                            IdentityConstant idSingleton = idProp.getComponent().getParent().getIdentityConstant();
-                            code.add(new P_Get(idProp, idSingleton, argLVal));
+                            IdentityConstant  idParent    = idProp.getParentConstant();
+                            SingletonConstant idSingleton = pool().ensureSingletonConstConstant(idParent);
+                            code.add(new Var_I(idParent.getType(), idSingleton));
+                            code.add(new P_Get(idProp, code.lastRegister(), argLVal));
                             break;
                             }
 
@@ -999,8 +1003,10 @@ public class NameExpression
                     {
                     case Singleton:
                         {
-                        IdentityConstant idSingleton = idProp.getComponent().getParent().getIdentityConstant();
-                        code.add(new P_Get(idProp, idSingleton, regTemp));
+                        IdentityConstant  idParent    = idProp.getParentConstant();
+                        SingletonConstant idSingleton = pool().ensureSingletonConstConstant(idParent);
+                        code.add(new Var_I(idParent.getType(), idSingleton));
+                        code.add(new P_Get(idProp, code.lastRegister(), regTemp));
                         break;
                         }
 
@@ -1071,8 +1077,8 @@ public class NameExpression
         {
         if (isAssignable())
             {
-            TargetInfo target = m_target;
-            Argument   arg     = m_arg;
+            TargetInfo target = m_targetInfo;
+            Argument   arg    = m_arg;
             if (arg instanceof Register)
                 {
                 assert target == null;
@@ -1080,11 +1086,45 @@ public class NameExpression
                 }
             else if (arg instanceof PropertyConstant)
                 {
-                // TODO target
                 PropertyConstant idProp = (PropertyConstant) arg;
-                Argument         argTarget = left == null
-                    ? new Register(ctx.getThisType(), Op.A_TARGET)
-                    : left.generateArgument(ctx, code, true, true, errs);
+                Argument         argTarget;
+
+                if (left == null)
+                    {
+                    ClassStructure clz = ctx.getThisClass();
+
+                    switch (m_propAccessPlan)
+                        {
+                        case Singleton:
+                            {
+                            IdentityConstant  idParent    = idProp.getParentConstant();
+                            SingletonConstant idSingleton = pool().ensureSingletonConstConstant(idParent);
+                            code.add(new Var_I(idParent.getType(), idSingleton));
+                            argTarget = code.lastRegister();
+                            break;
+                            }
+
+                        case This:
+                            argTarget = new Register(clz.getFormalType(), Op.A_TARGET);
+                            break;
+
+                        case Outer:
+                            for (int nDepth = target.stepsOut; --nDepth >= 0;)
+                                {
+                                clz = clz.getContainingClass();
+                                }
+                            argTarget = createRegister(clz.getFormalType(), true);
+                            code.add(new MoveThis(target.stepsOut, argTarget));
+                            break;
+
+                        default:
+                            throw new IllegalStateException();
+                        }
+                    }
+                else
+                    {
+                    argTarget = left.generateArgument(ctx, code, true, true, errs);
+                    }
 
                 return new Assignable(argTarget, idProp);
                 }
@@ -1142,7 +1182,7 @@ public class NameExpression
             return m_arg;
             }
 
-        m_target      = null;
+        m_targetInfo  = null;
         m_arg         = null;
         m_fAssignable = false;
 
@@ -1186,8 +1226,12 @@ public class NameExpression
                 TargetInfo       target = m_targetInfo = (TargetInfo) arg;
                 TypeInfo         info   = target.typeTarget.ensureTypeInfo(errs);
                 IdentityConstant id     = target.id;
-                if (id instanceof MultiMethodConstant) // TODO still some work here to (i) save off the TargetInfo (ii) use it in code gen (iii) mark the this (and out this's) as being used
+                if (id instanceof MultiMethodConstant)
                     {
+                    // TODO still some work here to
+                    //      (i) save off the TargetInfo
+                    //      (ii) use it in code gen
+                    //      (iii) mark the this (and out this's) as being used
                     MultiMethodConstant idMM   = (MultiMethodConstant) id;
                     ClassStructure      clzTop = (ClassStructure) idMM.getNamespace().getComponent();
 
@@ -1211,15 +1255,16 @@ public class NameExpression
                         m_arg = setMethods.iterator().next().getParentConstant();
                         }
                     }
-                else if (id instanceof PropertyConstant) // TODO still some work here to (i) save off the TargetInfo (ii) use it in code gen (iii) mark the this (and out this's) as being used
+                else if (id instanceof PropertyConstant)
                     {
+                    // TODO still some work here to mark the this (and out this's) as being used
                     PropertyInfo prop = info.findProperty((PropertyConstant) id);
                     if (prop == null)
                         {
                         throw new IllegalStateException("missing property: " + id + " on " + target.typeTarget);
                         }
 
-                    if (info.isStatic())
+                    if (info.isTopLevel() && info.isStatic())
                         {
                         m_propAccessPlan = PropertyAccess.Singleton;
                         }
@@ -1628,6 +1673,13 @@ public class NameExpression
                 else if (left == null)
                     {
                     ClassStructure clz = ctx.getThisClass();
+                    if (m_propAccessPlan == PropertyAccess.Outer)
+                        {
+                        for (int nDepth = m_targetInfo.stepsOut; --nDepth >= 0;)
+                            {
+                            clz = clz.getContainingClass();
+                            }
+                        }
                     if (clz != prop.getParent())
                         {
                         // the property may originate in a contribution
@@ -1997,7 +2049,7 @@ public class NameExpression
      * Cached validation info: The optional TargetInfo that provides context for the initial name,
      * if the initial name is related to "this".
      */
-    private transient TargetInfo m_target;
+    private transient TargetInfo m_targetInfo;
 
     /**
      * Cached validation info: The raw argument that the name refers to.
@@ -2028,11 +2080,6 @@ public class NameExpression
      * The chosen property access plan.
      */
     private PropertyAccess m_propAccessPlan;
-
-    /**
-     * Cached target info
-     */
-    private TargetInfo m_targetInfo;
 
     /**
      * Cached validation info: Can the name be used as an "L value"?
