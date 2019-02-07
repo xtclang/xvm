@@ -1418,8 +1418,7 @@ public class NameExpression
                     PropertyInfo infoProp = infoType.findProperty(sName);
                     if (infoProp == null)
                         {
-                        Set<MethodConstant> setMethods = infoType.findMethods(
-                                sName, -1, ctx.isFunction() ? MethodType.Function : MethodType.Either);
+                        Set<MethodConstant> setMethods = infoType.findMethods(sName, -1, MethodType.Either);
                         switch (setMethods.size())
                             {
                             case 0:
