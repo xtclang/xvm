@@ -1957,7 +1957,9 @@ public abstract class TypeConstant
                         }
 
                     TypeConstant typeRequire = typeContrib.getExplicitClassInto();
-                    if (!typeRequire.isIntoClassType())
+                    // mixins into Class are "synthetic" (e.g. Abstract, Override); the only
+                    // exception is Enumeration, which needs to be processed naturally
+                    if (!typeRequire.isIntoClassType() || typeRequire.isA(pool.typeEnumeration()))
                         {
                         // the mixin must be compatible with this type, as specified by its "into"
                         // clause; note: not 100% correct because the presence of this mixin may affect
