@@ -309,7 +309,7 @@ public abstract class TypeConstant
 
         // because isA() uses this method, there is a chicken-and-egg problem, so instead of
         // materializing the TypeInfo at this point, just answer the question without it
-        if (isSingleDefiningConstant())
+        if (isSingleUnderlyingClass(true))
             {
             ClassStructure clz = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
             TypeConstant type = clz.getGenericParamType(getConstantPool(), sName, getParamTypes());

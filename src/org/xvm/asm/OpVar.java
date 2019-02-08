@@ -61,10 +61,7 @@ public abstract class OpVar
 
         if (isTypeAware())
             {
-            if (m_reg != null)
-                {
-                m_nType = encodeArgument(getRegisterType(ConstantPool.getCurrentPool()), registry);
-                }
+            m_nType = encodeArgument(getRegisterType(ConstantPool.getCurrentPool()), registry);
 
             writePackedLong(out, m_nType);
             }
@@ -112,21 +109,13 @@ public abstract class OpVar
     @Override
     public void simulate(Scope scope)
         {
-        int iReg = scope.allocVar();
-        // TODO: remove the null check when manually compiled code is gone
-        if (m_reg != null)
-            {
-            m_nVar = m_reg.assignIndex(iReg);
-            }
+        m_nVar = m_reg.assignIndex(scope.allocVar());
         }
 
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
-        if (m_reg != null)
-            {
-            m_reg.registerConstants(registry);
-            }
+        m_reg.registerConstants(registry);
         }
 
     @Override
@@ -150,7 +139,7 @@ public abstract class OpVar
             }
 
         sb.append(' ')
-          .append(m_reg == null ? "" : m_reg.toString());
+          .append(m_reg);
 
         return sb.toString();
         }

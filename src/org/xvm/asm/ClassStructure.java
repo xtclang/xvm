@@ -428,7 +428,7 @@ public class ClassStructure
 
         // check for turtles, for example: "ElementTypes extends Tuple<ElementTypes>"
         if (typeConstraint.getParamsCount() == 1 &&
-                typeConstraint.getDefiningConstant().getValueString().equals("Tuple") &&
+                typeConstraint.isTuple() &&
                 typeConstraint.getParamTypesArray()[0].getValueString().equals(sName))
             {
             typeConstraint = pool.ensureTypeSequenceTypeConstant();
@@ -745,7 +745,7 @@ public class ClassStructure
      *
      * @return the resolution result is one of: RESOLVED, UNKNOWN or POSSIBLE
      */
-    public ResolutionResult resolveContributedName(
+    protected ResolutionResult resolveContributedName(
             String sName, Access access, ResolutionCollector collector, boolean fAllowInto)
         {
         Component child = getChild(sName);
@@ -791,6 +791,23 @@ public class ClassStructure
 
                 default:
                     throw new IllegalStateException();
+                }
+
+            // because some of the components in the graph that we would need to visit in order to
+            // answer the question about generic type parameters are not yet ready to answer those
+            // questions, we rely instead on a virtual child's knowledge of its parents' type
+            // parameters to short-circuit that search; we know that the virtual child type can
+            // answer the question precisely because it exists (they are created no earlier than a
+            // certain stage)
+            if (typeContrib.isVirtualChild())
+                {
+                // check the paren't formal type
+                TypeConstant typeFormal = typeContrib.getParentType().getGenericParamType(sName);
+                if (typeFormal != null)
+                    {
+                    collector.resolvedConstant(typeFormal.getDefiningConstant());
+                    return ResolutionResult.RESOLVED;
+                    }
                 }
 
             if (typeContrib.isSingleUnderlyingClass(true))
