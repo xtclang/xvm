@@ -2090,3 +2090,10 @@ switch (x)
     case (1, 0): (0, 0);
     case (0, 0): (0, 1);
     }
+
+Int x = switch(v?.foo())
+    {
+    case 0:  10;
+    case 1:  15;
+    default: -1; // short-circuit goes here
+    };

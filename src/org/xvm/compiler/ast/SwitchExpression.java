@@ -118,7 +118,7 @@ public class SwitchExpression
         else
             {
             // TODO short circuit support:
-            // m_labelElse = new Label("switch_else");
+            m_labelElse = new Label("switch_else");
 
             // TODO this code does NOT set constCond (and it appears that it should)
 
@@ -163,7 +163,7 @@ public class SwitchExpression
                 ? getImplicitType(ctx)
                 : typeRequired;
 
-        Constant       constVal     = null;
+        Constant[]     aconstVal     = null;
         List<Constant> listVals     = fIfSwitch ? null : new ArrayList<>();
         Set<Constant>  setCase      = fIfSwitch ? null : new HashSet<>();
         boolean        fAllConsts   = true;
@@ -192,7 +192,7 @@ public class SwitchExpression
                 stmtCase.setLabel(labelCurrent);
 
                 List<Expression> listExprs = stmtCase.exprs;
-                if (listExprs == null)
+                if (listExprs == null) // no expressions on a case means "default:"
                     {
                     if (labelDefault == null)
                         {
@@ -303,7 +303,7 @@ public class SwitchExpression
                         {
                         if (fGrabNext)
                             {
-                            constVal = exprNew.toConstant();
+                            aconstVal = exprNew.toConstant();
                             }
 
                         if (labelCurrent == labelDefault)
@@ -321,7 +321,7 @@ public class SwitchExpression
 
                 // reset the "this is the expression that might provide a constant value for the
                 // if-switch" flag
-                if (fIfSwitch && fGrabNext && constVal == null)
+                if (fIfSwitch && fGrabNext && aconstVal == null)
                     {
                     // this would have been the expression value to provide the constant value, but
                     // the expression value itself is not constant, so the switch expression cannot
@@ -337,21 +337,21 @@ public class SwitchExpression
             listNodes.get(listNodes.size()-1).log(errs, Severity.ERROR, Compiler.SWITCH_CASE_DANGLING);
             fValid = false;
             }
-        else if (constCond != null && constVal == null && fAllConsts && constDefault != null)
+        else if (constCond != null && aconstVal == null && fAllConsts && constDefault != null)
             {
-            constVal = constDefault;
+            aconstVal = constDefault;
             }
         else if (labelDefault == null && (!fIntConsts || listVals.size() < typeCase.getIntCardinality()))
             {
             // this means that the switch would "short circuit", which is not allowed
             log(errs, Severity.ERROR, Compiler.SWITCH_DEFAULT_REQUIRED);
-            fValid = false;
+            fValid       = false;
             }
 
-        TypeConstant typeActual = collector.inferSingle(typeRequired);
-        if (typeActual == null)
+        TypeConstant[] atypeActual = collector.inferMulti(atypeRequired);
+        if (atypeActual == null)
             {
-            typeActual = typeRequest == null
+            atypeActual = typeRequest == null
                     ? pool.typeObject()
                     : typeRequest;
             }
@@ -422,7 +422,7 @@ public class SwitchExpression
 
         m_labelDefault = labelDefault;
 
-        return finishValidation(typeRequired, typeActual, fValid ? TypeFit.Fit : TypeFit.NoFit, constVal, errs);
+        return finishValidations(atypeRequired, atypeActual, fValid ? TypeFit.Fit : TypeFit.NoFit, aconstVal, errs);
         }
 
     @Override
@@ -430,23 +430,25 @@ public class SwitchExpression
         {
         if (isConstant())
             {
-            super.generateAssignment(ctx, code, LVal, errs);
+            super.generateAssignments(ctx, code, aLVal, errs);
             }
         else
             {
             if (cond == null)
                 {
-                generateIfSwitch(ctx, code, LVal, errs);
+                generateIfSwitch(ctx, code, aLVal, errs);
                 }
             else
                 {
-                boolean fScope = cond instanceof AssignmentStatement && ((AssignmentStatement) cond).hasDeclarations();
+                // a scope will be required if the switch condition declares any new variables
+                boolean fScope = cond.stream().allMatch(node -> node instanceof AssignmentStatement
+                        && ((AssignmentStatement) node).hasDeclarations());
                 if (fScope)
                     {
                     code.add(new Enter());
                     }
 
-                generateJumpSwitch(ctx, code, LVal, errs);
+                generateJumpSwitch(ctx, code, aLVal, errs);
 
                 if (fScope)
                     {
@@ -456,7 +458,7 @@ public class SwitchExpression
             }
         }
 
-    private void generateIfSwitch(Context ctx, Code code, Assignable LVal, ErrorListener errs)
+    private void generateIfSwitch(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
         List<AstNode> aNodes = contents;
         int           cNodes = aNodes.size();
@@ -494,15 +496,16 @@ public class SwitchExpression
 
                 expr.updateLineNumber(code);
                 code.add(labelCur);
-                expr.generateAssignment(ctx, code, LVal, errs);
+                expr.generateAssignments(ctx, code, aLVal, errs);
                 code.add(new Jump(labelExit));
                 }
             }
         code.add(labelExit);
         }
 
-    private void generateJumpSwitch(Context ctx, Code code, Assignable LVal, ErrorListener errs)
+    private void generateJumpSwitch(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
+        List<>
         // TODO statement vs. expression (this is all wrong! doesn't support AssignmentStatement!)
         Expression exprCond = (Expression) cond;
         if (m_aconstCase == null && (m_pintOffset != null || !exprCond.getType().isA(pool().typeInt())))
@@ -551,7 +554,7 @@ public class SwitchExpression
             else
                 {
                 node.updateLineNumber(code);
-                ((Expression) node).generateAssignment(ctx, code, LVal, errs);
+                ((Expression) node).generateAssignments(ctx, code, aLVal, errs);
                 code.add(new Jump(labelExit));
                 }
             }
