@@ -2033,13 +2033,24 @@ class B
 // -- switch again
 
 // case "match" expressions
-switch (a,b,c)
+class Q
     {
-    case ("hello", 2, false), ("bye", 7, true):
-        foo();
-        break;
+    @Inject static Int x;
 
-    case ("ugh", 3..5, _):
+    switch (a,b,c)
+        {
+        case ("hello", 2, false), ("bye", 7, true):
+            foo();
+            break;
+
+        case ("ugh", 6, _):     // not an error
+
+        case ("ugh", 3..12, _): // also not an error
+
+        case ("ugh", 4, _):     // error
+
+        case ("bla", x, _):
+        }
     }
 
 switch (i)
@@ -2073,7 +2084,7 @@ switch (x)
         break;
     }
 
-// multi-value result
+// multi-value result  // or: Tuple<Int, Int> t = ...
 (x, y) = switch (x, y)
     {
     case (0, 1): 1, 1;
@@ -2083,10 +2094,46 @@ switch (x)
     }
 
 // tuple result
-(x, y) = switch (x, y)
+(x, y) = switch (x, y)  // or: Tuple<Int, Int> t = ...
     {
     case (0, 1): (1, 1);
     case (1, 1): (1, 0);
     case (1, 0): (0, 0);
     case (0, 0): (0, 1);
+    }
+
+// other uses of "_":
+
+// 1) "don't bind"
+class C
+    {
+    Int foo(Int x, Int y) {...}
+    }
+C c = new C();
+function Int f(Int) = c.&foo(1, _);
+
+// 2) "don't bind" with overloading
+class C
+    {
+    Int foo(Int x, Int y) {...}
+    Int foo(Int x, String y) {...}
+
+    Int bar(Int x);
+    String bar(Int x);
+    }
+C c = new C();
+Int q = ...
+function Int f(Int) = c.&foo(q, <Int> _);
+Function f2 = c.&bar<Int>(_);
+
+// 3) lambda ignored param
+// bar needs a function that takes two ints
+bar((x, _) -> c.foo(1, x));
+
+// 4) ignored return value
+// see Date.x
+@RO Int dayOfYear.get()
+    {
+    (_, _, _, Int dayOfYear) = calcDate(epochDay);
+    return dayOfYear;
     }
