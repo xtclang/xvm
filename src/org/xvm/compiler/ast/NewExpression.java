@@ -309,9 +309,7 @@ public class NewExpression
                     // anonymous inner class
                     typeSuper  = pool.ensureAccessTypeConstant(typeTarget, fNestMate ? Access.PRIVATE : Access.PROTECTED);
                     infoSuper  = typeSuper.ensureTypeInfo(errs);
-                    typeTarget = getAnonymousInnerClassType();
-                    // REVIEW GG - causes warning: "Suspicious assignment from: testSimple(?)#Object:1 to: testSimple(?)#Object:1:private"
-                    // typeTarget = pool.ensureAccessTypeConstant(getAnonymousInnerClassType(), Access.PRIVATE);
+                    typeTarget = pool.ensureAccessTypeConstant(getAnonymousInnerClassType(), Access.PRIVATE);
                     }
                 else if (fNestMate)
                     {
