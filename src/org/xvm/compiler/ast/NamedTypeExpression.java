@@ -18,6 +18,7 @@ import org.xvm.asm.constants.ChildClassConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.ThisClassConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -684,11 +685,9 @@ public class NamedTypeExpression
         switch (constTarget.getFormat())
             {
             case ThisClass:
-                idTarget = (ClassConstant) ((ThisClassConstant) constTarget).getDeclarationLevelClass();
-                break;
-
+            case ParentClass:
             case ChildClass:
-                idTarget = (ClassConstant) ((ChildClassConstant) constTarget).getDeclarationLevelClass();
+                idTarget = (ClassConstant) ((PseudoConstant) constTarget).getDeclarationLevelClass();
                 break;
 
             case Class:
