@@ -877,8 +877,7 @@ public class NameExpression
                             {
                             IdentityConstant  idParent    = idProp.getParentConstant();
                             SingletonConstant idSingleton = pool().ensureSingletonConstConstant(idParent);
-                            code.add(new Var_I(idParent.getType(), idSingleton));
-                            code.add(new P_Get(idProp, code.lastRegister(), argLVal));
+                            code.add(new P_Get(idProp, idSingleton, argLVal));
                             break;
                             }
 
@@ -1005,8 +1004,7 @@ public class NameExpression
                         {
                         IdentityConstant  idParent    = idProp.getParentConstant();
                         SingletonConstant idSingleton = pool().ensureSingletonConstConstant(idParent);
-                        code.add(new Var_I(idParent.getType(), idSingleton));
-                        code.add(new P_Get(idProp, code.lastRegister(), regTemp));
+                        code.add(new P_Get(idProp, idSingleton, regTemp));
                         break;
                         }
 
