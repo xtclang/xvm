@@ -231,8 +231,7 @@ public class VirtualChildTypeConstant
             }
 
         ClassConstant constClz = (ClassConstant) getDefiningConstant();
-        return ((ClassStructure) constClz.getComponent()).
-            resolveContributedName(sName, Access.PUBLIC, collector, true);
+        return constClz.getComponent().resolveName(sName, Access.PUBLIC, collector);
         }
 
 

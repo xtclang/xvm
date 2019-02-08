@@ -165,21 +165,6 @@ public class NewExpression
         return body;
         }
 
-    /**
-     * @return the type of the anonymous inner class
-     */
-    public TypeConstant getAnonymousInnerClassType()
-        {
-        if (anon == null)
-            {
-            ensureInnerClass(true, ErrorListener.BLACKHOLE);
-            }
-
-        // there must be an anonymous inner class skeleton by this point
-        assert anon != null && anon.getComponent() != null;
-        return anon.getComponent().getIdentityConstant().getType();
-        }
-
     @Override
     public boolean isAutoNarrowingAllowed(TypeExpression type)
         {
@@ -242,7 +227,7 @@ public class NewExpression
             }
         else
             {
-            return getAnonymousInnerClassType();
+            return getAnonymousInnerClassType(ctx);
             }
         }
 
@@ -268,7 +253,7 @@ public class NewExpression
         boolean fAnon  = anon != null;
         if (fAnon)
             {
-            ensureInnerClass(false, errs);
+            ensureInnerClass(ctx, /*fTemp*/ false, /*fRO*/ true, errs);
             assert left == null;
             }
 
@@ -309,9 +294,7 @@ public class NewExpression
                     // anonymous inner class
                     typeSuper  = pool.ensureAccessTypeConstant(typeTarget, fNestMate ? Access.PRIVATE : Access.PROTECTED);
                     infoSuper  = typeSuper.ensureTypeInfo(errs);
-                    typeTarget = getAnonymousInnerClassType();
-                    // REVIEW GG - causes warning: "Suspicious assignment from: testSimple(?)#Object:1 to: testSimple(?)#Object:1:private"
-                    // typeTarget = pool.ensureAccessTypeConstant(getAnonymousInnerClassType(), Access.PRIVATE);
+                    typeTarget = pool.ensureAccessTypeConstant(getAnonymousInnerClassType(ctx), Access.PRIVATE);
                     }
                 else if (fNestMate)
                     {
@@ -520,23 +503,21 @@ public class NewExpression
             // structures, such that we can revert it after we collect the information about the
             // captures
             destroyTempInnerClass();
-            AnonInnerClassContext ctxAnon = new AnonInnerClassContext(ctx);
-            m_ctxCapture = ctxAnon;
 
             // force a temp clone of the inner class to go through its validate() stage so that we
             // can determine what variables get captured (and if they are effectively final)
-            ensureInnerClass(/* fTemp */ true, ErrorListener.BLACKHOLE);
+            ensureInnerClass(ctx, /*fTemp*/ true, /*fRO*/ false, ErrorListener.BLACKHOLE);
+
             if (!new StageMgr(anon, Stage.Emitted, errs).fastForward(20))
                 {
                 fValid = false;
                 }
 
-            // collected VAS information from the lambda context
-            ctxAnon.exit();
-
-            // clean up temporary inner class and the capture context
+            // clean up temporary inner class and transfer the capture context information
             destroyTempInnerClass();
-            m_ctxCapture = null;
+
+            AnonInnerClassContext ctxAnon = m_ctxCapture;
+            ctxAnon.exit();
 
             // at this point we have a fair bit of data about which variables get captured, but we
             // still lack the effectively final data that will only get reported when the various
@@ -546,6 +527,7 @@ public class NewExpression
             m_mapCapture     = ctxAnon.getCaptureMap();
             m_mapRegisters   = ctxAnon.ensureRegisterMap();
             m_fInstanceChild = ctxAnon.isInstanceChild();
+            m_ctxCapture     = null;
             }
 
         // remove the access modifier
@@ -747,12 +729,29 @@ public class NewExpression
         }
 
     /**
+     * @return the type of the anonymous inner class
+     */
+    private TypeConstant getAnonymousInnerClassType(Context ctx)
+        {
+        if (anon == null)
+            {
+            ensureInnerClass(ctx, /*fTemp*/ true, /*fRO*/ true, ErrorListener.BLACKHOLE);
+            }
+
+        // there must be an anonymous inner class skeleton by this point
+        assert anon != null && anon.getComponent() != null;
+        return anon.getComponent().getIdentityConstant().getType();
+        }
+
+    /**
      * Create the necessary AST and Component nodes for the anonymous inner class.
      *
+     * @param ctx    the current compilation context
      * @param fTemp  true to specify that the inner class is only being created on a temporary basis
+     * @param fRO    true to specify that any changes to the capture context should be discarded
      * @param errs   the error listener to log any errors to
      */
-    private void ensureInnerClass(boolean fTemp, ErrorListener errs)
+    private void ensureInnerClass(Context ctx, boolean fTemp, boolean fRO, ErrorListener errs)
         {
         assert body != null;
 
@@ -799,16 +798,25 @@ public class NewExpression
             if (clzActual != null)
                 {
                 Component componentParent = clzActual.getParent();
-                assert componentParent == getComponent();       // the parent should be this method
+                assert componentParent == getComponent(); // the parent should be this method
 
-                anon.setComponent((ClassStructure) clzActual.replaceWithTemporary());
+                anon.setComponent(clzActual.replaceWithTemporary());
                 }
 
             m_anonActual = anonActual;
             m_clzActual  = clzActual;
             }
 
+        AnonInnerClassContext ctxAnon = new AnonInnerClassContext(ctx);
+        m_ctxCapture = ctxAnon;
+
         catchUpChildren(errs);
+
+        if (fRO)
+            {
+            // we intentionally don't call "ctxAnon.exit()"
+            m_ctxCapture = null;
+            }
         }
 
     /**

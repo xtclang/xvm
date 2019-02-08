@@ -1009,11 +1009,14 @@ interface Map<KeyType, ValueType>
             Map map = Map.this;
             Boolean modified = map.keys.iterator().untilAny(key ->
                 {
-                if (ValueType keyvalue : map.get(key) && keyvalue == value)
+                if (ValueType test : map.get(key))
                     {
-                    Map newMap = map.remove(key);
-                    assert Ref.equals(map, newMap);
-                    return true;
+                    if (test == value)
+                        {
+                        Map newMap = map.remove(key);
+                        assert Ref.equals(map, newMap);
+                        return true;
+                        }
                     }
                 return false;
                 });
