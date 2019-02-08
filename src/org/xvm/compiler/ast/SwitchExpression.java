@@ -105,7 +105,7 @@ public class SwitchExpression
     protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         boolean      fValid    = true;
-        boolean      fScope    = false;
+        boolean      fScope    = false;         // does the switch need its own scope?
         ConstantPool pool      = pool();
         Constant     constCond = null;
         TypeConstant typeCase  = null;
@@ -119,6 +119,8 @@ public class SwitchExpression
             {
             // TODO short circuit support:
             // m_labelElse = new Label("switch_else");
+
+            // TODO this code does NOT set constCond (and it appears that it should)
 
             if (cond instanceof AssignmentStatement)
                 {
@@ -574,9 +576,21 @@ public class SwitchExpression
 
         sb.append("switch (");
 
-        if (cond != null)
+        if (cond != null && !cond.isEmpty())
             {
-            sb.append(cond);
+            boolean fFirst = true;
+            for (AstNode node : cond)
+                {
+                if (fFirst)
+                    {
+                    fFirst = false;
+                    }
+                else
+                    {
+                    sb.append(", ");
+                    }
+                sb.append(node);
+                }
             }
 
         sb.append(")\n    {");

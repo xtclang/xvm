@@ -125,12 +125,12 @@ module TestNesting.xqiz.it
             // a call to C.foo() has the following potential call chain:
             // 1) BI.P.M.foo()
             // 2) PB.M.foo()
-            // 1) BI.P.C.foo()
-            // 2) PB.C.foo()
-            // 3) BI.P.A.foo()
-            // 4) PB.A.foo()
-            // 5) Object.foo() (doesn't exist)
-            // 6) <default> I.foo()
+            // 3) BI.P.C.foo()
+            // 4) PB.C.foo()
+            // 5) BI.P.A.foo()
+            // 6) PB.A.foo()
+            // 7) Object.foo() (doesn't exist)
+            // 8) <default> I.foo()
             }
         }
 

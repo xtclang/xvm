@@ -101,6 +101,7 @@ public class TypeCollector
             {
             list = m_listSingle;
             }
+
         if (list != null)
             {
             for (Object o : list)
@@ -111,6 +112,7 @@ public class TypeCollector
                     }
                 }
             }
+
         return false;
         }
 
@@ -131,6 +133,7 @@ public class TypeCollector
                     return false;
                     }
                 }
+
             return true;
             }
 
@@ -159,7 +162,6 @@ public class TypeCollector
                         }
                     }
                 }
-            return true;
             }
 
         return true;
@@ -404,7 +406,7 @@ public class TypeCollector
                     if (iCol == 0 && !typeResult.equals(f_pool.typeBoolean()))
                         {
                         // it's not a conditional result; it's just a one-column result
-                        cWidth       = 1;
+                        cWidth = 1;
                         break;
                         }
 
@@ -433,9 +435,6 @@ public class TypeCollector
                         return null;
                         }
                     aResult[iCol] = typeResult;
-
-                    TypeConstant typeRequired = iCol < cReqTypes ? atypeRequired[iCol] : null;
-                    aResult[iCol] = Op.selectCommonType(typeResult, typeRequired, ErrorListener.BLACKHOLE);
                     }
                 }
 
