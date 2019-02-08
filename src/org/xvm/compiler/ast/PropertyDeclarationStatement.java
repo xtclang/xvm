@@ -299,6 +299,8 @@ public class PropertyDeclarationStatement
 
                 // we're going to compile the initializer now, so that we can determine if it could
                 // be discarded and replaced with a constant
+                // IMPORTANT NOTE: this goes forward BEYOND validation, so the caller's context
+                // must be ready to resolve the corresponding names (e.g. see NewExpression)
                 if (!(new StageMgr(stmtInit, Stage.Emitted, errs).fastForward(10)))
                     {
                     mgr.requestRevisit();
