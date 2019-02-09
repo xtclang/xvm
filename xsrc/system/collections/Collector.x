@@ -77,9 +77,7 @@ interface Collector<ElementType, AccumulationType, ResultType>
                 function AType (AType, AType)   combine,
                 function RType (AType)          finish
                 )
-            implements Collector<EType, AType, RType>
-            {
-            }
+            implements Collector<EType, AType, RType>;
 
         return new SimpleCollector(supply, accumulate, combine, finish);
         }
