@@ -2679,7 +2679,7 @@ public abstract class Component
     /**
      * Types of composition.
      */
-    public static enum Composition
+    public enum Composition
         {
         /**
          * Represents an annotation.
@@ -2748,7 +2748,7 @@ public abstract class Component
          * The constant is a ModuleConstant.
          */
         ImportEmbedded,
-            /**
+        /**
          * Synthetic (transient) composition indicating an equivalency.
          * <p/>
          * The constant is a ClassConstant.

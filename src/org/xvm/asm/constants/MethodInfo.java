@@ -182,7 +182,7 @@ public class MethodInfo
             }
 
         Collections.addAll(listMerge, aBase);
-        return new MethodInfo(listMerge.toArray(new MethodBody[listMerge.size()]));
+        return new MethodInfo(listMerge.toArray(MethodBody.NO_BODIES));
         }
 
     /**
@@ -246,7 +246,7 @@ public class MethodInfo
 
         return list.isEmpty()
                 ? null
-                : new MethodInfo(list.toArray(new MethodBody[list.size()]));
+                : new MethodInfo(list.toArray(MethodBody.NO_BODIES));
         }
 
     /**

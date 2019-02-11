@@ -41,6 +41,18 @@ public class PropertyInfo
         this(new PropertyBody[] {body}, body.getType(), body.hasField(), false);
         }
 
+    /**
+     * Combine the information in this PropertyInfo with the specified PropertyBody.
+     *
+     * @param that  a PropertyInfo to merge with
+     * @param body  a PropertyBody to add
+     */
+    public PropertyInfo(PropertyInfo that, PropertyBody body)
+        {
+        this(Handy.appendHead(that.getPropertyBodies(), body),
+            body.getType(), body.hasField(), body.isSetterBlockingSuper());
+        }
+
     protected PropertyInfo(
             PropertyBody[] aBody,
             TypeConstant   type,
@@ -167,8 +179,7 @@ public class PropertyInfo
 
         // glue together the layers
         Collections.addAll(listMerge, aBase);
-        PropertyBody[] aResult = listMerge.toArray(new PropertyBody[listMerge.size()]);
-        int            cResult = aResult.length;
+        PropertyBody[] aResult = listMerge.toArray(new PropertyBody[0]);
 
         // check @Override
         if (fSelf)
@@ -319,7 +330,6 @@ public class PropertyInfo
      * have been applied to the class, giving the properties a chance to replace themselves with an
      * appropriate PropertyInfo.
      *
-     *
      * @param fNative  true iff the type being assembled is a native rebase class
      * @param errs     the error list to log any errors to
      *
@@ -443,7 +453,7 @@ public class PropertyInfo
 
         return list.isEmpty()
                 ? null
-                : new PropertyInfo(list.toArray(new PropertyBody[list.size()]), m_type, m_fRequireField, m_fSuppressVar);
+                : new PropertyInfo(list.toArray(new PropertyBody[0]), m_type, m_fRequireField, m_fSuppressVar);
         }
 
     /**
