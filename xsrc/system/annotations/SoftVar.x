@@ -65,7 +65,7 @@ mixin SoftVar<RefType>(function void ()? notify)
         // soft+lazy references are unassigned after being cleared by the garbage collector
         if (!assigned)
             {
-            assert (&this).actualType.incorporates_(LazyVar);
+            assert (&this).incorporates_(LazyVar);
 
             DateTime start = runtimeClock.now;
             RefType  value = super();

@@ -471,7 +471,6 @@ mixin FutureVar<RefType>
      * the chain.
      */
     static class DependentFuture<InputType>
-            implements Var<RefType>
             incorporates FutureVar<RefType>
             delegates Var<RefType>(resultVar)
         {

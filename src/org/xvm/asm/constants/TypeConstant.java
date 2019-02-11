@@ -52,6 +52,7 @@ import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xType;
 import org.xvm.runtime.template.xType.TypeHandle;
 
+import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
@@ -2286,9 +2287,11 @@ public abstract class TypeConstant
             Map<PropertyConstant, PropertyInfo> mapContribProps;
             Map<MethodConstant  , MethodInfo  > mapContribMethods;
 
-            TypeConstant typeContrib = contrib.getTypeConstant();
-            Composition  composition = contrib.getComposition();
-            boolean      fSelf       = composition == Composition.Equal;
+            TypeConstant     typeContrib = contrib.getTypeConstant();
+            Composition      composition = contrib.getComposition();
+            PropertyConstant idDelegate  = contrib.getDelegatePropertyConstant();
+            boolean          fSelf       = composition == Composition.Equal;
+
             if (fSelf)
                 {
                 mapContribProps   = new HashMap<>();
@@ -2322,7 +2325,7 @@ public abstract class TypeConstant
 
                     // layer on the property so its information is all correct before we have to
                     // make any decisions about how to process the property
-                    layerOnProp(constId, fSelf, mapTypeParams, mapProps, mapVirtProps,
+                    layerOnProp(constId, true, null, mapTypeParams, mapProps, mapVirtProps,
                             typeContrib, idProp, prop, errs);
 
                     if (!fNative)
@@ -2431,7 +2434,7 @@ public abstract class TypeConstant
             // that same level.
 
             // process properties
-            layerOnProps(constId, fSelf, mapTypeParams, mapProps, mapVirtProps,
+            layerOnProps(constId, fSelf, idDelegate, mapTypeParams, mapProps, mapVirtProps,
                     typeContrib, mapContribProps, errs);
 
             // if there are any remaining declared-but-not-overridden properties originating from
@@ -2460,7 +2463,7 @@ public abstract class TypeConstant
             // process methods
             if (!mapContribMethods.isEmpty())
                 {
-                layerOnMethods(constId, fSelf, mapTypeParams, mapMethods, mapVirtMethods,
+                layerOnMethods(constId, fSelf, idDelegate, mapTypeParams, mapMethods, mapVirtMethods,
                         typeContrib, mapContribMethods, errs);
                 }
 
@@ -2484,7 +2487,6 @@ public abstract class TypeConstant
                             assert infoOld == infoCheck;
                             }
                         }
-
                     }
                 }
             }
@@ -2633,7 +2635,8 @@ public abstract class TypeConstant
             PropertyConstant idContrib  = (PropertyConstant) idProp.appendNestedIdentity(pool, nidContrib);
             mapContribProps.put(idContrib, entry.getValue());
             }
-        layerOnProps(constId, false, mapTypeParams, mapProps, mapVirtProps, typeContrib, mapContribProps, errs);
+        layerOnProps(constId, false, null, mapTypeParams, mapProps, mapVirtProps,
+                typeContrib, mapContribProps, errs);
 
         Map<MethodConstant, MethodInfo> mapContribMethods = new HashMap<>();
         for (Entry<MethodConstant, MethodInfo> entry : infoContrib.getMethods().entrySet())
@@ -2642,26 +2645,28 @@ public abstract class TypeConstant
             MethodConstant idContrib  = (MethodConstant) idProp.appendNestedIdentity(pool, nidContrib);
             mapContribMethods.put(idContrib, entry.getValue());
             }
-        layerOnMethods(constId, false, mapTypeParams, mapMethods, mapVirtMethods,
-            typeContrib, mapContribMethods, errs);
+        layerOnMethods(constId, false, null, mapTypeParams, mapMethods, mapVirtMethods,
+                typeContrib, mapContribMethods, errs);
         }
 
     /**
      * Layer on the passed property contributions onto the property information already collected.
      *
      * @param constId          identity of the class
+     * @param fSelf            true if the layer being added represents the "Equals" contribution of
+     * @param idDelegate       the property constant that provides the reference to delegate to
      * @param mapTypeParams    type parameters of the class
      * @param mapProps         properties of the class
      * @param mapVirtProps     the virtual properties of the type, keyed by nested id
      * @param typeContrib      the type whose members are being contributed
      * @param mapContribProps  the property information to add to the existing properties
-     * @param fSelf            true if the layer being added represents the "Equals" contribution of
      *                         the type
      * @param errs             the error list to log any errors to
      */
     protected void layerOnProps(
             IdentityConstant                    constId,
             boolean                             fSelf,
+            PropertyConstant                    idDelegate,
             Map<Object, ParamInfo>              mapTypeParams,
             Map<PropertyConstant, PropertyInfo> mapProps,
             Map<Object, PropertyInfo>           mapVirtProps,
@@ -2671,7 +2676,7 @@ public abstract class TypeConstant
         {
         for (Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
             {
-            layerOnProp(constId, fSelf, mapTypeParams, mapProps, mapVirtProps,
+            layerOnProp(constId, fSelf, idDelegate, mapTypeParams, mapProps, mapVirtProps,
                 typeContrib, entry.getKey(), entry.getValue(), errs);
             }
         }
@@ -2682,6 +2687,7 @@ public abstract class TypeConstant
      * @param constId       identity of the class
      * @param fSelf         true if the layer being added represents the "Equals" contribution of
      *                      the type
+     * @param idDelegate    the property constant that provides the reference to delegate to
      * @param mapTypeParams type parameters of the class
      * @param mapProps      properties of the class
      * @param mapVirtProps  the virtual properties of the type, keyed by nested id
@@ -2693,6 +2699,7 @@ public abstract class TypeConstant
     protected void layerOnProp(
             IdentityConstant                    constId,
             boolean                             fSelf,
+            PropertyConstant                    idDelegate,
             Map<Object, ParamInfo>              mapTypeParams,
             Map<PropertyConstant, PropertyInfo> mapProps,
             Map<Object, PropertyInfo>           mapVirtProps,
@@ -2713,12 +2720,26 @@ public abstract class TypeConstant
 
         // look for a property of the same name (using its nested identity); only virtually
         // composable properties are registered using their nested identities
-        PropertyInfo propBase   = fVirtual
+        PropertyInfo propBase = fVirtual
                 ? mapVirtProps.get(nidContrib)
                 : null;
         PropertyInfo propResult = propBase == null
                 ? propContrib
                 : propBase.layerOn(propContrib, fSelf, errs);
+
+        // formal properties don't delegate
+        if (idDelegate != null && !propResult.isTypeParam())
+            {
+            PropertyBody head = propResult.getHead();
+            TypeConstant type = propResult.getType();
+
+            PropertyBody bodyDelegate = new PropertyBody(head.getStructure(),
+                    Implementation.Delegating, idDelegate, type,
+                    head.isRO(), head.isRW(), /*fCustom*/ false,
+                    Effect.BlocksSuper, Effect.BlocksSuper,
+                    /*fReqField*/ false, /*fConstant*/ false, null, null);
+            propResult = new PropertyInfo(propResult, bodyDelegate);
+            }
 
         // check if there's supposed to be a property by this same identity
         if (propBase == null && propContrib.isOverride())
@@ -2743,6 +2764,7 @@ public abstract class TypeConstant
      * @param constId            identity of the class
      * @param fSelf              true if the layer being added represents the "Equals" contribution of
      *                           the type
+     * @param idDelegate         the property constant that provides the reference to delegate to
      * @param mapTypeParams      type parameters of the class
      * @param mapMethods         methods of the class
      * @param mapVirtMethods     the virtual methods of the type, keyed by nested id
@@ -2753,6 +2775,7 @@ public abstract class TypeConstant
     protected void layerOnMethods(
             IdentityConstant                constId,
             boolean                         fSelf,
+            PropertyConstant                idDelegate,
             Map<Object, ParamInfo>          mapTypeParams,
             Map<MethodConstant, MethodInfo> mapMethods,
             Map<Object, MethodInfo>         mapVirtMethods,
@@ -2912,12 +2935,8 @@ public abstract class TypeConstant
                             {
                             mapNarrowedNids = new HashMap<>();
                             }
-                        Set<Object> setNarrowing = mapNarrowedNids.get(nidBase);
-                        if (setNarrowing == null)
-                            {
-                            setNarrowing = new HashSet<>();
-                            mapNarrowedNids.put(nidBase, setNarrowing);
-                            }
+                        Set<Object> setNarrowing = mapNarrowedNids.computeIfAbsent(
+                            nidBase, key_ -> new HashSet<>());
                         setNarrowing.add(nidContrib);
                         }
                     }
@@ -2937,6 +2956,15 @@ public abstract class TypeConstant
                             );
                         }
                     methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
+                    }
+
+                if (idDelegate != null)
+                    {
+                    MethodBody head         = methodResult.getHead();
+                    MethodBody bodyDelegate = new MethodBody(
+                        head.getIdentity(), head.getSignature(), Implementation.Delegating, idDelegate);
+
+                    methodResult = new MethodInfo(Handy.appendHead(methodResult.getChain(), bodyDelegate));
                     }
                 }
 
@@ -4933,11 +4961,8 @@ public abstract class TypeConstant
                 {
                 ConstantPool pool = getConstantPool();
                 IdentityConstant id = getSingleUnderlyingClass(true);
-                if (id.equals(pool.clzFunction()) ||
-                    id.equals(pool.clzOrderable()))
-                    {
-                    return false;
-                    }
+                return !id.equals(pool.clzFunction()) &&
+                       !id.equals(pool.clzOrderable());
                 }
             return true;
             }
@@ -5043,7 +5068,7 @@ public abstract class TypeConstant
      */
     private transient volatile int m_cRecursiveDepth;
     private transient volatile TypeInfo m_typeinfo;
-    private static AtomicReferenceFieldUpdater<TypeConstant, TypeInfo> s_typeinfo =
+    private static final AtomicReferenceFieldUpdater<TypeConstant, TypeInfo> s_typeinfo =
             AtomicReferenceFieldUpdater.newUpdater(TypeConstant.class, TypeInfo.class, "m_typeinfo");
 
     /**

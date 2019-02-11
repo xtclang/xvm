@@ -1577,6 +1577,24 @@ public class Handy
         }
 
     /**
+     * Add the specified element at the top of the specified array.
+     *
+     * @param aoBase  the array to add to
+     * @param oAdd    the element to append at the head
+     *
+     * @return an array containing all the elements
+     */
+    public static <T> T[] appendHead(T[] aoBase, T oAdd)
+        {
+        int c    = aoBase.length;
+        T[] aNew = (T[]) Array.newInstance(oAdd.getClass(), c + 1);
+
+        aNew[0] = oAdd;
+        System.arraycopy(aoBase, 0, aNew, 1, c);
+        return aNew;
+        }
+
+    /**
      * Creeate an ArrayList that contains the first {@code c} elements of the array {@code ao}.
      *
      * @param ao  an array of T
