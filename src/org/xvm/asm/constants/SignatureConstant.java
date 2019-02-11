@@ -532,6 +532,11 @@ public class SignatureConstant
             }
 
         SignatureConstant that = (SignatureConstant) obj;
+        if (that == m_sigPrev)
+            {
+            return m_nCmpPrev;
+            }
+
         int n = this.m_constName.compareTo(that.m_constName);
         if (n == 0)
             {
@@ -545,6 +550,13 @@ public class SignatureConstant
                     }
                 }
             }
+
+        // while completely non-obvious at first look, caching this result has a tremendous impact
+        // on the big-O, by short-circuiting a recursive comparison caused by signatures containing
+        // TypeParameterConstants
+        m_sigPrev  = that;
+        m_nCmpPrev = n;
+
         return n;
         }
 
@@ -839,4 +851,14 @@ public class SignatureConstant
      * An indicator that this signature refers to a property.
      */
     private transient boolean m_fProperty;
+
+    /**
+     * Cached comparison target.
+     */
+    private transient SignatureConstant m_sigPrev;
+
+    /**
+     * Cached comparison result.
+     */
+    private transient int m_nCmpPrev;
     }

@@ -190,24 +190,23 @@ public class TypeParameterConstant
             {
             return -1;
             }
+
         TypeParameterConstant regThat = (TypeParameterConstant) that;
-        if (!fReEntry)
+        int nDif = this.m_iReg - regThat.m_iReg;
+        if (nDif != 0 || fReEntry)
             {
-            fReEntry = true;
-            try
-                {
-                int n = m_constMethod.compareTo(regThat.m_constMethod);
-                if (n != 0)
-                    {
-                    return n;
-                    }
-                }
-            finally
-                {
-                fReEntry = false;
-                }
+            return nDif;
             }
-        return this.m_iReg - regThat.m_iReg;
+
+        fReEntry = true;
+        try
+            {
+            return m_constMethod.compareTo(regThat.m_constMethod);
+            }
+        finally
+            {
+            fReEntry = false;
+            }
         }
 
     @Override

@@ -626,23 +626,25 @@ public abstract class Constant
             return 0;
             }
 
-        // primary sort of constants is by the "format" i.e. the "binary
-        // type" of the constant
-        int cDif = this.getFormat().ordinal() - that.getFormat().ordinal();
-        if (cDif != 0)
-            {
-            return cDif;
-            }
-
         Constant constThis = this instanceof ResolvableConstant
                 ? ((ResolvableConstant) this).unwrap()
                 : this;
         Constant constThat = that instanceof ResolvableConstant
                 ? ((ResolvableConstant) that).unwrap()
                 : that;
+        if (constThis == constThat)
+            {
+            return 0;
+            }
 
-        // two constants of the same format can be compared by their
-        // contents
+        // primary sort of constants is by the "format" i.e. the "binary type" of the constant
+        int cDif = constThis.getFormat().compareTo(constThat.getFormat());
+        if (cDif != 0)
+            {
+            return cDif;
+            }
+
+        // two constants of the same format can be compared by their contents
         return constThis.compareDetails(constThat);
         }
 
