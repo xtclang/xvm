@@ -48,8 +48,7 @@ interface Collector<ElementType, AccumulationType, ResultType>
             function Boolean (AccumulationType, ElementType)               accumulate, // Accumulator
             function AccumulationType (AccumulationType, AccumulationType) combine)    // Combiner
         {
-        return new Collector<ElementType, AccumulationType, AccumulationType>.SimpleCollector(
-                supply, accumulate, combine, result -> result);
+        return of(supply, accumulate, combine, result -> result);
         }
 
     /**
@@ -66,24 +65,21 @@ interface Collector<ElementType, AccumulationType, ResultType>
      */
     static <ElementType, AccumulationType, ResultType>
         Collector<ElementType, AccumulationType, ResultType> of(
-            function AccumulationType ()                                   supply,     // Supplier
-            function Boolean (AccumulationType, ElementType)               accumulate, // Accumulator
-            function AccumulationType (AccumulationType, AccumulationType) combine,    // Combiner
-            function ResultType (AccumulationType)                         finish)     // Finisher
+            function AccumulationType ()                                   supply,
+            function Boolean (AccumulationType, ElementType)               accumulate,
+            function AccumulationType (AccumulationType, AccumulationType) combine,
+            function ResultType (AccumulationType)                         finish)
         {
-        return new Collector<ElementType, AccumulationType, ResultType>.SimpleCollector(
-                supply, accumulate, combine, finish);
-        }
+        const SimpleCollector<EType, AType, RType>
+                (
+                function AType ()               supply,
+                function Boolean (AType, EType) accumulate,
+                function AType (AType, AType)   combine,
+                function RType (AType)          finish
+                )
+            implements Collector<EType, AType, RType>;
 
-    /**
-     * Trivial Collector.
-     */
-    static const SimpleCollector(
-            function AccumulationType ()                                   supply,     // Supplier
-            function Boolean (AccumulationType, ElementType)               accumulate, // Accumulator
-            function AccumulationType (AccumulationType, AccumulationType) combine,    // Combiner
-            function ResultType (AccumulationType)                         finish)     // Finisher
-        implements Collector
-        {
+        return new SimpleCollector(supply, accumulate, combine, finish);
         }
     }
+

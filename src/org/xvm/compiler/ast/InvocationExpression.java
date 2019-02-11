@@ -564,11 +564,21 @@ public class InvocationExpression
                         else if (argMethod instanceof MethodConstant ||
                                  argMethod instanceof PropertyConstant)
                             {
-                            // note that the identity for a "capped" method has no body, so assume
-                            // that a missing body indicates virtual, and hence requires "this"
-                            // (we can also use m_method for the MethodConstant case)
                             Component component = ((IdentityConstant) argMethod).getComponent();
-                            if (component == null || !component.isStatic())
+                            boolean   fStatic;
+                            if (component == null)
+                                {
+                                TypeInfo info = m_targetinfo.typeTarget.ensureTypeInfo(errs);
+                                fStatic = argMethod instanceof MethodConstant
+                                        ? info.getMethodById((MethodConstant) argMethod).isFunction()
+                                        : info.findProperty((PropertyConstant) argMethod).isConstant();
+                                }
+                            else
+                                {
+                                fStatic = component.isStatic();
+                                }
+
+                            if (!fStatic)
                                 {
                                 // there is a read of the implicit "this" variable TODO use TargetInfo to figure out how many "this" steps there are
                                 Token tokName = exprName.getNameToken();
@@ -1064,7 +1074,7 @@ public class InvocationExpression
             {
             // argFn isn't a function; convert whatever-it-is into the desired function
             typeFn = m_idConvert.getRawReturns()[0];
-            Register regFn  = new Register(typeFn);       // TODO need fStackOk for Op.A_STACK
+            Register regFn = createRegister(typeFn, true);
             code.add(new Invoke_01(argFn, m_idConvert, regFn));
             argFn = regFn;
             }
@@ -1908,7 +1918,7 @@ public class InvocationExpression
     private transient boolean         m_fTupleArg;       // indicates that arguments come from a tuple
     private transient TargetInfo      m_targetinfo;      // for left==null with prop or method name
     private transient Argument        m_argMethod;
-    private transient MethodStructure m_method;          // if m_fArgMethod is a MethodConstant,
+    private transient MethodStructure m_method;          // if m_argMethod is a MethodConstant,
                                                          // this holds the corresponding structure
     private transient Argument[]      m_aargTypeParams;  // "hidden" type parameters
     private transient int             m_cDefaults;       // number of default arguments

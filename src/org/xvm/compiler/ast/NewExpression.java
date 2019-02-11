@@ -531,7 +531,7 @@ public class NewExpression
             }
 
         // remove the access modifier
-        if (typeTarget.isAccessSpecified())
+        if (typeTarget != null && typeTarget.isAccessSpecified())
             {
             typeTarget = typeTarget.getUnderlyingType();
             }
