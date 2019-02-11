@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Op;
@@ -442,7 +443,11 @@ public class TypeCollector
             for (int iCol = 0; iCol < cWidth; ++iCol)
                 {
                 TypeConstant typeRequired = iCol < cReqTypes ? atypeRequired[iCol] : null;
-                aResult[iCol] = Op.selectCommonType(aResult[iCol], typeRequired, ErrorListener.BLACKHOLE);
+                if (typeRequired != null)
+                    {
+                    aResult[iCol] = Op.selectCommonType(aResult[iCol], typeRequired,
+                            ErrorListener.BLACKHOLE);
+                    }
                 }
             }
 
@@ -538,6 +543,14 @@ public class TypeCollector
                     return null;
                     }
                 }
+            }
+
+        // an enum value type is replaced with the type of the enum; see Op.selectCommonType()
+        TypeInfo info = typeCommon.ensureTypeInfo();
+        if (info.getFormat() == Format.ENUMVALUE)
+            {
+            typeCommon = info.getExtends();
+            assert typeCommon != null;
             }
 
         return fImmutable ? typeCommon.ensureImmutable(pool) : typeCommon;

@@ -239,8 +239,8 @@ public class SwitchExpression
         TypeConstant   typeCase      = fSingleCond ? atypeCond[0] : pool.ensureImmutableTypeConstant(
                                        pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeCond));
         boolean        fAllConsts    = true;
-        boolean        fIntConsts    = !fIfSwitch && fSingleCond && typeCase.isIntConvertible()
-                                       && typeCase.getExplicitClassFormat() != Component.Format.ENUM;
+        boolean        fCardinals    = !fIfSwitch && fSingleCond && typeCase.isIntConvertible();
+        boolean        fIntConsts    = fCardinals && typeCase.getExplicitClassFormat() != Component.Format.ENUM;
         PackedInteger  pintMin       = null;
         PackedInteger  pintMax       = null;
         boolean        fGrabNext     = false;
@@ -418,7 +418,7 @@ public class SwitchExpression
             {
             aconstVal = aconstDefault;
             }
-        else if (labelDefault == null && (!fIntConsts || listVals.size() < typeCase.getIntCardinality()))
+        else if (labelDefault == null && (!fCardinals || listVals.size() < typeCase.getIntCardinality()))
             {
             // this means that the switch would "short circuit", which is not allowed
             log(errs, Severity.ERROR, Compiler.SWITCH_DEFAULT_REQUIRED);
@@ -573,8 +573,9 @@ public class SwitchExpression
 
     private void generateJumpSwitch(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
+        assert cond != null && cond.size() == 1;
+        Expression exprCond = (Expression) cond.get(0);
         // TODO statement vs. expression (this is all wrong! doesn't support AssignmentStatement!)
-        Expression exprCond = (Expression) cond;
         if (m_aconstCase == null && (m_pintOffset != null || !exprCond.getType().isA(pool().typeInt())))
             {
             exprCond = new ToIntExpression(exprCond, m_pintOffset, errs);
