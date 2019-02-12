@@ -1239,6 +1239,73 @@ public class ClassStructure
         }
 
     /**
+     * Recursively check if the formal name is introduced by this class of any of its contributions.
+     * <p/>
+     * Note: while this seems to be a duplication of what TypoInfo does, we need to keep this
+     * functionality since the TypeInfo generation itself uses it.
+     *
+     * @return true if the formal type with this name exists
+     */
+    public boolean containsGenericParamType(String sName)
+        {
+        return containsGenericParamTypeImpl(sName, true);
+        }
+
+    /**
+     * Recursive implementation of containsGenericParamType method.
+     *
+     * @param sName       teh formal type name
+     * @param fAllowInto  specifies whether or not the "Into" contribution is to be skipped
+     *
+     * @return the corresponding actual type or null if there is no matching formal type
+     */
+    protected boolean containsGenericParamTypeImpl(String sName, boolean fAllowInto)
+        {
+        int ix = indexOfGenericParameter(sName);
+        if (ix >= 0)
+            {
+            return true;
+            }
+
+        for (Contribution contrib : getContributionsAsList())
+            {
+            TypeConstant typeContrib = contrib.getTypeConstant();
+
+            if (!typeContrib.isSingleUnderlyingClass(true))
+                {
+                // TODO: how do we process relational types?
+                continue;
+                }
+
+            switch (contrib.getComposition())
+                {
+                case Into:
+                    if (!fAllowInto)
+                        {
+                        break;
+                        }
+                case Annotation:
+                case Delegates:
+                case Implements:
+                case Incorporates:
+                case Extends:
+                    ClassStructure clzContrib = (ClassStructure)
+                            typeContrib.getSingleUnderlyingClass(true).getComponent();
+                    if (clzContrib.containsGenericParamTypeImpl(sName, false))
+                        {
+                        return true;
+                        }
+                    break;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+
+        return false;
+        }
+
+    /**
      * Recursively find the type for the specified formal name. Note that the formal name could
      * be introduced by some contributions, rather than this class itself.
      * <p/>
@@ -1337,7 +1404,7 @@ public class ClassStructure
         if (isTuple())
             {
             return pool.ensureParameterizedTypeConstant(pool.typeTuple(),
-                list.toArray(new TypeConstant[list.size()]));
+                list.toArray(TypeConstant.NO_TYPES));
             }
 
         return ix < list.size() ? list.get(ix) : null;

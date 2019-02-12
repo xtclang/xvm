@@ -131,6 +131,36 @@ public class UnionTypeConstant
         }
 
     @Override
+    public boolean containsGenericParam(String sName)
+        {
+        return m_constType1.containsGenericParam(sName)
+            || m_constType2.containsGenericParam(sName);
+        }
+
+    @Override
+    public TypeConstant getGenericParamType(String sName)
+        {
+        // for Union types, either side needs to find it, but if both do, take the narrower one
+        TypeConstant typeActual1 = m_constType1.getGenericParamType(sName);
+        TypeConstant typeActual2 = m_constType2.getGenericParamType(sName);
+
+        if (typeActual1 == null)
+            {
+            return typeActual2;
+            }
+        if (typeActual2 == null)
+            {
+            return typeActual1;
+            }
+
+        return typeActual1.isA(typeActual2)
+                ? typeActual1
+                : typeActual2.isA(typeActual1)
+                    ? typeActual2
+                    : getConstantPool().ensureUnionTypeConstant(typeActual1, typeActual2);
+        }
+
+    @Override
     public ResolutionResult resolveContributedName(String sName, ResolutionCollector collector)
         {
         // for the UnionType to contribute a name, either side needs to find it

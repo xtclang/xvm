@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -437,8 +438,14 @@ public class VirtualChildTypeConstant
     @Override
     public boolean containsGenericParam(String sName)
         {
-        return m_typeParent.containsGenericParam(sName)
-            || super.containsGenericParam(sName);
+        if (m_typeParent.containsGenericParam(sName))
+            {
+            return true;
+            }
+
+        ClassStructure clz = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
+
+        return clz.containsGenericParamType(sName);
         }
 
     @Override
@@ -449,7 +456,10 @@ public class VirtualChildTypeConstant
             {
             return typeParent.getGenericParamType(sName);
             }
-        return super.getGenericParamType(sName);
+
+        ClassStructure clz = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
+
+        return clz.getGenericParamType(getConstantPool(), sName, Collections.EMPTY_LIST);
         }
 
     @Override

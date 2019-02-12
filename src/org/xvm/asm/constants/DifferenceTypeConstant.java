@@ -119,9 +119,16 @@ public class DifferenceTypeConstant
         }
 
     @Override
+    public boolean containsGenericParam(String sName)
+        {
+        // only the left side needs to have it and it doesn't matter what the right side has
+        return m_constType1.containsGenericParam(sName);
+        }
+
+    @Override
     public TypeConstant getGenericParamType(String sName)
         {
-        // only the left side needs to resolve and it doesn't matter what the right side does
+        // only the left side needs to have it and it doesn't matter what the right side has
         return m_constType1.getGenericParamType(sName);
         }
 
