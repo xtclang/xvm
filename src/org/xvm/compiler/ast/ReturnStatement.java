@@ -210,7 +210,7 @@ public class ReturnStatement
                 {
                 atypeActual = m_fTupleReturn
                         ? exprNew.getType().getParamTypesArray()
-                        : new TypeConstant[] {exprNew.getType()};
+                        : exprNew.getTypes();
                 }
             }
 
