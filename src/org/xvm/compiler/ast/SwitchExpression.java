@@ -282,8 +282,43 @@ public class SwitchExpression
                     for (int iExpr = 0, cExprs = listExprs.size(); iExpr < cExprs; ++iExpr)
                         {
                         Expression exprCase = listExprs.get(iExpr);
+                        boolean    fNormal  = true;
+                        long       lIgnore  = 0L;
+                        long       lRange   = 0L;
 
-                        // TODO .. _
+                        if (exprCase instanceof TupleExpression)
+                            {
+                            List<Expression> listFields = ((TupleExpression) exprCase).exprs;
+                            for (int i = 0, c = listFields.size(); i < c; ++i)
+                                {
+                                Expression exprField = listFields.get(i);
+                                if (exprField instanceof IgnoredNameExpression)
+                                    {
+                                    lIgnore |= 1 << i;
+                                    fNormal  = false;
+                                    }
+                                }
+                            }
+
+                        TypeConstant typeMatch = typeCase;
+                        if (!exprCase.testFit(ctx, typeMatch).isFit())
+                            {
+                            // figure out if any non-ignored field could be a range instead of a
+                            // single value
+                            TypeConstant[] atypeCond = m_atypeCond;
+                            int            cFields   = atypeCond.length;
+                            int            cValues   = cFields - Long.bitCount(lIgnore);
+                            if (cValues > 0)
+                                {
+                                TypeConstant[] atypeTry = m_atypeCond;
+                                for (int iTry = 1, cTries = 1 << cFields-1; iTry <= cTries; ++iTry)
+                                    {
+
+                                    }
+                                fNormal = false;
+                                // TODO testFit .. _
+                                }
+                            }
 
                         Expression exprNew  = exprCase.validate(ctx, typeCase, errs);
                         if (exprNew == null)

@@ -8,9 +8,6 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.Op;
-import org.xvm.asm.Register;
-
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Token;
@@ -18,8 +15,13 @@ import org.xvm.compiler.Token;
 
 /**
  * A name expression specifies a name; this is a special kind of name that no one cares about. The
- * ignored name expression is used as a lambda parameter when nobody cares what the parameter is
- * and they just want it to go away quietly.
+ * ignored name expression is used as:
+ * <ul><li>a lambda parameter when the lambda doesn't need the value of that parameter and just
+ * wants to ignore that it exists altogether;
+ * </li><li>a "do not bind" parameter when attempting to partially curry a method or function;
+ * </li><li>a wild-card match in a case statement;
+ * </li><li>an ignored LValue in an assignment, such as: {@code (_, Int x) = foo()}
+ * </li></ul>
  */
 public class IgnoredNameExpression
         extends NameExpression
@@ -44,6 +46,12 @@ public class IgnoredNameExpression
     public TypeConstant getImplicitType(Context ctx)
         {
         return pool().typeObject();
+        }
+
+    @Override
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
+        {
+        return TypeFit.Fit;
         }
 
     @Override
