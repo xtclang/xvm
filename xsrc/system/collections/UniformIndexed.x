@@ -24,14 +24,14 @@ interface UniformIndexed<IndexType, ElementType>
      */
     @Op Ref<ElementType> elementAt(IndexType index)
         {
-        return new SimpleRef();
+        return new SimpleVar();
 
         /**
-         * An implementation of Ref that delegates all of the complicated Ref responsibilities to
+         * An implementation of Var that delegates all of the complicated Ref responsibilities to
          * the return value from the {@link UniformIndexed.get} method.
          */
-        class SimpleRef
-                delegates Ref<ElementType>(ref)
+        class SimpleVar
+                delegates Var<ElementType>(ref)
             {
             @Override
             Boolean assigned.get()
@@ -51,7 +51,7 @@ interface UniformIndexed<IndexType, ElementType>
                 UniformIndexed.this.set(index, value);
                 }
 
-            private Ref<ElementType> ref.get()
+            private Var<ElementType> ref.get()
                 {
                 ElementType value = get();
                 return &value;
