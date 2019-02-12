@@ -281,11 +281,11 @@ public class SwitchExpression
                     // validate the expressions in the case label
                     for (int iExpr = 0, cExprs = listExprs.size(); iExpr < cExprs; ++iExpr)
                         {
-                        Expression exprCase = listExprs.get(iExpr);
-                        boolean    fNormal  = true;
-                        long       lIgnore  = 0L;
-                        long       lRange   = 0L;
-
+                        Expression     exprCase  = listExprs.get(iExpr);
+                        TypeConstant   typeMatch = typeCase;
+                        long           lIgnore   = 0L;
+                        long           lRange    = 0L;
+                        TypeConstant[] atypeAlt  = null;
                         if (exprCase instanceof TupleExpression)
                             {
                             List<Expression> listFields = ((TupleExpression) exprCase).exprs;
@@ -295,29 +295,29 @@ public class SwitchExpression
                                 if (exprField instanceof IgnoredNameExpression)
                                     {
                                     lIgnore |= 1 << i;
-                                    fNormal  = false;
+                                    }
+                                else if (!exprField.testFit(ctx, m_atypeCond[i]).isFit())
+                                    {
+                                    TypeConstant typeInterval = pool.ensureParameterizedTypeConstant(
+                                            pool.typeInterval(), m_atypeCond[i]);
+                                    if (exprField.testFit(ctx, typeInterval).isFit())
+                                        {
+                                        lRange |= 1 << i;
+
+                                        if (atypeAlt == null)
+                                            {
+                                            atypeAlt = m_atypeCond.clone();
+                                            }
+                                        atypeAlt[i] = typeInterval;
+                                        }
                                     }
                                 }
                             }
 
-                        TypeConstant typeMatch = typeCase;
-                        if (!exprCase.testFit(ctx, typeMatch).isFit())
+                        if (atypeAlt != null)
                             {
-                            // figure out if any non-ignored field could be a range instead of a
-                            // single value
-                            TypeConstant[] atypeCond = m_atypeCond;
-                            int            cFields   = atypeCond.length;
-                            int            cValues   = cFields - Long.bitCount(lIgnore);
-                            if (cValues > 0)
-                                {
-                                TypeConstant[] atypeTry = m_atypeCond;
-                                for (int iTry = 1, cTries = 1 << cFields-1; iTry <= cTries; ++iTry)
-                                    {
-
-                                    }
-                                fNormal = false;
-                                // TODO testFit .. _
-                                }
+                            typeMatch = pool.ensureImmutableTypeConstant(
+                                    pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeAlt));
                             }
 
                         Expression exprNew  = exprCase.validate(ctx, typeCase, errs);
@@ -608,7 +608,7 @@ public class SwitchExpression
     private void generateJumpSwitch(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
         assert cond != null && !cond.isEmpty();
-        
+
         Label labelDefault = m_labelDefault;
         if (labelDefault == null)
             {
@@ -696,7 +696,7 @@ public class SwitchExpression
         return !m_fAborting;
         }
 
-    
+
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
