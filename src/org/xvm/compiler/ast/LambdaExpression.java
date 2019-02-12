@@ -322,7 +322,7 @@ public class LambdaExpression
         String[]       asParams    = cParams == 0 ? NO_NAMES : new String[cParams];
         TypeConstant[] atypeParams = cParams == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cParams];
 
-        if (!collectParamNamedAndTypes(null, atypeParams, asParams, ErrorListener.BLACKHOLE))
+        if (!collectParamNamesAndTypes(null, atypeParams, asParams, ErrorListener.BLACKHOLE))
             {
             return null;
             }
@@ -368,7 +368,7 @@ public class LambdaExpression
             String[]       asParams    = cParams == 0 ? NO_NAMES : new String[cParams];
             TypeConstant[] atypeParams = cParams == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cParams];
 
-            if (!collectParamNamedAndTypes(atypeReqParams, atypeParams, asParams, ErrorListener.BLACKHOLE))
+            if (!collectParamNamesAndTypes(atypeReqParams, atypeParams, asParams, ErrorListener.BLACKHOLE))
                 {
                 return TypeFit.NoFit;
                 }
@@ -438,7 +438,7 @@ public class LambdaExpression
         String[]       asParams    = cParams == 0 ? NO_NAMES : new String[cParams];
         TypeConstant[] atypeParams = cParams == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cParams];
 
-        fValid &= collectParamNamedAndTypes(atypeReqParams, atypeParams, asParams, errs);
+        fValid &= collectParamNamesAndTypes(atypeReqParams, atypeParams, asParams, errs);
 
         if (!fValid)
             {
@@ -530,7 +530,7 @@ public class LambdaExpression
      *
      * @return true iff there were no errors
      */
-    protected boolean collectParamNamedAndTypes(TypeConstant[] atypeReqParams,
+    protected boolean collectParamNamesAndTypes(TypeConstant[] atypeReqParams,
                                                 TypeConstant[] atypeParams, String[] asParams,
                                                 ErrorListener errs)
         {
