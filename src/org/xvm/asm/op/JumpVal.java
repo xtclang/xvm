@@ -26,7 +26,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * JMP_VAL rvalue, #:(CONST, addr), addr-default ; if value equals a constant, jump to address, otherwise default
+ * JMP_VAL #:(rvalue), #:(CONST, addr), addr-default ; if value equals a constant, jump to address, otherwise default
  */
 public class JumpVal
         extends Op
@@ -34,16 +34,16 @@ public class JumpVal
     /**
      * Construct a JMP_VAL op.
      *
-     * @param arg        a value Argument
+     * @param aArgVal    an array of value Arguments
      * @param aArgCase   an array of "case" Arguments
      * @param aOpCase    an array of Ops to jump to
      * @param opDefault  an Op to jump to in the "default" case
      */
-    public JumpVal(Argument arg, Argument[] aArgCase, Op[] aOpCase, Op opDefault)
+    public JumpVal(Argument[] aArgVal, Argument[] aArgCase, Op[] aOpCase, Op opDefault)
         {
         assert aOpCase != null;
 
-        m_argVal    = arg;
+        m_aArgVal   = aArgVal;
         m_aArgCase  = aArgCase;
         m_aOpCase   = aOpCase;
         m_opDefault = opDefault;
@@ -58,7 +58,13 @@ public class JumpVal
     public JumpVal(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nArg = readPackedInt(in);
+        int   cArgs = readMagnitude(in);
+        int[] anArg = new int[cArgs];
+        for (int i = 0; i < cArgs; ++i)
+            {
+            anArg[i] = readPackedInt(in);
+            }
+        m_anArg = anArg;
 
         int   cCases    = readMagnitude(in);
         int[] anArgCase = new int[cCases];
@@ -78,15 +84,21 @@ public class JumpVal
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        if (m_argVal != null)
+        if (m_aArgVal != null)
             {
-            m_nArg      = encodeArgument(m_argVal, registry);
+            m_anArg     = encodeArguments(m_aArgVal , registry);
             m_anArgCase = encodeArguments(m_aArgCase, registry);
             }
 
         out.writeByte(getOpCode());
 
-        writePackedLong(out, m_nArg);
+        int[] anArg = m_anArg;
+        int   cArgs = anArg.length;
+        writePackedLong(out, cArgs);
+        for (int i = 0; i < cArgs; ++i)
+            {
+            writePackedLong(out, anArg[i]);
+            }
 
         int[] anArgCase = m_anArgCase;
         int[] aofCase   = m_aofCase;
@@ -126,9 +138,11 @@ public class JumpVal
     @Override
     public int process(Frame frame, int iPC)
         {
+        assert m_anArg.length == 1; // TODO support >1
+
         try
             {
-            ObjectHandle hValue = frame.getArgument(m_nArg);
+            ObjectHandle hValue = frame.getArgument(m_anArg[0]);
             if (hValue == null)
                 {
                 return R_REPEAT;
@@ -193,7 +207,10 @@ public class JumpVal
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
-        m_argVal = registerArgument(m_argVal, registry);
+        for (int i = 0, c = m_aArgVal.length; i < c; i++)
+            {
+            m_aArgVal[i] = registerArgument(m_aArgVal[i], registry);
+            }
 
         for (int i = 0, c = m_aArgCase.length; i < c; i++)
             {
@@ -206,25 +223,36 @@ public class JumpVal
         {
         StringBuilder sb = new StringBuilder();
 
+        sb.append(super.toString())
+          .append(' ');
+
+        int cArgVals  = m_aArgVal == null ? 0 : m_aArgVal.length;
+        int cNArgVals = m_anArg   == null ? 0 : m_anArg  .length;
+        int cArgs     = Math.max(cArgVals, cNArgVals);
+
+        for (int i = 0; i < cArgs; ++i)
+            {
+            Argument arg  = i < cArgVals    ? m_aArgVal[i] : null;
+            int      nArg = i < cNArgVals   ? m_anArg  [i] : Register.UNKNOWN;
+            sb.append(Argument.toIdString(arg, nArg))
+              .append(", ");
+            }
+
         int cOps     = m_aOpCase == null ? 0 : m_aOpCase.length;
         int cOffsets = m_aofCase == null ? 0 : m_aofCase.length;
         int cLabels  = Math.max(cOps, cOffsets);
 
-        int cArgs    = m_aArgCase  == null ? 0 : m_aArgCase .length;
-        int cNArgs   = m_anArgCase == null ? 0 : m_anArgCase.length;
-        assert Math.max(cArgs, cNArgs) == cLabels;
-
-        sb.append(super.toString())
-          .append(' ')
-          .append(Argument.toIdString(m_argVal, m_nArg))
-          .append(", ")
-          .append(cLabels)
+        sb.append(cLabels)
           .append(":[");
+
+        int cArgCases  = m_aArgCase  == null ? 0 : m_aArgCase .length;
+        int cNArgCases = m_anArgCase == null ? 0 : m_anArgCase.length;
+        assert Math.max(cArgCases, cNArgCases) == cLabels;
 
         for (int i = 0; i < cLabels; ++i)
             {
-            Argument arg  = i < cArgs    ? m_aArgCase [i] : null;
-            int      nArg = i < cNArgs   ? m_anArgCase[i] : Register.UNKNOWN;
+            Argument arg  = i < cArgCases    ? m_aArgCase [i] : null;
+            int      nArg = i < cNArgCases   ? m_anArgCase[i] : Register.UNKNOWN;
             Op       op   = i < cOps     ? m_aOpCase  [i] : null;
             int      of   = i < cOffsets ? m_aofCase  [i] : 0;
 
@@ -244,12 +272,12 @@ public class JumpVal
         return sb.toString();
         }
 
-    protected int   m_nArg;
+    protected int[] m_anArg;
     protected int[] m_anArgCase;
     protected int[] m_aofCase;
     protected int   m_ofDefault;
 
-    private Argument   m_argVal;
+    private Argument[] m_aArgVal;
     private Argument[] m_aArgCase;
     private Op[]       m_aOpCase;
     private Op         m_opDefault;

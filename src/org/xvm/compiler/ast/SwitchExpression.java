@@ -127,14 +127,13 @@ public class SwitchExpression
         boolean        fValid     = true;
         ConstantPool   pool       = pool();
         Constant[]     aconstCond = null;
-        TypeConstant[] atypeCond  = null;
         boolean        fIfSwitch  = cond == null;
         if (fIfSwitch)
             {
             // there is no condition, so all of the case statements must evaluate to boolean, and
             // the first one that matches "True" will be used
-            atypeCond  = new TypeConstant[] {pool.typeBoolean()};
-            aconstCond = new Constant[] {pool.valTrue()};
+            m_atypeCond = new TypeConstant[] {pool.typeBoolean()};
+            aconstCond  = new Constant[] {pool.valTrue()};
             }
         else
             {
@@ -219,7 +218,7 @@ public class SwitchExpression
                     }
                 }
 
-            atypeCond = listTypes.toArray(TypeConstant.NO_TYPES);
+            m_atypeCond = listTypes.toArray(TypeConstant.NO_TYPES);
             if (fValid && fAllConst)
                 {
                 aconstCond = listConsts.toArray(Constant.NO_CONSTS);
@@ -235,9 +234,9 @@ public class SwitchExpression
         Constant[]     aconstVal     = null;
         List<Constant> listVals      = fIfSwitch ? null : new ArrayList<>();
         Set<Constant>  setCase       = fIfSwitch ? null : new HashSet<>();
-        boolean        fSingleCond   = atypeCond.length == 1;
-        TypeConstant   typeCase      = fSingleCond ? atypeCond[0] : pool.ensureImmutableTypeConstant(
-                                       pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeCond));
+        boolean        fSingleCond   = m_atypeCond.length == 1;
+        TypeConstant   typeCase      = pool.ensureImmutableTypeConstant(fSingleCond ? m_atypeCond[0] :
+                                       pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_atypeCond));
         boolean        fAllConsts    = true;
         boolean        fCardinals    = !fIfSwitch && fSingleCond && typeCase.isIntConvertible();
         boolean        fIntConsts    = fCardinals && typeCase.getExplicitClassFormat() != Component.Format.ENUM;
@@ -573,28 +572,54 @@ public class SwitchExpression
 
     private void generateJumpSwitch(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
-        assert cond != null && cond.size() == 1;
-        Expression exprCond = (Expression) cond.get(0);
-        // TODO statement vs. expression (this is all wrong! doesn't support AssignmentStatement!)
-        if (m_aconstCase == null && (m_pintOffset != null || !exprCond.getType().isA(pool().typeInt())))
-            {
-            exprCond = new ToIntExpression(exprCond, m_pintOffset, errs);
-            }
-        Argument argVal = exprCond.generateArgument(ctx, code, true, true, errs);
-
+        assert cond != null && !cond.isEmpty();
+        
         Label labelDefault = m_labelDefault;
         if (labelDefault == null)
             {
             labelDefault = new Label("default_assert");
             }
 
+        Argument[] aArgVal  = new Argument[m_atypeCond.length];
+        int        ofArgVal = 0;
+        for (AstNode node : cond)
+            {
+            Expression exprCond;
+            if (node instanceof AssignmentStatement)
+                {
+                AssignmentStatement stmt = (AssignmentStatement) node;
+                boolean fCompletes = stmt.completes(ctx, true, code, errs);
+                if (!fCompletes)
+                    {
+                    m_fAborting = true;
+                    }
+                exprCond = stmt.getLValue().getLValueExpression();
+                }
+            else
+                {
+                exprCond = (Expression) node;
+                }
+
+            if (m_aconstCase == null && (m_pintOffset != null || !exprCond.getType().isA(pool().typeInt())))
+                {
+                exprCond = new ToIntExpression(exprCond, m_pintOffset, errs);
+                }
+
+            Argument[] aArgsAdd = exprCond.generateArguments(ctx, code, true, true, errs);
+            int        cArgsAdd = aArgsAdd.length;
+            System.arraycopy(aArgsAdd, 0, aArgVal, ofArgVal, cArgsAdd);
+            ofArgVal += cArgsAdd;
+            }
+        assert ofArgVal == aArgVal.length;
+
         if (m_aconstCase == null)
             {
-            code.add(new JumpInt(argVal, m_alabelCase, labelDefault));
+            assert cond.size() == 1 && aArgVal.length == 1;
+            code.add(new JumpInt(aArgVal[0], m_alabelCase, labelDefault));
             }
         else
             {
-            code.add(new JumpVal(argVal, m_aconstCase, m_alabelCase, labelDefault));
+            code.add(new JumpVal(aArgVal, m_aconstCase, m_alabelCase, labelDefault));
             }
 
         Label         labelCur  = null;
@@ -630,7 +655,13 @@ public class SwitchExpression
         code.add(labelExit);
         }
 
+    @Override
+    public boolean isCompletable()
+        {
+        return !m_fAborting;
+        }
 
+    
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -685,11 +716,13 @@ public class SwitchExpression
     protected List<AstNode> contents;
     protected long          lEndPos;
 
-    private transient boolean       m_fScope;
-    private transient Constant[]    m_aconstCase;
-    private transient Label[]       m_alabelCase;
-    private transient Label         m_labelDefault;
-    private transient PackedInteger m_pintOffset;
+    private transient boolean        m_fScope;
+    private transient TypeConstant[] m_atypeCond;
+    private transient Constant[]     m_aconstCase;
+    private transient Label[]        m_alabelCase;
+    private transient Label          m_labelDefault;
+    private transient PackedInteger  m_pintOffset;
+    private transient boolean        m_fAborting;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchExpression.class, "cond", "contents");
     }
