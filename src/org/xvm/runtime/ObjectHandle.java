@@ -267,7 +267,8 @@ public abstract class ObjectHandle
         @Override
         public boolean equals(Object obj)
             {
-            return Objects.equals(m_mapFields, ((GenericHandle) obj).m_mapFields);
+            return obj instanceof GenericHandle &&
+                Objects.equals(m_mapFields, ((GenericHandle) obj).m_mapFields);
             }
 
         public final static String OUTER = "$outer";

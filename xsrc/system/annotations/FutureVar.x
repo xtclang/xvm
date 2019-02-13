@@ -492,8 +492,8 @@ mixin FutureVar<RefType>
                     }
                 }
             }
-// TODO: CP
-//        private @Unassigned RefType result;
+
+        private @Unassigned RefType result;
         private Var<RefType> resultVar.get()
             {
             return &result;
