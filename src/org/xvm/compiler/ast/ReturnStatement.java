@@ -41,7 +41,7 @@ public class ReturnStatement
 
     public ReturnStatement(Token keyword, Expression expr)
         {
-        this(keyword, Arrays.asList(new Expression[]{expr}));
+        this(keyword, Arrays.asList(expr));
         }
 
     public ReturnStatement(Token keyword, List<Expression> exprs)

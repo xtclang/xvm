@@ -391,9 +391,13 @@ public class StatementBlock
                 {
                 if (fReachable && !fCompletable)
                     {
-                    // this statement is the first statement that cannot be reached
+                    // this statement is the first statement that cannot be reached;
+                    // the only thing that is allowed is an inner class definition
                     fReachable = false;
-                    stmt.log(errs, Severity.ERROR, Compiler.NOT_REACHABLE);
+                    if (!(stmt instanceof TypeCompositionStatement))
+                        {
+                        stmt.log(errs, Severity.ERROR, Compiler.NOT_REACHABLE);
+                        }
                     }
 
                 fCompletable &= stmt.completes(ctx, fReachable, code, errs);
