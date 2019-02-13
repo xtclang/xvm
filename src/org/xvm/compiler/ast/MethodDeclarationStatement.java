@@ -573,6 +573,17 @@ public class MethodDeclarationStatement
             }
         }
 
+    @Override
+    protected Statement validateImpl(Context ctx, ErrorListener errs)
+        {
+        return this;
+        }
+
+    @Override
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+        {
+        return true;
+        }
 
     // ----- internal ------------------------------------------------------------------------------
 
