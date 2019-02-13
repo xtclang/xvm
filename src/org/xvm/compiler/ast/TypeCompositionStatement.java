@@ -514,7 +514,7 @@ public class TypeCompositionStatement
                 break;
 
             default:
-                throw new UnsupportedOperationException("unable to guess structure for: "
+                throw new IllegalStateException("unable to guess structure for: "
                         + category.getId().TEXT);
             }
         setComponent(component);
@@ -1842,6 +1842,18 @@ public class TypeCompositionStatement
                     }
                 }
             }
+        }
+
+    @Override
+    protected Statement validateImpl(Context ctx, ErrorListener errs)
+        {
+        return this;
+        }
+
+    @Override
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+        {
+        return true;
         }
 
     /**

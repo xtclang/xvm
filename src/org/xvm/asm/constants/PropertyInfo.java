@@ -839,7 +839,22 @@ public class PropertyInfo
      */
     public boolean isNative()
         {
-        return getHead().getImplementation() == Implementation.Native;
+        NextBody:
+        for (PropertyBody body : m_aBody)
+            {
+            switch (body.getImplementation())
+                {
+                case Implicit:
+                    continue NextBody;
+
+                case Native:
+                    return true;
+
+                default:
+                    return false;
+                }
+            }
+        return false;
         }
 
     /**

@@ -152,27 +152,48 @@ interface Number
         // make sure the bit length is at least 8, and also a power-of-two
         assert:always Number.this.bitLength == (Number.this.bitLength & ~0x7).leftmostBit;
 
+        // unused
         class SequenceImpl(Number num)
                 implements Sequence<Nibble>
             {
-            @Override @RO Int size.get()
+            @Override
+            @RO Int size.get()
                 {
                 return num.bitLength / 4;
                 }
 
-            @Override Nibble get(Int index)
+            @Override
+            SequenceImpl slice(Range<Int> range)
+                {
+                TODO
+                }
+
+            @Override
+            Nibble getElement(Int index)
                 {
                 assert:always index >= 0 && index < size;
 
                 // the nibble array is in the opposite (!!!) sequence of the bit array; bit 0 is
                 // the least significant (rightmost) bit, while nibble 0 is the leftmost nibble
                 Bit[] bits = num.to<Bit[]>();
-                Int   of   = bit.length - index * 4 -  1;
+                Int   of   = bits.size - index * 4 -  1;
                 return new Nibble([bits[of], bits[of-1], bits[of-2], bits[of-3]].as(Bit[]));
                 }
             }
 
-        return new SequenceImpl(this);
+        Bit[]    bits = to<Bit[]>();
+        Int      size = bitLength / 4;
+        Nibble[] nibbles = new Nibble[size];
+
+        for (Int index : 0..size-1)
+            {
+            // the nibble array is in the opposite (!!!) sequence of the bit array; bit 0 is
+            // the least significant (rightmost) bit, while nibble 0 is the leftmost nibble
+            Int of = bitLength - index * 4 -  1;
+            nibbles[index] = new Nibble([bits[of], bits[of-1], bits[of-2], bits[of-3]].as(Bit[]));
+            }
+
+        return nibbles;
         }
 
     /**
@@ -183,28 +204,44 @@ interface Number
         // make sure the bit length is at least 8, and also a power-of-two
         assert:always bitLength == (bitLength & ~0x7).leftmostBit;
 
+        // not used
         class SequenceImpl(Number num)
                 implements Sequence<Byte>
             {
-            @Override @RO Int size.get()
+            @Override
+            @RO Int size.get()
                 {
                 return num.bitLength / 8;
                 }
 
-            @Override Boolean get(Int index)
+            @Override
+            Byte getElement(Int index)
                 {
                 assert:always index >= 0 && index < size;
 
                 // the byte array is in the opposite (!!!) sequence of the bit array; bit 0 is
                 // the least significant (rightmost) bit, while byte 0 is the leftmost byte
                 Bit[] bits = num.to<Bit[]>();
-                Int   of   = bit.length - index * 8 -  1;
+                Int   of   = bits.size - index * 8 - 1;
                 return new Byte([bits[of], bits[of-1], bits[of-2], bits[of-3],
                          bits[of-4], bits[of-5], bits[of-6], bits[of-7]].as(Bit[]));
                 }
             }
 
-        return new SequenceImpl(this);
+        Bit[]  bits  = to<Bit[]>();
+        Int    size  = byteLength;
+        Byte[] bytes = new Byte[size];
+
+        for (Int index : 0..size-1)
+            {
+            // the byte array is in the opposite (!!!) sequence of the bit array; bit 0 is
+            // the least significant (rightmost) bit, while byte 0 is the leftmost byte
+            Int of = bitLength - index * 8 - 1;
+            bytes[index] = new Byte([bits[of], bits[of-1], bits[of-2], bits[of-3],
+                     bits[of-4], bits[of-5], bits[of-6], bits[of-7]].as(Bit[]));
+            }
+
+        return bytes.makeImmutable();
         }
 
     /**

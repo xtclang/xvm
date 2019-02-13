@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -90,6 +91,17 @@ public class TypedefStatement
             }
         }
 
+    @Override
+    protected Statement validateImpl(Context ctx, ErrorListener errs)
+        {
+        return this;
+        }
+
+    @Override
+    protected boolean emit(Context ctx, boolean fReachable, MethodStructure.Code code, ErrorListener errs)
+        {
+        return true;
+        }
 
     // ----- debugging assistance ------------------------------------------------------------------
 
