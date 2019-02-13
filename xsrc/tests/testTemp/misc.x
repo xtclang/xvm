@@ -22,6 +22,7 @@ module TestMisc.xqiz.it
         testSwitchExpr();
         testSwitchExpr2();
         testSwitchExpr3();
+        testSwitchExpr4();
         testStmtExpr();
         testAssignOps();
 
@@ -279,6 +280,27 @@ module TestMisc.xqiz.it
                 case Lesser:  "less";
                 case Equal:   "same";
                 case Greater: "more";
+                });
+            }
+        }
+
+    void testSwitchExpr4()
+        {
+        console.println("\n** testSwitchExpr4()");
+
+        Int i = 0;
+        while (++i < 6)
+            {
+            console.println("result for (" + i + "<=>3)=" + switch(i <=> 3, i)
+                {
+                case (Lesser, 2):  "less #2";
+                case (Lesser, _):  "less";
+                case (Equal, 3):   "same #3";
+                case (Equal, 4):   "same #4";
+                case (Equal, _):   "same";
+                case (Greater, 4): "more #4";
+                case (Greater, 2..6): "more #2..6";
+                default: "default";
                 });
             }
         }

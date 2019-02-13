@@ -617,6 +617,23 @@ public class ConstantPool
         }
 
     /**
+     * Create a match-any constant.
+     *
+     * @param type  the type to match
+     *
+     * @return the desired match-any constant
+     */
+    public MatchAnyConstant ensureMatchAnyConstant(TypeConstant type)
+        {
+        MatchAnyConstant constant = (MatchAnyConstant) ensureLocatorLookup(Format.Any).get(type);
+        if (constant == null)
+            {
+            constant = (MatchAnyConstant) register(new MatchAnyConstant(this, type));
+            }
+        return constant;
+        }
+
+    /**
      * Given the specified name, obtain a NamedCondition that represents a test for the name being
      * specified.
      *
@@ -2181,6 +2198,10 @@ public class ConstantPool
 
                 case Interval:
                     constant = new IntervalConstant(this, format, in);
+                    break;
+
+                case Any:
+                    constant = new MatchAnyConstant(this, format, in);
                     break;
 
                 /*

@@ -61,7 +61,7 @@ public class IgnoredNameExpression
                 ? pool().typeObject()
                 : typeRequired;
 
-        return finishValidation(type, type, TypeFit.Fit, null, errs);
+        return finishValidation(type, type, TypeFit.Fit, pool().ensureMatchAnyConstant(type), errs);
         }
 
     @Override

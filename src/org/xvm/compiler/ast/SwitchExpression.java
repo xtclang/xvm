@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.xvm.asm.Argument;
@@ -29,6 +30,7 @@ import org.xvm.asm.op.Label;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
+import org.xvm.util.ListMap;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 
@@ -231,25 +233,26 @@ public class SwitchExpression
                 ? getImplicitTypes(ctx)
                 : atypeRequired;
 
-        Constant[]     aconstVal     = null;
-        List<Constant> listVals      = fIfSwitch ? null : new ArrayList<>();
-        Set<Constant>  setCase       = fIfSwitch ? null : new HashSet<>();
-        boolean        fSingleCond   = m_atypeCond.length == 1;
-        TypeConstant   typeCase      = pool.ensureImmutableTypeConstant(fSingleCond ? m_atypeCond[0] :
-                                       pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_atypeCond));
-        boolean        fAllConsts    = true;
-        boolean        fCardinals    = !fIfSwitch && fSingleCond && typeCase.isIntConvertible();
-        boolean        fIntConsts    = fCardinals && typeCase.getExplicitClassFormat() != Component.Format.ENUM;
-        PackedInteger  pintMin       = null;
-        PackedInteger  pintMax       = null;
-        boolean        fGrabNext     = false;
-        List<Label>    listLabels    = fIfSwitch ? null : new ArrayList<>();
-        Label          labelCurrent  = null;
-        Label          labelDefault  = null;
-        Constant[]     aconstDefault = null;
-        int            cLabels       = 0;
-        TypeCollector  collector     = new TypeCollector(pool);
-        List<AstNode>  listNodes     = contents;
+        Constant[]     aconstVal        = null;
+        List<Constant> listVals         = fIfSwitch ? null : new ArrayList<>();
+        Set<Constant>  setCase          = fIfSwitch ? null : new HashSet<>();
+        ListMap<Constant, Long> mapWild = fIfSwitch ? null : new ListMap<>();
+        boolean        fSingleCond      = m_atypeCond.length == 1;
+        TypeConstant   typeCase         = pool.ensureImmutableTypeConstant(fSingleCond ? m_atypeCond[0] :
+                                          pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_atypeCond));
+        boolean        fAllConsts       = true;
+        boolean        fCardinals       = !fIfSwitch && fSingleCond && typeCase.isIntConvertible();
+        boolean        fIntConsts       = fCardinals && typeCase.getExplicitClassFormat() != Component.Format.ENUM;
+        PackedInteger  pintMin          = null;
+        PackedInteger  pintMax          = null;
+        boolean        fGrabNext        = false;
+        List<Label>    listLabels       = fIfSwitch ? null : new ArrayList<>();
+        Label          labelCurrent     = null;
+        Label          labelDefault     = null;
+        Constant[]     aconstDefault    = null;
+        int            cLabels          = 0;
+        TypeCollector  collector        = new TypeCollector(pool);
+        List<AstNode>  listNodes        = contents;
         for (int iNode = 0, cNodes = listNodes.size(); iNode < cNodes; ++iNode)
             {
             AstNode node = listNodes.get(iNode);
@@ -313,6 +316,30 @@ public class SwitchExpression
                                     }
                                 }
                             }
+                        else if (fSingleCond)
+                            {
+                            if (exprCase instanceof IgnoredNameExpression)
+                                {
+                                lIgnore = 1;
+                                }
+                            else if (!exprCase.testFit(ctx, typeCase).isFit())
+                                {
+                                TypeConstant typeInterval = pool.ensureParameterizedTypeConstant(
+                                        pool.typeInterval(), typeCase);
+                                if (exprCase.testFit(ctx, typeInterval).isFit())
+                                    {
+                                    lRange    = 1;
+                                    typeMatch = typeInterval;
+                                    }
+                                }
+                            }
+                        else
+                            {
+                            // it's a multiple condition, but there's only a single value
+                            // TODO log error
+                            notImplemented();
+                            continue;
+                            }
 
                         if (atypeAlt != null)
                             {
@@ -320,7 +347,7 @@ public class SwitchExpression
                                     pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeAlt));
                             }
 
-                        Expression exprNew  = exprCase.validate(ctx, typeCase, errs);
+                        Expression exprNew  = exprCase.validate(ctx, typeMatch, errs);
                         if (exprNew == null)
                             {
                             fValid = false;
@@ -342,7 +369,14 @@ public class SwitchExpression
 
                                 if (!fIfSwitch)
                                     {
-                                    if (setCase.add(constCase))
+                                    if (collides(constCase, fSingleCond, setCase, mapWild, lIgnore, lRange))
+                                        {
+                                        // collision
+                                        stmtCase.log(errs, Severity.ERROR, Compiler.SWITCH_CASE_DUPLICATE,
+                                                constCase.getValueString());
+                                        fValid = false;
+                                        }
+                                    else
                                         {
                                         listVals.add(constCase);
                                         listLabels.add(labelCurrent);
@@ -363,13 +397,6 @@ public class SwitchExpression
                                                 pintMin = pint;
                                                 }
                                             }
-                                        }
-                                    else
-                                        {
-                                        // collision
-                                        stmtCase.log(errs, Severity.ERROR, Compiler.SWITCH_CASE_DUPLICATE,
-                                                constCase.getValueString());
-                                        fValid = false;
                                         }
                                     }
                                 }
@@ -527,6 +554,27 @@ public class SwitchExpression
 
         TypeConstant[] atypeActual = collector.inferMulti(atypeRequired);
         return finishValidations(atypeRequired, atypeActual, fValid ? TypeFit.Fit : TypeFit.NoFit, aconstVal, errs);
+        }
+
+    private boolean collides(Constant constCase, boolean fSingleCond,
+            Set<Constant> setCase, ListMap<Constant, Long> mapWild, long lIgnore, long lRange)
+        {
+        if (!setCase.add(constCase))
+            {
+            return true;
+            }
+
+        for (Entry<Constant, Long> entry : mapWild.entrySet())
+            {
+            // TODO check wildcards .. _
+            }
+
+        if ((lIgnore | lRange) != 0L)
+            {
+            mapWild.put(constCase, lRange);
+            }
+
+        return false;
         }
 
     @Override

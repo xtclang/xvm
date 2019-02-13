@@ -807,6 +807,7 @@ public abstract class Constant
         MapEntry,
         Map,
         Interval,
+        Any,
 
         /*
          * Structural identifiers.
