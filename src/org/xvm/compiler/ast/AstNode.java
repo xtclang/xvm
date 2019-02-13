@@ -767,7 +767,18 @@ public abstract class AstNode
         TypeFit fit    = TypeFit.Fit;
         for (int i = 0, c = Math.min(listExpr.size(), cTypes); i < c ; ++i)
             {
-            fit = fit.combineWith(listExpr.get(i).testFit(ctx, atypeTest[i]));
+            TypeConstant typeTest = atypeTest[i];
+            if (typeTest != null)
+                {
+                ctx = ctx.enterInferring(typeTest);
+                }
+
+            fit = fit.combineWith(listExpr.get(i).testFit(ctx, typeTest));
+
+            if (typeTest != null)
+                {
+                ctx = ctx.exit();
+                }
             }
         return fit;
         }
@@ -792,8 +803,20 @@ public abstract class AstNode
         boolean        fValid = true;
         for (int i = 0; i < cExprs; ++i)
             {
+            TypeConstant typeRequired = i < cReq ? atypeRequired[i] : null;
+            if (typeRequired != null)
+                {
+                ctx = ctx.enterInferring(typeRequired);
+                }
+
             Expression exprOld = listExpr.get(i);
-            Expression exprNew = exprOld.validate(ctx, i < cReq ? atypeRequired[i] : null, errs);
+            Expression exprNew = exprOld.validate(ctx, typeRequired, errs);
+
+            if (typeRequired != null)
+                {
+                ctx = ctx.exit();
+                }
+
             if (exprNew == null)
                 {
                 fValid = false;
@@ -1109,6 +1132,10 @@ public abstract class AstNode
                 else
                     {
                     // check if the method's parameter type fits the argument expression
+                    if (typeParam != null)
+                        {
+                        ctx = ctx.enterInferring(typeParam);
+                        }
                     TypeFit fit = exprArg.testFit(ctx, typeParam);
                     if (fit.isFit())
                         {
@@ -1145,7 +1172,13 @@ public abstract class AstNode
                             atypeAllArgs[i] = typeArg;
                             }
                         }
-                    else
+
+                    if (typeParam != null)
+                        {
+                        ctx = ctx.exit();
+                        }
+
+                    if (!fit.isFit())
                         {
                         continue NextMethod;
                         }
