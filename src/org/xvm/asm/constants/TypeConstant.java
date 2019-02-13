@@ -302,22 +302,7 @@ public abstract class TypeConstant
      */
     public boolean containsGenericParam(String sName)
         {
-        TypeInfo info = getTypeInfo();
-        if (isComplete(info))
-            {
-            return info.getTypeParams().containsKey(sName);
-            }
-
-        // because isA() uses this method, there is a chicken-and-egg problem, so instead of
-        // materializing the TypeInfo at this point, just answer the question without it
-        if (isSingleUnderlyingClass(true))
-            {
-            ClassStructure clz = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
-            TypeConstant type = clz.getGenericParamType(getConstantPool(), sName, getParamTypes());
-            return type != null;
-            }
-
-        return false;
+        return isModifyingType() && getUnderlyingType().containsGenericParam(sName);
         }
 
     /**

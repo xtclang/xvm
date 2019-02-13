@@ -57,25 +57,27 @@ public class MethodDeclarationStatement
                                       List<TypeExpression> redundant,
                                       List<Parameter>      params,
                                       StatementBlock       body,
-                                      StatementBlock       continuation,
+                                      Token                tokFinally,
+                                      StatementBlock       bodyFinally,
                                       Token                doc)
         {
         super(lStartPos, lEndPos);
 
         assert name != null;
 
-        this.condition    = condition;
-        this.modifiers    = modifiers;
-        this.annotations  = annotations;
-        this.conditional  = conditional;
-        this.typeParams   = typeParams;
-        this.returns      = returns;
-        this.name         = name;
-        this.redundant    = redundant;
-        this.params       = params;
-        this.body         = body;
-        this.continuation = continuation;
-        this.doc          = doc;
+        this.condition     = condition;
+        this.modifiers     = modifiers;
+        this.annotations   = annotations;
+        this.conditional   = conditional;
+        this.typeParams    = typeParams;
+        this.returns       = returns;
+        this.name          = name;
+        this.redundant     = redundant;
+        this.params        = params;
+        this.body          = body;
+        this.m_tokFinally  = tokFinally;
+        this.m_bodyFinally = bodyFinally;
+        this.doc           = doc;
         }
 
     /**
@@ -117,12 +119,84 @@ public class MethodDeclarationStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return true iff this statement represents a constructor
+     */
     public boolean isConstructor()
         {
         return name != null && name.getId() == Id.CONSTRUCT;
         }
 
-    public String getName()
+    /**
+     * @return true iff this statement represents a constructor's finally block
+     */
+    public boolean isConstructorFinally()
+        {
+        return name != null && name.getId() == Id.FINALLY;
+        }
+
+    /**
+     * If this statement represents a constructor, return a complementary statement
+     * representing the "finally" block if one exists.
+     *
+     * @return the statement representing the "finally" block or null
+     */
+    public MethodDeclarationStatement getConstructorFinally()
+        {
+        if (!isConstructor())
+            {
+            return null;
+            }
+
+        MethodDeclarationStatement stmtFinally = m_stmtComplement;
+        if (stmtFinally != null)
+            {
+            return stmtFinally;
+            }
+
+        StatementBlock bodyFinally = m_bodyFinally;
+        if (bodyFinally == null)
+            {
+            return null;
+            }
+
+        stmtFinally = new MethodDeclarationStatement(
+                bodyFinally.getStartPosition(),
+                bodyFinally.getEndPosition(),
+                condition,
+                modifiers,
+                annotations,
+                typeParams,
+                conditional,
+                returns,
+                m_tokFinally,
+                redundant,
+                params,
+                bodyFinally,
+                null,
+                null,
+                doc);
+
+        stmtFinally.bindConstructor(this);
+        return m_stmtComplement = stmtFinally;
+        }
+
+    /**
+     * When this statement represents a "finally" block, bind it to the corresponding
+     * constructor.
+     *
+     * @param stmtConstructor  the "construct" statement to bind this "finally" to
+     */
+    private void bindConstructor(MethodDeclarationStatement stmtConstructor)
+        {
+        assert isConstructorFinally();
+        m_stmtComplement = stmtConstructor;
+        }
+
+    /**
+     * @return the simple name for this statement
+     */
+    private String getName()
         {
         if (name != null)
             {
@@ -226,6 +300,7 @@ public class MethodDeclarationStatement
             if (container.isMethodContainer())
                 {
                 boolean      fConstructor = isConstructor();
+                boolean      fFinally     = isConstructorFinally();
                 boolean      fFunction    = isStatic(modifiers) || fConstructor;
                 Access       access       = getDefaultAccess();
                 ConstantPool pool         = container.getConstantPool();
@@ -249,7 +324,7 @@ public class MethodDeclarationStatement
                         break CreateStructure;
                         }
 
-                    if (fConstructor)
+                    if (fConstructor || fFinally)
                         {
                         aReturns = org.xvm.asm.Parameter.NO_PARAMS;
                         }
@@ -282,21 +357,38 @@ public class MethodDeclarationStatement
 
                 org.xvm.asm.Parameter[] aParams = buildParameters(pool);
 
-                boolean fUsesSuper = !fFunction && access != Access.PRIVATE && usesSuper();
-                MethodStructure method = container.createMethod(fFunction, access, aAnnotations,
-                        aReturns, sName, aParams, body != null, fUsesSuper);
-                setComponent(method);
-
-                // "finally" continuation for constructors
-                if (continuation != null)
+                boolean fUsesSuper = !fFunction && !fFinally && access != Access.PRIVATE && usesSuper();
+                MethodStructure method;
+                if (fFinally)
                     {
-                    assert fConstructor;
+                    method = container.createMethod(false, Access.PRIVATE, null,
+                            aReturns, "finally", aParams, true, false);
 
-                    MethodStructure methodFinally = container.createMethod(false, Access.PRIVATE,
-                            null, aReturns, "finally", aParams, true, false);
-                    this.methodFinally = methodFinally;
-                    method.setConstructFinally(methodFinally);
+                    MethodStructure methodConstruct = (MethodStructure) m_stmtComplement.getComponent();
+                    if (methodConstruct != null)
+                        {
+                        methodConstruct.setConstructFinally(method);
+                        }
                     }
+                else
+                    {
+                    method = container.createMethod(fFunction, access, aAnnotations,
+                            aReturns, sName, aParams, body != null, fUsesSuper);
+
+                    if (fConstructor)
+                        {
+                        MethodDeclarationStatement stmtFinally = m_stmtComplement;
+                        if (stmtFinally != null)
+                            {
+                            MethodStructure methodFinally = (MethodStructure) stmtFinally.getComponent();
+                            if (methodFinally != null)
+                                {
+                                method.setConstructFinally(methodFinally);
+                                }
+                            }
+                        }
+                    }
+                setComponent(method);
                 }
             else
                 {
@@ -307,7 +399,7 @@ public class MethodDeclarationStatement
 
         // methods are opaque, so everything inside can be deferred until we get to the
         // validateContent() stage
-        mgr.processChildrenExcept((child) -> child == body | child == continuation);
+        mgr.processChildrenExcept((child) -> child == body);
         }
 
     @Override
@@ -401,7 +493,7 @@ public class MethodDeclarationStatement
 
         // methods are opaque, so everything inside the curlies can be deferred until we get to the
         // validateContent() stage
-        mgr.processChildrenExcept((child) -> child == body | child == continuation);
+        mgr.processChildrenExcept((child) -> child == body);
 
         MethodStructure method = (MethodStructure) getComponent();
         if (method != null)
@@ -478,11 +570,6 @@ public class MethodDeclarationStatement
         if (body != null)
             {
             compileMethod(mgr, body, method, errs);
-            }
-
-        if (continuation != null)
-            {
-            compileMethod(mgr, continuation, methodFinally, errs);
             }
         }
 
@@ -828,7 +915,7 @@ public class MethodDeclarationStatement
             sb.append(')');
             }
 
-        if (continuation != null)
+        if (m_bodyFinally != null)
             {
             sb.append(" {..} finally {..}");
             }
@@ -871,9 +958,9 @@ public class MethodDeclarationStatement
                   .append(sBody);
                 }
 
-            if (continuation != null)
+            if (m_bodyFinally != null)
                 {
-                String sFinally = continuation.toString();
+                String sFinally = m_bodyFinally.toString();
                 sb.append("\nfinally");
                 if (sFinally.indexOf('\n') >= 0)
                     {
@@ -910,10 +997,14 @@ public class MethodDeclarationStatement
     protected List<TypeExpression> redundant;
     protected List<Parameter>      params;
     protected StatementBlock       body;
-    protected StatementBlock       continuation;
     protected Token                doc;
-    protected MethodStructure      methodFinally;
+
+    private transient Token          m_tokFinally;
+    private transient StatementBlock m_bodyFinally;
+
+    // complementary statement for the constructor points to the finalizer and vice versa
+    private transient MethodDeclarationStatement m_stmtComplement;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(MethodDeclarationStatement.class,
-            "condition", "annotations", "typeParams", "returns", "redundant", "params", "body", "continuation");
+            "condition", "annotations", "typeParams", "returns", "redundant", "params", "body");
     }

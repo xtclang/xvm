@@ -881,7 +881,7 @@ mixin FutureVar<RefType>
                     // (including exceptional result) will be captured in the future
                     @Future RefType async = invokeAsync(input.as(InputType));
                     asyncResult = &async;
-                    asyncResult.chain(asyncCompleted);
+                    asyncResult?.chain(asyncCompleted);
                     }
                 }
             }

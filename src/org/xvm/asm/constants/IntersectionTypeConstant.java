@@ -152,6 +152,31 @@ public class IntersectionTypeConstant
         }
 
     @Override
+    public boolean containsGenericParam(String sName)
+        {
+        return m_constType1.containsGenericParam(sName) && m_constType2.containsGenericParam(sName);
+        }
+
+    @Override
+    public TypeConstant getGenericParamType(String sName)
+        {
+        // for Intersection types, both sides need to find it and we'll take the wider one
+        TypeConstant typeActual1 = m_constType1.getGenericParamType(sName);
+        TypeConstant typeActual2 = m_constType2.getGenericParamType(sName);
+
+        if (typeActual1 == null || typeActual2 == null)
+            {
+            return null;
+            }
+
+        return typeActual1.isA(typeActual2)
+                ? typeActual2
+                : typeActual2.isA(typeActual1)
+                    ? typeActual1
+                    : getConstantPool().ensureIntersectionTypeConstant(typeActual1, typeActual2);
+        }
+
+    @Override
     public ResolutionResult resolveContributedName(String sName, ResolutionCollector collector)
         {
         // for the IntersectionType to contribute a name, both sides need to find exactly

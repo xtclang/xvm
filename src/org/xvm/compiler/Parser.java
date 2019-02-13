@@ -643,7 +643,17 @@ public class Parser
                     break;
                     }
                 }
+
             stmts.add(stmt);
+            if (stmt instanceof MethodDeclarationStatement)
+                {
+                MethodDeclarationStatement stmtFinally =
+                        ((MethodDeclarationStatement) stmt).getConstructorFinally();
+                if (stmtFinally != null)
+                    {
+                    stmts.add(stmtFinally);
+                    }
+                }
 
             if (fFileLevel && fFoundType)
                 {
@@ -1161,12 +1171,13 @@ public class Parser
         List<Parameter>      params           = parseParameterList(true);
         long                 lEndPos          = getLastMatch().getEndPosition();
         StatementBlock       body             = match(Id.SEMICOLON) == null ? parseStatementBlock() : null;
+        Token                tokFinally       = null;
         StatementBlock       stmtFinally      = null;
 
         if (body != null)
             {
             // check for "constructor finally" block
-            if (name.getId() == Id.CONSTRUCT && match(Id.FINALLY) != null)
+            if (name.getId() == Id.CONSTRUCT && (tokFinally = match(Id.FINALLY)) != null)
                 {
                 stmtFinally = parseStatementBlock();
                 lEndPos = stmtFinally.getEndPosition();
@@ -1177,8 +1188,9 @@ public class Parser
                 }
             }
 
-        return new MethodDeclarationStatement(lStartPos, lEndPos, exprCondition, modifiers, annotations,
-                typeVars, conditional, returns, name, redundantReturns, params, body, stmtFinally, doc);
+        return new MethodDeclarationStatement(lStartPos, lEndPos, exprCondition, modifiers,
+                annotations, typeVars, conditional, returns, name, redundantReturns, params,
+                body, tokFinally, stmtFinally, doc);
         }
 
     /**
@@ -1215,7 +1227,7 @@ public class Parser
             StatementBlock             block      = parseStatementBlock();
             MethodDeclarationStatement method     = new MethodDeclarationStatement(
                     methodName.getStartPosition(), block.getEndPosition(), null, null, null, null,
-                    null, null, methodName, null, params, block, null, null);
+                    null, null, methodName, null, params, block, null, null, null);
             body    = new StatementBlock(Collections.singletonList(method),
                     method.getStartPosition(), method.getEndPosition());
             lEndPos = body.getEndPosition();
