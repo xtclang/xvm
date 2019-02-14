@@ -2,24 +2,19 @@ package org.xvm.compiler.ast;
 
 
 import java.lang.reflect.Field;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
-
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-
-import org.xvm.asm.constants.MatchAnyConstant;
 import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.asm.op.Assert;
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
@@ -28,10 +23,8 @@ import org.xvm.asm.op.JumpInt;
 import org.xvm.asm.op.JumpVal;
 import org.xvm.asm.op.JumpVal_N;
 import org.xvm.asm.op.Label;
-
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
-
 import org.xvm.util.ListMap;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
@@ -42,90 +35,15 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * A "switch" expression.
  */
-public class SwitchExpression
-        extends Expression
+public class CaseManager
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public SwitchExpression(Token keyword, List<AstNode> cond, List<AstNode> contents, long lEndPos)
+    public CaseManager()
         {
-        this.keyword  = keyword;
-        this.cond     = cond;
-        this.contents = contents;
-        this.lEndPos  = lEndPos;
         }
 
 
-    // ----- accessors -----------------------------------------------------------------------------
-
-    @Override
-    public long getStartPosition()
-        {
-        return keyword.getStartPosition();
-        }
-
-    @Override
-    public long getEndPosition()
-        {
-        return lEndPos;
-        }
-
-    @Override
-    protected Field[] getChildFields()
-        {
-        return CHILD_FIELDS;
-        }
-
-
-    // ----- compilation ---------------------------------------------------------------------------
-
-    @Override
-    protected boolean hasSingleValueImpl()
-        {
-        return false;
-        }
-
-    @Override
-    protected boolean hasMultiValueImpl()
-        {
-        return true;
-        }
-
-    @Override
-    public TypeConstant[] getImplicitTypes(Context ctx)
-        {
-        TypeCollector collector = new TypeCollector(pool());
-        for (AstNode node : contents)
-            {
-            if (node instanceof Expression)
-                {
-                collector.add(((Expression) node).getImplicitTypes(ctx));
-                }
-            }
-        return collector.inferMulti(null);
-        }
-
-    @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired)
-        {
-        boolean fAny = false;
-        TypeFit fit  = TypeFit.Fit;
-        for (AstNode node : contents)
-            {
-            if (node instanceof Expression)
-                {
-                fit.combineWith(((Expression) node).testFitMulti(ctx, atypeRequired));
-                if (!fit.isFit())
-                    {
-                    return fit;
-                    }
-                }
-            }
-
-        return fit;
-        }
-
-    @Override
     protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         boolean        fValid     = true;
@@ -599,37 +517,6 @@ public class SwitchExpression
         return false;
         }
 
-    @Override
-    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
-        {
-        if (isConstant())
-            {
-            super.generateAssignments(ctx, code, aLVal, errs);
-            }
-        else
-            {
-            if (cond == null)
-                {
-                generateIfSwitch(ctx, code, aLVal, errs);
-                }
-            else
-                {
-                // a scope will be required if the switch condition declares any new variables
-                if (m_fScope)
-                    {
-                    code.add(new Enter());
-                    }
-
-                generateJumpSwitch(ctx, code, aLVal, errs);
-
-                if (m_fScope)
-                    {
-                    code.add(new Exit());
-                    }
-                }
-            }
-        }
-
     private void generateIfSwitch(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
         List<AstNode> aNodes = contents;
@@ -762,74 +649,6 @@ public class SwitchExpression
         code.add(labelExit);
         }
 
-    @Override
-    public boolean isCompletable()
-        {
-        return !m_fAborting;
-        }
-
-
-    // ----- debugging assistance ------------------------------------------------------------------
-
-    @Override
-    public String toString()
-        {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append("switch (");
-
-        if (cond != null && !cond.isEmpty())
-            {
-            boolean fFirst = true;
-            for (AstNode node : cond)
-                {
-                if (fFirst)
-                    {
-                    fFirst = false;
-                    }
-                else
-                    {
-                    sb.append(", ");
-                    }
-                sb.append(node);
-                }
-            }
-
-        sb.append(")\n    {");
-        for (AstNode node : contents)
-            {
-            if (node instanceof CaseStatement)
-                {
-                sb.append('\n')
-                  .append(indentLines(node.toString(), "    "));
-                }
-            else
-                {
-                sb.append(' ')
-                  .append(node)
-                  .append(';');
-                }
-            }
-        sb.append("\n    }");
-
-        return sb.toString();
-        }
-
-
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token         keyword;
-    protected List<AstNode> cond;
-    protected List<AstNode> contents;
-    protected long          lEndPos;
-
-    private transient boolean        m_fScope;
-    private transient TypeConstant[] m_atypeCond;
-    private transient Constant[]     m_aconstCase;
-    private transient Label[]        m_alabelCase;
-    private transient Label          m_labelDefault;
-    private transient PackedInteger  m_pintOffset;
-    private transient boolean        m_fAborting;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchExpression.class, "cond", "contents");
     }

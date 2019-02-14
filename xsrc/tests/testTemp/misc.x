@@ -294,6 +294,7 @@ module TestMisc.xqiz.it
             console.println("result for (" + i + "<=>3)=" + switch(i <=> 3, i)
                 {
                 case (Lesser, 2):  "less #2";           // [0]
+                case (_, _):       "any";
                 case (Lesser, _):  "less";              // [1] next=4   <== FIRST
                 case (Equal, 3):   "same #3";           // [2]
                 case (Equal, 4):   "same #4";           // [3]
