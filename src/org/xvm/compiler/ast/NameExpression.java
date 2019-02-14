@@ -1264,7 +1264,9 @@ public class NameExpression
 
                     if (info.isTopLevel() && info.isStatic())
                         {
-                        m_propAccessPlan = PropertyAccess.Singleton;
+                        m_propAccessPlan = info.getClassStructure().equals(ctx.getThisClass())
+                            ? PropertyAccess.This
+                            : PropertyAccess.Singleton;
                         }
                     else if (target.stepsOut == 0)
                         {
