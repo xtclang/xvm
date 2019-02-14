@@ -15,26 +15,21 @@ module TestSimple.xqiz.it
         console.println("Hello world!!!");
         }
 
-    void test2()
-        {
-        @Inject X.io.Console console;
-
-        Int i = answer;
-        console.println(i);
-        }
-
-    @Lazy Int answer.calc()
-        {
-        DEBUG;
-        return 42;
-        }
-
-    void test3(String s = "again!!!")
+    void test2(String s = "again!!!")
         {
         @Inject X.io.Console console;
         @Inject X.Clock runtimeClock;
 
         console.println(runtimeClock.now.to<String>() + ": Hello " + s);
+        }
+
+    void test3()
+        {
+        @Inject X.io.Console console;
+
+        Int i = 40;
+        i = i + 2;
+        console.println(i);
         }
 
     void test4()
