@@ -246,7 +246,7 @@ mixin FutureVar<RefType>
      * * If this future or the other future completes exceptionally, and the new future has not
      *   already completed, then the new future will complete exceptionally with the same exception.
      */
-    FutureVar! or(FutureVar! other)
+    <OtherType> FutureVar! or(FutureVar!<OtherType> other)
         {
         return chain(new OrStep(other));
         }
@@ -290,12 +290,12 @@ mixin FutureVar<RefType>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-// TODO: CP
-//    <NewType> FutureVar!<NewType> and(FutureVar! other,
-//            function FutureVar!<NewType> (RefType, other.RefType) combine = (v1, v2) -> (v1, v2))
-//        {
-//        return chain(new AndStep<NewType, RefType, other.RefType>(other, combine));
-//        }
+    <OtherType, Other2Type> FutureVar! and(FutureVar!<Other2Type> other,
+            function FutureVar! (OtherType, Other2Type) combine)
+        {
+        // return chain(new AndStep<OtherType, Other2Type>(other, combine));
+        TODO
+        }
 
     /**
      * Create and return a new future that will execute the specified function on completion.
@@ -686,10 +686,10 @@ mixin FutureVar<RefType>
      * * Generally, it is expected that the first parent that notifies this future of the parent's
      *   completion will cause this future to complete.
      */
-    static class OrStep
-            extends DependentFuture<RefType> // InputType == RefType
+    static class OrStep<InputType>
+            extends DependentFuture<InputType>
         {
-        construct(FutureVar other)
+        construct(FutureVar<InputType> other)
             {
             }
         finally
@@ -777,7 +777,12 @@ mixin FutureVar<RefType>
             {
             try
                 {
-                complete(combine(input1, input2));
+                InputType?  in1 = input1;
+                Input2Type? in2 = input2;
+
+                assert in1 != null && in2 != null;
+
+                complete(combine(in1, in2));
                 }
             catch (Exception e)
                 {

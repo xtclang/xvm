@@ -498,7 +498,7 @@ class Array<ElementType>
 
         try
             {
-            return super.makeImmutable();
+            return super();
             }
         catch (Exception e)
             {
