@@ -90,7 +90,7 @@ mixin FutureVar<RefType>
     @Override
     Boolean assigned.get()
         {
-        return completion != Completion.Pending; // TODO can we drop the "Completion." using inference
+        return completion != Pending;
         }
 
     /**
@@ -246,7 +246,7 @@ mixin FutureVar<RefType>
      * * If this future or the other future completes exceptionally, and the new future has not
      *   already completed, then the new future will complete exceptionally with the same exception.
      */
-    FutureVar! or(FutureVar! other)
+    <OtherType> FutureVar! or(FutureVar!<OtherType> other)
         {
         return chain(new OrStep(other));
         }
@@ -290,12 +290,12 @@ mixin FutureVar<RefType>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-// TODO: CP
-//    <NewType> FutureVar!<NewType> and(FutureVar! other,
-//            function FutureVar!<NewType> (RefType, other.RefType) combine = (v1, v2) -> (v1, v2))
-//        {
-//        return chain(new AndStep<NewType, RefType, other.RefType>(other, combine));
-//        }
+    <OtherType, Other2Type> FutureVar! and(FutureVar!<Other2Type> other,
+            function FutureVar! (OtherType, Other2Type) combine)
+        {
+        // return chain(new AndStep<OtherType, Other2Type>(other, combine));
+        TODO
+        }
 
     /**
      * Create and return a new future that will execute the specified function on completion.
@@ -686,10 +686,10 @@ mixin FutureVar<RefType>
      * * Generally, it is expected that the first parent that notifies this future of the parent's
      *   completion will cause this future to complete.
      */
-    static class OrStep
-            extends DependentFuture<RefType> // InputType == RefType
+    static class OrStep<InputType>
+            extends DependentFuture<InputType>
         {
-        construct(FutureVar other)
+        construct(FutureVar<InputType> other)
             {
             }
         finally
@@ -715,11 +715,10 @@ mixin FutureVar<RefType>
             other.whenComplete((result, e) -> parent2Completed(e == null ? Result : Error, result, e));
             }
 
-// TODO: CP
         public/private function RefType (InputType, Input2Type) combine;
 
-        private /* TODO property cannot be conditional */ InputType?  input1;      // REVIEW
-        private /* TODO property cannot be conditional */ Input2Type? input2;
+        private @Unassigned InputType  input1;
+        private @Unassigned Input2Type input2;
 
         /**
          * Handle the completion of the first parent.
@@ -727,7 +726,7 @@ mixin FutureVar<RefType>
         @Override
         void parentCompleted(Completion completion, InputType? input, Exception? e)
             {
-            if (!assigned && input != null)
+            if (!assigned)
                 {
                 assert completion != Pending;
 
@@ -737,8 +736,10 @@ mixin FutureVar<RefType>
                     }
                 else
                     {
+                    assert completion == Result && input != null;
+
                     input1 = input;
-                    if (input2 != null)
+                    if (&input2.assigned)
                         {
                         bothParentsCompleted();
                         }
@@ -751,7 +752,7 @@ mixin FutureVar<RefType>
          */
         void parent2Completed(Completion completion, Input2Type? input, Exception? e)
             {
-            if (!assigned && input != null)
+            if (!assigned)
                 {
                 assert completion != Pending;
 
@@ -761,8 +762,10 @@ mixin FutureVar<RefType>
                     }
                 else
                     {
+                    assert completion == Result && input != null;
+
                     input2 = input;
-                    if (input1 != null)
+                    if (&input1.assigned)
                         {
                         bothParentsCompleted();
                         }

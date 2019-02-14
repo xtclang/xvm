@@ -538,10 +538,14 @@ public class MethodDeclarationStatement
             StatementBlock.RootContext ctxMethod = block.new RootContext(method);
             Context                    ctx       = ctxMethod.validatingContext();
 
-            int cParams = method.getParamCount();
-            for (int i = cParams - cDefaults; i < cParams; ++i)
+            int cParamExprs = params.size();
+            int cTypeParams = method.getTypeParamCount();
+
+            assert cParamExprs == method.getParamCount() - cTypeParams;
+
+            for (int i = cParamExprs - cDefaults; i < cParamExprs; ++i)
                 {
-                org.xvm.asm.Parameter parameter = method.getParam(i);
+                org.xvm.asm.Parameter parameter = method.getParam(cTypeParams + i);
                 assert parameter.hasDefaultValue();
 
                 TypeConstant typeParam = parameter.getType();
