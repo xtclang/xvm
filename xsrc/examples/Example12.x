@@ -2090,3 +2090,19 @@ switch (x)
     case (1, 0): (0, 0);
     case (0, 0): (0, 1);
     }
+
+class C
+    {
+    @Inject static Int Q;
+    //...
+
+    void foo(Int i)
+        {
+        switch (i)
+            {
+            case 0:  //...
+            case Q:  //...
+            default: //...
+            }
+        }
+    }

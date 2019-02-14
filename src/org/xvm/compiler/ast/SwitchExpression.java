@@ -25,6 +25,7 @@ import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.JumpInt;
 import org.xvm.asm.op.JumpVal;
+import org.xvm.asm.op.JumpVal_N;
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
@@ -702,7 +703,9 @@ public class SwitchExpression
             }
         else
             {
-            code.add(new JumpVal(aArgVal, m_aconstCase, m_alabelCase, labelDefault));
+            code.add(cond.size() == 1 // TODO && no wildcards && no intervals
+                    ? new JumpVal(aArgVal[0], m_aconstCase, m_alabelCase, labelDefault)
+                    : new JumpVal_N(aArgVal, m_aconstCase, m_alabelCase, labelDefault));
             }
 
         Label         labelCur  = null;

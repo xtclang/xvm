@@ -26,26 +26,27 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * JMP_VAL rvalue, #:(CONST, addr), addr-default ; if value equals a constant, jump to address, otherwise default
- * <p/>
- * Note: No support for wild-cards or intervals.
+ * JMP_VAL_N #:(rvalue), #:(CONST, addr), addr-default ; if value equals a constant, jump to address, otherwise default
+ * <ul><li>with support for wildcard field matches (using MatchAnyConstant)
+ * </li><li>with support for interval matches (using IntervalConstant)
+ * </li></ul>
  */
-public class JumpVal
+public class JumpVal_N
         extends Op
     {
     /**
-     * Construct a JMP_VAL op.
+     * Construct a JMP_VAL_N op.
      *
-     * @param argCond     a value Argument (the "condition")
+     * @param aArgVal     an array of value Arguments (the "condition")
      * @param aConstCase  an array of "case" values (constants)
      * @param aOpCase     an array of Ops to jump to
      * @param opDefault   an Op to jump to in the "default" case
      */
-    public JumpVal(Argument argCond, Constant[] aConstCase, Op[] aOpCase, Op opDefault)
+    public JumpVal_N(Argument[] aArgVal, Constant[] aConstCase, Op[] aOpCase, Op opDefault)
         {
         assert aOpCase != null;
 
-        m_argCond    = argCond;
+        m_aArgCond   = aArgVal;
         m_aConstCase = aConstCase;
         m_aOpCase    = aOpCase;
         m_opDefault  = opDefault;
@@ -57,10 +58,16 @@ public class JumpVal
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public JumpVal(DataInput in, Constant[] aconst)
+    public JumpVal_N(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nArgCond = readPackedInt(in);
+        int   cArgs = readMagnitude(in);
+        int[] anArg = new int[cArgs];
+        for (int i = 0; i < cArgs; ++i)
+            {
+            anArg[i] = readPackedInt(in);
+            }
+        m_anArgCond = anArg;
 
         int   cCases    = readMagnitude(in);
         int[] anArgCase = new int[cCases];
@@ -80,15 +87,21 @@ public class JumpVal
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        if (m_argCond != null)
+        if (m_aArgCond != null)
             {
-            m_nArgCond    = encodeArgument(m_argCond, registry);
+            m_anArgCond   = encodeArguments(m_aArgCond, registry);
             m_anConstCase = encodeArguments(m_aConstCase, registry);
             }
 
         out.writeByte(getOpCode());
 
-        writePackedLong(out, m_nArgCond);
+        int[] anArg = m_anArgCond;
+        int   cArgs = anArg.length;
+        writePackedLong(out, cArgs);
+        for (int i = 0; i < cArgs; ++i)
+            {
+            writePackedLong(out, anArg[i]);
+            }
 
         int[] anArgCase = m_anConstCase;
         int[] aofCase   = m_aofCase;
@@ -107,7 +120,7 @@ public class JumpVal
     @Override
     public int getOpCode()
         {
-        return OP_JMP_VAL;
+        return OP_JMP_VAL_N;
         }
 
     @Override
@@ -128,9 +141,11 @@ public class JumpVal
     @Override
     public int process(Frame frame, int iPC)
         {
+        assert m_anArgCond.length == 1; // TODO GG support >1
+
         try
             {
-            ObjectHandle hValue = frame.getArgument(m_nArgCond);
+            ObjectHandle hValue = frame.getArgument(m_anArgCond[0]);
             if (hValue == null)
                 {
                 return R_REPEAT;
@@ -140,7 +155,7 @@ public class JumpVal
                 {
                 ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
                 Frame.Continuation stepNext = frameCaller ->
-                    complete(frame, iPC, ahValue[0]);
+                        complete(frame, iPC, ahValue[0]);
 
                 return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
                 }
@@ -157,9 +172,11 @@ public class JumpVal
         {
         Integer Index = ensureJumpMap(frame).get(hValue);
 
+        // TODO GG wildcards ("_") and intervals ("..")
+
         return Index == null
-            ? iPC + m_ofDefault
-            : iPC + Index.intValue();
+                ? iPC + m_ofDefault
+                : iPC + Index.intValue();
         }
 
     private Map<ObjectHandle, Integer> ensureJumpMap(Frame frame)
@@ -181,6 +198,8 @@ public class JumpVal
                 assert !(hCase instanceof ObjectHandle.DeferredCallHandle);
                 assert !hCase.isMutable();
 
+                // TODO GG this can contain wildcards ("_") and intevals ("..")
+
                 mapJump.put(hCase, Integer.valueOf(aofCase[i]));
                 }
 
@@ -192,7 +211,7 @@ public class JumpVal
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
-        m_argCond = m_argCond.registerConstants(registry);
+        registerArguments(m_aArgCond, registry);
         registerArguments(m_aConstCase, registry);
         }
 
@@ -202,16 +221,26 @@ public class JumpVal
         StringBuilder sb = new StringBuilder();
 
         sb.append(super.toString())
-          .append(' ')
-          .append(Argument.toIdString(m_argCond, m_nArgCond))
-          .append(", ");
+                .append(' ');
+
+        int cArgConds  = m_aArgCond  == null ? 0 : m_aArgCond.length;
+        int cNArgConds = m_anArgCond == null ? 0 : m_anArgCond.length;
+        int cArgs      = Math.max(cArgConds, cNArgConds);
+
+        for (int i = 0; i < cArgs; ++i)
+            {
+            Argument arg  = i < cArgConds  ? m_aArgCond [i] : null;
+            int      nArg = i < cNArgConds ? m_anArgCond[i] : Register.UNKNOWN;
+            sb.append(Argument.toIdString(arg, nArg))
+                    .append(", ");
+            }
 
         int cOps     = m_aOpCase == null ? 0 : m_aOpCase.length;
         int cOffsets = m_aofCase == null ? 0 : m_aofCase.length;
         int cLabels  = Math.max(cOps, cOffsets);
 
         sb.append(cLabels)
-          .append(":[");
+                .append(":[");
 
         int cConstCases  = m_aConstCase  == null ? 0 : m_aConstCase.length;
         int cNConstCases = m_anConstCase == null ? 0 : m_anConstCase.length;
@@ -230,22 +259,22 @@ public class JumpVal
                 }
 
             sb.append(Argument.toIdString(arg, nArg))
-              .append(":")
-              .append(OpJump.getLabelDesc(op, of));
+                    .append(":")
+                    .append(OpJump.getLabelDesc(op, of));
             }
 
         sb.append("], ")
-          .append(OpJump.getLabelDesc(m_opDefault, m_ofDefault));
+                .append(OpJump.getLabelDesc(m_opDefault, m_ofDefault));
 
         return sb.toString();
         }
 
-    protected int   m_nArgCond;
+    protected int[] m_anArgCond;
     protected int[] m_anConstCase;
     protected int[] m_aofCase;
     protected int   m_ofDefault;
 
-    private Argument   m_argCond;
+    private Argument[] m_aArgCond;
     private Constant[] m_aConstCase;
     private Op[]       m_aOpCase;
     private Op         m_opDefault;
