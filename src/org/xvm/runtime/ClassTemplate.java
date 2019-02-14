@@ -724,8 +724,11 @@ public abstract class ClassTemplate
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
 
         ObjectHandle hProp = ((GenericHandle) hTarget).getField(sPropName);
-
-        return frame.invoke1(chain, 0, hProp, ahVar, iReturn);
+        if (hProp instanceof RefHandle)
+            {
+            hTarget = hProp;
+            }
+        return frame.invoke1(chain, 0, hTarget, ahVar, iReturn);
         }
 
     /**
@@ -833,8 +836,12 @@ public abstract class ClassTemplate
         ahVar[0] = hValue;
 
         ObjectHandle hProp = ((GenericHandle) hTarget).getField(sPropName);
+        if (hProp instanceof RefHandle)
+            {
+            hTarget = hProp;
+            }
 
-        return frame.invoke1(chain, 0, hProp, ahVar, Op.A_IGNORE);
+        return frame.invoke1(chain, 0, hTarget, ahVar, Op.A_IGNORE);
         }
 
     /**
