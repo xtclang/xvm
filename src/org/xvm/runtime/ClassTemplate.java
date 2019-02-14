@@ -723,7 +723,9 @@ public abstract class ClassTemplate
         MethodStructure method = chain.getTop();
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
 
-        return frame.invoke1(chain, 0, hTarget, ahVar, iReturn);
+        ObjectHandle hProp = ((GenericHandle) hTarget).getField(sPropName);
+
+        return frame.invoke1(chain, 0, hProp, ahVar, iReturn);
         }
 
     /**
@@ -830,7 +832,9 @@ public abstract class ClassTemplate
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
         ahVar[0] = hValue;
 
-        return frame.invoke1(chain, 0, hTarget, ahVar, Op.A_IGNORE);
+        ObjectHandle hProp = ((GenericHandle) hTarget).getField(sPropName);
+
+        return frame.invoke1(chain, 0, hProp, ahVar, Op.A_IGNORE);
         }
 
     /**

@@ -88,10 +88,10 @@ public class Container
         ConstantPool.setCurrentPool(null);
 
         ModuleStructure structModule = (ModuleStructure) f_constModule.getComponent();
+        ConstantPool.setCurrentPool(structModule.getConstantPool());
+
         m_app = f_templates.getTemplate(f_constModule);
         m_hModule = ((xModule) m_app).ensureModuleHandle(f_constModule);
-
-        ConstantPool.setCurrentPool(structModule.getConstantPool());
 
         m_contextMain = createServiceContext(f_sAppName, structModule);
         xService.makeHandle(m_contextMain,

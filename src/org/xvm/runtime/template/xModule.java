@@ -41,13 +41,6 @@ public class xModule
         {
         }
 
-
-    @Override
-    public boolean isGenericHandle()
-        {
-        return false;
-        }
-
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
