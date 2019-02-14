@@ -90,7 +90,7 @@ mixin FutureVar<RefType>
     @Override
     Boolean assigned.get()
         {
-        return completion != Completion.Pending; // TODO can we drop the "Completion." using inference
+        return completion != Pending;
         }
 
     /**
@@ -715,11 +715,10 @@ mixin FutureVar<RefType>
             other.whenComplete((result, e) -> parent2Completed(e == null ? Result : Error, result, e));
             }
 
-// TODO: CP
         public/private function RefType (InputType, Input2Type) combine;
 
-        private /* TODO property cannot be conditional */ InputType?  input1;      // REVIEW
-        private /* TODO property cannot be conditional */ Input2Type? input2;
+        private @Unassigned InputType  input1;
+        private @Unassigned Input2Type input2;
 
         /**
          * Handle the completion of the first parent.
@@ -727,7 +726,7 @@ mixin FutureVar<RefType>
         @Override
         void parentCompleted(Completion completion, InputType? input, Exception? e)
             {
-            if (!assigned && input != null)
+            if (!assigned)
                 {
                 assert completion != Pending;
 
@@ -737,8 +736,10 @@ mixin FutureVar<RefType>
                     }
                 else
                     {
+                    assert completion == Result && input != null;
+
                     input1 = input;
-                    if (input2 != null)
+                    if (&input2.assigned)
                         {
                         bothParentsCompleted();
                         }
@@ -751,7 +752,7 @@ mixin FutureVar<RefType>
          */
         void parent2Completed(Completion completion, Input2Type? input, Exception? e)
             {
-            if (!assigned && input != null)
+            if (!assigned)
                 {
                 assert completion != Pending;
 
@@ -761,8 +762,10 @@ mixin FutureVar<RefType>
                     }
                 else
                     {
+                    assert completion == Result && input != null;
+
                     input2 = input;
-                    if (input1 != null)
+                    if (&input1.assigned)
                         {
                         bothParentsCompleted();
                         }
@@ -777,12 +780,7 @@ mixin FutureVar<RefType>
             {
             try
                 {
-                InputType?  in1 = input1;
-                Input2Type? in2 = input2;
-
-                assert in1 != null && in2 != null;
-
-                complete(combine(in1, in2));
+                complete(combine(input1, input2));
                 }
             catch (Exception e)
                 {
