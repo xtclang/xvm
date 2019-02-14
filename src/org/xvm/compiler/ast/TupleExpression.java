@@ -341,10 +341,16 @@ public class TupleExpression
 
             aFieldTypes[i] = typeField;
             }
-
         typeResult = (typeResult == null ? pool.typeTuple() : typeResult).adoptParameters(pool, aFieldTypes);
-        ArrayConstant constVal   = aFieldVals == null ? null : pool.ensureTupleConstant(typeResult, aFieldVals);
-        Expression    exprResult = finishValidation(typeRequired, typeResult, fit, constVal, errs);
+
+        ArrayConstant constVal = null;
+        if (aFieldVals != null)
+            {
+            typeResult = pool.ensureImmutableTypeConstant(typeResult);
+            constVal   = pool.ensureTupleConstant(typeResult, aFieldVals);
+            }
+
+        Expression exprResult = finishValidation(typeRequired, typeResult, fit, constVal, errs);
         return fHalted ? null : exprResult;
         }
 

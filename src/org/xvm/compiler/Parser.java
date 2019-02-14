@@ -2087,11 +2087,10 @@ public class Parser
         // multi-condition expression
         List<AstNode> list = new ArrayList<>();
         list.add(expr);
-        do
+        while (match(Id.COMMA) != null)
             {
             list.add(parseSwitchConditionExpression());
             }
-        while (match(Id.COMMA) != null);
         return list;
         }
 

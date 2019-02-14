@@ -90,6 +90,35 @@ public class IntervalConstant
         }
 
     /**
+     * For a value of the type of the values defining the extent of this interval, determine if that
+     * value would be found inside of this interval.
+     *
+     * @param value  a value that might be found within this interval
+     *
+     * @return true iff the value is found within this interval
+     */
+    public boolean contains(Constant value)
+        {
+        if (value.equals(m_const1) || value.equals(m_const2))
+            {
+            return true;
+            }
+
+        switch (Integer.signum(m_const1.compareTo(m_const2)))
+            {
+            case -1:
+                return value.compareTo(m_const1) >= 0 && value.compareTo(m_const2) <= 0;
+
+            default:
+            case 0:
+                return false;
+
+            case 1:
+                return value.compareTo(m_const2) >= 0 && value.compareTo(m_const1) <= 0;
+            }
+        }
+
+    /**
      * @return  true iff the last constant in the interval is ordered before the first constant in
      *          the interval
      */
