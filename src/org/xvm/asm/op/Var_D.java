@@ -70,6 +70,6 @@ public class Var_D
 
         frame.introduceResolvedVar(m_nVar, clz.getType(), null, Frame.VAR_DYNAMIC_REF, hRef);
 
-        return iPC + 1;
+        return hRef.ensureInitialized(frame);
         }
     }

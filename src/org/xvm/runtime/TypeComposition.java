@@ -11,6 +11,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.AccessTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -55,6 +56,11 @@ public class TypeComposition
     public final TypeConstant f_typeInception;
 
     /**
+     * The structure type for the inception type.
+     */
+    public final TypeConstant f_typeStructure;
+
+    /**
      * The type that is revealed by the ObjectHandle that refer to this composition.
      */
     private final TypeConstant f_typeRevealed;
@@ -79,6 +85,9 @@ public class TypeComposition
     // cached array of field name handles
     private StringHandle[] m_ashFieldNames;
 
+    // cached auto-generated structure initializer
+    private MethodStructure m_methodInit;
+
     /**
      * Construct the TypeComposition for a given "inception" type and a "revealed" type.
      *
@@ -97,20 +106,19 @@ public class TypeComposition
         assert typeInception.isSingleDefiningConstant();
         assert typeInception.getAccess() == Access.PUBLIC;
 
-        // TODO: should it be a "super-private", allowing private access per inheritance level?
-        typeInception = typeInception.getConstantPool().
-            ensureAccessTypeConstant(typeInception, Access.PRIVATE);
-
         ClassTemplate template = support.getTemplate(typeInception);
         if (support instanceof ClassTemplate)
             {
             support = template;
             }
 
+        ConstantPool pool = typeInception.getConstantPool();
+
         f_clzInception = this;
         f_support = support;
         f_template = template;
-        f_typeInception = typeInception;
+        f_typeInception = pool.ensureAccessTypeConstant(typeInception, Access.PRIVATE);
+        f_typeStructure = pool.ensureAccessTypeConstant(typeInception, Access.STRUCT);
         f_typeRevealed = typeRevealed;
         f_mapCompositions = new ConcurrentHashMap<>();
         f_mapMethods = new ConcurrentHashMap<>();
@@ -120,7 +128,7 @@ public class TypeComposition
         }
 
     /**
-     * Construct a TypeComposition for a masked or revealed type.
+     * Construct a TypeComposition for the specified revealed type.
      */
     private TypeComposition(TypeComposition clzInception, TypeConstant typeRevealed)
         {
@@ -128,6 +136,7 @@ public class TypeComposition
         f_support = clzInception.f_support;
         f_template = clzInception.f_template;
         f_typeInception = clzInception.f_typeInception;
+        f_typeStructure = clzInception.f_typeStructure;
         f_typeRevealed = typeRevealed;
         f_mapCompositions = f_clzInception.f_mapCompositions;
         f_mapMethods = f_clzInception.f_mapMethods;
@@ -279,7 +288,6 @@ public class TypeComposition
         return this == f_clzInception;
         }
 
-
     /**
      * @return true iff the revealed type is a struct
      */
@@ -327,10 +335,29 @@ public class TypeComposition
         return f_typeRevealed.getGenericParamType(sName);
         }
 
-    // is the revealed type of this class assignable to the revealed type of the specified class
+    /**
+     * @return true iff is the revealed type of this class assignable to the revealed type of the
+     *         specified class
+     */
     public boolean isA(TypeComposition that)
         {
         return this.f_typeRevealed.isA(that.f_typeRevealed);
+        }
+
+    /**
+     * Retrieve an auto-generated default initializer for struct instances of this class. The
+     * returned method is abstract if there are no fields to initialize.
+     *
+     * @return the auto-generated method structure with necessary initialization code
+     */
+    public MethodStructure ensureAutoInitializer()
+        {
+        MethodStructure method = m_methodInit;
+        if (method == null)
+            {
+            m_methodInit = method = f_template.f_struct.createInitializer(f_typeStructure);
+            }
+        return method;
         }
 
     // retrieve the call chain for the specified method

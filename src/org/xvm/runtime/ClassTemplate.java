@@ -435,15 +435,7 @@ public abstract class ClassTemplate
             return hFD.callChain(frameCaller, Access.PUBLIC, contAssign);
             });
 
-        Map<TypeConstant, MethodStructure> mapInitializers = m_mapInitializers;
-        if (mapInitializers == null)
-            {
-            mapInitializers = m_mapInitializers = new ConcurrentHashMap<>();
-            }
-
-        MethodStructure methodID = mapInitializers.computeIfAbsent(
-            hStruct.getType(), f_struct::createInitializer);
-
+        MethodStructure methodID = clazz.ensureAutoInitializer();
         if (methodID.isAbstract())
             {
             return frame.call(frameCD);
@@ -724,8 +716,25 @@ public abstract class ClassTemplate
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
 
         ObjectHandle hProp = ((GenericHandle) hTarget).getField(sPropName);
-        if (hProp instanceof RefHandle)
+        if (hProp instanceof RefHandle &&
+                hTarget.getPropertyInfo(sPropName).isRefAnnotated())
             {
+            switch (((RefHandle) hProp).ensureInitialized(frame))
+                {
+                case Op.R_NEXT:
+                    break;
+
+                case Op.R_CALL:
+                    frame.m_frameNext.setContinuation(frameCaller ->
+                        frame.invoke1(chain, 0, hProp, ahVar, iReturn));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
             hTarget = hProp;
             }
         return frame.invoke1(chain, 0, hTarget, ahVar, iReturn);
@@ -779,9 +788,26 @@ public abstract class ClassTemplate
         if (info.isRefAnnotated())
             {
             RefHandle hRef = (RefHandle) hValue;
+            switch (hRef.ensureInitialized(frame))
+                {
+                case Op.R_NEXT:
+                    break;
+
+                case Op.R_CALL:
+                    frame.m_frameNext.setContinuation(frameCaller ->
+                         hRef.getVarSupport().get(frameCaller, hRef, iReturn));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
             return hRef.getVarSupport().get(frame, hRef, iReturn);
             }
-         return frame.assignValue(iReturn, hValue);
+
+        return frame.assignValue(iReturn, hValue);
         }
 
     /**
@@ -835,10 +861,28 @@ public abstract class ClassTemplate
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
         ahVar[0] = hValue;
 
-        ObjectHandle hProp = ((GenericHandle) hTarget).getField(sPropName);
-        if (hProp instanceof RefHandle)
+        if (hTarget.getPropertyInfo(sPropName).isRefAnnotated())
             {
-            hTarget = hProp;
+            GenericHandle hThis = (GenericHandle) hTarget;
+            RefHandle hRef = (RefHandle) hThis.getField(sPropName);
+
+            switch (hRef.ensureInitialized(frame))
+                {
+                case Op.R_NEXT:
+                    break;
+
+                case Op.R_CALL:
+                    frame.m_frameNext.setContinuation(frameCaller ->
+                        frameCaller.invoke1(chain, 0, hRef, ahVar, Op.A_IGNORE));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            hTarget = hRef;
             }
 
         return frame.invoke1(chain, 0, hTarget, ahVar, Op.A_IGNORE);
@@ -867,10 +911,25 @@ public abstract class ClassTemplate
 
         assert hThis.containsField(sPropName);
 
-        PropertyInfo info = hThis.getPropertyInfo(sPropName);
-        if (info.isRefAnnotated())
+        if (hThis.getPropertyInfo(sPropName).isRefAnnotated())
             {
             RefHandle hRef = (RefHandle) hThis.getField(sPropName);
+            switch (hRef.ensureInitialized(frame))
+                {
+                case Op.R_NEXT:
+                    break;
+
+                case Op.R_CALL:
+                    frame.m_frameNext.setContinuation(frameCaller ->
+                        hRef.getVarSupport().set(frameCaller, hRef, hValue));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
             return hRef.getVarSupport().set(frame, hRef, hValue);
             }
 
@@ -1692,9 +1751,4 @@ public abstract class ClassTemplate
      * TypeComposition itself and are not known or controllable by the ClassTemplate.
      */
     private Map<TypeConstant, TypeComposition> m_mapCompositions = new ConcurrentHashMap<>();
-
-    /**
-     * A cache of default constructors.
-     */
-    private Map<TypeConstant, MethodStructure> m_mapInitializers;
     }

@@ -11,8 +11,10 @@ import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Utils;
 import org.xvm.runtime.VarSupport;
 
 
@@ -41,12 +43,6 @@ public class xRef
     @Override
     public void initDeclared()
         {
-        }
-
-    @Override
-    public boolean isGenericHandle()
-        {
-        return false;
         }
 
     @Override
@@ -403,12 +399,13 @@ public class xRef
     // ----- handle class -----
 
     public static class RefHandle
-            extends ObjectHandle
+            extends GenericHandle
         {
         protected ObjectHandle m_hDelegate; // can point to another Ref for the same referent
         protected String m_sName;
         protected Frame m_frame;
         protected int m_iVar;
+        protected boolean m_fInit;
 
         // indicates that the m_hDelegate field holds a referent
         protected static final int REF_REFERENT = -1;
@@ -487,6 +484,40 @@ public class xRef
                 m_iVar = REF_REF;
                 m_hDelegate = refCurrent;
                 }
+            }
+
+        /**
+         * Ensure the RefHandle fields are initialized (only necessary for stateful Ref/Var mixins).
+         *
+         * @param frame  the current frame
+         *
+         * @return R_NEXT, R_CALL or R_EXCEPTION
+         */
+        public int ensureInitialized(Frame frame)
+            {
+            if (m_fInit)
+                {
+                return Op.R_NEXT;
+                }
+
+            m_fInit = true;
+
+            MethodStructure methodInit = getComposition().ensureAutoInitializer();
+            if (methodInit.isAbstract())
+                {
+                return Op.R_NEXT;
+                }
+
+            // strictly speaking, we need to pass a "struct" clone
+            //      this.ensureAccess(Access.STRUCT);
+            // but since the auto-initializer is auto-generated, we can skip that expense
+            Frame frameID = frame.createFrame1(methodInit, this, Utils.OBJECTS_NONE, Op.A_IGNORE);
+
+            frameID.setContinuation(frameCaller ->
+                this.validateFields() ?
+                    Op.R_NEXT : frameCaller.raiseException(xException.unassignedFields()));
+
+            return frame.call(frame.ensureInitialized(methodInit, frameID));
             }
 
         public ObjectHandle getValue()

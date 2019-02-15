@@ -104,6 +104,7 @@ public class Var_DN
         String sName = frame.getString(m_nNameId);
 
         RefHandle hRef = m_ref;
+        int       iRet = iPC + 1;
         if (hRef == null)
             {
             TypeComposition clz = frame.resolveClass(m_nType);
@@ -112,13 +113,17 @@ public class Var_DN
 
             if (hRef instanceof xInjectedRef.InjectedHandle)
                 {
+                // InjectedRef is exclusively native; no need for initialization
                 m_ref = hRef;
+                }
+            else
+                {
+                iRet = hRef.ensureInitialized(frame);
                 }
             }
 
         frame.introduceResolvedVar(m_nVar, hRef.getType(), sName, Frame.VAR_DYNAMIC_REF, hRef);
-
-        return iPC + 1;
+        return iRet;
         }
 
     @Override
