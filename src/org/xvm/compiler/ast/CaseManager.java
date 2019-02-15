@@ -1,35 +1,34 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+
 import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.asm.op.Assert;
-import org.xvm.asm.op.Enter;
-import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.JumpInt;
 import org.xvm.asm.op.JumpVal;
 import org.xvm.asm.op.JumpVal_N;
 import org.xvm.asm.op.Label;
+
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.Token;
+
 import org.xvm.util.ListMap;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
-
-import static org.xvm.util.Handy.indentLines;
 
 
 /**
@@ -39,17 +38,107 @@ public class CaseManager
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public CaseManager()
+    public CaseManager(AstNode nodeSwitch)
         {
+        m_nodeSwitch = nodeSwitch;
         }
 
 
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
+    // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * @return the node that created this manager
+     */
+    public AstNode getSwitch()
+        {
+        return m_nodeSwitch;
+        }
+
+    /**
+     * @return the constant pool to use
+     */
+    public ConstantPool pool()
+        {
+        return getSwitch().pool();
+        }
+
+    /**
+     * @return the type of the condition (which is the basis for the type of each case expression)
+     */
+    public TypeConstant getConditionType()
+        {
+        return m_typeCase;
+        }
+
+    /**
+     * @return the number of condition values for this switch
+     */
+    public int getConditionCount()
+        {
+        return m_atypeCond == null ? -1 : m_atypeCond.length;
+        }
+
+    /**
+     * @return true if the condition value require a scope to be created for the switch
+     */
+    public boolean hasDeclarations()
+        {
+        return m_fScope;
+        }
+
+    /**
+     * @return true iff any of the case expressions use a wild-card value match
+     */
+    public boolean hasMatchAny()
+        {
+        return m_fHasWildcards;
+        }
+
+    /**
+     * @return true iff any of the case expressions use an interval or range value match
+     */
+    public boolean hasMatchInterval()
+        {
+        return m_fHasIntervals;
+        }
+
+    /**
+     * @return true iff the switch has no conditions, which implies that each case expression is an
+     *         "if" condition, with the flow of control transferring to the first one that evaluates
+     *         to true
+     */
+    public boolean usesIfLadder()
+        {
+        return getConditionCount() == 0;
+        }
+    
+    /**
+     * @return true iff the JMP_VAL_N op is required, because the condition is multiple, or because
+     *         wildcards or intervals are used
+     */
+    public boolean usesJmpValN()
+        {
+        return getConditionCount() > 1 || hasMatchAny() || hasMatchInterval();
+        }
+
+
+    // ----- operations ----------------------------------------------------------------------------
+
+    /**
+     * Validate the condition value expressions.
+     *
+     * @param ctx   the validation context
+     * @param listCond  the list of condition value expressions (mutable)
+     * @param errs  the error list to log to
+     *
+     * @return true iff the validation succeeded
+     */
+    protected boolean validateCondition(Context ctx, List<AstNode> listCond, ErrorListener errs)
         {
         boolean        fValid     = true;
         ConstantPool   pool       = pool();
         Constant[]     aconstCond = null;
-        boolean        fIfSwitch  = cond == null;
+        boolean        fIfSwitch  = listCond == null;
         if (fIfSwitch)
             {
             // there is no condition, so all of the case statements must evaluate to boolean, and
@@ -62,9 +151,9 @@ public class CaseManager
             List<TypeConstant> listTypes  = new ArrayList<>();
             List<Constant>     listConsts = new ArrayList<>();
             boolean            fAllConst  = true;
-            for (int i = 0, c = cond.size(); i < c; ++i)
+            for (int i = 0, c = listCond.size(); i < c; ++i)
                 {
-                AstNode        node    = cond.get(i);
+                AstNode        node    = listCond.get(i);
                 AstNode        nodeNew = null;
                 TypeConstant[] atype   = null;
                 Constant[]     aconst  = null;
@@ -105,7 +194,7 @@ public class CaseManager
                     {
                     if (nodeNew != node)
                         {
-                        cond.set(i, nodeNew);
+                        listCond.set(i, nodeNew);
                         }
                     }
 
@@ -146,12 +235,10 @@ public class CaseManager
                 aconstCond = listConsts.toArray(Constant.NO_CONSTS);
                 }
             }
+        }
 
-        // determine the type to request from each "result expression" (i.e. the result of this
-        // switch expression, each of which comes after some "case:" label)
-        TypeConstant[] atypeRequest = atypeRequired == null
-                ? getImplicitTypes(ctx)
-                : atypeRequired;
+    public boolean validateCase(Context ctx, CaseStatement stmtCase, ErrorListener errs)
+        {
 
         Constant[]     aconstVal        = null;
         List<Constant> listVals         = fIfSwitch ? null : new ArrayList<>();
@@ -649,6 +736,36 @@ public class CaseManager
         code.add(labelExit);
         }
 
+
     // ----- fields --------------------------------------------------------------------------------
 
+    /**
+     * The switch statement or expression.
+     */
+    private AstNode m_nodeSwitch;
+
+    /**
+     * The type of the condition.
+     */
+    private TypeConstant m_typeCase;
+
+    /**
+     * If the switch condition requires a scope.
+     */
+    private boolean m_fScope;
+
+    /**
+     * The type of each condition expression / tuple field of case statements.
+     */
+    private TypeConstant[] m_atypeCond;
+
+    /**
+     * True if any case statements use a wildcard.
+     */
+    private boolean m_fHasWildcards;
+
+    /**
+     * True if any case statements use an interval.
+     */
+    private boolean m_fHasIntervals;
     }
