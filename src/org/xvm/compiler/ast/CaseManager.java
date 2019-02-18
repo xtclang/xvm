@@ -6,20 +6,18 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.constants.ArrayConstant;
+import org.xvm.asm.constants.IntervalConstant;
+import org.xvm.asm.constants.MatchAnyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.asm.op.Assert;
-import org.xvm.asm.op.Jump;
-import org.xvm.asm.op.JumpInt;
-import org.xvm.asm.op.JumpVal;
-import org.xvm.asm.op.JumpVal_N;
+import org.xvm.asm.constants.ValueConstant;
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
@@ -31,7 +29,7 @@ import org.xvm.util.Severity;
 
 
 /**
- * A "switch" expression.
+ * The CaseManager is shared compilation logic used by both the "switch" statement and  expression.
  */
 public class CaseManager
     {
@@ -46,6 +44,14 @@ public class CaseManager
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
+     * @return the constant pool to use
+     */
+    public ConstantPool pool()
+        {
+        return getSwitch().pool();
+        }
+
+    /**
      * @return the node that created this manager
      */
     public AstNode getSwitch()
@@ -54,11 +60,20 @@ public class CaseManager
         }
 
     /**
-     * @return the constant pool to use
+     * @return true if the condition value require a scope to be created for the switch
      */
-    public ConstantPool pool()
+    public boolean hasDeclarations()
         {
-        return getSwitch().pool();
+        return m_ctxSwitch != null;
+        }
+
+    /**
+     * @return a nesting context created automatically if the switch condition declares any
+     *         variables
+     */
+    public Context getSwitchContext()
+        {
+        return m_ctxSwitch;
         }
 
     /**
@@ -78,14 +93,6 @@ public class CaseManager
         }
 
     /**
-     * @return true if the condition value require a scope to be created for the switch
-     */
-    public boolean hasDeclarations()
-        {
-        return m_fScope;
-        }
-
-    /**
      * @return true if the switch is operating with a cardinal set of values (allowing an offset
      *         jump, for example)
      */
@@ -99,7 +106,7 @@ public class CaseManager
      */
     public boolean usesNonExactMatching()
         {
-        return m_listWild != null;
+        return m_mapWild != null;
         }
 
     /**
@@ -122,6 +129,22 @@ public class CaseManager
         }
 
     /**
+     * @return true iff the JMP_INT op is going to be used
+     */
+    public boolean usesJmpInt()
+        {
+        return !usesIfLadder() && getCaseLabels() != null && getCaseConstants() == null;
+        }
+
+    /**
+     * @return the int offset for the JMP_INT op
+     */
+    public PackedInteger getJmpIntOffset()
+        {
+        return m_pintMin;
+        }
+
+    /**
      * @return true if the switch condition is constant and as a result the case to use is known at
      *         compile time; this value is available after validateEnd()
      */
@@ -137,6 +160,39 @@ public class CaseManager
     public Label getSwitchConstantLabel()
         {
         return m_labelConstant;
+        }
+
+    /**
+     * @return the array of labels
+     */
+    public Label[] getCaseLabels()
+        {
+        return m_alabelCase;
+        }
+
+    /**
+     * @return the array of constants assocated with the labels, or null if either an if-ladder or
+     *         JMP_INT is used
+     */
+    public Constant[] getCaseConstants()
+        {
+        return m_aconstCase;
+        }
+
+    /**
+     * @return the label for the "default:" (or fully wild-card "case:") statement; may be null
+     */
+    public Label getDefaultLabel()
+        {
+        return m_labelDefault;
+        }
+
+    /**
+     * @return the cookie for the specified label
+     */
+    public Object getCookie(Label label)
+        {
+        return m_mapLabels.get(label);
         }
 
 
@@ -181,10 +237,9 @@ public class CaseManager
                     fAllConst = false;
 
                     AssignmentStatement stmtCond = (AssignmentStatement) node;
-                    if (!m_fScope && stmtCond.hasDeclarations())
+                    if (m_ctxSwitch == null && stmtCond.hasDeclarations())
                         {
-                        ctx      = ctx.enter();
-                        m_fScope = true;
+                        m_ctxSwitch = ctx = ctx.enter();
                         }
 
                     nodeNew = stmtCond.validate(ctx, errs);
@@ -279,11 +334,12 @@ public class CaseManager
         // each contiguous group of "case:"/"default:" statements shares a single label
         if (m_labelCurrent == null)
             {
-            m_labelCurrent = new Label("case_" + (m_listLabel.size() + 1));
+            m_labelCurrent = new Label("case_" + (m_mapLabels.size() + 1));
             }
 
         // each case statement is marked with the label that it will jump to
         stmtCase.setLabel(m_labelCurrent);
+        m_caseCurrent = stmtCase;
 
         // a case statement has any number of case values, any one of which can match the switch
         // condition; a case statement with no values indicates the "default:" statement
@@ -416,7 +472,7 @@ public class CaseManager
 
                     if (!fIfSwitch)
                         {
-                        if (collides(constCase, getConditionCount()==1, m_listsetCase, m_mapWild, lIgnore, lRange))
+                        if (collides(constCase, lIgnore, lRange))
                             {
                             // collision
                             stmtCase.log(errs, Severity.ERROR, Compiler.SWITCH_CASE_DUPLICATE,
@@ -426,7 +482,7 @@ public class CaseManager
                         else
                             {
                             m_listsetCase.add(constCase);
-                            m_listLabel.add(m_labelCurrent);
+                            m_mapLabels.put(m_labelCurrent, null);
 
                             if (fIntConsts)
                                 {
@@ -464,63 +520,73 @@ public class CaseManager
 
     /**
      * Mark the end of a series of contiguous "case:" / "default:" statements
+     *
+     * @param cookie  whatever the caller wants to associate with the just-finished case group
      */
-    public void endCaseGroup()
+    public void endCaseGroup(Object cookie)
         {
         if (m_labelCurrent == null)
             {
             throw new IllegalStateException();
             }
 
+        if (cookie != null)
+            {
+            m_mapLabels.put(m_labelCurrent, cookie);
+            }
+
         m_labelCurrent = null;
+        m_caseCurrent  = null;
         }
 
     /**
      * Finish the switch validation.
      *
-     * @param ctx       the validation context
-     * @param errs      the error list to log to
+     * @param ctx     the validation context
+     * @param errs    the error list to log to
      *
      * @return true iff the validation succeeded
      */
     public boolean validateEnd(Context ctx, ErrorListener errs)
         {
+        boolean fValid = true;
+        
         if (m_labelCurrent != null)
             {
-            listNodes.get(listNodes.size()-1).log(errs, Severity.ERROR, Compiler.SWITCH_CASE_DANGLING);
+            m_caseCurrent.log(errs, Severity.ERROR, Compiler.SWITCH_CASE_DANGLING);
             fValid = false;
             }
-        else if (m_aconstCond != null && aconstVal == null && m_fAllConsts && aconstDefault != null)
+        else if (m_aconstCond != null && m_labelConstant == null && m_fAllConsts && m_labelDefault != null)
             {
-            aconstVal = aconstDefault;
+            m_labelConstant = m_labelDefault;
             }
-        else if (m_labelDefault == null && (!fCardinals || m_listsetCase.size() < typeCase.getIntCardinality()))
+        else if (m_labelDefault == null && (m_nodeSwitch instanceof Expression)
+                && (!isCardinal() || m_listsetCase.size() < m_typeCase.getIntCardinality()))
             {
-            // this means that the switch would "short circuit", which is not allowed
-            log(errs, Severity.ERROR, Compiler.SWITCH_DEFAULT_REQUIRED);
+            // this means that the switch expression would "short circuit" (not result in a value),
+            // which is not allowed
+            m_nodeSwitch.log(errs, Severity.ERROR, Compiler.SWITCH_DEFAULT_REQUIRED);
             fValid = false;
             }
 
-        if (m_fScope)
+        if (m_ctxSwitch != null)
             {
-            ctx = ctx.exit();
+            m_ctxSwitch.exit();
             }
 
         // store the resulting information
-        if (!fIfSwitch)
+        if (!usesIfLadder())
             {
-            int cVals = m_listsetCase.size();
-            assert m_listLabel.size() == cVals;
-
             // check if the JumpInt optimization can be used
             // (enums are no longer supported, since cross-module dependencies without
             // re-compilation would cause the values to fail to "line up", so it's better to
             // use the JumpVal option instead of the JumpInt option)
-            boolean fUseJumpInt = false;
+            int     cVals       = m_listsetCase.size();
             int     cRange      = 0;
-            if (fValid && pintMin != null)
+            boolean fUseJumpInt = false;
+            if (fValid && m_pintMin != null && !usesJmpValN())
                 {
-                PackedInteger pintRange = pintMax.sub(pintMin);
+                PackedInteger pintRange = m_pintMax.sub(m_pintMin);
                 if (!pintRange.isBig())
                     {
                     // the idea is that if we have ints from 100,000 to 100,100, and there are
@@ -533,195 +599,231 @@ public class CaseManager
                     }
                 }
 
+            Constant[] aConstCase = m_listsetCase.toArray(Constant.NO_CONSTS);
+            Label[]    aLabelCase = m_mapLabels.keySet().toArray(new Label[0]);
             if (fUseJumpInt)
                 {
                 Label[] aLabels = new Label[cRange];
                 for (int i = 0; i < cVals; ++i)
                     {
-                    Label    label     = m_listLabel.get(i);
-                    Constant constCase = m_listsetCase.get(i);
-                    int      nIndex    = constCase.getIntValue().sub(pintMin).getInt();
+                    Label    label     = aLabelCase[i];
+                    Constant constCase = aConstCase[i];
+                    int      nIndex    = constCase.getIntValue().sub(m_pintMin).getInt();
 
                     aLabels[nIndex] = label;
                     }
 
                 // fill in any gaps
+                Label labelMiss = m_labelDefault;
+                if (labelMiss == null && m_nodeSwitch instanceof Statement)
+                    {
+                    // statement "defaults" to skipping out of the statement altogether
+                    labelMiss = ((Statement) m_nodeSwitch).getEndLabel();
+                    }
                 for (int i = 0; i < cRange; ++i)
                     {
                     if (aLabels[i] == null)
                         {
-                        assert m_labelDefault != null;
-                        aLabels[i] = m_labelDefault;
+                        assert labelMiss != null || !fValid;
+                        aLabels[i] = labelMiss;
                         }
                     }
 
                 m_alabelCase = aLabels;
-                m_pintOffset = pintMin;
                 }
             else
                 {
-                m_aconstCase = m_listsetCase.toArray(new Constant[cVals]);
-                m_alabelCase = m_listLabel.toArray(new Label   [cVals]);
+                m_alabelCase = aLabelCase;
+                m_aconstCase = aConstCase;
                 }
             }
 
-        m_labelDefault = m_labelDefault;
-
-        TypeConstant[] atypeActual = collector.inferMulti(atypeRequired);
-        return finishValidations(atypeRequired, atypeActual, fValid ? TypeFit.Fit : TypeFit.NoFit, aconstVal, errs);
+        return fValid;
         }
 
-    private boolean collides(Constant constCase, boolean fSingleCond,
-            Set<Constant> setCase, ListMap<Constant, Long> mapWild, long lIgnore, long lRange)
+    /**
+     * Check if the specified case constant is covered by any previously encountered case constants.
+     *
+     * @param constCase  the case constant to test
+     * @param lIgnore
+     * @param lRange
+     *
+     * @return true if the passed case constant collides with any previous encountered case
+     *         constants
+     */
+    private boolean collides(Constant constCase, long lIgnore, long lRange)
         {
-        if (!setCase.add(constCase))
+        if (!m_listsetCase.add(constCase))
             {
             return true;
             }
 
-        for (Entry<Constant, Long> entry : mapWild.entrySet())
+        if (m_mapWild != null)
             {
-            // TODO check wildcards .. _
+            for (Entry<Constant, Long> entry : m_mapWild.entrySet())
+                {
+                Constant constWild   = entry.getKey();
+                long     lWildRanges = entry.getValue();
+                if (covers(constWild, lWildRanges, constCase, lRange))
+                    {
+                    return true;
+                    }
+                }
             }
 
         if ((lIgnore | lRange) != 0L)
             {
-            mapWild.put(constCase, lRange);
+            if (m_mapWild == null)
+                {
+                m_mapWild = new ListMap<>();
+                }
+            m_mapWild.put(constCase, lRange);
             }
 
         return false;
         }
 
-    private void generateIfSwitch(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
+    /**
+     * Determine if "this constant" covers "that constant", applying rules including wild-cards and
+     * ranges.
+     *
+     * @param constThis  a case constant
+     * @param constThat  another case constant
+     *
+     * @return true iff constThis provably covers constThat
+     */
+    private boolean covers(Constant constThis, long lRangeThis, Constant constThat, long lRangeThat)
         {
-        List<AstNode> aNodes = contents;
-        int           cNodes = aNodes.size();
-        for (int i = 0; i < cNodes; ++i)
+        if (constThis.equals(constThat))
             {
-            AstNode node = aNodes.get(i);
-            if (node instanceof CaseStatement)
-                {
-                CaseStatement stmt = ((CaseStatement) node);
-                if (!stmt.isDefault())
-                    {
-                    stmt.updateLineNumber(code);
-                    Label labelCur = stmt.getLabel();
-                    for (Expression expr : stmt.getExpressions())
-                        {
-                        expr.generateConditionalJump(ctx, code, labelCur, true, errs);
-                        }
-                    }
-                }
+            return true;
             }
-        code.add(new Jump(m_labelDefault));
-
-        Label labelCur  = null;
-        Label labelExit = new Label("switch_end");
-        for (int i = 0; i < cNodes; ++i)
+        
+        int cConds = getConditionCount();
+        if (cConds == 1)
             {
-            AstNode node = aNodes.get(i);
-            if (node instanceof CaseStatement)
-                {
-                labelCur = ((CaseStatement) node).getLabel();
-                }
-            else
-                {
-                Expression expr = (Expression) node;
-
-                expr.updateLineNumber(code);
-                code.add(labelCur);
-                expr.generateAssignments(ctx, code, aLVal, errs);
-                code.add(new Jump(labelExit));
-                }
-            }
-        code.add(labelExit);
-        }
-
-    private void generateJumpSwitch(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
-        {
-        assert cond != null && !cond.isEmpty();
-
-        Label labelDefault = this.m_labelDefault;
-        if (labelDefault == null)
-            {
-            labelDefault = new Label("default_assert");
-            }
-
-        Argument[] aArgVal  = new Argument[m_atypeCond.length];
-        int        ofArgVal = 0;
-        for (AstNode node : cond)
-            {
-            Expression exprCond;
-            if (node instanceof AssignmentStatement)
-                {
-                AssignmentStatement stmt = (AssignmentStatement) node;
-                boolean fCompletes = stmt.completes(ctx, true, code, errs);
-                if (!fCompletes)
-                    {
-                    m_fAborting = true;
-                    }
-                exprCond = stmt.getLValue().getLValueExpression();
-                }
-            else
-                {
-                exprCond = (Expression) node;
-                }
-
-            if (m_aconstCase == null && (m_pintOffset != null || !exprCond.getType().isA(pool().typeInt())))
-                {
-                exprCond = new ToIntExpression(exprCond, m_pintOffset, errs);
-                }
-
-            Argument[] aArgsAdd = exprCond.generateArguments(ctx, code, true, true, errs);
-            int        cArgsAdd = aArgsAdd.length;
-            System.arraycopy(aArgsAdd, 0, aArgVal, ofArgVal, cArgsAdd);
-            ofArgVal += cArgsAdd;
-            }
-        assert ofArgVal == aArgVal.length;
-
-        if (m_aconstCase == null)
-            {
-            assert cond.size() == 1 && aArgVal.length == 1;
-            code.add(new JumpInt(aArgVal[0], m_alabelCase, labelDefault));
+            return covers(constThis, (lRangeThis & 1) != 0,
+                          constThat, (lRangeThat & 1) != 0);
             }
         else
             {
-            code.add(cond.size() == 1 // TODO && no wildcards && no intervals
-                    ? new JumpVal(aArgVal[0], m_aconstCase, m_alabelCase, labelDefault)
-                    : new JumpVal_N(aArgVal, m_aconstCase, m_alabelCase, labelDefault));
+            assert cConds > 1;
+            if (constThis.getFormat() == Format.Tuple &&
+                constThat.getFormat() == Format.Tuple)
+                {
+                Constant[] aconstThis = ((ArrayConstant) constThis).getValue();
+                Constant[] aconstThat = ((ArrayConstant) constThat).getValue();
+                for (int i = 0; i < cConds; ++i)
+                    {
+                    if (!covers(aconstThis[i], (lRangeThis & (1L << i)) != 0,
+                                aconstThat[i], (lRangeThat & (1L << i)) != 0))
+                        {
+                        return false;
+                        }
+                    }
+                return true;
+                }
             }
 
-        Label         labelCur  = null;
-        Label         labelExit = new Label("switch_end");
-        List<AstNode> aNodes    = contents;
-        for (int i = 0, c = aNodes.size(); i < c; ++i)
+        return false;
+        }
+
+    private boolean covers(Constant constThis, boolean fRangeThis, Constant constThat, boolean fRangeThat)
+        {
+        if (constThis.equals(constThat) || constThis instanceof MatchAnyConstant)
             {
-            AstNode node = aNodes.get(i);
-            if (node instanceof CaseStatement)
+            return true;
+            }
+        
+        if (constThat instanceof MatchAnyConstant
+                || !fRangeThis && !fRangeThat
+                || !(constThis instanceof ValueConstant)
+                || !(constThat instanceof ValueConstant))
+            {
+            // technically, some types do have a known range, so it is possible to define a range
+            // that is equivalent to a wild-card; that implementation can be deferred until the
+            // compiler is re-built from the ground up in Ecstasy; similarly, no handling is
+            // provided for non-value constants (since they don't have a comparable value)
+            return false;
+            }
+        
+        Object oThisLo, oThisHi;
+        if (fRangeThis)
+            {
+            if (constThis instanceof IntervalConstant)
                 {
-                Label labelNew = ((CaseStatement) node).getLabel();
-                if (labelNew != labelCur)
-                    {
-                    code.add(labelNew);
-                    labelCur = labelNew;
-                    }
+                IntervalConstant interval = (IntervalConstant) constThis;
+                oThisLo = interval.getFirst();
+                oThisHi = interval.getLast();
                 }
             else
                 {
-                node.updateLineNumber(code);
-                ((Expression) node).generateAssignments(ctx, code, aLVal, errs);
-                code.add(new Jump(labelExit));
+                return false;
                 }
             }
-
-        if (labelDefault != this.m_labelDefault)
+        else
             {
-            // default is an assertion
-            code.add(labelDefault);
-            code.add(new Assert(pool().valFalse()));
+            oThisLo = oThisHi = ((ValueConstant) constThis).getValue();
+            }
+        if (!(  oThisLo instanceof Comparable &&
+                oThisHi instanceof Comparable))
+            {
+            return false;
             }
 
-        code.add(labelExit);
+        Object oThatLo, oThatHi;
+        if (fRangeThat)
+            {
+            if (constThat instanceof IntervalConstant)
+                {
+                IntervalConstant interval = (IntervalConstant) constThat;
+                oThatLo = interval.getFirst();
+                oThatHi = interval.getLast();
+                }
+            else
+                {
+                return false;
+                }
+            }
+        else
+            {
+            oThatLo = oThatHi = ((ValueConstant) constThat).getValue();
+            }
+        if (!(  oThatLo instanceof Comparable &&
+                oThatHi instanceof Comparable))
+            {
+            return false;
+            }
+
+        // TODO this will work for types that have a corrresponding Java type, like Int, but not enums etc.
+        Comparable cmpThisLo = (Comparable) oThisLo;
+        Comparable cmpThisHi = (Comparable) oThisHi;
+        Comparable cmpThatLo = (Comparable) oThatLo;
+        Comparable cmpThatHi = (Comparable) oThatHi;
+        try
+            {
+            if (cmpThisLo.compareTo(cmpThisHi) > 0)
+                {
+                Comparable cmpOops = cmpThisLo;
+                cmpThisLo = cmpThisHi;
+                cmpThisHi = cmpOops;
+                }
+            if (cmpThatLo.compareTo(cmpThatHi) > 0)
+                {
+                Comparable cmpOops = cmpThatLo;
+                cmpThatLo = cmpThatHi;
+                cmpThatHi = cmpOops;
+                }
+
+            return  cmpThisLo.compareTo(cmpThatLo) <= 0 &&
+                    cmpThisLo.compareTo(cmpThatHi) <= 0 &&
+                    cmpThisHi.compareTo(cmpThatLo) >= 0 &&
+                    cmpThisHi.compareTo(cmpThatHi) >= 0;
+            }
+        catch (Exception e)
+            {
+            return false;
+            }
         }
 
 
@@ -733,9 +835,9 @@ public class CaseManager
     private AstNode m_nodeSwitch;
 
     /**
-     * If the switch condition requires a scope.
+     * If the switch condition requires a scope, this creates a context.
      */
-    private boolean m_fScope;
+    private Context m_ctxSwitch;
 
     /**
      * The actual number of condition values.
@@ -756,6 +858,11 @@ public class CaseManager
      * The type of the condition.
      */
     private TypeConstant m_typeCase;
+
+    /**
+     * The label of the currently active case group.
+     */
+    private CaseStatement m_caseCurrent;
 
     /**
      * The label of the currently active case group.
@@ -783,16 +890,34 @@ public class CaseManager
     private boolean m_fAllConsts = true;
 
     /**
-     * A list of labels corresponding to the list of case values.
+     * A list-map of labels corresponding to the list of case values; associated value is a cookie.
      */
-    private List<Label> m_listLabel = new ArrayList<>();
+    private ListMap<Label, Object> m_mapLabels = new ListMap<>();
 
     /**
      * The (lazily created) list of all case values that have wildcards or intervals.
      */
-    private List<Constant> m_listWild;
+    private ListMap<Constant, Long> m_mapWild;
 
-    private transient PackedInteger m_pintOffset;
-    private transient PackedInteger m_pintMin;
-    private transient PackedInteger m_pintMax;
+    /**
+     * After the validateEnd(), this holds all of the constant values for the cases, if JMP_VAL is
+     * used.
+     */
+    private Constant[] m_aconstCase;
+
+    /**
+     * After the validateEnd(), this holds all of the labels for the cases, unless an if-ladder is
+     * used.
+     */
+    private Label[] m_alabelCase;
+
+    /**
+     * Used to calculate the range of cardinal case values to determine if JMP_INT can be used.
+     */
+    private PackedInteger m_pintMin;
+
+    /**
+     * Used to calculate the range of cardinal case values to determine if JMP_INT can be used.
+     */
+    private PackedInteger m_pintMax;
     }
