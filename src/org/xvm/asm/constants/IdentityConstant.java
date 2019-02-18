@@ -394,8 +394,10 @@ public abstract class IdentityConstant
         public String toString()
             {
             // for member "m" of class "c", the string is "m"
-            IdentityConstant id = IdentityConstant.this;
-            return id.getPathString().substring(id.getClassIdentity().getPathString().length()+1);
+            IdentityConstant id     = IdentityConstant.this;
+            String           sClass = id.getClassIdentity().getPathString();
+
+            return id.getPathString().substring(sClass.isEmpty() ? 0 : sClass.length() + 1);
             }
 
         @Override
