@@ -331,6 +331,12 @@ public class CaseManager
         {
         boolean fValid = true;
 
+        // the context must match
+        if (m_ctxSwitch != null)
+            {
+            assert ctx == m_ctxSwitch;
+            }
+
         // each contiguous group of "case:"/"default:" statements shares a single label
         if (m_labelCurrent == null)
             {
@@ -482,6 +488,7 @@ public class CaseManager
                         else
                             {
                             m_listsetCase.add(constCase);
+                            m_listLabels.add(m_labelCurrent);
                             m_mapLabels.put(m_labelCurrent, null);
 
                             if (fIntConsts)
@@ -550,7 +557,13 @@ public class CaseManager
     public boolean validateEnd(Context ctx, ErrorListener errs)
         {
         boolean fValid = true;
-        
+
+        // the context must match
+        if (m_ctxSwitch != null)
+            {
+            assert ctx == m_ctxSwitch;
+            }
+
         if (m_labelCurrent != null)
             {
             m_caseCurrent.log(errs, Severity.ERROR, Compiler.SWITCH_CASE_DANGLING);
@@ -600,7 +613,7 @@ public class CaseManager
                 }
 
             Constant[] aConstCase = m_listsetCase.toArray(Constant.NO_CONSTS);
-            Label[]    aLabelCase = m_mapLabels.keySet().toArray(new Label[0]);
+            Label[]    aLabelCase = m_listLabels.toArray(new Label[0]);
             if (fUseJumpInt)
                 {
                 Label[] aLabels = new Label[cRange];
@@ -645,15 +658,15 @@ public class CaseManager
      * Check if the specified case constant is covered by any previously encountered case constants.
      *
      * @param constCase  the case constant to test
-     * @param lIgnore
-     * @param lRange
+     * @param lIgnore    the bitmask indicating which fields are match-any
+     * @param lRange     the bitmask indicating which fields are intervals
      *
      * @return true if the passed case constant collides with any previous encountered case
      *         constants
      */
     private boolean collides(Constant constCase, long lIgnore, long lRange)
         {
-        if (!m_listsetCase.add(constCase))
+        if (m_listsetCase.contains(constCase))
             {
             return true;
             }
@@ -755,6 +768,15 @@ public class CaseManager
                 IntervalConstant interval = (IntervalConstant) constThis;
                 oThisLo = interval.getFirst();
                 oThisHi = interval.getLast();
+                if (oThisLo instanceof ValueConstant && oThisHi instanceof ValueConstant)
+                    {
+                    oThisLo = ((ValueConstant) oThisLo).getValue();
+                    oThisHi = ((ValueConstant) oThisHi).getValue();
+                    }
+                else
+                    {
+                    return false;
+                    }
                 }
             else
                 {
@@ -779,6 +801,15 @@ public class CaseManager
                 IntervalConstant interval = (IntervalConstant) constThat;
                 oThatLo = interval.getFirst();
                 oThatHi = interval.getLast();
+                if (oThatLo instanceof ValueConstant && oThatHi instanceof ValueConstant)
+                    {
+                    oThatLo = ((ValueConstant) oThatLo).getValue();
+                    oThatHi = ((ValueConstant) oThatHi).getValue();
+                    }
+                else
+                    {
+                    return false;
+                    }
                 }
             else
                 {
@@ -883,6 +914,11 @@ public class CaseManager
      * A list of case values.
      */
     private ListSet<Constant> m_listsetCase = new ListSet<>();
+
+    /**
+     * A list of case labels.
+     */
+    private List<Label> m_listLabels = new ArrayList<>();
 
     /**
      * Set to false when any non-constant case values are encountered.

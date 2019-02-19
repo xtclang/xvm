@@ -128,323 +128,54 @@ public class SwitchExpression
     @Override
     protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
-        boolean        fValid     = true;
-        ConstantPool   pool       = pool();
-        Constant[]     aconstCond = null;
-        boolean        fIfSwitch  = cond == null;
-        if (fIfSwitch)
-            {
-            // there is no condition, so all of the case statements must evaluate to boolean, and
-            // the first one that matches "True" will be used
-            m_atypeCond = new TypeConstant[] {pool.typeBoolean()};
-            aconstCond  = new Constant[] {pool.valTrue()};
-            }
-        else
-            {
-            List<TypeConstant> listTypes  = new ArrayList<>();
-            List<Constant>     listConsts = new ArrayList<>();
-            boolean            fAllConst  = true;
-            for (int i = 0, c = cond.size(); i < c; ++i)
-                {
-                AstNode        node    = cond.get(i);
-                AstNode        nodeNew = null;
-                TypeConstant[] atype   = null;
-                Constant[]     aconst  = null;
-                if (node instanceof AssignmentStatement)
-                    {
-                    // assignment represents a side-effect, so disable the constant optimizations
-                    fAllConst = false;
-
-                    AssignmentStatement stmtCond = (AssignmentStatement) node;
-                    if (!m_fScope && stmtCond.hasDeclarations())
-                        {
-                        ctx      = ctx.enter();
-                        m_fScope = true;
-                        }
-
-                    nodeNew = stmtCond.validate(ctx, errs);
-                    if (nodeNew != null)
-                        {
-                        atype = ((AssignmentStatement) nodeNew).getLValue().getLValueExpression().getTypes();
-                        }
-                    }
-                else
-                    {
-                    nodeNew = ((Expression) node).validate(ctx, null, errs);
-                    if (nodeNew != null)
-                        {
-                        Expression expr = (Expression) nodeNew;
-                        atype  = expr.getTypes();
-                        aconst = expr.toConstants();
-                        }
-                    }
-
-                if (nodeNew == null)
-                    {
-                    fValid = false;
-                    }
-                else
-                    {
-                    if (nodeNew != node)
-                        {
-                        cond.set(i, nodeNew);
-                        }
-                    }
-
-                if (atype == null)
-                    {
-                    fValid = false;
-                    }
-                else
-                    {
-                    for (TypeConstant type : atype)
-                        {
-                        listTypes.add(type);
-                        }
-                    }
-
-                if (fAllConst)
-                    {
-                    if (aconst == null)
-                        {
-                        fAllConst = false;
-                        }
-                    else
-                        {
-                        assert aconst.length == atype.length;
-                        for (Constant constant : aconst)
-                            {
-                            assert constant != null;
-                            listConsts.add(constant);
-                            }
-                        assert listConsts.size() == listTypes.size();
-                        }
-                    }
-                }
-
-            m_atypeCond = listTypes.toArray(TypeConstant.NO_TYPES);
-            if (fValid && fAllConst)
-                {
-                aconstCond = listConsts.toArray(Constant.NO_CONSTS);
-                }
-            }
-
         // determine the type to request from each "result expression" (i.e. the result of this
         // switch expression, each of which comes after some "case:" label)
         TypeConstant[] atypeRequest = atypeRequired == null
                 ? getImplicitTypes(ctx)
                 : atypeRequired;
 
-        Constant[]     aconstVal        = null;
-        List<Constant> listVals         = fIfSwitch ? null : new ArrayList<>();
-        Set<Constant>  setCase          = fIfSwitch ? null : new HashSet<>();
-        ListMap<Constant, Long> mapWild = fIfSwitch ? null : new ListMap<>();
-        boolean        fSingleCond      = m_atypeCond.length == 1;
-        TypeConstant   typeCase         = pool.ensureImmutableTypeConstant(fSingleCond ? m_atypeCond[0] :
-                                          pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_atypeCond));
-        boolean        fAllConsts       = true;
-        boolean        fCardinals       = !fIfSwitch && fSingleCond && typeCase.isIntConvertible();
-        boolean        fIntConsts       = fCardinals && typeCase.getExplicitClassFormat() != Component.Format.ENUM;
-        PackedInteger  pintMin          = null;
-        PackedInteger  pintMax          = null;
-        boolean        fGrabNext        = false;
-        List<Label>    listLabels       = fIfSwitch ? null : new ArrayList<>();
-        Label          labelCurrent     = null;
-        Label          labelDefault     = null;
-        Constant[]     aconstDefault    = null;
-        int            cLabels          = 0;
-        TypeCollector  collector        = new TypeCollector(pool);
-        List<AstNode>  listNodes        = contents;
+        // the structure of the switch is determined using a case manager
+        CaseManager mgr = new CaseManager(this);
+        m_casemgr = mgr;
+
+        // validate the switch condition
+        boolean fValid = mgr.validateCondition(ctx, cond, errs);
+
+        // the case manager enters a new context if the switch condition declares variables
+        Context ctxCase = mgr.getSwitchContext();
+        if (ctxCase == null)
+            {
+            ctxCase = ctx;
+            }
+
+        ConstantPool   pool      = pool();
+        TypeCollector  collector = new TypeCollector(pool);
+        List<AstNode>  listNodes = contents;
+        boolean        fInCase   = false;
         for (int iNode = 0, cNodes = listNodes.size(); iNode < cNodes; ++iNode)
             {
             AstNode node = listNodes.get(iNode);
             if (node instanceof CaseStatement)
                 {
-                if (labelCurrent == null)
-                    {
-                    labelCurrent = new Label("case_" + (++cLabels));
-                    }
-
-                CaseStatement stmtCase = (CaseStatement) node;
-                stmtCase.setLabel(labelCurrent);
-
-                List<Expression> listExprs = stmtCase.exprs;
-                if (listExprs == null) // no expressions on a case means "default:"
-                    {
-                    if (labelDefault == null)
-                        {
-                        labelDefault = labelCurrent;
-                        }
-                    else
-                        {
-                        stmtCase.log(errs, Severity.ERROR, Compiler.SWITCH_DEFAULT_DUPLICATE);
-                        fValid = false;
-                        }
-                    }
-                else
-                    {
-                    // validate the expressions in the case label
-                    for (int iExpr = 0, cExprs = listExprs.size(); iExpr < cExprs; ++iExpr)
-                        {
-                        Expression     exprCase  = listExprs.get(iExpr);
-                        TypeConstant   typeMatch = typeCase;
-                        long           lIgnore   = 0L;
-                        long           lRange    = 0L;
-                        int            cFields   = 1;
-                        TypeConstant[] atypeAlt  = null;
-                        if (exprCase instanceof TupleExpression)
-                            {
-                            List<Expression> listFields = ((TupleExpression) exprCase).exprs;
-                            cFields = listFields.size();
-                            for (int i = 0; i < cFields; ++i)
-                                {
-                                Expression exprField = listFields.get(i);
-                                if (exprField instanceof IgnoredNameExpression)
-                                    {
-                                    lIgnore |= 1 << i;
-                                    }
-                                else if (!exprField.testFit(ctx, m_atypeCond[i]).isFit())
-                                    {
-                                    TypeConstant typeInterval = pool.ensureParameterizedTypeConstant(
-                                            pool.typeInterval(), m_atypeCond[i]);
-                                    if (exprField.testFit(ctx, typeInterval).isFit())
-                                        {
-                                        lRange |= 1 << i;
-
-                                        if (atypeAlt == null)
-                                            {
-                                            atypeAlt = m_atypeCond.clone();
-                                            }
-                                        atypeAlt[i] = typeInterval;
-                                        }
-                                    }
-                                }
-                            }
-                        else if (fSingleCond)
-                            {
-                            if (exprCase instanceof IgnoredNameExpression)
-                                {
-                                lIgnore = 1;
-                                }
-                            else if (!exprCase.testFit(ctx, typeCase).isFit())
-                                {
-                                TypeConstant typeInterval = pool.ensureParameterizedTypeConstant(
-                                        pool.typeInterval(), typeCase);
-                                if (exprCase.testFit(ctx, typeInterval).isFit())
-                                    {
-                                    lRange    = 1;
-                                    typeMatch = typeInterval;
-                                    }
-                                }
-                            }
-                        else
-                            {
-                            // it's a multiple condition, but there's only a single value
-                            // TODO log error
-                            notImplemented();
-                            continue;
-                            }
-
-                        // if everything is a wildcard, then this is the same as a "default:"
-                        if (Long.bitCount(lIgnore) == cFields)
-                            {
-                            if (labelDefault == null)
-                                {
-                                labelDefault = labelCurrent;
-                                }
-                            else
-                                {
-                                stmtCase.log(errs, Severity.ERROR, Compiler.SWITCH_DEFAULT_DUPLICATE);
-                                fValid = false;
-                                }
-                            continue;
-                            }
-
-                        // if the validation type changes for this particular case expression
-                        // (because of an interval match), then create the type that will apply to
-                        // this particular case expression
-                        if (atypeAlt != null)
-                            {
-                            typeMatch = pool.ensureImmutableTypeConstant(
-                                    pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeAlt));
-                            }
-
-                        Expression exprNew = exprCase.validate(ctx, typeMatch, errs);
-                        if (exprNew == null)
-                            {
-                            fValid = false;
-                            }
-                        else
-                            {
-                            if (exprNew != exprCase)
-                                {
-                                listExprs.set(iExpr, exprCase = exprNew);
-                                }
-
-                            if (exprCase.isConstant()) // TODO resolve the difference with isRuntimeConstant()
-                                {
-                                Constant constCase = exprCase.toConstant();
-                                if (fAllConsts && aconstCond != null && aconstCond.equals(constCase))
-                                    {
-                                    fGrabNext = true;
-                                    }
-
-                                if (!fIfSwitch)
-                                    {
-                                    if (collides(constCase, fSingleCond, setCase, mapWild, lIgnore, lRange))
-                                        {
-                                        // collision
-                                        stmtCase.log(errs, Severity.ERROR, Compiler.SWITCH_CASE_DUPLICATE,
-                                                constCase.getValueString());
-                                        fValid = false;
-                                        }
-                                    else
-                                        {
-                                        listVals.add(constCase);
-                                        listLabels.add(labelCurrent);
-
-                                        if (fIntConsts)
-                                            {
-                                            PackedInteger pint = constCase.getIntValue();
-                                            if (pintMin == null)
-                                                {
-                                                pintMin = pintMax = pint;
-                                                }
-                                            else if (pint.compareTo(pintMax) > 0)
-                                                {
-                                                pintMax = pint;
-                                                }
-                                            else if (pint.compareTo(pintMin) < 0)
-                                                {
-                                                pintMin = pint;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            else
-                                {
-                                fAllConsts = false;
-                                if (!fIfSwitch)
-                                    {
-                                    stmtCase.log(errs, Severity.ERROR, Compiler.SWITCH_CASE_CONSTANT_REQUIRED);
-                                    fValid = false;
-                                    }
-                                }
-                            }
-                        }
-                    }
+                fInCase = true;
+                fValid &= mgr.validateCase(ctxCase, (CaseStatement) node, errs);
                 }
             else // it's an expression value
                 {
-                if (labelCurrent == null)
+                Expression exprOld = (Expression) node;
+                Expression exprNew = exprOld.validateMulti(ctxCase, atypeRequest, errs);
+
+                if (fInCase)
+                    {
+                    mgr.endCaseGroup(exprNew == null ? exprOld : exprNew);
+                    fInCase = false;
+                    }
+                else
                     {
                     node.log(errs, Severity.ERROR, Compiler.SWITCH_CASE_EXPECTED);
                     fValid = false;
                     }
 
-                Expression exprOld = (Expression) node;
-                Expression exprNew = exprOld.validateMulti(ctx, atypeRequest, errs);
                 if (exprNew == null)
                     {
                     fValid = false;
@@ -457,146 +188,25 @@ public class SwitchExpression
                         }
 
                     collector.add(exprNew.getTypes());
-
-                    if (exprNew.isConstant())
-                        {
-                        if (fGrabNext)
-                            {
-                            aconstVal = exprNew.toConstants();
-                            }
-
-                        if (labelCurrent == labelDefault)
-                            {
-                            // remember the default value so that we can compute the default value
-                            // for the case in which nothing matches
-                            aconstDefault = exprNew.toConstants();
-                            }
-                        }
-                    }
-
-                // at this point, we have found the trailing expression for the "current label"
-                // representing all of the immediately preceding case statements, so reset it
-                labelCurrent = null;
-
-                // reset the "this is the expression that might provide a constant value for the
-                // if-switch" flag
-                if (fIfSwitch && fGrabNext && aconstVal == null)
-                    {
-                    // this would have been the expression value to provide the constant value, but
-                    // the expression value itself is not constant, so the switch expression cannot
-                    // resolve to a compile-time constant value
-                    fAllConsts = false;
-                    }
-
-                fGrabNext = false;
-                }
-            }
-
-        if (labelCurrent != null)
-            {
-            listNodes.get(listNodes.size()-1).log(errs, Severity.ERROR, Compiler.SWITCH_CASE_DANGLING);
-            fValid = false;
-            }
-        else if (aconstCond != null && aconstVal == null && fAllConsts && aconstDefault != null)
-            {
-            aconstVal = aconstDefault;
-            }
-        else if (labelDefault == null && (!fCardinals || listVals.size() < typeCase.getIntCardinality()))
-            {
-            // this means that the switch would "short circuit", which is not allowed
-            log(errs, Severity.ERROR, Compiler.SWITCH_DEFAULT_REQUIRED);
-            fValid = false;
-            }
-
-        if (m_fScope)
-            {
-            ctx = ctx.exit();
-            }
-
-        // store the resulting information
-        if (!fIfSwitch)
-            {
-            int cVals = listVals.size();
-            assert listLabels.size() == cVals;
-
-            // check if the JumpInt optimization can be used
-            // (enums are no longer supported, since cross-module dependencies without
-            // re-compilation would cause the values to fail to "line up", so it's better to
-            // use the JumpVal option instead of the JumpInt option)
-            boolean fUseJumpInt = false;
-            int     cRange      = 0;
-            if (fValid && pintMin != null)
-                {
-                PackedInteger pintRange = pintMax.sub(pintMin);
-                if (!pintRange.isBig())
-                    {
-                    // the idea is that if we have ints from 100,000 to 100,100, and there are
-                    // 25+ of them, then we should go ahead and use the jump table optimization
-                    if (listVals.size() >= (pintRange.getLong() >>> 2))
-                        {
-                        cRange      = pintRange.getInt() + 1;
-                        fUseJumpInt = true;
-                        }
                     }
                 }
-
-            if (fUseJumpInt)
-                {
-                Label[] aLabels = new Label[cRange];
-                for (int i = 0; i < cVals; ++i)
-                    {
-                    Label    label     = listLabels.get(i);
-                    Constant constCase = listVals.get(i);
-                    int      nIndex    = constCase.getIntValue().sub(pintMin).getInt();
-
-                    aLabels[nIndex] = label;
-                    }
-
-                // fill in any gaps
-                for (int i = 0; i < cRange; ++i)
-                    {
-                    if (aLabels[i] == null)
-                        {
-                        assert labelDefault != null;
-                        aLabels[i] = labelDefault;
-                        }
-                    }
-
-                m_alabelCase = aLabels;
-                m_pintOffset = pintMin;
-                }
-            else
-                {
-                m_aconstCase = listVals  .toArray(new Constant[cVals]);
-                m_alabelCase = listLabels.toArray(new Label   [cVals]);
-                }
             }
 
-        m_labelDefault = labelDefault;
+        // notify the case manager that we're finished collecting everything
+        fValid &= mgr.validateEnd(ctxCase, errs);
 
+        // determine the result type of the switch expression
         TypeConstant[] atypeActual = collector.inferMulti(atypeRequired);
+
+        // determine the constant value of the switch expression
+        Constant[] aconstVal = null;
+        if (mgr.isSwitchConstant())
+            {
+            Expression exprResult = (Expression) mgr.getCookie(mgr.getSwitchConstantLabel());
+            aconstVal = exprResult.toConstants();
+            }
+
         return finishValidations(atypeRequired, atypeActual, fValid ? TypeFit.Fit : TypeFit.NoFit, aconstVal, errs);
-        }
-
-    private boolean collides(Constant constCase, boolean fSingleCond,
-            Set<Constant> setCase, ListMap<Constant, Long> mapWild, long lIgnore, long lRange)
-        {
-        if (!setCase.add(constCase))
-            {
-            return true;
-            }
-
-        for (Entry<Constant, Long> entry : mapWild.entrySet())
-            {
-            // TODO check wildcards .. _
-            }
-
-        if ((lIgnore | lRange) != 0L)
-            {
-            mapWild.put(constCase, lRange);
-            }
-
-        return false;
         }
 
     @Override
@@ -615,14 +225,15 @@ public class SwitchExpression
             else
                 {
                 // a scope will be required if the switch condition declares any new variables
-                if (m_fScope)
+                boolean fScope = m_casemgr.hasDeclarations();
+                if (fScope)
                     {
                     code.add(new Enter());
                     }
 
                 generateJumpSwitch(ctx, code, aLVal, errs);
 
-                if (m_fScope)
+                if (fScope)
                     {
                     code.add(new Exit());
                     }
@@ -651,7 +262,10 @@ public class SwitchExpression
                     }
                 }
             }
-        code.add(new Jump(m_labelDefault));
+
+        Label labelDefault = m_casemgr.getDefaultLabel();
+        assert labelDefault != null;
+        code.add(new Jump(labelDefault));
 
         Label labelCur  = null;
         Label labelExit = new Label("switch_end");
@@ -679,13 +293,13 @@ public class SwitchExpression
         {
         assert cond != null && !cond.isEmpty();
 
-        Label labelDefault = m_labelDefault;
+        Label labelDefault = m_casemgr.getDefaultLabel();
         if (labelDefault == null)
             {
             labelDefault = new Label("default_assert");
             }
 
-        Argument[] aArgVal  = new Argument[m_atypeCond.length];
+        Argument[] aArgVal  = new Argument[m_casemgr.getConditionCount()];
         int        ofArgVal = 0;
         for (AstNode node : cond)
             {
@@ -705,9 +319,12 @@ public class SwitchExpression
                 exprCond = (Expression) node;
                 }
 
-            if (m_aconstCase == null && (m_pintOffset != null || !exprCond.getType().isA(pool().typeInt())))
+            if (m_casemgr.usesJmpInt() && (!m_casemgr.getJmpIntOffset().equals(PackedInteger.ZERO)
+                    || !exprCond.getType().isA(pool().typeInt())))
                 {
-                exprCond = new ToIntExpression(exprCond, m_pintOffset, errs);
+                // either the offset is non-zero of the type is non-int; either way, convert it to a
+                // zero-based int
+                exprCond = new ToIntExpression(exprCond, m_casemgr.getJmpIntOffset(), errs);
                 }
 
             Argument[] aArgsAdd = exprCond.generateArguments(ctx, code, true, true, errs);
@@ -717,16 +334,18 @@ public class SwitchExpression
             }
         assert ofArgVal == aArgVal.length;
 
-        if (m_aconstCase == null)
+        Label[] alabelCase = m_casemgr.getCaseLabels();
+        if (m_casemgr.usesJmpInt())
             {
             assert cond.size() == 1 && aArgVal.length == 1;
-            code.add(new JumpInt(aArgVal[0], m_alabelCase, labelDefault));
+            code.add(new JumpInt(aArgVal[0], alabelCase, labelDefault));
             }
         else
             {
-            code.add(cond.size() == 1 // TODO && no wildcards && no intervals
-                    ? new JumpVal(aArgVal[0], m_aconstCase, m_alabelCase, labelDefault)
-                    : new JumpVal_N(aArgVal, m_aconstCase, m_alabelCase, labelDefault));
+            Constant[] aconstCase = m_casemgr.getCaseConstants();
+            code.add(m_casemgr.usesJmpValN()
+                    ? new JumpVal_N(aArgVal, aconstCase, alabelCase, labelDefault)
+                    : new JumpVal(aArgVal[0], aconstCase, alabelCase, labelDefault));
             }
 
         Label         labelCur  = null;
@@ -752,7 +371,7 @@ public class SwitchExpression
                 }
             }
 
-        if (labelDefault != m_labelDefault)
+        if (labelDefault != m_casemgr.getDefaultLabel())
             {
             // default is an assertion
             code.add(labelDefault);
@@ -823,13 +442,8 @@ public class SwitchExpression
     protected List<AstNode> contents;
     protected long          lEndPos;
 
-    private transient boolean        m_fScope;
-    private transient TypeConstant[] m_atypeCond;
-    private transient Constant[]     m_aconstCase;
-    private transient Label[]        m_alabelCase;
-    private transient Label          m_labelDefault;
-    private transient PackedInteger  m_pintOffset;
-    private transient boolean        m_fAborting;
+    private transient CaseManager m_casemgr;
+    private transient boolean     m_fAborting;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchExpression.class, "cond", "contents");
     }
