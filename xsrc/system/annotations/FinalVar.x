@@ -12,7 +12,7 @@ mixin FinalVar<RefType>
     @Override
     void set(RefType value)
         {
-        assert:always !assigned;
+        assert !assigned;
         super(value);
         }
     }

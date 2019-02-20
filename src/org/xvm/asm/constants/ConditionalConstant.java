@@ -340,7 +340,6 @@ public abstract class ConditionalConstant
      *
      * @return true iff this ConditionalConstant can calculate its terminal influence without
      *         resorting to brute force
-     *
      */
     protected boolean isTerminalInfluenceFinessable(boolean fInNot,
             Set<ConditionalConstant> setSimple, Set<ConditionalConstant> setComplex)

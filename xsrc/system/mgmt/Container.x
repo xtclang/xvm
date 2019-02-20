@@ -28,7 +28,7 @@ service Container
             @Override
             immutable Byte[] getModule(String name)
                 {
-                assert:always(name == moduleName);
+                assert(name == moduleName);
 
                 return moduleBytes;
                 }

@@ -6,7 +6,7 @@ const VarInt
     {
     construct(Bit[] bits)
         {
-        assert:always bits.size >= 8 && bits.size.bitCount == 1;
+        assert bits.size >= 8 && bits.size.bitCount == 1;
         this.bits = bits;
         }
 

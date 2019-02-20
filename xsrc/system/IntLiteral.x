@@ -25,7 +25,7 @@ const IntLiteral(String text)
     construct(String text)
         {
 /*  TODO: uncomment when the compiler is sufficiently complete
-        assert:always text.length > 0;
+        assert text.length > 0;
 
         // optional leading sign
         Int of = 0;
@@ -91,17 +91,17 @@ const IntLiteral(String text)
                 }
             else
                 {
-                assert:always ch == '_' && underscoreOk;
+                assert ch == '_' && underscoreOk;
                 continue;
                 }
 
-            assert:always nch < radix;
+            assert nch < radix;
             magnitude = magnitude * radix + nch.to<VarInt>();
             ++digits;
             underscoreOk = true;
             }
 
-        assert:always digits > 0;
+        assert digits > 0;
         this.magnitude = magnitude;
 */
         this.text = text;
@@ -179,7 +179,7 @@ const IntLiteral(String text)
     @RO Int minUIntBits.get()
         {
 // TODO review
-        assert:always explicitSign != Signum.Negative;
+        assert explicitSign != Signum.Negative;
 
         if (magnitude == 0)
             {
@@ -215,7 +215,7 @@ const IntLiteral(String text)
             return 0;
             }
 
-        assert:always magnitude == 1 && explicitSign != Signum.Negative;
+        assert magnitude == 1 && explicitSign != Signum.Negative;
         return 1;
         }
 

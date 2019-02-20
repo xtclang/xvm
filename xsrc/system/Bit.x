@@ -1,14 +1,13 @@
 const Bit
+    default(0)
     {
     construct(IntLiteral literal)
         {
-        assert:always literal == 0 || literal == 1;
+        assert literal == 0 || literal == 1;
         this.literal = literal;
         }
 
     private IntLiteral literal;
-
-    static Bit defaultValue = 0;        // TODO could this be an annotation on Bit?
 
     IntLiteral to<IntLiteral>()
         {
