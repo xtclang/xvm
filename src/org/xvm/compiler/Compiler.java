@@ -1090,6 +1090,10 @@ public class Compiler
      */
     public static final String VIRTUAL_CHILD_EXTENDS_MULTIPLE     = "COMPILER-115";
     /**
+     * The "case" statement has an illegal number of values.
+     */
+    public static final String SWITCH_CASE_ILLEGAL_ARITY          = "COMPILER-116";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";
