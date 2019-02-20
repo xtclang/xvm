@@ -1,20 +1,19 @@
 const Nibble
+    default(0)
     {
     construct(Bit[] bits)
         {
-        assert:always bits.size == 4;
+        assert bits.size == 4;
         this.bits = bits;
         }
 
     construct(Int n)
         {
-        assert:always n >= 0 && n <= 0xF;
+        assert n >= 0 && n <= 0xF;
         // TODO this. = ;
         }
 
     private Bit[] bits;
-
-    static Nibble defaultValue = 0;
 
     Char to<Char>()
         {

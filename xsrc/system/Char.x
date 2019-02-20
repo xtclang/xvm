@@ -4,7 +4,7 @@ const Char
     {
     construct(UInt32 codepoint)
         {
-        assert:always codepoint <= 0x10FFFF;
+        assert codepoint <= 0x10FFFF;
         this.codepoint = codepoint;
         }
 
@@ -32,7 +32,7 @@ const Char
      */
     Byte to<Byte>()
         {
-        assert:always codepoint <= 0x7f;
+        assert codepoint <= 0x7f;
         return codepoint.to<Byte>();
         }
 
@@ -76,7 +76,7 @@ const Char
         Int    length = calcUtf8Length();
         Byte[] bytes  = new Byte[length];
         Int    actual = formatUtf8(bytes, 0);
-        assert:always actual == length;
+        assert actual == length;
         return bytes.makeImmutable();
         }
 

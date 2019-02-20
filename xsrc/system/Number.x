@@ -150,7 +150,7 @@ interface Number
     Nibble[] to<Nibble[]>()
         {
         // make sure the bit length is at least 8, and also a power-of-two
-        assert:always Number.this.bitLength == (Number.this.bitLength & ~0x7).leftmostBit;
+        assert Number.this.bitLength == (Number.this.bitLength & ~0x7).leftmostBit;
 
         // unused
         class SequenceImpl(Number num)
@@ -171,7 +171,7 @@ interface Number
             @Override
             Nibble getElement(Int index)
                 {
-                assert:always index >= 0 && index < size;
+                assert index >= 0 && index < size;
 
                 // the nibble array is in the opposite (!!!) sequence of the bit array; bit 0 is
                 // the least significant (rightmost) bit, while nibble 0 is the leftmost nibble
@@ -202,7 +202,7 @@ interface Number
     immutable Byte[] bytes()
         {
         // make sure the bit length is at least 8, and also a power-of-two
-        assert:always bitLength == (bitLength & ~0x7).leftmostBit;
+        assert bitLength == (bitLength & ~0x7).leftmostBit;
 
         // not used
         class SequenceImpl(Number num)
@@ -217,7 +217,7 @@ interface Number
             @Override
             Byte getElement(Int index)
                 {
-                assert:always index >= 0 && index < size;
+                assert index >= 0 && index < size;
 
                 // the byte array is in the opposite (!!!) sequence of the bit array; bit 0 is
                 // the least significant (rightmost) bit, while byte 0 is the leftmost byte
