@@ -2,10 +2,10 @@ package org.xvm.runtime.template;
 
 import org.xvm.asm.ClassStructure;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
-import org.xvm.runtime.TypeComposition;
 
 
 /**
@@ -52,7 +52,7 @@ public abstract class xUnsignedConstrainedInt
         }
 
     @Override
-    public int callCompare(Frame frame, TypeComposition clazz,
+    public int callCompare(Frame frame, ClassComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         ObjectHandle.JavaLong h1 = (ObjectHandle.JavaLong) hValue1;

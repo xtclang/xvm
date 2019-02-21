@@ -13,8 +13,8 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.VarSupport;
 
 import org.xvm.runtime.template.xRef.RefHandle;
@@ -107,7 +107,7 @@ public class Var_DN
         int       iRet = iPC + 1;
         if (hRef == null)
             {
-            TypeComposition clz = frame.resolveClass(m_nType);
+            ClassComposition clz = frame.resolveClass(m_nType);
 
             hRef = ((VarSupport) clz.getSupport()).createRefHandle(clz, sName);
 

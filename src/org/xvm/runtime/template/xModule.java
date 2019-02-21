@@ -12,6 +12,7 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TypeComposition;
@@ -58,8 +59,8 @@ public class xModule
      */
     public ModuleHandle ensureModuleHandle(ModuleConstant constModule)
         {
-        TypeConstant    typeModule = constModule.getType();
-        TypeComposition clazz      = ensureClass(typeModule, typeModule);
+        TypeConstant     typeModule = constModule.getType();
+        ClassComposition clazz      = ensureClass(typeModule, typeModule);
 
         return f_mapModules.computeIfAbsent(constModule.getName(),
             sName -> new ModuleHandle(clazz, sName));

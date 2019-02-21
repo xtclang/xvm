@@ -7,10 +7,10 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IntConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
 
@@ -49,7 +49,7 @@ public class xBit
         }
 
     @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
+    public int callEquals(Frame frame, ClassComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         JavaLong h1 = (JavaLong) hValue1;
@@ -59,7 +59,7 @@ public class xBit
         }
 
     @Override
-    public int callCompare(Frame frame, TypeComposition clazz,
+    public int callCompare(Frame frame, ClassComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         JavaLong h1 = (JavaLong) hValue1;

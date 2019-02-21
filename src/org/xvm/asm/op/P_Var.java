@@ -111,15 +111,13 @@ public class P_Var
         {
         PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
 
-        RefHandle hRef = hTarget.getComposition().getTemplate().
-            createPropertyRef(frame.poolContext(), hTarget, constProperty, false);
-
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceResolvedVar(m_nRetValue, hRef.getType());
+            frame.introduceResolvedVar(m_nRetValue, constProperty.getRefType(null));
             }
 
-        return frame.assignValue(m_nRetValue, hRef, false);
+        return hTarget.getComposition().getTemplate().
+            createPropertyRef(frame, hTarget, constProperty, false, m_nRetValue);
         }
 
     @Override

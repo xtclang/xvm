@@ -139,11 +139,11 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Obtain the canonical TypeComposition for this template.
+     * Obtain the canonical ClassComposition for this template.
      */
-    public TypeComposition getCanonicalClass()
+    public ClassComposition getCanonicalClass()
         {
-        TypeComposition clz = m_clazzCanonical;
+        ClassComposition clz = m_clazzCanonical;
         if (clz == null)
             {
             m_clazzCanonical = clz = ensureCanonicalClass();
@@ -152,20 +152,20 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Ensure the canonical TypeComposition for this template.
+     * Ensure the canonical ClassComposition for this template.
      */
-    protected TypeComposition ensureCanonicalClass()
+    protected ClassComposition ensureCanonicalClass()
         {
         return ensureClass(getCanonicalType());
         }
 
     /**
-     * Produce a TypeComposition for this template using the actual types for formal parameters.
+     * Produce a ClassComposition for this template using the actual types for formal parameters.
      *
      * @param pool        the ConstantPool to place a potentially created new type into
      * @param typeParams  the type parameters
      */
-    public TypeComposition ensureParameterizedClass(ConstantPool pool, TypeConstant... typeParams)
+    public ClassComposition ensureParameterizedClass(ConstantPool pool, TypeConstant... typeParams)
         {
         TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
             getInceptionClassConstant().getType(), typeParams).normalizeParameters(pool);
@@ -176,12 +176,12 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Produce a TypeComposition using the specified actual type.
+     * Produce a ClassComposition using the specified actual type.
      *
      * Note: the passed type should be fully resolved and normalized
      *       (all formal parameters resolved)
      */
-    public TypeComposition ensureClass(TypeConstant typeActual)
+    public ClassComposition ensureClass(TypeConstant typeActual)
         {
         ClassConstant constInception = getInceptionClassConstant();
 
@@ -206,14 +206,14 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Produce a TypeComposition for this type using the specified actual (inception) type
+     * Produce a ClassComposition for this type using the specified actual (inception) type
      * and the revealed (mask) type.
      *
      * Note: the passed inception and mask types should be fully resolved and normalized
      *       (all formal parameters resolved)
      * Note2: the following should always hold true: typeInception.getOpSupport() == this;
      */
-    protected TypeComposition ensureClass(TypeConstant typeInception, TypeConstant typeMask)
+    protected ClassComposition ensureClass(TypeConstant typeInception, TypeConstant typeMask)
         {
         ConstantPool pool = typeInception.getConstantPool();
 
@@ -226,7 +226,7 @@ public abstract class ClassTemplate
             {
             OpSupport support = typeI.isAnnotated() ? typeI.getOpSupport(f_templates) : this;
 
-            return new TypeComposition(support, typeI, typeMask);
+            return new ClassComposition(support, typeI, typeMask);
             });
         }
 
@@ -383,7 +383,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
+    public int construct(Frame frame, MethodStructure constructor, ClassComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         ObjectHandle hStruct = createStruct(frame, clazz);
@@ -436,7 +436,7 @@ public abstract class ClassTemplate
             });
 
         MethodStructure methodID = clazz.ensureAutoInitializer();
-        if (methodID.isAbstract())
+        if (methodID == null)
             {
             return frame.call(frameCD);
             }
@@ -452,11 +452,11 @@ public abstract class ClassTemplate
      * Create an ObjectHandle of the "struct" access for the specified natural class.
      *
      * @param frame  the current frame
-     * @param clazz  the TypeComposition for the newly created handle
+     * @param clazz  the ClassComposition for the newly created handle
      *
      * @return the newly allocated handle
      */
-    protected ObjectHandle createStruct(Frame frame, TypeComposition clazz)
+    protected ObjectHandle createStruct(Frame frame, ClassComposition clazz)
         {
         assert clazz.getTemplate() == this &&
              (f_struct.getFormat() == Component.Format.CLASS ||
@@ -716,8 +716,7 @@ public abstract class ClassTemplate
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
 
         ObjectHandle hProp = ((GenericHandle) hTarget).getField(sPropName);
-        if (hProp instanceof RefHandle &&
-                hTarget.getPropertyInfo(sPropName).isRefAnnotated())
+        if (hProp instanceof RefHandle && hTarget.isRefAnnotated(sPropName))
             {
             switch (((RefHandle) hProp).ensureInitialized(frame))
                 {
@@ -761,14 +760,14 @@ public abstract class ClassTemplate
         GenericHandle hThis = (GenericHandle) hTarget;
         ObjectHandle hValue = hThis.getField(sPropName);
 
-        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-
         if (hValue == null)
             {
             String sErr;
-            if (info.isInjected())
+            if (hThis.isInjected(sPropName))
                 {
-                hValue = frame.f_context.f_container.getInjectable(sPropName, info.getType());
+                TypeInfo     info = hThis.getType().ensureTypeInfo();
+                PropertyInfo prop = info.findProperty(sPropName);
+                hValue = frame.f_context.f_container.getInjectable(sPropName, prop.getType());
                 if (hValue != null)
                     {
                     hThis.setField(sPropName, hValue);
@@ -785,7 +784,7 @@ public abstract class ClassTemplate
             return frame.raiseException(xException.makeHandle(sErr + sPropName + '"'));
             }
 
-        if (info.isRefAnnotated())
+        if (hTarget.isRefAnnotated(sPropName))
             {
             RefHandle hRef = (RefHandle) hValue;
             switch (hRef.ensureInitialized(frame))
@@ -861,7 +860,7 @@ public abstract class ClassTemplate
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
         ahVar[0] = hValue;
 
-        if (hTarget.getPropertyInfo(sPropName).isRefAnnotated())
+        if (hTarget.isRefAnnotated(sPropName))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle hRef = (RefHandle) hThis.getField(sPropName);
@@ -911,7 +910,7 @@ public abstract class ClassTemplate
 
         assert hThis.containsField(sPropName);
 
-        if (hThis.getPropertyInfo(sPropName).isRefAnnotated())
+        if (hThis.isRefAnnotated(sPropName))
             {
             RefHandle hRef = (RefHandle) hThis.getField(sPropName);
             switch (hRef.ensureInitialized(frame))
@@ -950,9 +949,9 @@ public abstract class ClassTemplate
      */
     protected int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
-        if (hTarget.getComposition().containsGenericParam(sPropName))
+        if (hTarget.getType().containsGenericParam(sPropName))
             {
-            TypeConstant type = hTarget.getComposition().getActualParamType(sPropName);
+            TypeConstant type = hTarget.getType().getGenericParamType(sPropName);
 
             return frame.assignValue(iReturn, type.getTypeHandle());
             }
@@ -989,8 +988,7 @@ public abstract class ClassTemplate
      */
     public int invokePreInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
-        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info.isRefAnnotated())
+        if (hTarget.isRefAnnotated(sPropName))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle hRef = (RefHandle) hThis.getField(sPropName);
@@ -1013,8 +1011,7 @@ public abstract class ClassTemplate
      */
     public int invokePostInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
-        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info.isRefAnnotated())
+        if (hTarget.isRefAnnotated(sPropName))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle hRef = (RefHandle) hThis.getField(sPropName);
@@ -1037,8 +1034,7 @@ public abstract class ClassTemplate
      */
     public int invokePreDec(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
-        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info.isRefAnnotated())
+        if (hTarget.isRefAnnotated(sPropName))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle hRef = (RefHandle) hThis.getField(sPropName);
@@ -1061,8 +1057,7 @@ public abstract class ClassTemplate
      */
     public int invokePostDec(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
-        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info.isRefAnnotated())
+        if (hTarget.isRefAnnotated(sPropName))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle hRef = (RefHandle) hThis.getField(sPropName);
@@ -1085,8 +1080,7 @@ public abstract class ClassTemplate
      */
     public int invokePropertyAdd(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
         {
-        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info.isRefAnnotated())
+        if (hTarget.isRefAnnotated(sPropName))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
@@ -1110,8 +1104,7 @@ public abstract class ClassTemplate
      */
     public int invokePropertySub(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
         {
-        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info.isRefAnnotated())
+        if (hTarget.isRefAnnotated(sPropName))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
@@ -1135,8 +1128,7 @@ public abstract class ClassTemplate
      */
     public int invokePropertyMul(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
         {
-        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info.isRefAnnotated())
+        if (hTarget.isRefAnnotated(sPropName))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
@@ -1160,8 +1152,7 @@ public abstract class ClassTemplate
      */
     public int invokePropertyDiv(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
         {
-        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info.isRefAnnotated())
+        if (hTarget.isRefAnnotated(sPropName))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
@@ -1185,8 +1176,7 @@ public abstract class ClassTemplate
      */
     public int invokePropertyMod(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
         {
-        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info.isRefAnnotated())
+        if (hTarget.isRefAnnotated(sPropName))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
@@ -1210,8 +1200,7 @@ public abstract class ClassTemplate
      */
     public int invokePropertyShl(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
         {
-        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info.isRefAnnotated())
+        if (hTarget.isRefAnnotated(sPropName))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
@@ -1235,8 +1224,7 @@ public abstract class ClassTemplate
      */
     public int invokePropertyShr(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
         {
-        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info.isRefAnnotated())
+        if (hTarget.isRefAnnotated(sPropName))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
@@ -1260,8 +1248,7 @@ public abstract class ClassTemplate
      */
     public int invokePropertyShrAll(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
         {
-        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info.isRefAnnotated())
+        if (hTarget.isRefAnnotated(sPropName))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
@@ -1285,8 +1272,7 @@ public abstract class ClassTemplate
      */
     public int invokePropertyAnd(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
         {
-        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info.isRefAnnotated())
+        if (hTarget.isRefAnnotated(sPropName))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
@@ -1310,8 +1296,7 @@ public abstract class ClassTemplate
      */
     public int invokePropertyOr(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
         {
-        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info.isRefAnnotated())
+        if (hTarget.isRefAnnotated(sPropName))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
@@ -1335,8 +1320,7 @@ public abstract class ClassTemplate
      */
     public int invokePropertyXor(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
         {
-        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info.isRefAnnotated())
+        if (hTarget.isRefAnnotated(sPropName))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
@@ -1353,15 +1337,16 @@ public abstract class ClassTemplate
     /**
      * Create a property Ref or Var for the specified target and property.
      *
-     * @param pool       the ConstantPool to place a potentially created new type into
+     * @param frame       the ConstantPool to place a potentially created new type into
      * @param hTarget    the target handle
      * @param constProp  the property constant
-     * @param fRO        true if the
+     * @param fRO        true iff a Ref is required; Var otherwise
+     * @param iReturn    the register to place the result in
      *
-     * @return the corresponding {@link RefHandle}
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      */
-    public RefHandle createPropertyRef(ConstantPool pool, ObjectHandle hTarget,
-                                       PropertyConstant constProp, boolean fRO)
+    public int createPropertyRef(Frame frame, ObjectHandle hTarget,
+                                       PropertyConstant constProp, boolean fRO, int iReturn)
         {
         GenericHandle hThis = (GenericHandle) hTarget;
 
@@ -1371,19 +1356,37 @@ public abstract class ClassTemplate
             throw new IllegalStateException("Unknown property: (" + f_sName + ")." + constProp);
             }
 
-        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info.isRefAnnotated())
+        if (hTarget.isRefAnnotated(sPropName))
             {
-            return ((RefHandle) hThis.getField(sPropName));
+            RefHandle hRef = (RefHandle) hThis.getField(sPropName);
+            switch (hRef.ensureInitialized(frame))
+                {
+                case Op.R_NEXT:
+                    break;
+
+                case Op.R_CALL:
+                    frame.m_frameNext.setContinuation(frameCaller ->
+                        frameCaller.assignValue(iReturn, hRef, false));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            return frame.assignValue(iReturn, hRef, false);
             }
 
+        ConstantPool pool         = frame.poolContext();
         TypeConstant typeReferent = constProp.getType().resolveGenerics(pool, hTarget.getType());
 
-        TypeComposition clzRef = fRO
+        ClassComposition clzRef = fRO
             ? xRef.INSTANCE.ensureParameterizedClass(pool, typeReferent)
             : xVar.INSTANCE.ensureParameterizedClass(pool, typeReferent);
 
-        return new RefHandle(clzRef, hThis, sPropName);
+        RefHandle hRef = new RefHandle(clzRef, hThis, sPropName);
+        return frame.assignValue(iReturn, hRef, false);
         }
 
     // ----- support for equality and comparison ---------------------------------------------------
@@ -1392,6 +1395,7 @@ public abstract class ClassTemplate
      * Compare for equality two object handles that both belong to the specified class.
      *
      * @param frame    the current frame
+     * @param clazz    the class to use for the equality check
      * @param hValue1  the first value
      * @param hValue2  the second value
      * @param iReturn  the register id to place a Boolean result into
@@ -1399,7 +1403,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int callEquals(Frame frame, TypeComposition clazz,
+    public int callEquals(Frame frame, ClassComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         if (hValue1 == hValue2)
@@ -1426,6 +1430,7 @@ public abstract class ClassTemplate
      * Compare for order two object handles that both belong to the specified class.
      *
      * @param frame    the current frame
+     * @param clazz    the class to use for the comparison test
      * @param hValue1  the first value
      * @param hValue2  the second value
      * @param iReturn  the register id to place an Ordered result into
@@ -1433,8 +1438,8 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int callCompare(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+    public int callCompare(Frame frame, ClassComposition clazz,
+                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // if there is an "compare" function, we need to call it
         TypeConstant    type            = clazz.getType();
@@ -1733,10 +1738,10 @@ public abstract class ClassTemplate
     /**
      * Canonical type composition.
      */
-    protected TypeComposition m_clazzCanonical;
+    protected ClassComposition m_clazzCanonical;
 
     /**
-     * A cache of "instantiate-able" TypeCompositions keyed by the "inception type". Most of the
+     * A cache of "instantiate-able" ClassCompositions keyed by the "inception type". Most of the
      * time the revealed type is identical to the inception type and is defined by a
      * {@link ClassConstant} referring to a concrete natural class (not an interface).
      *
@@ -1745,10 +1750,10 @@ public abstract class ClassTemplate
      * revealed type refers to the corresponding natural interface.
      *
      * We assume that for a given template, there will never be two instantiate-able classes with
-     * the same inception type, but different revealed type. OTOH, the TypeComposition may
+     * the same inception type, but different revealed type. OTOH, the ClassComposition may
      * hide (or mask) its original identity via the {@link TypeComposition#maskAs(TypeConstant)}
      * operation and later reveal it back. All those transformations are handled by the
-     * TypeComposition itself and are not known or controllable by the ClassTemplate.
+     * ClassComposition itself and are not known or controllable by the ClassTemplate.
      */
-    private Map<TypeConstant, TypeComposition> m_mapCompositions = new ConcurrentHashMap<>();
+    private Map<TypeConstant, ClassComposition> m_mapCompositions = new ConcurrentHashMap<>();
     }

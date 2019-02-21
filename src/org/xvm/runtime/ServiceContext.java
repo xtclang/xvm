@@ -448,7 +448,7 @@ public class ServiceContext
 
     // send and asynchronous "construct service" message to this context
     public CompletableFuture<ServiceHandle> sendConstructRequest(Frame frameCaller,
-                MethodStructure constructor, TypeComposition clazz, ObjectHandle[] ahArg)
+                MethodStructure constructor, ClassComposition clazz, ObjectHandle[] ahArg)
         {
         CompletableFuture<ServiceHandle> future = new CompletableFuture<>();
 
@@ -641,11 +641,11 @@ public class ServiceContext
             extends Message
         {
         private final MethodStructure f_constructor;
-        private final TypeComposition f_clazz;
+        private final ClassComposition f_clazz;
         private final ObjectHandle[] f_ahArg;
         private final CompletableFuture<ServiceHandle> f_future;
 
-        public ConstructRequest(Frame frameCaller, MethodStructure constructor, TypeComposition clazz,
+        public ConstructRequest(Frame frameCaller, MethodStructure constructor, ClassComposition clazz,
                                 CompletableFuture<ServiceHandle> future, ObjectHandle[] ahArg)
             {
             super(frameCaller);

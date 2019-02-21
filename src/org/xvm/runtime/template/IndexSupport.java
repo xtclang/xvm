@@ -7,10 +7,10 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xRef.IndexedRefHandle;
 
@@ -71,7 +71,7 @@ public interface IndexSupport
             {
             TypeConstant typeEl = getElementType(hTarget, lIndex);
 
-            TypeComposition clzRef = fReadOnly
+            ClassComposition clzRef = fReadOnly
                 ? xRef.INSTANCE.ensureParameterizedClass(frame.poolContext(), typeEl)
                 : xVar.INSTANCE.ensureParameterizedClass(frame.poolContext(), typeEl);
 

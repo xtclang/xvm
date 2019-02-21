@@ -14,6 +14,7 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -114,7 +115,7 @@ public class xTuple
         }
 
     @Override
-    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
+    public int construct(Frame frame, MethodStructure constructor, ClassComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         ObjectHandle hSequence = ahVar[0];

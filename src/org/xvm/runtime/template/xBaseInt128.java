@@ -9,6 +9,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -431,7 +432,7 @@ public abstract class xBaseInt128
     // ----- comparison support -----
 
     @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
+    public int callEquals(Frame frame, ClassComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         LongLongHandle h1 = (LongLongHandle) hValue1;
@@ -441,7 +442,7 @@ public abstract class xBaseInt128
         }
 
     @Override
-    public int callCompare(Frame frame, TypeComposition clazz,
+    public int callCompare(Frame frame, ClassComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         LongLongHandle h1 = (LongLongHandle) hValue1;

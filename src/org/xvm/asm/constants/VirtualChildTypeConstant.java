@@ -19,7 +19,6 @@ import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 
 import org.xvm.runtime.OpSupport;
@@ -53,7 +52,7 @@ import static org.xvm.util.Handy.writePackedLong;
  *      where T3 is TerminalTypeConstant(Parent)
  */
 public class VirtualChildTypeConstant
-        extends TypeConstant
+        extends AbstractDependantTypeConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -69,10 +68,9 @@ public class VirtualChildTypeConstant
     public VirtualChildTypeConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
-        super(pool);
+        super(pool, format, in);
 
-        m_iTypeParent = readIndex(in);
-        m_iName       = readIndex(in);
+        m_iName = readIndex(in);
         }
 
     /**
@@ -84,14 +82,7 @@ public class VirtualChildTypeConstant
      */
     public VirtualChildTypeConstant(ConstantPool pool, TypeConstant typeParent, String sName)
         {
-        super(pool);
-
-        if (typeParent == null)
-            {
-            throw new IllegalArgumentException("parent type is required");
-            }
-
-        typeParent = typeParent.resolveTypedefs();
+        super(pool, typeParent);
 
         if (typeParent.isAccessSpecified() ||
             typeParent.isImmutabilitySpecified() ||
@@ -101,11 +92,9 @@ public class VirtualChildTypeConstant
             }
         if (sName == null)
             {
-            throw new IllegalArgumentException("child name is required");
+            throw new IllegalArgumentException("name is required");
             }
-
-        m_typeParent = typeParent;
-        m_constName  = pool.ensureStringConstant(sName);
+        m_constName = pool.ensureStringConstant(sName);
         }
 
     /**
@@ -135,47 +124,11 @@ public class VirtualChildTypeConstant
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    public boolean isImmutabilitySpecified()
-        {
-        return false;
-        }
-
-    @Override
-    public boolean isImmutable()
-        {
-        return false;
-        }
-
-    @Override
-    public boolean isAccessSpecified()
-        {
-        return false;
-        }
-
-    @Override
-    public Access getAccess()
-        {
-        return Access.PUBLIC;
-        }
-
-    @Override
-    public boolean isParamsSpecified()
-        {
-        return false;
-        }
-
-    @Override
     public int getMaxParamsCount()
         {
         ClassConstant  constClz = (ClassConstant) getDefiningConstant();
         ClassStructure clz      = (ClassStructure) constClz.getComponent();
         return clz.getTypeParams().size();
-        }
-
-    @Override
-    public boolean isAnnotated()
-        {
-        return false;
         }
 
     @Override
@@ -197,18 +150,6 @@ public class VirtualChildTypeConstant
         ClassStructure parent = (ClassStructure)
                 typeParent.getSingleUnderlyingClass(true).getComponent();
         return parent.getChild(getChildName()) == null;
-        }
-
-    @Override
-    public TypeConstant getParentType()
-        {
-        return m_typeParent;
-        }
-
-    @Override
-    public boolean isSingleDefiningConstant()
-        {
-        return true;
         }
 
     @Override
@@ -244,12 +185,6 @@ public class VirtualChildTypeConstant
         return typeOriginal == typeResolved
                 ? this
                 : getConstantPool().ensureVirtualChildTypeConstant(typeResolved, m_constName.getValue());
-        }
-
-    @Override
-    public void bindTypeParameters(MethodConstant idMethod)
-        {
-        // not applicable
         }
 
     @Override
@@ -321,24 +256,6 @@ public class VirtualChildTypeConstant
         }
 
     @Override
-    public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName)
-        {
-        return null;
-        }
-
-    @Override
-    public boolean isTuple()
-        {
-        return false;
-        }
-
-    @Override
-    public boolean isOnlyNullable()
-        {
-        return false;
-        }
-
-    @Override
     public boolean extendsClass(IdentityConstant constClass)
         {
         ClassConstant idClass = (ClassConstant) getDefiningConstant();
@@ -381,61 +298,6 @@ public class VirtualChildTypeConstant
         }
 
     @Override
-    public TypeConstant getExplicitClassInto()
-        {
-        throw new IllegalStateException();
-        }
-
-    @Override
-    public boolean isIntoClassType()
-        {
-        return false;
-        }
-
-    @Override
-    public boolean isIntoPropertyType()
-        {
-        return false;
-        }
-
-    @Override
-    public TypeConstant getIntoPropertyType()
-        {
-        return null;
-        }
-
-    @Override
-    public boolean isIntoMethodType()
-        {
-        return false;
-        }
-
-    @Override
-    public boolean isIntoVariableType()
-        {
-        return false;
-        }
-
-    @Override
-    public TypeConstant getIntoVariableType()
-        {
-        return null;
-        }
-
-    @Override
-    public boolean isConstant()
-        {
-        return false;
-        }
-
-    @Override
-    public boolean isTypeOfType()
-        {
-        return false;
-        }
-
-
-    @Override
     public boolean containsGenericParam(String sName)
         {
         if (m_typeParent.containsGenericParam(sName))
@@ -460,18 +322,6 @@ public class VirtualChildTypeConstant
         ClassStructure clz = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
 
         return clz.getGenericParamType(getConstantPool(), sName, Collections.EMPTY_LIST);
-        }
-
-    @Override
-    public TypeConstant getOuterType()
-        {
-        return m_typeParent;
-        }
-
-    @Override
-    protected TypeInfo buildTypeInfo(ErrorListener errs)
-        {
-        return super.buildTypeInfo(errs);
         }
 
 
@@ -566,9 +416,6 @@ public class VirtualChildTypeConstant
         }
 
 
-    // ----- type comparison support ---------------------------------------------------------------
-
-
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override
@@ -587,26 +434,21 @@ public class VirtualChildTypeConstant
         }
 
     @Override
-    public boolean containsUnresolved()
-        {
-        return m_typeParent.containsUnresolved();
-        }
-
-    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
-        visitor.accept(m_typeParent);
+        super.forEachUnderlying(visitor);
+
         visitor.accept(m_constName);
         }
 
     @Override
     protected int compareDetails(Constant obj)
         {
-        VirtualChildTypeConstant that = (VirtualChildTypeConstant) obj;
-        int n = this.m_typeParent.compareTo(that.m_typeParent);
+        int n = super.compareDetails(obj);
         if (n == 0)
             {
-            n = this.m_constName.compareTo(that.m_constName);
+            VirtualChildTypeConstant that = (VirtualChildTypeConstant) obj;
+            return this.m_constName.compareTo(that.m_constName);
             }
         return n;
         }
@@ -624,23 +466,25 @@ public class VirtualChildTypeConstant
     protected void disassemble(DataInput in)
             throws IOException
         {
-        m_typeParent = (TypeConstant) getConstantPool().getConstant(m_iTypeParent);
-        m_constName  = (StringConstant) getConstantPool().getConstant(m_iName);
+        super.disassemble(in);
+
+        m_constName = (StringConstant) getConstantPool().getConstant(m_iName);
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_typeParent = (TypeConstant) pool.register(m_typeParent);
-        m_constName  = (StringConstant) pool.register(m_constName);
+        super.registerConstants(pool);
+
+        m_constName = (StringConstant) pool.register(m_constName);
         }
 
     @Override
     protected void assemble(DataOutput out)
             throws IOException
         {
-        out.writeByte(getFormat().ordinal());
-        writePackedLong(out, m_typeParent.getPosition());
+        super.assemble(out);
+
         writePackedLong(out, m_constName.getPosition());
         }
 
@@ -657,22 +501,12 @@ public class VirtualChildTypeConstant
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * During disassembly, this holds the index of the underlying TypeConstant.
-     */
-    private transient int m_iTypeParent;
-
-    /**
      * During disassembly, this holds the index of the StringConstant for the name.
      */
     private transient int m_iName;
 
     /**
-     * The parent's TypeConstant.
+     * The StringConstant representing this virtual child's name.
      */
-    private TypeConstant m_typeParent;
-
-    /**
-     * The ChildClassConstant representing this child type.
-     */
-    private StringConstant m_constName;
+    protected StringConstant m_constName;
     }

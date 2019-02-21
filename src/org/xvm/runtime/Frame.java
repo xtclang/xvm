@@ -767,7 +767,7 @@ public class Frame
      */
     public int assignTuple(int nVar, ObjectHandle[] ahValue)
         {
-        TypeComposition clazz = ensureClass(getVarInfo(nVar).getType());
+        ClassComposition clazz = ensureClass(getVarInfo(nVar).getType());
 
         return assignValue(nVar, xTuple.makeHandle(clazz, ahValue), false);
         }
@@ -864,7 +864,7 @@ public class Frame
 
         int iReturn = f_aiReturn[0];
 
-        TypeComposition clazz = ensureClass(f_framePrev.getVarInfo(iReturn).getType());
+        ClassComposition clazz = ensureClass(f_framePrev.getVarInfo(iReturn).getType());
         return returnValue(iReturn, xTuple.makeHandle(clazz, ahValue), false);
         }
 
@@ -1070,12 +1070,12 @@ public class Frame
         return info.getType().getParamTypesArray()[0];
         }
 
-    public TypeComposition resolveClass(int iArg)
+    public ClassComposition resolveClass(int iArg)
         {
         return ensureClass(resolveType(iArg));
         }
 
-    public TypeComposition ensureClass(TypeConstant type)
+    public ClassComposition ensureClass(TypeConstant type)
         {
         return f_context.f_templates.resolveClass(type);
         }
@@ -1741,8 +1741,8 @@ public class Frame
 
             for (int iCatch = 0, c = f_anClassConstId.length; iCatch < c; iCatch++)
                 {
-                TypeComposition clzCatch = frame.resolveClass(f_anClassConstId[iCatch]);
-                if (clzException.isA(clzCatch))
+                ClassComposition clzCatch = frame.resolveClass(f_anClassConstId[iCatch]);
+                if (clzException.getType().isA(clzCatch.getType()))
                     {
                     introduceException(frame, iGuard, hException,
                         frame.getString(f_anNameConstId[iCatch]));

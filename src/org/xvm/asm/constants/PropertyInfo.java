@@ -1001,11 +1001,15 @@ public class PropertyInfo
         }
 
     /**
-     * @return the TypeConstant representing the data type of the "box" (Ref/Var)
+     * Obtain the TypeConstant representing the data type of the "box" (Ref/Var).
+     * <p/>
+     * Note, that unlike the {@link PropertyConstant#getRefType}, this method returns the base
+     * Ref type even for "custom" properties.
+     *
+     * @return the underlying Ref type
      */
     public TypeConstant getRefType()
         {
-        // TODO cp - may need a TypeConstant for the specific type of the property
         TypeConstant typeProp = getType();
         ConstantPool pool     = pool();
 

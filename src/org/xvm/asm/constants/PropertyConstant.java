@@ -133,19 +133,18 @@ public class PropertyConstant
     @Override
     public TypeConstant getRefType(TypeConstant typeTarget)
         {
-        // this is not correct, but it is close;
-        // TODO what we really need is a type that points at the prop itself as if it were a class
-        // REVIEW GG
         if (typeTarget == null)
             {
             typeTarget = getClassIdentity().getType();
             }
 
-        TypeInfo     infoClz  = typeTarget.ensureTypeInfo();
-        PropertyInfo infoThis = infoClz.findProperty(this);
-        ConstantPool pool     = getConstantPool();
-        return pool.ensureParameterizedTypeConstant(
-                infoThis.isVar() ? pool.typeVar() : pool.typeRef(), getType());
+        PropertyInfo infoThis = typeTarget.ensureTypeInfo().findProperty(this);
+
+        assert infoThis != null;
+
+        return infoThis.isCustomLogic()
+                ? getConstantPool().ensurePropertyClassTypeConstant(typeTarget, this)
+                : infoThis.getRefType();
         }
 
     @Override

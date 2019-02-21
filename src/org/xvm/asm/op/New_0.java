@@ -13,10 +13,10 @@ import org.xvm.asm.OpCallable;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TypeComposition;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -82,9 +82,9 @@ public class New_0
 
         ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
 
-        IdentityConstant constClz = constructor.getParent().getParent().getIdentityConstant();
-        ClassTemplate template = frame.ensureTemplate(constClz);
-        TypeComposition clzTarget = template.getCanonicalClass();
+        IdentityConstant constClz  = constructor.getParent().getParent().getIdentityConstant();
+        ClassTemplate    template  = frame.ensureTemplate(constClz);
+        ClassComposition clzTarget = template.getCanonicalClass();
 
         if (frame.isNextRegister(m_nRetValue))
             {

@@ -12,6 +12,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -42,8 +43,8 @@ public class xConst
 
     public static MethodStructure FN_ESTIMATE_LENGTH;
     public static MethodStructure FN_APPEND_TO;
-    public static TypeComposition CLZ_STRINGS;
-    public static TypeComposition CLZ_OBJECTS;
+    public static ClassComposition CLZ_STRINGS;
+    public static ClassComposition CLZ_OBJECTS;
 
     public xConst(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -128,7 +129,7 @@ public class xConst
         }
 
     @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
+    public int callEquals(Frame frame, ClassComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // if there is an "equals" function that is not native (on the Const itself),
@@ -142,12 +143,18 @@ public class xConst
 
         assert (f_struct.getFormat() == Component.Format.CONST);
 
+        // default "equals" implementation takes the actual type into the account
+        if (!hValue1.getType().equals(hValue2.getType()))
+            {
+            return frame.assignValue(iReturn, xBoolean.FALSE);
+            }
+
         return new Equals((GenericHandle) hValue1, (GenericHandle) hValue2,
             clazz.getFieldNames().iterator(), iReturn).doNext(frame);
         }
 
     @Override
-    public int callCompare(Frame frame, TypeComposition clazz,
+    public int callCompare(Frame frame, ClassComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // if there is an "compare" function, we need to call it
@@ -159,6 +166,14 @@ public class xConst
             }
 
         assert (f_struct.getFormat() == Component.Format.CONST);
+
+        // default "equals" implementation takes the actual type into the account
+        if (!hValue1.getType().equals(hValue2.getType()))
+            {
+            // use the string comparison for consistency
+            return frame.assignValue(iReturn, xOrdered.makeHandle(
+                hValue1.getType().getValueString().compareTo(hValue2.getType().getValueString())));
+            }
 
         return new Compare((GenericHandle) hValue1, (GenericHandle) hValue2,
             clazz.getFieldNames().iterator(), iReturn).doNext(frame);

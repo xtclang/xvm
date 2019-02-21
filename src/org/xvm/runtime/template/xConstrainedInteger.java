@@ -10,12 +10,12 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
-import org.xvm.runtime.TypeComposition;
 
 
 /**
@@ -422,7 +422,7 @@ public abstract class xConstrainedInteger
     // ----- comparison support -----
 
     @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
+    public int callEquals(Frame frame, ClassComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         JavaLong h1 = (JavaLong) hValue1;
@@ -432,7 +432,7 @@ public abstract class xConstrainedInteger
         }
 
     @Override
-    public int callCompare(Frame frame, TypeComposition clazz,
+    public int callCompare(Frame frame, ClassComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         JavaLong h1 = (JavaLong) hValue1;

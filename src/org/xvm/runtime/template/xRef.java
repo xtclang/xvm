@@ -8,6 +8,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -231,7 +232,7 @@ public class xRef
         }
 
     @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
+    public int callEquals(Frame frame, ClassComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         RefHandle hRef1 = (RefHandle) hValue1;
@@ -503,7 +504,7 @@ public class xRef
             m_fInit = true;
 
             MethodStructure methodInit = getComposition().ensureAutoInitializer();
-            if (methodInit.isAbstract())
+            if (methodInit == null)
                 {
                 return Op.R_NEXT;
                 }

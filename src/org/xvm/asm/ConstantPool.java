@@ -1493,7 +1493,7 @@ public class ConstantPool
         }
 
     /**
-     * Given the specified type, obtain a TypeConstant representing a virtual child of that type.
+     * Given the specified type and name, obtain a TypeConstant representing a virtual child.
      *
      * @param constParent  the parent's TypeConstant (can be parameterized)
      * @param sName        the child name
@@ -1503,6 +1503,19 @@ public class ConstantPool
     public TypeConstant ensureVirtualChildTypeConstant(TypeConstant constParent, String sName)
         {
         return (TypeConstant) register(new VirtualChildTypeConstant(this, constParent, sName));
+        }
+
+    /**
+     * Given the specified type and property, obtain a TypeConstant representing a property class.
+     *
+     * @param constParent  the parent's TypeConstant (can be parameterized)
+     * @param idProp       the property id
+     *
+     * @return the TypeConstant of the instance child type
+     */
+    public TypeConstant ensurePropertyClassTypeConstant(TypeConstant constParent, PropertyConstant idProp)
+        {
+        return (TypeConstant) register(new PropertyClassTypeConstant(this, constParent, idProp));
         }
 
     /**

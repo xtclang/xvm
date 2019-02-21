@@ -711,6 +711,14 @@ public class TypeInfo
         }
 
     /**
+     * @return virtual properties keyed by nested id
+     */
+    public Map<Object, PropertyInfo> getVirtProperties()
+        {
+        return m_mapVirtProps;
+        }
+
+    /**
      * @return all of the properties for this type that can be identified by a simple name, indexed
      *         by that name
      */
@@ -920,6 +928,14 @@ public class TypeInfo
     public Map<MethodConstant, MethodInfo> getMethods()
         {
         return m_mapMethods;
+        }
+
+    /**
+     * @return virtual methods keyed by nested id
+     */
+    public Map<Object, MethodInfo> getVirtMethods()
+        {
+        return m_mapVirtMethods;
         }
 
     // TODO this should be the "virt map" from Object to MethodInfo

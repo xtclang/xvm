@@ -228,11 +228,148 @@ public class AnnotatedTypeConstant
             m_annotation.getParams(), type);
         }
 
-    @Override
-    protected TypeInfo buildTypeInfo(ErrorListener errs)
+    /**
+     * Create a TypeInfo for the private access type of this type.
+     *
+     * @param errs  the error list to log any errors to
+     *
+     * @return a new TypeInfo representing this annotated type
+     */
+    TypeInfo buildPrivateInfo(ErrorListener errs)
         {
-        // TODO
-        return super.buildTypeInfo(errs);
+        // this can only be called from TypeConstant.buildTypeInfoImpl()
+        assert getAccess() == Access.PUBLIC;
+
+        ConstantPool pool = getConstantPool();
+
+        TypeConstant typeThis    = pool.ensureAccessTypeConstant(this, Access.PRIVATE);
+        TypeConstant typeAnno    = getAnnotationType();
+        TypeConstant typePrivate = pool.ensureAccessTypeConstant(typeAnno, Access.PRIVATE);
+        TypeInfo     infoAnno    = typePrivate.ensureTypeInfoInternal(errs);
+        if (infoAnno == null)
+            {
+            return null;
+            }
+
+        TypeInfo infoBase = m_constType.ensureTypeInfoInternal(errs);
+        if (infoBase == null)
+            {
+            return null;
+            }
+
+        IdentityConstant constId;
+        ClassStructure   struct;
+        try
+            {
+            constId = (IdentityConstant) typeAnno.getDefiningConstant();
+            struct  = (ClassStructure)   constId.getComponent();
+            }
+        catch (RuntimeException e)
+            {
+            throw new IllegalStateException("Unable to determine class for " + getValueString(), e);
+            }
+
+        // merge the private view of the annotation on top if the specified view of the underlying type
+        Map<PropertyConstant, PropertyInfo> mapAnnoProps   = infoAnno.getProperties();
+        Map<MethodConstant  , MethodInfo  > mapAnnoMethods = infoAnno.getMethods();
+        Map<Object          , ParamInfo   > mapAnnoParams  = infoAnno.getTypeParams();
+
+        Map<PropertyConstant, PropertyInfo> mapProps       = new HashMap<>(infoBase.getProperties());
+        Map<MethodConstant  , MethodInfo  > mapMethods     = new HashMap<>(infoBase.getMethods());
+        Map<Object          , PropertyInfo> mapVirtProps   = new HashMap<>(infoBase.getVirtProperties());
+        Map<Object          , MethodInfo  > mapVirtMethods = new HashMap<>(infoBase.getVirtMethods());
+
+        for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapAnnoProps.entrySet())
+            {
+            layerOnProp(pool, mapProps, mapVirtProps, entry.getKey(), entry.getValue(), errs);
+            }
+
+        for (Map.Entry<MethodConstant, MethodInfo> entry : mapAnnoMethods.entrySet())
+            {
+            layerOnMethod(pool, mapMethods, mapVirtMethods, entry.getKey(), entry.getValue(), errs);
+            }
+
+        return new TypeInfo(typeThis, struct, 0, false, mapAnnoParams, Annotation.NO_ANNOTATIONS,
+                infoAnno.getExtends(), infoAnno.getRebases(), infoAnno.getInto(),
+                infoAnno.getContributionList(), infoAnno.getClassChain(), infoAnno.getDefaultChain(),
+                mapProps, mapMethods, mapVirtProps, mapVirtMethods,
+                TypeInfo.Progress.Complete);
+        }
+
+    /**
+     * Layer on the passed annotation (mixin) property contributions onto the base properties.
+     *
+     * @param pool          the constant pool to use
+     * @param mapProps      properties already collected from the base
+     * @param mapVirtProps  virtual properties already collected from the base
+     * @param idAnno        the identity of the property at the annotation (mixin)
+     * @param infoAnno      the property info
+     * @param errs          the error listener
+     */
+    protected void layerOnProp(ConstantPool pool, Map<PropertyConstant, PropertyInfo> mapProps,
+                               Map<Object, PropertyInfo> mapVirtProps,
+                               PropertyConstant idAnno, PropertyInfo infoAnno, ErrorListener errs)
+        {
+        if (!infoAnno.isVirtual())
+            {
+            mapProps.put(idAnno, infoAnno);
+            return;
+            }
+
+        Object       nidContrib = idAnno.resolveNestedIdentity(pool, this);
+        PropertyInfo propBase   = mapVirtProps.get(nidContrib);
+        if (propBase != null && infoAnno.getIdentity().equals(propBase.getIdentity()))
+            {
+            // keep whatever the base has got
+            return;
+            }
+
+        PropertyInfo propResult = propBase == null
+                ? infoAnno
+                : propBase.layerOn(infoAnno, false, errs);
+
+        mapProps.put(idAnno, propResult);
+        mapVirtProps.put(nidContrib, propResult);
+        }
+
+    /**
+     * Layer on the passed annotation (mixin) method contributions onto the base methods.
+     *
+     * @param pool            the constant pool to use
+     * @param mapMethods      methods already collected from the base
+     * @param mapVirtMethods  virtual methods already collected from the base
+     * @param idAnno          the identity of the method at the annotation (mixin)
+     * @param infoAnno        the method info
+     * @param errs            the error listener
+     */
+    private void layerOnMethod(ConstantPool pool, Map<MethodConstant, MethodInfo> mapMethods,
+                               Map<Object, MethodInfo> mapVirtMethods, MethodConstant idAnno,
+                               MethodInfo infoAnno, ErrorListener errs)
+        {
+        if (!infoAnno.isVirtual())
+            {
+            mapMethods.put(idAnno, infoAnno);
+            return;
+            }
+
+        Object nidContrib = idAnno.resolveNestedIdentity(pool,
+                infoAnno.isFunction() || infoAnno.isConstructor() ? null : this);
+
+        MethodInfo methodBase = mapVirtMethods.get(nidContrib);
+        if (methodBase != null && methodBase.getIdentity().equals(infoAnno.getIdentity()))
+            {
+            // keep whatever the base has got
+            return;
+            }
+
+        SignatureConstant sigContrib = infoAnno.getSignature();
+
+        MethodInfo methodResult = methodBase == null
+                ? infoAnno
+                : methodBase.layerOn(infoAnno, false, errs);
+
+        mapMethods.put(idAnno, methodResult);
+        mapVirtMethods.put(sigContrib, methodResult);
         }
 
 

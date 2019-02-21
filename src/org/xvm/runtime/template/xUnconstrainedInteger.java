@@ -4,10 +4,10 @@ package org.xvm.runtime.template;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
-import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xIntLiteral.VarIntHandle;
 
@@ -267,7 +267,7 @@ public abstract class xUnconstrainedInteger
     // ----- comparison support -----
 
     @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
+    public int callEquals(Frame frame, ClassComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         VarIntHandle h1 = (xIntLiteral.VarIntHandle) hValue1;
@@ -277,7 +277,7 @@ public abstract class xUnconstrainedInteger
         }
 
     @Override
-    public int callCompare(Frame frame, TypeComposition clazz,
+    public int callCompare(Frame frame, ClassComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         VarIntHandle h1 = (VarIntHandle) hValue1;

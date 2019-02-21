@@ -233,6 +233,12 @@ public abstract class OpCallable extends Op
         return m_function = (MethodStructure) constFunction.getComponent();
         }
 
+    // return the corresponding VirtualChildType constant
+    protected TypeConstant getCanonicalChildType(Frame frame, TypeConstant typeParent, String sName)
+        {
+        return frame.poolContext().ensureVirtualChildTypeConstant(typeParent, sName);
+        }
+
     // check if a register for the return value needs to be allocated
     protected void checkReturnRegister(Frame frame, MethodStructure method)
         {

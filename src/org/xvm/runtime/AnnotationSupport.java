@@ -42,9 +42,9 @@ public class AnnotationSupport
 
         if (!f_fNative)
             {
-            ConstantPool pool = type.getConstantPool();
-            TypeConstant typeAnno = type.getAnnotationType();
-            TypeComposition clzAnno = registry.resolveClass(typeAnno);
+            ConstantPool     pool     = type.getConstantPool();
+            TypeConstant     typeAnno = type.getAnnotationType();
+            ClassComposition clzAnno  = registry.resolveClass(typeAnno);
 
             TypeInfo info = typeAnno.ensureTypeInfo();
 
@@ -473,7 +473,7 @@ public class AnnotationSupport
     /**
      * The underlying annotated class.
      */
-    private TypeComposition m_clzAnno;
+    private ClassComposition m_clzAnno;
 
     /**
      * Cached "get" signature.

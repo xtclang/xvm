@@ -13,11 +13,11 @@ import org.xvm.asm.OpCallable;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.checkElementsNonNull;
@@ -98,9 +98,9 @@ public class New_N
                 return R_REPEAT;
                 }
 
-            IdentityConstant constClz = constructor.getParent().getParent().getIdentityConstant();
-            ClassTemplate template = frame.ensureTemplate(constClz);
-            TypeComposition clzTarget = template.getCanonicalClass();
+            IdentityConstant constClz  = constructor.getParent().getParent().getIdentityConstant();
+            ClassTemplate    template  = frame.ensureTemplate(constClz);
+            ClassComposition clzTarget = template.getCanonicalClass();
 
             if (frame.isNextRegister(m_nRetValue))
                 {

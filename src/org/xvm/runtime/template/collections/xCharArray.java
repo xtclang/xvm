@@ -9,6 +9,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
@@ -55,7 +56,7 @@ public class xCharArray
         }
 
     @Override
-    public ArrayHandle createArrayHandle(TypeComposition clzArray, ObjectHandle[] ahArg)
+    public ArrayHandle createArrayHandle(ClassComposition clzArray, ObjectHandle[] ahArg)
         {
         int    c  = ahArg.length;
         char[] al = new char[c];
@@ -67,7 +68,7 @@ public class xCharArray
         }
 
     @Override
-    public ArrayHandle createArrayHandle(TypeComposition clzArray, long cCapacity)
+    public ArrayHandle createArrayHandle(ClassComposition clzArray, long cCapacity)
         {
         return new CharArrayHandle(clzArray, cCapacity);
         }
@@ -140,7 +141,7 @@ public class xCharArray
         }
 
     @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
+    public int callEquals(Frame frame, ClassComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         CharArrayHandle h1 = (CharArrayHandle) hValue1;

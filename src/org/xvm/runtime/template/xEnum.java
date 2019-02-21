@@ -13,6 +13,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.SingletonConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -138,7 +139,7 @@ public class xEnum
         }
 
     @Override
-    public int callEquals(Frame frame, TypeComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+    public int callEquals(Frame frame, ClassComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         EnumHandle hEnum1 = (EnumHandle) hValue1;
         EnumHandle hEnum2 = (EnumHandle) hValue2;
@@ -146,7 +147,7 @@ public class xEnum
         }
 
     @Override
-    public int callCompare(Frame frame, TypeComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+    public int callCompare(Frame frame, ClassComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         EnumHandle hEnum1 = (EnumHandle) hValue1;
         EnumHandle hEnum2 = (EnumHandle) hValue2;

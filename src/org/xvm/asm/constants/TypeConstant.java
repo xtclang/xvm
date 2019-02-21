@@ -41,11 +41,11 @@ import org.xvm.asm.constants.TypeInfo.Progress;
 
 import org.xvm.compiler.Compiler;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.OpSupport;
 import org.xvm.runtime.TemplateRegistry;
-import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xOrdered;
@@ -1186,6 +1186,17 @@ public abstract class TypeConstant
                 return buildStructInfo(errs);
 
             case PRIVATE:
+                // annotated types require special handling
+                if (isAnnotated())
+                    {
+                    TypeConstant typeAnno = getUnderlyingType();
+                    if (typeAnno instanceof AnnotatedTypeConstant)
+                        {
+                        return ((AnnotatedTypeConstant) typeAnno).buildPrivateInfo(errs);
+                        }
+                    throw new IllegalStateException("Unsupported type: " + getValueString());
+                    }
+
                 // this is the one type that actually gets built by this method
                 break;
 
@@ -2875,8 +2886,16 @@ public abstract class TypeConstant
                             }
                         else
                             {
-                            nidBase      = mapNids.get(sigBest);
-                            methodBase   = mapVirtMethods.get(nidBase);
+                            nidBase    = mapNids.get(sigBest);
+                            methodBase = mapVirtMethods.get(nidBase);
+                            if (methodBase.isCapped())
+                                {
+                                // replace the cap with the referent
+                                nidBase    = methodBase.getHead().getNarrowingNestedIdentity();
+                                methodBase = mapVirtMethods.get(nidBase);
+                                listMatches.remove(sigBest);
+                                cMatches--;
+                                }
                             methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
 
                             // there are multiple non-ambiguous "super" methods;
@@ -4552,7 +4571,7 @@ public abstract class TypeConstant
      */
     public boolean isExplicitClassIdentity(boolean fAllowParams)
         {
-        return false;
+        return isModifyingType() && getUnderlyingType().isExplicitClassIdentity(fAllowParams);
         }
 
     /**
@@ -4562,7 +4581,7 @@ public abstract class TypeConstant
      */
     public Component.Format getExplicitClassFormat()
         {
-        throw new IllegalStateException();
+        return getUnderlyingType().getExplicitClassFormat();
         }
 
     /**
@@ -4763,7 +4782,7 @@ public abstract class TypeConstant
             return frame.assignValue(iReturn, xBoolean.TRUE);
             }
 
-        TypeComposition clz = frame.ensureClass(this);
+        ClassComposition clz = frame.ensureClass(this);
         return clz.getTemplate().callEquals(frame, clz, hValue1, hValue2, iReturn);
         }
 
@@ -4784,7 +4803,7 @@ public abstract class TypeConstant
             return frame.assignValue(iReturn, xOrdered.EQUAL);
             }
 
-        TypeComposition clz = frame.ensureClass(this);
+        ClassComposition clz = frame.ensureClass(this);
         return clz.getTemplate().callCompare(frame, clz, hValue1, hValue2, iReturn);
         }
 

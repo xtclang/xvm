@@ -10,8 +10,8 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.VarSupport;
 
 import org.xvm.runtime.template.xRef.RefHandle;
@@ -64,7 +64,7 @@ public class Var_D
     @Override
     public int process(Frame frame, int iPC)
         {
-        TypeComposition clz = frame.resolveClass(m_nType);
+        ClassComposition clz = frame.resolveClass(m_nType);
 
         RefHandle hRef = ((VarSupport) clz.getSupport()).createRefHandle(clz, null);
 

@@ -12,11 +12,11 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray;
 
@@ -108,8 +108,8 @@ public class Var_S
                 return R_REPEAT;
                 }
 
-            TypeConstant    typeSequence = frame.resolveType(m_nType);
-            TypeComposition clzArray     = m_clzArray;
+            TypeConstant     typeSequence = frame.resolveType(m_nType);
+            ClassComposition clzArray     = m_clzArray;
 
             if (clzArray == null)
                 {
@@ -144,6 +144,6 @@ public class Var_S
 
     private Argument[] m_aArgValue;
 
-    // cached TypeComposition for the underlying array
-    private transient TypeComposition m_clzArray;
+    // cached ClassComposition for the underlying array
+    private transient ClassComposition m_clzArray;
     }

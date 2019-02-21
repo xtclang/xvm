@@ -12,6 +12,7 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -102,7 +103,7 @@ public class xMethod
         TypeConstant typeRet = pool.ensureParameterizedTypeConstant(pool.typeTuple(), method.getReturnTypes());
         TypeConstant typeArg = pool.ensureParameterizedTypeConstant(pool.typeTuple(), method.getParamTypes());
 
-        TypeComposition clzMethod = INSTANCE.ensureParameterizedClass(pool, typeTarget, typeRet, typeArg);
+        ClassComposition clzMethod = INSTANCE.ensureParameterizedClass(pool, typeTarget, typeRet, typeArg);
 
         return new MethodHandle(clzMethod, method);
         }

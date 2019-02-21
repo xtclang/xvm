@@ -11,6 +11,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -73,7 +74,7 @@ public class xString
         }
 
     @Override
-    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
+    public int construct(Frame frame, MethodStructure constructor, ClassComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         CharArrayHandle hCharArray = (CharArrayHandle) ahVar[0];
@@ -248,7 +249,7 @@ public class xString
     // ----- comparison support -----
 
     @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
+    public int callEquals(Frame frame, ClassComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         StringHandle h1 = (StringHandle) hValue1;
@@ -258,8 +259,8 @@ public class xString
         }
 
     @Override
-    public int callCompare(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+    public int callCompare(Frame frame, ClassComposition clazz,
+                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         StringHandle h1 = (StringHandle) hValue1;
         StringHandle h2 = (StringHandle) hValue2;

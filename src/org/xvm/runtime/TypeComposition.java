@@ -1,230 +1,65 @@
 package org.xvm.runtime;
 
 
-import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component.Format;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
-
-import org.xvm.asm.constants.AccessTypeConstant;
-import org.xvm.asm.constants.PropertyConstant;
-import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
 
-import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xString.StringHandle;
-
-import org.xvm.util.ListMap;
 
 
 /**
  * TypeComposition represents a fully resolved class (e.g. ArrayList<String> or
  * @Range Interval<Date>).
  */
-public class TypeComposition
+public interface TypeComposition
     {
-    /**
-     * The underlying {@link OpSupport} for the inception type.
-     */
-    private final OpSupport f_support;
-
-    /**
-     * The {@link ClassTemplate} for the defining class of the inception type. Note, that the
-     * defining class could be {@link org.xvm.asm.constants.NativeRebaseConstant native}.
-     */
-    private final ClassTemplate f_template;
-
-    /**
-     * The inception TypeComposition.
-     */
-    private final TypeComposition f_clzInception;
-
-    /**
-     * The inception type - the maximum of what this type composition could be revealed as.
-     *
-     * Note: the access of the inception type is always Access.PRIVATE.
-     */
-    public final TypeConstant f_typeInception;
-
-    /**
-     * The structure type for the inception type.
-     */
-    public final TypeConstant f_typeStructure;
-
-    /**
-     * The type that is revealed by the ObjectHandle that refer to this composition.
-     */
-    private final TypeConstant f_typeRevealed;
-
-    /**
-     * A cache of derivative TypeCompositions keyed by the "revealed type".
-     */
-    private final Map<TypeConstant, TypeComposition> f_mapCompositions;
-
-    // cached method call chain (the top-most method first)
-    private final Map<SignatureConstant, CallChain> f_mapMethods;
-
-    // cached property getter call chain (the top-most method first)
-    private final Map<String, CallChain> f_mapGetters;
-
-    // cached property setter call chain (the top-most method first)
-    private final Map<String, CallChain> f_mapSetters;
-
-    // cached map of fields (values are either nulls or TypeComposition for refs)
-    private final Map<String, TypeComposition> f_mapFields;
-
-    // cached array of field name handles
-    private StringHandle[] m_ashFieldNames;
-
-    // cached auto-generated structure initializer
-    private MethodStructure m_methodInit;
-
-    /**
-     * Construct the TypeComposition for a given "inception" type and a "revealed" type.
-     *
-     * The guarantees for the inception type are:
-     *  - it has to be a class (TypeConstant.isClass())
-     *  - it cannot be abstract
-     *  - the only modifying types that are allowed are AnnotatedTypeConstant(s) and
-     *    ParameterizedTypeConstant(s)
-     *
-     * @param support        the OpSupport implementation for the inception type
-     * @param typeInception  the "origin type"
-     * @param typeRevealed   the type to reveal an ObjectHandle reference to this class as
-     */
-    protected TypeComposition(OpSupport support, TypeConstant typeInception, TypeConstant typeRevealed)
-        {
-        assert typeInception.isSingleDefiningConstant();
-        assert typeInception.getAccess() == Access.PUBLIC;
-
-        ClassTemplate template = support.getTemplate(typeInception);
-        if (support instanceof ClassTemplate)
-            {
-            support = template;
-            }
-
-        ConstantPool pool = typeInception.getConstantPool();
-
-        f_clzInception = this;
-        f_support = support;
-        f_template = template;
-        f_typeInception = pool.ensureAccessTypeConstant(typeInception, Access.PRIVATE);
-        f_typeStructure = pool.ensureAccessTypeConstant(typeInception, Access.STRUCT);
-        f_typeRevealed = typeRevealed;
-        f_mapCompositions = new ConcurrentHashMap<>();
-        f_mapMethods = new ConcurrentHashMap<>();
-        f_mapGetters = new ConcurrentHashMap<>();
-        f_mapSetters = new ConcurrentHashMap<>();
-        f_mapFields  = f_template.isGenericHandle() ? ensureFields() : null;
-        }
-
-    /**
-     * Construct a TypeComposition for the specified revealed type.
-     */
-    private TypeComposition(TypeComposition clzInception, TypeConstant typeRevealed)
-        {
-        f_clzInception = clzInception;
-        f_support = clzInception.f_support;
-        f_template = clzInception.f_template;
-        f_typeInception = clzInception.f_typeInception;
-        f_typeStructure = clzInception.f_typeStructure;
-        f_typeRevealed = typeRevealed;
-        f_mapCompositions = f_clzInception.f_mapCompositions;
-        f_mapMethods = f_clzInception.f_mapMethods;
-        f_mapGetters = f_clzInception.f_mapGetters;
-        f_mapSetters = f_clzInception.f_mapSetters;
-        f_mapFields = f_clzInception.f_mapFields;
-        }
-
     /**
      * @return the OpSupport for the inception type of this TypeComposition
      */
-    public OpSupport getSupport()
-        {
-        return f_support;
-        }
+    OpSupport getSupport();
+
     /**
      * @return the template for the defining class for the inception type
      */
-    public ClassTemplate getTemplate()
-        {
-        return f_template;
-        }
+    ClassTemplate getTemplate();
 
     /**
      * @return the current (revealed) type of this TypeComposition
      */
-    public TypeConstant getType()
-        {
-        return f_typeRevealed;
-        }
+    TypeConstant getType();
 
     /**
      * Retrieve a TypeComposition that widens the current type to the specified type.
      *
      * Note that the underlying ClassTemplate doesn't change.
      */
-    public TypeComposition maskAs(TypeConstant type)
-        {
-        if (type.equals(f_typeRevealed))
-            {
-            return this;
-            }
-
-        if (!f_typeRevealed.isA(type))
-            {
-            throw new IllegalArgumentException("Type " + f_typeRevealed + " cannot be widened to " + type);
-            }
-
-        return f_mapCompositions.computeIfAbsent(type, typeR -> new TypeComposition(this, typeR));
-        }
+    TypeComposition maskAs(TypeConstant type);
 
     /**
      * Retrieve a TypeComposition that widens the actual type to the specified type.
      *
      * Note that the underlying ClassTemplate doesn't change.
      */
-    public TypeComposition revealAs(TypeConstant type, Container container)
-        {
-        // TODO: this is only allowed within the container that created the original TypeComposition
+    TypeComposition revealAs(TypeConstant type, Container container);
 
-        if (type.equals(f_typeRevealed))
-            {
-            return this;
-            }
-
-        if (!f_typeInception.isA(type))
-            {
-            throw new IllegalArgumentException("Type " + f_typeInception + " cannot be revealed as " + type);
-            }
-
-        return f_mapCompositions.computeIfAbsent(type, typeR -> new TypeComposition(this, typeR));
-        }
-
-    public ObjectHandle ensureOrigin(ObjectHandle handle)
-        {
-        assert handle.getComposition() == this;
-
-        return isInception() ? handle : handle.cloneAs(f_clzInception);
-        }
+    /**
+     * @return an inception TypeComposition
+     */
+    ObjectHandle ensureOrigin(ObjectHandle handle);
 
     /**
      * @return an equivalent ObjectHandle for the specified access
      */
-    public ObjectHandle ensureAccess(ObjectHandle handle, Access access)
+    default ObjectHandle ensureAccess(ObjectHandle handle, Access access)
         {
         assert handle.getComposition() == this;
 
-        return access == f_typeRevealed.getAccess()
+        return access == getType().getAccess()
             ? handle
             : handle.cloneAs(ensureAccess(access));
         }
@@ -232,307 +67,62 @@ public class TypeComposition
     /**
      * @return an associated TypeComposition for the specified access
      */
-    public TypeComposition ensureAccess(Access access)
-        {
-        TypeConstant typeCurrent = f_typeRevealed;
-
-        Access accessCurrent = typeCurrent.getAccess();
-        if (accessCurrent == access)
-            {
-            return this;
-            }
-
-        if (typeCurrent instanceof AccessTypeConstant)
-            {
-            // strip the access
-            typeCurrent = typeCurrent.getUnderlyingType();
-            }
-
-        ConstantPool pool = typeCurrent.getConstantPool();
-        TypeConstant typeTarget;
-        switch (access)
-            {
-            case PUBLIC:
-                typeTarget = typeCurrent;
-                if (typeTarget.equals(f_clzInception.f_typeRevealed))
-                    {
-                    return f_clzInception;
-                    }
-                break;
-
-            case PROTECTED:
-                typeTarget = pool.ensureAccessTypeConstant(typeCurrent, Access.PROTECTED);
-                break;
-
-            case PRIVATE:
-                typeTarget = pool.ensureAccessTypeConstant(typeCurrent, Access.PRIVATE);
-                break;
-
-            case STRUCT:
-                typeTarget = pool.ensureAccessTypeConstant(typeCurrent, Access.STRUCT);
-                break;
-
-            default:
-                throw new IllegalStateException();
-            }
-
-        return f_mapCompositions.computeIfAbsent(
-            typeTarget, typeR -> new TypeComposition(f_clzInception, typeR));
-        }
-
-    /**
-     * @return true iff this TypeComposition represents an inception class
-     */
-    public boolean isInception()
-        {
-        return this == f_clzInception;
-        }
+    TypeComposition ensureAccess(Access access);
 
     /**
      * @return true iff the revealed type is a struct
      */
-    public boolean isStruct()
-        {
-        return f_typeRevealed.getAccess() == Access.STRUCT;
-        }
-
-    /**
-     * @return true iff the revealed type has a formal type parameter with the specified name
-     */
-    public boolean containsGenericParam(String sName)
-        {
-        return f_typeRevealed.containsGenericParam(sName);
-        }
+    boolean isStruct();
 
     /**
      * @return true iff the inception type represents a service
      */
-    public boolean isService()
-        {
-        TypeConstant type = f_typeInception;
-        return type.getSingleUnderlyingClass(false).getComponent().getFormat() == Format.SERVICE;
-        }
+    boolean isService();
 
     /**
      * @return true iff the inception type represents a const
      */
-    public boolean isConst()
-        {
-        TypeConstant type = f_typeInception;
-        return ((ClassStructure) type.getSingleUnderlyingClass(false).getComponent()).isConst();
-        }
+    boolean isConst();
 
     /**
-     * Find the type for the specified formal parameter. Note that the formal name could be declared
-     * by some contributions, rather than this class itself.
+     * Retrieve an auto-generated default initializer for struct instances of this class. Return
+     * null if there are no fields to initialize.
      *
-     * @param sName  the formal parameter name
-     *
-     * @return the corresponding actual type
+     * @return the auto-generated method structure with necessary initialization code or null
      */
-    public TypeConstant getActualParamType(String sName)
-        {
-        return f_typeRevealed.getGenericParamType(sName);
-        }
-
-    /**
-     * @return true iff is the revealed type of this class assignable to the revealed type of the
-     *         specified class
-     */
-    public boolean isA(TypeComposition that)
-        {
-        return this.f_typeRevealed.isA(that.f_typeRevealed);
-        }
-
-    /**
-     * Retrieve an auto-generated default initializer for struct instances of this class. The
-     * returned method is abstract if there are no fields to initialize.
-     *
-     * @return the auto-generated method structure with necessary initialization code
-     */
-    public MethodStructure ensureAutoInitializer()
-        {
-        MethodStructure method = m_methodInit;
-        if (method == null)
-            {
-            m_methodInit = method = f_template.f_struct.createInitializer(f_typeStructure);
-            }
-        return method;
-        }
-
-    // retrieve the call chain for the specified method
-    public CallChain getMethodCallChain(SignatureConstant constSignature)
-        {
-        // we only cache the PUBLIC access chains; all others are only cached at the op-code level
-        return f_mapMethods.computeIfAbsent(constSignature, this::collectMethodCallChain);
-        }
-
-    protected CallChain collectMethodCallChain(SignatureConstant constSignature)
-        {
-        TypeConstant typeActual = f_typeInception;
-
-        TypeInfo info = typeActual.ensureTypeInfo();
-        return new CallChain(info.getOptimizedMethodChain(constSignature));
-        }
-
-    public PropertyInfo getPropertyInfo(String sPropName)
-        {
-        return f_typeInception.ensureTypeInfo().findProperty(sPropName);
-        }
-
-    // retrieve the call chain for the specified property
-    public CallChain getPropertyGetterChain(String sProperty)
-        {
-        return f_mapGetters.computeIfAbsent(sProperty, sPropName ->
-                collectPropertyCallChain(sPropName, true));
-        }
-
-    public CallChain getPropertySetterChain(String sProperty)
-        {
-        return f_mapSetters.computeIfAbsent(sProperty, sPropName ->
-                collectPropertyCallChain(sPropName, false));
-        }
-
-    protected CallChain collectPropertyCallChain(String sPropName, boolean fGetter)
-        {
-        TypeInfo     info = f_typeInception.ensureTypeInfo();
-        PropertyInfo prop = info.findProperty(sPropName);
-
-        PropertyConstant constProp = prop.getIdentity(); // TODO: this should be passed in
-
-        return new CallChain(fGetter
-            ? info.getOptimizedGetChain(constProp)
-            : info.getOptimizedSetChain(constProp));
-        }
-
-    // return the set of field names
-    public Set<String> getFieldNames()
-        {
-        Map mapCached = f_mapFields;
-        return mapCached == null ? Collections.EMPTY_SET : mapCached.keySet();
-        }
-
-    // return an array of field name handles
-    public StringHandle[] getFieldNameArray()
-        {
-        StringHandle[] ashNames = m_ashFieldNames;
-        if (ashNames == null)
-            {
-            Set<String> setNames = getFieldNames();
-
-            ashNames = new StringHandle[setNames.size()];
-
-            int i = 0;
-            for (String sName : setNames)
-                {
-                ashNames[i++] = xString.makeHandle(sName);
-                }
-            m_ashFieldNames = ashNames;
-            }
-        return ashNames;
-        }
-
-    // return an array of field value handles
-    public ObjectHandle[] getFieldValueArray(ObjectHandle.GenericHandle hValue)
-        {
-        Set<String> setNames = getFieldNames();
-        if (setNames.isEmpty())
-            {
-            return Utils.OBJECTS_NONE;
-            }
-
-        ObjectHandle[] ahFields = new ObjectHandle[setNames.size()];
-
-        int i = 0;
-        for (String sName : setNames)
-            {
-            ahFields[i++] = hValue.getField(sName);
-            }
-
-        return ahFields;
-        }
+    MethodStructure ensureAutoInitializer();
 
     // create unassigned (with a null value) entries for all fields
-    protected Map<String, ObjectHandle> createFields()
-        {
-        Map<String, TypeComposition> mapCached = f_mapFields;
-        if (mapCached == null)
-            {
-            return null;
-            }
-
-        Map<String, ObjectHandle> mapFields = new ListMap<>();
-        for (Map.Entry<String, TypeComposition> entry : f_mapFields.entrySet())
-            {
-            String          sName  = entry.getKey();
-            TypeComposition clzRef = entry.getValue();
-            ObjectHandle    hValue = null;
-            if (clzRef != null)
-                {
-                hValue = ((VarSupport) clzRef.getSupport()).createRefHandle(clzRef, sName);
-                }
-            mapFields.put(sName, hValue);
-            }
-        return mapFields;
-        }
-
-    // return a canonical child type
-    public TypeConstant getCanonicalChildType(String sName)
-        {
-        ConstantPool pool = f_typeRevealed.getConstantPool();
-        return pool.ensureVirtualChildTypeConstant(f_typeRevealed, sName);
-        }
+    Map<String, ObjectHandle> createFields();
 
     /**
-     * Create a map of fields that serves as a prototype for all instances of this class.
-     *
-     * @return a prototype map
+     * @return true if the specified property is Ref annotated
      */
-    private Map<String, TypeComposition> ensureFields()
-        {
-        ConstantPool pool = f_typeInception.getConstantPool();
+    boolean isRefAnnotated(String sProperty);
 
-        TypeConstant typeStruct = pool.ensureAccessTypeConstant(
-            f_typeInception.getUnderlyingType(), Access.STRUCT);
-        TypeInfo infoStruct = typeStruct.ensureTypeInfo();
+    /**
+     * @return true if the specified property is injected
+     */
+    boolean isInjected(String sProperty);
 
-        Map<String, TypeComposition> mapFields = new ListMap<>();
-        for (Map.Entry<PropertyConstant, PropertyInfo> entry :
-                infoStruct.getProperties().entrySet())
-            {
-            String sPropName = entry.getKey().getName();
-            PropertyInfo infoProp = entry.getValue();
+    /**
+     * @return true if the specified property is atomic
+     */
+    boolean isAtomic(String sProperty);
 
-            if (infoProp.hasField())
-                {
-                TypeComposition clzRef = null;
-                if (infoProp.isRefAnnotated())
-                    {
-                    clzRef = f_template.f_templates.resolveClass(infoProp.getRefType());
-                    }
+    CallChain getMethodCallChain(SignatureConstant sig);
 
-                mapFields.put(sPropName, clzRef);
-                }
-            }
-        return mapFields.isEmpty() ? null : mapFields;
-        }
+    // retrieve the call chain for the specified property
+    CallChain getPropertyGetterChain(String sProperty);
 
-    @Override
-    public int hashCode()
-        {
-        return f_typeRevealed.hashCode();
-        }
+    CallChain getPropertySetterChain(String sProperty);
 
-    @Override
-    public boolean equals(Object obj)
-        {
-        // type compositions are singletons
-        return this == obj;
-        }
+    // return the set of field names
+    Set<String> getFieldNames();
 
-    @Override
-    public String toString()
-        {
-        return f_typeRevealed.getValueString();
-        }
+    // return an array of field name handles
+    StringHandle[] getFieldNameArray();
+
+    // return an array of field value handles
+    ObjectHandle[] getFieldValueArray(ObjectHandle.GenericHandle hValue);
     }

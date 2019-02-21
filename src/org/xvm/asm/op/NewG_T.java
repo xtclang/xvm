@@ -11,10 +11,10 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 import org.xvm.asm.constants.MethodConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
@@ -116,8 +116,8 @@ public class NewG_T
 
     protected int complete(Frame frame, ObjectHandle[] ahArg)
         {
-        MethodStructure constructor = getMethodStructure(frame);
-        TypeComposition clzTarget = frame.resolveClass(m_nTypeValue);
+        MethodStructure  constructor = getMethodStructure(frame);
+        ClassComposition clzTarget   = frame.resolveClass(m_nTypeValue);
 
         if (frame.isNextRegister(m_nRetValue))
             {

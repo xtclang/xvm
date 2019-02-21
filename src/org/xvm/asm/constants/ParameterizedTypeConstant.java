@@ -173,12 +173,6 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public Component.Format getExplicitClassFormat()
-        {
-        return getUnderlyingType().getExplicitClassFormat();
-        }
-
-    @Override
     public TypeConstant getExplicitClassInto()
         {
         TypeConstant constResolved = m_constType.getExplicitClassInto();

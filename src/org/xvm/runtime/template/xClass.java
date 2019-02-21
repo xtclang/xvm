@@ -11,6 +11,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -83,7 +84,7 @@ public class xClass
         }
 
     @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
+    public int callEquals(Frame frame, ClassComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         ClassHandle hThis = (ClassHandle) hValue1;
@@ -93,8 +94,8 @@ public class xClass
         }
 
     @Override
-    public int callCompare(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+    public int callCompare(Frame frame, ClassComposition clazz,
+                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         ClassHandle hThis = (ClassHandle) hValue1;
         ClassHandle hThat = (ClassHandle) hValue2;

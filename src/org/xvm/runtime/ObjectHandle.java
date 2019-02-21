@@ -7,7 +7,6 @@ import java.util.Objects;
 import org.xvm.asm.Constants;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.util.ListMap;
@@ -129,9 +128,19 @@ public abstract class ObjectHandle
         return m_clazz.ensureAccess(this, access);
         }
 
-    public PropertyInfo getPropertyInfo(String sPropName)
+    public boolean isRefAnnotated(String sPropName)
         {
-        return m_clazz.getPropertyInfo(sPropName);
+        return m_clazz.isRefAnnotated(sPropName);
+        }
+
+    public boolean isInjected(String sPropName)
+        {
+        return m_clazz.isInjected(sPropName);
+        }
+
+    public boolean isAtomic(String sPropName)
+        {
+        return m_clazz.isInjected(sPropName);
         }
 
     @Override

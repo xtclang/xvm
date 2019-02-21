@@ -4,6 +4,7 @@ package org.xvm.runtime.template;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constants.Access;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -37,7 +38,7 @@ public class xException
         }
 
     @Override
-    public ObjectHandle createStruct(Frame frame, TypeComposition clazz)
+    public ObjectHandle createStruct(Frame frame, ClassComposition clazz)
         {
         return makeMutableStruct(clazz, null, null);
         }

@@ -8,6 +8,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
@@ -53,7 +54,7 @@ public class xIntArray
         }
 
     @Override
-    public ArrayHandle createArrayHandle(TypeComposition clzArray, ObjectHandle[] ahArg)
+    public ArrayHandle createArrayHandle(ClassComposition clzArray, ObjectHandle[] ahArg)
         {
         int    c  = ahArg.length;
         long[] al = new long[c];
@@ -65,7 +66,7 @@ public class xIntArray
         }
 
     @Override
-    public ArrayHandle createArrayHandle(TypeComposition clzArray, long cCapacity)
+    public ArrayHandle createArrayHandle(ClassComposition clzArray, long cCapacity)
         {
         return new IntArrayHandle(clzArray, cCapacity);
         }
@@ -138,7 +139,7 @@ public class xIntArray
         }
 
     @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
+    public int callEquals(Frame frame, ClassComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         IntArrayHandle h1 = (IntArrayHandle) hValue1;

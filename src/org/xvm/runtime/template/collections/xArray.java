@@ -12,6 +12,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
@@ -80,7 +81,7 @@ public class xArray
         }
 
     @Override
-    public TypeComposition ensureParameterizedClass(ConstantPool pool, TypeConstant... typeParams)
+    public ClassComposition ensureParameterizedClass(ConstantPool pool, TypeConstant... typeParams)
         {
         assert typeParams.length == 1;
 
@@ -126,7 +127,7 @@ public class xArray
 
         TypeConstant typeArray = constArray.getType();
         TypeConstant typeEl = typeArray.getGenericParamType("ElementType");
-        TypeComposition clzArray = ensureParameterizedClass(frame.poolContext(), typeEl);
+        ClassComposition clzArray = ensureParameterizedClass(frame.poolContext(), typeEl);
 
         Constant[] aconst = constArray.getValue();
         int cSize = aconst.length;
@@ -162,7 +163,7 @@ public class xArray
      *
      * @return the array handle
      */
-    public ArrayHandle createArrayHandle(TypeComposition clzArray, ObjectHandle[] ahArg)
+    public ArrayHandle createArrayHandle(ClassComposition clzArray, ObjectHandle[] ahArg)
         {
         return new GenericArrayHandle(clzArray, ahArg);
         }
@@ -175,13 +176,13 @@ public class xArray
      *
      * @return the array handle
      */
-    public ArrayHandle createArrayHandle(TypeComposition clzArray, long cCapacity)
+    public ArrayHandle createArrayHandle(ClassComposition clzArray, long cCapacity)
         {
         return new GenericArrayHandle(clzArray, cCapacity);
         }
 
     @Override
-    public int construct(Frame frame, MethodStructure constructor, TypeComposition clzArray,
+    public int construct(Frame frame, MethodStructure constructor, ClassComposition clzArray,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         // this is a native constructor
@@ -271,7 +272,7 @@ public class xArray
         }
 
     @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
+    public int callEquals(Frame frame, ClassComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         GenericArrayHandle hArray1 = (GenericArrayHandle) hValue1;

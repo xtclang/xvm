@@ -8,8 +8,8 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.OpMove;
 import org.xvm.asm.Register;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xRef.RefHandle;
 import org.xvm.runtime.template.xVar;
@@ -70,7 +70,7 @@ public class MoveVar
             }
         else
             {
-            TypeComposition clzRef = xVar.INSTANCE.ensureParameterizedClass(
+            ClassComposition clzRef = xVar.INSTANCE.ensureParameterizedClass(
                 frame.poolContext(), infoSrc.getType());
 
             RefHandle hRef = new RefHandle(clzRef, frame, m_nFromValue);
