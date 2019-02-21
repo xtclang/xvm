@@ -198,7 +198,7 @@ public class PropertyClassTypeConstant
     @Override
     public OpSupport getOpSupport(TemplateRegistry registry)
         {
-        return getPropertyInfo().getRefType().getOpSupport(registry);
+        return getPropertyInfo().getBaseRefType().getOpSupport(registry);
         }
 
 

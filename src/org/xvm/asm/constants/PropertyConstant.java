@@ -144,7 +144,7 @@ public class PropertyConstant
 
         return infoThis.isCustomLogic()
                 ? getConstantPool().ensurePropertyClassTypeConstant(typeTarget, this)
-                : infoThis.getRefType();
+                : infoThis.getBaseRefType();
         }
 
     @Override

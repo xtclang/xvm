@@ -41,7 +41,7 @@ public class PropertyComposition
 
         TypeConstant typeParent = clzParent.getInceptionType();
         TypeInfo     infoParent = typeParent.ensureTypeInfo();
-        TypeConstant typeRef    = infoProp.getRefType();
+        TypeConstant typeRef    = infoProp.getBaseRefType();
 
         f_clzRef     = clzParent.getRegistry().resolveClass(typeRef);
         f_infoParent = infoParent;
@@ -65,7 +65,7 @@ public class PropertyComposition
     @Override
     public TypeConstant getType()
         {
-        return f_infoProp.getRefType();
+        return f_infoProp.getBaseRefType();
         }
 
     @Override

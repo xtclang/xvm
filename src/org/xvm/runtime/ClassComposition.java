@@ -419,7 +419,7 @@ public class ClassComposition
                     }
                 else if (infoProp.isRefAnnotated())
                     {
-                    clzRef = f_template.f_templates.resolveClass(infoProp.getRefType());
+                    clzRef = f_template.f_templates.resolveClass(infoProp.getBaseRefType());
                     }
 
                 mapFields.put(sPropName, clzRef);
