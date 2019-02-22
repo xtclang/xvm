@@ -105,7 +105,7 @@ public class PropertyClassTypeConstant
         PropertyInfo info = m_info;
         if (info == null)
             {
-            m_info = m_typeParent.ensureTypeInfo().findProperty(m_idProp);
+            m_info = info = m_typeParent.ensureTypeInfo().findProperty(m_idProp);
             }
         return info;
         }
@@ -190,6 +190,18 @@ public class PropertyClassTypeConstant
     public boolean isSingleUnderlyingClass(boolean fAllowInterface)
         {
         return false;
+        }
+
+    @Override
+    public boolean containsGenericParam(String sName)
+        {
+        return getPropertyInfo().getBaseRefType().containsGenericParam(sName);
+        }
+
+    @Override
+    public TypeConstant getGenericParamType(String sName)
+        {
+        return getPropertyInfo().getBaseRefType().getGenericParamType(sName);
         }
 
 
