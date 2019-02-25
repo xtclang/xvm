@@ -200,8 +200,7 @@ public class PropertyInfo
             }
 
         // check the property type and determine the type of the resulting property
-        TypeConstant typeBase   = this.getType();
-        TypeConstant typeResult = typeBase;
+        TypeConstant typeResult = this.getType();
         for (int iAdd = cAdd - 1; iAdd >= 0; --iAdd)
             {
             PropertyBody bodyAdd = aAdd[iAdd];
@@ -351,7 +350,7 @@ public class PropertyInfo
         PropertyBody[]    aBody  = m_aBody;
         PropertyStructure struct = null;
         boolean           fRO    = false;
-        for (int i = 0, c = m_aBody.length; i < c; ++i)
+        for (int i = 0, c = aBody.length; i < c; ++i)
             {
             PropertyBody body = aBody[i];
             if (body.getExistence() != Existence.Implied)
@@ -993,7 +992,7 @@ public class PropertyInfo
 
             if (list != null)
                 {
-                aAnnos = list.toArray(new Annotation[list.size()]);
+                aAnnos = list.toArray(Annotation.NO_ANNOTATIONS);
                 }
             m_annotations = aAnnos;
             }
@@ -1001,14 +1000,14 @@ public class PropertyInfo
         }
 
     /**
-     * Obtain the TypeConstant representing the data type of the "box" (Ref/Var).
+     * Obtain the TypeConstant representing the data type of the underlying "box" (Ref/Var).
      * <p/>
      * Note, that unlike the {@link PropertyConstant#getRefType}, this method returns the base
      * Ref type even for "custom" properties.
      *
      * @return the underlying Ref type
      */
-    public TypeConstant getRefType()
+    public TypeConstant getBaseRefType()
         {
         TypeConstant typeProp = getType();
         ConstantPool pool     = pool();

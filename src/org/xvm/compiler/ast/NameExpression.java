@@ -1659,10 +1659,10 @@ public class NameExpression
                     return ((PropertyConstant) constant).getRefType(left.getType());
                     }
 
-                PropertyConstant  id   = (PropertyConstant) argRaw;
-                PropertyStructure prop = (PropertyStructure) id.getComponent();
-                TypeConstant      type = prop.getType();
-                PropertyInfo      info = null;
+                PropertyConstant  id       = (PropertyConstant) argRaw;
+                PropertyStructure prop     = (PropertyStructure) id.getComponent();
+                TypeConstant      type     = prop.getType();
+                TypeConstant      typeLeft = null;
 
                 // resolve the property type
                 if (id.isTypeSequenceTypeParameter())
@@ -1672,6 +1672,8 @@ public class NameExpression
                     }
                 else if (left == null)
                     {
+                    typeLeft = pool.ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE);
+
                     ClassStructure clz = ctx.getThisClass();
                     if (m_propAccessPlan == PropertyAccess.Outer)
                         {
@@ -1689,13 +1691,12 @@ public class NameExpression
                         if (infoProp != null)
                             {
                             type = infoProp.getType();
-                            info = infoProp;
                             }
                         }
                     }
                 else
                     {
-                    TypeConstant typeLeft = left.getImplicitType(ctx);
+                    typeLeft = left.getImplicitType(ctx);
                     if (isNestMate(ctx, typeLeft))
                         {
                         typeLeft = pool.ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
@@ -1704,7 +1705,6 @@ public class NameExpression
                     if (infoProp != null)
                         {
                         type = infoProp.getType();
-                        info = infoProp;
                         }
                     }
 
@@ -1718,20 +1718,7 @@ public class NameExpression
                 if (isSuppressDeref())
                     {
                     m_plan = Plan.PropertyRef;
-                    if (info == null)
-                        {
-                        // this shouldn't happen, but leaving the code for safety
-                        TypeConstant typeRef = pool.ensureParameterizedTypeConstant(
-                                m_fAssignable ? pool.typeVar() : pool.typeRef(), type);
-                        return prop.isRefAnnotated()
-                                ? pool.ensureAnnotatedTypeConstant(typeRef, prop.getRefAnnotations())
-                                : typeRef;
-                        }
-                    else
-                        {
-                        assert m_fAssignable == info.isVar();
-                        return info.getRefType();
-                        }
+                    return id.getRefType(typeLeft);
                     }
                 else
                     {

@@ -178,7 +178,7 @@ public class CaseManager
         }
 
     /**
-     * @return the array of constants assocated with the labels, or null if either an if-ladder or
+     * @return the array of constants associated with the labels, or null if either an if-ladder or
      *         JMP_INT is used
      */
     public Constant[] getCaseConstants()
@@ -373,7 +373,7 @@ public class CaseManager
             return fValid;
             }
 
-        // validate each seperate value in the case label
+        // validate each separate value in the case label
         ConstantPool pool       = pool();
         boolean      fIfSwitch  = usesIfLadder();
         boolean      fIntConsts = isCardinal() && m_typeCase.getExplicitClassFormat() != Component.Format.ENUM;
@@ -718,7 +718,7 @@ public class CaseManager
             {
             return true;
             }
-        
+
         int cConds = getConditionCount();
         if (cConds == 1)
             {
@@ -754,7 +754,7 @@ public class CaseManager
             {
             return true;
             }
-        
+
         if (constThat instanceof MatchAnyConstant
                 || !fRangeThis && !fRangeThat
                 || !(constThis instanceof ValueConstant)
@@ -766,7 +766,7 @@ public class CaseManager
             // provided for non-value constants (since they don't have a comparable value)
             return false;
             }
-        
+
         Object oThisLo, oThisHi;
         if (fRangeThis)
             {
@@ -833,7 +833,7 @@ public class CaseManager
             return false;
             }
 
-        // TODO this will work for types that have a corrresponding Java type, like Int, but not enums etc.
+        // TODO this will work for types that have a corresponding Java type, like Int, but not enums etc.
         Comparable cmpThisLo = (Comparable) oThisLo;
         Comparable cmpThisHi = (Comparable) oThisHi;
         Comparable cmpThatLo = (Comparable) oThatLo;

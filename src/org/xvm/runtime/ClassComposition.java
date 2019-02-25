@@ -419,7 +419,7 @@ public class ClassComposition
                     }
                 else if (infoProp.isRefAnnotated())
                     {
-                    clzRef = f_template.f_templates.resolveClass(infoProp.getRefType());
+                    clzRef = f_template.f_templates.resolveClass(infoProp.getBaseRefType());
                     }
 
                 mapFields.put(sPropName, clzRef);
@@ -471,12 +471,12 @@ public class ClassComposition
      *
      * Note: the access of the inception type is always Access.PRIVATE.
      */
-    public final TypeConstant f_typeInception;
+    private final TypeConstant f_typeInception;
 
     /**
      * The structure type for the inception type.
      */
-    public final TypeConstant f_typeStructure;
+    private final TypeConstant f_typeStructure;
 
     /**
      * The type that is revealed by the ObjectHandle that refer to this composition.
@@ -505,5 +505,4 @@ public class ClassComposition
 
     // cached auto-generated structure initializer
     private MethodStructure m_methodInit;
-
     }
