@@ -3,11 +3,16 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import java.util.Map;
+import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.Label;
+
 import org.xvm.compiler.Token;
 
 import static org.xvm.util.Handy.indentLines;
@@ -36,6 +41,26 @@ public class SwitchStatement
         {
         return true;
         }
+
+    @Override
+    public Label ensureContinueLabel(Context ctxOrigin)
+        {
+        Context ctxDest = getValidationContext();
+        assert ctxDest != null;
+
+        // generate a delta of assignment information for the long-jump
+        Map<String, Assignment> mapAsn = ctxOrigin.prepareJump(ctxDest);
+
+        // record the long-jump that landed on this statement by recording its assignment impact
+        if (m_listContinues == null)
+            {
+            m_listContinues = new ArrayList<>();
+            }
+        m_listContinues.add(mapAsn);
+
+        return getContinueLabel();
+        }
+
 
     @Override
     public long getStartPosition()
@@ -88,6 +113,14 @@ public class SwitchStatement
             ctx = ctxCond;
             }
 
+        if (m_casemgr.usesIfLadder())
+            {
+            // a switch that uses an "if ladder" may have side-effects of the various case
+            // statements that effect assignment, so treat the context containing the case
+            // statements as one big branch whose completion represents one possible path
+            ctx = ctx.enterFork(false);
+            }
+
         List<Statement> listStmts = block.stmts;
         int             cStmts    = listStmts.size();
         boolean         fInCase   = false;
@@ -110,11 +143,21 @@ public class SwitchStatement
                 {
                 if (fInCase)
                     {
+                    // use the statement index "i" as the cookie for the case group, so that we can
+                    // easily find the first statement of the case group's implicit statement block
                     m_casemgr.endCaseGroup(i);
                     fInCase = false;
 
                     assert ctxBlock == null;
                     ctxBlock = ctx.enter();
+
+                    // while not immediately apparent, a case block never completes normally; it
+                    // must break, continue (fall through), or otherwise fail to complete (e.g.
+                    // throw or return), otherwise an error occurs (detected during emit); by
+                    // marking the context as non-completing, we prevent the incorrect leaking of
+                    // assignment information from inside the block if the block does not break
+                    // unconditionally at its termination
+                    ctxBlock.markNonCompleting();
                     }
 
                 Statement stmtNew = stmt.validate(ctxBlock, errs);
@@ -138,24 +181,47 @@ public class SwitchStatement
                 }
             }
 
+        // close any last block
         if (ctxBlock != null)
             {
-            ctxBlock.exit();
+            ctx = ctxBlock.exit();
+            }
+
+        // close the context used for an "if ladder"
+        if (m_casemgr.usesIfLadder())
+            {
+            ctx = ctx.exit();
             }
 
         // notify the case manager that we're finished collecting everything
         fValid &= m_casemgr.validateEnd(ctx, errs);
 
-        // TODO
-
-        return fValid
-                ? this
-                : null;
+        return fValid ? this : null;
         }
 
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
+        boolean fCompletesCond;
+        if (m_casemgr.isSwitchConstant())
+        else if (cond instanceof AssignmentStatement)
+            {
+            AssignmentStatement stmtCond = (AssignmentStatement) cond;
+            fCompletesCond = stmtCond.completes(ctx, fReachable, code, errs);
+            code.add(new JumpFalse(stmtCond.getConditionRegister(), labelElse));
+            }
+        else
+            {
+            Expression exprCond = (Expression) cond;
+            fCompletesCond = exprCond.isCompletable();
+            exprCond.generateConditionalJump(ctx, code, labelElse, false, errs);
+            }
+
+        boolean fCompletes = fReachable;
+
+            {
+
+            }
         // TODO
         return fReachable;
         }
@@ -193,6 +259,21 @@ public class SwitchStatement
     protected StatementBlock block;
 
     private transient CaseManager m_casemgr;
+
+    /**
+     * A list of continuation labels, corresponding to the case groups from the CaseManager.
+     */
+    private transient List<Map<String, Assignment>> m_listContinues;
+
+    /**
+     * A list of continuation labels, corresponding to the case groups from the CaseManager.
+     */
+    private transient List<Map<String, Assignment>> m_listContinues;
+
+    /**
+     * A list of continuation labels, corresponding to the case groups from the CaseManager.
+     */
+    private transient List<Map<String, Assignment>> m_listContinues;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchStatement.class, "cond", "block");
     }
