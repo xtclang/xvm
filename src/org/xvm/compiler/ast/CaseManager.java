@@ -331,12 +331,6 @@ public class CaseManager
         {
         boolean fValid = true;
 
-        // the context must match
-        if (m_ctxSwitch != null)
-            {
-            assert ctx == m_ctxSwitch;
-            }
-
         // each contiguous group of "case:"/"default:" statements shares a single label
         if (m_labelCurrent == null)
             {
@@ -711,7 +705,7 @@ public class CaseManager
             {
             return true;
             }
-        
+
         int cConds = getConditionCount();
         if (cConds == 1)
             {
@@ -747,7 +741,7 @@ public class CaseManager
             {
             return true;
             }
-        
+
         if (constThat instanceof MatchAnyConstant
                 || !fRangeThis && !fRangeThat
                 || !(constThis instanceof ValueConstant)
@@ -759,7 +753,7 @@ public class CaseManager
             // provided for non-value constants (since they don't have a comparable value)
             return false;
             }
-        
+
         Object oThisLo, oThisHi;
         if (fRangeThis)
             {
