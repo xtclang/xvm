@@ -15,8 +15,8 @@ import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IntervalConstant;
 import org.xvm.asm.constants.MatchAnyConstant;
 import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.asm.constants.ValueConstant;
+
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
@@ -89,6 +89,14 @@ public class CaseManager
     public int getConditionCount()
         {
         return m_cCondVals;
+        }
+
+    /**
+     * @return the number of case groups encountered thus far
+     */
+    public int getCaseGroupCount()
+        {
+        return m_mapLabels.size();
         }
 
     /**
@@ -334,6 +342,7 @@ public class CaseManager
         if (m_labelCurrent == null)
             {
             m_labelCurrent = new Label("case_" + (m_mapLabels.size() + 1));
+            m_mapLabels.put(m_labelCurrent, null);
             }
 
         // each case statement is marked with the label that it will jump to
@@ -482,7 +491,6 @@ public class CaseManager
                             {
                             m_listsetCase.add(constCase);
                             m_listLabels.add(m_labelCurrent);
-                            m_mapLabels.put(m_labelCurrent, null);
 
                             if (fIntConsts)
                                 {
