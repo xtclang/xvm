@@ -58,6 +58,12 @@ public class DifferenceTypeConstant
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
+    public boolean isImmutabilitySpecified()
+        {
+        return m_constType1.isImmutabilitySpecified();
+        }
+
+    @Override
     public boolean isImmutable()
         {
         return m_constType1.isImmutable();
