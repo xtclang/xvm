@@ -2106,3 +2106,42 @@ class C
             }
         }
     }
+
+switch (x)
+    {
+    case a:
+        {A}
+        break;
+    case b:
+        {B}
+        break;
+    case c:
+        {C}
+        break;
+    default:
+        {D}
+        break;
+    }
+
+if (x==a)
+    {
+    A
+    }
+else
+    {
+    if (x==b)
+        {
+        B
+        }
+    else
+        {
+        if (x==c)
+            {
+            C
+            }
+        else
+            {
+            D
+            }
+        }
+    }
