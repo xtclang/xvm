@@ -421,13 +421,6 @@ public class Annotation
             {
             throw new IllegalStateException();
             }
-
-        @Override
-        protected Assignment promoteNonCompleting(String sName, Assignment asnInner,
-                Assignment asnOuter)
-            {
-            throw new IllegalStateException();
-            }
         }
 
 

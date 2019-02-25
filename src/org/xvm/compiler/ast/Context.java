@@ -299,40 +299,38 @@ public class Context
                     ((Register) getVar(sName)).markEffectivelyFinal();
                     }
                 }
-            else
+            else if (fCompleting)
                 {
-                Assignment asnOuter = ctxOuter.getVarAssignment(sName);
-
-                asnOuter = fCompleting
-                        ? promote(sName, asnInner, asnOuter)
-                        : promoteNonCompleting(sName, asnInner, asnOuter);
-
+                Assignment asnOuter = promote(sName, asnInner, ctxOuter.getVarAssignment(sName));
                 if (fDemuxing)
                     {
                     asnOuter = asnOuter.demux();
                     }
-
                 ctxOuter.setVarAssignment(sName, asnOuter);
                 }
             }
 
-        for (Entry<String, Argument> entry : getNarrowingMap(true).entrySet())
+        if (fCompleting)
             {
-            promoteNarrowedType(entry.getKey(), entry.getValue(), true);
-            }
-        for (Entry<String, Argument> entry : getNarrowingMap(false).entrySet())
-            {
-            promoteNarrowedType(entry.getKey(), entry.getValue(), false);
+            for (Entry<String, Argument> entry : getNarrowingMap(true).entrySet())
+                {
+                promoteNarrowedType(entry.getKey(), entry.getValue(), true);
+                }
+            for (Entry<String, Argument> entry : getNarrowingMap(false).entrySet())
+                {
+                promoteNarrowedType(entry.getKey(), entry.getValue(), false);
+                }
+
+            for (Entry<String, TypeConstant> entry : getFormalTypeMap(Branch.WhenTrue).entrySet())
+                {
+                promoteNarrowedFormalType(entry.getKey(), entry.getValue(), Branch.WhenTrue);
+                }
+            for (Entry<String, TypeConstant> entry : getFormalTypeMap(Branch.WhenFalse).entrySet())
+                {
+                promoteNarrowedFormalType(entry.getKey(), entry.getValue(), Branch.WhenFalse);
+                }
             }
 
-        for (Entry<String, TypeConstant> entry : getFormalTypeMap(Branch.WhenTrue).entrySet())
-            {
-            promoteNarrowedFormalType(entry.getKey(), entry.getValue(), Branch.WhenTrue);
-            }
-        for (Entry<String, TypeConstant> entry : getFormalTypeMap(Branch.WhenFalse).entrySet())
-            {
-            promoteNarrowedFormalType(entry.getKey(), entry.getValue(), Branch.WhenFalse);
-            }
         return ctxOuter;
         }
 
@@ -421,21 +419,6 @@ public class Context
     protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
         {
         return asnInner;
-        }
-
-    /**
-     * Promote assignment information from this context to its enclosing context with the explicit
-     * understanding that this context is non-completing.
-     *
-     * @param sName     the variable name
-     * @param asnInner  the variable assignment information to promote to the enclosing context
-     * @param asnOuter  the variable assignment information from the enclosing context
-     *
-     * @return the promoted assignment information
-     */
-    protected Assignment promoteNonCompleting(String sName, Assignment asnInner, Assignment asnOuter)
-        {
-        return asnOuter.promoteFromNonCompleting(asnInner);
         }
 
     /**
@@ -1361,13 +1344,6 @@ public class Context
 
         @Override
         protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
-            {
-            throw new IllegalStateException();
-            }
-
-        @Override
-        protected Assignment promoteNonCompleting(String sName, Assignment asnInner,
-                Assignment asnOuter)
             {
             throw new IllegalStateException();
             }
