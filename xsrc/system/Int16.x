@@ -1,5 +1,5 @@
 const Int16
-        implements IntNumber
+        extends IntNumber
         default(0)
     {
     /**

@@ -1,5 +1,5 @@
 const Int8
-        implements IntNumber
+        extends IntNumber
         default(0)
     {
     /**

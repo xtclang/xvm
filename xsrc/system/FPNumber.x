@@ -1,4 +1,4 @@
-interface FPNumber
+const FPNumber
         extends Number
     {
     static FPLiteral PI = 3.141592653589793238462643383279502884197169399375105820974944592307816406286;
@@ -8,27 +8,27 @@ interface FPNumber
      * If the floating point number is a finite value, indicating that it is neither
      * infinite nor Not-a-Number.
      */
-    @RO Boolean finite;
+    @Abstract @RO Boolean finite;
     /**
      * If the floating point number is an infinite value.
      */
-    @RO Boolean infinite;
+    @Abstract @RO Boolean infinite;
     /**
      * If the floating point number is Not-a-Number.
      */
-    @RO Boolean NaN;
+    @Abstract @RO Boolean NaN;
     /**
      * The radix. (The only values defined by IEEE 754-2008 are 2 and 10.)
      */
-    @RO Int radix;
+    @Abstract @RO Int radix;
     /**
      * The precision, in "digits" of the radix of the floating point number, as specified by IEEE 754-2008.
      */
-    @RO Int precision;
+    @Abstract @RO Int precision;
     /**
      * The maximum exponent, as specified by IEEE 754-2008.
      */
-    @RO Int emax;
+    @Abstract @RO Int emax;
     /**
      * The minimum exponent, as specified by IEEE 754-2008.
      */

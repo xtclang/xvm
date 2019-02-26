@@ -1,4 +1,4 @@
-interface DecimalFPNumber
+const DecimalFPNumber
         extends FPNumber
     {
     @Override

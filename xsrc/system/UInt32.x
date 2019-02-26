@@ -1,5 +1,5 @@
 const UInt32
-        implements IntNumber
+        extends IntNumber
         default(0)
     {
     /**

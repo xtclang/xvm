@@ -1,5 +1,5 @@
 const Int128
-        implements IntNumber
+        extends IntNumber
         default(0)
     {
     /**

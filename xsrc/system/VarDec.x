@@ -1,4 +1,4 @@
 const VarDec
-        implements DecimalFPNumber
+        extends DecimalFPNumber
     {
     }

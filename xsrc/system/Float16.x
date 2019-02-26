@@ -1,4 +1,4 @@
 const Float16
-        implements BinaryFPNumber
+        extends BinaryFPNumber
     {
     }

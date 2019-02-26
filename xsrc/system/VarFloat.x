@@ -1,4 +1,4 @@
 const VarFloat
-        implements BinaryFPNumber
+        extends BinaryFPNumber
     {
     }

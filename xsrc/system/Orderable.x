@@ -10,7 +10,8 @@ interface Orderable
      */
     @Op Interval<Orderable> through(Orderable that)
         {
-        return new Interval<Orderable>(this, that);
+        assert this.is(immutable Object) && that.is(immutable Object);
+        return new Interval<immutable Orderable>(this, that);
         }
 
     /**

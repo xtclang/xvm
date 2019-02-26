@@ -2,7 +2,7 @@
  * An unsigned integer with a power-of-2 number of bits (at least 8).
  */
 const VarUInt
-        implements UIntNumber
+        extends UIntNumber
     {
     /**
      * TODO

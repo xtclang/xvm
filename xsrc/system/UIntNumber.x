@@ -1,4 +1,4 @@
-interface UIntNumber
+const UIntNumber
         extends IntNumber
     {
     @Override

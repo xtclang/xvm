@@ -1,4 +1,4 @@
 const Float32
-        implements BinaryFPNumber
+        extends BinaryFPNumber
     {
     }

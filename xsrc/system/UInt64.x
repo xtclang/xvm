@@ -1,5 +1,5 @@
 const UInt64
-        implements UIntNumber
+        extends UIntNumber
         default(0)
     {
     /**

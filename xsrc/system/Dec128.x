@@ -1,4 +1,4 @@
 const Dec128
-        implements DecimalFPNumber
+        extends DecimalFPNumber
     {
     }

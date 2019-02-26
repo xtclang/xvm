@@ -1,5 +1,5 @@
 const Int64
-        implements IntNumber
+        extends IntNumber
         default(0)
     {
     /**

@@ -2,8 +2,8 @@
  * The Number interface represents the properties and operations available on every
  * numeric type included in Ecstasy.
  */
-interface Number
-        extends Orderable
+const Number
+        implements Orderable
     {
     enum Signum(String prefix, IntLiteral factor, Ordered ordered)
         {
@@ -17,12 +17,12 @@ interface Number
     /**
      * The number of bits that the number uses.
      */
-    @RO Int bitLength;
+    Int bitLength;
 
     /**
      * The number of bytes that the number uses.
      */
-    @RO Int byteLength.get()
+    Int byteLength.get()
         {
         // make sure the bit length is at least 8, and also a power-of-two
         assert bitLength == (bitLength & ~0x7).leftmostBit;
@@ -34,12 +34,12 @@ interface Number
      * True if the numeric type is signed (has the potential to hold positive or negative values);
      * false if unsigned (representing only a magnitude).
      */
-    @RO Boolean signed;
+    Boolean signed;
 
     /**
      * The Sign of the number.
      */
-    @RO Signum sign;
+    Signum sign;
 
     // ----- operations
 

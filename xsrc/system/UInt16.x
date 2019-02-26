@@ -1,5 +1,5 @@
 const UInt16
-        implements IntNumber
+        extends IntNumber
         default(0)
     {
     /**

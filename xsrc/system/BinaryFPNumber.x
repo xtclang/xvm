@@ -1,4 +1,4 @@
-interface BinaryFPNumber
+const BinaryFPNumber
         extends FPNumber
     {
     @Override
