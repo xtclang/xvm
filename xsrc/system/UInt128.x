@@ -12,24 +12,10 @@ const UInt128
      */
     static IntLiteral maxvalue =  0xFFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF;
 
-    private Bit[] bits;
-
     construct(Bit[] bits)
         {
         assert bits.size == 128;
-        this.bits = bits;
-        }
-
-    @Override
-    Int bitLength.get()
-        {
-        return 128;
-        }
-
-    @Override
-    Int byteLength.get()
-        {
-        return 16;
+        construct IntNumber(bits);
         }
 
     @Override

@@ -26,11 +26,7 @@ const VarUInt
         bitsUsed = bitsUsed < 8 ? 8 : (bitsUsed * 2 - 1).leftmostBit;
 
         // if the passed-in bits array isn't the right length, then replace it with a correct one
-        if (bitsUsed == bits.size)
-            {
-            this.bits = bits;
-            }
-        else
+        if (bitsUsed != bits.size)
             {
             // need to allocate a new array of bits of the calculated size, and copy over
             // the least significant bitsUsed number of bits that were passed in
@@ -39,29 +35,17 @@ const VarUInt
                 {
                 newBits[i] = bits[i];
                 }
-            this.bits = newBits;
+            bits = newBits;
             }
-        }
 
-    /**
-     * The actual bits of the unsigned integer.
-     */
-    private Bit[] bits;
+        construct UIntNumber(bits);
+        }
 
     /**
      * The sign property is declared by Number as read-only, but the VarUInt actually needs storage
      * for the sign property, so it is declaring it at this level as a read/write property (which,
      * due to the constness of this class, is read-only in reality.)
      */
-
-    @Override
-    Signum sign;
-
-    @Override
-    Int bitLength.get()
-        {
-        return bits.size;
-        }
 
     @Override
     Bit[] to<Bit[]>()

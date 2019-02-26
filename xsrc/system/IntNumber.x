@@ -5,6 +5,11 @@ const IntNumber
         extends Number
         implements Sequential
     {
+    protected construct(Bit[] bits)
+        {
+        construct Number(bits);
+        }
+
     // ----- additional IntNumber capabilities -----------------------------------------------------
 
     /**

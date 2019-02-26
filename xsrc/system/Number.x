@@ -12,12 +12,25 @@ const Number
         Positive("+", +1, Greater)
         }
 
+    protected construct(Bit[] bits)
+        {
+        this.bits = bits;
+        }
+
     // ----- properties
+
+    /**
+     * The array of bits representing this number.
+     */
+    @Abstract Bit[] bits;
 
     /**
      * The number of bits that the number uses.
      */
-    Int bitLength;
+    Int bitLength.get()
+        {
+        return bits.size;
+        }
 
     /**
      * The number of bytes that the number uses.
@@ -72,7 +85,7 @@ const Number
      * Division and Modulo: Divide this number by another number, and return both the
      * quotient and the modulo.
      */
-//    @Op (@Desc("quotient") Number, @Desc("modulo") Number) divmod(Number n)
+// TODO @Op (Number quotient, Number modulo) divmod(Number n)
     @Op (Number, Number) divmod(Number n)
         {
         return (this / n, this % n);

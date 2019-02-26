@@ -7,10 +7,8 @@ const VarInt
     construct(Bit[] bits)
         {
         assert bits.size >= 8 && bits.size.bitCount == 1;
-        this.bits = bits;
+        construct IntNumber(bits);
         }
-
-    private Bit[] bits;
 
     @Override
     @Lazy Signum sign.get()
@@ -29,18 +27,6 @@ const VarInt
 
         // no bits set is zero
         return Zero;
-        }
-
-    @Override
-    Int bitLength.get()
-        {
-        return bits.size;
-        }
-
-    @Override
-    Int byteLength.get()
-        {
-        return bitLength / 8;
         }
 
     @Override
