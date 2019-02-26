@@ -133,20 +133,6 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public boolean isImmutabilitySpecified()
-        {
-        return m_constType1.isImmutabilitySpecified()
-                && m_constType2.isImmutabilitySpecified();
-        }
-
-    @Override
-    public boolean isImmutable()
-        {
-        return m_constType1.isImmutable()
-                && m_constType2.isImmutable();
-        }
-
-    @Override
     public boolean isAccessSpecified()
         {
         return m_constType1.isAccessSpecified()

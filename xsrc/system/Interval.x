@@ -1,7 +1,7 @@
 /**
  * An interval specifies a lower bound and an upper bound.
  */
-const Interval<ElementType extends Orderable>
+const Interval<ElementType extends immutable Orderable>
 // TODO this should be: Interval<ElementType extends Orderable+Stringable>
 // and all casts to <Stringable> removed
         incorporates conditional Range<ElementType extends Sequential>

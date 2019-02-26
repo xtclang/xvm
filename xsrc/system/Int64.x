@@ -1,5 +1,5 @@
 const Int64
-        implements IntNumber
+        extends IntNumber
         default(0)
     {
     /**
@@ -12,24 +12,10 @@ const Int64
      */
     static IntLiteral maxvalue =  0x7FFF_FFFF_FFFF_FFFF;
 
-    private Bit[] bits;
-
     construct(Bit[] bits)
         {
         assert bits.size == 64;
-        this.bits = bits;
-        }
-
-    @Override
-    Int bitLength.get()
-        {
-        return 64;
-        }
-
-    @Override
-    Int byteLength.get()
-        {
-        return 8;
+        construct IntNumber(bits);
         }
 
     @Override

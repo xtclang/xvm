@@ -1,5 +1,5 @@
 const Int8
-        implements IntNumber
+        extends IntNumber
         default(0)
     {
     /**
@@ -12,24 +12,10 @@ const Int8
      */
     static IntLiteral maxvalue = 127;
 
-    private Bit[] bits;
-
     construct(Bit[] bits)
         {
         assert bits.size == 8;
-        this.bits = bits;
-        }
-
-    @Override
-    Int bitLength.get()
-        {
-        return 8;
-        }
-
-    @Override
-    Int byteLength.get()
-        {
-        return 1;
+        construct IntNumber(bits);
         }
 
     @Override

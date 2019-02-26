@@ -1,4 +1,9 @@
 const Float64
-        implements BinaryFPNumber
+        extends BinaryFPNumber
     {
+    construct(Bit[] bits)
+        {
+        assert bits.size == 64;
+        construct BinaryFPNumber(bits);
+        }
     }

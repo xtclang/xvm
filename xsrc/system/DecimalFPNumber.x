@@ -1,6 +1,11 @@
-interface DecimalFPNumber
+const DecimalFPNumber
         extends FPNumber
     {
+    protected construct(Bit[] bits)
+        {
+        construct FPNumber(bits);
+        }
+
     @Override
     @RO Int radix.get()
         {

@@ -1,4 +1,9 @@
 const Float32
-        implements BinaryFPNumber
+        extends BinaryFPNumber
     {
+    construct(Bit[] bits)
+        {
+        assert bits.size == 32;
+        construct BinaryFPNumber(bits);
+        }
     }

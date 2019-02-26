@@ -1,10 +1,15 @@
 /**
  * An IntNumber is a Number that represents an integer value.
  */
-interface IntNumber
+const IntNumber
         extends Number
-        extends Sequential
+        implements Sequential
     {
+    protected construct(Bit[] bits)
+        {
+        construct Number(bits);
+        }
+
     // ----- additional IntNumber capabilities -----------------------------------------------------
 
     /**
@@ -68,30 +73,45 @@ interface IntNumber
      * If any bits are set in this integer, then return an integer with only the most significant
      * (left-most) of those bits set, otherwise return zero.
      */
-    @RO Int leftmostBit;
+    Int leftmostBit.get()
+        {
+        TODO
+        }
 
     /**
      * If any bits are set in this integer, then return an integer with only the least significant
      * (right-most) of those bits set, otherwise return zero.
      */
-    @RO Int rightmostBit;
+    Int rightmostBit.get()
+        {
+        TODO
+        }
 
     /**
      * Determine, from left-to-right (most significant to least) the number of bits that are zero
      * preceding the most significant (left-most) bit.
      */
-    @RO Int leadingZeroCount;
+    Int leadingZeroCount.get()
+        {
+        TODO
+        }
 
     /**
      * Determine, from right-to-left (least significant to most) the number of bits that are zero
      * following the least significant (right-most) bit.
      */
-    @RO Int trailingZeroCount;
+    Int trailingZeroCount.get()
+        {
+        TODO
+        }
 
     /**
      * The number of bits that are set (non-zero) in the integer.
      */
-    @RO Int bitCount;
+    Int bitCount.get()
+        {
+        TODO
+        }
 
     /**
      * Swap the bit ordering of this integer's bits to produce a new integer with the
@@ -137,7 +157,10 @@ interface IntNumber
     /**
      * The number of digits necessary to represent the magnitude of this integer value.
      */
-    @RO Int digitCount;
+    Int digitCount.get()
+        {
+        TODO
+        }
 
 
     // ----- helpers -------------------------------------------------------------------------------

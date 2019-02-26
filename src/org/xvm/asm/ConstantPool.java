@@ -1091,6 +1091,11 @@ public class ConstantPool
                 sSub = sName;
                 break;
 
+            case "Abstract":
+                sPkg = "annotations";
+                sClz = "Abstract";
+                break;
+
             case "Atomic":
                 sPkg = "annotations";
                 sClz = "AtomicVar";

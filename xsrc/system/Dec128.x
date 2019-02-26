@@ -1,4 +1,9 @@
 const Dec128
-        implements DecimalFPNumber
+        extends DecimalFPNumber
     {
+    construct(Bit[] bits)
+        {
+        assert bits.size == 128;
+        construct DecimalFPNumber(bits);
+        }
     }
