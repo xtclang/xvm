@@ -22,7 +22,7 @@ const Number
     /**
      * The array of bits representing this number.
      */
-    @Abstract Bit[] bits;
+    Bit[] bits;
 
     /**
      * The number of bits that the number uses.
