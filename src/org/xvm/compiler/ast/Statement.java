@@ -49,6 +49,18 @@ public abstract class Statement
         }
 
     /**
+     * Specify a label for this statement. Note that only one label is supported, so once set, it
+     * cannot be modified. (Package private, because this should only be used by other AST nodes.)
+     *
+     * @param label  the label corresponding to the beginning of the Statement
+     */
+    void setBeginLabel(Label label)
+        {
+        assert m_labelBegin == null;
+        m_labelBegin = m_labelBegin;
+        }
+
+    /**
      * @return the label corresponding to the ending of the Statement
      */
     public Label getEndLabel()

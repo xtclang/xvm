@@ -5,11 +5,12 @@ import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import java.util.Map;
+
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.Label;
 
@@ -48,19 +49,24 @@ public class SwitchStatement
         Context ctxDest = getValidationContext();
         assert ctxDest != null;
 
-        // generate a delta of assignment information for the long-jump
-        Map<String, Assignment> mapAsn = ctxOrigin.prepareJump(ctxDest);
-
-        // record the long-jump that landed on this statement by recording its assignment impact
-        if (m_listContinues == null)
+        if (m_labelContinue == null)
             {
+            assert m_listContinues == null;
+
+            int iGroup = m_casemgr.getCaseGroupCount() - 1;
+            assert iGroup >= 0;
+
+            m_labelContinue = new Label("fall_through_from_case_group_" + iGroup);
             m_listContinues = new ArrayList<>();
             }
-        m_listContinues.add(mapAsn);
 
-        return getContinueLabel();
+        // record the long-jump that will either fall-through to the next case group or (if this is
+        // the last case group) break out of this switch statement by recording its assignment
+        // impact (a delta of assignment information)
+        m_listContinues.add(ctxOrigin.prepareJump(ctxDest));
+
+        return m_labelContinue;
         }
-
 
     @Override
     public long getStartPosition()
@@ -118,7 +124,8 @@ public class SwitchStatement
             // a switch that uses an "if ladder" may have side-effects of the various case
             // statements that effect assignment, so treat the context containing the case
             // statements as one big branch whose completion represents one possible path
-            ctx = ctx.enterFork(false);
+            ctx = ctx.enter();
+            ctx.markNonCompleting();
             }
 
         List<Statement> listStmts = block.stmts;
@@ -158,6 +165,19 @@ public class SwitchStatement
                     // assignment information from inside the block if the block does not break
                     // unconditionally at its termination
                     ctxBlock.markNonCompleting();
+
+                    // associate any previous "fall through" with this pseudo statement block
+                    if (m_labelContinue != null)
+                        {
+                        stmt.setBeginLabel(m_labelContinue);
+                        for (Map<String, Assignment> mapAsn : m_listContinues)
+                            {
+                            ctxBlock.merge(mapAsn);
+                            }
+
+                        m_labelContinue = null;
+                        m_listContinues = null;
+                        }
                     }
 
                 Statement stmtNew = stmt.validate(ctxBlock, errs);
@@ -193,6 +213,16 @@ public class SwitchStatement
             ctx = ctx.exit();
             }
 
+        if (m_listContinues != null)
+            {
+            // the last "continue" donates asn deltas in roughtly the same way that a "break" would
+            // REVIEW does this go AFTER validateEnd() i.e. on the original passed-in ctx?
+            for (Map<String, Assignment> mapAsn : m_listContinues)
+                {
+                ctx.merge(mapAsn);
+                }
+            }
+
         // notify the case manager that we're finished collecting everything
         fValid &= m_casemgr.validateEnd(ctx, errs);
 
@@ -219,10 +249,15 @@ public class SwitchStatement
 
         boolean fCompletes = fReachable;
 
-            {
-
-            }
         // TODO
+
+        // if the last case group block has a "continue", then it "continues" to the same place that
+        // a "break" would "break", i.e. the end
+        if (m_labelContinue != null)
+            {
+            code.add(m_labelContinue);
+            }
+
         return fReachable;
         }
 
@@ -263,7 +298,7 @@ public class SwitchStatement
     /**
      * A list of continuation labels, corresponding to the case groups from the CaseManager.
      */
-    private transient List<Map<String, Assignment>> m_listContinues;
+    private transient Label m_labelContinue;
 
     /**
      * A list of continuation labels, corresponding to the case groups from the CaseManager.
@@ -273,7 +308,7 @@ public class SwitchStatement
     /**
      * A list of continuation labels, corresponding to the case groups from the CaseManager.
      */
-    private transient List<Map<String, Assignment>> m_listContinues;
+    // TODO private transient List<Map<String, Assignment>> m_listContinues;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchStatement.class, "cond", "block");
     }

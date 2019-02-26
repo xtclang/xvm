@@ -2145,3 +2145,20 @@ else
             }
         }
     }
+
+// property
+static Int X = 1;
+//....
+switch (X)
+    {
+    case 0:
+    case 7, 9:
+    case 8:
+        //....
+    case 1:
+        //....
+    case 2:
+        //....
+    default:
+        //....
+    }
