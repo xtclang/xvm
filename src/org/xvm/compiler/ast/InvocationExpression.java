@@ -1518,7 +1518,9 @@ public class InvocationExpression
                     // - methods are included because there is a left, but since it is to obtain a
                     //   method reference, there must not be any arg binding or actual invocation
                     // - functions are included because the left is identity-mode
-                    TypeInfo   infoLeft   = nameLeft.getIdentity(ctx).ensureTypeInfo(errs);
+                    // TODO: if left is a super class or a "nest mate", use PROTECTED access as well
+                    Access     access     = fConstruct ? Access.PROTECTED : Access.PUBLIC;
+                    TypeInfo   infoLeft   = nameLeft.getIdentity(ctx).ensureTypeInfo(access, errs);
                     MethodType methodType = fConstruct ? MethodType.Constructor
                             : fNoFBind && fNoCall ? MethodType.Either : MethodType.Function;
                     Argument   arg        = findCallable(ctx, infoLeft, sName, methodType, atypeReturn, errs);

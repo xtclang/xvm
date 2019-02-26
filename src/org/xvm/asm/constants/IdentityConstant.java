@@ -573,19 +573,23 @@ public abstract class IdentityConstant
      *         (including module and package), or a property identity (to obtain a nested TypeInfo
      *         for the property, as if the property were a class itself)
      */
-    public TypeInfo ensureTypeInfo(ErrorListener errs)
+    public TypeInfo ensureTypeInfo(Access access, ErrorListener errs)
         {
+        TypeConstant type;
         switch (getFormat())
             {
             case Module:
             case Package:
-                return getType().ensureTypeInfo(errs);
+                type = getType();
+                break;
 
             case Class:
-                return ((ClassStructure) getComponent()).getFormalType().ensureTypeInfo(errs);
+                type = ((ClassStructure) getComponent()).getFormalType();
+                break;
 
             case Typedef:
-                return ((TypedefStructure) getComponent()).getType().ensureTypeInfo(errs);
+                type = ((TypedefStructure) getComponent()).getType();
+                break;
 
             case Property:
                 throw new UnsupportedOperationException("TODO: TypeInfo for property");
@@ -593,6 +597,12 @@ public abstract class IdentityConstant
             default:
                 throw new IllegalStateException("not a class type: " + this);
             }
+
+        if (access != null && access != Access.PUBLIC)
+            {
+            type = type.getConstantPool().ensureAccessTypeConstant(type, access);
+            }
+        return type.ensureTypeInfo(errs);
         }
 
     /**
