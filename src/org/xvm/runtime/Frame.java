@@ -1918,8 +1918,13 @@ public class Frame
 
     public interface Continuation
         {
-        // @param frame  the frame which has just "returned"
-        // return either R_NEXT, R_CALL or R_EXCEPTION
+        /**
+         * Proceed with a deferred execution.
+         *
+         * @param frameCaller  the frame which has just "returned"
+         *
+         * @return R_NEXT, R_CALL, R_EXCEPTION or a positive iPC value
+         */
         int proceed(Frame frameCaller);
         }
 

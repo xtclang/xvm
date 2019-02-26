@@ -268,6 +268,10 @@ public class ServiceContext
                     Frame.Continuation continuation = frame.m_continuation;
                     frame = m_frameCurrent = frame.f_framePrev; // GC the old frame
 
+                    if (frame != null)
+                        {
+                        iPC = frame.m_iPC;
+                        }
                     if (continuation != null)
                         {
                         int iResult = continuation.proceed(frame);
@@ -325,7 +329,6 @@ public class ServiceContext
                         return frame;
                         }
                     abOp = frame.f_aOp;
-                    iPC = frame.m_iPC;
                     break;
                     }
 
