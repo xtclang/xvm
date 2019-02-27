@@ -379,7 +379,8 @@ class Array<ElementType>
                 case Persistent:
                 case Mutable:
                     mutability = FixedSize;
-                    // fall through
+                    continue;
+
                 case FixedSize:
                     return this;
                 }
@@ -423,7 +424,8 @@ class Array<ElementType>
                 case FixedSize:
                 case Mutable:
                     mutability = Persistent;
-                    // fall through
+                    continue;
+
                 case Persistent:
                     return this;
                 }
@@ -445,7 +447,6 @@ class Array<ElementType>
                     return this;
                 }
             }
-
         }
 
     /**
