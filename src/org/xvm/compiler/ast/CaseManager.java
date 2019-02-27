@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
@@ -18,7 +19,11 @@ import org.xvm.asm.constants.MatchAnyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.ValueConstant;
 
+import org.xvm.asm.op.Assert;
 import org.xvm.asm.op.Jump;
+import org.xvm.asm.op.JumpInt;
+import org.xvm.asm.op.JumpVal;
+import org.xvm.asm.op.JumpVal_N;
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
@@ -320,6 +325,7 @@ public class CaseManager<CookieType>
                 }
             }
 
+        m_listCond = listCond;
         m_typeCase = pool.ensureImmutableTypeConstant(m_atypeCond.length == 1
                 ? m_atypeCond[0]
                 : pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_atypeCond));
@@ -907,6 +913,113 @@ public class CaseManager<CookieType>
         }
 
     /**
+     * Generate the arguments that result from the evaluation of the switch condition.
+     *
+     * @param ctx     the emitting context
+     * @param code    the code to emit to
+     * @param errs    the error list to log to
+     *
+     * @return an array of arguments
+     */
+    public Argument[] generateConditionArguments(Context ctx, Code code, ErrorListener errs)
+        {
+        assert m_listCond != null && !m_listCond.isEmpty();
+
+        Label labelDefault = getDefaultLabel();
+        if (labelDefault == null)
+            {
+            labelDefault = new Label("default_assert");
+            }
+
+        Argument[] aArgVal = new Argument[getConditionCount()];
+        int ofArgVal = 0;
+        for (AstNode node : m_listCond)
+            {
+            Expression exprCond;
+            if (node instanceof AssignmentStatement)
+                {
+                AssignmentStatement stmt = (AssignmentStatement) node;
+                boolean fCompletes = stmt.completes(ctx, true, code, errs);
+                if (!fCompletes)
+                    {
+                    m_fCondAborts = true;
+                    }
+                exprCond = stmt.getLValue().getLValueExpression();
+                }
+            else
+                {
+                exprCond = (Expression) node;
+                }
+
+            if (usesJmpInt() && (!getJmpIntOffset().equals(PackedInteger.ZERO)
+                    || !exprCond.getType().isA(pool().typeInt())))
+                {
+                // either the offset is non-zero of the type is non-int; either way, convert it to a
+                // zero-based int
+                exprCond = new ToIntExpression(exprCond, getJmpIntOffset(), errs);
+                }
+
+            Argument[] aArgsAdd = exprCond.generateArguments(ctx, code, true, true, errs);
+            int cArgsAdd = aArgsAdd.length;
+            System.arraycopy(aArgsAdd, 0, aArgVal, ofArgVal, cArgsAdd);
+            ofArgVal += cArgsAdd;
+            }
+        assert ofArgVal == aArgVal.length;
+
+        return aArgVal;
+        }
+
+    /**
+     * After generating the condition arguments, determine if the condition is aborting.
+     *
+     * @return true iff the condition is known to always abort
+     */
+    public boolean isConditionAborting()
+        {
+        return m_fCondAborts;
+        }
+
+    /**
+     * Generate the code for "jump table".
+     *
+     * @param ctx     the emitting context
+     * @param code    the code to emit to
+     * @param errs    the error list to log to
+     */
+    public void generateJumpTable(Context ctx, Code code, ErrorListener errs)
+        {
+        boolean fDefaultAssert = false;
+        Label   labelDefault   = getDefaultLabel();
+        if (labelDefault == null)
+            {
+            labelDefault   = new Label("default_assert");
+            fDefaultAssert = true;
+            }
+
+        Argument[] aArgVal    = generateConditionArguments(ctx, code, errs);
+        Label[]    alabelCase = getCaseLabels();
+        if (usesJmpInt())
+            {
+            assert getConditionCount() == 1 && aArgVal.length == 1;
+            code.add(new JumpInt(aArgVal[0], alabelCase, labelDefault));
+            }
+        else
+            {
+            Constant[] aconstCase = getCaseConstants();
+            code.add(usesJmpValN()
+                    ? new JumpVal_N(aArgVal, aconstCase, alabelCase, labelDefault)
+                    : new JumpVal(aArgVal[0], aconstCase, alabelCase, labelDefault));
+            }
+
+        if (fDefaultAssert)
+            {
+            // default is an assertion
+            code.add(labelDefault);
+            code.add(new Assert(pool().valFalse()));
+            }
+        }
+
+    /**
      * Generate the code for "jump table emulation" via an if-ladder.
      *
      * @param ctx     the emitting context
@@ -958,6 +1071,16 @@ public class CaseManager<CookieType>
      * The actual number of condition values.
      */
     private int m_cCondVals = -1;
+
+    /**
+     * The condition (or list of conditions).
+     */
+    private List<AstNode> m_listCond;
+
+    /**
+     * Set to true iff the condition is determined to abort.
+     */
+    private boolean m_fCondAborts;
 
     /**
      * The type of each condition expression / tuple field of case statements.

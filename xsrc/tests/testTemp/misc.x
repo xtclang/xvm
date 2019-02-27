@@ -231,9 +231,11 @@ module TestMisc.xqiz.it
         console.println("We Have Lift-Off!!!");
         }
 
-    static Int FOUR = 4;
+    // static Int FOUR = 4;
+    // TODO BUGBUG GG: Int FOUR = 4;
     void testSwitchStmt()
         {
+        Int FOUR = 4;
         console.println("\n** testSwitchStmt()");
 
         switch (FOUR)
