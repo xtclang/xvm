@@ -100,6 +100,16 @@ public class UnresolvedTypeConstant
         }
 
     @Override
+    public boolean isExplicitClassIdentity(boolean fAllowParams)
+        {
+        if (isTypeResolved())
+            {
+            return m_type.isExplicitClassIdentity(fAllowParams);
+            }
+        throw new IllegalStateException();
+        }
+
+    @Override
     public TypeConstant getUnderlyingType()
         {
         if (isTypeResolved())

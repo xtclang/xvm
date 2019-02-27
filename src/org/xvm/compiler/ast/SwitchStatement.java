@@ -100,7 +100,7 @@ public class SwitchStatement
     @Override
     protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
         {
-        // TODO definite assignment implications
+        // REVIEW definite assignment implications
         return getEndLabel();
         }
 
@@ -280,19 +280,19 @@ public class SwitchStatement
             code.add(new Enter());
             }
 
-        // TODO
-//        if (cond instanceof AssignmentStatement)
-//            {
-//            AssignmentStatement stmtCond = (AssignmentStatement) cond;
-//            fCompletesCond = stmtCond.completes(ctx, fReachable, code, errs);
-//            code.add(new JumpFalse(stmtCond.getConditionRegister(), labelElse));
-//            }
-//        else
-//            {
-//            Expression exprCond = (Expression) cond;
-//            fCompletesCond = exprCond.isCompletable();
-//            exprCond.generateConditionalJump(ctx, code, labelElse, false, errs);
-//            }
+        if (m_casemgr.usesIfLadder())
+            {
+            m_casemgr.generateIfLadder(ctx, code, block.stmts, errs);
+            }
+        else
+            {
+            m_casemgr.generateJumpTable(ctx, code, errs);
+            }
+
+        for (int iGroup = 0, cGroups = m_listGroups.size(); iGroup < cGroups; ++iGroup)
+            {
+            emitCaseGroup(ctx, fReachable, code, iGroup, errs);
+            }
 
         if (m_casemgr.hasDeclarations())
             {
@@ -306,7 +306,7 @@ public class SwitchStatement
             code.add(m_labelContinue);
             }
 
-        return fReachable;
+        return false;
         }
 
     private void emitCaseGroup(Context ctx, boolean fReachable, Code code, int iGroup, ErrorListener errs)
@@ -325,14 +325,14 @@ public class SwitchStatement
             }
 
         // the label assigned to the case group
-        code.add(m_casemgr.getCaseLabels()[iGroup]);
+        List<Statement> listStmts = block.stmts;
+        code.add(((CaseStatement) listStmts.get(group.iFirstCase)).getLabel());
 
         if (group.fScope)
             {
             code.add(new Enter());
             }
 
-        List<Statement> listStmts = block.stmts;
         for (int iStmt = group.iFirstStmt, cStmts = listStmts.size(); iStmt < cStmts; ++iStmt)
             {
             Statement stmt = listStmts.get(iStmt);

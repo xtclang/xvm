@@ -211,33 +211,33 @@ public class SwitchExpression
             }
         else
             {
-            if (cond == null)
+            // a scope will be required if the switch condition declares any new variables
+            boolean fScope = m_casemgr.hasDeclarations();
+            if (fScope)
                 {
-                generateIfSwitch(ctx, code, aLVal, errs);
+                code.add(new Enter());
+                }
+
+            if (m_casemgr.usesIfLadder())
+                {
+                m_casemgr.generateIfLadder(ctx, code, contents, errs);
                 }
             else
                 {
-                // a scope will be required if the switch condition declares any new variables
-                boolean fScope = m_casemgr.hasDeclarations();
-                if (fScope)
-                    {
-                    code.add(new Enter());
-                    }
+                m_casemgr.generateJumpTable(ctx, code, errs);
+                }
 
-                generateJumpSwitch(ctx, code, aLVal, errs);
+            generateCaseBodies(ctx, code, aLVal, errs);
 
-                if (fScope)
-                    {
-                    code.add(new Exit());
-                    }
+            if (fScope)
+                {
+                code.add(new Exit());
                 }
             }
         }
 
-    private void generateIfSwitch(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
+    private void generateCaseBodies(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
-        m_casemgr.generateIfLadder(ctx, code, contents, errs);
-
         List<AstNode> aNodes    = contents;
         int           cNodes    = aNodes.size();
         Label         labelCur  = null;
@@ -262,102 +262,10 @@ public class SwitchExpression
         code.add(labelExit);
         }
 
-    private void generateJumpSwitch(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
-        {
-        assert cond != null && !cond.isEmpty();
-
-        Label labelDefault = m_casemgr.getDefaultLabel();
-        if (labelDefault == null)
-            {
-            labelDefault = new Label("default_assert");
-            }
-
-        Argument[] aArgVal  = new Argument[m_casemgr.getConditionCount()];
-        int        ofArgVal = 0;
-        for (AstNode node : cond)
-            {
-            Expression exprCond;
-            if (node instanceof AssignmentStatement)
-                {
-                AssignmentStatement stmt = (AssignmentStatement) node;
-                boolean fCompletes = stmt.completes(ctx, true, code, errs);
-                if (!fCompletes)
-                    {
-                    m_fAborting = true;
-                    }
-                exprCond = stmt.getLValue().getLValueExpression();
-                }
-            else
-                {
-                exprCond = (Expression) node;
-                }
-
-            if (m_casemgr.usesJmpInt() && (!m_casemgr.getJmpIntOffset().equals(PackedInteger.ZERO)
-                    || !exprCond.getType().isA(pool().typeInt())))
-                {
-                // either the offset is non-zero of the type is non-int; either way, convert it to a
-                // zero-based int
-                exprCond = new ToIntExpression(exprCond, m_casemgr.getJmpIntOffset(), errs);
-                }
-
-            Argument[] aArgsAdd = exprCond.generateArguments(ctx, code, true, true, errs);
-            int        cArgsAdd = aArgsAdd.length;
-            System.arraycopy(aArgsAdd, 0, aArgVal, ofArgVal, cArgsAdd);
-            ofArgVal += cArgsAdd;
-            }
-        assert ofArgVal == aArgVal.length;
-
-        Label[] alabelCase = m_casemgr.getCaseLabels();
-        if (m_casemgr.usesJmpInt())
-            {
-            assert cond.size() == 1 && aArgVal.length == 1;
-            code.add(new JumpInt(aArgVal[0], alabelCase, labelDefault));
-            }
-        else
-            {
-            Constant[] aconstCase = m_casemgr.getCaseConstants();
-            code.add(m_casemgr.usesJmpValN()
-                    ? new JumpVal_N(aArgVal, aconstCase, alabelCase, labelDefault)
-                    : new JumpVal(aArgVal[0], aconstCase, alabelCase, labelDefault));
-            }
-
-        Label         labelCur  = null;
-        Label         labelExit = new Label("switch_end");
-        List<AstNode> aNodes    = contents;
-        for (int i = 0, c = aNodes.size(); i < c; ++i)
-            {
-            AstNode node = aNodes.get(i);
-            if (node instanceof CaseStatement)
-                {
-                Label labelNew = ((CaseStatement) node).getLabel();
-                if (labelNew != labelCur)
-                    {
-                    code.add(labelNew);
-                    labelCur = labelNew;
-                    }
-                }
-            else
-                {
-                node.updateLineNumber(code);
-                ((Expression) node).generateAssignments(ctx, code, aLVal, errs);
-                code.add(new Jump(labelExit));
-                }
-            }
-
-        if (labelDefault != m_casemgr.getDefaultLabel())
-            {
-            // default is an assertion
-            code.add(labelDefault);
-            code.add(new Assert(pool().valFalse()));
-            }
-
-        code.add(labelExit);
-        }
-
     @Override
     public boolean isCompletable()
         {
-        return !m_fAborting;
+        return !m_casemgr.isConditionAborting();
         }
 
 
@@ -416,7 +324,6 @@ public class SwitchExpression
     protected long          lEndPos;
 
     private transient CaseManager<Expression> m_casemgr;
-    private transient boolean                 m_fAborting;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchExpression.class, "cond", "contents");
     }
