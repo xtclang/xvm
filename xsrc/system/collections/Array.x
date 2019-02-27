@@ -131,15 +131,12 @@ class Array<ElementType>
                 throw new IllegalStateException("Array is fixed size");
 
             case Persistent:
-                {
-                ElementType[] that = new ElementType[this.size + 1,
-                    (i) -> i < this.size ? this[i] : element];
-                that.mutability = Persistent;
-                return that;
-                }
+                ElementType[] newArray = new ElementType[this.size + 1,
+                    (i) -> (i < this.size ? this[i] : element)];
+                newArray.mutability = Persistent;
+                return newArray;
 
             default:
-                {
                 Element el = new Element(element);
                 if (head == null)
                     {
@@ -152,7 +149,6 @@ class Array<ElementType>
                     tail = el;
                     }
                 return this;
-                }
             }
         }
 
@@ -167,12 +163,10 @@ class Array<ElementType>
                 throw new IllegalStateException("Array is fixed size");
 
             case Persistent:
-                {
-                ElementType[] that = new ElementType[this.size + that.size,
-                    (i) -> i < this.size ? this[i] : that[i-this.size]];
-                that.mutability = Persistent;
-                return that;
-                }
+                ElementType[] newArray = new ElementType[this.size + that.size,
+                    (i) -> (i < this.size ? this[i] : that[i-this.size])];
+                newArray.mutability = Persistent;
+                return newArray;
 
             default:
                 for (Int i = 0; i < that.size; i++)
@@ -191,12 +185,10 @@ class Array<ElementType>
                 throw new IllegalStateException("Array is constant");
 
             case Persistent:
-                {
                 ElementType[] that = new ElementType[size, (i) -> this[i]];
                 that[index] = value;
                 that.mutability = Persistent;
                 return that;
-                }
 
             default:
                 elementAt(index).set(value);
