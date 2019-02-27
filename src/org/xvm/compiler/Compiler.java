@@ -1094,6 +1094,11 @@ public class Compiler
      */
     public static final String SWITCH_CASE_ILLEGAL_ARITY          = "COMPILER-116";
     /**
+     * Each "case" group in a "switch" must end with a break or continue (or other non-completing
+     * statement).
+     */
+    public static final String SWITCH_BREAK_OR_CONTINUE_EXPECTED  = "COMPILER-117";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

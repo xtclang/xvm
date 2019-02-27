@@ -59,16 +59,7 @@ public class ContinueStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        Label label = getJumpLabel();
-        if (label == null)
-            {
-            // for the "no label" situation, it just means (literally) to continue; see switch
-            return true;
-            }
-        else
-            {
-            code.add(new Jump(getJumpLabel()));
-            return false;
-            }
+        code.add(new Jump(getJumpLabel()));
+        return false;
         }
     }

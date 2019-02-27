@@ -464,6 +464,8 @@ public abstract class Op
          */
         public void append(Op op)
             {
+            assert op != this;
+
             if (m_op == null)
                 {
                 m_op = op;

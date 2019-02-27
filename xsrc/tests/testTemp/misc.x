@@ -243,7 +243,7 @@ module TestMisc.xqiz.it
                 console.println("2 or 3");
                 break;
 
-            case 4:
+            case 4..5:
                 console.println("4");
                 continue;
 

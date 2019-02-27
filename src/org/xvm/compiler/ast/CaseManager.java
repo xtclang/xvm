@@ -472,11 +472,15 @@ public class CaseManager<CookieType>
                 if (exprCase.isConstant()) // TODO resolve the difference with isRuntimeConstant()
                     {
                     Constant constCase = exprCase.toConstant();
-                    if (m_fAllConsts && m_aconstCond != null && m_labelConstant == null
-                            && covm_aconstCond.equals(constCase) // TODO covers (not equals)
-                            )
+                    if (m_fAllConsts && m_aconstCond != null && m_labelConstant == null)
                         {
-                        m_labelConstant = m_labelCurrent;
+                        Constant constCond = m_aconstCond.length == 1
+                                ? m_aconstCond[0]
+                                : pool.ensureArrayConstant(m_typeCase, m_aconstCond);
+                        if (covers(constCase, lRange, constCond, 0))
+                            {
+                            m_labelConstant = m_labelCurrent;
+                            }
                         }
 
                     if (!fIfSwitch)
@@ -495,18 +499,18 @@ public class CaseManager<CookieType>
 
                             if (fIntConsts)
                                 {
-                                PackedInteger pint = constCase.getIntValue();
-                                if (m_pintMin == null)
+                                if (constCase instanceof MatchAnyConstant)
                                     {
-                                    m_pintMin = m_pintMax = pint;
+                                    // treated as "default:", so ignore
                                     }
-                                else if (pint.compareTo(m_pintMax) > 0)
+                                else if (constCase instanceof IntervalConstant)
                                     {
-                                    m_pintMax = pint;
+                                    incorporateInt(((IntervalConstant) constCase).getFirst().getIntValue());
+                                    incorporateInt(((IntervalConstant) constCase).getLast().getIntValue());
                                     }
-                                else if (pint.compareTo(m_pintMin) < 0)
+                                else
                                     {
-                                    m_pintMin = pint;
+                                    incorporateInt(constCase.getIntValue());
                                     }
                                 }
                             }
@@ -525,6 +529,22 @@ public class CaseManager<CookieType>
             }
 
         return fValid;
+        }
+
+    private void incorporateInt(PackedInteger pint)
+        {
+        if (m_pintMin == null)
+            {
+            m_pintMin = m_pintMax = pint;
+            }
+        else if (pint.compareTo(m_pintMax) > 0)
+            {
+            m_pintMax = pint;
+            }
+        else if (pint.compareTo(m_pintMin) < 0)
+            {
+            m_pintMin = pint;
+            }
         }
 
     /**

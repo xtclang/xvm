@@ -13,10 +13,12 @@ import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
-import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.Label;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
+
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -253,16 +255,32 @@ public class SwitchStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
+        // check for the extremely rare possibility that the switch condition is a constant and we
+        // can tell which branch to use (discarding the rest of the possible case branches)
         if (m_casemgr.isSwitchConstant())
             {
             // skip the condition and just spit out the reachable
-            boolean         fCompletes = fReachable;
             List<Statement> listStmts  = block.stmts;
-            CaseGroup       group      = m_casemgr.getCookie(m_casemgr.getSwitchConstantLabel());
-
-            for (int iGroup = group.iGroup, cGroups = m_listGroups.size(); iGroup < cGroups; ++iGroup)
+            CaseGroup       groupStart = m_casemgr.getCookie(m_casemgr.getSwitchConstantLabel());
+            for (int iGroup = groupStart.iGroup, cGroups = m_listGroups.size(); iGroup < cGroups; ++iGroup)
                 {
-                group = m_listGroups.get(iGroup);
+// TODO make this into an emitCaseGroup(int iGroup) method
+                boolean   fCompletes = fReachable;
+                CaseGroup group      = m_listGroups.get(iGroup);
+
+                // the label for any "continue" from the last group
+                if (iGroup > 0)
+                    {
+                    Label labelContinueFrom = m_listGroups.get(iGroup - 1).labelContinueTo;
+                    if (labelContinueFrom != null)
+                        {
+                        code.add(labelContinueFrom);
+                        }
+                    }
+
+                // the label assigned to the case group
+                code.add(m_casemgr.getCaseLabels()[iGroup]);
+
                 if (group.fScope)
                     {
                     code.add(new Enter());
@@ -271,9 +289,25 @@ public class SwitchStatement
                 for (int iStmt = group.iFirstStmt, cStmts = listStmts.size(); iStmt < cStmts; ++iStmt)
                     {
                     Statement stmt = listStmts.get(iStmt);
+
                     if (stmt instanceof CaseStatement)
                         {
+                        if (fReachable && fCompletes)
+                            {
+                            stmt.log(errs, Severity.ERROR, Compiler.SWITCH_BREAK_OR_CONTINUE_EXPECTED);
+                            }
                         break;
+                        }
+
+                    if (fReachable && !fCompletes)
+                        {
+                        // this statement is the first statement that cannot be reached;
+                        // the only thing that is allowed is an inner class definition
+                        fReachable = false;
+                        if (!(stmt instanceof TypeCompositionStatement))
+                            {
+                            stmt.log(errs, Severity.ERROR, Compiler.NOT_REACHABLE);
+                            }
                         }
 
                     fCompletes = stmt.completes(ctx, fCompletes, code, errs);
@@ -283,6 +317,7 @@ public class SwitchStatement
                     {
                     code.add(new Exit());
                     }
+// TODO end method cut & paste
 
                 Label labelNext = group.labelContinueTo;
                 if (labelNext == null)
@@ -290,13 +325,10 @@ public class SwitchStatement
                     // if there was no "continue", then we're done
                     break;
                     }
-                else
-                    {
-                    code.add(labelNext);
-                    }
                 }
 
-            return fCompletes;
+            // switch never completes normally
+            return false;
             }
 
         if (m_casemgr.hasDeclarations())
