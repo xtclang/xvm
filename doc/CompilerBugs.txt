@@ -34,3 +34,8 @@ caused by a failure to correctly init a parameter with "markInitialValue"
     Number[] to<Number[]>();
 
 -- "this.new Child()"" doesn't parse correctly, while "x.new Child()" does
+
+-- a naked lambda body cannot have a ternary; the error reporting is extremely confusing
+    ElementType[] that = new ElementType[this.size + that.size,
+        (i) -> i < this.size ? this[i] : that[i-this.size]];
+
