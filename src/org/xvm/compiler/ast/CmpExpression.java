@@ -268,8 +268,8 @@ public class CmpExpression
                 break;
             }
 
-        ctx.narrowType(exprTarget.name, Branch.WhenTrue,  typeTrue);
-        ctx.narrowType(exprTarget.name, Branch.WhenFalse, typeFalse);
+        ctx.narrowType(exprTarget, Branch.WhenTrue,  typeTrue);
+        ctx.narrowType(exprTarget, Branch.WhenFalse, typeFalse);
         }
 
     @Override

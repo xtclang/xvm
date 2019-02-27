@@ -1059,20 +1059,23 @@ public class Context
         }
 
     /**
-     * Narrow the type of the specified variable name in this context for this branch.
+     * Narrow the type of the specified variable in this context for this branch.
      * <p/>
-     * Note: This can only be used during the validate() stage.
+     * Note: This can only be used during the validate() stage after the name expression
+     *       has been validated.
      *
-     * @param tokName     the token from the source code for the variable
+     * @param exprName    the NameExpression representing the variable
      * @param branch      the branch
      * @param typeNarrow  the narrowing type
      */
-    public void narrowType(Token tokName, Branch branch, TypeConstant typeNarrow)
+    public void narrowType(NameExpression exprName, Branch branch, TypeConstant typeNarrow)
         {
         if (typeNarrow != null)
             {
-            String   sName = tokName.getValueText();
-            Argument arg   = resolveName(sName);
+            assert exprName.isValidated();
+
+            String   sName = exprName.getName();
+            Argument arg   = exprName.resolveRawArgument(this, false, ErrorListener.BLACKHOLE);
 
             // we are only concerned with registers and type parameters;
             // properties and constants are ignored

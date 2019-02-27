@@ -89,9 +89,9 @@ public class IsExpression
                     typeTest   = typeTest  .getParamTypesArray()[0];
                     }
 
-                ctx.narrowType(exprName.name, Branch.WhenTrue,
+                ctx.narrowType(exprName, Branch.WhenTrue,
                         RelationalTypeConstant.combineWith(pool, typeTarget, typeTest));
-                ctx.narrowType(exprName.name, Branch.WhenFalse,
+                ctx.narrowType(exprName, Branch.WhenFalse,
                         RelationalTypeConstant.combineWithout(pool, typeTarget, typeTest));
                 }
             }
