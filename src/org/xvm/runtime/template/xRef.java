@@ -238,6 +238,10 @@ public class xRef
         RefHandle hRef1 = (RefHandle) hValue1;
         RefHandle hRef2 = (RefHandle) hValue2;
 
+        // From Ref.x:
+        // Reference equality is used to determine if two references are referring to the same referent
+        // _identity_. Specifically, two references are equal iff they reference the same runtime
+        // object, or the two objects that they reference are both immutable and structurally identical.
         return new CompareReferents(hRef1, hRef2, this, iReturn).doNext(frame);
         }
 
@@ -402,24 +406,6 @@ public class xRef
     public static class RefHandle
             extends GenericHandle
         {
-        protected ObjectHandle m_hDelegate; // can point to another Ref for the same referent
-        protected String m_sName;
-        protected Frame m_frame;
-        protected int m_iVar;
-        protected boolean m_fInit;
-
-        // indicates that the m_hDelegate field holds a referent
-        protected static final int REF_REFERENT = -1;
-
-        // indicates that the m_hDelegate field holds a Ref that this Ref is "chained" to
-        protected static final int REF_REF = -2;
-
-        // indicates that the m_hDelegate field holds a property target
-        protected static final int REF_PROPERTY = -3;
-
-        // indicates that the m_hDelegate field holds an array target
-        protected static final int REF_ARRAY = -4;
-
         /**
          * Create an unassigned RefHandle for a given clazz.
          *
@@ -597,6 +583,24 @@ public class xRef
                     return s + "-> #" + m_iVar;
                 }
             }
+
+        protected ObjectHandle m_hDelegate; // can point to another Ref for the same referent
+        protected String m_sName;
+        protected Frame m_frame;
+        protected int m_iVar;
+        protected boolean m_fInit;
+
+        // indicates that the m_hDelegate field holds a referent
+        protected static final int REF_REFERENT = -1;
+
+        // indicates that the m_hDelegate field holds a Ref that this Ref is "chained" to
+        protected static final int REF_REF = -2;
+
+        // indicates that the m_hDelegate field holds a property target
+        protected static final int REF_PROPERTY = -3;
+
+        // indicates that the m_hDelegate field holds an array target
+        protected static final int REF_ARRAY = -4;
         }
 
     /***

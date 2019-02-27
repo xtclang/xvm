@@ -5,22 +5,21 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
-import org.xvm.asm.OpJump;
-import org.xvm.asm.Register;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.Utils;
 
-import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -31,7 +30,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Note: No support for wild-cards or intervals.
  */
 public class JumpVal
-        extends Op
+        extends OpSwitch
     {
     /**
      * Construct a JMP_VAL op.
@@ -43,12 +42,9 @@ public class JumpVal
      */
     public JumpVal(Argument argCond, Constant[] aConstCase, Op[] aOpCase, Op opDefault)
         {
-        assert aOpCase != null;
+        super(aConstCase, aOpCase, opDefault);
 
-        m_argCond    = argCond;
-        m_aConstCase = aConstCase;
-        m_aOpCase    = aOpCase;
-        m_opDefault  = opDefault;
+        m_argCond = argCond;
         }
 
     /**
@@ -60,69 +56,29 @@ public class JumpVal
     public JumpVal(DataInput in, Constant[] aconst)
             throws IOException
         {
+        super(in, aconst);
+
         m_nArgCond = readPackedInt(in);
-
-        int   cCases    = readMagnitude(in);
-        int[] anArgCase = new int[cCases];
-        int[] aofCase   = new int[cCases];
-        for (int i = 0; i < cCases; ++i)
-            {
-            anArgCase[i] = readPackedInt(in);
-            aofCase  [i] = readPackedInt(in);
-            }
-        m_anConstCase = anArgCase;
-        m_aofCase   = aofCase;
-
-        m_ofDefault = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_argCond != null)
             {
-            m_nArgCond    = encodeArgument(m_argCond, registry);
-            m_anConstCase = encodeArguments(m_aConstCase, registry);
+            m_nArgCond = encodeArgument(m_argCond, registry);
             }
-
-        out.writeByte(getOpCode());
 
         writePackedLong(out, m_nArgCond);
-
-        int[] anArgCase = m_anConstCase;
-        int[] aofCase   = m_aofCase;
-        int   c         = anArgCase.length;
-
-        writePackedLong(out, c);
-        for (int i = 0; i < c; ++i)
-            {
-            writePackedLong(out, anArgCase[i]);
-            writePackedLong(out, aofCase  [i]);
-            }
-
-        writePackedLong(out, m_ofDefault);
         }
 
     @Override
     public int getOpCode()
         {
         return OP_JMP_VAL;
-        }
-
-    @Override
-    public void resolveAddress(MethodStructure.Code code, int iPC)
-        {
-        if (m_aOpCase != null && m_aofCase == null)
-            {
-            int c = m_aOpCase.length;
-            m_aofCase = new int[c];
-            for (int i = 0; i < c; i++)
-                {
-                m_aofCase[i] = code.resolveAddress(iPC, m_aOpCase[i]);
-                }
-            m_ofDefault = code.resolveAddress(iPC, m_opDefault);
-            }
         }
 
     @Override
@@ -140,12 +96,12 @@ public class JumpVal
                 {
                 ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
                 Frame.Continuation stepNext = frameCaller ->
-                    complete(frame, iPC, ahValue[0]);
+                    collectCaseConstants(frame, iPC, ahValue[0]);
 
                 return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
                 }
 
-            return complete(frame, iPC, hValue);
+            return collectCaseConstants(frame, iPC, hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -153,103 +109,199 @@ public class JumpVal
             }
         }
 
+    protected int collectCaseConstants(Frame frame, int iPC, ObjectHandle hValue)
+        {
+        if (m_ahCases == null)
+            {
+            m_ahCases = new ObjectHandle[m_aofCase.length];
+
+            return explodeConstants(frame, iPC, hValue);
+            }
+        return complete(frame, iPC, hValue);
+        }
+
+    protected int explodeConstants(Frame frame, int iPC, ObjectHandle hValue)
+        {
+        ObjectHandle[] ahCases = m_ahCases;
+        for (int iRow = 0, cRows = m_aofCase.length; iRow < cRows; iRow++)
+            {
+            ahCases[iRow] = frame.getConstHandle(m_anConstCase[iRow]);
+            }
+
+        if (Op.anyDeferred(ahCases))
+            {
+            Frame.Continuation stepNext = frameCaller ->
+                {
+                buildJumpMap(hValue);
+                return complete(frame, iPC, hValue);
+                };
+            return new Utils.GetArguments(ahCases, stepNext).doNext(frame);
+            }
+
+        buildJumpMap(hValue);
+        return complete(frame, iPC, hValue);
+        }
+
     protected int complete(Frame frame, int iPC, ObjectHandle hValue)
         {
-        Integer Index = ensureJumpMap(frame).get(hValue);
+        Map<ObjectHandle, Integer> mapJump = m_mapJump;
+        Integer Index;
+
+        switch (m_algorithm)
+            {
+            case NativeSimple:
+                Index = mapJump.get(hValue);
+                break;
+
+            case NativeInterval:
+                {
+                // check the exact match first
+                Index = mapJump.get(hValue);
+
+                List<Object[]> listInterval = m_listIntervals;
+                for (int iR = 0, cR = listInterval.size(); iR < cR; iR++)
+                    {
+                    Object[] ao = listInterval.get(iR);
+
+                    int index = (Integer) ao[2];
+
+                    // we only need to compare the range if there is a chance that it can impact
+                    // the result (the range case precedes the exact match case)
+                    if (Index == null || Index.intValue() > index)
+                        {
+                        ObjectHandle hLow  = (ObjectHandle) ao[0];
+                        ObjectHandle hHigh = (ObjectHandle) ao[1];
+
+                        if (hValue.compareTo(hLow) >= 0 && hValue.compareTo(hHigh) <= 0)
+                            {
+                            Index = index;
+                            break;
+                            }
+                        }
+                    }
+                break;
+                }
+
+            default:
+                return findNatural(frame, iPC, hValue);
+            }
 
         return Index == null
             ? iPC + m_ofDefault
             : iPC + Index.intValue();
         }
 
-    private Map<ObjectHandle, Integer> ensureJumpMap(Frame frame)
+    protected int findNatural(Frame frame, int iPC, ObjectHandle hValue)
         {
-        Map<ObjectHandle, Integer> mapJump = m_mapJump;
-        if (mapJump == null)
+        throw new UnsupportedOperationException();
+        }
+
+    private void buildJumpMap(ObjectHandle hValue)
+        {
+        ObjectHandle[] ahCase  = m_ahCases;
+        int[]          aofCase = m_aofCase;
+        int            cCases  = ahCase.length;
+
+        Map<ObjectHandle, Integer> mapJump = new HashMap<>(cCases);
+
+        m_mapJump   = mapJump;
+        m_algorithm = Algorithm.NativeSimple;
+
+        for (int i = 0; i < cCases; i++ )
             {
-            int[] anConstCase = m_anConstCase;
-            int[] aofCase     = m_aofCase;
-            int   cCases      = anConstCase.length;
+            ObjectHandle hCase = m_ahCases[i];
 
-            mapJump = new HashMap<>(cCases);
+            assert !hCase.isMutable();
 
-            for (int i = 0, c = anConstCase.length; i < c; i++ )
+            if (hValue.isNativeEqual())
                 {
-                ObjectHandle hCase = frame.getConstHandle(anConstCase[i]);
+                if (hCase.isNativeEqual())
+                    {
+                    mapJump.put(hCase, Integer.valueOf(aofCase[i]));
+                    }
+                else
+                    {
+                    // this must be an interval of native values
+                    m_algorithm = Algorithm.NativeInterval;
 
-                // case values are always constants
-                assert !(hCase instanceof ObjectHandle.DeferredCallHandle);
-                assert !hCase.isMutable();
-
-                mapJump.put(hCase, Integer.valueOf(aofCase[i]));
+                    addInterval((GenericHandle) hCase, i);
+                    }
                 }
+            else // natural comparison
+                {
+                if (hCase.getType().isAssignableTo(hValue.getType()))
+                    {
+                    m_algorithm = m_algorithm.worstOf(Algorithm.NaturalSimple);
 
-            m_mapJump = mapJump;
+                    mapJump.put(hCase, Integer.valueOf(aofCase[i]));
+                    }
+                else
+                    {
+                    // this must be an interval of native values
+                    m_algorithm = Algorithm.NaturalInterval;
+
+                    addInterval((GenericHandle) hCase, i);
+                    }
+                }
             }
-        return mapJump;
+        }
+
+    /**
+     * Add an interval definition for the specified column.
+     *
+     * @param hInterval the Interval value
+     * @param index     the case index
+     */
+    private void addInterval(GenericHandle hInterval, int index)
+        {
+        ObjectHandle hLow  = hInterval.getField("lowerBound");
+        ObjectHandle hHigh = hInterval.getField("upperBound");
+
+        // TODO: if the interval is small, replace it with the exact hits for native values
+        List<Object[]> list = m_listIntervals;
+        if (list == null)
+            {
+            list = m_listIntervals = new ArrayList<>();
+            }
+        list.add(new Object[]{hLow, hHigh, Integer.valueOf(index)});
         }
 
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
         m_argCond = m_argCond.registerConstants(registry);
-        registerArguments(m_aConstCase, registry);
+
+        super.registerConstants(registry);
         }
 
     @Override
-    public String toString()
+    protected void appendArgDescription(StringBuilder sb)
         {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(super.toString())
-          .append(' ')
-          .append(Argument.toIdString(m_argCond, m_nArgCond))
+        sb.append(Argument.toIdString(m_argCond, m_nArgCond))
           .append(", ");
-
-        int cOps     = m_aOpCase == null ? 0 : m_aOpCase.length;
-        int cOffsets = m_aofCase == null ? 0 : m_aofCase.length;
-        int cLabels  = Math.max(cOps, cOffsets);
-
-        sb.append(cLabels)
-          .append(":[");
-
-        int cConstCases  = m_aConstCase  == null ? 0 : m_aConstCase.length;
-        int cNConstCases = m_anConstCase == null ? 0 : m_anConstCase.length;
-        assert Math.max(cConstCases, cNConstCases) == cLabels;
-
-        for (int i = 0; i < cLabels; ++i)
-            {
-            Constant arg  = i < cConstCases  ? m_aConstCase [i] : null;
-            int      nArg = i < cNConstCases ? m_anConstCase[i] : Register.UNKNOWN;
-            Op       op   = i < cOps         ? m_aOpCase    [i] : null;
-            int      of   = i < cOffsets     ? m_aofCase    [i] : 0;
-
-            if (i > 0)
-                {
-                sb.append(", ");
-                }
-
-            sb.append(Argument.toIdString(arg, nArg))
-              .append(":")
-              .append(OpJump.getLabelDesc(op, of));
-            }
-
-        sb.append("], ")
-          .append(OpJump.getLabelDesc(m_opDefault, m_ofDefault));
-
-        return sb.toString();
         }
 
-    protected int   m_nArgCond;
-    protected int[] m_anConstCase;
-    protected int[] m_aofCase;
-    protected int   m_ofDefault;
 
-    private Argument   m_argCond;
-    private Constant[] m_aConstCase;
-    private Op[]       m_aOpCase;
-    private Op         m_opDefault;
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected int      m_nArgCond;
+    private   Argument m_argCond;
+
+    /**
+     * Cached array of ObjectHandles for cases.
+     */
+    private transient ObjectHandle[] m_ahCases;
 
     // cached jump map
     private Map<ObjectHandle, Integer> m_mapJump;
+
+    /**
+     * A list of intervals;
+     *  a[0] - lower bound (ObjectHandle);
+     *  a[1] - upper bound (ObjectHandle);
+     *  a[2] - the case index (Integer)
+     */
+    private transient List<Object[]> m_listIntervals;
+
+    private transient Algorithm m_algorithm;  // the algorithm
     }

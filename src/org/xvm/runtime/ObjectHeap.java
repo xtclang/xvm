@@ -11,7 +11,10 @@ import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.IntervalConstant;
+import org.xvm.asm.constants.MapConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -81,6 +84,7 @@ public class ObjectHeap
                 return new DeferredCallHandle(frameNext);
 
             case Op.R_EXCEPTION:
+                // deferred exception
                 return new DeferredCallHandle(frame);
 
             default:
@@ -95,14 +99,14 @@ public class ObjectHeap
         }
 
     /**
-     * Obtain a canonical type for the specified constant.
+     * Obtain an object type for the specified constant.
      */
-    protected TypeConstant getConstType(Constant constValue)
+    public TypeConstant getConstType(Constant constValue)
         {
         switch (constValue.getFormat())
             {
             case Array:
-                return f_poolRoot.typeArray();
+                return ((ArrayConstant) constValue).getType();
 
             case Int64:
                 return f_poolRoot.typeInt();
@@ -156,8 +160,16 @@ public class ObjectHeap
                 return constId.getType();
                 }
 
+            case Interval:
+                {
+                ConstantPool pool    = constValue.getConstantPool();
+                Constant     constEl = ((IntervalConstant) constValue).getFirst();
+                TypeConstant typeEl  = getConstType(constEl);
+                return pool.ensureParameterizedTypeConstant(f_poolRoot.typeInterval(), typeEl);
+                }
+
             case Tuple:
-                return f_poolRoot.typeTuple();
+                return ((ArrayConstant) constValue).getType();
 
             case UInt8Array:
                 throw new UnsupportedOperationException("TODO: " + constValue);
@@ -167,7 +179,7 @@ public class ObjectHeap
                 throw new UnsupportedOperationException("TODO: " + constValue);
 
             case Map:
-                return f_poolRoot.typeMap();
+                return ((MapConstant) constValue).getType();
 
             case Module:
                 return f_poolRoot.typeModule();

@@ -5,10 +5,12 @@ import java.util.Iterator;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.IntervalConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -19,6 +21,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.ObjectHeap;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
@@ -43,6 +46,7 @@ public class xConst
 
     public static MethodStructure FN_ESTIMATE_LENGTH;
     public static MethodStructure FN_APPEND_TO;
+    public static MethodStructure INTERVAL_CONSTRUCT;
     public static ClassComposition CLZ_STRINGS;
     public static ClassComposition CLZ_OBJECTS;
 
@@ -82,7 +86,50 @@ public class xConst
 
             CLZ_STRINGS = f_templates.resolveClass(f_templates.f_adapter.getClassType("collections.Array<String>", null));
             CLZ_OBJECTS = f_templates.resolveClass(f_templates.f_adapter.getClassType("collections.Array<Object>", null));
+
+            // Interval support
+            ClassStructure clzInterval = f_templates.getClassStructure("Interval");
+            for (MethodStructure idConstruct :
+                    ((MultiMethodStructure) clzInterval.getChild("construct")).methods())
+                {
+                INTERVAL_CONSTRUCT = idConstruct;
+                }
             }
+        }
+
+    @Override
+    public int createConstHandle(Frame frame, Constant constant)
+        {
+        if (constant instanceof IntervalConstant)
+            {
+            IntervalConstant constInterval = (IntervalConstant) constant;
+
+            Constant     const1 = constInterval.getFirst();
+            Constant     const2 = constInterval.getLast();
+            ObjectHeap   heap   = frame.f_context.f_heapGlobal;
+            ObjectHandle h1     = heap.ensureConstHandle(frame, const1);
+            ObjectHandle h2     = heap.ensureConstHandle(frame, const2);
+
+            TypeConstant     typeInterval = heap.getConstType(constInterval);
+            ClassComposition clzInterval  = heap.f_templates.resolveClass(typeInterval);
+            MethodStructure  constructor  = INTERVAL_CONSTRUCT;
+
+            ObjectHandle[] ahArg = new ObjectHandle[constructor.getMaxVars()];
+            ahArg[0] = h1;
+            ahArg[1] = h2;
+
+            if (Op.anyDeferred(ahArg))
+                {
+                Frame.Continuation stepNext = frameCaller ->
+                    clzInterval.getTemplate().construct(
+                        frameCaller, constructor, clzInterval, null, ahArg, Op.A_STACK);
+                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
+                }
+            return clzInterval.getTemplate().construct(
+                frame, constructor, clzInterval, null, ahArg, Op.A_STACK);
+            }
+
+        return super.createConstHandle(frame, constant);
         }
 
     @Override

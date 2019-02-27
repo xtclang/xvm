@@ -81,11 +81,6 @@ public abstract class ObjectHandle
         return true;
         }
 
-    public boolean isStruct()
-        {
-        return m_clazz.isStruct();
-        }
-
     public boolean isSelfContained()
         {
         return false;
@@ -143,16 +138,43 @@ public abstract class ObjectHandle
         return m_clazz.isInjected(sPropName);
         }
 
+    /**
+     * @return true iff the handle itself could be used for the equality check
+     */
+    public boolean isNativeEqual()
+        {
+        return true;
+        }
+
+    /**
+     * @return the result of comparison (only for isNativeEqual() handles)
+     */
+    public int compareTo(ObjectHandle that)
+        {
+        throw new UnsupportedOperationException(getClass() + " cannot compare");
+        }
+
     @Override
     public int hashCode()
         {
-        throw new UnsupportedOperationException(getClass() + " cannot be used as a constant");
+        if (isNativeEqual())
+            {
+            throw new UnsupportedOperationException(getClass() + " must implement \"hashCode()\"");
+            }
+
+        return System.identityHashCode(this);
         }
 
     @Override
     public boolean equals(Object obj)
         {
-        throw new UnsupportedOperationException(getClass() + " cannot be used as a constant");
+        if (isNativeEqual())
+            {
+            throw new UnsupportedOperationException(getClass() + " must implement \"equals()\"");
+            }
+
+        // we don't use this for natural equality check
+        return this == obj;
         }
 
     @Override
@@ -164,9 +186,6 @@ public abstract class ObjectHandle
     public static class GenericHandle
             extends ObjectHandle
         {
-        // keyed by the property name
-        private Map<String, ObjectHandle> m_mapFields;
-
         public GenericHandle(TypeComposition clazz)
             {
             super(clazz);
@@ -268,17 +287,13 @@ public abstract class ObjectHandle
             }
 
         @Override
-        public int hashCode()
+        public boolean isNativeEqual()
             {
-            return m_mapFields == null ? 0 : m_mapFields.hashCode();
+            return false;
             }
 
-        @Override
-        public boolean equals(Object obj)
-            {
-            return obj instanceof GenericHandle &&
-                Objects.equals(m_mapFields, ((GenericHandle) obj).m_mapFields);
-            }
+        // keyed by the property name
+        private Map<String, ObjectHandle> m_mapFields;
 
         public final static String OUTER = "$outer";
         }
@@ -360,9 +375,16 @@ public abstract class ObjectHandle
             }
 
         @Override
+        public int compareTo(ObjectHandle that)
+            {
+            return Long.compare(m_lValue, ((JavaLong) that).m_lValue);
+            }
+
+        @Override
         public boolean equals(Object obj)
             {
-            return m_lValue == ((JavaLong) obj).m_lValue;
+            return obj instanceof JavaLong
+                && m_lValue == ((JavaLong) obj).m_lValue;
             }
 
         @Override
@@ -427,6 +449,11 @@ public abstract class ObjectHandle
 
             frameCaller.m_hException = frameNext.m_hException;
             return Op.R_EXCEPTION;
+            }
+
+        public ExceptionHandle.WrapperException getDeferredException()
+            {
+            return f_frameNext.m_hException.getException();
             }
 
         @Override

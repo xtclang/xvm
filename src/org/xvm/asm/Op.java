@@ -292,7 +292,7 @@ public abstract class Op
      *
      * @return true iff the argument represents a deferred action
      */
-    protected static boolean isDeferred(ObjectHandle handle)
+    public static boolean isDeferred(ObjectHandle handle)
         {
         return handle instanceof DeferredCallHandle;
         }
@@ -300,7 +300,7 @@ public abstract class Op
     /**
      * @return true iff any of the specified handles represents a deferred action
      */
-    protected static boolean anyDeferred(ObjectHandle[] aHandle)
+    public static boolean anyDeferred(ObjectHandle[] aHandle)
         {
         for (ObjectHandle h : aHandle)
             {

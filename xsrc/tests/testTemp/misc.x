@@ -241,7 +241,8 @@ module TestMisc.xqiz.it
                 {
                 // default: "other";
                 case 2, 3:
-                case 4: "between 2 and 4";
+                case 4:    "between 2 and 4";
+                // case 5..6: "between 5 and 6";
 
                 case 7: "sieben";
 
@@ -289,7 +290,7 @@ module TestMisc.xqiz.it
         console.println("\n** testSwitchExpr4()");
 
         Int i = 0;
-        while (++i < 6)
+        while (++i < 8)
             {
             console.println("result for (" + i + "<=>3)=" + switch(i <=> 3, i)
                 {

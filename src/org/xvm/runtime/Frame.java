@@ -103,7 +103,7 @@ public class Frame
         f_hTarget = hTarget;
         f_hThis   = hTarget == null
                     ? null
-                    : hTarget.isStruct()
+                    : hTarget.getComposition().isStruct()
                         ? hTarget
                         : hTarget.revealOrigin();
 
