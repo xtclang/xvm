@@ -5,6 +5,7 @@ import java.util.Arrays;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
 import org.xvm.asm.Op;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -310,6 +311,36 @@ public class xIntArray
             }
 
         @Override
+        public boolean isNativeEqual()
+            {
+            return true;
+            }
+
+        @Override
+        public int compareTo(ObjectHandle that)
+            {
+            long[] alThis = m_alValue;
+            int    cThis  = m_cSize;
+            long[] alThat = ((IntArrayHandle) that).m_alValue;
+            int    cThat  = ((IntArrayHandle) that).m_cSize;
+
+            if (cThis != cThat)
+                {
+                return cThis - cThat;
+                }
+
+            for (int i = 0; i < cThis; i++)
+                {
+                long lDiff = alThis[i] - alThat[i];
+                if (lDiff != 0)
+                    {
+                    return lDiff < 0 ? -1 : 1;
+                    }
+                }
+            return 0;
+            }
+
+        @Override
         public int hashCode()
             {
             return Arrays.hashCode(m_alValue);
@@ -318,7 +349,8 @@ public class xIntArray
         @Override
         public boolean equals(Object obj)
             {
-            return Arrays.equals(m_alValue, ((IntArrayHandle) obj).m_alValue);
+            return obj instanceof IntArrayHandle
+                && Arrays.equals(m_alValue, ((IntArrayHandle) obj).m_alValue);
             }
         }
     }

@@ -196,8 +196,6 @@ public class xEnum
     public static class EnumHandle
                 extends GenericHandle
         {
-        protected int m_index;
-
         EnumHandle(TypeComposition clz, int index)
             {
             super(clz);
@@ -212,9 +210,32 @@ public class xEnum
             }
 
         @Override
+        public boolean isNativeEqual()
+            {
+            return true;
+            }
+
+        @Override
+        public int compareTo(ObjectHandle that)
+            {
+            return getValue() - ((EnumHandle) that).getValue();
+            }
+
+        @Override
+        public int hashCode()
+            {
+            return m_index;
+            }
+
+        @Override
         public boolean equals(Object obj)
             {
-            return this == obj;
+            if (obj instanceof EnumHandle)
+                {
+                EnumHandle that = (EnumHandle) obj;
+                return m_clazz == that.m_clazz && m_index == that.m_index;
+                }
+            return false;
             }
 
         @Override
@@ -223,5 +244,7 @@ public class xEnum
             xEnum template = (xEnum) getTemplate();
             return template.m_listNames.get(m_index);
             }
+
+        protected int m_index;
         }
     }

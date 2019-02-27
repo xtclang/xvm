@@ -331,6 +331,36 @@ public class xCharArray
             }
 
         @Override
+        public boolean isNativeEqual()
+            {
+            return true;
+            }
+
+        @Override
+        public int compareTo(ObjectHandle that)
+            {
+            char[] achThis = m_achValue;
+            int    cThis   = m_cSize;
+            char[] achThat = ((CharArrayHandle) that).m_achValue;
+            int    cThat   = ((CharArrayHandle) that).m_cSize;
+
+            if (cThis != cThat)
+                {
+                return cThis - cThat;
+                }
+
+            for (int i = 0; i < cThis; i++)
+                {
+                int iDiff = achThis[i] - achThat[i];
+                if (iDiff != 0)
+                    {
+                    return iDiff;
+                    }
+                }
+            return 0;
+            }
+
+        @Override
         public int hashCode()
             {
             return Arrays.hashCode(m_achValue);
@@ -339,7 +369,8 @@ public class xCharArray
         @Override
         public boolean equals(Object obj)
             {
-            return Arrays.equals(m_achValue, ((CharArrayHandle) obj).m_achValue);
+            return obj instanceof CharArrayHandle
+                && Arrays.equals(m_achValue, ((CharArrayHandle) obj).m_achValue);
             }
         }
 

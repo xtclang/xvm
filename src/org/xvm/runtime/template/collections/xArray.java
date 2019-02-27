@@ -769,15 +769,9 @@ public class xArray
             }
 
         @Override
-        public int hashCode()
+        public boolean isNativeEqual()
             {
-            return Arrays.hashCode(m_ahValue);
-            }
-
-        @Override
-        public boolean equals(Object obj)
-            {
-            return Arrays.equals(m_ahValue, ((GenericArrayHandle) obj).m_ahValue);
+            return false;
             }
         }
 

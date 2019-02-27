@@ -696,12 +696,13 @@ public abstract class ClassTemplate
             throw new IllegalStateException(f_sName);
             }
 
-        if (hTarget.isStruct())
+        TypeComposition clzTarget = hTarget.getComposition();
+        if (clzTarget.isStruct())
             {
             return getFieldValue(frame, hTarget, sPropName, iReturn);
             }
 
-        CallChain chain = hTarget.getComposition().getPropertyGetterChain(sPropName);
+        CallChain chain = clzTarget.getPropertyGetterChain(sPropName);
         if (chain.isNative())
             {
             return invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -828,7 +829,8 @@ public abstract class ClassTemplate
             throw new IllegalStateException(f_sName);
             }
 
-        if (hTarget.isStruct())
+        TypeComposition clzTarget = hTarget.getComposition();
+        if (clzTarget.isStruct())
             {
             return setFieldValue(frame, hTarget, sPropName, hValue);
             }
@@ -838,7 +840,7 @@ public abstract class ClassTemplate
             return frame.raiseException(xException.immutableObject());
             }
 
-        CallChain chain = hTarget.getComposition().getPropertySetterChain(sPropName);
+        CallChain chain = clzTarget.getPropertySetterChain(sPropName);
 
 //        if (chain.getDepth() == 0)
 //            {
