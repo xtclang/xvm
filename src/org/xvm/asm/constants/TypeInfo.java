@@ -1669,6 +1669,12 @@ public class TypeInfo
                         continue;
                         }
 
+                    if (info.isCapped())
+                        {
+                        // ignore "capped" methods
+                        continue;
+                        }
+
                     int cAllParams  = sig.getRawParams().length;
                     int cTypeParams = method.getTypeParamCount();
                     int cDefaults   = method.getDefaultParamCount();
