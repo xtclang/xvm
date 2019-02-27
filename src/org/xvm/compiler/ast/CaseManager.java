@@ -30,7 +30,7 @@ import org.xvm.util.Severity;
 /**
  * The CaseManager is shared compilation logic used by both the "switch" statement and  expression.
  */
-public class CaseManager
+public class CaseManager<CookieType>
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -197,7 +197,7 @@ public class CaseManager
     /**
      * @return the cookie for the specified label
      */
-    public Object getCookie(Label label)
+    public CookieType getCookie(Label label)
         {
         return m_mapLabels.get(label);
         }
@@ -472,8 +472,9 @@ public class CaseManager
                 if (exprCase.isConstant()) // TODO resolve the difference with isRuntimeConstant()
                     {
                     Constant constCase = exprCase.toConstant();
-                    if (m_fAllConsts && m_aconstCond != null && m_aconstCond.equals(constCase) // TODO covers (not equals)
-                            && m_labelConstant == null)
+                    if (m_fAllConsts && m_aconstCond != null && m_labelConstant == null
+                            && covm_aconstCond.equals(constCase) // TODO covers (not equals)
+                            )
                         {
                         m_labelConstant = m_labelCurrent;
                         }
@@ -531,7 +532,7 @@ public class CaseManager
      *
      * @param cookie  whatever the caller wants to associate with the just-finished case group
      */
-    public void endCaseGroup(Object cookie)
+    public void endCaseGroup(CookieType cookie)
         {
         if (m_labelCurrent == null)
             {
@@ -929,7 +930,7 @@ public class CaseManager
     /**
      * A list-map of labels corresponding to the list of case values; associated value is a cookie.
      */
-    private ListMap<Label, Object> m_mapLabels = new ListMap<>();
+    private ListMap<Label, CookieType> m_mapLabels = new ListMap<>();
 
     /**
      * The (lazily created) list of all case values that have wildcards or intervals.

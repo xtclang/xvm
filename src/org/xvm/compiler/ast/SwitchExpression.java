@@ -135,7 +135,7 @@ public class SwitchExpression
                 : atypeRequired;
 
         // the structure of the switch is determined using a case manager
-        CaseManager mgr = new CaseManager(this);
+        CaseManager<Expression> mgr = new CaseManager<>(this);
         m_casemgr = mgr;
 
         // validate the switch condition
@@ -202,7 +202,7 @@ public class SwitchExpression
         Constant[] aconstVal = null;
         if (mgr.isSwitchConstant())
             {
-            Expression exprResult = (Expression) mgr.getCookie(mgr.getSwitchConstantLabel());
+            Expression exprResult = mgr.getCookie(mgr.getSwitchConstantLabel());
             aconstVal = exprResult.toConstants();
             }
 
@@ -442,8 +442,8 @@ public class SwitchExpression
     protected List<AstNode> contents;
     protected long          lEndPos;
 
-    private transient CaseManager m_casemgr;
-    private transient boolean     m_fAborting;
+    private transient CaseManager<Expression> m_casemgr;
+    private transient boolean                 m_fAborting;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchExpression.class, "cond", "contents");
     }

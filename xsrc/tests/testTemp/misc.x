@@ -18,6 +18,7 @@ module TestMisc.xqiz.it
         testSpaceship();
         testElvis();
         testLoop();
+        testSwitchStmt();
         testElseExpr();
         testSwitchExpr();
         testSwitchExpr2();
@@ -228,6 +229,32 @@ module TestMisc.xqiz.it
             console.println(i--);
             }
         console.println("We Have Lift-Off!!!");
+        }
+
+    static Int FOUR = 4;
+    void testSwitchStmt()
+        {
+        console.println("\n** testSwitchStmt()");
+
+        switch (FOUR)
+            {
+            // default: "other";
+            case 2, 3:
+                console.println("2 or 3");
+                break;
+
+            case 4:
+                console.println("4");
+                continue;
+
+            case 7:
+                console.println("7");
+                break;
+
+            default:
+                console.println("other");
+                break;
+            }
         }
 
     void testSwitchExpr()

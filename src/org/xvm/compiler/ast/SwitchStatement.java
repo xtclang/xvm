@@ -11,6 +11,8 @@ import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.op.Enter;
+import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.Label;
 
@@ -106,10 +108,11 @@ public class SwitchStatement
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
-        boolean fValid = true;
+        boolean fValid  = true;
+        Context ctxOrig = ctx;
 
         // validate the switch condition
-        m_casemgr = new CaseManager(this);
+        m_casemgr = new CaseManager<CaseGroup>(this);
         fValid   &= m_casemgr.validateCondition(ctx, cond, errs);
 
         // the case manager enters a new context if the switch condition declares variables
@@ -132,6 +135,7 @@ public class SwitchStatement
         int             cStmts    = listStmts.size();
         boolean         fInCase   = false;
         Context         ctxBlock  = null;
+        CaseGroup       group     = null;
         for (int i = 0; i < cStmts; ++i)
             {
             Statement stmt = listStmts.get(i);
@@ -139,20 +143,35 @@ public class SwitchStatement
                 {
                 if (ctxBlock != null)
                     {
+                    assert group != null;
+                    group.fScope          = ctxBlock.isAnyVarDeclaredInThisScope();
+                    group.labelContinueTo = m_labelContinue;
+                    group = null;
+
                     ctxBlock.exit();
                     ctxBlock = null;
                     }
 
+                if (!fInCase)
+                    {
+                    fInCase = true;
+
+                    assert group == null;
+                    group            = new CaseGroup();
+                    group.iGroup     = m_listGroups.size();
+                    group.iFirstCase = i;
+                    m_listGroups.add(group);
+                    }
+
                 fValid &= m_casemgr.validateCase(ctx, (CaseStatement) stmt, errs);
-                fInCase = true;
                 }
             else
                 {
                 if (fInCase)
                     {
-                    // use the statement index "i" as the cookie for the case group, so that we can
-                    // easily find the first statement of the case group's implicit statement block
-                    m_casemgr.endCaseGroup(i);
+                    assert group != null && group.iFirstStmt < 0;
+                    group.iFirstStmt = i;
+                    m_casemgr.endCaseGroup(group);
                     fInCase = false;
 
                     assert ctxBlock == null;
@@ -169,7 +188,6 @@ public class SwitchStatement
                     // associate any previous "fall through" with this pseudo statement block
                     if (m_labelContinue != null)
                         {
-                        stmt.setBeginLabel(m_labelContinue);
                         for (Map<String, Assignment> mapAsn : m_listContinues)
                             {
                             ctxBlock.merge(mapAsn);
@@ -204,7 +222,11 @@ public class SwitchStatement
         // close any last block
         if (ctxBlock != null)
             {
-            ctx = ctxBlock.exit();
+            assert group != null;
+            group.fScope          = ctxBlock.isAnyVarDeclaredInThisScope();
+            group.labelContinueTo = m_labelContinue;
+
+            ctxBlock.exit();
             }
 
         // close the context used for an "if ladder"
@@ -213,18 +235,17 @@ public class SwitchStatement
             ctx = ctx.exit();
             }
 
+        // notify the case manager that we're finished collecting everything
+        fValid &= m_casemgr.validateEnd(ctx, errs);
+
         if (m_listContinues != null)
             {
             // the last "continue" donates asn deltas in roughtly the same way that a "break" would
-            // REVIEW does this go AFTER validateEnd() i.e. on the original passed-in ctx?
             for (Map<String, Assignment> mapAsn : m_listContinues)
                 {
-                ctx.merge(mapAsn);
+                ctxOrig.merge(mapAsn);
                 }
             }
-
-        // notify the case manager that we're finished collecting everything
-        fValid &= m_casemgr.validateEnd(ctx, errs);
 
         return fValid ? this : null;
         }
@@ -232,24 +253,79 @@ public class SwitchStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean fCompletesCond;
         if (m_casemgr.isSwitchConstant())
-        else if (cond instanceof AssignmentStatement)
             {
-            AssignmentStatement stmtCond = (AssignmentStatement) cond;
-            fCompletesCond = stmtCond.completes(ctx, fReachable, code, errs);
-            code.add(new JumpFalse(stmtCond.getConditionRegister(), labelElse));
-            }
-        else
-            {
-            Expression exprCond = (Expression) cond;
-            fCompletesCond = exprCond.isCompletable();
-            exprCond.generateConditionalJump(ctx, code, labelElse, false, errs);
+            // skip the condition and just spit out the reachable
+            boolean         fCompletes = fReachable;
+            List<Statement> listStmts  = block.stmts;
+            CaseGroup       group      = m_casemgr.getCookie(m_casemgr.getSwitchConstantLabel());
+
+            for (int iGroup = group.iGroup, cGroups = m_listGroups.size(); iGroup < cGroups; ++iGroup)
+                {
+                group = m_listGroups.get(iGroup);
+                if (group.fScope)
+                    {
+                    code.add(new Enter());
+                    }
+
+                for (int iStmt = group.iFirstStmt, cStmts = listStmts.size(); iStmt < cStmts; ++iStmt)
+                    {
+                    Statement stmt = listStmts.get(iStmt);
+                    if (stmt instanceof CaseStatement)
+                        {
+                        break;
+                        }
+
+                    fCompletes = stmt.completes(ctx, fCompletes, code, errs);
+                    }
+
+                if (group.fScope)
+                    {
+                    code.add(new Exit());
+                    }
+
+                Label labelNext = group.labelContinueTo;
+                if (labelNext == null)
+                    {
+                    // if there was no "continue", then we're done
+                    break;
+                    }
+                else
+                    {
+                    code.add(labelNext);
+                    }
+                }
+
+            return fCompletes;
             }
 
-        boolean fCompletes = fReachable;
+        if (m_casemgr.hasDeclarations())
+            {
+            code.add(new Enter());
+            }
+
+//        boolean fCompletesCond;
+//        else if (cond instanceof AssignmentStatement)
+//            {
+//            AssignmentStatement stmtCond = (AssignmentStatement) cond;
+//            fCompletesCond = stmtCond.completes(ctx, fReachable, code, errs);
+//            code.add(new JumpFalse(stmtCond.getConditionRegister(), labelElse));
+//            }
+//        else
+//            {
+//            Expression exprCond = (Expression) cond;
+//            fCompletesCond = exprCond.isCompletable();
+//            exprCond.generateConditionalJump(ctx, code, labelElse, false, errs);
+//            }
+//
+//        boolean fCompletes = fReachable;
 
         // TODO
+
+        if (m_casemgr.hasDeclarations())
+            {
+            code.add(new Exit());
+            }
 
         // if the last case group block has a "continue", then it "continues" to the same place that
         // a "break" would "break", i.e. the end
@@ -287,13 +363,52 @@ public class SwitchStatement
         }
 
 
+    // ----- inner class: CaseGroup ----------------------------------------------------------------
+
+    /**
+     * Holds information about a case group.
+     */
+    class CaseGroup
+        {
+        /**
+         * What group number is this? Zero-based.
+         */
+        int iGroup     = -1;
+        /**
+         * What is the index of the first case statement of this group? Index into "block".
+         */
+        int iFirstCase = -1;
+        /**
+         * What is the index of the first non-case statement of this group? Index into "block".
+         */
+        int iFirstStmt = -1;
+        /**
+         * Does this group need an enter/exit?
+         */
+        boolean fScope;
+        /**
+         * Does this group ever "continue"? If so, this is the label that it continues to.
+         */
+        Label   labelContinueTo;
+        }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token          keyword;
     protected List<AstNode>  cond;
     protected StatementBlock block;
 
-    private transient CaseManager m_casemgr;
+    /**
+     * The manager that collects all of the case information.
+     */
+    private transient CaseManager<CaseGroup> m_casemgr;
+
+    /**
+     * Information about each group that begins with one or more CaseStatements and is followed by
+     * other statements.
+     */
+    private transient List<CaseGroup> m_listGroups = new ArrayList<>();
 
     /**
      * A list of continuation labels, corresponding to the case groups from the CaseManager.
@@ -304,11 +419,6 @@ public class SwitchStatement
      * A list of continuation labels, corresponding to the case groups from the CaseManager.
      */
     private transient List<Map<String, Assignment>> m_listContinues;
-
-    /**
-     * A list of continuation labels, corresponding to the case groups from the CaseManager.
-     */
-    // TODO private transient List<Map<String, Assignment>> m_listContinues;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchStatement.class, "cond", "block");
     }

@@ -588,6 +588,21 @@ public class Context
         }
 
     /**
+     * @return true iff this context declares any names
+     */
+    public boolean isAnyVarDeclaredInThisScope()
+        {
+        for (String sName : getNameMap().keySet())
+            {
+            if (isVarDeclaredInThisScope(sName))
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    /**
      * Obtain the assignment information for a variable name.
      *
      * @param sName  the variable name
