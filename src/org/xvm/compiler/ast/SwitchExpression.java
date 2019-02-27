@@ -3,20 +3,14 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map.Entry;
-import java.util.Set;
 
 import org.xvm.asm.Argument;
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.constants.MatchAnyConstant;
 import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -32,7 +26,6 @@ import org.xvm.asm.op.Label;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
-import org.xvm.util.ListMap;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 
@@ -243,32 +236,12 @@ public class SwitchExpression
 
     private void generateIfSwitch(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
-        List<AstNode> aNodes = contents;
-        int           cNodes = aNodes.size();
-        for (int i = 0; i < cNodes; ++i)
-            {
-            AstNode node = aNodes.get(i);
-            if (node instanceof CaseStatement)
-                {
-                CaseStatement stmt = ((CaseStatement) node);
-                if (!stmt.isDefault())
-                    {
-                    stmt.updateLineNumber(code);
-                    Label labelCur = stmt.getLabel();
-                    for (Expression expr : stmt.getExpressions())
-                        {
-                        expr.generateConditionalJump(ctx, code, labelCur, true, errs);
-                        }
-                    }
-                }
-            }
+        m_casemgr.generateIfLadder(ctx, code, contents, errs);
 
-        Label labelDefault = m_casemgr.getDefaultLabel();
-        assert labelDefault != null;
-        code.add(new Jump(labelDefault));
-
-        Label labelCur  = null;
-        Label labelExit = new Label("switch_end");
+        List<AstNode> aNodes    = contents;
+        int           cNodes    = aNodes.size();
+        Label         labelCur  = null;
+        Label         labelExit = new Label("switch_end");
         for (int i = 0; i < cNodes; ++i)
             {
             AstNode node = aNodes.get(i);

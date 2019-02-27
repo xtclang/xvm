@@ -259,68 +259,12 @@ public class SwitchStatement
         // can tell which branch to use (discarding the rest of the possible case branches)
         if (m_casemgr.isSwitchConstant())
             {
-            // skip the condition and just spit out the reachable
-            List<Statement> listStmts  = block.stmts;
-            CaseGroup       groupStart = m_casemgr.getCookie(m_casemgr.getSwitchConstantLabel());
+            // skip the condition and just spit out the reachable code inside the case group(s)
+            CaseGroup groupStart = m_casemgr.getCookie(m_casemgr.getSwitchConstantLabel());
             for (int iGroup = groupStart.iGroup, cGroups = m_listGroups.size(); iGroup < cGroups; ++iGroup)
                 {
-// TODO make this into an emitCaseGroup(int iGroup) method
-                boolean   fCompletes = fReachable;
-                CaseGroup group      = m_listGroups.get(iGroup);
-
-                // the label for any "continue" from the last group
-                if (iGroup > 0)
-                    {
-                    Label labelContinueFrom = m_listGroups.get(iGroup - 1).labelContinueTo;
-                    if (labelContinueFrom != null)
-                        {
-                        code.add(labelContinueFrom);
-                        }
-                    }
-
-                // the label assigned to the case group
-                code.add(m_casemgr.getCaseLabels()[iGroup]);
-
-                if (group.fScope)
-                    {
-                    code.add(new Enter());
-                    }
-
-                for (int iStmt = group.iFirstStmt, cStmts = listStmts.size(); iStmt < cStmts; ++iStmt)
-                    {
-                    Statement stmt = listStmts.get(iStmt);
-
-                    if (stmt instanceof CaseStatement)
-                        {
-                        if (fReachable && fCompletes)
-                            {
-                            stmt.log(errs, Severity.ERROR, Compiler.SWITCH_BREAK_OR_CONTINUE_EXPECTED);
-                            }
-                        break;
-                        }
-
-                    if (fReachable && !fCompletes)
-                        {
-                        // this statement is the first statement that cannot be reached;
-                        // the only thing that is allowed is an inner class definition
-                        fReachable = false;
-                        if (!(stmt instanceof TypeCompositionStatement))
-                            {
-                            stmt.log(errs, Severity.ERROR, Compiler.NOT_REACHABLE);
-                            }
-                        }
-
-                    fCompletes = stmt.completes(ctx, fCompletes, code, errs);
-                    }
-
-                if (group.fScope)
-                    {
-                    code.add(new Exit());
-                    }
-// TODO end method cut & paste
-
-                Label labelNext = group.labelContinueTo;
-                if (labelNext == null)
+                emitCaseGroup(ctx, fReachable, code, iGroup, errs);
+                if (m_listGroups.get(iGroup).labelContinueTo == null)
                     {
                     // if there was no "continue", then we're done
                     break;
@@ -336,8 +280,8 @@ public class SwitchStatement
             code.add(new Enter());
             }
 
-//        boolean fCompletesCond;
-//        else if (cond instanceof AssignmentStatement)
+        // TODO
+//        if (cond instanceof AssignmentStatement)
 //            {
 //            AssignmentStatement stmtCond = (AssignmentStatement) cond;
 //            fCompletesCond = stmtCond.completes(ctx, fReachable, code, errs);
@@ -349,10 +293,6 @@ public class SwitchStatement
 //            fCompletesCond = exprCond.isCompletable();
 //            exprCond.generateConditionalJump(ctx, code, labelElse, false, errs);
 //            }
-//
-//        boolean fCompletes = fReachable;
-
-        // TODO
 
         if (m_casemgr.hasDeclarations())
             {
@@ -367,6 +307,63 @@ public class SwitchStatement
             }
 
         return fReachable;
+        }
+
+    private void emitCaseGroup(Context ctx, boolean fReachable, Code code, int iGroup, ErrorListener errs)
+        {
+        boolean   fCompletes = fReachable;
+        CaseGroup group      = m_listGroups.get(iGroup);
+
+        // the label for any "continue" from the last group
+        if (iGroup > 0)
+            {
+            Label labelContinueFrom = m_listGroups.get(iGroup - 1).labelContinueTo;
+            if (labelContinueFrom != null)
+                {
+                code.add(labelContinueFrom);
+                }
+            }
+
+        // the label assigned to the case group
+        code.add(m_casemgr.getCaseLabels()[iGroup]);
+
+        if (group.fScope)
+            {
+            code.add(new Enter());
+            }
+
+        List<Statement> listStmts = block.stmts;
+        for (int iStmt = group.iFirstStmt, cStmts = listStmts.size(); iStmt < cStmts; ++iStmt)
+            {
+            Statement stmt = listStmts.get(iStmt);
+
+            if (stmt instanceof CaseStatement)
+                {
+                if (fReachable && fCompletes)
+                    {
+                    stmt.log(errs, Severity.ERROR, Compiler.SWITCH_BREAK_OR_CONTINUE_EXPECTED);
+                    }
+                break;
+                }
+
+            if (fReachable && !fCompletes)
+                {
+                // this statement is the first statement that cannot be reached;
+                // the only thing that is allowed is an inner class definition
+                fReachable = false;
+                if (!(stmt instanceof TypeCompositionStatement))
+                    {
+                    stmt.log(errs, Severity.ERROR, Compiler.NOT_REACHABLE);
+                    }
+                }
+
+            fCompletes = stmt.completes(ctx, fCompletes, code, errs);
+            }
+
+        if (group.fScope)
+            {
+            code.add(new Exit());
+            }
         }
 
 

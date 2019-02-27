@@ -10,6 +10,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IntervalConstant;
@@ -17,6 +18,7 @@ import org.xvm.asm.constants.MatchAnyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.ValueConstant;
 
+import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
@@ -877,6 +879,41 @@ public class CaseManager<CookieType>
             {
             return false;
             }
+        }
+
+    /**
+     * Generate the code for "jump table emulation" via an if-ladder.
+     *
+     * @param ctx     the emitting context
+     * @param code    the code to emit to
+     * @param aNodes  the statements/expressions inside the switch statement / expression (only the
+     *                CaseStatement instances are used by this method)
+     * @param errs    the error list to log to
+     */
+    public void generateIfLadder(Context ctx, Code code, List<? extends AstNode> aNodes, ErrorListener errs)
+        {
+        int cNodes = aNodes.size();
+        for (int i = 0; i < cNodes; ++i)
+            {
+            AstNode node = aNodes.get(i);
+            if (node instanceof CaseStatement)
+                {
+                CaseStatement stmt = ((CaseStatement) node);
+                if (!stmt.isDefault())
+                    {
+                    stmt.updateLineNumber(code);
+                    Label labelCur = stmt.getLabel();
+                    for (Expression expr : stmt.getExpressions())
+                        {
+                        expr.generateConditionalJump(ctx, code, labelCur, true, errs);
+                        }
+                    }
+                }
+            }
+
+        Label labelDefault = getDefaultLabel();
+        assert labelDefault != null;
+        code.add(new Jump(labelDefault));
         }
 
 
