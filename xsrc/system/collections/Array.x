@@ -81,6 +81,7 @@ class Array<ElementType>
 
             default:
                 elementAt(index).set(value);
+                break;
             }
         }
 
@@ -147,7 +148,7 @@ class Array<ElementType>
                     }
                 else
                     {
-                    tail.next = el;
+                    tail.as(Element).next = el;
                     tail = el;
                     }
                 return this;

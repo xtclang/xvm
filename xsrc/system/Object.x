@@ -71,14 +71,5 @@ class Object
 
         return this.as(immutable Object);
         }
-
-    // REVIEW - what about this?
-    interface InstanceChild
-        {
-        @RO Object outer.get()
-            {
-            return this.Object;
-            }
-        }
     }
 

@@ -446,7 +446,7 @@ mixin FutureVar<RefType>
                     }
                 else
                     {
-                    this.notify = new MultiCompleter(this.notify, notify).parentCompleted;
+                    this.notify = new MultiCompleter(this.notify.as(NotifyDependent), notify).parentCompleted;
                     }
                 break;
 

@@ -1,3 +1,5 @@
+import io.UTFDataFormatException;
+
 const Char
         implements Sequential
         implements Stringable
@@ -133,10 +135,11 @@ const Char
 
     Int formatUtf8(Byte[] bytes, Int of)
         {
-        if (codepoint <= 0x7F)
+        UInt32 ch = codepoint;
+        if (ch <= 0x7F)
             {
             // ASCII - single byte 0xxxxxxx format
-            bytes[of] = codepoint.to<Byte>();
+            bytes[of] = ch.to<Byte>();
             return 1;
             }
 
@@ -149,13 +152,13 @@ const Char
         //  26   U+200000  - U+3FFFFFF   111110xx    10xxxxxx      4
         //  31   U+4000000 - U+7FFFFFFF  1111110x    10xxxxxx      5
         Int trailing;
-        switch (codepoint.highestBit())             // REVIEW method or @RO property?
+        switch (ch.leftmostBit)             // REVIEW method or @RO property?
             {
             case 0b00000000000000000000000010000000:
             case 0b00000000000000000000000100000000:
             case 0b00000000000000000000001000000000:
             case 0b00000000000000000000010000000000:
-                out.write(0b11000000 | ch >>> 6);
+                bytes[of++] = 0b11000000 | ch >>> 6;
                 trailing = 1;
                 break;
 
@@ -164,7 +167,7 @@ const Char
             case 0b00000000000000000010000000000000:
             case 0b00000000000000000100000000000000:
             case 0b00000000000000001000000000000000:
-                out.write(0b11100000 | ch >>> 12);
+                bytes[of++] = 0b11100000 | ch >>> 12;
                 trailing = 2;
                 break;
 
@@ -173,7 +176,7 @@ const Char
             case 0b00000000000001000000000000000000:
             case 0b00000000000010000000000000000000:
             case 0b00000000000100000000000000000000:
-                out.write(0b11110000 | ch >>> 18);
+                bytes[of++] = 0b11110000 | ch >>> 18;
                 trailing = 3;
                 break;
 
@@ -182,7 +185,7 @@ const Char
             case 0b00000000100000000000000000000000:
             case 0b00000001000000000000000000000000:
             case 0b00000010000000000000000000000000:
-                out.write(0b11111000 | ch >>> 24);
+                bytes[of++] = 0b11111000 | ch >>> 24;
                 trailing = 4;
                 break;
 
@@ -191,12 +194,13 @@ const Char
             case 0b00010000000000000000000000000000:
             case 0b00100000000000000000000000000000:
             case 0b01000000000000000000000000000000:
-                out.write(0b11111100 | ch >>> 30);
+                bytes[of++] = 0b11111100 | ch >>> 30;
                 trailing = 5;
                 break;
 
             default:
-                throw new UTFDataFormatException("illegal character: " + intToHexString(ch));
+                // TODO: ch.toHexString() would be a better output
+                throw new UTFDataFormatException("illegal character: " + ch);
             }
         Int length = trailing + 1;
 
@@ -204,17 +208,9 @@ const Char
         // bits of data
         while (trailing > 0)
             {
-            out.write(0b10_000000 | (ch >>> --trailing * 6 & 0b00_111111));
+            bytes[of++] = 0b10_000000 | (ch >>> --trailing * 6 & 0b00_111111);
             }
 
         return length;
-        }
-
-    /**
-     * A UTFDataFormatException is raised when an illegal character is encountered in a byte stream.
-     */
-    static const UTFDataFormatException(String? text, Exception? cause)
-            extends Exception(text, cause)
-        {
         }
     }

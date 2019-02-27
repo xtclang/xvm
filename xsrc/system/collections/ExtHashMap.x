@@ -526,7 +526,7 @@ class ExtHashMap<KeyType, ValueType>
         // grow when around 80% capacity
         Int growThreshold = bucketCount - (bucketCount >>> 2) + (bucketCount >>> 5) + (bucketCount >>> 6);
 
-        return buckets, growThreshold, shrinkThreshold;
+        return bucketCount, growThreshold, shrinkThreshold;
         }
 
     /**
