@@ -1666,12 +1666,15 @@ public class InvocationExpression
             {
             TypeConstant typeParam = atypeParams[i];
             Expression   exprArg   = listArgs.get(i);
+
+            ctx = ctx.enterInferring(typeParam);
             if (!exprArg.testFit(ctx, typeParam).isFit())
                 {
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                         typeParam.getValueString(), exprArg.getTypeString(ctx));
                 fValid = false;
                 }
+            ctx = ctx.exit();
             }
 
         if (atypeReturn != null)
