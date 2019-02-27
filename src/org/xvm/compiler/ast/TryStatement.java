@@ -6,6 +6,8 @@ import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.List;
 
+import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure.Code;
 import org.xvm.compiler.Token;
 
 import static org.xvm.util.Handy.indentLines;
@@ -51,6 +53,41 @@ public class TryStatement
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    protected Statement validateImpl(Context ctx, ErrorListener errs)
+        {
+        boolean fUsing = resources != null && !resources.isEmpty();
+
+        if (fUsing)
+            {
+            ctx = ctx.enter();
+            // TODO
+            }
+
+        ctx = ctx.enter();
+        ctx.markNonCompleting();
+        block.validate(ctx, errs);
+        ctx = ctx.exit();
+
+        if (catches != null)
+            {
+            // TODO
+            }
+
+        if (catchall != null)
+            {
+
+            }
+        }
+
+    @Override
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+        {
         }
 
 

@@ -2,6 +2,8 @@ package org.xvm.compiler.ast;
 
 
 import java.lang.reflect.Field;
+import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure.Code;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -40,6 +42,36 @@ public class CatchStatement
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    protected Statement validateImpl(Context ctx, ErrorListener errs)
+        {
+        ctx = ctx.enter();
+        ctx.markNonCompleting();
+
+        // validate the catch clause
+        // TODO
+
+        // validate the block
+        // TODO
+
+        ctx.exit();
+
+        // contribute the variable assignment information from the catch back to the try statement,
+        // since the normal completion of a try combined with the normal completion of all of its
+        // catch clauses combines to provide the assignment impact of the try/catch
+        // TODO
+
+        return this;
+        }
+
+    @Override
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+        {
         }
 
 
