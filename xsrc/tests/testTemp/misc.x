@@ -269,7 +269,7 @@ module TestMisc.xqiz.it
                 // default: "other";
                 case 2, 3:
                 case 4:    "between 2 and 4";
-                // case 5..6: "between 5 and 6";
+                case 5..6: "between 5 and 6";
 
                 case 7: "sieben";
 

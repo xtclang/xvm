@@ -134,7 +134,7 @@ public class CaseManager<CookieType>
      */
     public boolean usesJmpValN()
         {
-        return getConditionCount() > 1 || usesNonExactMatching();
+        return getConditionCount() > 1;
         }
 
     /**
@@ -369,6 +369,9 @@ public class CaseManager<CookieType>
             return fValid;
             }
 
+        // allow case values to infer based on the expected type from the switch condition
+        ctx = ctx.enterInferring(m_typeCase);
+
         // validate each separate value in the case label
         ConstantPool pool       = pool();
         boolean      fIfSwitch  = usesIfLadder();
@@ -530,6 +533,9 @@ public class CaseManager<CookieType>
                 }
             }
 
+        // exit the inferring context
+        ctx = ctx.exit();
+
         return fValid;
         }
 
@@ -645,9 +651,28 @@ public class CaseManager<CookieType>
                     {
                     Label    label     = aLabelCase[i];
                     Constant constCase = aConstCase[i];
-                    int      nIndex    = constCase.getIntValue().sub(m_pintMin).getInt();
-
-                    aLabels[nIndex] = label;
+                    if (constCase instanceof IntervalConstant)
+                        {
+                        int iFirst = ((IntervalConstant) constCase).getFirst().getIntValue().sub(m_pintMin).getInt();
+                        int iLast  = ((IntervalConstant) constCase).getLast().getIntValue().sub(m_pintMin).getInt();
+                        if (iFirst > iLast)
+                            {
+                            int iTemp = iFirst;
+                            iFirst = iLast;
+                            iLast  = iTemp;
+                            }
+                        for (int iVal = iFirst; iVal <= iLast; ++iVal)
+                            {
+                            if (aLabels[iVal] == null)
+                                {
+                                aLabels[iVal] = label;
+                                }
+                            }
+                        }
+                    else
+                        {
+                        aLabels[constCase.getIntValue().sub(m_pintMin).getInt()] = label;
+                        }
                     }
 
                 // fill in any gaps
