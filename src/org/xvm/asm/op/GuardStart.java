@@ -27,33 +27,18 @@ public class GuardStart
         extends Op
     {
     /**
-     * Construct a GUARD op for a single exception.
-     *
-     * @param typeException  the exception type to catch
-     * @param constName      the name constant for the catch exception variable
-     * @param opCatch        the first op of the catch handler
-     */
-    public GuardStart(TypeConstant typeException, StringConstant constName, Op opCatch)
-        {
-        this(new TypeConstant[] {typeException},
-            new StringConstant[] {constName}, new Op[] {opCatch});
-        }
-
-    /**
      * Construct a GUARD op for multiple exceptions.
      *
-     * @param aTypeException  the exception type to catch
-     * @param aConstName      the name constant for the catch exception variable
-     * @param aOpCatch         the first op of the catch handler
+     * @param aOpCatch        the first op of the catch handler
      */
-    public GuardStart(TypeConstant[] aTypeException, StringConstant[] aConstName, Op[] aOpCatch)
+    public GuardStart(CatchStart[] aOpCatch)
         {
         assert aTypeException.length == aConstName.length;
         assert aTypeException.length == aOpCatch.length;
 
         m_aTypeException = aTypeException;
-        m_aConstName = aConstName;
-        m_aOpCatch = aOpCatch;
+        m_aConstName     = aConstName;
+        m_aOpCatch       = aOpCatch;
         }
 
     /**
