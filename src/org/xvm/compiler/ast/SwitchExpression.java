@@ -5,7 +5,6 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
-import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -14,19 +13,14 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.asm.op.Assert;
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.Jump;
-import org.xvm.asm.op.JumpInt;
-import org.xvm.asm.op.JumpVal;
-import org.xvm.asm.op.JumpVal_N;
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
-import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;

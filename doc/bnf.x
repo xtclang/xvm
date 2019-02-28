@@ -757,7 +757,7 @@ AnonClassBody
 
 # a statement expression is a lambda with an implicit "()->" preamble and with an implicit "()"
 # trailing invocation, i.e. it is a block of statements that executes, and at the end, it must
-# returns a value (it can not just be an expression, like lambda would support)
+# return a value (unlike a "naked" lambda, it can not just be an expression)
 StatementExpression
     StatementBlock
 
