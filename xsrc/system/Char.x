@@ -152,7 +152,7 @@ const Char
         //  26   U+200000  - U+3FFFFFF   111110xx    10xxxxxx      4
         //  31   U+4000000 - U+7FFFFFFF  1111110x    10xxxxxx      5
         Int trailing;
-        switch (ch.leftmostBit)             // REVIEW method or @RO property?
+        switch (ch.leftmostBit)
             {
             case 0b00000000000000000000000010000000:
             case 0b00000000000000000000000100000000:
