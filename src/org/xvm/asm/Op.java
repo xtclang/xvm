@@ -716,7 +716,7 @@ public abstract class Op
             case OP_EXIT:        return new Exit        ();
             case OP_GUARD:       return new GuardStart  (in, aconst);
             case OP_GUARD_END:   return new GuardEnd    (in, aconst);
-            case OP_CATCH:       return new CatchStart  ();
+            case OP_CATCH:       return new CatchStart  (in, aconst);
             case OP_CATCH_END:   return new CatchEnd    (in, aconst);
             case OP_GUARD_ALL:   return new GuardAll    (in, aconst);
             case OP_FINALLY:     return new FinallyStart();
