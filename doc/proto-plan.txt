@@ -152,6 +152,12 @@
 -- review the argument generation approach (regarding stack, and local prop) for all ops that use
    Frame.getArguments() similar to InvocationExpression and NewExpression
 
+-- tuple support
+   - InvocationExpression - needs to generate _xT ops (i.e. it must be able to testFit & validate for a tuple type)
+   - verify (and test) the logic in ReturnStatement that gens RETURN_T
+   - assignment w/ multi-LVal needs to testFit for Tuple if testFit for multi fails
+     (and use Expression.packedExpression and unpackedExpressions for code gen?)
+
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
 - TemplateRegistry and TypeComposition could be mutated by different threads

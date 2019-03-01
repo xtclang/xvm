@@ -159,6 +159,13 @@ public class ReturnStatement
             {
             Expression exprOld = listExprs.get(0);
             Expression exprNew;
+
+            if (fConditional && exprOld instanceof TernaryExpression)
+                {
+                // ternary expression needs to know the fact that it returns a conditional type
+                ((TernaryExpression) exprOld).markConditional();
+                }
+
             // several possibilities:
             // 1) most likely the expression matches the return types for the method
             if (cRets < 0 || exprOld.testFitMulti(ctx, aRetTypes).isFit())
@@ -185,7 +192,14 @@ public class ReturnStatement
                     if (exprOld.testFit(ctx, typeTuple).isFit())
                         {
                         exprNew = exprOld.validate(ctx, typeTuple, errs);
-                        m_fTupleReturn = true;
+                        if (fConditional)
+                            {
+                            m_fConditionalTernary = true;
+                            }
+                        else
+                            {
+                            m_fTupleReturn = true;
+                            }
                         }
                     // 4) otherwise it's most probably an error and the validation will log it
                     //   (except cases when testFit() implementation doesn't fully match the validate
@@ -193,6 +207,11 @@ public class ReturnStatement
                     else
                         {
                         exprNew = exprOld.validateMulti(ctx, aRetTypes, errs);
+                        if (exprNew != null)
+                            {
+                            // TODO: remove
+                            System.out.println("validate() and testFit() mismatch for " + exprOld.getClass().getName());
+                            }
                         }
                     }
                 }
@@ -208,7 +227,7 @@ public class ReturnStatement
 
             if (fValid)
                 {
-                atypeActual = m_fTupleReturn
+                atypeActual = m_fTupleReturn || m_fConditionalTernary
                         ? exprNew.getType().getParamTypesArray()
                         : exprNew.getTypes();
                 }
@@ -257,12 +276,16 @@ public class ReturnStatement
         List<Expression> listExprs = this.exprs;
         int              cExprs    = listExprs == null ? 0 : listExprs.size();
 
-        if (m_fTupleReturn) // REVIEW
+        if (m_fTupleReturn)
             {
             // the return statement has a single expression; the type that the expression has to
             // generate is the "tuple of" all of the return types
             Argument arg = listExprs.get(0).generateArgument(ctx, code, true, true, errs);
             code.add(new Return_T(arg));
+            }
+        else if (m_fConditionalTernary)
+            {
+            ((TernaryExpression) listExprs.get(0)).generateConditionalReturn(ctx, code, errs);
             }
         else
             {
@@ -356,6 +379,7 @@ public class ReturnStatement
     protected Token             keyword;
     protected List<Expression>  exprs;
 
+    protected transient boolean m_fConditionalTernary;
     protected transient boolean m_fTupleReturn;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ReturnStatement.class, "exprs");
