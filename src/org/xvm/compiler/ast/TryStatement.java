@@ -8,8 +8,12 @@ import java.util.List;
 
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Register;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
 
+import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo.MethodType;
 import org.xvm.asm.op.CatchEnd;
 import org.xvm.asm.op.CatchStart;
 import org.xvm.asm.op.FinallyEnd;
@@ -17,6 +21,11 @@ import org.xvm.asm.op.FinallyStart;
 import org.xvm.asm.op.GuardAll;
 import org.xvm.asm.op.GuardStart;
 
+import org.xvm.asm.op.Invoke_00;
+import org.xvm.asm.op.JumpNType;
+import org.xvm.asm.op.JumpNotNull;
+import org.xvm.asm.op.Label;
+import org.xvm.asm.op.Throw;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
@@ -99,11 +108,9 @@ public class TryStatement
             ctx = ctx.enter();
 
             int c = resources.size();
-            aFinallyClose = new FinallyStart[c];
             for (int i = 0; i < c; ++i)
                 {
                 Statement stmt = resources.get(i);
-
                 // TODO
                 }
             }
@@ -118,21 +125,21 @@ public class TryStatement
             {
             for (int i = 0, c = catches.size(); i < c; ++i)
                 {
-                CatchStatement stmt = catches.get(i);
-
                 ctx = ctx.enter();
                 ctx.markNonCompleting();
 
+                CatchStatement stmt = catches.get(i);
+
                 // validate the catch clause
+                VariableDeclarationStatement target    = stmt.target;
                 VariableDeclarationStatement targetNew = (VariableDeclarationStatement) target.validate(ctx, errs);
                 if (targetNew != null)
                     {
-                    target = targetNew;
-
-                    if (!targetNew.getType().isA(pool().typeException()))
+                    stmt.target = target = targetNew;
+                    if (!target.getType().isA(pool().typeException()))
                         {
-                        targetNew.log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                                pool().typeException().getValueString(), targetNew.getType().getValueString());
+                        target.log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                                pool().typeException().getValueString(), target.getType().getValueString());
                         }
 
                     // validate the block
@@ -172,6 +179,7 @@ public class TryStatement
 
         // using() or try()-with-resources
         FinallyStart[] aFinallyClose = null;
+        Register[]     aRegClose     = null;
         if (hasResources())
             {
             // the first resource is declared outside of any try/finally block, but it is not
@@ -217,7 +225,7 @@ public class TryStatement
             }
 
         // the "guarded" body of the using/try statement
-        boolean fBlockCompletes    = block.completes(ctx, fCompletes, code, errs);
+        boolean fBlockCompletes = block.completes(ctx, fCompletes, code, errs);
 
         // the "catch" blocks
         boolean fAnyCatchCompletes = false;
@@ -226,10 +234,8 @@ public class TryStatement
             int c = catches.size();
             for (int i = 0; i < c; ++i)
                 {
-                CatchStatement               stmtCatch = catches.get(i);
-                VariableDeclarationStatement stmtVar   = stmtCatch.target;
                 code.add(aCatchStart[i]);
-                fAnyCatchCompletes |= stmtCatch.completes(ctx, fCompletes, code, errs);
+                fAnyCatchCompletes |= catches.get(i).completes(ctx, fCompletes, code, errs);
                 code.add(new CatchEnd(getEndLabel()));
                 }
             }
@@ -245,13 +251,49 @@ public class TryStatement
 
         if (hasResources())
             {
+            // ...
+            // FINALLY (e)
+            // GUARD
+            // # if (x.is(Closeable)) { x.close(); }
+            // JMP_NTYPE skip_close
+            // NVOK_00 x Closeable.close
+            // skip_close: GUARD_E
+            // CATCH Exception e_close
+            // # if e == null throw e_close
+            // JMP_NNULL e skip
+            // throw e_close
+            // skip_throw: CATCH_E
+            // FINALLY_E
+            // EXIT
+            TypeConstant   typeCloseable = pool().typeCloseable();
+            MethodConstant methodClose   = typeCloseable.ensureTypeInfo(errs)
+                    .findMethods("close", 0, MethodType.Method).iterator().next();
             for (int i = 0, c = resources.size(); i < c; ++i)
                 {
                 code.add(aFinallyClose[i]);
-                AssignmentStatement stmt = resources.get(i);
-                if (stmt.getLValueExpression().getType().isA(pool().typeCloseable()))
-                // TODO for provably-Closeable types: value.close()
-                // TODO for possibly-Closeable types: if value.is(Closeable) value.close()
+                Register regException = code.lastRegister();       // TODO this probably isn't implemented yet for FinallyStart op
+
+                Register       regCatch  = new Register(pool().typeException());
+                StringConstant constName = pool().ensureStringConstant("(close-exception)");
+                CatchStart     opCatch   = new CatchStart(regCatch, constName);
+                code.add(new GuardStart(new CatchStart[] {opCatch}));
+
+                Register regResource    = aRegClose[i];
+                Label    labelSkipClose = new Label("skip_close");
+                if (!regResource.getType().isA(typeCloseable))
+                    {
+                    code.add(new JumpNType(regResource, typeCloseable, labelSkipClose));
+                    }
+                code.add(new Invoke_00(regResource, methodClose));
+                code.add(labelSkipClose);
+
+                code.add(opCatch);
+                Label labelSkipThrow   = new Label("skip_throw");
+                Label labelFallThrough = new Label();
+                code.add(new JumpNotNull(regException, labelSkipThrow));
+                code.add(new Throw(regException));
+                code.add(new CatchEnd(labelFallThrough));
+                code.add(labelFallThrough);
                 code.add(new FinallyEnd());
                 }
 

@@ -21,6 +21,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
+import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xFunction.FullyBoundHandle;
@@ -789,7 +790,8 @@ public class Frame
                 return Op.R_RETURN;
 
             case Op.A_MULTI:
-                throw new IllegalStateException();
+                assert f_function.isConditionalReturn() && hValue.equals(xBoolean.FALSE);
+                return returnValue(f_aiReturn[0], hValue, fDynamic);
 
             case Op.A_TUPLE:
                 if (fDynamic)

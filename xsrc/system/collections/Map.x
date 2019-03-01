@@ -714,8 +714,8 @@ interface Map<KeyType, ValueType>
             Set<KeyType> oldKeys = Map.this.keys;
 
             // temp fix, part 1 of 2:
-            KeyBasedCursorEntry entry;
-            Set<KeyType> newKeys = oldKeys.removeIf(key ->
+            @Unassigned KeyBasedCursorEntry entry;
+            if (Set<KeyType> newKeys : oldKeys.removeIf(key ->
                 {
                 // REVIEW this line of code is possibly "so wrong" in so many ways:
                 // 1) what does it mean to have a "static" variable inside of a lambda?
@@ -750,10 +750,12 @@ interface Map<KeyType, ValueType>
                     }
 
                 return shouldRemove(entry.advance(key));
-                });
-            assert &newKeys == &oldKeys;
-
-            return true, this;
+                }))
+                {
+                assert &newKeys == &oldKeys;
+                return true, this;
+                }
+            return false;
             }
 
         @Override
@@ -912,16 +914,20 @@ interface Map<KeyType, ValueType>
         @Override
         conditional Collection<ValueType> remove(ValueType value)
             {
-            Map.this.entries.iterator().untilAny(entry ->
-                {
-                if (entry.value == value)
+            Map map = Map.this;
+            if (map.entries.iterator().untilAny(entry ->
                     {
-                    Map newMap = Map.this.remove(entry.key);
-                    assert Ref.equals(Map.this, newMap);
-                    return true, this;
-                    }
-                return false;
-                });
+                    if (entry.value == value)
+                        {
+                        Map newMap = map.remove(entry.key);
+                        assert Ref.equals(map, newMap);
+                        return true;
+                        }
+                    return false;
+                    }))
+                {
+                return true, this;
+                }
 
             return false;
             }
