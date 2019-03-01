@@ -2162,3 +2162,29 @@ switch (X)
     default:
         //....
     }
+
+// ----- using / try..catch
+
+using (X x = new X())
+    {
+    ...
+    }
+
+ENTER
+VAR_N X x
+NEW_0 X -> x
+GUARD_ALL
+...
+FINALLY (e)
+GUARD
+// if (x.is(Closeable)) { x.close(); }
+JMP_NTYPE skip_close
+NVOK_00 x Closeable.close
+skip_close: GUARD_E
+CATCH Exception e_close
+// if e == null throw e_close
+JMP_NNULL e skip
+throw e_close
+skip_throw: CATCH_E
+FINALLY_E
+EXIT
