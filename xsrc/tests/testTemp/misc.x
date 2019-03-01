@@ -39,6 +39,7 @@ module TestMisc.xqiz.it
         testException();
         // testTupleConv();
         // testMap();
+        testConditional();
         testConstants();
         testImport();
         testChild();
@@ -425,6 +426,25 @@ module TestMisc.xqiz.it
     Tuple<String, IntLiteral> getTupleSI()
         {
         return ("Hello", 4);
+        }
+
+    void testConditional()
+        {
+        console.println("\n** testConditional()");
+        if (String s : checkPositive(17))
+            {
+            console.println(s);
+            }
+
+        if (String s : checkPositive(-17))
+            {
+            assert;
+            }
+        }
+
+    private conditional String checkPositive(Int i)
+        {
+        return i < 0 ? false : (true, "positive");
         }
 
     // TODO

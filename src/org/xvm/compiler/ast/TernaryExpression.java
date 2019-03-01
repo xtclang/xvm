@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -12,6 +13,8 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.Label;
+import org.xvm.asm.op.Return_1;
+import org.xvm.asm.op.Return_T;
 
 
 /**
@@ -50,9 +53,18 @@ public class TernaryExpression
         return CHILD_FIELDS;
         }
 
+    /**
+     * Mark this ternary as "possibly" asymmetrical - returning conditional "false" on some branch.
+     *
+     * This method must be called *before* validation or testFit.
+     */
+    public void markConditional()
+        {
+        m_fConditional = true;
+        }
+
 
     // ----- compilation ---------------------------------------------------------------------------
-
 
     @Override
     public TypeConstant getImplicitType(Context ctx)
@@ -62,14 +74,32 @@ public class TernaryExpression
         }
 
     @Override
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
+        {
+        switch (generatePlan(ctx))
+            {
+            case ThenIsFalse:
+                return exprElse.testFit(ctx, typeRequired);
+
+            case ElseIsFalse:
+                return exprThen.testFit(ctx, typeRequired);
+
+            default:
+            case Symmetrical:
+                return exprThen.testFit(ctx, typeRequired).combineWith(
+                       exprElse.testFit(ctx, typeRequired));
+            }
+        }
+
+    @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        TypeFit      fit         = TypeFit.Fit;
-        ConstantPool pool        = pool();
+        TypeFit      fit  = TypeFit.Fit;
+        ConstantPool pool = pool();
 
         ctx = ctx.enter();
 
-        Expression   exprNewCond = cond.validate(ctx, pool.typeBoolean(), errs);
+        Expression exprNewCond = cond.validate(ctx, pool.typeBoolean(), errs);
         if (exprNewCond == null)
             {
             fit = TypeFit.NoFit;
@@ -80,15 +110,32 @@ public class TernaryExpression
             // TODO check if it is short circuiting
             }
 
-        TypeConstant typeRequest = typeRequired == null
-                ? getImplicitType(ctx)
-                : typeRequired;
+        TypeConstant typeThen, typeElse;
+        Plan plan;
+        switch (plan = generatePlan(ctx))
+            {
+            case ThenIsFalse:
+                typeThen = pool.typeFalse();
+                typeElse = typeRequired;
+                break;
+
+            case ElseIsFalse:
+                typeThen = typeRequired;
+                typeElse = pool.typeFalse();
+                break;
+
+            default:
+            case Symmetrical:
+                typeThen = typeElse = typeRequired == null
+                        ? getImplicitType(ctx)
+                        : typeRequired;
+                break;
+            }
 
         ctx = ctx.enterFork(true);
-        Expression exprNewThen = exprThen.validate(ctx, typeRequest, errs);
+        Expression exprNewThen = exprThen.validate(ctx, typeThen, errs);
         ctx = ctx.exit();
 
-        TypeConstant typeThen = null;
         if (exprNewThen == null)
             {
             fit = TypeFit.NoFit;
@@ -99,17 +146,16 @@ public class TernaryExpression
             typeThen = exprNewThen.getType();
             // TODO check if it is short circuiting
 
-            if (typeRequest == null)
+            if (typeElse == null)
                 {
-                typeRequest = Op.selectCommonType(exprNewThen.getType(), null, errs);
+                typeElse = Op.selectCommonType(typeThen, null, errs);
                 }
             }
 
         ctx = ctx.enterFork(false);
-        Expression   exprNewElse = exprElse.validate(ctx, typeRequest, errs);
+        Expression exprNewElse = exprElse.validate(ctx, typeElse, errs);
         ctx = ctx.exit();
 
-        TypeConstant typeElse = null;
         if (exprNewElse == null)
             {
             fit = TypeFit.NoFit;
@@ -130,7 +176,24 @@ public class TernaryExpression
                     : replaceThisWith(exprNewElse);
             }
 
-        TypeConstant typeResult = Op.selectCommonType(typeThen, typeElse, errs);
+        TypeConstant typeResult;
+        switch (plan)
+            {
+            case ThenIsFalse:
+                typeResult = ensureConditionalType(pool, typeElse);
+                break;
+
+            case ElseIsFalse:
+                typeResult = ensureConditionalType(pool, typeThen);
+                break;
+
+            default:
+            case Symmetrical:
+                typeResult = Op.selectCommonType(typeThen, typeElse, errs);
+                assert typeResult != null;
+                break;
+            }
+
         return finishValidation(typeRequired, typeResult, fit, null, errs);
         }
 
@@ -166,6 +229,91 @@ public class TernaryExpression
         code.add(labelEnd);
         }
 
+    /**
+     * Custom logic for conditional return.
+     *
+     * @param ctx   the compilation context for the statement
+     * @param code  the code block
+     * @param errs  the error list to log any errors to
+     */
+    public void generateConditionalReturn(Context ctx, Code code, ErrorListener errs)
+        {
+        switch (m_plan)
+            {
+            case ThenIsFalse:
+                {
+                Label labelElse = new Label("else");
+
+                cond.generateConditionalJump(ctx, code, labelElse, true, errs);
+                Argument arg = exprElse.generateArgument(ctx, code, true, true, errs);
+                code.add(new Return_T(arg));
+                code.add(labelElse);
+                code.add(new Return_1(pool().valFalse()));
+                break;
+                }
+
+            case ElseIsFalse:
+                {
+                Label labelElse = new Label("else");
+
+                cond.generateConditionalJump(ctx, code, labelElse, false, errs);
+                Argument arg = exprThen.generateArgument(ctx, code, true, true, errs);
+                code.add(new Return_T(arg));
+                code.add(labelElse);
+                code.add(new Return_1(pool().valFalse()));
+                break;
+                }
+
+            default:
+            case Symmetrical:
+                {
+                Argument arg = generateArgument(ctx, code, true, true, errs);
+                code.add(new Return_T(arg));
+                break;
+                }
+            }
+        }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    private Plan generatePlan(Context ctx)
+        {
+        if (m_fConditional)
+            {
+            TypeConstant typeFalse = pool().typeFalse();
+
+            // test "? (true, result) : false" first
+            if (exprElse.testFit(ctx, typeFalse).isFit())
+                {
+                return m_plan = Plan.ElseIsFalse;
+                }
+
+            // test "? false : (true, result)" next
+            if (exprThen.testFit(ctx, typeFalse).isFit())
+                {
+                return m_plan = Plan.ThenIsFalse;
+                }
+            }
+        return m_plan = Plan.Symmetrical;
+        }
+
+    private static TypeConstant ensureConditionalType(ConstantPool pool, TypeConstant typeTuple)
+        {
+        assert typeTuple.isA(pool.typeTuple()) && typeTuple.getParamsCount() > 0;
+
+        TypeConstant[] atypeResult = typeTuple.getParamTypesArray();
+        if (atypeResult[0].equals(pool.typeBoolean()))
+            {
+            return typeTuple;
+            }
+
+        atypeResult    = atypeResult.clone();
+        atypeResult[0] = pool.typeBoolean();
+
+        return pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeResult);
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -189,6 +337,11 @@ public class TernaryExpression
     protected Expression cond;
     protected Expression exprThen;
     protected Expression exprElse;
+
+    private transient boolean m_fConditional;
+
+    enum Plan {Symmetrical, ThenIsFalse, ElseIsFalse}
+    private transient Plan m_plan = Plan.Symmetrical;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TernaryExpression.class, "cond", "exprThen", "exprElse");
     }
