@@ -11,7 +11,7 @@
 +GUARD_E    addr                                    ; } ... // ("E"=) end guarded block with a jump (implicit EXIT)
 +CATCH                                              ; begin an exception handler (implicit ENTER and INVAR for exception)
 +CATCH_E    addr                                    ; ("E"=) end an exception handler with a jump (implicit EXIT)
-+GUARDALL   addr                                    ; try { (+ "finally" address (implicit ENTER)
++GUARDALL   addr                                    ; try { (+ "finally" address (implicit ENTER, also intercepts boundary-crossing-jumps and returns)
 +FINALLY                                            ; begin a "finally" handler (implicit EXIT/ENTER and an exception var)
 +FINALLY_E                                          ; ("E"=) end  a "finally" handler (implicit EXIT)
 +THROW      rvalue                                  ; raise exception
