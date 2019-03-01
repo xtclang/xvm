@@ -10,15 +10,11 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Scope;
 
-import org.xvm.asm.constants.StringConstant;
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.Frame.MultiGuard;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * GUARD #handlers:(CONST_CLASS, CONST_STRING, rel_addr)
@@ -29,16 +25,11 @@ public class GuardStart
     /**
      * Construct a GUARD op for multiple exceptions.
      *
-     * @param aOpCatch        the first op of the catch handler
+     * @param aOpCatch  the first op of the catch handlers
      */
     public GuardStart(CatchStart[] aOpCatch)
         {
-        assert aTypeException.length == aConstName.length;
-        assert aTypeException.length == aOpCatch.length;
-
-        m_aTypeException = aTypeException;
-        m_aConstName     = aConstName;
-        m_aOpCatch       = aOpCatch;
+        m_aOpCatch = aOpCatch;
         }
 
     /**
@@ -67,11 +58,22 @@ public class GuardStart
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        if (m_aTypeException != null)
+        if (m_aOpCatch != null)
             {
-            m_anTypeId = encodeArguments(m_aTypeException, registry);
-            m_anNameId = encodeArguments(m_aConstName, registry);
+            int   cCatch   = m_aOpCatch.length;
+            int[] anTypeId = new int[cCatch];
+            int[] anNameId = new int[cCatch];
+            for (int i = 0; i < cCatch; ++i)
+                {
+                CatchStart op = m_aOpCatch[i];
+                op.preWrite(registry);
+                anTypeId[i] = op.getTypeId();
+                anNameId[i] = op.getNameId();
+                }
+            m_anTypeId = anTypeId;
+            m_anNameId = anNameId;
             }
+
         out.writeByte(OP_GUARD);
 
         int c = m_anTypeId.length;
@@ -120,8 +122,7 @@ public class GuardStart
         MultiGuard guard = m_guard;
         if (guard == null)
             {
-            m_guard = guard = new MultiGuard(iPC, iScope,
-                m_anTypeId, m_anNameId, m_aofCatch);
+            m_guard = guard = new MultiGuard(iPC, iScope, m_anTypeId, m_anNameId, m_aofCatch);
             }
         frame.pushGuard(guard);
 
@@ -136,20 +137,11 @@ public class GuardStart
         m_nNextVar = scope.getCurVars();
         }
 
-    @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
-        registerArguments(m_aTypeException, registry);
-        registerArguments(m_aConstName, registry);
-        }
-
     private int[] m_anTypeId;
     private int[] m_anNameId;
     private int[] m_aofCatch;
 
-    private TypeConstant[] m_aTypeException;
-    private StringConstant[] m_aConstName;
-    private Op[] m_aOpCatch;
+    private CatchStart[] m_aOpCatch;
 
     private int m_nNextVar;
 

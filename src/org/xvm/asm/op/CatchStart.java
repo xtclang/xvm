@@ -2,11 +2,11 @@ package org.xvm.asm.op;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
 import org.xvm.asm.Scope;
@@ -48,26 +48,40 @@ public class CatchStart
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    protected CatchStart(DataInput in, Constant[] aconst)
+    public CatchStart(DataInput in, Constant[] aconst)
             throws IOException
         {
         super(in, aconst);
-
-        m_nNameId = readPackedInt(in);
         }
 
-    @Override
-    public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
+    void preWrite(ConstantRegistry registry)
         {
-        super.write(out, registry);
+        m_nType = encodeArgument(getRegisterType(ConstantPool.getCurrentPool()), registry);
 
-        // TODO this doesn't go here; it belongs on GuardStart (since that's the place that will write it out)
-//        if (m_constName != null)
-//            {
-//            m_nNameId = encodeArgument(m_constName, registry);
-//            }
-//        writePackedLong(out, m_nNameId);
+        if (m_constName != null)
+            {
+            m_nNameId = encodeArgument(m_constName, registry);
+            }
+        }
+
+    int getTypeId()
+        {
+        return m_nType;
+        }
+
+    void setTypeId(int nType)
+        {
+        m_nType = nType;
+        }
+
+    int getNameId()
+        {
+        return m_nNameId;
+        }
+
+    void setNameId(int nName)
+        {
+        m_nNameId = nName;
         }
 
     @Override
@@ -80,6 +94,12 @@ public class CatchStart
     public int getOpCode()
         {
         return OP_CATCH;
+        }
+
+    @Override
+    public boolean isEnter()
+        {
+        return true;
         }
 
     @Override

@@ -2317,7 +2317,7 @@ public class Parser
     Statement parseTryStatement()
         {
         Token keyword = expect(Id.TRY);
-        List<Statement> resources = null;
+        List<AssignmentStatement> resources = null;
         if (match(Id.L_PAREN) != null)
             {
             resources = parseVariableInitializationList(true);
@@ -2392,7 +2392,7 @@ public class Parser
         {
         Token keyword = expect(Id.USING);
         expect(Id.L_PAREN);
-        List<Statement> resources = parseVariableInitializationList(true);
+        List<AssignmentStatement> resources = parseVariableInitializationList(true);
         expect(Id.R_PAREN);
         return new TryStatement(keyword, resources, parseStatementBlock(), null, null);
         }
@@ -2436,7 +2436,7 @@ public class Parser
      *
      * @return a statement representing the variable initializer
      */
-    List<Statement> parseVariableInitializationList(boolean required)
+    List<AssignmentStatement> parseVariableInitializationList(boolean required)
         {
         if (!required)
             {
@@ -2449,7 +2449,7 @@ public class Parser
                 }
             }
 
-        List<Statement> list = new ArrayList<>();
+        List<AssignmentStatement> list = new ArrayList<>();
         list.add(parseVariableInitializer());
         while (match(Id.COMMA) != null)
             {
@@ -2472,7 +2472,7 @@ public class Parser
      *
      * @return a statement representing the variable initializer
      */
-    Statement parseVariableInitializer()
+    AssignmentStatement parseVariableInitializer()
         {
         TypeExpression type;
         if (peek().getId() == Id.VAR || peek().getId() == Id.VAL)

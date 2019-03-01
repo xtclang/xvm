@@ -1874,6 +1874,7 @@ public class ConstantPool
     public ClassConstant     clzPackage()       {ClassConstant     c = m_clzPackage;      if (c == null) {m_clzPackage      = c = (ClassConstant) getImplicitlyImportedIdentity("Package"    );} return c;}
     public ClassConstant     clzEnum()          {ClassConstant     c = m_clzEnum;         if (c == null) {m_clzEnum         = c = (ClassConstant) getImplicitlyImportedIdentity("Enum"       );} return c;}
     public ClassConstant     clzEnumeration()   {ClassConstant     c = m_clzEnumeration;  if (c == null) {m_clzEnumeration  = c = (ClassConstant) getImplicitlyImportedIdentity("Enumeration");} return c;}
+    public ClassConstant     clzCloseable()     {ClassConstant     c = m_clzCloseable;    if (c == null) {m_clzCloseable    = c = (ClassConstant) getImplicitlyImportedIdentity("Closeable"  );} return c;}
     public ClassConstant     clzException()     {ClassConstant     c = m_clzException;    if (c == null) {m_clzException    = c = (ClassConstant) getImplicitlyImportedIdentity("Exception"  );} return c;}
     public ClassConstant     clzProperty()      {ClassConstant     c = m_clzProperty;     if (c == null) {m_clzProperty     = c = (ClassConstant) getImplicitlyImportedIdentity("Property"   );} return c;}
     public ClassConstant     clzMethod()        {ClassConstant     c = m_clzMethod;       if (c == null) {m_clzMethod       = c = (ClassConstant) getImplicitlyImportedIdentity("Method"     );} return c;}
@@ -1942,6 +1943,7 @@ public class ConstantPool
     public TypeConstant      typeEnumRB()       {TypeConstant      c = m_typeEnumRB;      if (c == null) {m_typeEnumRB      = c = makeNativeRebase(clzEnum()                                 );} return c;}
     public TypeConstant      typeEnumeration()  {TypeConstant      c = m_typeEnumeration; if (c == null) {m_typeEnumeration = c = ensureTerminalTypeConstant(clzEnumeration()                );} return c;}
     public TypeConstant      typeException()    {TypeConstant      c = m_typeException;   if (c == null) {m_typeException   = c = ensureTerminalTypeConstant(clzException()                  );} return c;}
+    public TypeConstant      typeCloseable()    {TypeConstant      c = m_typeCloseable;   if (c == null) {m_typeCloseable   = c = ensureTerminalTypeConstant(clzCloseable()                  );} return c;}
     public TypeConstant      typeProperty()     {TypeConstant      c = m_typeProperty;    if (c == null) {m_typeProperty    = c = ensureTerminalTypeConstant(clzProperty()                   );} return c;}
     public TypeConstant      typeMethod()       {TypeConstant      c = m_typeMethod;      if (c == null) {m_typeMethod      = c = ensureTerminalTypeConstant(clzMethod()                     );} return c;}
     public TypeConstant      typeFunction()     {TypeConstant      c = m_typeFunction;    if (c == null) {m_typeFunction    = c = ensureTerminalTypeConstant(clzFunction()                   );} return c;}
@@ -2591,6 +2593,7 @@ public class ConstantPool
         m_clzStruct       = null;
         m_clzType         = null;
         m_clzClass        = null;
+        m_clzCloseable    = null;
         m_clzConst        = null;
         m_clzService      = null;
         m_clzModule       = null;
@@ -2671,6 +2674,7 @@ public class ConstantPool
         m_typeBoolean     = null;
         m_typeTrue        = null;
         m_typeFalse       = null;
+        m_typeCloseable   = null;
         m_typeNullable    = null;
         m_typeOrdered     = null;
         m_typeNull        = null;
@@ -3026,6 +3030,7 @@ public class ConstantPool
     private transient ClassConstant     m_clzEnum;
     private transient ClassConstant     m_clzEnumeration;
     private transient ClassConstant     m_clzException;
+    private transient ClassConstant     m_clzCloseable;
     private transient ClassConstant     m_clzProperty;
     private transient ClassConstant     m_clzMethod;
     private transient ClassConstant     m_clzFunction;
@@ -3092,6 +3097,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeEnumRB;
     private transient TypeConstant      m_typeEnumeration;
     private transient TypeConstant      m_typeException;
+    private transient TypeConstant      m_typeCloseable;
     private transient TypeConstant      m_typeException१;
     private transient TypeConstant      m_typeProperty;
     private transient TypeConstant      m_typeMethod;
