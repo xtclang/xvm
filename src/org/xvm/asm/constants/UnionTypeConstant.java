@@ -12,6 +12,10 @@ import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.Utils;
+
 
 /**
  * Represent a constant that specifies the union ("+") of two types.
@@ -286,6 +290,23 @@ public class UnionTypeConstant
         {
         return getUnderlyingType().containsSubstitutableMethod(signature, access, listParams)
             || getUnderlyingType2().containsSubstitutableMethod(signature, access, listParams);
+        }
+
+
+    // ----- run-time support ----------------------------------------------------------------------
+
+    @Override
+    public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        return Utils.callEqualsSequence(frame,
+            m_constType1, m_constType2, hValue1, hValue2, iReturn);
+        }
+
+    @Override
+    public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        return Utils.callCompareSequence(frame,
+            m_constType1, m_constType2, hValue1, hValue2, iReturn);
         }
 
 

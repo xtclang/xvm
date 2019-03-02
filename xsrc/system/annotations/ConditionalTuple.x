@@ -20,7 +20,7 @@ mixin ConditionalTuple
         }
 
     @Override
-    @Op Tuple add(Tuple that)
+    @Op Tuple add(Tuple!<> that)
         {
         assert this[0];
         return super(that);

@@ -12,6 +12,9 @@ import org.xvm.asm.Component.SimpleCollector;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+
 
 /**
  * Represent a constant that specifies the difference (relative complement) ("-") of two types.
@@ -216,8 +219,25 @@ public class DifferenceTypeConstant
     public boolean containsSubstitutableMethod(
             SignatureConstant signature, Access access, List<TypeConstant> listParams)
         {
-        return getUnderlyingType().containsSubstitutableMethod(signature, access, listParams)
-            && !getUnderlyingType2().containsSubstitutableMethod(signature, access, listParams);
+        return m_constType1.containsSubstitutableMethod(signature, access, listParams)
+            && m_constType2.containsSubstitutableMethod(signature, access, listParams);
+        }
+
+
+    // ----- run-time support ----------------------------------------------------------------------
+
+    @Override
+    public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        // disregard what the second type thinks
+        return m_constType1.callEquals(frame, hValue1, hValue2, iReturn);
+        }
+
+    @Override
+    public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        // disregard what the second type thinks
+        return m_constType1.callCompare(frame, hValue1, hValue2, iReturn);
         }
 
 

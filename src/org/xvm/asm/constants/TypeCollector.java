@@ -310,7 +310,7 @@ public class TypeCollector
             TypeConstant type = inferSingle(
                     atypeRequired == null || atypeRequired.length == 0 ? null : atypeRequired[0]);
             return type == null
-                    ? null
+                    ? TypeConstant.NO_TYPES
                     : new TypeConstant[] {type};
             }
 
@@ -321,7 +321,7 @@ public class TypeCollector
         int                  cHeight   = listTypes.size();
         if (cHeight == 0)
             {
-            return null;
+            return TypeConstant.NO_TYPES;
             }
 
         // do a quick scan to determine the "shape" of the result, keeping in mind that some of the
@@ -333,7 +333,7 @@ public class TypeCollector
             {
             if (aTypes == null)
                 {
-                return null;
+                return TypeConstant.NO_TYPES;
                 }
 
             // it is permissible for a single "False" value to be returned if the multi-type is

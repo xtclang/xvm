@@ -71,7 +71,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * compile-time type of the returned tuple is known; otherwise, an explicit cast to a
      * compile-time type is required to regain the compile-time type.
      */
-    @Op Tuple!<> add(Tuple! that);
+    @Op Tuple!<> add(Tuple!<> that);
 
     /**
      * Modify the value of the specified element in the tuple, returning the resultant tuple.
@@ -83,7 +83,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * tuple is returned; otherwise, a new tuple with the change is returned, and this tuple is left
      * unchanged.
      */
-    Tuple! replace(Int index, Object value);
+    Tuple!<> replace(Int index, Object value);
 
     /**
      * Obtain a portion of the tuple as a tuple.
@@ -131,7 +131,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * contents as this tuple. If this tuple is already a fixed-size tuple, then _this_ is returned.
      */
     @Override
-    Tuple<ElementTypes> ensureFixedSize(Boolean inPlace = false);
+    Tuple ensureFixedSize(Boolean inPlace = false);
 
     /**
      * Return a persistent tuple of the same element types and values as are present in this tuple.
@@ -141,7 +141,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * using the {@link replace} method; instead, calls to {@link replace} will return a new tuple.
      */
     @Override
-    Tuple<ElementTypes> ensurePersistent(Boolean inPlace = false);
+    Tuple ensurePersistent(Boolean inPlace = false);
 
     /**
      * Return a {@code const} tuple of the same element types and values as are present in this
@@ -154,5 +154,5 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      *         {@link ConstAble}
      */
     @Override
-    immutable Tuple<ElementTypes> ensureConst(Boolean inPlace = false);
+    immutable Tuple ensureConst(Boolean inPlace = false);
     }

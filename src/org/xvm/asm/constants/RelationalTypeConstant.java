@@ -409,15 +409,13 @@ public abstract class RelationalTypeConstant
     @Override
     public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        return Utils.callEqualsSequence(frame,
-            m_constType1, m_constType2, hValue1, hValue2, iReturn);
+        throw new UnsupportedOperationException();
         }
 
     @Override
     public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        return Utils.callCompareSequence(frame,
-            m_constType1, m_constType2, hValue1, hValue2, iReturn);
+        throw new UnsupportedOperationException();
         }
 
 

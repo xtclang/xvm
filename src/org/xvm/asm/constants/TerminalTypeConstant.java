@@ -408,7 +408,26 @@ public class TerminalTypeConstant
         if (constId instanceof PropertyConstant)
             {
             PropertyConstant idProp = (PropertyConstant) constId;
-            if (!idProp.isTypeSequenceTypeParameter())
+            if (idProp.isTypeSequenceTypeParameter())
+                {
+                // the following block is for nothing else, but compilation of Tuple and
+                // ConditionalTuple natural classes
+                if (resolver instanceof TypeConstant)
+                    {
+                    TypeConstant typeResolver = (TypeConstant) resolver;
+                    if (typeResolver.isTuple() && !typeResolver.isParamsSpecified())
+                        {
+                        return this;
+                        }
+                    }
+                TypeConstant typeResolved = resolver.resolveGenericType(idProp.getName());
+                if (typeResolved != null && !typeResolved.isFormalTypeSequence())
+                    {
+                    // prevent a recursive resolution into "Tuple<...>"
+                    return typeResolved;
+                    }
+                }
+            else
                 {
                 TypeConstant typeResolved = resolver.resolveGenericType(idProp.getName());
                 if (typeResolved != null)
@@ -417,7 +436,7 @@ public class TerminalTypeConstant
                     }
                 }
             }
-        if (constId instanceof TypeParameterConstant)
+        else if (constId instanceof TypeParameterConstant)
             {
             TypeParameterConstant constTypeParam = (TypeParameterConstant) constId;
             MethodConstant        idMethod       = constTypeParam.getMethod();
