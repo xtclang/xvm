@@ -69,8 +69,13 @@ public class TernaryExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        return Op.selectCommonType(exprThen.getImplicitType(ctx),
-                exprElse.getImplicitType(ctx), ErrorListener.BLACKHOLE);
+        TypeConstant typeThen = exprThen.getImplicitType(ctx);
+        TypeConstant typeElse = exprElse.getImplicitType(ctx);
+
+        TypeConstant typeCommon = Op.selectCommonType(typeThen, typeElse, ErrorListener.BLACKHOLE);
+        return typeCommon == null && typeThen != null && typeElse != null
+                ? pool().ensureIntersectionTypeConstant(typeThen, typeElse)
+                : typeCommon;
         }
 
     @Override
@@ -189,8 +194,21 @@ public class TernaryExpression
 
             default:
             case Symmetrical:
+                // we know by now that both typeThen and typeElse are assignable to
+                // typeRequired (if not null). Let's try to find a common type for them
+                // that is narrower than the required type
                 typeResult = Op.selectCommonType(typeThen, typeElse, errs);
-                assert typeResult != null;
+                if (typeResult == null)
+                    {
+                    typeResult = pool.ensureIntersectionTypeConstant(typeThen, typeElse);
+                    if (!typeResult.isA(typeRequired))
+                        {
+                        // leave as is (but not null)
+                        typeResult = typeRequired == null
+                                ? pool.typeObject()
+                                : typeRequired;
+                        }
+                    }
                 break;
             }
 
