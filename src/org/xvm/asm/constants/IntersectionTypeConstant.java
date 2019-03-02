@@ -20,6 +20,11 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+
+import org.xvm.runtime.template.xBoolean;
+
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
@@ -502,6 +507,49 @@ public class IntersectionTypeConstant
         return pool.typeRef();
         }
 
+    // ----- run-time support ----------------------------------------------------------------------
+
+    @Override
+    public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        TypeConstant typeV1 = hValue1.getType();
+        TypeConstant typeV2 = hValue2.getType();
+
+        TypeConstant type = m_constType1;
+        if (typeV1.isA(type) && typeV2.isA(type))
+            {
+            return type.callEquals(frame, hValue1, hValue2, iReturn);
+            }
+
+        type = m_constType2;
+        if (typeV1.isA(type) && typeV2.isA(type))
+            {
+            return type.callEquals(frame, hValue1, hValue2, iReturn);
+            }
+
+        return frame.assignValue(iReturn, xBoolean.FALSE);
+        }
+
+    @Override
+    public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        TypeConstant typeV1 = hValue1.getType();
+        TypeConstant typeV2 = hValue2.getType();
+
+        TypeConstant type = m_constType1;
+        if (typeV1.isA(type) && typeV2.isA(type))
+            {
+            return type.callCompare(frame, hValue1, hValue2, iReturn);
+            }
+
+        type = m_constType2;
+        if (typeV1.isA(type) && typeV2.isA(type))
+            {
+            return type.callCompare(frame, hValue1, hValue2, iReturn);
+            }
+
+        return frame.assignValue(iReturn, xBoolean.FALSE);
+        }
 
     // ----- Constant methods ----------------------------------------------------------------------
 
