@@ -1,3 +1,6 @@
+import collections.HashSet;
+import collections.Set;
+
 import io.FileStore;
 import io.Path;
 
@@ -23,7 +26,12 @@ service Container
         {
         ModuleRepository simpleRepo = new ModuleRepository()
             {
-            collections.Set<String> moduleNames = Set:{moduleName};
+            construct()
+                {
+                Set<String> names = new HashSet();
+                names.add(moduleName);
+                moduleNames = names.makeImmutable();
+                }
 
             @Override
             immutable Byte[] getModule(String name)
@@ -67,7 +75,7 @@ service Container
         /**
          * Set of domain names that are known by this repository.
          */
-        @RO immutable collections.Set<String> moduleNames;
+        @RO immutable Set<String> moduleNames;
 
         /**
          * Obtain a binary image of the specified module.

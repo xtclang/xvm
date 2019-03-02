@@ -151,7 +151,7 @@ const Char
         //  21   U+10000   - U+1FFFFF    11110xxx    10xxxxxx      3
         //  26   U+200000  - U+3FFFFFF   111110xx    10xxxxxx      4
         //  31   U+4000000 - U+7FFFFFFF  1111110x    10xxxxxx      5
-        Int trailing;
+        Int trailing = 0; // TODO should not be necessary to initialize this (def-asn bug)
         switch (ch.leftmostBit)
             {
             case 0b00000000000000000000000010000000:
