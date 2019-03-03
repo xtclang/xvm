@@ -1473,7 +1473,7 @@ public class MethodStructure
                 {
                 m_code.ensureAssembled();
                 }
-            catch (IllegalStateException | UnsupportedOperationException e)
+            catch (UnsupportedOperationException e)
                 {
                 System.err.println("Error in MethodStructure.assemble() for "
                         + this.getParent().getContainingClass().getName() + "."
