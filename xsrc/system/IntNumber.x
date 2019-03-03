@@ -151,6 +151,15 @@ const IntNumber
      */
     Boolean[] to<Boolean[]>();
 
+// REVIEW GG every IntNumber needs to be able to produced an "unchecked" form of itself
+    /**
+     * Obtain the integer number as an integer that does not check for overflow or underflow.
+     */
+    @Unchecked IntNumber to<@Unchecked IntNumber>()
+        {
+        TODO
+        }
+
 
     // ----- formatting ----------------------------------------------------------------------------
 

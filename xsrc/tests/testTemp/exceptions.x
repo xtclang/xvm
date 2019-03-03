@@ -29,6 +29,6 @@ module TestTry.xqiz.it
             console.println("caught: " + e);
             }
 
-        console.println("done: " + e);
+        console.println("done");
         }
     }

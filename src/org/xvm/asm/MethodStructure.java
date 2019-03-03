@@ -1475,7 +1475,9 @@ public class MethodStructure
                 }
             catch (IllegalStateException | UnsupportedOperationException e)
                 {
-                System.err.println("Error in MethodStructure.assemble(): " + e);
+                System.err.println("Error in MethodStructure.assemble() for "
+                        + this.getParent().getContainingClass().getName() + "."
+                        + this.getName() + ": " + e);
                 }
             }
 

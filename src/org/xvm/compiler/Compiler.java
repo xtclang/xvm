@@ -1099,6 +1099,10 @@ public class Compiler
      */
     public static final String SWITCH_BREAK_OR_CONTINUE_EXPECTED  = "COMPILER-117";
     /**
+     * The "catch" clause for {0} is unreachable because {1} was caught by a previous "catch" clause.
+     */
+    public static final String CATCH_TYPE_ALREADY_CAUGHT          = "COMPILER-118";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

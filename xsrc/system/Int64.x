@@ -40,6 +40,13 @@ const Int64
         return to<Int128>().abs().to<UInt64>();
         }
 
+// REVIEW GG - should it go here?
+//    @Override
+//    @Unchecked Int64 to<@Unchecked Int64>()
+//        {
+//        return new @Unchecked Int64(bits);
+//        }
+
     @Override
     @Auto Int8 to<Int8>()
         {

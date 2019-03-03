@@ -3,29 +3,29 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.Collections;
 import java.util.List;
 
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
+
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
-
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo.MethodType;
+
 import org.xvm.asm.op.CatchEnd;
 import org.xvm.asm.op.CatchStart;
 import org.xvm.asm.op.FinallyEnd;
 import org.xvm.asm.op.FinallyStart;
 import org.xvm.asm.op.GuardAll;
 import org.xvm.asm.op.GuardStart;
-
 import org.xvm.asm.op.Invoke_00;
 import org.xvm.asm.op.JumpNType;
 import org.xvm.asm.op.JumpNotNull;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Throw;
+
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
@@ -44,12 +44,12 @@ public class TryStatement
 
     public TryStatement(Token keyword, List<AssignmentStatement> resources, StatementBlock block, List<CatchStatement> catches, StatementBlock catchall)
         {
-        assert block != null;
+        assert block     != null;
 
         this.keyword   = keyword;
-        this.resources = resources == null ? Collections.EMPTY_LIST : resources;
+        this.resources = resources == null || resources.isEmpty() ? null : resources;
         this.block     = block;
-        this.catches   = catches == null ? Collections.EMPTY_LIST : catches;
+        this.catches   = catches == null || catches.isEmpty() ? null : catches;
         this.catchall  = catchall;
         }
 
@@ -66,25 +66,10 @@ public class TryStatement
     public long getEndPosition()
         {
         return catchall == null
-                ? catches.isEmpty()
+                ? catches == null
                         ? block.getEndPosition()
                         : catches.get(catches.size()-1).getEndPosition()
                 : catchall.getEndPosition();
-        }
-
-    public boolean hasResources()
-        {
-        return !resources.isEmpty();
-        }
-
-    public boolean hasCatches()
-        {
-        return !catches.isEmpty();
-        }
-
-    public boolean hasFinally()
-        {
-        return catchall != null;
         }
 
     @Override
@@ -101,17 +86,29 @@ public class TryStatement
         {
         boolean fValid = true;
 
-        if (hasResources())
+        if (resources != null)
             {
-            // the using/try-with-resources section provides a context to the rest of the statement
-            // (it is the outer-most layer of the "onion")
-            ctx = ctx.enter();
-
-            int c = resources.size();
-            for (int i = 0; i < c; ++i)
+            for (int i = 0, c = resources.size(); i < c; ++i)
                 {
-                Statement stmt = resources.get(i);
-                // TODO
+                // the using/try-with-resources section provides a context to the rest of the
+                // statement (it is the outer-most layer of the "onion")
+                ctx = ctx.enter();
+
+                AssignmentStatement useOld = resources.get(i);
+                AssignmentStatement useNew = (AssignmentStatement) useOld.validate(ctx, errs);
+                if (useNew == null)
+                    {
+                    fValid = false;
+                    }
+                else
+                    {
+                    if (useNew != useOld)
+                        {
+                        resources.set(i, useNew);
+                        }
+
+                    // TODO
+                    }
                 }
             }
 
@@ -125,48 +122,57 @@ public class TryStatement
             {
             for (int i = 0, c = catches.size(); i < c; ++i)
                 {
-                ctx = ctx.enter();
-                ctx.markNonCompleting();
-
-                CatchStatement stmt = catches.get(i);
-
-                // validate the catch clause
-                VariableDeclarationStatement target    = stmt.target;
-                VariableDeclarationStatement targetNew = (VariableDeclarationStatement) target.validate(ctx, errs);
-                if (targetNew != null)
+                CatchStatement catchOld = catches.get(i);
+                CatchStatement catchNew = (CatchStatement) catchOld.validate(ctx, errs);
+                if (catchNew == null)
                     {
-                    stmt.target = target = targetNew;
-                    if (!target.getType().isA(pool().typeException()))
-                        {
-                        target.log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                                pool().typeException().getValueString(), target.getType().getValueString());
-                        }
-
-                    // validate the block
-                    StatementBlock blockNew = (StatementBlock) block.validate(ctx, errs);
-                    if (blockNew != null)
-                        {
-                        block = blockNew;
-                        }
-
-                    // contribute the variable assignment information from the catch back to the try statement,
-                    // since the normal completion of a try combined with the normal completion of all of its
-                    // catch clauses combines to provide the assignment impact of the try/catch
-                    // TODO
+                    fValid = false;
                     }
+                else
+                    {
+                    if (catchNew != catchOld)
+                        {
+                        catches.set(i, catchNew);
+                        }
 
-                ctx.exit();
+                    TypeConstant typeE = catchNew.getCatchType();
+                    for (int iPrev = 0; iPrev < i; ++iPrev)
+                        {
+                        TypeConstant typeEPrev = catches.get(iPrev).target.getType();
+                        if (typeE.isA(typeEPrev))
+                            {
+                            catchNew.target.log(errs, Severity.ERROR, Compiler.CATCH_TYPE_ALREADY_CAUGHT,
+                                    typeE.getValueString(), typeEPrev.getValueString());
+
+                            // only report this error once (but don't bother setting fValid to false
+                            // because this isn't an error bad enough to stop compilation at this
+                            // point)
+                            break;
+                            }
+                        }
+                    }
                 }
             }
 
         if (catchall != null)
             {
-
+            StatementBlock catchallNew = (StatementBlock) catchall.validate(ctx, errs);
+            if (catchallNew == null)
+                {
+                fValid = false;
+                }
+            else
+                {
+                catchall = catchallNew;
+                }
             }
 
-        if (hasResources())
+        if (resources != null)
             {
-            ctx = ctx.exit();
+            for (int i = 0, c = resources.size(); i < c; ++i)
+                {
+                ctx = ctx.exit();
+                }
             }
 
         return fValid ? this : null;
@@ -180,7 +186,7 @@ public class TryStatement
         // using() or try()-with-resources
         FinallyStart[] aFinallyClose = null;
         Register[]     aRegClose     = null;
-        if (hasResources())
+        if (resources != null)
             {
             // the first resource is declared outside of any try/finally block, but it is not
             // visible beyond this statement
@@ -191,6 +197,7 @@ public class TryStatement
             for (int i = 0; i < c; ++i)
                 {
                 AssignmentStatement stmt = resources.get(i);
+                // TODO separate declaration and register, store off register
                 fCompletes = stmt.completes(ctx, fCompletes, code, errs);
                 FinallyStart opFinally = new FinallyStart();
                 aFinallyClose[i] = opFinally;
@@ -200,7 +207,7 @@ public class TryStatement
 
         // try..finally
         FinallyStart opFinallyBlock = null;
-        if (hasFinally())
+        if (catchall != null)
             {
             opFinallyBlock = new FinallyStart();
             code.add(new GuardAll(opFinallyBlock));
@@ -208,16 +215,13 @@ public class TryStatement
 
         // try..catch
         CatchStart[] aCatchStart = null;
-        if (hasCatches())
+        if (catches != null)
             {
             int c = catches.size();
             aCatchStart = new CatchStart[c];
             for (int i = 0; i < c; ++i)
                 {
-                CatchStatement               stmtCatch = catches.get(i);
-                VariableDeclarationStatement stmtVar   = stmtCatch.target;
-                StringConstant               constName = pool().ensureStringConstant(stmtVar.getName());
-                aCatchStart[i] = new CatchStart(stmtVar.getRegister(), constName);
+                aCatchStart[i] = catches.get(i).ensureCatchStart();
                 }
 
             // single "try" for all of the catches
@@ -229,27 +233,25 @@ public class TryStatement
 
         // the "catch" blocks
         boolean fAnyCatchCompletes = false;
-        if (hasCatches())
+        if (catches != null)
             {
             int c = catches.size();
             for (int i = 0; i < c; ++i)
                 {
-                code.add(aCatchStart[i]);
                 fAnyCatchCompletes |= catches.get(i).completes(ctx, fCompletes, code, errs);
-                code.add(new CatchEnd(getEndLabel()));
                 }
             }
 
         // the "finally" block
         boolean fFinallyCompletes = true;
-        if (hasFinally())
+        if (catchall != null)
             {
             code.add(opFinallyBlock);
             fFinallyCompletes = catchall.completes(ctx, fCompletes, code, errs);
             code.add(new FinallyEnd());
             }
 
-        if (hasResources())
+        if (resources != null)
             {
             // ...
             // FINALLY (e)
@@ -314,7 +316,7 @@ public class TryStatement
 
         sb.append(keyword.getId().TEXT);
 
-        if (!resources.isEmpty())
+        if (resources != null)
             {
             sb.append(" (");
             boolean first = true;

@@ -66,7 +66,7 @@ public class VariableDeclarationStatement
      */
     public TypeConstant getType()
         {
-        return type.getType();
+        return type.getTypeConstant();
         }
 
     /**
