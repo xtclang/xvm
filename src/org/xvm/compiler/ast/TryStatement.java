@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
@@ -16,6 +17,8 @@ import org.xvm.asm.constants.TypeInfo.MethodType;
 
 import org.xvm.asm.op.CatchEnd;
 import org.xvm.asm.op.CatchStart;
+import org.xvm.asm.op.Enter;
+import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.FinallyEnd;
 import org.xvm.asm.op.FinallyStart;
 import org.xvm.asm.op.GuardAll;
@@ -88,12 +91,12 @@ public class TryStatement
 
         if (resources != null)
             {
+            // the using/try-with-resources section provides a context to the rest of the
+            // statement (it is the outer-most layer of the "onion")
+            ctx = ctx.enter();
+
             for (int i = 0, c = resources.size(); i < c; ++i)
                 {
-                // the using/try-with-resources section provides a context to the rest of the
-                // statement (it is the outer-most layer of the "onion")
-                ctx = ctx.enter();
-
                 AssignmentStatement useOld = resources.get(i);
                 AssignmentStatement useNew = (AssignmentStatement) useOld.validate(ctx, errs);
                 if (useNew == null)
@@ -106,9 +109,10 @@ public class TryStatement
                         {
                         resources.set(i, useNew);
                         }
-
-                    // TODO
                     }
+
+                // each using/try-with-resources is a nested try-finally
+                ctx = ctx.enter();
                 }
             }
 
@@ -173,6 +177,7 @@ public class TryStatement
                 {
                 ctx = ctx.exit();
                 }
+            ctx = ctx.exit();
             }
 
         return fValid ? this : null;
@@ -190,15 +195,13 @@ public class TryStatement
             {
             // the first resource is declared outside of any try/finally block, but it is not
             // visible beyond this statement
-            ctx = ctx.enter();
+            code.add(new Enter());
 
             int c = resources.size();
             aFinallyClose = new FinallyStart[c];
             for (int i = 0; i < c; ++i)
                 {
-                AssignmentStatement stmt = resources.get(i);
-                // TODO separate declaration and register, store off register
-                fCompletes = stmt.completes(ctx, fCompletes, code, errs);
+                fCompletes = resources.get(i).completes(ctx, fCompletes, code, errs);
                 FinallyStart opFinally = new FinallyStart();
                 aFinallyClose[i] = opFinally;
                 code.add(new GuardAll(opFinally));
@@ -273,20 +276,20 @@ public class TryStatement
             for (int i = 0, c = resources.size(); i < c; ++i)
                 {
                 code.add(aFinallyClose[i]);
-                Register regException = code.lastRegister();       // TODO this probably isn't implemented yet for FinallyStart op
+                Register regException = code.lastRegister();       // TODO implement this: type "Exception?"
 
                 Register       regCatch  = new Register(pool().typeException());
                 StringConstant constName = pool().ensureStringConstant("(close-exception)");
                 CatchStart     opCatch   = new CatchStart(regCatch, constName);
                 code.add(new GuardStart(new CatchStart[] {opCatch}));
 
-                Register regResource    = aRegClose[i];
+                Argument argResource    = resources.get(i).getLValueExpression().generateArgument(ctx, code, false, false, errs);
                 Label    labelSkipClose = new Label("skip_close");
-                if (!regResource.getType().isA(typeCloseable))
+                if (!argResource.getType().isA(typeCloseable))
                     {
-                    code.add(new JumpNType(regResource, typeCloseable, labelSkipClose));
+                    code.add(new JumpNType(argResource, typeCloseable, labelSkipClose));
                     }
-                code.add(new Invoke_00(regResource, methodClose));
+                code.add(new Invoke_00(argResource, methodClose));
                 code.add(labelSkipClose);
 
                 code.add(opCatch);
@@ -300,7 +303,7 @@ public class TryStatement
                 }
 
             // no resources remain in scope after the try/using statement
-            ctx = ctx.exit();
+            code.add(new Exit());
             }
 
         return (fBlockCompletes | fAnyCatchCompletes) & fFinallyCompletes;
