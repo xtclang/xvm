@@ -303,30 +303,47 @@ public class AnnotatedTypeConstant
      * @param mapProps      properties already collected from the base
      * @param mapVirtProps  virtual properties already collected from the base
      * @param idAnno        the identity of the property at the annotation (mixin)
-     * @param infoAnno      the property info
+     * @param propAnno      the property info from the annotation (mixin)
      * @param errs          the error listener
      */
     protected void layerOnProp(ConstantPool pool, Map<PropertyConstant, PropertyInfo> mapProps,
                                Map<Object, PropertyInfo> mapVirtProps,
-                               PropertyConstant idAnno, PropertyInfo infoAnno, ErrorListener errs)
+                               PropertyConstant idAnno, PropertyInfo propAnno, ErrorListener errs)
         {
-        if (!infoAnno.isVirtual())
+        if (!propAnno.isVirtual())
             {
-            mapProps.put(idAnno, infoAnno);
+            mapProps.put(idAnno, propAnno);
             return;
             }
 
         Object       nidContrib = idAnno.resolveNestedIdentity(pool, this);
         PropertyInfo propBase   = mapVirtProps.get(nidContrib);
-        if (propBase != null && infoAnno.getIdentity().equals(propBase.getIdentity()))
+        if (propBase != null && propAnno.getIdentity().equals(propBase.getIdentity()))
             {
             // keep whatever the base has got
             return;
             }
 
-        PropertyInfo propResult = propBase == null
-                ? infoAnno
-                : propBase.layerOn(infoAnno, false, errs);
+        PropertyInfo propResult;
+        if (propBase == null)
+            {
+            propResult = propAnno;
+            }
+        else
+            {
+            // it's possible that the base has a narrower property type then the mixin,
+            // in which case, the mixin's info should be ignored/replaced
+            TypeConstant typeBase = propBase.getType();
+            TypeConstant typeAnno = propAnno.getType();
+            if (!typeBase.equals(typeAnno) && typeBase.isA(typeAnno))
+                {
+                propResult = propBase;
+                }
+            else
+                {
+                propResult = propBase.layerOn(propAnno, false, errs);
+                }
+            }
 
         mapProps.put(idAnno, propResult);
         mapVirtProps.put(nidContrib, propResult);
@@ -339,34 +356,51 @@ public class AnnotatedTypeConstant
      * @param mapMethods      methods already collected from the base
      * @param mapVirtMethods  virtual methods already collected from the base
      * @param idAnno          the identity of the method at the annotation (mixin)
-     * @param infoAnno        the method info
+     * @param methodAnno      the method info from the annotation (mixin)
      * @param errs            the error listener
      */
     private void layerOnMethod(ConstantPool pool, Map<MethodConstant, MethodInfo> mapMethods,
                                Map<Object, MethodInfo> mapVirtMethods, MethodConstant idAnno,
-                               MethodInfo infoAnno, ErrorListener errs)
+                               MethodInfo methodAnno, ErrorListener errs)
         {
-        if (!infoAnno.isVirtual())
+        if (!methodAnno.isVirtual())
             {
-            mapMethods.put(idAnno, infoAnno);
+            mapMethods.put(idAnno, methodAnno);
             return;
             }
 
         Object nidContrib = idAnno.resolveNestedIdentity(pool,
-                infoAnno.isFunction() || infoAnno.isConstructor() ? null : this);
+                methodAnno.isFunction() || methodAnno.isConstructor() ? null : this);
 
         MethodInfo methodBase = mapVirtMethods.get(nidContrib);
-        if (methodBase != null && methodBase.getIdentity().equals(infoAnno.getIdentity()))
+        if (methodBase != null && methodBase.getIdentity().equals(methodAnno.getIdentity()))
             {
             // keep whatever the base has got
             return;
             }
 
-        SignatureConstant sigContrib = infoAnno.getSignature();
+        SignatureConstant sigContrib = methodAnno.getSignature();
 
-        MethodInfo methodResult = methodBase == null
-                ? infoAnno
-                : methodBase.layerOn(infoAnno, false, errs);
+        MethodInfo methodResult;
+        if (methodBase == null)
+            {
+            methodResult = methodAnno;
+            }
+        else
+            {
+            // it's possible that the base has a narrower method signature then the mixin,
+            // in which case, the mixin's info should be ignored/replaced
+            SignatureConstant sigBase = methodBase.getSignature();
+            SignatureConstant sigAnno = methodAnno.getSignature();
+            if (!sigBase.equals(sigAnno) && sigBase.isSubstitutableFor(sigAnno, this))
+                {
+                methodResult = methodBase;
+                }
+            else
+                {
+                methodResult = methodBase.layerOn(methodAnno, false, errs);
+                }
+            }
 
         mapMethods.put(idAnno, methodResult);
         mapVirtMethods.put(sigContrib, methodResult);

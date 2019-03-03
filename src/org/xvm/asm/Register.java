@@ -292,15 +292,6 @@ public class Register
         }
 
     /**
-     * Force the register to be treated as effectively final from this point forward.
-     */
-    public void markEffectivelyFinal()
-        {
-        m_fRO               = true;
-        m_fEffectivelyFinal = true;
-        }
-
-    /**
      * Determine if this register is writable. This is equivalent to the Ref for the register
      * supporting the set() operation.
      *
@@ -309,6 +300,15 @@ public class Register
     public boolean isWritable()
         {
         return !m_fRO;
+        }
+
+    /**
+     * Force the register to be treated as effectively final from this point forward.
+     */
+    public void markEffectivelyFinal()
+        {
+        m_fRO               = true;
+        m_fEffectivelyFinal = true;
         }
 
     /**
@@ -474,8 +474,6 @@ public class Register
 
     /**
      * A register that represents the underlying (base) register, but overrides its type.
-     *
-     * <p/>REVIEW GG - there are a few methods not overridden - perhaps have them throw for now as an assertion?
      */
     private class ShadowRegister
             extends Register
@@ -488,6 +486,20 @@ public class Register
         protected ShadowRegister(TypeConstant typeNew)
             {
             super(typeNew);
+            }
+
+        @Override
+        public TypeConstant getType()
+            {
+            // the narrowed type
+            return super.getType();
+            }
+
+        @Override
+        public Register registerConstants(Op.ConstantRegistry registry)
+            {
+            // register the narrowed type
+            return super.registerConstants(registry);
             }
 
         @Override
@@ -517,11 +529,18 @@ public class Register
         @Override
         public TypeConstant ensureRegType(ConstantPool pool, boolean fRO)
             {
-            throw new UnsupportedOperationException();
+            // the register type is using against the narrowed type
+            return super.ensureRegType(pool, fRO);
             }
 
         @Override
         public void specifyRegType(TypeConstant typeReg)
+            {
+            throw new UnsupportedOperationException();
+            }
+
+        @Override
+        public void specifyActualType(TypeConstant type)
             {
             throw new UnsupportedOperationException();
             }
@@ -564,6 +583,12 @@ public class Register
             }
 
         @Override
+        public boolean isLabel()
+            {
+            return false;
+            }
+
+        @Override
         public boolean isUnknown()
             {
             return Register.this.isUnknown();
@@ -579,6 +604,12 @@ public class Register
         public boolean isWritable()
             {
             return Register.this.isWritable();
+            }
+
+        @Override
+        public void markEffectivelyFinal()
+            {
+            throw new UnsupportedOperationException();
             }
 
         @Override

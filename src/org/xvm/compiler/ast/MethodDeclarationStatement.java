@@ -650,19 +650,8 @@ public class MethodDeclarationStatement
 
             method.setNative(true);
 
-            if (e instanceof UnsupportedOperationException)
-                {
-                // INFO, FATAL_ERROR serves as a "not yet supported" indicator;
-                // see CommandLine.checkCompilerErrors()
-                log(errs, Severity.INFO, Compiler.FATAL_ERROR,
-                    "Failed to compile " + method.getIdentityConstant() +
-                        (e.getMessage() == null ? "" : ": " + e.getMessage()));
-                }
-            else
-                {
-                System.err.println("Compilation error: " + sPath + " " + e);
-                e.printStackTrace(System.err);
-                }
+            System.err.println("Compilation error: " + sPath + " " + e);
+            e.printStackTrace(System.err);
             }
         }
 
