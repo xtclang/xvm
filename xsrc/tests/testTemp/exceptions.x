@@ -6,7 +6,14 @@ module TestTry.xqiz.it
         {
         console.println("Exception tests:");
 
-        testBasic();
+        try
+            {
+            testBasic();
+            }
+        catch (Exception e)
+            {
+            console.println("UNEXPECTED THROW!");
+            }
         }
 
     void testThrow()
@@ -29,7 +36,7 @@ module TestTry.xqiz.it
             console.println("caught: " + e);
             }
 
-        console.println("done");
+        console.println("done testBasic()");
         }
 
     void testUsing()

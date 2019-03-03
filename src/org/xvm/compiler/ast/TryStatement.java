@@ -22,6 +22,7 @@ import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.FinallyEnd;
 import org.xvm.asm.op.FinallyStart;
 import org.xvm.asm.op.GuardAll;
+import org.xvm.asm.op.GuardEnd;
 import org.xvm.asm.op.GuardStart;
 import org.xvm.asm.op.Invoke_00;
 import org.xvm.asm.op.JumpNType;
@@ -234,6 +235,9 @@ public class TryStatement
         // the "guarded" body of the using/try statement
         boolean fBlockCompletes = block.completes(ctx, fCompletes, code, errs);
 
+        Label labelGuardEnd = new Label();
+        code.add(new GuardEnd(labelGuardEnd));
+
         // the "catch" blocks
         boolean fAnyCatchCompletes = false;
         if (catches != null)
@@ -305,6 +309,8 @@ public class TryStatement
             // no resources remain in scope after the try/using statement
             code.add(new Exit());
             }
+
+        code.add(labelGuardEnd);
 
         return (fBlockCompletes | fAnyCatchCompletes) & fFinallyCompletes;
         }
