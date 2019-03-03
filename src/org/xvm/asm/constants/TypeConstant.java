@@ -4214,21 +4214,24 @@ public abstract class TypeConstant
         if (idLeft.equals(pool.clzFunction()))
             {
             // the only modification that is allowed on the Function is "this:class"
-            Constant constIdLeft  = typeLeft.getDefiningConstant();
-            Constant constIdRight = typeRight.getDefiningConstant();
-            if (constIdLeft.getFormat()  == Format.ThisClass &&
-                constIdRight.getFormat() == Format.ThisClass)
+            if (typeLeft.isSingleDefiningConstant() && typeRight.isSingleDefiningConstant())
                 {
-                // to allow assignment of this:class(X) to this:class(Function),
-                // X should be a Function or an Object
-                typeRight = typeRight.resolveAutoNarrowing(pool, false, null);
-                typeLeft  = typeLeft.resolveAutoNarrowing(pool, false, null);
-
-                if (typeRight.equals(pool.typeObject()))
+                Constant constIdLeft  = typeLeft.getDefiningConstant();
+                Constant constIdRight = typeRight.getDefiningConstant();
+                if (constIdLeft.getFormat()  == Format.ThisClass &&
+                    constIdRight.getFormat() == Format.ThisClass)
                     {
-                    return Relation.IS_A;
+                    // to allow assignment of this:class(X) to this:class(Function),
+                    // X should be a Function or an Object
+                    typeRight = typeRight.resolveAutoNarrowing(pool, false, null);
+                    typeLeft  = typeLeft.resolveAutoNarrowing(pool, false, null);
+
+                    if (typeRight.equals(pool.typeObject()))
+                        {
+                        return Relation.IS_A;
+                        }
+                    // continue with auto-narrowing resolved
                     }
-                // continue with auto-narrowing resolved
                 }
 
             if (!idRight.equals(pool.clzFunction()))

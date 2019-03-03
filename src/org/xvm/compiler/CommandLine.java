@@ -915,25 +915,14 @@ public class CommandLine
                 {
                 err("xtc: Errors in " + compiler.getModuleStatement().getName());
 
-                int cCompiler    = 0;
-                int cUnsupported = 0;
+                int cErrors = 0;
                 for (ErrorList.ErrorInfo err : errs.getErrors())
                     {
-                    // TODO: temporary until the compiler works
-                    if (err.getCode().equals(Compiler.FATAL_ERROR)
-                            && err.getSeverity() == Severity.INFO)
-                        {
-                        // this is a "not yet supported" indicator
-                        cUnsupported++;
-                        }
-                    else
-                        {
-                        cCompiler++;
-                        err(" [" + cCompiler + "] " + err);
-                        }
+                    cErrors++;
+                    err(" [" + cErrors + "] " + err);
                     }
 
-                err("Compiler errors: " + cCompiler + "; not implemented: " + cUnsupported);
+                err("Compiler errors: " + cErrors);
 
                 error |= errs.getSeverity().ordinal() >= opts.badEnoughToQuit().ordinal();
                 errs.clear();
