@@ -5,11 +5,13 @@ import java.io.DataInput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
 import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
 
 
 /**
@@ -79,7 +81,10 @@ public class FinallyStart
         // (called from Frame.findGuard) with an exception at anNextVar[iScope] + 1,
         // so we need to reserve the slot (unassigned) when coming in normally;
         // presence or absence of the exception will be checked by the FinallyEnd
-        frame.f_anNextVar[iScope]++;
+        ConstantPool pool = frame.poolContext();
+        frame.introduceResolvedVar(m_nVar, pool.typeException१());
+        ObjectHandle hNull = frame.f_context.f_heapGlobal.ensureConstHandle(frame, pool.valNull());
+        frame.assignValue(m_nVar, hNull);
 
         return iPC + 1;
         }

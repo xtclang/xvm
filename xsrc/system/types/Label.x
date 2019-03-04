@@ -62,4 +62,10 @@ interface Label<KeyType, ValueType>
      * an attempt to access this property is illegal.
      */
     @RO Map<KeyType, ValueType>.Entry entry;
+
+    /**
+     * In the "finally" block of a "try" statement, this property provides the Exception that
+     * occurred within the "try" statement, or Null if no Exception occurred.
+     */
+    @RO Exception? exception;
     }

@@ -33,6 +33,7 @@ import org.xvm.asm.op.Throw;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
+import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Severity;
 
@@ -41,11 +42,10 @@ import static org.xvm.util.Handy.indentLines;
 
 /**
  * A "try" or "using" statement.
- *
- * TODO add label var support for ".exception"
  */
 public class TryStatement
         extends Statement
+        implements LabelAble
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -83,6 +83,35 @@ public class TryStatement
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ----- LabelAble methods ---------------------------------------------------------------------
+
+    @Override
+    public boolean hasLabelVar(String sName)
+        {
+        return sName.equals("exception") &&
+                (m_ctxValidatingFinally != null || m_regFinallyException != null);
+        }
+
+    @Override
+    public Register getLabelVar(String sName)
+        {
+        assert hasLabelVar(sName);
+
+        Register reg = m_regFinallyException;
+        if (reg == null)
+            {
+            String sLabel = ((LabeledStatement) getParent()).getName();
+            Token  tok    = new Token(keyword.getStartPosition(), keyword.getEndPosition(),
+                    Id.IDENTIFIER, sLabel + '.' + sName);
+
+            m_regFinallyException = reg = new Register(pool().typeException१());
+            m_ctxValidatingFinally.registerVar(tok, reg, m_errsValidatingFinally);
+            }
+
+        return reg;
         }
 
 
@@ -169,7 +198,12 @@ public class TryStatement
 
         if (catchall != null)
             {
+            m_ctxValidatingFinally  = ctx;
+            m_errsValidatingFinally = errs;
             StatementBlock catchallNew = (StatementBlock) catchall.validate(ctx, errs);
+            m_ctxValidatingFinally  = null;
+            m_errsValidatingFinally = null;
+
             if (catchallNew == null)
                 {
                 fValid = false;
@@ -223,7 +257,10 @@ public class TryStatement
         FinallyStart opFinallyBlock = null;
         if (catchall != null)
             {
-            opFinallyBlock = new FinallyStart(new Register(pool.typeException१()));
+            Register regFinallyException = m_regFinallyException == null
+                    ? new Register(pool.typeException१())
+                    : m_regFinallyException;
+            opFinallyBlock = new FinallyStart(regFinallyException);
             code.add(new GuardAll(opFinallyBlock));
             }
 
@@ -392,6 +429,10 @@ public class TryStatement
     protected StatementBlock            block;
     protected List<CatchStatement>      catches;
     protected StatementBlock            catchall;
+
+    private transient Context       m_ctxValidatingFinally;
+    private transient ErrorListener m_errsValidatingFinally;
+    private transient Register      m_regFinallyException;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TryStatement.class,
             "resources", "block", "catches", "catchall");
