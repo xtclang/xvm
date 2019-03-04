@@ -23,7 +23,7 @@ module TestTry.xqiz.it
             {
             console.println("UNEXPECTED THROW in testUsing(): " + e);
             }
-            
+
         try
             {
             testFinally();
@@ -96,12 +96,12 @@ module TestTry.xqiz.it
         {
         console.println("\n** testFinally()");
 
-        for (Int i : 1..2)
+        FOR: for (Int i : 1..2)
             {
             console.println("iteration " + i);
-            test: try
+            TRY: try
                 {
-                if (i == 2)
+                if (FOR.last)
                     {
                     console.println("throwing exception inside try");
                     testThrow();
@@ -113,7 +113,7 @@ module TestTry.xqiz.it
                 }
             finally
                 {
-                console.println("exception in finally: " + test.exception);
+                console.println("exception in finally: " + TRY.exception);
                 }
             }
 

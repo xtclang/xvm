@@ -1716,7 +1716,8 @@ public class Frame
             {
             introduceException(frame, iGuard, hException, "");
 
-            return f_nStartAddress + f_nFinallyRelAddress;
+            // need to jump to the instruction past the FinallyStart
+            return f_nStartAddress + f_nFinallyRelAddress + 1;
             }
         }
 

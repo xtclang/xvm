@@ -73,6 +73,7 @@ public class FinallyStart
     public int process(Frame frame, int iPC)
         {
         frame.exitScope();
+        frame.popGuard();
 
         frame.enterScope(m_nVar);
 
