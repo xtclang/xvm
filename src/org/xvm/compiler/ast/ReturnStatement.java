@@ -210,7 +210,8 @@ public class ReturnStatement
                         if (exprNew != null)
                             {
                             // TODO: remove
-                            System.out.println("validate() and testFit() mismatch for " + exprOld.getClass().getName());
+                            System.out.println("validate() and testFit() mismatch for " +
+                                exprOld.getClass().getName() + ": " + exprOld);
                             }
                         }
                     }
