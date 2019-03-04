@@ -4228,66 +4228,66 @@ public abstract class TypeConstant
                 return Relation.INCOMPATIBLE;
                 }
 
-        // Function<TupleRP, TupleRR> is assignable to Function<TupleLP, TupleLR> iff
-        // (RP/RR - right parameters/return, LP/LR - left parameter/return)
-        // 1) TupleLP has the same arity as TupleRP
-        // 2) every parameter type on the right should be assignable to a corresponding parameter
-        //    on the left (e.g. "function void (Number)" is assignable to "function void (Int)"
-        // 3) TupleLR has less or equal arity than TupleRR
-        // 4) every return type on the left should be assignable to a corresponding return
-        //    on the right (e.g. "function Int ()" is assignable to "function Number ()"
-        int cL = typeLeft.getParamsCount();
-        int cR = typeRight.getParamsCount();
-        if (cL == 0)
-            {
-            // Function <- Function<RP, RR> is allowed
+            // Function<TupleRP, TupleRR> is assignable to Function<TupleLP, TupleLR> iff
+            // (RP/RR - right parameters/return, LP/LR - left parameter/return)
+            // 1) TupleLP has the same arity as TupleRP
+            // 2) every parameter type on the right should be assignable to a corresponding parameter
+            //    on the left (e.g. "function void (Number)" is assignable to "function void (Int)"
+            // 3) TupleLR has less or equal arity than TupleRR
+            // 4) every return type on the left should be assignable to a corresponding return
+            //    on the right (e.g. "function Int ()" is assignable to "function Number ()"
+            int cL = typeLeft.getParamsCount();
+            int cR = typeRight.getParamsCount();
+            if (cL == 0)
+                {
+                // Function <- Function<RP, RR> is allowed
+                return Relation.IS_A;
+                }
+            if (cL != 2 || cR != 2)
+                {
+                // either cR == 0 or a compilation error; not our responsibility to report
+                return Relation.INCOMPATIBLE;
+                }
+
+            TypeConstant typeLP = typeLeft.getParamTypesArray()[0];
+            TypeConstant typeLR = typeLeft.getParamTypesArray()[1];
+            TypeConstant typeRP = typeRight.getParamTypesArray()[0];
+            TypeConstant typeRR = typeRight.getParamTypesArray()[1];
+
+            assert typeLP.isTuple() && typeLR.isTuple() && typeRP.isTuple() && typeRR.isTuple();
+
+            int cLP = typeLP.getParamsCount();
+            int cLR = typeLR.getParamsCount();
+            int cRP = typeRP.getParamsCount();
+            int cRR = typeRR.getParamsCount();
+
+            if (cLP != cRP || cLR > cRR)
+                {
+                return Relation.INCOMPATIBLE;
+                }
+
+            // functions do not produce, so we cannot have "weak" relations
+            for (int i = 0; i < cLP; i++)
+                {
+                TypeConstant typeL = typeLP.getParamTypesArray()[i];
+                TypeConstant typeR = typeRP.getParamTypesArray()[i];
+                if (!typeL.isA(typeR))
+                    {
+                    return Relation.INCOMPATIBLE;
+                    }
+                }
+
+            for (int i = 0; i < cLR; i++)
+                {
+                TypeConstant typeL = typeLR.getParamTypesArray()[i];
+                TypeConstant typeR = typeRR.getParamTypesArray()[i];
+                if (!typeR.isA(typeL))
+                    {
+                    return Relation.INCOMPATIBLE;
+                    }
+                }
             return Relation.IS_A;
             }
-        if (cL != 2 || cR != 2)
-            {
-            // either cR == 0 or a compilation error; not our responsibility to report
-            return Relation.INCOMPATIBLE;
-            }
-
-        TypeConstant typeLP = typeLeft.getParamTypesArray()[0];
-        TypeConstant typeLR = typeLeft.getParamTypesArray()[1];
-        TypeConstant typeRP = typeRight.getParamTypesArray()[0];
-        TypeConstant typeRR = typeRight.getParamTypesArray()[1];
-
-        assert typeLP.isTuple() && typeLR.isTuple() && typeRP.isTuple() && typeRR.isTuple();
-
-        int cLP = typeLP.getParamsCount();
-        int cLR = typeLR.getParamsCount();
-        int cRP = typeRP.getParamsCount();
-        int cRR = typeRR.getParamsCount();
-
-        if (cLP != cRP || cLR > cRR)
-            {
-            return Relation.INCOMPATIBLE;
-            }
-
-        // functions do not produce, so we cannot have "weak" relations
-        for (int i = 0; i < cLP; i++)
-            {
-            TypeConstant typeL = typeLP.getParamTypesArray()[i];
-            TypeConstant typeR = typeRP.getParamTypesArray()[i];
-            if (!typeL.isA(typeR))
-                {
-                return Relation.INCOMPATIBLE;
-                }
-            }
-
-        for (int i = 0; i < cLR; i++)
-            {
-            TypeConstant typeL = typeLR.getParamTypesArray()[i];
-            TypeConstant typeR = typeRR.getParamTypesArray()[i];
-            if (!typeR.isA(typeL))
-                {
-                return Relation.INCOMPATIBLE;
-                }
-            }
-        return Relation.IS_A;
-        }
 
         return null;
         }
