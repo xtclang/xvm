@@ -61,7 +61,7 @@ public class CatchEnd
     public int process(Frame frame, int iPC)
         {
         frame.exitScope();
-        return iPC + m_ofJmp;
+        return jump(frame, iPC + m_ofJmp, m_cExits);
         }
 
     @Override

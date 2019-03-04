@@ -62,7 +62,7 @@ public class GuardEnd
         {
         frame.popGuard();
         frame.exitScope();
-        return iPC + m_ofJmp;
+        return jump(frame, iPC + m_ofJmp, m_cExits);
         }
 
     @Override
