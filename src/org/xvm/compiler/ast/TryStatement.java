@@ -346,12 +346,13 @@ public class TryStatement
                     }
                 code.add(new Invoke_00(argResource, methodClose));
                 code.add(labelSkipClose);
+                code.add(new GuardEnd(getEndLabel()));
 
                 code.add(opCatch);
                 Label labelSkipThrow   = new Label("skip_throw");
                 Label labelFallThrough = new Label();
                 code.add(new JumpNotNull(regException, labelSkipThrow));
-                code.add(new Throw(regException));
+                code.add(new Throw(regCatch));
                 code.add(labelSkipThrow);
                 code.add(new CatchEnd(labelFallThrough));
                 code.add(labelFallThrough);

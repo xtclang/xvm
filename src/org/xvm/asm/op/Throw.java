@@ -87,6 +87,12 @@ public class Throw
             }
         }
 
+    @Override
+    public String toString()
+        {
+        return super.toString() + " " + Argument.toIdString(m_argValue, m_nArgValue);
+        }
+
     private int m_nArgValue;
 
     private Argument m_argValue; // never a Constant

@@ -8,6 +8,8 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
+import org.xvm.runtime.template.xNullable;
+
 
 /**
  * FINALLY_END ; finish a "finally" handler (Implicit EXIT)
@@ -48,15 +50,15 @@ public class FinallyEnd
         int nException = frame.f_anNextVar[frame.m_iScope - 1];
 
         ObjectHandle hException = frame.f_ahVar[nException];
-        if (hException instanceof ExceptionHandle)
-            {
-            // re-throw
-            return frame.raiseException((ExceptionHandle) hException);
-            }
-        else
+        if (hException == xNullable.NULL)
             {
             frame.exitScope();
             return iPC + 1;
+            }
+        else
+            {
+            // re-throw
+            return frame.raiseException((ExceptionHandle) hException);
             }
         }
 

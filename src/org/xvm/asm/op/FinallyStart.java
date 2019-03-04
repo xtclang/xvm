@@ -5,13 +5,13 @@ import java.io.DataInput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
 import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle;
+
+import org.xvm.runtime.template.xNullable;
 
 
 /**
@@ -74,17 +74,15 @@ public class FinallyStart
         {
         frame.exitScope();
 
-        int iScope = frame.enterScope(m_nVar);
+        frame.enterScope(m_nVar);
 
         // this op-code can only be reached by the normal flow of execution,
         // while upon an exception, the GuardAll would jump to the very next op
         // (called from Frame.findGuard) with an exception at anNextVar[iScope] + 1,
-        // so we need to reserve the slot (unassigned) when coming in normally;
+        // so we need to initialize the exception slot (to Null) when coming in normally;
         // presence or absence of the exception will be checked by the FinallyEnd
-        ConstantPool pool = frame.poolContext();
-        frame.introduceResolvedVar(m_nVar, pool.typeException१());
-        ObjectHandle hNull = frame.f_context.f_heapGlobal.ensureConstHandle(frame, pool.valNull());
-        frame.assignValue(m_nVar, hNull);
+        frame.introduceResolvedVar(m_nVar, frame.poolContext().typeException१(), null,
+                Frame.VAR_STANDARD, xNullable.NULL);
 
         return iPC + 1;
         }
