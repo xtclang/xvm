@@ -1,23 +1,52 @@
 package org.xvm.asm.op;
 
 
-import org.xvm.asm.Op;
+import java.io.DataInput;
+import java.io.IOException;
+
+import org.xvm.asm.Constant;
+import org.xvm.asm.OpVar;
+import org.xvm.asm.Register;
 import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
 
 
 /**
- * FINALLY ; begin a "finally" handler (implicit EXIT/ENTER and an exception var)
+ * FINALLY ; begin a "finally" handler (implicit EXIT/ENTER and VAR_I of type "Exception?")
+ * <p/>
+ * The FINALLY op indicates the beginning of the "finally" block. If the block is executed at the
+ * normal conclusion of the "try" block, then the variable is null; if the block is executed due
+ * to an exception within the "try" block, the the variable holds that exception. The finally block
+ * concludes with a matching FINALLY_END op.
  */
 public class FinallyStart
-        extends Op
+        extends OpVar
     {
     /**
      * Construct a FINALLY op.
      */
-    public FinallyStart()
+    public FinallyStart(Register reg)
         {
+        super(reg);
+        }
+
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public FinallyStart(DataInput in, Constant[] aconst)
+            throws IOException
+        {
+        super(in, aconst);
+        }
+
+    @Override
+    protected boolean isTypeAware()
+        {
+        return false;
         }
 
     @Override
@@ -27,11 +56,23 @@ public class FinallyStart
         }
 
     @Override
+    public boolean isEnter()
+        {
+        return true;
+        }
+
+    @Override
+    public boolean isExit()
+        {
+        return true;
+        }
+
+    @Override
     public int process(Frame frame, int iPC)
         {
         frame.exitScope();
 
-        int iScope = frame.enterScope(m_nNextVar);
+        int iScope = frame.enterScope(m_nVar);
 
         // this op-code can only be reached by the normal flow of execution,
         // while upon an exception, the GuardAll would jump to the very next op
@@ -48,11 +89,6 @@ public class FinallyStart
         {
         scope.exit();
         scope.enter();
-
-        m_nNextVar = scope.getCurVars();
-
-        scope.allocVar();
+        super.simulate(scope);
         }
-
-    private int m_nNextVar;
     }

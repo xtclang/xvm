@@ -533,6 +533,9 @@ public class MethodStructure
         return code.getAssembledOps();
         }
 
+    /**
+     * @return the array of constants that are referenced by the code in this method
+     */
     public Constant[] getLocalConstants()
         {
         return m_aconstLocal;
@@ -1585,16 +1588,25 @@ public class MethodStructure
             byte[] abOps = method.m_abOps;
             if (abOps != null)
                 {
+                Op[] aop;
+                Constant[] aconst = method.getLocalConstants();
                 try
                     {
-                    m_aop = abOps.length == 0
+                    aop = abOps.length == 0
                             ? Op.NO_OPS
-                            : Op.readOps(new DataInputStream(new ByteArrayInputStream(abOps)),
-                                    method.getLocalConstants());
+                            : Op.readOps(new DataInputStream(new ByteArrayInputStream(abOps)), aconst);
                     }
                 catch (IOException e)
                     {
                     throw new RuntimeException(e);
+                    }
+
+                // now that the ops have been read in, introduce them to the whole of the body of
+                // code and the constants
+                m_aop = aop;
+                for (int i = 0, c = aop.length; i < c; ++i)
+                    {
+                    aop[i].resolveCode(this, aconst);
                     }
                 }
             }
@@ -1608,6 +1620,21 @@ public class MethodStructure
             }
 
         // ----- Code methods -----------------------------------------------------------------
+
+        /**
+         * Obtain the op at the specified index.
+         * <p/>
+         * This method is intended to support implementation of the {@link Op#resolveCode
+         * Op.resolveCode()} method.
+         *
+         * @param i  the index (absolute address) of the Op to obtain
+         *
+         * @return the specified op
+         */
+        public Op get(int i)
+            {
+            return m_aop[i];
+            }
 
         /**
          * Update the "current" line number from the corresponding source code.
@@ -1662,19 +1689,28 @@ public class MethodStructure
             List<Op> list = m_listOps;
             if (!list.isEmpty())
                 {
-                Op op = list.get(list.size() - 1);  // TODO walk back until we find one
-
-                while (op instanceof Op.Prefix)
+                Op  op = null;
+                int of = 0;
+                do
                     {
-                    op = ((Op.Prefix) op).getNextOp();
+                    ++of;
+                    op = list.get(list.size() - 1);
+                    while (op instanceof Op.Prefix)
+                        {
+                        op = ((Op.Prefix) op).getNextOp();
+                        }
                     }
+                while (op == null);
+
                 if (op instanceof OpVar)
                     {
                     return ((OpVar) op).getRegister();
                     }
-                // TODO else some op that could have gen'd a new register
+
+                throw new IllegalStateException("op=" + op);
                 }
-            throw new IllegalStateException();
+
+            throw new IllegalStateException("no ops");
             }
 
         /**
@@ -1785,7 +1821,7 @@ public class MethodStructure
                     {
                     cDelta++;
                     }
-                else if (op.isExit())
+                if (op.isExit())
                     {
                     cDelta--;
                     }

@@ -13,7 +13,12 @@ import org.xvm.runtime.Frame;
 
 
 /**
- * CATCH_END addr ; finish an exception handler with a jump
+ * CATCH_END rel_addr ; finish an exception handler with a jump
+ * <p/>
+ * Each CATCH_END op must match up with a previous CATCH op.
+ * <p/>
+ * The CATCH_END op exits the scope and proceeds to the instruction at the location specified by
+ * "rel_addr".
  */
 public class CatchEnd
         extends OpJump

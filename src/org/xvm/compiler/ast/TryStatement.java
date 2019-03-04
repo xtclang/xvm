@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
@@ -40,6 +41,8 @@ import static org.xvm.util.Handy.indentLines;
 
 /**
  * A "try" or "using" statement.
+ *
+ * TODO add label var support for ".exception"
  */
 public class TryStatement
         extends Statement
@@ -127,6 +130,9 @@ public class TryStatement
             {
             for (int i = 0, c = catches.size(); i < c; ++i)
                 {
+                ctx = ctx.enter();
+                ctx.markNonCompleting();
+
                 CatchStatement catchOld = catches.get(i);
                 CatchStatement catchNew = (CatchStatement) catchOld.validate(ctx, errs);
                 if (catchNew == null)
@@ -156,6 +162,8 @@ public class TryStatement
                             }
                         }
                     }
+
+                ctx = ctx.exit();
                 }
             }
 
@@ -187,7 +195,8 @@ public class TryStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean fCompletes = fReachable;
+        boolean      fCompletes = fReachable;
+        ConstantPool pool       = pool();
 
         // using() or try()-with-resources
         FinallyStart[] aFinallyClose = null;
@@ -200,10 +209,11 @@ public class TryStatement
 
             int c = resources.size();
             aFinallyClose = new FinallyStart[c];
+            aRegClose     = new Register[c];
             for (int i = 0; i < c; ++i)
                 {
                 fCompletes = resources.get(i).completes(ctx, fCompletes, code, errs);
-                FinallyStart opFinally = new FinallyStart();
+                FinallyStart opFinally = new FinallyStart(new Register(pool.typeException१()));
                 aFinallyClose[i] = opFinally;
                 code.add(new GuardAll(opFinally));
                 }
@@ -213,7 +223,7 @@ public class TryStatement
         FinallyStart opFinallyBlock = null;
         if (catchall != null)
             {
-            opFinallyBlock = new FinallyStart();
+            opFinallyBlock = new FinallyStart(new Register(pool.typeException१()));
             code.add(new GuardAll(opFinallyBlock));
             }
 
@@ -233,15 +243,15 @@ public class TryStatement
             }
 
         // the "guarded" body of the using/try statement
+        block.suppressScope();
         boolean fBlockCompletes = block.completes(ctx, fCompletes, code, errs);
-
-        Label labelGuardEnd = new Label();
-        code.add(new GuardEnd(labelGuardEnd));
 
         // the "catch" blocks
         boolean fAnyCatchCompletes = false;
         if (catches != null)
             {
+            code.add(new GuardEnd(getEndLabel()));
+
             int c = catches.size();
             for (int i = 0; i < c; ++i)
                 {
@@ -253,6 +263,9 @@ public class TryStatement
         boolean fFinallyCompletes = true;
         if (catchall != null)
             {
+            // the finally clause gets wrapped in FINALLY / FINALLY_E ops, which imply an enter/exit
+            catchall.suppressScope();
+
             code.add(opFinallyBlock);
             fFinallyCompletes = catchall.completes(ctx, fCompletes, code, errs);
             code.add(new FinallyEnd());
@@ -274,20 +287,21 @@ public class TryStatement
             // skip_throw: CATCH_E
             // FINALLY_E
             // EXIT
-            TypeConstant   typeCloseable = pool().typeCloseable();
+            TypeConstant   typeCloseable = pool.typeCloseable();
             MethodConstant methodClose   = typeCloseable.ensureTypeInfo(errs)
                     .findMethods("close", 0, MethodType.Method).iterator().next();
             for (int i = 0, c = resources.size(); i < c; ++i)
                 {
                 code.add(aFinallyClose[i]);
-                Register regException = code.lastRegister();       // TODO implement this: type "Exception?"
+                Register regException = code.lastRegister();
 
-                Register       regCatch  = new Register(pool().typeException());
-                StringConstant constName = pool().ensureStringConstant("(close-exception)");
+                Register       regCatch  = new Register(pool.typeException());
+                StringConstant constName = pool.ensureStringConstant("(close-exception)");
                 CatchStart     opCatch   = new CatchStart(regCatch, constName);
                 code.add(new GuardStart(new CatchStart[] {opCatch}));
 
-                Argument argResource    = resources.get(i).getLValueExpression().generateArgument(ctx, code, false, false, errs);
+                Argument argResource    = resources.get(i).getLValueExpression()
+                                          .generateArgument(ctx, code, false, false, errs);
                 Label    labelSkipClose = new Label("skip_close");
                 if (!argResource.getType().isA(typeCloseable))
                     {
@@ -301,6 +315,7 @@ public class TryStatement
                 Label labelFallThrough = new Label();
                 code.add(new JumpNotNull(regException, labelSkipThrow));
                 code.add(new Throw(regException));
+                code.add(labelSkipThrow);
                 code.add(new CatchEnd(labelFallThrough));
                 code.add(labelFallThrough);
                 code.add(new FinallyEnd());
@@ -309,8 +324,6 @@ public class TryStatement
             // no resources remain in scope after the try/using statement
             code.add(new Exit());
             }
-
-        code.add(labelGuardEnd);
 
         return (fBlockCompletes | fAnyCatchCompletes) & fFinallyCompletes;
         }
@@ -347,10 +360,13 @@ public class TryStatement
         sb.append('\n')
           .append(indentLines(block.toString(), "    "));
 
-        for (CatchStatement catchone : catches)
+        if (catches != null)
             {
-            sb.append('\n')
-              .append(catchone);
+            for (CatchStatement catchone : catches)
+                {
+                sb.append('\n')
+                  .append(catchone);
+                }
             }
 
         if (catchall != null)

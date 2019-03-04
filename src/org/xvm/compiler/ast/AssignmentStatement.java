@@ -283,6 +283,18 @@ public class AssignmentStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
+    public boolean isLValueSyntax()
+        {
+        return true;
+        }
+
+    @Override
+    public Expression getLValueExpression()
+        {
+        return lvalueExpr;
+        }
+
+    @Override
     protected boolean isRValue(Expression exprChild)
         {
         return m_fSuppressLValue || exprChild != lvalue;

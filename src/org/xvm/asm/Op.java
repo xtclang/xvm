@@ -36,6 +36,17 @@ public abstract class Op
     // ----- Op interface --------------------------------------------------------------------------
 
     /**
+     * After the op has been disassembled, it is given an opportunity to finish its deserialization
+     * process by resolving against the remainder of the disassembled ops.
+     *
+     * @param code    the code containing this op
+     * @param aconst  the local constants used by the code
+     */
+    public void resolveCode(Code code, Constant[] aconst)
+        {
+        }
+
+    /**
      * Write the op-code.
      *
      * @param out       the DataOutput to write to
@@ -686,7 +697,6 @@ public abstract class Op
         for (int i = 0; i < cOps; ++i)
             {
             aop[i] = instantiate(in.readUnsignedByte(), in, aconst);
-            ;
             }
 
         return aop;
@@ -719,7 +729,7 @@ public abstract class Op
             case OP_CATCH:       return new CatchStart  (in, aconst);
             case OP_CATCH_END:   return new CatchEnd    (in, aconst);
             case OP_GUARD_ALL:   return new GuardAll    (in, aconst);
-            case OP_FINALLY:     return new FinallyStart();
+            case OP_FINALLY:     return new FinallyStart(in, aconst);
             case OP_FINALLY_END: return new FinallyEnd  ();
             case OP_THROW:       return new Throw       (in, aconst);
 

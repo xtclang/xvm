@@ -12,7 +12,16 @@ module TestTry.xqiz.it
             }
         catch (Exception e)
             {
-            console.println("UNEXPECTED THROW!");
+            console.println("UNEXPECTED THROW in testBasic()!");
+            }
+
+        try
+            {
+            testUsing();
+            }
+        catch (Exception e)
+            {
+            console.println("UNEXPECTED THROW in testUsing()!");
             }
         }
 
