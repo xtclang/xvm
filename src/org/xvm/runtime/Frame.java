@@ -953,7 +953,7 @@ public class Frame
 
     /**
      * @return the ConstantPool to be used to create new constants that may be required by the
-     *         tun-time execution
+     *         run-time execution
      */
     public ConstantPool poolContext()
         {

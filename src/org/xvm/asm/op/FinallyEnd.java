@@ -5,6 +5,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 
@@ -46,15 +47,17 @@ public class FinallyEnd
         // (see Frame.findGuard and FinallyStart.process)
         int nException = frame.f_anNextVar[frame.m_iScope - 1];
 
-        ExceptionHandle hException = (ExceptionHandle) frame.f_ahVar[nException];
-        if (hException == null)
+        ObjectHandle hException = frame.f_ahVar[nException];
+        if (hException instanceof ExceptionHandle)
+            {
+            // re-throw
+            return frame.raiseException((ExceptionHandle) hException);
+            }
+        else
             {
             frame.exitScope();
             return iPC + 1;
             }
-
-        // re-throw
-        return frame.raiseException(hException);
         }
 
     @Override

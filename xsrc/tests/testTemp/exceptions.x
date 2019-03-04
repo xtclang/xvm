@@ -12,7 +12,7 @@ module TestTry.xqiz.it
             }
         catch (Exception e)
             {
-            console.println("UNEXPECTED THROW in testBasic()!");
+            console.println("UNEXPECTED THROW in testBasic(): " + e);
             }
 
         try
@@ -21,7 +21,16 @@ module TestTry.xqiz.it
             }
         catch (Exception e)
             {
-            console.println("UNEXPECTED THROW in testUsing()!");
+            console.println("UNEXPECTED THROW in testUsing(): " + e);
+            }
+            
+        try
+            {
+            testFinally();
+            }
+        catch (Exception e)
+            {
+            console.println("expected throw in testFinally(): " + e);
             }
         }
 
@@ -81,5 +90,33 @@ module TestTry.xqiz.it
             {
             console.println("bye-bye!");
             }
+        }
+
+    void testFinally()
+        {
+        console.println("\n** testFinally()");
+
+        for (Int i : 1..2)
+            {
+            console.println("iteration " + i);
+            test: try
+                {
+                if (i == 2)
+                    {
+                    console.println("throwing exception inside try");
+                    testThrow();
+                    }
+                else
+                    {
+                    console.println("not throwing exception inside try");
+                    }
+                }
+            finally
+                {
+                console.println("exception in finally: " + test.exception);
+                }
+            }
+
+        console.println("done testFinally() - which shouldn't happen!");
         }
     }
