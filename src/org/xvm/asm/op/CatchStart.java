@@ -12,18 +12,31 @@ import org.xvm.asm.Register;
 import org.xvm.asm.Scope;
 
 import org.xvm.asm.constants.StringConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 
-import static org.xvm.util.Handy.readPackedInt;
-
 
 /**
- * CATCH ; begin an exception handler (implicit ENTER)
+ * CATCH ; begin an exception handler (implicit ENTER and VAR_IN)
+ * <p/>
+ * The CATCH op indicates the beginning of an exception handler. The exception handler concludes
+ * with a matching CATCH_END op.
  */
 public class CatchStart
         extends OpVar
     {
+    /**
+     * Construct a CATCH op for the specified exception type.
+     *
+     * @param type       the exception type to catch
+     * @param constName  the name constant for the catch exception variable
+     */
+    public CatchStart(TypeConstant type, StringConstant constName)
+        {
+        this(new Register(type), constName);
+        }
+
     /**
      * Construct a CATCH op.
      *
@@ -33,6 +46,11 @@ public class CatchStart
     public CatchStart(Register reg, StringConstant constName)
         {
         super(reg);
+
+        if (!reg.getType().isA(reg.getType().getConstantPool().typeException()))
+            {
+            throw new IllegalArgumentException("catch type must be an exception type");
+            }
 
         if (constName == null)
             {

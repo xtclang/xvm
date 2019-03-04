@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Scope;
 
@@ -18,6 +19,13 @@ import static org.xvm.util.Handy.writePackedLong;
 
 /**
  * GUARD #handlers:(CONST_CLASS, CONST_STRING, rel_addr)
+ * <p/>
+ * The GUARD op indicates the beginning of a section of ops for which there are exception handlers.
+ * The GUARD op contains the information, in order of precedence, for the types of exceptions that
+ * are to be caught, and the address of the CATCH op that is the exception handler for each of those
+ * exception types.
+ * <p/>
+ * The section of guarded ops concludes with a matching GUARD_END op.
  */
 public class GuardStart
         extends Op
@@ -51,6 +59,22 @@ public class GuardStart
             m_anTypeId[i] = readPackedInt(in);
             m_anNameId[i] = readPackedInt(in);
             m_aofCatch[i] = readPackedInt(in);
+            }
+        }
+
+    @Override
+    public void resolveCode(Code code, Constant[] aconst)
+        {
+        super.resolveCode(code, aconst);
+
+        int c = m_aofCatch.length;
+        m_aOpCatch = new CatchStart[c];
+        for (int i = 0; i < c; i++)
+            {
+            CatchStart op = (CatchStart) code.get(i);
+            op.setNameId(m_anNameId[i]);
+            op.setTypeId(m_anTypeId[i]);
+            m_aOpCatch[i] = op;
             }
         }
 

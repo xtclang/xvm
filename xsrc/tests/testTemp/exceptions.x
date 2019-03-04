@@ -12,13 +12,22 @@ module TestTry.xqiz.it
             }
         catch (Exception e)
             {
-            console.println("UNEXPECTED THROW!");
+            console.println("UNEXPECTED THROW in testBasic()!");
+            }
+
+        try
+            {
+            testUsing();
+            }
+        catch (Exception e)
+            {
+            console.println("UNEXPECTED THROW in testUsing()!");
             }
         }
 
     void testThrow()
         {
-        console.println("\n** testThrow()");
+        console.println("in testThrow()");
         throw new X.IllegalStateException("test");
         }
 
@@ -37,5 +46,40 @@ module TestTry.xqiz.it
             }
 
         console.println("done testBasic()");
+        }
+
+    void testUsing()
+        {
+        console.println("\n** testUsing()");
+
+        try
+            {
+            using (ByeBye bye = new ByeBye())
+                {
+                testThrow();
+                console.println("DIDN'T THROW!");
+                }
+            }
+        catch (Exception e)
+            {
+            console.println("ok");
+            }
+
+        console.println("done");
+        }
+
+    class ByeBye
+            implements X.Closeable
+        {
+        construct()
+            {
+            console.println("hello!");
+            }
+
+        @Override
+        void close()
+            {
+            console.println("bye-bye!");
+            }
         }
     }

@@ -993,6 +993,7 @@ public class ConstantPool
             case "Const":
             case "Enum":
             case "Enumeration":
+            case "Closeable":
             case "Exception":
             case "Function":
             case "FPLiteral":

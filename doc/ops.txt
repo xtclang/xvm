@@ -7,12 +7,12 @@
 +BREAK                                              ; explicit break-point for a debugger
 +ENTER                                              ; variable scope begin
 +EXIT                                               ; variable scope end
-+GUARD      #handlers:(TYPE, STRING, addr)          ; try { (+ “catch” class, var name, handler address) (implicit ENTER)
++GUARD      #handlers:(TYPE, STRING, addr)          ; try { (+ catch type, var name, handler address) (implicit ENTER)
 +GUARD_E    addr                                    ; } ... // ("E"=) end guarded block with a jump (implicit EXIT)
-+CATCH                                              ; begin an exception handler (implicit ENTER and INVAR for exception)
++CATCH                                              ; begin an exception handler (implicit ENTER and VAR_IN for exception)
 +CATCH_E    addr                                    ; ("E"=) end an exception handler with a jump (implicit EXIT)
 +GUARDALL   addr                                    ; try { (+ "finally" address (implicit ENTER, also intercepts boundary-crossing-jumps and returns)
-+FINALLY                                            ; begin a "finally" handler (implicit EXIT/ENTER and an exception var)
++FINALLY                                            ; begin a "finally" handler (implicit EXIT/ENTER and VAR_I of type "Exception?")
 +FINALLY_E                                          ; ("E"=) end  a "finally" handler (implicit EXIT)
 +THROW      rvalue                                  ; raise exception
 
