@@ -108,6 +108,22 @@ public abstract class RelationalTypeConstant
      */
     public static TypeConstant combineWithout(ConstantPool pool, TypeConstant type1, TypeConstant type2)
         {
+        if (type1 instanceof RelationalTypeConstant)
+            {
+            TypeConstant type1_1 = type1.getUnderlyingType();
+            TypeConstant type1_2 = type1.getUnderlyingType2();
+            if (type1_1.equals(type2))
+                {
+                // (A | B) - A => B
+                return type1_2;
+                }
+
+            if (type1_2.equals(type2))
+                {
+                // (A | B) - B => B
+                return type1_1;
+                }
+            }
         return type1;
         }
 
