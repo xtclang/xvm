@@ -203,16 +203,10 @@ public class ReturnStatement
                         }
                     // 4) otherwise it's most probably an error and the validation will log it
                     //   (except cases when testFit() implementation doesn't fully match the validate
-                    //    logic or somehow has more information to operate on)
+                    //    logic or somehow has more information to operate on, such as type inference)
                     else
                         {
                         exprNew = exprOld.validateMulti(ctx, aRetTypes, errs);
-                        if (exprNew != null)
-                            {
-                            // TODO: remove
-                            System.out.println("validate() and testFit() mismatch for " +
-                                exprOld.getClass().getName() + ": " + exprOld);
-                            }
                         }
                     }
                 }
