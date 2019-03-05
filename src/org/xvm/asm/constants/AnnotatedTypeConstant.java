@@ -538,6 +538,11 @@ public class AnnotatedTypeConstant
     @Override
     protected void registerConstants(ConstantPool pool)
         {
+        if (m_annotation.getConstantPool() != pool)
+            {
+            m_annotation = m_annotation.forPool(pool);
+            }
+
         m_annotation.registerConstants(pool);
         m_constType = (TypeConstant) pool.register(m_constType);
         }

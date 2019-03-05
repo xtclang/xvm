@@ -83,6 +83,17 @@ public class Annotation
         m_aParams    = aconstParam == null ? Constant.NO_CONSTS : aconstParam;
         }
 
+    private Annotation(ConstantPool pool, Annotation that)
+        {
+        super(pool);
+
+        this.m_iClass      = that.m_iClass;
+        this.m_aiParam     = that.m_aiParam;
+        this.m_constClass  = that.m_constClass;
+        this.m_aParams     = that.m_aParams;
+        this.m_fUnresolved = that.m_fUnresolved;
+        }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -214,6 +225,19 @@ public class Annotation
                 }
             m_aParams = aParams;
             }
+        }
+
+    /**
+     * Obtain this Annotation, but associated with the specified ConstantPool.
+     *
+     * @param pool  the pool to use
+     *
+     * @return an annotation associated with the specified pool, but containing this Annotation's
+     *         information
+     */
+    public Annotation forPool(ConstantPool pool)
+        {
+        return pool == getConstantPool() ? this : new Annotation(pool, this);
         }
 
     @Override

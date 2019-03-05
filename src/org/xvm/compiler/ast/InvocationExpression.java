@@ -861,7 +861,7 @@ public class InvocationExpression
         Argument[] aargTypeParams = m_aargTypeParams;
         int        cTypeParams    = aargTypeParams == null ? 0 : aargTypeParams.length;
         int        cDefaults      = m_cDefaults;
-        boolean    fTargetOnStack = cArgs == 0;
+        boolean    fTargetOnStack = cArgs == 0 || args.stream().allMatch(e -> e.isConstant());
 
         if (expr instanceof NameExpression)
             {
