@@ -20,7 +20,7 @@ package collections
         /**
          * The MutabilityConstraint of the data structure.
          */
-        @RO MutabilityConstraint mutability;
+        @RO MutabilityConstraint mutability = Mutable;
         }
 
     /**
