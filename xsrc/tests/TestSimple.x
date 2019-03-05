@@ -36,7 +36,7 @@ module TestSimple.xqiz.it
         console.println(runtimeClock.now.to<String>() + ": Hello " + s);
         }
 
-    void test4()
+    void testIn()
         {
         @Inject X.io.Console console;
 
