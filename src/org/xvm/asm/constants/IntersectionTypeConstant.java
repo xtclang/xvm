@@ -70,6 +70,20 @@ public class IntersectionTypeConstant
         return pool.ensureIntersectionTypeConstant(type1, type2);
         }
 
+    @Override
+    protected TypeConstant simplifyOrClone(ConstantPool pool, TypeConstant type1, TypeConstant type2)
+        {
+        if (type1.isA(type2))
+            {
+            return type2;
+            }
+        if (type2.isA(type1))
+            {
+            return type1;
+            }
+        return cloneRelational(pool, type1, type2);
+        }
+
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 

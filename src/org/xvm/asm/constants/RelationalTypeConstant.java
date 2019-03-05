@@ -78,6 +78,17 @@ public abstract class RelationalTypeConstant
     protected abstract TypeConstant cloneRelational(ConstantPool pool,
                                                     TypeConstant type1, TypeConstant type2);
 
+    /**
+     * Simplify or clone this relational type based on the specified underlying types.
+     *
+     * @return the resulting type, which may or may not be relational
+     */
+    protected TypeConstant simplifyOrClone(ConstantPool pool,
+                                           TypeConstant type1, TypeConstant type2)
+        {
+        return cloneRelational(pool, type1, type2);
+        }
+
 
     // ----- type algebra methods ------------------------------------------------------------------
 
@@ -233,7 +244,7 @@ public abstract class RelationalTypeConstant
 
         return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
                 ? this
-                : cloneRelational(pool, constResolved1, constResolved2);
+                : simplifyOrClone(pool, constResolved1, constResolved2);
         }
 
     @Override
@@ -246,7 +257,7 @@ public abstract class RelationalTypeConstant
 
         return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
                 ? this
-                : cloneRelational(pool, constResolved1, constResolved2);
+                : simplifyOrClone(pool, constResolved1, constResolved2);
         }
 
     @Override
@@ -278,7 +289,7 @@ public abstract class RelationalTypeConstant
 
         return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
                 ? this
-                : cloneRelational(pool, constResolved1, constResolved2);
+                : simplifyOrClone(pool, constResolved1, constResolved2);
         }
 
     @Override

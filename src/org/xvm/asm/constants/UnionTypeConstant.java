@@ -58,6 +58,20 @@ public class UnionTypeConstant
         return pool.ensureUnionTypeConstant(type1, type2);
         }
 
+    @Override
+    protected TypeConstant simplifyOrClone(ConstantPool pool, TypeConstant type1, TypeConstant type2)
+        {
+        if (type1.isA(type2))
+            {
+            return type1;
+            }
+        if (type2.isA(type1))
+            {
+            return type2;
+            }
+        return cloneRelational(pool, type1, type2);
+        }
+
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
