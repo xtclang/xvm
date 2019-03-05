@@ -1,6 +1,7 @@
 package org.xvm.runtime;
 
 
+import java.util.List;
 import java.util.Map;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -419,9 +420,10 @@ public abstract class ClassTemplate
 
         frameCD.setContinuation(frameCaller ->
             {
-            if (!hStruct.validateFields())
+            List<String> listUnassigned;
+            if ((listUnassigned = hStruct.validateFields()) != null)
                 {
-                return frame.raiseException(xException.unassignedFields());
+                return frame.raiseException(xException.unassignedFields(listUnassigned));
                 }
 
             if (isConstructImmutable())
@@ -697,10 +699,6 @@ public abstract class ClassTemplate
             }
 
         TypeComposition clzTarget = hTarget.getComposition();
-        if (clzTarget.isStruct())
-            {
-            return getFieldValue(frame, hTarget, sPropName, iReturn);
-            }
 
         CallChain chain = clzTarget.getPropertyGetterChain(sPropName);
         if (chain.isNative())
@@ -708,7 +706,7 @@ public abstract class ClassTemplate
             return invokeNativeGet(frame, sPropName, hTarget, iReturn);
             }
 
-        if (chain.isField())
+        if (clzTarget.isStruct() || chain.isField())
             {
             return getFieldValue(frame, hTarget, sPropName, iReturn);
             }

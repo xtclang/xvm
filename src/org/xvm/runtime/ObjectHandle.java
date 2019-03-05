@@ -1,8 +1,9 @@
 package org.xvm.runtime;
 
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import org.xvm.asm.Constants;
 import org.xvm.asm.Op;
@@ -74,11 +75,11 @@ public abstract class ObjectHandle
         }
 
     /**
-     * @return true iff all the fields are assigned
+     * @return null iff all the fields are assigned; a list of unassigned names otherwise
      */
-    public boolean validateFields()
+    public List<String> validateFields()
         {
-        return true;
+        return null;
         }
 
     public boolean isSelfContained()
@@ -231,19 +232,26 @@ public abstract class ObjectHandle
             }
 
         @Override
-        public boolean validateFields()
+        public List<String> validateFields()
             {
+            List<String> listUnassigned = null;
             if (m_mapFields != null)
                 {
-                for (ObjectHandle hValue : m_mapFields.values())
+                for (Map.Entry<String, ObjectHandle> entry : m_mapFields.entrySet())
                     {
-                    if (hValue == null || !hValue.validateFields())
+                    ObjectHandle hValue = entry.getValue();
+                    if (hValue == null)
                         {
-                        return false;
+                        if (listUnassigned == null)
+                            {
+                            listUnassigned = new ArrayList<>();
+                            }
+                        listUnassigned.add(entry.getKey());
                         }
+                    // no need to recurse to a field; it would throw during its own construction
                     }
                 }
-            return true;
+            return listUnassigned;
             }
 
         public static boolean compareIdentity(GenericHandle h1, GenericHandle h2)

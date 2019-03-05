@@ -1,6 +1,8 @@
 package org.xvm.runtime.template;
 
 
+import java.util.List;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -501,9 +503,12 @@ public class xRef
             Frame frameID = frame.createFrame1(methodInit, this, Utils.OBJECTS_NONE, Op.A_IGNORE);
 
             frameID.setContinuation(frameCaller ->
-                this.validateFields() ?
-                    Op.R_NEXT : frameCaller.raiseException(xException.unassignedFields()));
-
+                {
+                List<String> listUnassigned;
+                return (listUnassigned = this.validateFields()) == null
+                    ? Op.R_NEXT
+                    : frameCaller.raiseException(xException.unassignedFields(listUnassigned));
+                });
             return frame.call(frame.ensureInitialized(methodInit, frameID));
             }
 

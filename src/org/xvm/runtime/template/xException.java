@@ -1,6 +1,8 @@
 package org.xvm.runtime.template;
 
 
+import java.util.List;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constants.Access;
 
@@ -50,9 +52,9 @@ public class xException
         return makeHandle("Unassigned reference");
         }
 
-    public static ExceptionHandle unassignedFields()
+    public static ExceptionHandle unassignedFields(List<String> listNames)
         {
-        return makeHandle("Unassigned fields");
+        return makeHandle("Unassigned fields: " + listNames);
         }
 
     public static ExceptionHandle immutableObject()
