@@ -6,7 +6,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Scope;
@@ -112,16 +111,16 @@ public class GuardStart
         }
 
     @Override
-    public void resolveAddress(MethodStructure.Code code, int iPC)
+    public void resolveAddresses()
         {
-        if (m_aOpCatch != null && m_aofCatch == null)
+        if (m_aOpCatch != null)
             {
             int c = m_aOpCatch.length;
             m_aofCatch = new int[c];
 
             for (int i = 0; i < c; i++)
                 {
-                m_aofCatch[i] = code.resolveAddress(iPC, m_aOpCatch[i]);
+                m_aofCatch[i] = calcRelativeAddress(m_aOpCatch[i]);
                 }
             }
         }
@@ -156,7 +155,7 @@ public class GuardStart
     @Override
     public void simulate(Scope scope)
         {
-        scope.enter();
+        scope.enter(this);
 
         m_nNextVar = scope.getCurVars();
         }

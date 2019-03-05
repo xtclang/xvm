@@ -120,12 +120,15 @@ public class GP_DivMod
         }
 
     @Override
+    public void resetSimulation()
+        {
+        resetRegisters(m_aargReturn);
+        }
+
+    @Override
     public void simulate(Scope scope)
         {
-        if (m_aargReturn != null)
-            {
-            checkNextRegisters(scope, m_aargReturn);
-            }
+        checkNextRegisters(scope, m_aargReturn);
         }
 
     @Override

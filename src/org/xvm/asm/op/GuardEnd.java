@@ -68,6 +68,6 @@ public class GuardEnd
     @Override
     public void simulate(Scope scope)
         {
-        scope.exit();
+        scope.exit(this);
         }
     }

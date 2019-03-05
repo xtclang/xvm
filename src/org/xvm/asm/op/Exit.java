@@ -43,6 +43,6 @@ public class Exit
     @Override
     public void simulate(Scope scope)
         {
-        scope.exit();
+        scope.exit(this);
         }
     }

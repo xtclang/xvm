@@ -89,6 +89,12 @@ public class L_Get
         }
 
     @Override
+    public void resetSimulation()
+        {
+        resetRegister(m_argReturn);
+        }
+
+    @Override
     public void simulate(Scope scope)
         {
         checkNextRegister(scope, m_argReturn);

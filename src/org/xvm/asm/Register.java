@@ -41,6 +41,7 @@ public class Register
         m_type = type;
         m_iArg = iArg;
         m_fRO  = isPredefinedReadonly(iArg);
+        m_fOriginallyUnknown = iArg == UNKNOWN;
         }
 
     /**
@@ -204,13 +205,25 @@ public class Register
      */
     public int assignIndex(int iArg)
         {
-        if (m_iArg != UNKNOWN)
+        if (m_iArg != UNKNOWN && m_iArg != iArg)
             {
             throw new IllegalStateException("index has already been assigned (old=" + m_iArg + ", new=" + iArg);
             }
 
         validateIndex(iArg);
         return m_iArg = iArg;
+        }
+
+    /**
+     * Reset the register to an unknown index to allow for a re-run of the simulation that assigns
+     * variable indexes.
+     */
+    public void resetIndex()
+        {
+        if (m_fOriginallyUnknown)
+            {
+            m_iArg = UNKNOWN;
+            }
         }
 
     /**
@@ -678,4 +691,9 @@ public class Register
      * Effectively final flag.
      */
     private boolean m_fEffectivelyFinal;
+
+    /**
+     * A record of whether the register was created without its index being known.
+     */
+    private boolean m_fOriginallyUnknown;
     }

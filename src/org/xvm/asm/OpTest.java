@@ -197,6 +197,12 @@ public abstract class OpTest
         }
 
     @Override
+    public void resetSimulation()
+        {
+        resetRegister(m_argReturn);
+        }
+
+    @Override
     public void simulate(Scope scope)
         {
         checkNextRegister(scope, m_argReturn);

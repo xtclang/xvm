@@ -1440,7 +1440,7 @@ public class MethodStructure
             }
         else if (m_code != null)
             {
-            m_code.registerConstants();
+            m_code.ensureConstantRegistry();
             }
         }
 
@@ -1600,10 +1600,11 @@ public class MethodStructure
                     {
                     throw new RuntimeException(e);
                     }
+                m_aop = aop;
 
                 // now that the ops have been read in, introduce them to the whole of the body of
                 // code and the constants
-                m_aop = aop;
+                addressAndSimulateOps();
                 for (int i = 0, c = aop.length; i < c; ++i)
                     {
                     aop[i].resolveCode(this, aconst);
@@ -1755,90 +1756,6 @@ public class MethodStructure
 
             Integer index = mapIndex.get(op);
             return index == null ? -1 : index;
-            }
-
-        /**
-         * Calculate a relative address from the specified program counter (iPC) to the
-         * specified destination op-code.
-         *
-         * @param iPC     the "current" program counter
-         * @param opDest  the destination Op
-         *
-         * @return the offset from the current PC to the destination Op
-         */
-        public int resolveAddress(int iPC, Op opDest)
-            {
-            assert (opDest != null);
-
-            int iPCThat = addressOf(opDest);
-            if (iPCThat < 0)
-                {
-                throw new IllegalStateException("cannot find op: " + opDest);
-                }
-
-            // calculate relative offset
-            int ofJmp = iPCThat - iPC;
-            if (ofJmp == 0)
-                {
-                throw new IllegalStateException("infinite loop: code=" + this + "; PC=" + iPC);
-                }
-            return ofJmp;
-            }
-
-        /**
-         * Calculate a number of scopes that must be exited by a jump from one op to another.
-         *
-         * @param iPC    the program counter of a "jump" op code
-         * @param nJump  the jump distance (positive or negative)
-         *
-         * @return the number of scopes to exit
-         */
-        public int calculateExits(int iPC, int nJump)
-            {
-            int ofStart, ofEnd;
-
-            assert nJump != 0;
-            if (nJump > 0)
-                {
-                // forward
-                ofStart  = iPC + 1;
-                ofEnd    = iPC + nJump - 1;
-                }
-            else
-                {
-                // backward
-                ofStart  = iPC + nJump;
-                ofEnd    = iPC - 1;
-                }
-
-            Op[] aOP    = m_aop;
-            int  cDelta = 0; // number of Enter ops minus number of Exit ops
-
-            for (int i = ofStart; i <= ofEnd; i++)
-                {
-                Op op = aOP[i];
-                if (op.isEnter())
-                    {
-                    cDelta++;
-                    }
-                if (op.isExit())
-                    {
-                    cDelta--;
-                    }
-                }
-
-            if (cDelta != 0)
-                {
-                // jump forward should see number of exits outnumbering enters;
-                // jump backward should see the opposite;
-                if (nJump < 0 ^ cDelta > 0)
-                    {
-                    throw new IllegalStateException();
-                    }
-                return Math.abs(cDelta);
-                }
-
-            return 0;
             }
 
         /**
@@ -2038,12 +1955,12 @@ public class MethodStructure
                 }
             }
 
-        protected void registerConstants()
+        protected Op.ConstantRegistry ensureConstantRegistry()
             {
+            Op.ConstantRegistry registry;
             if (f_method.m_abOps == null)
                 {
-                Op.ConstantRegistry registry = f_method.m_registry =
-                        new Op.ConstantRegistry(f_method.getConstantPool());
+                f_method.m_registry = registry = new Op.ConstantRegistry(f_method.getConstantPool());
                 Op[] aop;
                 try
                     {
@@ -2052,7 +1969,7 @@ public class MethodStructure
                 catch (UnsupportedOperationException e)
                     {
                     // TODO: remove when the compiler is working
-                    System.err.println("Error in MethodStructure.registerConstants(): " + e);
+                    System.err.println("Error in MethodStructure.ensureConstantRegistry(): " + e);
                     aop = Op.NO_OPS;
                     }
 
@@ -2061,38 +1978,102 @@ public class MethodStructure
                     op.registerConstants(registry);
                     }
                 }
+            else
+                {
+                registry = f_method.m_registry;
+                assert registry != null;
+                }
+
+            return registry;
+            }
+
+        /**
+         * Walk through all of the code paths, determining what code is reachable versus
+         * unreachable, and eliminate the unreachable code.
+         */
+        private void eliminateDeadCode()
+            {
+            // TODO
+            }
+
+        /**
+         * Walk over all of the code, determining what ops are redundant (have no net effect), and
+         * eliminate that redundant code.
+         */
+        private void eliminateRedundantCode()
+            {
+            // first, mark all the ops with their locations, and determine which enter/exit pairs
+            // are redundant
+            addressAndSimulateOps();
+
+            // next, scan for additional redundant ops
+            Op[] aop = ensureOps();
+            for (int i = 0, c = aop.length; i < c; ++i)
+                {
+                Op opOrig = aop[i];
+                Op opReal = opOrig.ensureOp();
+
+                switch (opReal.getOpCode())
+                    {
+                    case Op.OP_NOP:
+                        // there should not (must not) be a dangling NOP (see StatementBlock)
+                        // TODO after eliminateDeadCode() is written: assert i < c - 1;
+                        opOrig.markRedundant();
+                        break;
+// TODO
+                    }
+                }
+
+            // next, compress the remaining non-redundant ops, including combining
+            }
+
+        /**
+         * Mark all the ops with their locations and scope depth.
+         */
+        private void addressAndSimulateOps()
+            {
+            Op[] aop = ensureOps();
+            for (Op op : aop)
+                {
+                op.resetSimulation();
+                }
+
+            Scope scope = f_method.createInitialScope();
+            for (int i = 0, c = aop.length; i < c; ++i)
+                {
+                Op op = aop[i];
+                op.initInfo(i, scope.getCurDepth());
+                op.simulate(scope);
+                }
+
+            f_method.m_cVars   = scope.getMaxVars();
+            f_method.m_cScopes = scope.getMaxDepth();
             }
 
         protected void ensureAssembled()
             {
             if (f_method.m_abOps == null)
                 {
-                // if the code has been modified without assembling the entire module, then the
-                // corresponding local constant registry hasn't been populated yet to be used by
-                // the modified code
-                if (f_method.m_registry == null)
-                    {
-                    registerConstants();
-                    }
-                assert f_method.m_registry != null;
+                eliminateDeadCode();
+                eliminateRedundantCode();
 
-                Op.ConstantRegistry registry = f_method.m_registry;
+                // stamp the ops with their address and scope depth
+                addressAndSimulateOps();
 
-                // build the local constant array
-                Op[] aop = ensureOps();
+                // populate the local constant registry
+                Op.ConstantRegistry registry = ensureConstantRegistry();
 
                 // assemble the ops into bytes
-                Scope scope = f_method.createInitialScope();
+                Op[] aop = ensureOps();
                 ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
                 DataOutputStream outData = new DataOutputStream(outBytes);
+
                 try
                     {
                     for (int i = 0, c = aop.length; i < c; ++i)
                         {
                         Op op = aop[i];
-
-                        op.resolveAddress(this, i);
-                        op.simulate(scope);
+                        op.resolveAddresses();
                         op.write(outData, registry);
                         }
                     }
@@ -2103,8 +2084,6 @@ public class MethodStructure
 
                 f_method.m_abOps       = outBytes.toByteArray();
                 f_method.m_aconstLocal = registry.getConstantArray();
-                f_method.m_cVars       = scope.getMaxVars();
-                f_method.m_cScopes     = scope.getMaxDepth();
                 f_method.m_registry    = null;
                 f_method.markModified();
                 }
@@ -2151,7 +2130,8 @@ public class MethodStructure
         /**
          * The array of ops.
          */
-        private Op[] m_aop;
+        // TODO private Op[] m_aop;
+        public Op[] m_aop;
 
         /**
          * A coding black hole.

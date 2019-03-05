@@ -77,6 +77,19 @@ public abstract class OpInvocable extends Op
         }
 
     @Override
+    public void resetSimulation()
+        {
+        if (isMultiReturn())
+            {
+            resetRegisters(m_aArgReturn);
+            }
+        else
+            {
+            resetRegister(m_argReturn);
+            }
+        }
+
+    @Override
     public void simulate(Scope scope)
         {
         if (isMultiReturn())

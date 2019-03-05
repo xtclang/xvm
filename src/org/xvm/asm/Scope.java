@@ -1,6 +1,10 @@
 package org.xvm.asm;
 
 
+import org.xvm.asm.op.Enter;
+import org.xvm.asm.op.Exit;
+
+
 /**
  * Represents a variable scope in the op-code stream.
  */
@@ -20,10 +24,11 @@ public class Scope
      *
      * @param scopeParent  the parent that contains this child scope
      */
-    private Scope(Scope scopeParent)
+    private Scope(Scope scopeParent, Op opEnter)
         {
         assert scopeParent != null;
         m_scopeParent = scopeParent;
+        m_opEnter     = opEnter;
         }
 
 
@@ -31,30 +36,41 @@ public class Scope
 
     /**
      * Indicate that a new scope is being entered.
+     *
+     * @param op  the op causing the scope to be created
      */
-    public void enter()
+    public void enter(Op op)
         {
         if (m_scopeChild == null)
             {
             // create a new scope under this scope
             validate();
-            m_scopeChild = new Scope(this);
+            m_scopeChild = new Scope(this, op);
             }
         else
             {
-            m_scopeChild.enter();
+            m_scopeChild.enter(op);
             }
         }
 
     /**
      * Indicate that the current scope is being exited.
+     *
+     * @param op  the op causing the scope to be exited
      */
-    public void exit()
+    public void exit(Op op)
         {
         if (m_scopeChild == null)
             {
             // shut down this scope, but first transfer all of its statistics up to its parent
             validate();
+
+            if (m_cVars == 0 && op instanceof Exit)
+                {
+                assert m_opEnter instanceof Enter;
+                m_opEnter.markRedundant();
+                op.markRedundant();
+                }
 
             Scope scopeParent = m_scopeParent;
             if (scopeParent != null)
@@ -72,7 +88,7 @@ public class Scope
             }
         else
             {
-            m_scopeChild.exit();
+            m_scopeChild.exit(op);
             }
         }
 
@@ -196,6 +212,11 @@ public class Scope
      * The current child scope.
      */
     private Scope m_scopeChild;
+
+    /**
+     * The op (if any) that created this scope.
+     */
+    private Op    m_opEnter;
 
     /**
      * The number of variables allocated within <b>this</b> scope (and <b>not</b> within any

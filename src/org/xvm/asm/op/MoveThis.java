@@ -75,6 +75,12 @@ public class MoveThis
         }
 
     @Override
+    public void resetSimulation()
+        {
+        resetRegister(m_argTo);
+        }
+
+    @Override
     public void simulate(Scope scope)
         {
         checkNextRegister(scope, m_argTo);

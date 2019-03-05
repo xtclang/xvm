@@ -107,6 +107,12 @@ public abstract class OpVar
         }
 
     @Override
+    public void resetSimulation()
+        {
+        resetRegister(m_reg);
+        }
+
+    @Override
     public void simulate(Scope scope)
         {
         m_nVar = m_reg.assignIndex(scope.allocVar());

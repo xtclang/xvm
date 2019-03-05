@@ -156,6 +156,15 @@ public abstract class OpIndex
         }
 
     @Override
+    public void resetSimulation()
+        {
+        if (isAssignOp())
+            {
+            resetRegister(m_argReturn);
+            }
+        }
+
+    @Override
     public void simulate(Scope scope)
         {
         if (isAssignOp())

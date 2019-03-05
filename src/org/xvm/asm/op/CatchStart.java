@@ -130,7 +130,7 @@ public class CatchStart
     @Override
     public void simulate(Scope scope)
         {
-        scope.enter();
+        scope.enter(this);
         super.simulate(scope);
         }
 

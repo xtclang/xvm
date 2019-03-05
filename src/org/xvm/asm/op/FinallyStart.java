@@ -91,8 +91,8 @@ public class FinallyStart
     @Override
     public void simulate(Scope scope)
         {
-        scope.exit();
-        scope.enter();
+        scope.exit(this);
+        scope.enter(this);
         super.simulate(scope);
         }
     }

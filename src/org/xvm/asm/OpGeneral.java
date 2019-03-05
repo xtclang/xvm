@@ -182,6 +182,12 @@ public abstract class OpGeneral
         }
 
     @Override
+    public void resetSimulation()
+        {
+        resetRegister(m_argReturn);
+        }
+
+    @Override
     public void simulate(Scope scope)
         {
         checkNextRegister(scope, m_argReturn);

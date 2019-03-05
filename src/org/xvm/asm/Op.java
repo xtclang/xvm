@@ -61,6 +61,14 @@ public abstract class Op
         }
 
     /**
+     * @return the actual "op" for this address (skipping over any labels or other prefix ops)
+     */
+    public Op ensureOp()
+        {
+        return this;
+        }
+
+    /**
      * @return the byte value that identifies the op-code, in the range 0-255
      */
     public int getOpCode()
@@ -77,6 +85,71 @@ public abstract class Op
      * @return a positive iPC or a negative {@code R_}* value
      */
     public abstract int process(Frame frame, int iPC);
+
+    /**
+     * Stores the address and the scope depth; also resets the reachability and redundant flags.
+     *
+     * @param nAddress  the program counter ("iPC") for this op
+     * @param nDepth    the scope depth for this op
+     */
+    public void initInfo(int nAddress, int nDepth)
+        {
+        assert nAddress >= 0;
+        assert nAddress <= POSITION_BITS;
+        assert nDepth > 0;
+        assert nDepth <= (SCOPEDEPTH_BITS >>> SCOPEDEPTH_SHIFT);
+
+        m_nStruct = nAddress | (nDepth << SCOPEDEPTH_SHIFT);
+        }
+
+    /**
+     * @return the address (iPC) of the op
+     */
+    public int getAddress()
+        {
+        return m_nStruct & POSITION_BITS;
+        }
+
+    /**
+     * @return the scope depth of the op
+     */
+    public int getDepth()
+        {
+        return (m_nStruct & SCOPEDEPTH_BITS) >>> SCOPEDEPTH_SHIFT;
+        }
+
+    /**
+     * @return true iff the op has been determined to be reachable
+     */
+    public boolean isReachable()
+        {
+        return (m_nStruct & REACHABLE_BIT) != 0;
+        }
+
+    public void markReachable()
+        {
+        m_nStruct |= REACHABLE_BIT;
+        }
+
+    /**
+     * @return true iff the op has been determined to be redundant (removable)
+     */
+    public boolean isRedundant()
+        {
+        return (m_nStruct & REDUNDANT_BIT) != 0;
+        }
+
+    public void markRedundant()
+        {
+        m_nStruct |= REDUNDANT_BIT;
+        }
+
+    /**
+     * Prepare to simulate the effects of the op on the passed scope.
+     */
+    public void resetSimulation()
+        {
+        }
 
     /**
      * Simulate the effects of the op on the passed scope.
@@ -98,13 +171,24 @@ public abstract class Op
         }
 
     /**
-     * Allows each op to know its location within the code.
+     * Before the op is assembled, it is given an opportunity to determine relative addresses to
+     * other ops.
      *
-     * @param code  the code containing the op
-     * @param iPC   the program counter (address)
      */
-    public void resolveAddress(Code code, int iPC)
+    public void resolveAddresses()
         {
+        }
+
+    /**
+     * Calculate a relative address from this Op to the specified destination Op.
+     *
+     * @param opDest  the destination Op
+     *
+     * @return the offset from this Op's address (iPC) to the destination Op
+     */
+    protected int calcRelativeAddress(Op opDest)
+        {
+        return opDest.getAddress() - this.getAddress();
         }
 
     /**
@@ -144,6 +228,329 @@ public abstract class Op
         }
 
     /**
+     * Calculate a number of scopes that must be exited by a jump from this Op to another.
+     *
+     * @param opDest  the op to jump to
+     *
+     * @return the number of scopes to exit
+     */
+    protected int calcExits(Op opDest)
+        {
+        return Math.abs(opDest.getDepth() - getDepth() - (isEnter() ? 1 : 0) + (isExit() ? 1 : 0));
+        }
+
+    @Override
+    public String toString()
+        {
+        return toName(getOpCode());
+        }
+
+
+    // ----- inner class: Prefix Op ----------------------------------------------------------------
+
+    /**
+     * An Op that can act as a Prefix to another op must implement the Prefix interface.
+     */
+    public static abstract class Prefix
+            extends Op
+        {
+        // ----- Prefix methods ---------------------------------------------------------------
+
+        /**
+         * @return the op that this op is a prefix for, which may itself be a prefix op, or may be
+         *         null if no op has been appended
+         */
+        public Op getNextOp()
+            {
+            return m_op;
+            }
+
+        /**
+         * @return the non-prefix op that is at the end of the linked list of prefix ops, or null
+         *         if there is no non-prefix op
+         */
+        public Op getSuffix()
+            {
+            Op op = m_op;
+            return op instanceof Prefix
+                    ? ((Prefix) op).getSuffix()
+                    : op;
+            }
+
+        /**
+         * Append an op to this prefix op.
+         *
+         * @param op  the op to append to this op
+         */
+        public void append(Op op)
+            {
+            assert op != this;
+
+            if (m_op == null)
+                {
+                m_op = op;
+                }
+            else if (m_op instanceof Prefix)
+                {
+                ((Prefix) m_op).append(op);
+                }
+            else
+                {
+                throw new IllegalStateException();
+                }
+            }
+
+        // ----- Op methods -------------------------------------------------------------------
+
+        @Override
+        public void resolveCode(Code code, Constant[] aconst)
+            {
+            ensureOp().resolveCode(code, aconst);
+            }
+
+        @Override
+        public void write(DataOutput out, ConstantRegistry registry)
+                throws IOException
+            {
+            ensureOp().write(out, registry);
+            }
+
+        @Override
+        public Op ensureOp()
+            {
+            Op op = getSuffix();
+            if (op == null)
+                {
+                throw new IllegalStateException("prefix requires a suffix: " + this.toString());
+                }
+            return op;
+            }
+
+        @Override
+        public int getOpCode()
+            {
+            return ensureOp().getOpCode();
+            }
+
+        @Override
+        public int process(Frame frame, int iPC)
+            {
+            return ensureOp().process(frame, iPC);
+            }
+
+        @Override
+        public void initInfo(int nAddress, int nDepth)
+            {
+            super.initInfo(nAddress, nDepth);
+            getNextOp().initInfo(nAddress, nDepth);
+            }
+
+        @Override
+        public void markReachable()
+            {
+            super.markReachable();
+            getNextOp().markReachable();
+            }
+
+        @Override
+        public void markRedundant()
+            {
+            super.markRedundant();
+            getNextOp().markRedundant();
+            }
+
+        @Override
+        public void resetSimulation()
+            {
+            ensureOp().resetSimulation();
+            }
+
+        @Override
+        public void simulate(Scope scope)
+            {
+            ensureOp().simulate(scope);
+            }
+
+        @Override
+        public void registerConstants(ConstantRegistry registry)
+            {
+            ensureOp().registerConstants(registry);
+            }
+
+        @Override
+        public void resolveAddresses()
+            {
+            ensureOp().resolveAddresses();
+            }
+
+        @Override
+        public boolean contains(Op that)
+            {
+            return this == that || m_op != null && m_op.contains(that);
+            }
+
+        @Override
+        public boolean usesSuper()
+            {
+            return m_op != null && m_op.usesSuper();
+            }
+
+        @Override
+        public boolean isEnter()
+            {
+            return m_op != null && m_op.isEnter();
+            }
+
+        @Override
+        public boolean isExit()
+            {
+            return m_op != null && m_op.isExit();
+            }
+
+        // ----- fields -----------------------------------------------------------------------
+
+        /**
+         * The "next" op that this op acts as a prefix for. Note that the next op may itself be a
+         * prefix op, so this can act as a linked list.
+         */
+        private Op m_op;
+        }
+
+
+    // ----- inner class: ConstantRegistry ---------------------------------------------------------
+
+    /**
+     * Kind of like a ConstantPool, but this is local to a MethodStructure, and just collects
+     * together all of the constants used by the ops.
+     */
+    public static class ConstantRegistry
+        {
+        /**
+         * Construct a ConstantRegistry.
+         *
+         * @param pool  the underlying ConstantPool
+         */
+        public ConstantRegistry(ConstantPool pool)
+            {
+            m_pool = pool;
+            }
+
+        /**
+         * Register the specified constant. This is called once by each op for each constant that
+         * the op refers to.
+         *
+         * @param constant  the constant to register
+         *
+         * @return the constant reference to use (may be different from the passed constant)
+         */
+        public Constant register(Constant constant)
+            {
+            ensureRegistering();
+
+            if (constant == null)
+                {
+                return null;
+                }
+
+            constant = m_pool.register(constant);
+
+            // keep track of how many times each constant is registered
+            m_mapConstants.compute(constant, (k, count) -> count == null ? 1 : 1 + count);
+
+            return constant;
+            }
+
+        /**
+         * @return the array of constants, in optimized order
+         */
+        public Constant[] getConstantArray()
+            {
+            ensureOptimized();
+
+            return m_aconst;
+            }
+
+        /**
+         * Obtain the index of the specified constant, as it appears in the optimized order.
+         *
+         * @param constant  the constant to get the index of
+         *
+         * @return the index of the constant in the array returned by {@link #getConstantArray()}
+         */
+        public int indexOf(Constant constant)
+            {
+            ensureOptimized();
+
+            Integer index = m_mapConstants.get(constant);
+            if (index == null)
+                {
+                throw new IllegalArgumentException("missing constant: " + constant);
+                }
+            return index;
+            }
+
+        /**
+         * Internal: Make sure this ConstantRegistry is still being used to register constants.
+         */
+        private void ensureRegistering()
+            {
+            if (m_aconst != null)
+                {
+                throw new IllegalStateException("constants are no longer being registered");
+                }
+            }
+
+        /**
+         * Internal: Make sure this ConstantRegistry is no longer being used to register constants,
+         * and has settled on an optimized order for the constants that were registered.
+         */
+        private void ensureOptimized()
+            {
+            if (m_aconst == null)
+                {
+                // first, create an array of all of the constants, sorted by how often they are used
+                // (backwards order, such that the most often used come first, since the variable
+                // length index encoding uses less bytes for lower indexes, the result is more
+                // compact)
+                Map<Constant, Integer> mapConstants = m_mapConstants;
+                Constant[] aconst = mapConstants.keySet().toArray(new Constant[mapConstants.size()]);
+                Arrays.sort(aconst, Constants.DEBUG
+                        ? Comparator.<Constant>naturalOrder()
+                        : (o1, o2) -> mapConstants.get(o2) - mapConstants.get(o1));
+                m_aconst = aconst;
+
+                // now re-use the map of constants to point to the constant indexes, for when we
+                // need to look up index by constant
+                for (int i = 0, c = aconst.length; i < c; ++i)
+                    {
+                    mapConstants.put(aconst[i], i);
+                    }
+                }
+            }
+
+        /**
+         * The underlying ConstantPool.
+         */
+        private ConstantPool m_pool;
+
+        /**
+         * The constants registered in the ConstantRegistry. While the registry is still
+         * registering, the map tracks counts of how many times each constant is referenced. Once
+         * the registry optimizes its constant ordering, the map holds the index of each constant
+         * (in the local "constant pool", not the real constant pool.)
+         */
+        private Map<Constant, Integer> m_mapConstants = new HashMap<>();
+
+        /**
+         * The array of constants in their optimized order.
+         */
+        private Constant[] m_aconst;
+        }
+
+
+    // ----- static helpers ------------------------------------------------------------------------
+
+    /**
      * Determine if the specified Argument is a Constant.
      *
      * @param arg  the argument
@@ -156,15 +563,35 @@ public abstract class Op
         }
 
     /**
-     * Determine if the specified Argument is a register (variable).
+     * Check if the specified Argument is a register, and reset its index if it is.
      *
      * @param arg  the argument
-     *
-     * @return true iff the argument is a register
      */
-    protected static boolean isRegister(Argument arg)
+    public static void resetRegister(Argument arg)
         {
-        return arg instanceof Register;
+        if (arg instanceof Register)
+            {
+            ((Register) arg).resetIndex();
+            }
+        }
+
+    /**
+     * Check if any of the specified Arguments is a register, and for each such, reset its index.
+     *
+     * @param aArg   the argument array
+     */
+    public static void resetRegisters(Argument[] aArg)
+        {
+        if (aArg != null)
+            {
+            for (Argument arg : aArg)
+                {
+                if (arg instanceof Register)
+                    {
+                    ((Register) arg).resetIndex();
+                    }
+                }
+            }
         }
 
     /**
@@ -174,7 +601,7 @@ public abstract class Op
      * @param scope  the scope
      * @param arg    the argument
      */
-    public void checkNextRegister(Scope scope, Argument arg)
+    public static void checkNextRegister(Scope scope, Argument arg)
         {
         if (arg instanceof Register && ((Register) arg).isUnknown())
             {
@@ -189,7 +616,7 @@ public abstract class Op
      * @param scope  the scope
      * @param aArg   the argument array
      */
-    public void checkNextRegisters(Scope scope, Argument[] aArg)
+    public static void checkNextRegisters(Scope scope, Argument[] aArg)
         {
         if (aArg != null)
             {
@@ -404,280 +831,6 @@ public abstract class Op
                 ? typeinfo.getExtends()
                 : typeResult;
         }
-
-    @Override
-    public String toString()
-        {
-        return toName(getOpCode());
-        }
-
-
-    // ----- inner class: Prefix Op ----------------------------------------------------------------
-
-    /**
-     * An Op that can act as a Prefix to another op must implement the Prefix interface.
-     */
-    public static abstract class Prefix
-            extends Op
-        {
-        // ----- Prefix methods ---------------------------------------------------------------
-
-        /**
-         * @return the op that this op is a prefix for, which may itself be a prefix op, or may be
-         *         null if no op has been appended
-         */
-        public Op getNextOp()
-            {
-            return m_op;
-            }
-
-        @Override
-        public boolean isEnter()
-            {
-            return m_op.isEnter();
-            }
-
-        @Override
-        public boolean isExit()
-            {
-            return m_op.isExit();
-            }
-
-        /**
-         * @return the op that this op is a prefix for, or throw an exception if there is none
-         */
-        public Op ensureNextOp()
-            {
-            final Op opNext = m_op;
-            if (opNext == null)
-                {
-                throw new IllegalStateException("prefix requires a suffix");
-                }
-            return opNext;
-            }
-
-        /**
-         * @return the non-prefix op that is at the end of the linked list of prefix ops, or null
-         *         if there is no non-prefix op
-         */
-        public Op getSuffix()
-            {
-            Op op = m_op;
-            return op instanceof Prefix
-                    ? ((Prefix) op).getSuffix()
-                    : op;
-            }
-
-        /**
-         * Append an op to this prefix op.
-         *
-         * @param op  the op to append to this op
-         */
-        public void append(Op op)
-            {
-            assert op != this;
-
-            if (m_op == null)
-                {
-                m_op = op;
-                }
-            else if (m_op instanceof Prefix)
-                {
-                ((Prefix) m_op).append(op);
-                }
-            else
-                {
-                throw new IllegalStateException();
-                }
-            }
-
-        // ----- Op methods -------------------------------------------------------------------
-
-        @Override
-        public void write(DataOutput out, ConstantRegistry registry)
-                throws IOException
-            {
-            ensureNextOp().write(out, registry);
-            }
-
-        @Override
-        public int getOpCode()
-            {
-            return ensureNextOp().getOpCode();
-            }
-
-        @Override
-        public int process(Frame frame, int iPC)
-            {
-            return ensureNextOp().process(frame, iPC);
-            }
-
-        @Override
-        public void simulate(Scope scope)
-            {
-            ensureNextOp().simulate(scope);
-            }
-
-        @Override
-        public void registerConstants(ConstantRegistry registry)
-            {
-            ensureNextOp().registerConstants(registry);
-            }
-
-        @Override
-        public void resolveAddress(Code code, int iPC)
-            {
-            ensureNextOp().resolveAddress(code, iPC);
-            }
-
-        @Override
-        public boolean contains(Op that)
-            {
-            return this == that || m_op != null && m_op.contains(that);
-            }
-
-        // ----- fields -----------------------------------------------------------------------
-
-        /**
-         * The "next" op that this op acts as a prefix for. Note that the next op may itself be a
-         * prefix op, so this can act as a linked list.
-         */
-        private Op m_op;
-        }
-
-
-    // ----- inner class: ConstantRegistry ---------------------------------------------------------
-
-    /**
-     * Kind of like a ConstantPool, but this is local to a MethodStructure, and just collects
-     * together all of the constants used by the ops.
-     */
-    public static class ConstantRegistry
-        {
-        /**
-         * Construct a ConstantRegistry.
-         *
-         * @param pool  the underlying ConstantPool
-         */
-        public ConstantRegistry(ConstantPool pool)
-            {
-            m_pool = pool;
-            }
-
-        /**
-         * Register the specified constant. This is called once by each op for each constant that
-         * the op refers to.
-         *
-         * @param constant  the constant to register
-         *
-         * @return the constant reference to use (may be different from the passed constant)
-         */
-        public Constant register(Constant constant)
-            {
-            ensureRegistering();
-
-            if (constant == null)
-                {
-                return null;
-                }
-
-            constant = m_pool.register(constant);
-
-            // keep track of how many times each constant is registered
-            m_mapConstants.compute(constant, (k, count) -> count == null ? 1 : 1 + count);
-
-            return constant;
-            }
-
-        /**
-         * @return the array of constants, in optimized order
-         */
-        public Constant[] getConstantArray()
-            {
-            ensureOptimized();
-
-            return m_aconst;
-            }
-
-        /**
-         * Obtain the index of the specified constant, as it appears in the optimized order.
-         *
-         * @param constant  the constant to get the index of
-         *
-         * @return the index of the constant in the array returned by {@link #getConstantArray()}
-         */
-        public int indexOf(Constant constant)
-            {
-            ensureOptimized();
-
-            Integer index = m_mapConstants.get(constant);
-            if (index == null)
-                {
-                throw new IllegalArgumentException("missing constant: " + constant);
-                }
-            return index;
-            }
-
-        /**
-         * Internal: Make sure this ConstantRegistry is still being used to register constants.
-         */
-        private void ensureRegistering()
-            {
-            if (m_aconst != null)
-                {
-                throw new IllegalStateException("constants are no longer being registered");
-                }
-            }
-
-        /**
-         * Internal: Make sure this ConstantRegistry is no longer being used to register constants,
-         * and has settled on an optimized order for the constants that were registered.
-         */
-        private void ensureOptimized()
-            {
-            if (m_aconst == null)
-                {
-                // first, create an array of all of the constants, sorted by how often they are used
-                // (backwards order, such that the most often used come first, since the variable
-                // length index encoding uses less bytes for lower indexes, the result is more
-                // compact)
-                Map<Constant, Integer> mapConstants = m_mapConstants;
-                Constant[] aconst = mapConstants.keySet().toArray(new Constant[mapConstants.size()]);
-                Arrays.sort(aconst, Constants.DEBUG
-                        ? Comparator.<Constant>naturalOrder()
-                        : (o1, o2) -> mapConstants.get(o2) - mapConstants.get(o1));
-                m_aconst = aconst;
-
-                // now re-use the map of constants to point to the constant indexes, for when we
-                // need to look up index by constant
-                for (int i = 0, c = aconst.length; i < c; ++i)
-                    {
-                    mapConstants.put(aconst[i], i);
-                    }
-                }
-            }
-
-        /**
-         * The underlying ConstantPool.
-         */
-        private ConstantPool m_pool;
-
-        /**
-         * The constants registered in the ConstantRegistry. While the registry is still
-         * registering, the map tracks counts of how many times each constant is referenced. Once
-         * the registry optimizes its constant ordering, the map holds the index of each constant
-         * (in the local "constant pool", not the real constant pool.)
-         */
-        private Map<Constant, Integer> m_mapConstants = new HashMap<>();
-
-        /**
-         * The array of constants in their optimized order.
-         */
-        private Constant[] m_aconst;
-        }
-
-
-    // ----- static helpers ------------------------------------------------------------------------
 
     /**
      * Read the ops for a particular method.
@@ -1563,4 +1716,18 @@ public abstract class Op
      * index is {@code i}, it is encoded as: {@code CONSTANT_OFFSET - i}
      */
     public static final int CONSTANT_OFFSET = -21;
+
+    private static final int REACHABLE_BIT    = 0x80000000;
+    private static final int REDUNDANT_BIT    = 0x40000000;
+    private static final int RESERVED_BITS    = 0x30000000;
+    private static final int SCOPEDEPTH_BITS  = 0x0FF00000, SCOPEDEPTH_SHIFT = 20;
+    private static final int POSITION_BITS    = 0x000FFFFF;
+
+
+    // ----- data members --------------------------------------------------------------------------
+
+    /**
+     * A bunch of internal info munged into an int.
+     */
+    private int m_nStruct;
     }

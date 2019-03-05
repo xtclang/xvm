@@ -6,7 +6,6 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpJump;
 import org.xvm.asm.Register;
@@ -86,17 +85,17 @@ public abstract class OpSwitch
         }
 
     @Override
-    public void resolveAddress(MethodStructure.Code code, int iPC)
+    public void resolveAddresses()
         {
-        if (m_aOpCase != null && m_aofCase == null)
+        if (m_aOpCase != null)
             {
             int c = m_aOpCase.length;
             m_aofCase = new int[c];
             for (int i = 0; i < c; i++)
                 {
-                m_aofCase[i] = code.resolveAddress(iPC, m_aOpCase[i]);
+                m_aofCase[i] = calcRelativeAddress(m_aOpCase[i]);
                 }
-            m_ofDefault = code.resolveAddress(iPC, m_opDefault);
+            m_ofDefault = calcRelativeAddress(m_opDefault);
             }
         }
 
