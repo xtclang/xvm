@@ -19,8 +19,8 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * Represent a Parameter constant. A Parameter is a combination of a type and a name, representing a
- * type parameter, a method invocation parameter, and a return value.
+ * A Parameter is a combination of a type and a name, representing a type parameter, a method
+ * invocation parameter, and a return value.
  */
 public class Parameter
         extends XvmStructure
