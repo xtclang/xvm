@@ -819,6 +819,7 @@ public abstract class Constant
         Property,
         MultiMethod,
         Method,
+        Annotation,
 
         /*
          * Pseudo identifiers.

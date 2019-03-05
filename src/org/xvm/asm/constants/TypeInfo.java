@@ -1005,16 +1005,24 @@ public class TypeInfo
 
             for (MethodBody body : methodTest.getChain())
                 {
-                SignatureConstant sigTest = body.getIdentity().getSignature();
+                SignatureConstant sigTest;
+
+                sigTest = body.getSignature();
                 if (sigTest.equals(sig) || sigTest.isSubstitutableFor(sig, typeThis))
                     {
                     mapBySig.putIfAbsent(sig, methodTest);
                     return methodTest;
                     }
 
-                SignatureConstant sigResolved =
-                        resolveMethodConstant(body.getIdentity(), methodTest).getSignature();
-                if (sigResolved.equals(sig) || sigResolved.isSubstitutableFor(sig, typeThis))
+                sigTest = body.getIdentity().getSignature();
+                if (sigTest.equals(sig) || sigTest.isSubstitutableFor(sig, typeThis))
+                    {
+                    mapBySig.putIfAbsent(sig, methodTest);
+                    return methodTest;
+                    }
+
+                sigTest = resolveMethodConstant(body.getIdentity(), methodTest).getSignature();
+                if (sigTest.equals(sig) || sigTest.isSubstitutableFor(sig, typeThis))
                     {
                     mapBySig.putIfAbsent(sig, methodTest);
                     return methodTest;
@@ -1675,7 +1683,7 @@ public class TypeInfo
                         continue;
                         }
 
-                    int cAllParams  = sig.getRawParams().length;
+                    int cAllParams  = sig.getParamCount();
                     int cTypeParams = method.getTypeParamCount();
                     int cDefaults   = method.getDefaultParamCount();
                     int cRequired   = cAllParams - cTypeParams - cDefaults;

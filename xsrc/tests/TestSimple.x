@@ -7,7 +7,7 @@ module TestSimple.xqiz.it
         test1();
         test2();
         test3();
-        // test4(); // it works; but an interactive test is a nuisance to run
+        // testIn(); // it works; but an interactive test is a nuisance to run
         }
 
     void test1()
@@ -36,7 +36,7 @@ module TestSimple.xqiz.it
         console.println(runtimeClock.now.to<String>() + ": Hello " + s);
         }
 
-    void test4()
+    void testIn()
         {
         @Inject X.io.Console console;
 

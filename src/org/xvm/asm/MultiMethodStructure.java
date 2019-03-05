@@ -146,8 +146,7 @@ public class MultiMethodStructure
         {
         assert constId instanceof MethodConstant;
 
-        MethodStructure firstSibling = getMethodByConstantMap().
-            get((MethodConstant) constId.resolveTypedefs());
+        MethodStructure firstSibling = getMethodByConstantMap().get(constId);
 
         return findLinkedChild(constId, firstSibling);
         }
