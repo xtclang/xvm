@@ -2304,7 +2304,7 @@ public class ClassStructure
                     }
                 else
                     {
-                    constInit = infoProp.getDefaultValue();
+                    constInit = infoProp.getType().getDefaultValue();
                     }
 
                 if (constInit != null)

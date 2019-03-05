@@ -666,32 +666,6 @@ public class PropertyInfo
 
         return null;
         }
-    /**
-     * @return the default value of the property as a constant, or null if there is no default value
-     *         for this property
-     */
-    public Constant getDefaultValue()
-        {
-        TypeConstant type = getType();
-
-        if (type.isSingleUnderlyingClass(false))
-            {
-            IdentityConstant id   = type.getSingleUnderlyingClass(false);
-            ClassStructure   clz  = (ClassStructure) id.getComponent();
-            Component        prop = clz.getChild("default");
-            if (prop instanceof PropertyStructure)
-                {
-                PropertyStructure propDefault = (PropertyStructure) prop;
-                return propDefault.getInitialValue();
-                }
-            }
-        else if (type.isNullable())
-            {
-            return pool().valNull();
-            }
-
-        return null;
-        }
 
     /**
      * @return the function that provides the initial value of the property, or null if there is no

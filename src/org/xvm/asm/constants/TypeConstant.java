@@ -4732,6 +4732,30 @@ public abstract class TypeConstant
             }
         }
 
+    /**
+     * @return the default value for this type, or null if there is none
+     */
+    public Constant getDefaultValue()
+        {
+        if (isSingleUnderlyingClass(false))
+            {
+            IdentityConstant id   = getSingleUnderlyingClass(false);
+            ClassStructure   clz  = (ClassStructure) id.getComponent();
+            Component        prop = clz.getChild("default");
+            if (prop instanceof PropertyStructure)
+                {
+                PropertyStructure propDefault = (PropertyStructure) prop;
+                return propDefault.getInitialValue();
+                }
+            }
+        else if (isNullable())
+            {
+            return getConstantPool().valNull();
+            }
+
+        return null;
+        }
+
 
     // ----- run-time support ----------------------------------------------------------------------
 
