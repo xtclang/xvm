@@ -8,8 +8,6 @@ import java.io.PrintWriter;
 
 import java.util.function.Consumer;
 
-import org.xvm.asm.Component.Format;
-
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -26,8 +24,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * A Constant that represents the annotation of another type constant.
  */
 public class Annotation
-        extends XvmStructure
-        implements Comparable<Annotation>
+        extends Constant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -81,17 +78,6 @@ public class Annotation
 
         m_constClass = constClass;
         m_aParams    = aconstParam == null ? Constant.NO_CONSTS : aconstParam;
-        }
-
-    private Annotation(ConstantPool pool, Annotation that)
-        {
-        super(pool);
-
-        this.m_iClass      = that.m_iClass;
-        this.m_aiParam     = that.m_aiParam;
-        this.m_constClass  = that.m_constClass;
-        this.m_aParams     = that.m_aParams;
-        this.m_fUnresolved = that.m_fUnresolved;
         }
 
 
@@ -158,7 +144,13 @@ public class Annotation
         }
 
 
-    // ----- Constant helpers ----------------------------------------------------------------------
+    // ----- Constant methods ----------------------------------------------------------------------
+
+    @Override
+    public Format getFormat()
+        {
+        return Format.Annotation;
+        }
 
     /**
      * Helper for Constant.
@@ -193,6 +185,65 @@ public class Annotation
             }
         }
 
+    @Override
+    protected int compareDetails(Constant obj)
+        {
+        if (!(obj instanceof Annotation))
+            {
+            return -1;
+            }
+        Annotation that = (Annotation) obj;
+        int n = this.getAnnotationClass().compareTo(that.getAnnotationClass());
+
+        if (n == 0)
+            {
+            Constant[] aThisParam = this.m_aParams;
+            Constant[] aThatParam = that.m_aParams;
+            for (int i = 0, c = Math.min(aThisParam.length, aThatParam.length); i < c; ++i)
+                {
+                n = aThisParam[i].compareTo(aThatParam[i]);
+                if (n != 0)
+                    {
+                    return n;
+                    }
+                }
+            n = aThisParam.length - aThatParam.length;
+            }
+
+        return n;
+        }
+
+    @Override
+    public String getValueString()
+        {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append('@')
+          .append(getAnnotationClass().getValueString());
+
+        if (m_aParams.length > 0)
+            {
+            sb.append('(');
+
+            boolean first = true;
+            for (Constant param : m_aParams)
+                {
+                if (first)
+                    {
+                    first = false;
+                    }
+                else
+                    {
+                    sb.append(", ");
+                    }
+                sb.append(param.getValueString());
+                }
+
+            sb.append(')');
+            }
+
+        return sb.toString();
+        }
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -214,7 +265,7 @@ public class Annotation
         int cParams = m_aiParam == null ? 0 : m_aiParam.length;
         if (cParams == 0)
             {
-            m_aParams = Constant.NO_CONSTS;
+            m_aParams = NO_CONSTS;
             }
         else
             {
@@ -225,19 +276,6 @@ public class Annotation
                 }
             m_aParams = aParams;
             }
-        }
-
-    /**
-     * Obtain this Annotation, but associated with the specified ConstantPool.
-     *
-     * @param pool  the pool to use
-     *
-     * @return an annotation associated with the specified pool, but containing this Annotation's
-     *         information
-     */
-    public Annotation forPool(ConstantPool pool)
-        {
-        return pool == getConstantPool() ? this : new Annotation(pool, this);
         }
 
     @Override
@@ -275,7 +313,7 @@ public class Annotation
         boolean fHalt = super.validate(errlist);
 
         // it must be a mixin type
-        if (getAnnotationType().getExplicitClassFormat() != Format.MIXIN)
+        if (getAnnotationType().getExplicitClassFormat() != Component.Format.MIXIN)
             {
             fHalt |= log(errlist, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
                     getAnnotationClass().getValueString());
@@ -322,32 +360,6 @@ public class Annotation
         }
 
 
-    // ----- Comparable interface ------------------------------------------------------------------
-
-    @Override
-    public int compareTo(Annotation that)
-        {
-        int n = this.getAnnotationClass().compareTo(that.getAnnotationClass());
-
-        if (n == 0)
-            {
-            Constant[] aThisParam = this.m_aParams;
-            Constant[] aThatParam = that.m_aParams;
-            for (int i = 0, c = Math.min(aThisParam.length, aThatParam.length); i < c; ++i)
-                {
-                n = aThisParam[i].compareTo(aThatParam[i]);
-                if (n != 0)
-                    {
-                    return n;
-                    }
-                }
-            n = aThisParam.length - aThatParam.length;
-            }
-
-        return n;
-        }
-
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -363,65 +375,6 @@ public class Annotation
             n *= 11 + aParams[i].hashCode();
             }
         return n;
-        }
-
-    @Override
-    public boolean equals(Object obj)
-        {
-        assert isResolved();
-
-        if (obj instanceof Annotation)
-            {
-            Annotation that       = (Annotation) obj;
-            Constant[] aThisParam = this.m_aParams;
-            Constant[] aThatParam = that.m_aParams;
-            if (this.getAnnotationClass().equals(that.getAnnotationClass())
-                    && aThisParam.length == aThatParam.length)
-                {
-                for (int i = 0, c = aThisParam.length; i < c; ++i)
-                    {
-                    if (!aThisParam[i].equals(aThatParam[i]))
-                        {
-                        return false;
-                        }
-                    }
-                return true;
-                }
-            }
-
-        return false;
-        }
-
-    @Override
-    public String toString()
-        {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append('@')
-          .append(getAnnotationClass().getValueString());
-
-        if (m_aParams.length > 0)
-            {
-            sb.append('(');
-
-            boolean first = true;
-            for (Constant param : m_aParams)
-                {
-                if (first)
-                    {
-                    first = false;
-                    }
-                else
-                    {
-                    sb.append(", ");
-                    }
-                sb.append(param.getValueString());
-                }
-
-            sb.append(')');
-            }
-
-        return sb.toString();
         }
 
 
