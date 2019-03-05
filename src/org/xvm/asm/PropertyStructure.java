@@ -377,8 +377,8 @@ public class PropertyStructure
                                       SignatureConstant sigThat, List<TypeConstant> listActual)
         {
         assert getName().equals(sigThat.getName());
-        assert sigThat.getRawParams().length == 0;
-        assert sigThat.getRawReturns().length == 1;
+        assert sigThat.getParamCount() == 0;
+        assert sigThat.getReturnCount() == 1;
 
         SignatureConstant sigThis = getIdentityConstant().getSignature();
         if (!listActual.isEmpty())

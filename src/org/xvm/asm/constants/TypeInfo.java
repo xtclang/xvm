@@ -1675,7 +1675,7 @@ public class TypeInfo
                         continue;
                         }
 
-                    int cAllParams  = sig.getRawParams().length;
+                    int cAllParams  = sig.getParamCount();
                     int cTypeParams = method.getTypeParamCount();
                     int cDefaults   = method.getDefaultParamCount();
                     int cRequired   = cAllParams - cTypeParams - cDefaults;

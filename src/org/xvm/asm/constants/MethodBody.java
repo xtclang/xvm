@@ -333,9 +333,9 @@ public class MethodBody
     public boolean isAuto()
         {
         // all @Auto methods must have no params and a single return value
-        return  m_id.getRawParams().length == 0 &&
-                m_id.getRawReturns().length == 1 &&
-                findAnnotation(pool().clzAuto()) != null;
+        SignatureConstant sig = m_id.getSignature();
+        return sig.getParamCount() == 0 && sig.getReturnCount() == 1 &&
+               findAnnotation(pool().clzAuto()) != null;
         }
 
     /**

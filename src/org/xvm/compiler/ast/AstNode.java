@@ -1053,7 +1053,7 @@ public abstract class AstNode
             int cRequired   = cAllParams - cTypeParams - cDefaults;
 
             if (cArgs < cRequired || cArgs > cVisible
-                    || sigMethod.getRawReturns().length < cReturns)
+                    || sigMethod.getReturnCount() < cReturns)
                 {
                 // invalid number of arguments or return values
                 continue;

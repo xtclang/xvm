@@ -141,6 +141,14 @@ public class SignatureConstant
         }
 
     /**
+     * @return the method's parameter count
+     */
+    public int getParamCount()
+        {
+        return m_aconstParams.length;
+        }
+
+    /**
      * @return the method's parameter types
      */
     public TypeConstant[] getRawParams()
@@ -154,6 +162,14 @@ public class SignatureConstant
     public List<TypeConstant> getParams()
         {
         return Arrays.asList(m_aconstParams.clone());
+        }
+
+    /**
+     * @return the method's return count
+     */
+    public int getReturnCount()
+        {
+        return m_aconstReturns.length;
         }
 
     /**
@@ -346,8 +362,8 @@ public class SignatureConstant
         // number of param types and return values must match
         // REVIEW consider relaxing this later, i.e. allow sub-classes to add return values
         if (!this.getName().equals(that.getName())
-                || this.getRawParams().length != that.getRawParams().length
-                || this.getRawReturns().length != that.getRawReturns().length)
+                || this.getParamCount()  != that.getParamCount()
+                || this.getReturnCount() != that.getReturnCount())
             {
             return false;
             }
