@@ -16,6 +16,23 @@ class ExtHashMap<KeyType, ValueType>
      * @param hasher
      * @param initCapacity  the number of expected entries
      */
+    construct(Int initCapacity = 0)
+        {
+        assert(KeyType.is(Type<Hashable>));
+
+        this.hasher = new NaturalHasher<KeyType>();
+
+        // allocate the initial capacity
+        (Int bucketCount, this.growAt) = calcBucketCount(initCapacity);
+        buckets = new HashEntry?[bucketCount, (i) -> Null];
+        }
+
+    /**
+     * Construct the ExtHashMap with the specified hasher and (optional) initial capacity.
+     *
+     * @param hasher
+     * @param initCapacity  the number of expected entries
+     */
     construct(Hasher<KeyType> hasher, Int initCapacity = 0)
         {
         this.hasher = hasher;
@@ -194,12 +211,15 @@ class ExtHashMap<KeyType, ValueType>
         }
 
     @Override
-    public/private HashEntrySet entries = new HashEntrySet();
-
-    @Override
     @Lazy public/private Collection<ValueType> values.calc()
         {
         return new EntryBasedValuesCollection();
+        }
+
+    @Override
+    @Lazy public/private HashEntrySet entries.calc()
+        {
+        return new HashEntrySet();
         }
 
     @Override
