@@ -1,4 +1,5 @@
 enum Boolean
+        default(False)
     {
     False
         {
