@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
@@ -113,13 +114,14 @@ public abstract class OpInvocable extends Op
             return m_chain;
             }
 
-        MethodConstant constMethod = (MethodConstant) frame.getConstant(m_nMethodId);
+        MethodConstant    idMethod = (MethodConstant) frame.getConstant(m_nMethodId);
+        SignatureConstant sig      = idMethod.getSignature().
+                resolveGenericTypes(frame.poolContext(), frame.getGenericsResolver());
 
         TypeComposition clazz = m_clazz = hTarget.getComposition();
-
-        return m_chain = constMethod.isLambda()
-                ? new CallChain(constMethod)
-                : clazz.getMethodCallChain(constMethod.getSignature());
+        return m_chain = idMethod.isLambda()
+                ? new CallChain(idMethod)
+                : clazz.getMethodCallChain(sig);
         }
 
     // check if a register for the return value needs to be allocated

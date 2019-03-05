@@ -3061,14 +3061,8 @@ public abstract class Component
             {
             TypeConstant typeContrib = getTypeConstant();
 
-            typeContrib = typeContrib.normalizeParameters(pool);
-            if (!typeContrib.isParamsSpecified() && !typeContrib.isRelationalType())
-                {
-                // non-parameterized contribution
-                return typeContrib;
-                }
-
-            typeContrib = typeContrib.resolveGenerics(pool, resolver);
+            typeContrib = typeContrib.normalizeParameters(pool)
+                                     .resolveGenerics(pool, resolver);
 
             return getComposition() != Composition.Incorporates ||
                     checkConditionalIncorporate(typeContrib.getParamTypesArray()) ?
