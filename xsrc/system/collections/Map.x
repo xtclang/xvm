@@ -681,7 +681,12 @@ interface Map<KeyType, ValueType>
                     if (KeyType key : keyIterator.next())
                         {
                         // TODO verify this is private (a private property on the anon inner class)
-                        static KeyBasedCursorEntry entry = new KeyBasedCursorEntry(key);
+                        private KeyBasedCursorEntry entry = new KeyBasedCursorEntry(key);
+                        // MOV_VAR entry ref                // i.e. the next register is "ref"
+                        // PGET ref Ref.assigned -> stack
+                        // JMP_TRUE stack skip_assignment
+                        // entry = new KeyBasedCursorEntry(key);
+                        // skip_assignment:
                         return true, entry.advance(key);
                         }
 
@@ -713,44 +718,13 @@ interface Map<KeyType, ValueType>
             {
             Set<KeyType> oldKeys = Map.this.keys;
 
-            // temp fix, part 1 of 2:
-            @Unassigned KeyBasedCursorEntry entry;
+            KeyBasedCursorEntry? entry = null;
             if (Set<KeyType> newKeys : oldKeys.removeIf(key ->
-                {
-                // REVIEW this line of code is possibly "so wrong" in so many ways:
-                // 1) what does it mean to have a "static" variable inside of a lambda?
-                //    a) does this mean that the state is owned by the lambda (making it stateFUL)
-                //    b) .. or that the lambda is a method (captures "this") and thus can put a
-                //       property onto the KeyBasedEntrySet itself?
-                // 2) the compiler currently barfs on this because the identity of the lambda is not
-                //    known during the validateExpressions() stage, so the property constant is
-                //    considered to be "unresolved" (so MethodDeclarationStatement.resolveNames()
-                //    requeues itself infinitely because method.resolveTypedefs() cannot succeed)
-                //
-
-                // this is the code that we actually want:
-                // 1) "static" says that "hey, i need this to be 'here' for some definition of here,
-                //    i.e. available every call into this lambda
-                //    -> is it a property, which forces this lambda to be a method? (NOT ideal)
-                //    -> or is it just a local variable that gets added to the frame that hosts this
-                //       lambda, as if it were declared outside of this lambda and then captured?
-                // 2) "lazy" says "just the first time, initialize it", which could conceivably be
-                //    an implicit thing, written as:
-                // static @Lazy KeyBasedCursorEntry entry.calc()
-                //     {
-                //     return new KeyBasedCursorEntry(key);
-                //    }
-                // or better yet (not yet supported, but with implicit @Lazy):
-                // static KeyBasedCursorEntry entry = new KeyBasedCursorEntry(key);
-
-                // temp fix, part 2 of 2:
-                if (&entry.assigned)
                     {
-                    entry = new KeyBasedCursorEntry(key);
-                    }
-
-                return shouldRemove(entry.advance(key));
-                }))
+                    entry = entry?.advance(key) : new KeyBasedCursorEntry(key);
+                    assert entry != null; // TODO: should not be necessary
+                    return shouldRemove(entry.advance(key));
+                    }))
                 {
                 assert &newKeys == &oldKeys;
                 return true, this;
