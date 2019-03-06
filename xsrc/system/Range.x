@@ -2,7 +2,7 @@
  * A range is an interval whose values are known to be sequential. A range adds some capabilities,
  * including the ability to union two adjoining ranges, and to iterate over the values in the range.
  */
-mixin Range<ElementType extends Sequential>
+mixin Range<ElementType extends immutable Sequential>
         into Interval<ElementType>
         implements Iterable<ElementType>
     {
