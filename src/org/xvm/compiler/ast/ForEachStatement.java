@@ -336,7 +336,7 @@ public class ForEachStatement
         //   3) sequence   :  L: for (T value          : container.as(Sequence<T>)) {...}
         //   4) map keys   :  L: for (K key            : container.as(Map<K,T>   )) {...}
         //   5) map entries:  L: for ((K key, T value) : container.as(Map<K,T>   )) {...}
-        //   6) iterable   :  L: for (T value          : container.as(Iterator<T>)) {...}
+        //   6) iterable   :  L: for (T value          : container.as(Iterable<T>)) {...}
         assert cond.getCategory() == Category.CondExpr;
 
         // validate the LValue declarations and any LValue sub-expressions
@@ -436,13 +436,11 @@ public class ForEachStatement
             }
         else
             {
-            m_exprRValue = exprRVal = exprRValNew;
+            m_exprRValue = exprRValNew;
 
             if (fValid)
                 {
                 // update "var"/"val" type declarations on the LValues with their actual types
-                typeRVal = exprRVal.getType();
-
                 TypeConstant[] aTypeLVals;
                 switch (plan)
                     {
