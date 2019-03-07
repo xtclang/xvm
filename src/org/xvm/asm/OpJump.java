@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.List;
+
 import org.xvm.asm.op.Label;
 
 import org.xvm.runtime.Frame;
@@ -63,6 +65,37 @@ public abstract class OpJump
     public int process(Frame frame, int iPC)
         {
         throw new UnsupportedOperationException();
+        }
+
+    @Override
+    public void markReachable(Op[] aop)
+        {
+        super.markReachable(aop);
+
+        m_opDest = findDestinationOp(aop, m_ofJmp);
+        m_ofJmp  = calcRelativeAddress(m_opDest);
+        }
+
+    @Override
+    public boolean branches(List<Integer> list)
+        {
+        list.add(m_ofJmp);
+        return true;
+        }
+
+    @Override
+    public boolean advances()
+        {
+        // of the various OpJump sub-classes, only GuardAll naturally advances to the next op
+        return getOpCode() == Op.OP_GUARD_ALL;
+        }
+
+    /**
+     * @return the number of instructions to jump (may be negative)
+     */
+    public int getRelativeAddress()
+        {
+        return m_ofJmp;
         }
 
     /**

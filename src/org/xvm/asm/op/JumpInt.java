@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.List;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
@@ -127,6 +129,41 @@ public class JumpInt
         return lValue >= 0 && lValue < m_aofCase.length
             ? iPC + m_aofCase[(int) lValue]
             : iPC + m_ofDefault;
+        }
+
+    @Override
+    public void markReachable(Op[] aop)
+        {
+        super.markReachable(aop);
+
+        Op[]  aOpCase = m_aOpCase;
+        int[] aofCase = m_aofCase;
+        for (int i = 0, c = aofCase.length; i < c; ++i)
+            {
+            aOpCase[i] = findDestinationOp(aop, aofCase[i]);
+            aofCase[i] = calcRelativeAddress(aOpCase[i]);
+            }
+
+        m_opDefault = findDestinationOp(aop, m_ofDefault);
+        m_ofDefault = calcRelativeAddress(m_opDefault);
+        }
+
+    @Override
+    public boolean branches(List<Integer> list)
+        {
+        resolveAddresses();
+        for (int i : m_aofCase)
+            {
+            list.add(i);
+            }
+        list.add(m_ofDefault);
+        return true;
+        }
+
+    @Override
+    public boolean advances()
+        {
+        return false;
         }
 
     @Override

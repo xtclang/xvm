@@ -109,6 +109,12 @@ public class Return_N
         }
 
     @Override
+    public boolean advances()
+        {
+        return false;
+        }
+
+    @Override
     public void registerConstants(ConstantRegistry registry)
         {
         registerArguments(m_aArg, registry);

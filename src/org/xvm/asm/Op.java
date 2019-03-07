@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Component.Format;
@@ -126,9 +127,31 @@ public abstract class Op
         return (m_nStruct & REACHABLE_BIT) != 0;
         }
 
-    public void markReachable()
+    public void markReachable(Op[] aop)
         {
         m_nStruct |= REACHABLE_BIT;
+        }
+
+    /**
+     * @return true iff the op has been determined to be necessary to keep, even if it's not
+     *         reachable
+     */
+    public boolean isNecessary()
+        {
+        return (m_nStruct & NECESSARY_BIT) != 0;
+        }
+
+    public void markNecessary()
+        {
+        m_nStruct |= NECESSARY_BIT;
+        }
+
+    /**
+     * @return true iff the op cannot be reached AND should be discarded as a result
+     */
+    public boolean isDiscardable()
+        {
+        return !isReachable() && !isNecessary();
         }
 
     /**
@@ -145,6 +168,97 @@ public abstract class Op
         }
 
     /**
+     * Determine if this op is redundant, and if it is, mark itself as such.
+     *
+     * @param aop  the ops of the current method
+     *
+     * @return true if this op determined that it is redundant
+     */
+    public boolean checkRedundant(Op[] aop)
+        {
+        return false;
+        }
+
+    /**
+     * Find the destination op given a relative jump offset.
+     *
+     * @param aop    the ops of this method
+     * @param ofJmp  the distance to jump from this op
+     *
+     * @return the destination op
+     */
+    public Op findDestinationOp(Op[] aop, int ofJmp)
+        {
+        int iPC = getAddress() + ofJmp;
+        Op  opPrefix, opActual;
+        while (true)
+            {
+            opPrefix = aop[iPC];
+            opActual = opPrefix.ensureOp();
+
+            assert opActual != this;
+
+            if (opActual instanceof Jump)
+                {
+                iPC += ((Jump) opActual).getRelativeAddress();
+                }
+            else
+                {
+                // make sure that the jump lands on a label; this is not strictly necessary, but
+                // some of the data structures were built assuming the label type
+                if (!(opPrefix instanceof Label))
+                    {
+                    aop[iPC] = opPrefix = new Label().append(opPrefix);
+                    }
+
+                return opPrefix;
+                }
+            }
+        }
+
+    /**
+     * Find the "closing" op that corresponds to this op.
+     *
+     * @param aop    the ops of this method
+     *
+     * @return the op that corresponds to this op
+     */
+    public Op findCorrespondingOp(Op[] aop, int nThat)
+        {
+        int iPC   = getAddress();
+        int nThis = this.getOpCode();
+        int cReq  = 1;
+        while (true)
+            {
+            Op  op  = aop[++iPC];
+            int nOp = op.ensureOp().getOpCode();
+            if (nOp == nThis)
+                {
+                ++cReq;
+                }
+            else if (nOp == nThat)
+                {
+                if (--cReq == 0)
+                    {
+                    return op;
+                    }
+                }
+            }
+        }
+
+    /**
+     * @return a "pass-through" op that removes this op from the resulting assembly
+     */
+    public Prefix convertToPrefix()
+        {
+        // this is used to convert a redundant op to a label of sorts, so that anything that jumps
+        // to the op will still be able to find it
+        assert isRedundant();
+
+        return new Redundant(this);
+        }
+
+    /**
      * Prepare to simulate the effects of the op on the passed scope.
      */
     public void resetSimulation()
@@ -158,6 +272,26 @@ public abstract class Op
      */
     public void simulate(Scope scope)
         {
+        }
+
+    /**
+     * Determine if the op branches.
+     *
+     * @param list  a list to put the branches (relative addresses) into, if there are any
+     *
+     * @return true if the op branches, and those branches have been added to the passed list
+     */
+    public boolean branches(List<Integer> list)
+        {
+        return false;
+        }
+
+    /**
+     * @return true iff the op can advance to the following op
+     */
+    public boolean advances()
+        {
+        return true;
         }
 
     /**
@@ -282,7 +416,7 @@ public abstract class Op
          *
          * @param op  the op to append to this op
          */
-        public void append(Op op)
+        public Prefix append(Op op)
             {
             assert op != this;
 
@@ -298,6 +432,8 @@ public abstract class Op
                 {
                 throw new IllegalStateException();
                 }
+
+            return this;
             }
 
         // ----- Op methods -------------------------------------------------------------------
@@ -305,82 +441,157 @@ public abstract class Op
         @Override
         public void resolveCode(Code code, Constant[] aconst)
             {
-            ensureOp().resolveCode(code, aconst);
+            m_op.resolveCode(code, aconst);
             }
 
         @Override
         public void write(DataOutput out, ConstantRegistry registry)
                 throws IOException
             {
-            ensureOp().write(out, registry);
+            m_op.write(out, registry);
             }
 
         @Override
         public Op ensureOp()
             {
-            Op op = getSuffix();
-            if (op == null)
+            if (m_op == null)
                 {
                 throw new IllegalStateException("prefix requires a suffix: " + this.toString());
                 }
-            return op;
+            return m_op.ensureOp();
             }
 
         @Override
         public int getOpCode()
             {
-            return ensureOp().getOpCode();
+            return m_op.getOpCode();
             }
 
         @Override
         public int process(Frame frame, int iPC)
             {
-            return ensureOp().process(frame, iPC);
+            return m_op.process(frame, iPC);
             }
 
         @Override
         public void initInfo(int nAddress, int nDepth)
             {
             super.initInfo(nAddress, nDepth);
-            getNextOp().initInfo(nAddress, nDepth);
+            m_op.initInfo(nAddress, nDepth);
             }
 
         @Override
-        public void markReachable()
+        public int getAddress()
             {
-            super.markReachable();
-            getNextOp().markReachable();
+            return m_op.getAddress();
+            }
+
+        @Override
+        public int getDepth()
+            {
+            return m_op.getDepth();
+            }
+
+        @Override
+        public boolean isReachable()
+            {
+            return m_op.isReachable();
+            }
+
+        @Override
+        public void markReachable(Op[] aop)
+            {
+            super.markReachable(aop);
+            m_op.markReachable(aop);
+            }
+
+        @Override
+        public boolean isNecessary()
+            {
+            return m_op.isNecessary();
+            }
+
+        @Override
+        public void markNecessary()
+            {
+            super.markNecessary();
+            m_op.markNecessary();
+            }
+
+        @Override
+        public boolean isDiscardable()
+            {
+            return m_op.isDiscardable();
+            }
+
+        @Override
+        public boolean isRedundant()
+            {
+            return m_op.isRedundant();
             }
 
         @Override
         public void markRedundant()
             {
             super.markRedundant();
-            getNextOp().markRedundant();
+            m_op.markRedundant();
+            }
+
+        @Override
+        public boolean checkRedundant(Op[] aop)
+            {
+            boolean fRedundant = m_op.checkRedundant(aop);
+            if (fRedundant)
+                {
+                super.markRedundant();
+                }
+            return fRedundant;
+            }
+
+        @Override
+        public Prefix convertToPrefix()
+            {
+            if (m_op != null)
+                {
+                m_op = m_op.convertToPrefix();
+                }
+            return this;
             }
 
         @Override
         public void resetSimulation()
             {
-            ensureOp().resetSimulation();
+            m_op.resetSimulation();
             }
 
         @Override
         public void simulate(Scope scope)
             {
-            ensureOp().simulate(scope);
+            m_op.simulate(scope);
+            }
+
+        @Override
+        public boolean branches(List<Integer> list)
+            {
+            return m_op.branches(list);
+            }
+
+        @Override
+        public boolean advances()
+            {
+            return m_op.advances();
             }
 
         @Override
         public void registerConstants(ConstantRegistry registry)
             {
-            ensureOp().registerConstants(registry);
+            m_op.registerConstants(registry);
             }
 
         @Override
         public void resolveAddresses()
             {
-            ensureOp().resolveAddresses();
+            m_op.resolveAddresses();
             }
 
         @Override
@@ -1718,8 +1929,9 @@ public abstract class Op
     public static final int CONSTANT_OFFSET = -21;
 
     private static final int REACHABLE_BIT    = 0x80000000;
-    private static final int REDUNDANT_BIT    = 0x40000000;
-    private static final int RESERVED_BITS    = 0x30000000;
+    private static final int NECESSARY_BIT    = 0x40000000;
+    private static final int REDUNDANT_BIT    = 0x20000000;
+    private static final int RESERVED_BIT     = 0x10000000;
     private static final int SCOPEDEPTH_BITS  = 0x0FF00000, SCOPEDEPTH_SHIFT = 20;
     private static final int POSITION_BITS    = 0x000FFFFF;
 

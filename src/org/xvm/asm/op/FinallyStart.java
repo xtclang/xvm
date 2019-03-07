@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.Op;
 import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
 import org.xvm.asm.Scope;
@@ -86,6 +87,13 @@ public class FinallyStart
                 Frame.VAR_STANDARD, xNullable.NULL);
 
         return iPC + 1;
+        }
+
+    @Override
+    public void markReachable(Op[] aop)
+        {
+        super.markReachable(aop);
+        findCorrespondingOp(aop, OP_FINALLY_END).markNecessary();
         }
 
     @Override

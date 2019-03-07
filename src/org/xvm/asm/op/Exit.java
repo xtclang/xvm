@@ -41,6 +41,15 @@ public class Exit
         }
 
     @Override
+    public boolean isNecessary()
+        {
+        // enter and exit are considered to be necessary, because the iPC does not have to pass
+        // through them in order for their effect to be felt; however, a pair of enter/exit that
+        // are not actually used (no vars inside them) will be removed because they are redundant
+        return true;
+        }
+
+    @Override
     public void simulate(Scope scope)
         {
         scope.exit(this);

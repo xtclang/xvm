@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.List;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Label;
@@ -186,6 +188,42 @@ public abstract class OpCondJump
                                    ObjectHandle hValue1, ObjectHandle hValue2)
         {
         throw new UnsupportedOperationException();
+        }
+
+    @Override
+    public void markReachable(Op[] aop)
+        {
+        super.markReachable(aop);
+
+        m_opDest = findDestinationOp(aop, m_ofJmp);
+        m_ofJmp  = calcRelativeAddress(m_opDest);
+        }
+
+    @Override
+    public boolean checkRedundant(Op[] aop)
+        {
+        if (m_ofJmp == 1)
+            {
+            markRedundant();
+            return true;
+            }
+
+        return false;
+        }
+
+    @Override
+    public boolean branches(List<Integer> list)
+        {
+        list.add(getRelativeAddress());
+        return true;
+        }
+
+    /**
+     * @return the number of instructions to jump (may be negative)
+     */
+    public int getRelativeAddress()
+        {
+        return m_ofJmp;
         }
 
     @Override

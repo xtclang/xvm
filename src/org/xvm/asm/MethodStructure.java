@@ -1607,6 +1607,8 @@ public class MethodStructure
                 addressAndSimulateOps();
                 for (int i = 0, c = aop.length; i < c; ++i)
                     {
+                    // TODO ops that can jump need to implement this method and resolve their address to an op
+                    //      (otherwise code read from disk will break when we eliminate dead & redundant code)
                     aop[i].resolveCode(this, aconst);
                     }
                 }
@@ -1712,50 +1714,6 @@ public class MethodStructure
                 }
 
             throw new IllegalStateException("no ops");
-            }
-
-        /**
-         * Find the specified op in the sequence of op codes.
-         *
-         * @param op  the op to find
-         *
-         * @return the index (aka the PC) within the method) of the op, or -1 if the op could not be
-         *         found
-         */
-        public int addressOf(Op op)
-            {
-            IdentityHashMap<Op, Integer> mapIndex = m_mapIndex;
-            if (mapIndex == null)
-                {
-                ArrayList<Op> listOps = m_listOps;
-                int           cOps    = listOps.size();
-                if (cOps < 50)
-                    {
-                    // brute force search a small list of ops
-                    for (int i = 0; i < cOps; ++i)
-                        {
-                        if (listOps.get(i).contains(op))
-                            {
-                            return i;
-                            }
-                        }
-                    return -1;
-                    }
-
-                m_mapIndex = mapIndex = new IdentityHashMap<>();
-                for (int i = 0; i < cOps; ++i)
-                    {
-                    Op opEach = listOps.get(i);
-                    do
-                        {
-                        mapIndex.put(opEach, i);
-                        }
-                    while (opEach instanceof Prefix && (opEach = ((Prefix) opEach).getNextOp()) != null);
-                    }
-                }
-
-            Integer index = mapIndex.get(op);
-            return index == null ? -1 : index;
             }
 
         /**
@@ -1908,12 +1866,6 @@ public class MethodStructure
                 }
 
             @Override
-            public int addressOf(Op op)
-                {
-                return f_wrappee.addressOf(op);
-                }
-
-            @Override
             public boolean usesSuper()
                 {
                 return false;
@@ -1990,41 +1942,146 @@ public class MethodStructure
         /**
          * Walk through all of the code paths, determining what code is reachable versus
          * unreachable, and eliminate the unreachable code.
+         *
+         * @return true iff any changes occurred
          */
-        private void eliminateDeadCode()
+        private boolean eliminateDeadCode()
             {
-            // TODO
+            // first, mark all the ops with their locations
+            addressAndSimulateOps();
+
+            // "color" the graph of reachable ops
+            Op[] aop = ensureOps();
+            follow(0);
+
+            // scan through it sequentially, compacting to eliminate any unreachable ops
+            int cOld = aop.length;
+            int cNew = 0;
+            for (int iOld = 0; iOld < cOld; ++iOld)
+                {
+                Op op = aop[iOld];
+                if (!op.isDiscardable())
+                    {
+                    if (cNew < iOld)
+                        {
+                        aop[cNew] = op;
+                        }
+                    ++cNew;
+                    }
+                }
+            
+            if (cNew == cOld)
+                {
+                return false;
+                }
+
+            Op[] aopNew = new Op[cNew];
+            System.arraycopy(aop, 0, aopNew, 0, cNew);
+            m_aop = aopNew;
+            return true;
+            }
+
+        private void follow(int iPC)
+            {
+            Op[] aop = m_aop;
+            Op   op  = aop[iPC];
+            if (op.isReachable())
+                {
+                return;
+                }
+
+            List<Integer> listBranches = new ArrayList<>();
+            do
+                {
+                op.markReachable(aop);
+
+                if (op.branches(listBranches))
+                    {
+                    for (int cJmp : listBranches)
+                        {
+                        follow(iPC + cJmp);
+                        }
+                    listBranches.clear();
+                    }
+
+                if (!op.advances())
+                    {
+                    return;
+                    }
+
+                op = aop[++iPC];
+                }
+            while (!op.isReachable());
             }
 
         /**
          * Walk over all of the code, determining what ops are redundant (have no net effect), and
          * eliminate that redundant code.
+         *
+         * @return true iff any changes occurred
          */
-        private void eliminateRedundantCode()
+        private boolean eliminateRedundantCode()
             {
             // first, mark all the ops with their locations, and determine which enter/exit pairs
             // are redundant
             addressAndSimulateOps();
 
             // next, scan for additional redundant ops
-            Op[] aop = ensureOps();
-            for (int i = 0, c = aop.length; i < c; ++i)
+            Op[]    aop  = ensureOps();
+            boolean fMod = false;
+            for (Op op : aop)
                 {
-                Op opOrig = aop[i];
-                Op opReal = opOrig.ensureOp();
+                fMod |= op.checkRedundant(aop);
+                }
 
-                switch (opReal.getOpCode())
+            if (!fMod)
+                {
+                return false;
+                }
+
+            // next, scan through sequentially, keeping the remaining non-redundant ops
+            int    cOld     = aop.length;
+            int    cNew     = 0;
+            Prefix opPrefix = null;
+            for (int iOld = 0; iOld < cOld; ++iOld)
+                {
+                Op op = aop[iOld];
+                if (op.isRedundant())
                     {
-                    case Op.OP_NOP:
-                        // there should not (must not) be a dangling NOP (see StatementBlock)
-                        // TODO after eliminateDeadCode() is written: assert i < c - 1;
-                        opOrig.markRedundant();
-                        break;
-// TODO
+                    if (opPrefix == null)
+                        {
+                        opPrefix = op.convertToPrefix();
+                        }
+                    else
+                        {
+                        opPrefix.append(op.convertToPrefix());
+                        }
+                    }
+                else
+                    {
+                    if (cNew < iOld)
+                        {
+                        if (opPrefix == null)
+                            {
+                            aop[cNew] = op;
+                            }
+                        else
+                            {
+                            aop[cNew] = opPrefix.append(op);
+                            opPrefix  = null;
+                            }
+                        }
+                    ++cNew;
                     }
                 }
 
-            // next, compress the remaining non-redundant ops, including combining
+            // there was redundant code; we should have seen code shrinkage
+            assert cNew != cOld;
+
+            Op[] aopNew = new Op[cNew];
+            System.arraycopy(aop, 0, aopNew, 0, cNew);
+            m_aop = aopNew;
+            return true;
             }
 
         /**
@@ -2046,6 +2103,11 @@ public class MethodStructure
                 op.simulate(scope);
                 }
 
+            for (Op op : aop)
+                {
+                op.resolveAddresses();
+                }
+
             f_method.m_cVars   = scope.getMaxVars();
             f_method.m_cScopes = scope.getMaxDepth();
             }
@@ -2054,26 +2116,26 @@ public class MethodStructure
             {
             if (f_method.m_abOps == null)
                 {
-                eliminateDeadCode();
-                eliminateRedundantCode();
-
-                // stamp the ops with their address and scope depth
-                addressAndSimulateOps();
+                // it is possible that the elimination of dead code makes it possible to find new
+                // redundant code, and vice versa
+                do
+                    {
+                    eliminateDeadCode();
+                    }
+                while (eliminateRedundantCode());
+                // note that the last call to eliminateRedundantCode() did not modify the code, so
+                // each op will already have been stamped with the correct address and scope depth
 
                 // populate the local constant registry
                 Op.ConstantRegistry registry = ensureConstantRegistry();
 
                 // assemble the ops into bytes
-                Op[] aop = ensureOps();
                 ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
-                DataOutputStream outData = new DataOutputStream(outBytes);
-
+                DataOutputStream      outData  = new DataOutputStream(outBytes);
                 try
                     {
-                    for (int i = 0, c = aop.length; i < c; ++i)
+                    for (Op op : ensureOps())
                         {
-                        Op op = aop[i];
-                        op.resolveAddresses();
                         op.write(outData, registry);
                         }
                     }
@@ -2130,8 +2192,7 @@ public class MethodStructure
         /**
          * The array of ops.
          */
-        // TODO private Op[] m_aop;
-        public Op[] m_aop;
+        private Op[] m_aop;
 
         /**
          * A coding black hole.
