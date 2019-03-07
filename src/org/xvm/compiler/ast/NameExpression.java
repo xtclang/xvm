@@ -1661,8 +1661,10 @@ public class NameExpression
 
                 PropertyConstant  id       = (PropertyConstant) argRaw;
                 PropertyStructure prop     = (PropertyStructure) id.getComponent();
-                TypeConstant      type     = prop.getType();
                 TypeConstant      typeLeft = null;
+                TypeConstant      type     = m_targetInfo == null
+                        ? prop.getType()
+                        : m_targetInfo.typeTarget.ensureTypeInfo().findProperty(id).getType();
 
                 // resolve the property type
                 if (id.isTypeSequenceTypeParameter())
