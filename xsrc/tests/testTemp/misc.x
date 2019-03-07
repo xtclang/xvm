@@ -247,7 +247,8 @@ module TestMisc.xqiz.it
 
             case 4..5:
                 console.println("4");
-                continue;
+                continue if (FOUR == 4);
+                break;
 
             case 7:
                 console.println("7");
