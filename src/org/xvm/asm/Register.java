@@ -173,7 +173,9 @@ public class Register
      */
     public Register narrowType(TypeConstant typeNarrowed)
         {
-        return new ShadowRegister(typeNarrowed);
+        return typeNarrowed.equals(getType())
+                ? this
+                : new ShadowRegister(typeNarrowed);
         }
 
     /**
@@ -622,7 +624,7 @@ public class Register
         @Override
         public void markEffectivelyFinal()
             {
-            throw new UnsupportedOperationException();
+            Register.this.markEffectivelyFinal();
             }
 
         @Override
