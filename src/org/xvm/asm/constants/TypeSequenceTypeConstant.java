@@ -150,6 +150,16 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
+    public TypeConstant getGenericParamType(String sName)
+        {
+        // since the formal type sequence is a Sequence of types (see above).
+        // we need to report the "ElementType" formal type
+        return sName.equals("ElementType")
+                ? getConstantPool().typeType()
+                : null;
+        }
+
+    @Override
     protected Relation calculateRelationToRight(TypeConstant typeRight)
         {
         // the formal type sequence is a tuple of types ...
