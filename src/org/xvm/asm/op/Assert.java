@@ -107,6 +107,13 @@ public class Assert
         }
 
     @Override
+    public boolean advances()
+        {
+        // TODO this won't work when we read from disk
+        return !(m_argTest instanceof Constant && m_argTest.equals(((Constant) m_argTest).getConstantPool().valFalse()));
+        }
+
+    @Override
     public void registerConstants(ConstantRegistry registry)
         {
         super.registerConstants(registry);

@@ -46,5 +46,11 @@ public class Return_0
         return R_RETURN;
         }
 
+    @Override
+    public boolean advances()
+        {
+        return false;
+        }
+
     public static final Return_0 INSTANCE = new Return_0();
     }

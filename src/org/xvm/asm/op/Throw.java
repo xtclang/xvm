@@ -88,6 +88,12 @@ public class Throw
         }
 
     @Override
+    public boolean advances()
+        {
+        return false;
+        }
+
+    @Override
     public String toString()
         {
         return super.toString() + " " + Argument.toIdString(m_argValue, m_nArgValue);

@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.List;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
@@ -153,11 +155,29 @@ public class GuardStart
         }
 
     @Override
+    public void markReachable(Op[] aop)
+        {
+        super.markReachable(aop);
+        findCorrespondingOp(aop, OP_GUARD_END).markNecessary();
+        }
+
+    @Override
     public void simulate(Scope scope)
         {
         scope.enter(this);
 
         m_nNextVar = scope.getCurVars();
+        }
+
+    @Override
+    public boolean branches(List<Integer> list)
+        {
+        resolveAddresses();
+        for (int i : m_aofCatch)
+            {
+            list.add(i);
+            }
+        return true;
         }
 
     private int[] m_anTypeId;

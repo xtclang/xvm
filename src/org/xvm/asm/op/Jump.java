@@ -50,4 +50,16 @@ public class Jump
         {
         return jump(frame, iPC + m_ofJmp, m_cExits);
         }
+
+    @Override
+    public boolean checkRedundant(Op[] aop)
+        {
+        if (m_ofJmp == 1)
+            {
+            markRedundant();
+            return true;
+            }
+
+        return false;
+        }
     }

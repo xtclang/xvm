@@ -7,6 +7,7 @@ import java.io.IOException;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Op;
 import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
 import org.xvm.asm.Scope;
@@ -125,6 +126,13 @@ public class CatchStart
         {
         // all the logic is actually implemented by Frame.findGuard()
         return iPC + 1;
+        }
+
+    @Override
+    public void markReachable(Op[] aop)
+        {
+        super.markReachable(aop);
+        findCorrespondingOp(aop, OP_CATCH_END).markNecessary();
         }
 
     @Override

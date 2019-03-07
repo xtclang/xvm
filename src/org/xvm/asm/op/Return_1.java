@@ -82,6 +82,12 @@ public class Return_1
         }
 
     @Override
+    public boolean advances()
+        {
+        return false;
+        }
+
+    @Override
     public void registerConstants(ConstantRegistry registry)
         {
         m_arg = registerArgument(m_arg, registry);
