@@ -1382,19 +1382,31 @@ public class Parser
                 return parseAssertStatement();
 
             case BREAK:
-                {
-                Token keyword = current();
-                Token name    = match(Id.IDENTIFIER);
-                expect(Id.SEMICOLON);
-                return new BreakStatement(keyword, name);
-                }
-
             case CONTINUE:
                 {
                 Token keyword = current();
                 Token name    = match(Id.IDENTIFIER);
+                Statement stmt = keyword.getId() == Id.BREAK
+                        ? new BreakStatement(keyword, name)
+                        : new ContinueStatement(keyword, name);
+
+                // optional: "break if (...);"
+                if (peek().getId() == Id.IF)
+                    {
+                    Token keywordIf = expect(Id.IF);
+                    expect(Id.L_PAREN);
+                    AstNode cond = parseIfCondition();
+                    expect(Id.R_PAREN);
+
+                    // turn the "break" or "continue" into the statement block
+                    StatementBlock block = new StatementBlock(Collections.singletonList(stmt));
+                    block.suppressScope();
+
+                    stmt = new IfStatement(keywordIf, cond, block);
+                    }
+
                 expect(Id.SEMICOLON);
-                return new ContinueStatement(keyword, name);
+                return stmt;
                 }
 
             case DEBUG:
@@ -1961,6 +1973,13 @@ public class Parser
             }
         while (match(Id.R_CURLY) == null);
 
+        // there must be at least one case
+        if (stmts.isEmpty())
+            {
+            putBack(getLastMatch());
+            expect(Id.CASE);
+            }
+
         return new SwitchStatement(keyword, cond, new StatementBlock(stmts,
                 tokLCurly.getStartPosition(), getLastMatch().getEndPosition()));
         }
@@ -2003,6 +2022,8 @@ public class Parser
                     break;
                     }
 
+                case BREAK:
+                case CONTINUE:
                 default:
                     if (!fAnyLabels)
                         {
@@ -2013,16 +2034,8 @@ public class Parser
                             }
                         }
                     stmts.add(parseStatement());
+                    fAnyStmts = true;
                     break;
-
-                case BREAK:
-                case CONTINUE:
-                    if (!fAnyLabels)
-                        {
-                        log(Severity.ERROR, MISSING_CASE, peek().getStartPosition(), peek().getEndPosition());
-                        }
-                    stmts.add(parseStatement());
-                    return fDefault;
 
                 case R_CURLY:
                     if (stmts.isEmpty())
@@ -3534,17 +3547,43 @@ public class Parser
      *     SwitchExpressionBlocks SwitchExpressionBlock
      *
      * SwitchExpressionBlock
-     *     SwitchLabels Expression ;
+     *     SwitchLabels ExpressionList ;
      *
      * SwitchLabels
      *     SwitchLabel
      *     SwitchLabels SwitchLabel
      *
      * SwitchLabel
-     *     "case" Expression ":"
+     *     "case" CaseOptionList ":"
      *     "default" ":"
+     *
+     * # each "case" expression may be any of:
+     * #    (a) the type of the corresponding expression (or tuple field value) in the SwitchCondition;
+     * #    (b) an Interval of that type; or
+     * #    (c) the wild-card "_" (compiled as the "blackhole" constant)
+     * # a CaseExpressionList of all wild-cards is semantically equivalent to the use of a "default"
+     * # label, and would predictably conflict with the same if both were specified.
+     * CaseOptionList:
+     *     CaseOption
+     *     CaseOptionList "," CaseOption
+     *
+     * CaseOption:
+     *     "(" CaseExpressionList "," CaseExpression ")"
+     *     SafeCaseExpression
+     *
+     * CaseExpressionList:
+     *     CaseExpression
+     *     CaseExpressionList "," CaseExpression
+     *
+     * CaseExpression:
+     *     "_"
+     *     Expression
+     *
+     * # parse for "case TernaryExpression:" because Expression parsing looks for a possible trailing ':'
+     * SafeCaseExpression:
+     *     "_"
+     *     TernaryExpression
      * </pre></code>
-     * TODO update BNF here
      *
      * @return a SwitchExpression
      */
@@ -3555,8 +3594,9 @@ public class Parser
         List<AstNode> cond = parseSwitchCondition();
         expect(Id.R_PAREN);
 
-        List<AstNode> contents = new ArrayList<>();
-        boolean       fDefault = false;
+        List<AstNode> contents  = new ArrayList<>();
+        boolean       fDefault  = false;
+        boolean       fNeedExpr = false;
         expect(Id.L_CURLY);
         while (true)
             {
@@ -3564,6 +3604,7 @@ public class Parser
                 {
                 case CASE:
                     contents.add(new CaseStatement(current(), parseCaseOptionList(), expect(Id.COLON)));
+                    fNeedExpr = true;
                     break;
 
                 case DEFAULT:
@@ -3575,22 +3616,37 @@ public class Parser
                                 tokDefault.getStartPosition(), tokDefault.getEndPosition());
                         }
                     contents.add(new CaseStatement(tokDefault, null, expect(Id.COLON)));
-                    fDefault = true;
+                    fDefault  = true;
+                    fNeedExpr = true;
                     }
                     break;
 
                 default:
-                    if (contents.isEmpty())
+                    if (!fNeedExpr)
                         {
                         log(Severity.ERROR, MISSING_CASE, peek().getStartPosition(), peek().getEndPosition());
                         throw new CompilerException("switch must start with a case");
                         }
-                    contents.add(parseExpression());
+
+                    contents.add(parseExpression()); // TODO it's an ExpressionList, so while match(',') ...
                     expect(Id.SEMICOLON);
+                    fNeedExpr = false;
                     break;
 
                 case R_CURLY:
-                    // TODO if the last thing in "contents" is a CaseStatement, then log error: missing expression!
+                    if (contents.isEmpty())
+                        {
+                        // there must be at least one case
+                        // this should result in the appropriate error being logged
+                        expect(Id.CASE);
+                        }
+                    else if (fNeedExpr)
+                        {
+                        // the last thing in "contents" is a CaseStatement; missing the expression!
+                        // this should result in the appropriate error being logged
+                        contents.add(parseExpression());
+                        }
+
                     return new SwitchExpression(keyword, cond, contents, expect(Id.R_CURLY).getEndPosition());
                 }
             }
