@@ -722,7 +722,6 @@ interface Map<KeyType, ValueType>
             if (Set<KeyType> newKeys : oldKeys.removeIf(key ->
                     {
                     entry = entry?.advance(key) : new KeyBasedCursorEntry(key);
-                    assert entry != null; // TODO: should not be necessary
                     return shouldRemove(entry.advance(key));
                     }))
                 {

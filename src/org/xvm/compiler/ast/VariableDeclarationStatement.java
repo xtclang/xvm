@@ -147,7 +147,7 @@ public class VariableDeclarationStatement
         }
 
     @Override
-    public void updateLValueFromRValueTypes(TypeConstant[] aTypes)
+    public void updateLValueFromRValueTypes(Context ctx, TypeConstant[] aTypes)
         {
         assert aTypes != null && aTypes.length == 1;
 

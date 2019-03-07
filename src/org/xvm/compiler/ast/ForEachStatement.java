@@ -458,7 +458,7 @@ public class ForEachStatement
                     }
 
                 assert aTypeLVals.length >= exprLVal.getValueCount();
-                exprLVal.updateLValueFromRValueTypes(aTypeLVals);
+                exprLVal.updateLValueFromRValueTypes(ctx, aTypeLVals);
                 }
             }
 

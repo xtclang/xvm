@@ -513,8 +513,19 @@ public class NameExpression
         }
 
     @Override
-    public void updateLValueFromRValueTypes(TypeConstant[] aTypes)
+    public void updateLValueFromRValueTypes(Context ctx, TypeConstant[] aTypes)
         {
+        assert aTypes != null && aTypes.length == 1;
+
+        TypeConstant typeNew = aTypes[0];
+        TypeConstant typeOld = getType();
+
+        if (!typeOld.equals(typeNew))
+            {
+            assert typeNew.isA(typeOld);
+
+            ctx.narrowType(this, Context.Branch.Always, typeNew);
+            }
         }
 
 

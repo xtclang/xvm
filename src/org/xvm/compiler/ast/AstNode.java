@@ -432,9 +432,10 @@ public abstract class AstNode
     /**
      * (LValue method)
      *
+     * @param ctx     the compiler context
      * @param aTypes  the type of the RValue
      */
-    public void updateLValueFromRValueTypes(TypeConstant[] aTypes)
+    public void updateLValueFromRValueTypes(Context ctx, TypeConstant[] aTypes)
         {
         throw notLValue();
         }
@@ -1136,6 +1137,10 @@ public abstract class AstNode
                         {
                         ctx = ctx.enterInferring(typeParam);
                         }
+                    // TODO: we should pass an ErrorListener to testFit() API, since in case
+                    //       of a LambdaExpression, this spot could be the only place where the
+                    //       validity of the expression was checked, resulting in MISSING_METHOD
+                    //       error rather than the actual issue at the lambda
                     TypeFit fit = exprArg.testFit(ctx, typeParam);
                     if (fit.isFit())
                         {

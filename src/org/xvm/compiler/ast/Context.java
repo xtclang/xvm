@@ -1123,7 +1123,7 @@ public class Context
     protected void narrowLocalRegister(String sName, Register reg,
                                        Branch branch, TypeConstant typeNarrow)
         {
-        assert typeNarrow.isA(reg.getType());
+        assert typeNarrow.isA(reg.getType()) || typeNarrow.isA(reg.getOriginalType());
 
         Register regNarrow = reg.narrowType(typeNarrow);
         if (branch == Branch.Always)

@@ -79,13 +79,13 @@ public class MultipleLValueStatement
         }
 
     @Override
-    public void updateLValueFromRValueTypes(TypeConstant[] aTypes)
+    public void updateLValueFromRValueTypes(Context ctx, TypeConstant[] aTypes)
         {
         assert aTypes != null && aTypes.length >= 1;
 
         for (int i = 0, c = Math.min(aTypes.length, LVals.size()); i < c; ++i)
             {
-            LVals.get(i).updateLValueFromRValueTypes(new TypeConstant[] {aTypes[i]});
+            LVals.get(i).updateLValueFromRValueTypes(ctx, new TypeConstant[] {aTypes[i]});
             }
         }
 
@@ -307,9 +307,9 @@ public class MultipleLValueStatement
             }
 
         @Override
-        public void updateLValueFromRValueTypes(TypeConstant[] aTypes)
+        public void updateLValueFromRValueTypes(Context ctx, TypeConstant[] aTypes)
             {
-            getParent().updateLValueFromRValueTypes(aTypes);
+            getParent().updateLValueFromRValueTypes(ctx, aTypes);
             }
 
         @Override

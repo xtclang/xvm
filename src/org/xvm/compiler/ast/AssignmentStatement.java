@@ -513,7 +513,7 @@ public class AssignmentStatement
 
             if (atypeRight != null)
                 {
-                nodeLeft.updateLValueFromRValueTypes(atypeRight);
+                nodeLeft.updateLValueFromRValueTypes(ctx, atypeRight);
                 }
             }
 
