@@ -2919,7 +2919,7 @@ public abstract class TypeConstant
                             }
                         }
 
-                    if (nidBase != null)
+                    if (nidBase != null && !mapVirtMethods.containsKey(nidContrib))
                         {
                         // there exists a method that this method will narrow, so add this
                         // method to the set of methods that are narrowing the super method
