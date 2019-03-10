@@ -6,8 +6,11 @@ import java.util.Set;
 
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
+
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.runtime.ObjectHandle.GenericHandle;
 
 import org.xvm.runtime.template.xString.StringHandle;
 
@@ -124,5 +127,5 @@ public interface TypeComposition
     StringHandle[] getFieldNameArray();
 
     // return an array of field value handles
-    ObjectHandle[] getFieldValueArray(ObjectHandle.GenericHandle hValue);
+    ObjectHandle[] getFieldValueArray(GenericHandle hValue);
     }
