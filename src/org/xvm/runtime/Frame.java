@@ -1271,7 +1271,8 @@ public class Frame
      * Introduce a new unnamed standard variable for the specified type.
      *
      * Note: this method increments up the "nextVar" index
-     *  @param nVar       the variable to introduce
+     *
+     * @param nVar       the variable to introduce
      * @param constType  the type constant
      */
     public void introduceResolvedVar(int nVar, TypeConstant constType)
