@@ -624,7 +624,9 @@ public class Frame
                         //      lo = ls;
                         // "add(Object o)" method needs to be wrapped on "lo" reference, to ensure the
                         // run-time type of "String"
-                        throw new UnsupportedOperationException("TODO - wrap"); // TODO: wrap the handle
+                        System.err.println("Wrapping required from: " + typeFrom.getValueString()
+                            + " to: " + typeTo.getValueString());
+                        break;
 
                     default:
                         // why did the compiler/verifier allow this?

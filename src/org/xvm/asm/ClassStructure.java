@@ -2331,6 +2331,14 @@ public class ClassStructure
         return method;
         }
 
+    /**
+     * @return true iff a object of this class needs to hold a reference to its parent
+     */
+    public boolean isInstanceChild()
+        {
+        return isInnerClass() && !isStatic();
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

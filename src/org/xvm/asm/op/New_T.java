@@ -119,13 +119,14 @@ public class New_T
         IdentityConstant constClz  = constructor.getParent().getParent().getIdentityConstant();
         ClassTemplate    template  = frame.ensureTemplate(constClz);
         ClassComposition clzTarget = template.getCanonicalClass();
+        ObjectHandle     hParent   = template.f_struct.isInstanceChild() ? frame.getThis() : null;
 
         if (frame.isNextRegister(m_nRetValue))
             {
             frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
             }
 
-        return template.construct(frame, constructor, clzTarget, null,
+        return template.construct(frame, constructor, clzTarget, hParent,
             Utils.ensureSize(ahArg, constructor.getMaxVars()), m_nRetValue);
         }
 

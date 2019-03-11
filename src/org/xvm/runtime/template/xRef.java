@@ -478,11 +478,12 @@ public class xRef
         /**
          * Ensure the RefHandle fields are initialized (only necessary for stateful Ref/Var mixins).
          *
-         * @param frame  the current frame
+         * @param frame    the current frame
+         * @param hParent  an optional "outer" synthetic property value
          *
          * @return R_NEXT, R_CALL or R_EXCEPTION
          */
-        public int ensureInitialized(Frame frame)
+        public int ensureInitialized(Frame frame, GenericHandle hParent)
             {
             if (m_fInit)
                 {
@@ -490,6 +491,11 @@ public class xRef
                 }
 
             m_fInit = true;
+
+            if (hParent != null)
+                {
+                setField(GenericHandle.OUTER, hParent);
+                }
 
             MethodStructure methodInit = getComposition().ensureAutoInitializer();
             if (methodInit == null)
