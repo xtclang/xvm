@@ -120,7 +120,8 @@ public class CallChain
         switch (bodySuper.getImplementation())
             {
             case Field:
-                return getField(frame, hThis, iReturn);
+                return hThis.getComposition().getFieldValue(frame,
+                    hThis, bodySuper.getPropertyConstant(), iReturn);
 
             case Native:
                 return hThis.getTemplate().invokeNativeN(frame, bodySuper.getMethodStructure(),
@@ -139,11 +140,6 @@ public class CallChain
             }
         }
 
-    protected int getField(Frame frame, ObjectHandle hThis, int iReturn)
-        {
-        return hThis.getTemplate().getFieldValue(frame, hThis, getProperty().getName(), iReturn);
-        }
-
     public int callSuper10(Frame frame, ObjectHandle hArg)
         {
         ObjectHandle hThis = frame.getThis();
@@ -153,7 +149,8 @@ public class CallChain
         switch (bodySuper.getImplementation())
             {
             case Field:
-                return setField(frame, hThis, hArg);
+                return hThis.getComposition().setFieldValue(frame,
+                    hThis, bodySuper.getPropertyConstant(), hArg);
 
             case Native:
                 return hThis.getTemplate().invokeNative1(frame, bodySuper.getMethodStructure(),
@@ -171,11 +168,6 @@ public class CallChain
             default:
                 throw new IllegalStateException();
             }
-        }
-
-    protected int setField(Frame frame, ObjectHandle hThis, ObjectHandle hArg)
-        {
-        return hThis.getTemplate().setFieldValue(frame, hThis, getProperty().getName(), hArg);
         }
 
     public int callSuperN1(Frame frame, ObjectHandle[] ahArg, int iReturn,

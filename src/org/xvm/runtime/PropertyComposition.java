@@ -19,6 +19,8 @@ import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
+import org.xvm.runtime.template.xRef;
+import org.xvm.runtime.template.xRef.RefHandle;
 import org.xvm.runtime.template.xString.StringHandle;
 
 /**
@@ -51,6 +53,8 @@ public class PropertyComposition
         f_mapGetters = new ConcurrentHashMap<>();
         f_mapSetters = new ConcurrentHashMap<>();
         }
+
+    // ----- TypeComposition interface -------------------------------------------------------------
 
     @Override
     public OpSupport getSupport()
@@ -197,6 +201,22 @@ public class PropertyComposition
                     ? f_clzRef.getPropertySetterChain(sName)
                     : new CallChain(infoProp.ensureOptimizedSetChain(f_infoParent));
                 });
+        }
+
+    @Override
+    public int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
+        {
+        assert f_infoProp.getIdentity().equals(idProp);
+
+        return ((xRef) getTemplate()).get(frame, (RefHandle) hTarget, iReturn);
+        }
+
+    @Override
+    public int setFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue)
+        {
+        assert f_infoProp.getIdentity().equals(idProp);
+
+        return ((xRef) getTemplate()).set(frame, (RefHandle) hTarget, hValue);
         }
 
     @Override
