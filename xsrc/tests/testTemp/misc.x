@@ -43,8 +43,6 @@ module TestMisc.xqiz.it
         testConstants();
         testImport();
         testChild();
-
-        testMethodProperty();
         }
 
     void testInts()
@@ -206,7 +204,10 @@ module TestMisc.xqiz.it
         // [18] :else1: MOV #1, #2                                      // else: move int to int (ok!)
         // [19] :end1: GP_ADD this:stack, #2, this:stack                // all done; do some string concat (ok!)
 
-        a = 4;
+        if (b==7)
+            {
+            a = 4;
+            }
         console.println("a=" + a + ", b=" + b + ", a?.to<Int>():b=" + (a?.to<Int>():b));
         // [28] VAR #-238, Ecstasy:Int64 #5                             // create temp var "#5" to hold the result of the else expression (ok!)
         // [29] VAR #-256, Ecstasy:Nullable | Ecstasy:IntLiteral #6     // create temp var #6 to hold ... um ... wrong! (wasted)
@@ -410,23 +411,186 @@ module TestMisc.xqiz.it
         Exception e = new Exception("test");
         console.println("e=" + e);
 
-    void testMethodProperty()
-        {
-        console.println("\n** testMethodProperty()");
+        e = new IllegalArgumentException("test");
+        console.println("e=" + e);
+        }
 
-        for (Int i : 1..3)
+    // TODO
+    void testTupleConv()
+        {
+        console.println("\n** testTupleConv()");
+
+        Tuple<String, IntLiteral> t1 = getTupleSI();
+        console.println("t1 = " + t1);
+
+        Tuple<String, Int> t2 = getTupleSI();
+        }
+
+    Tuple<String, IntLiteral> getTupleSI()
+        {
+        return ("Hello", 4);
+        }
+
+    void testConditional()
+        {
+        console.println("\n** testConditional()");
+        if (String s : checkPositive(17))
             {
-            showMethodProperty();
+            console.println(s);
+            }
+
+        if (String s : checkPositive(-17))
+            {
+            assert;
             }
         }
 
-    void showMethodProperty()
+    private conditional String checkPositive(Int i)
         {
-        private Int x = 0;
-        // compiles as:
-        // private Int x;       // not inside the method compilation itself
-        // x = 0;               // THIS CODE gets compiled as part of the method (but within an "if (!(&x.assigned))" check
+        return i < 0 ? false : (true, "positive");
+        }
 
-        console.println(" - in showMethodProperty(), ++x=" + ++x);
+    // TODO
+    void testMap()
+        {
+        console.println("\n** testMap()");
+
+        console.println("Map:{1=one, 2=two}=" + Map:{1="one", 2="two"});
+        }
+
+    void testAssignOps()
+        {
+        console.println("\n** testAssignOps()");
+
+        Int? n = null;
+        n ?:= 4;
+        console.println("n=" + n + " (should be 4)");
+        n ?:= 7;
+        console.println("n=" + n + " (should be 4)");
+
+        Boolean f1 = false;
+        f1 &&= true;
+        console.println("f1=" + f1 + " (should be false)");
+
+        Boolean f2 = false;
+        f2 ||= true;
+        console.println("f2=" + f2 + " (should be true)");
+
+        Boolean f3 = true;
+        f3 &&= false;
+        console.println("f3=" + f3 + " (should be false)");
+
+        Boolean f4 = true;
+        f4 ||= false;
+        console.println("f4=" + f4 + " (should be true)");
+
+        Boolean f5 = true;
+        f5 &&= true;
+        console.println("f5=" + f5 + " (should be true)");
+
+        Boolean f6 = false;
+        f6 ||= false;
+        console.println("f6=" + f6 + " (should be false)");
+        }
+
+    void testConstants()
+        {
+        console.println("\n** testConstants()");
+
+        IntLiteral lit = 42;
+        console.println("lit=" + lit);
+
+        Point point = new Point(0, 1);
+        console.println("point=" + point);
+
+        Point point2 = new NamedPoint("top-left", 1, 3);
+        console.println("point2=" + point2);
+        }
+
+    const Point(Int x, Int y);
+
+    const NamedPoint(String name, Int x, Int y)
+            extends Point(2*y, x + 1)
+        {
+        @Override
+        Int estimateStringLength()
+            {
+            return super() + name.size;
+            }
+
+        @Override
+        void appendTo(Appender<Char> appender)
+            {
+            name.appendTo(appender.add('('));
+            x.appendTo(appender.add(": x="));
+            y.appendTo(appender.add(", y="));
+            appender.add(')');
+            }
+        }
+
+    void testImport()
+        {
+        console.println("\n** testImport()");
+
+        import Int as Q;
+        Q x = 42;
+        console.println("x=" + x);
+        }
+
+    void testChild()
+        {
+        console.println("\n** testChild()");
+
+        Order order = new Order("Order-17");
+        console.println("order=" + order);
+
+        Order.OrderLine line = order.addLine("item-5");
+        console.println("line=" + line);
+
+        order = new EnhancedOrder("Order-18");
+        line = order.addLine("item-6");
+        console.println("line=" + line);
+        }
+
+    class Order(String id)
+        {
+        Int lineCount;
+        DateTime date = runtimeClock.now;
+
+        @Override
+        String to<String>()
+            {
+            return id;
+            }
+
+        OrderLine addLine(String descr)
+            {
+            return new OrderLine(++lineCount, descr);
+            }
+
+        class OrderLine(Int lineNumber, String descr)
+            {
+            @Override
+            String to<String>()
+                {
+                return Order.this.to<String>() +
+                    ": " + descr;
+                }
+            }
+        }
+
+    class EnhancedOrder(String id)
+            extends Order(id)
+        {
+        @Override
+        class OrderLine(Int lineNumber, String descr)
+            {
+            @Override
+            String to<String>()
+                {
+                return EnhancedOrder.this.to<String>() +
+                    ": " + lineNumber + ") " + descr + " @ " + date;
+                }
+            }
         }
     }
