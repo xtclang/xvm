@@ -680,13 +680,7 @@ interface Map<KeyType, ValueType>
                     {
                     if (KeyType key : keyIterator.next())
                         {
-                        // TODO verify this is private (a private property on the anon inner class)
                         private KeyBasedCursorEntry entry = new KeyBasedCursorEntry(key);
-                        // MOV_VAR entry ref                // i.e. the next register is "ref"
-                        // PGET ref Ref.assigned -> stack
-                        // JMP_TRUE stack skip_assignment
-                        // entry = new KeyBasedCursorEntry(key);
-                        // skip_assignment:
                         return true, entry.advance(key);
                         }
 

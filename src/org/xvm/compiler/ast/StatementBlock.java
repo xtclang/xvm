@@ -878,9 +878,35 @@ public class StatementBlock
                             return new TargetInfo(sName, idResult, fHasThis, info.getType(), cSteps);
                             }
                         }
+                    else if (id instanceof MethodConstant)
+                        {
+                        // first, look for a property of the given name inside this method
+                        IdentityConstant idResult = null;
+                        MethodConstant   idMethod = (MethodConstant) id;
+                        PropertyInfo     prop     = info.ensureNestedPropertiesByName(idMethod).get(sName);
+                        if (prop == null)
+                            {
+                            // second, look for any methods of the given name inside this method
+                            if (info.methodContainsMultiMethod(idMethod, sName))
+                                {
+                                // the multi-method structure does not actually exist on the
+                                // class, but its methods exist in the TypeInfo
+                                idResult = pool.ensureMultiMethodConstant(id, sName);
+                                }
+                            }
+                        else
+                            {
+                            idResult = prop.getIdentity();
+                            }
+
+                        if (idResult != null)
+                            {
+                            return new TargetInfo(sName, idResult, fHasThis, info.getType(), cSteps);
+                            }
+                        }
                     else
                         {
-                        assert id instanceof MethodConstant || id instanceof MultiMethodConstant;
+                        assert id instanceof MultiMethodConstant;
                         }
 
                     // check if we are nested inside an anonymous inner class and attempting to

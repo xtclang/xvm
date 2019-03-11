@@ -897,29 +897,40 @@ public class TypeInfo
     /**
      * Look up the property by its identity constant.
      *
-     * @param constId  the constant that identifies the property
+     * @param id  the constant that identifies the property
      *
      * @return the PropertyInfo for the specified constant, or null
      */
-    public PropertyInfo findProperty(PropertyConstant constId)
+    public PropertyInfo findProperty(PropertyConstant id)
         {
-        PropertyInfo prop = m_mapProps.get(constId);
+        PropertyInfo prop = m_mapProps.get(id);
         if (prop != null)
             {
             return prop;
             }
 
-        if (constId.getNestedDepth() == 1)
+        int cDeep = id.getNestedDepth();
+        if (cDeep == 1)
             {
-            prop = findProperty(constId.getName());
-            }
-        else
-            {
-            // TODO BUGBUG this won't find a constant that is nested
-            prop = m_mapVirtProps.get(constId.resolveNestedIdentity(pool(), m_type));
+            prop = findProperty(id.getName());
+            return prop != null && prop.isIdentityValid(id) ? prop : null;
             }
 
-        return prop != null && prop.isIdentityValid(constId) ? prop : null;
+        Object nidThis = id.getNestedIdentity();
+        for (Entry<PropertyConstant, PropertyInfo> entry : m_mapProps.entrySet())
+            {
+            PropertyConstant idThat = entry.getKey();
+            if (idThat.getNestedDepth() == cDeep && nidThis.equals(idThat.getNestedIdentity()))
+                {
+                prop = entry.getValue();
+                if (prop.isIdentityValid(id))
+                    {
+                    return prop;
+                    }
+                }
+            }
+
+        return null;
         }
 
     /**
@@ -1515,9 +1526,10 @@ public class TypeInfo
     /**
      * See if any method has the specified name.
      *
-     * @param sName  a method name
+     * @param idProp  the property to look inside of
+     * @param sName   a method name
      *
-     * @return true if the type contains at least one method (or function) by the specified name
+     * @return true if the property contains at least one method (or function) by the specified name
      */
     public boolean propertyContainsMultiMethod(PropertyConstant idProp, String sName)
         {
@@ -1526,6 +1538,29 @@ public class TypeInfo
             {
             if (method.getNestedDepth() == cReqDepth && method.getName().equals(sName)
                     && method.getNamespace().getNestedIdentity().equals(idProp.getNestedIdentity()))
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    /**
+     * See if any method has the specified name.
+     * REVIEW this really doesn't need to be its own method; we could combine it with the above method
+     *
+     * @param idMethod  the method to look inside of
+     * @param sName     a method name
+     *
+     * @return true if the method contains at least one method (or function) by the specified name
+     */
+    public boolean methodContainsMultiMethod(MethodConstant idMethod, String sName)
+        {
+        int cReqDepth = idMethod.getNestedDepth() + 2;
+        for (MethodConstant method : m_mapMethods.keySet())
+            {
+            if (method.getNestedDepth() == cReqDepth && method.getName().equals(sName)
+                    && method.getNamespace().getNestedIdentity().equals(idMethod.getNestedIdentity()))
                 {
                 return true;
                 }

@@ -1218,7 +1218,7 @@ public class TypeCompositionStatement
                                 null, null,
                                 typeDefault,
                                 composition.keyword,
-                                exprValue,
+                                null, exprValue,
                                 null, null);
                         propDefault.markSynthetic();
                         typeDefault.setParent(propDefault);
@@ -1302,7 +1302,7 @@ public class TypeCompositionStatement
                     // create the property and get it caught up to where we are
                     PropertyDeclarationStatement prop = new PropertyDeclarationStatement(
                             param.getStartPosition(), param.getEndPosition(), null, null, null,
-                            param.getType(), param.getNameToken(), null, null, null);
+                            param.getType(), param.getNameToken(), null, null, null, null);
                     prop.markSynthetic();
                     prop.setParent(this);
                     prop.registerStructures(mgr, errs);
