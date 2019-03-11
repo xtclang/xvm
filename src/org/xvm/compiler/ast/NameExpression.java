@@ -907,7 +907,7 @@ public class NameExpression
 
                         case Left:
                             {
-                            Argument argLeft = left.generateArgument(ctx, code, false, false, errs);
+                            Argument argLeft = left.generateArgument(ctx, code, false, true, errs);
                             code.add(new P_Get(idProp, argLeft, argLVal));
                             break;
                             }
@@ -1038,7 +1038,7 @@ public class NameExpression
 
                     case Left:
                         {
-                        Argument argLeft = left.generateArgument(ctx, code, false, false, errs);
+                        Argument argLeft = left.generateArgument(ctx, code, false, true, errs);
                         code.add(new P_Get(idProp, argLeft, regTemp));
                         break;
                         }
@@ -1963,10 +1963,21 @@ public class NameExpression
             return m_propAccessPlan;
             }
 
-        return left == null ||
-              (left instanceof NameExpression && ((NameExpression) left).getName().equals("this"))
-                ? PropertyAccess.This
-                : PropertyAccess.Left;
+        if (left == null)
+            {
+            return PropertyAccess.This;
+            }
+
+        if (left instanceof NameExpression)
+            {
+            NameExpression exprLeft = (NameExpression) left;
+            // check that "this" is not "OuterThis"
+            if (exprLeft.getName().equals("this") && exprLeft.m_plan == Plan.None)
+                {
+                return PropertyAccess.This;
+                }
+            }
+        return PropertyAccess.Left;
         }
 
     // ----- debugging assistance ------------------------------------------------------------------
