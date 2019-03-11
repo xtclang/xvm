@@ -1209,10 +1209,11 @@ public class Parser
             Expression exprCondition, Token doc, List<Token> modifiers,
             List<Annotation> annotations, TypeExpression type, Token name)
         {
-        Expression     value   = null;
-        StatementBlock body    = null;
+        Token          tokAsn = null;
+        Expression     value  = null;
+        StatementBlock body   = null;
         long           lEndPos;
-        if (match(Id.ASN) != null)
+        if ((tokAsn = match(Id.ASN)) != null)
             {
             // "=" Expression ";"
             value   = parseExpression();
@@ -1246,7 +1247,7 @@ public class Parser
             }
 
         return new PropertyDeclarationStatement(lStartPos, lEndPos, exprCondition,
-                modifiers, annotations, type, name, value, body, doc);
+                modifiers, annotations, type, name, tokAsn, value, body, doc);
         }
 
     /**

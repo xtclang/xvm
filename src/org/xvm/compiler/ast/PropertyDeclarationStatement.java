@@ -7,16 +7,26 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.xvm.asm.Component;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
+import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
+import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.asm.op.JumpTrue;
+import org.xvm.asm.op.Label;
+import org.xvm.asm.op.P_Get;
+import org.xvm.asm.op.P_Var;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
@@ -43,6 +53,7 @@ public class PropertyDeclarationStatement
                                         List<Annotation> annotations,
                                         TypeExpression   type,
                                         Token            name,
+                                        Token            tokAsn,
                                         Expression       value,
                                         StatementBlock   body,
                                         Token            doc)
@@ -85,6 +96,7 @@ public class PropertyDeclarationStatement
         this.annotations = annotations;
         this.type        = type;
         this.name        = name;
+        this.tokAsn      = tokAsn;
         this.value       = value;
         this.body        = body;
         this.doc         = doc;
@@ -142,7 +154,7 @@ public class PropertyDeclarationStatement
     public Access getDefaultAccess()
         {
         // properties are *not* taking the parent's access by default
-        Access  access = getAccess(modifiers);
+        Access access = getAccess(modifiers);
         return access == null ? Access.PUBLIC : access;
         }
 
@@ -187,12 +199,22 @@ public class PropertyDeclarationStatement
                             return Access.PRIVATE;
                             }
                         break;
-
                     }
                 }
             }
 
         return null;
+        }
+
+    /**
+     * @return true iff this property is nested directly within a method, such that it is processed
+     *         as part of the method compilation
+     */
+    public boolean isInMethod()
+        {
+        Component componentParent = getParent().getComponent();
+        assert componentParent != null;
+        return componentParent.getFormat() == Format.METHOD;
         }
 
     @Override
@@ -215,57 +237,99 @@ public class PropertyDeclarationStatement
     @Override
     protected void registerStructures(StageMgr mgr, ErrorListener errs)
         {
-        // create the structure for this property
-        if (getComponent() == null)
+        if (getComponent() != null)
             {
-            // create a structure for this type
-            String    sName     = name.getValueText();
-            Component container = getParent().getComponent();
-            if (container.isClassContainer())
+            return;
+            }
+
+        String    sName     = name.getValueText();
+        Component container = getParent().getComponent();
+        if (!container.isClassContainer())
+            {
+            log(errs, Severity.ERROR, Compiler.PROP_UNEXPECTED, sName, container);
+            return;
+            }
+
+        // another property by the same name should not already exist (other than in the case of
+        // conditionals, which are not yet implemented)
+        if (container.getChild(sName) != null)
+            {
+            log(errs, Severity.ERROR, Compiler.PROP_DUPLICATE, sName);
+            return;
+            }
+
+        // create the structure for this property
+        Access  accessDft = getDefaultAccess();
+        Access  accessGet = getAccess(modifiers);
+        Access  accessSet = getAccess2();
+        boolean fStatic   = isStatic();
+        boolean fInMethod = isInMethod();
+
+        if (fInMethod)
+            {
+            if (fStatic && accessGet != null)
                 {
-                // TODO sanity checks on the declaration of the property e.g. no "private/public", no "public/private static", no "static abstract", etc.
-
-                // another property by the same name should not already exist, but the check for
-                // duplicates is deferred, since it is possible (thanks to the complexity of
-                // conditionals) to have multiple components occupying the same location within the
-                // namespace at this point in the compilation
-                // TODO if (container.getProperty(sName) != null) ...
-
-                // the type constant we get from the type expression may be unresolved,
-                // but it will resolve when the type expression resolves names
-                TypeConstant      constType = type.ensureTypeConstant();
-                PropertyStructure prop      = container.createProperty(
-                        isStatic(), getDefaultAccess(), getAccess2(), constType, sName);
-                if (value != null)
-                    {
-                    prop.indicateInitialValue();
-                    }
-                prop.setSynthetic(fSynthetic);
-                setComponent(prop);
-
-                // the annotations either have to be registered on the type or on the property, so
-                // register them on the property for now (they'll get sorted out later after we
-                // can resolve the types to figure out what the annotation targets actually are)
-                if (annotations != null)
-                    {
-                    ConstantPool pool = pool();
-                    for (Annotation annotation : annotations)
-                        {
-                        prop.addAnnotation(annotation.ensureAnnotation(pool));
-                        }
-                    }
+                // a property in a method must either say "private" or "static", but not both
+                log(errs, Severity.ERROR, Compiler.STATIC_PROP_IN_METHOD_HAS_ACCESS,
+                        sName, container.getIdentityConstant().getValueString());
                 }
-            else
+            else if (accessGet != Access.PRIVATE)
                 {
-                log(errs, Severity.ERROR, Compiler.PROP_UNEXPECTED, sName, container);
+                // for a property in a method, the only allowable access is "private"
+                log(errs, Severity.ERROR, Compiler.PROP_IN_METHOD_NOT_PRIVATE,
+                        sName, container.getIdentityConstant().getValueString());
+                }
+
+            // properties in a method will always be created as "private"
+            accessDft = Access.PRIVATE;
+            }
+
+        if (accessSet != null)
+            {
+            if (accessSet == accessGet)
+                {
+                accessSet = null;
+                }
+            else if (fStatic)
+                {
+                // illegal to combine a setter-specific access with static
+                log(errs, Severity.ERROR, Compiler.STATIC_PROP_HAS_SETTER_ACCESS,
+                        sName, container.getIdentityConstant().getValueString());
+                accessSet = null;
+                }
+            else if (accessSet.isMoreAccessibleThan(accessGet))
+                {
+                // illegal to have a setter-specific access that is more accessible than the default
+                // access (the getter access)
+                log(errs, Severity.ERROR, Compiler.PROP_SETTER_ACCESS_TOO_ACCESSIBLE,
+                        sName, container.getIdentityConstant().getValueString());
+                accessSet = null;
                 }
             }
-        }
 
-    @Override
-    public void resolveNames(StageMgr mgr, ErrorListener errs)
-        {
-        // TODO?
+        // the type constant we get from the type expression may be unresolved,
+        // but it will resolve when the type expression resolves names
+        TypeConstant      constType = type.ensureTypeConstant();
+        PropertyStructure prop      = container.createProperty(
+                fStatic, accessDft, accessSet, constType, sName);
+        if (value != null)
+            {
+            prop.indicateInitialValue();
+            }
+        prop.setSynthetic(fSynthetic);
+        setComponent(prop);
+
+        // the annotations either have to be registered on the type or on the property, so
+        // register them on the property for now (they'll get sorted out later after we
+        // can resolve the types to figure out what the annotation targets actually are)
+        if (annotations != null)
+            {
+            ConstantPool pool = pool();
+            for (Annotation annotation : annotations)
+                {
+                prop.addAnnotation(annotation.ensureAnnotation(pool));
+                }
+            }
         }
 
     @Override
@@ -284,53 +348,73 @@ public class PropertyDeclarationStatement
 
             if (prop.hasInitialValue())
                 {
-                TypeConstant type = prop.getType();
-                assert !type.containsUnresolved();
-
-                // create an initializer function
-                MethodStructure methodInit = prop.createMethod(true, Access.PRIVATE,
-                        org.xvm.asm.Annotation.NO_ANNOTATIONS,
-                        new Parameter[] {new Parameter(pool(), type, null, null, true, 0, false)},
-                        "=", Parameter.NO_PARAMS, true, false);
-
-                // wrap it with a pretend function in the AST tree
-                MethodDeclarationStatement stmtInit = adopt(
-                        new MethodDeclarationStatement(methodInit, value));
-
-                // we're going to compile the initializer now, so that we can determine if it could
-                // be discarded and replaced with a constant
-                // IMPORTANT NOTE: this goes forward BEYOND validation, so the caller's context
-                // must be ready to resolve the corresponding names (e.g. see NewExpression)
-                if (!(new StageMgr(stmtInit, Stage.Emitted, errs).fastForward(10)))
+                if (isInMethod() && !isStatic())
                     {
-                    mgr.requestRevisit();
-                    return;
-                    }
+                    // the assignment will occur as part of the execution of the method body
+                    AssignmentStatement stmtInit = adopt(new AssignmentStatement(
+                                new NameExpression(name), tokAsn, value));
+                    stmtInit.introduceParentage();
+                    if (!(new StageMgr(stmtInit, Stage.Resolved, errs).fastForward(3)))
+                        {
+                        mgr.requestRevisit();
+                        return;
+                        }
 
-                // if in the process of compiling the initializer, it became obvious that the result
-                // was a constant value, then just take that constant value and discard the
-                // initializer
-                Expression valueNew = stmtInit.getInitializerExpression();
-                if (valueNew != null && valueNew.isConstant()) // REVIEW !valueNew.isCompletable() && valueNew.isRuntimeConstant())
-                    {
-                    value = adopt(valueNew);
-
-                    Constant constValue = valueNew.toConstant();
-                    assert !constValue.containsUnresolved() && !constValue.getType().containsUnresolved();
-                    prop.setInitialValue(valueNew.validateAndConvertConstant(constValue, type, errs));
-
-                    // discard the initializer by removing the entire MultiMethodStructure
-                    MultiMethodStructure mms = (MultiMethodStructure) methodInit.getParent();
-                    mms.getParent().removeChild(mms);
+                    // the assignment statement takes the place of the initial value, but there
+                    // should not be any side-effects of leaving the "value" field assigned
+                    //   value = null;
+                    assignment = stmtInit;
                     }
                 else
                     {
-                    // clear the "has initial value" setting
-                    prop.setInitialValue(null);
+                    TypeConstant type = prop.getType();
+                    assert !type.containsUnresolved();
 
-                    // REVIEW should value be nulled out since it's now "owned by" initializer?
-                    // REVIEW and if so, what other methods make decisions based on "value != null"?
-                    initializer = stmtInit;
+                    // create an initializer function
+                    MethodStructure methodInit = prop.createMethod(true, Access.PRIVATE,
+                            org.xvm.asm.Annotation.NO_ANNOTATIONS,
+                            new Parameter[] {new Parameter(pool(), type, null, null, true, 0, false)},
+                            "=", Parameter.NO_PARAMS, true, false);
+
+                    // wrap it with a pretend function in the AST tree
+                    MethodDeclarationStatement stmtInit = adopt(
+                            new MethodDeclarationStatement(methodInit, value));
+
+                    // we're going to compile the initializer now, so that we can determine if it could
+                    // be discarded and replaced with a constant
+                    // IMPORTANT NOTE: this goes forward BEYOND validation, so the caller's context
+                    // must be ready to resolve the corresponding names (e.g. see NewExpression)
+                    if (!(new StageMgr(stmtInit, Stage.Emitted, errs).fastForward(10)))
+                        {
+                        mgr.requestRevisit();
+                        return;
+                        }
+
+                    // if in the process of compiling the initializer, it became obvious that the result
+                    // was a constant value, then just take that constant value and discard the
+                    // initializer
+                    Expression valueNew = stmtInit.getInitializerExpression();
+                    if (valueNew != null && valueNew.isConstant()) // REVIEW !valueNew.isCompletable() && valueNew.isRuntimeConstant())
+                        {
+                        value = adopt(valueNew);
+
+                        Constant constValue = valueNew.toConstant();
+                        assert !constValue.containsUnresolved() && !constValue.getType().containsUnresolved();
+                        prop.setInitialValue(valueNew.validateAndConvertConstant(constValue, type, errs));
+
+                        // discard the initializer by removing the entire MultiMethodStructure
+                        MultiMethodStructure mms = (MultiMethodStructure) methodInit.getParent();
+                        mms.getParent().removeChild(mms);
+                        }
+                    else
+                        {
+                        // clear the "has initial value" setting
+                        prop.setInitialValue(null);
+
+                        // REVIEW should value be nulled out since it's now "owned by" initializer?
+                        // REVIEW and if so, what other methods make decisions based on "value != null"?
+                        initializer = stmtInit;
+                        }
                     }
                 }
             }
@@ -339,13 +423,73 @@ public class PropertyDeclarationStatement
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
+        if (assignment != null)
+            {
+            // first, invalidate all TypeInfos that should have included this property, because
+            // the cached TypeInfos will be wrong (this is a temporary solution, because it doesn't
+            // follow the dependency graph and clean it up)
+            IdentityConstant id   = ctx.getThisClass().getIdentityConstant();
+            ConstantPool     pool = pool();
+            pool.ensureClassTypeConstant(id, Access.PUBLIC   ).clearTypeInfo();
+            pool.ensureClassTypeConstant(id, Access.PROTECTED).clearTypeInfo();
+            pool.ensureClassTypeConstant(id, Access.PRIVATE  ).clearTypeInfo();
+            pool.ensureClassTypeConstant(id, Access.STRUCT   ).clearTypeInfo();
+            ctx.getThisType().clearTypeInfo();
+
+            AssignmentStatement stmtNew = (AssignmentStatement) assignment.validate(ctx, errs);
+            if (stmtNew == null)
+                {
+                return null;
+                }
+            assignment = stmtNew;
+            }
+
         return this;
         }
 
     @Override
     protected boolean emit(Context ctx, boolean fReachable, MethodStructure.Code code, ErrorListener errs)
         {
-        return true;
+        boolean fCompletes = fReachable;
+
+        // this is the code generation for a property inside of a method; see for example the
+        // "Map.KeyBasedEntrySet.iterator().Iterator#1.next().entry" property:
+        //
+        //     private KeyBasedCursorEntry entry = new KeyBasedCursorEntry(key);
+        //
+        // the compilation must ensure that the first execution of the "next()" method for an
+        // instance of the "Iterator#1" inner class will initialize the property:
+        //
+        //     MOV_VAR entry ref                  # i.e. the next register is "ref"
+        //     PGET ref Ref.assigned -> stack     # is the property already assigned?
+        //     JMP_TRUE stack skip_assignment     # if it is, then skip over assigning it
+        //     NEWC KeyBasedCursorEntry entry     # entry = new KeyBasedCursorEntry(key);
+        //     skip_assignment:
+        //
+        // for a constant (a static property), the initialization is done as it would be if the
+        // property were nested directly under the class itself, through an initialization function.
+        // no code is contributed to the method for a static property.
+        if (assignment != null)
+            {
+            NameExpression   exprProp        = (NameExpression) assignment.getLValueExpression();
+            ConstantPool     pool            = pool();
+            PropertyConstant idProp          = (PropertyConstant) exprProp.getIdentity(ctx);
+            TypeConstant     typeVar         = idProp.getRefType(pool.ensureAccessTypeConstant(
+                                               ctx.getThisType(), Access.PRIVATE));  // REVIEW GG should context always give us PRIVATE type?
+            Register         regPropRef      = new Register(typeVar, Op.A_STACK);
+            Register         regAssigned     = new Register(pool.typeBoolean(), Op.A_STACK);
+            Label            labelSkipAssign = new Label("skip_assign_" + idProp.getName());
+            PropertyConstant idAssigned      = typeVar.ensureTypeInfo(errs)
+                                               .findProperty("assigned").getIdentity();
+
+            code.add(new P_Var(idProp, ctx.resolveReservedName("this"), regPropRef));
+            code.add(new P_Get(idAssigned, regPropRef, regAssigned));
+            code.add(new JumpTrue(regAssigned, labelSkipAssign));
+            fCompletes = assignment.completes(ctx, fCompletes, code, errs);
+            code.add(labelSkipAssign);
+            }
+
+        return fCompletes;
         }
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -438,13 +582,15 @@ public class PropertyDeclarationStatement
     protected List<Annotation>   annotations;
     protected TypeExpression     type;
     protected Token              name;
+    protected Token              tokAsn;
     protected Expression         value;
     protected StatementBlock     body;
     protected Token              doc;
 
     protected transient MethodDeclarationStatement initializer;
     protected transient boolean                    fSynthetic;
+    protected transient AssignmentStatement        assignment;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(PropertyDeclarationStatement.class,
-            "condition", "annotations", "type", "value", "body", "initializer");
+            "condition", "annotations", "type", "value", "body", "initializer", "assignment");
     }

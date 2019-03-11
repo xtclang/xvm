@@ -204,7 +204,10 @@ module TestMisc.xqiz.it
         // [18] :else1: MOV #1, #2                                      // else: move int to int (ok!)
         // [19] :end1: GP_ADD this:stack, #2, this:stack                // all done; do some string concat (ok!)
 
-        a = 4;
+        if (b==7)
+            {
+            a = 4;
+            }
         console.println("a=" + a + ", b=" + b + ", a?.to<Int>():b=" + (a?.to<Int>():b));
         // [28] VAR #-238, Ecstasy:Int64 #5                             // create temp var "#5" to hold the result of the else expression (ok!)
         // [29] VAR #-256, Ecstasy:Nullable | Ecstasy:IntLiteral #6     // create temp var #6 to hold ... um ... wrong! (wasted)

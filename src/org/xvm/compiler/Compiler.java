@@ -1103,6 +1103,22 @@ public class Compiler
      */
     public static final String CATCH_TYPE_ALREADY_CAUGHT          = "COMPILER-118";
     /**
+     * No access can be specified for the static property {0} in the method {1}.
+     */
+    public static final String STATIC_PROP_IN_METHOD_HAS_ACCESS   = "COMPILER-119";
+    /**
+     * Only private access can be specified for the property {0} in the method {1}.
+     */
+    public static final String PROP_IN_METHOD_NOT_PRIVATE         = "COMPILER-120";
+    /**
+     * The "set" access must not be specified on the static property {0} on {1}.
+     */
+    public static final String STATIC_PROP_HAS_SETTER_ACCESS      = "COMPILER-121";
+    /**
+     * The "set" access is more accessible than the "get" access for property {0} on {1}.
+     */
+    public static final String PROP_SETTER_ACCESS_TOO_ACCESSIBLE  = "COMPILER-122";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

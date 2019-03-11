@@ -230,15 +230,14 @@ TypeCompositionComponent
     AccessModifier-opt TypeDefStatement
     ImportStatement
     TypeCompositionStatement
-    PropertyDeclaration
+    PropertyDeclarationStatement
     MethodDeclarationStatement
-    ConstantDeclaration
 
 #
 # properties
 #
 
-PropertyDeclaration
+PropertyDeclarationStatement
     PropertyModifiers-opt TypeExpression Name PropertyDeclarationFinish-opt
 
 PropertyModifiers
@@ -246,7 +245,7 @@ PropertyModifiers
     PropertyModifiers PropertyModifiers
 
 PropertyModifier
-     "static"
+    "static"
     PropertyAccessModifier
     Annotation
 
@@ -297,13 +296,6 @@ MethodDeclarationFinish
     StatementBlock
 
 #
-# constants
-#
-
-ConstantDeclaration
-    static TypeExpression Name "=" Expression;
-
-#
 # statements
 #
 
@@ -313,7 +305,7 @@ ConstantDeclaration
 # note: no "empty statement"
 Statement
     TypeCompositionStatement
-    PropertyDeclarationStatement
+    PropertyDeclarationStatement        # note: always "static" or "private"
     MethodDeclarationStatement
 	VariableDeclaration ";"
 	Assignment ";"
@@ -334,9 +326,6 @@ Statement
     WithStatement
     StatementBlock
 	Expression ";"      // for parsing purposes (compilation will only allow specific expression forms)
-
-PropertyDeclarationStatement
-    "static" TypeExpression Name PropertyDeclarationFinish-opt
 
 StatementBlock
     "{" Statements "}"
