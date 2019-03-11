@@ -277,6 +277,14 @@ public class Register
         }
 
     /**
+     * @return true iff the register represents "this:struct" pre-defined argument
+     */
+    public boolean isStruct()
+        {
+        return m_iArg == Op.A_STRUCT;
+        }
+
+    /**
      * @return true iff the register represents a label
      */
     public boolean isLabel()

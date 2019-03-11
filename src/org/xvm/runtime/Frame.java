@@ -624,7 +624,9 @@ public class Frame
                         //      lo = ls;
                         // "add(Object o)" method needs to be wrapped on "lo" reference, to ensure the
                         // run-time type of "String"
-                        throw new UnsupportedOperationException("TODO - wrap"); // TODO: wrap the handle
+                        System.err.println("Wrapping required from: " + typeFrom.getValueString()
+                            + " to: " + typeTo.getValueString());
+                        break;
 
                     default:
                         // why did the compiler/verifier allow this?
@@ -1269,7 +1271,8 @@ public class Frame
      * Introduce a new unnamed standard variable for the specified type.
      *
      * Note: this method increments up the "nextVar" index
-     *  @param nVar       the variable to introduce
+     *
+     * @param nVar       the variable to introduce
      * @param constType  the type constant
      */
     public void introduceResolvedVar(int nVar, TypeConstant constType)

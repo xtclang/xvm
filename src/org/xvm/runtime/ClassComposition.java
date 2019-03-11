@@ -21,6 +21,8 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.runtime.ObjectHandle.GenericHandle;
+
 import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xString.StringHandle;
 
@@ -316,7 +318,7 @@ public class ClassComposition
         }
 
     @Override
-    public ObjectHandle[] getFieldValueArray(ObjectHandle.GenericHandle hValue)
+    public ObjectHandle[] getFieldValueArray(GenericHandle hValue)
         {
         Set<String> setNames = getFieldNames();
         if (setNames.isEmpty())

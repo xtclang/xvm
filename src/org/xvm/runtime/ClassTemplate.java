@@ -714,10 +714,11 @@ public abstract class ClassTemplate
         MethodStructure method = chain.getTop();
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
 
-        ObjectHandle hProp = ((GenericHandle) hTarget).getField(sPropName);
+        GenericHandle hValue = (GenericHandle) hTarget;
+        ObjectHandle  hProp  = hValue.getField(sPropName);
         if (hProp instanceof RefHandle && hTarget.isRefAnnotated(sPropName))
             {
-            switch (((RefHandle) hProp).ensureInitialized(frame))
+            switch (((RefHandle) hProp).ensureInitialized(frame, hValue))
                 {
                 case Op.R_NEXT:
                     break;
@@ -786,7 +787,7 @@ public abstract class ClassTemplate
         if (hTarget.isRefAnnotated(sPropName))
             {
             RefHandle hRef = (RefHandle) hValue;
-            switch (hRef.ensureInitialized(frame))
+            switch (hRef.ensureInitialized(frame, hThis))
                 {
                 case Op.R_NEXT:
                     break;
@@ -865,7 +866,7 @@ public abstract class ClassTemplate
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle hRef = (RefHandle) hThis.getField(sPropName);
 
-            switch (hRef.ensureInitialized(frame))
+            switch (hRef.ensureInitialized(frame, hThis))
                 {
                 case Op.R_NEXT:
                     break;
@@ -913,7 +914,7 @@ public abstract class ClassTemplate
         if (hThis.isRefAnnotated(sPropName))
             {
             RefHandle hRef = (RefHandle) hThis.getField(sPropName);
-            switch (hRef.ensureInitialized(frame))
+            switch (hRef.ensureInitialized(frame, hThis))
                 {
                 case Op.R_NEXT:
                     break;
@@ -1359,7 +1360,7 @@ public abstract class ClassTemplate
         if (hTarget.isRefAnnotated(sPropName))
             {
             RefHandle hRef = (RefHandle) hThis.getField(sPropName);
-            switch (hRef.ensureInitialized(frame))
+            switch (hRef.ensureInitialized(frame, hThis))
                 {
                 case Op.R_NEXT:
                     break;

@@ -431,7 +431,9 @@ public abstract class IdentityConstant
             IdentityConstant idThat = that.getIdentityConstant();
             while (idThis.isNested() && idThat.isNested())
                 {
-                if (!resolve(idThis.getPathElement()).equals(resolve(idThat.getPathElement())))
+                Object oThis = this.resolve(idThis.getPathElement());
+                Object oThat = that.resolve(idThat.getPathElement());
+                if (!oThis.equals(oThat))
                     {
                     return false;
                     }

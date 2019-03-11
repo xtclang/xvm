@@ -2919,17 +2919,31 @@ public abstract class TypeConstant
                             }
                         }
 
-                    if (nidBase != null && !mapVirtMethods.containsKey(nidContrib))
+                    if (nidBase != null)
                         {
-                        // there exists a method that this method will narrow, so add this
-                        // method to the set of methods that are narrowing the super method
-                        if (mapNarrowedNids == null)
+                        if (nidBase.equals(nidContrib))
                             {
-                            mapNarrowedNids = new HashMap<>();
+                            // while the ids are "equal", they are not the same;
+                            // one of them may have a resolver and the other may not;
+                            // as a result, the call to
+                            //      constId.appendNestedIdentity(pool, nid)
+                            // below may produce different results
+                            // TODO: consider making appendNestedIdentity() implementation
+                            //       more predictable and "m_resolver" aware
+                            nidContrib = nidBase;
                             }
-                        Set<Object> setNarrowing = mapNarrowedNids.computeIfAbsent(
-                            nidBase, key_ -> new HashSet<>());
-                        setNarrowing.add(nidContrib);
+                        else
+                            {
+                            // there exists a method that this method will narrow, so add this
+                            // method to the set of methods that are narrowing the super method
+                            if (mapNarrowedNids == null)
+                                {
+                                mapNarrowedNids = new HashMap<>();
+                                }
+                            Set<Object> setNarrowing = mapNarrowedNids.computeIfAbsent(
+                                nidBase, key_ -> new HashSet<>());
+                            setNarrowing.add(nidContrib);
+                            }
                         }
                     }
                 }
@@ -3040,101 +3054,6 @@ public abstract class TypeConstant
                 }
             }
         return listMatch;
-        }
-
-    /**
-     * Find the method that would be the "super" of the specified method signature. A super is
-     * required to exist, and one super must be the unambiguously best choice, otherwise an error
-     * will be logged.
-     *
-     * @param nidSub     the nested identity of the method that is searching for a super
-     * @param mapSupers  the possible super methods to select from
-     * @param errs       the error list to log any errors to
-     *
-     * @return the nested identity for the super method, or null if there is no one unambiguously
-     *         "best" super method signature to be found
-     */
-    protected Object findRequiredSuper(
-            Object                  nidSub,
-            SignatureConstant       sigSub,
-            Map<Object, MethodInfo> mapSupers,
-            ErrorListener           errs)
-        {
-        // check for exact match
-        if (mapSupers.containsKey(nidSub))
-            {
-            return nidSub;
-            }
-
-        // brute force search
-        Object            nidBest   = null;
-        List<Object>      listMatch = null;
-        for (Entry<Object, MethodInfo> entry : mapSupers.entrySet())
-            {
-            Object nidCandidate = entry.getKey();
-            if (IdentityConstant.isNestedSibling(nidSub, nidCandidate))
-                {
-                SignatureConstant sigCandidate = entry.getValue().getSignature(); // resolved
-                if (sigSub.isSubstitutableFor(sigCandidate, this))
-                    {
-                    if (listMatch == null)
-                        {
-                        if (nidBest == null)
-                            {
-                            nidBest = nidCandidate;
-                            }
-                        else
-                            {
-                            // we've got at least 2 matches, so we'll need to compare them all
-                            listMatch = new ArrayList<>();
-                            listMatch.add(nidBest);
-                            listMatch.add(nidCandidate);
-                            nidBest = null;
-                            }
-                        }
-                    else
-                        {
-                        listMatch.add(nidCandidate);
-                        }
-                    }
-                }
-            }
-
-        // if none match, then there is no match; if only 1 matches, then use it
-        if (listMatch == null)
-            {
-            if (nidBest == null)
-                {
-                log(errs, Severity.ERROR, VE_SUPER_MISSING,
-                        sigSub.getValueString(), getValueString());
-                }
-
-            return nidBest;
-            }
-
-        // collect the signatures and create an inverse lookup map
-        int                            cMatches = listMatch.size();
-        SignatureConstant[]            aSig     = new SignatureConstant[cMatches];
-        Map<SignatureConstant, Object> mapNids  = new HashMap<>(cMatches);
-        for (int i = 0; i < cMatches; i++)
-            {
-            Object            nidMatch = listMatch.get(i);
-            SignatureConstant sig      = mapSupers.get(nidMatch).getSignature();
-
-            assert sig != null;
-
-            aSig[i] = sig;
-            mapNids.put(sig, nidMatch);
-            }
-
-        SignatureConstant sigBest = selectBest(aSig);
-        if (sigBest == null)
-            {
-            log(errs, Severity.ERROR, VE_SUPER_AMBIGUOUS, sigSub.getValueString());
-            }
-
-        // return the corresponding nid
-        return mapNids.get(sigBest);
         }
 
     /**

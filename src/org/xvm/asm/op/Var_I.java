@@ -14,6 +14,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -104,8 +105,20 @@ public class Var_I
                 return R_REPEAT;
                 }
 
-            frame.introduceVar(m_nVar, convertId(m_nType), 0, Frame.VAR_STANDARD, hArg);
+            if (isDeferred(hArg))
+                {
+                ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
+                Frame.Continuation stepNext = frameCaller ->
+                    {
+                    frameCaller.introduceVar(m_nVar, convertId(m_nType),
+                            0, Frame.VAR_STANDARD, ahArg[0]);
+                    return iPC + 1;
+                    };
 
+                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
+                }
+
+            frame.introduceVar(m_nVar, convertId(m_nType), 0, Frame.VAR_STANDARD, hArg);
             return iPC + 1;
             }
         catch (ObjectHandle.ExceptionHandle.WrapperException e)

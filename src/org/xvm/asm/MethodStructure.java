@@ -1192,7 +1192,7 @@ public class MethodStructure
         int nLine = 1;
         for (int i = 0; i < iPC; i++)
             {
-            Op op = aOp[i];
+            Op op = aOp[i].ensureOp();
             if (op instanceof Nop)
                 {
                 nLine += ((Nop) op).getLineCount();
@@ -1969,7 +1969,7 @@ public class MethodStructure
                     ++cNew;
                     }
                 }
-            
+
             if (cNew == cOld)
                 {
                 return false;
