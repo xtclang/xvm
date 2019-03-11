@@ -2188,3 +2188,18 @@ throw e_close
 skip_throw: CATCH_E
 FINALLY_E
 EXIT
+
+// --- services thoughts
+
+// we need a buffer that we can pass between services. since it's a mutable buffer (even if it
+// represents the data it carries immutably), it needs to be a "service" itself (kind of like
+// how atomic properties are "services").
+
+service ReadBuffer
+    {
+    Int first;
+
+    Int last;
+
+    void release();
+    }
