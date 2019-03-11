@@ -163,7 +163,7 @@ const Number
     Nibble[] to<Nibble[]>()
         {
         // make sure the bit length is at least 8, and also a power-of-two
-        assert Number.this.bitLength == (Number.this.bitLength & ~0x7).leftmostBit;
+        assert bitLength == (bitLength & ~0x7).leftmostBit;
 
         // unused
         class SequenceImpl(Number num)
