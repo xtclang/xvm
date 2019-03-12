@@ -816,12 +816,22 @@ public class StatementBlock
                         }
                     else
                         {
+                        TypeConstant typeClz = pool.ensureAccessTypeConstant(typeThis == null
+                                ? ((ClassStructure) idClz.getComponent()).getFormalType()
+                                : typeThis, access);
+
+                        // invalidate the TypeInfo that might have been created before diving into
+                        // this method to compile it
+                        // TODO this is a temporary solution, because it doesn't follow the
+                        //      dependency graph and clean it up, and it will invalidate every
+                        //      time we look this name up
+                        if (idPrev == null && ctxFrom.getMethod().getChildrenCount() > 0)
+                            {
+                            typeClz.clearTypeInfo();
+                            }
+
                         idPrev   = idClz;
-                        infoPrev = info = pool.ensureAccessTypeConstant(
-                                typeThis == null ?
-                                    ((ClassStructure) idClz.getComponent()).getFormalType()
-                                    : typeThis, access)
-                                .ensureTypeInfo(errs);
+                        infoPrev = info = typeClz.ensureTypeInfo(errs);
                         }
 
                     if (id == idClz)
