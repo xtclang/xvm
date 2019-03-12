@@ -12,6 +12,7 @@ class Array<ElementType>
         implements PersistentAble
         implements ConstAble
         implements Stringable
+        incorporates Stringer
     {
     /**
      * Construct a dynamically growing array with the specified initial capacity.
@@ -311,14 +312,6 @@ class Array<ElementType>
                 }
             }
         appender.add(']');
-        }
-
-    @Override
-    String to<String>()
-        {
-        StringBuffer buf = new StringBuffer(estimateStringLength());
-        appendTo(buf);
-        return buf.to<String>();
         }
 
     // ----- internal implementation details -------------------------------------------------------
