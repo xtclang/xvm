@@ -6,7 +6,6 @@ import java.io.IOException;
 
 import org.xvm.asm.constants.PropertyConstant;
 
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -25,13 +24,13 @@ public abstract class OpPropInPlaceAssign
     /**
      * Construct a "property in-place and assign" op for the passed arguments.
      *
-     * @param constProperty  the property constant
-     * @param argTarget      the target Argument
-     * @param argVal         the second Argument
+     * @param idProp     the property id
+     * @param argTarget  the target Argument
+     * @param argVal     the second Argument
      */
-    protected OpPropInPlaceAssign(PropertyConstant constProperty, Argument argTarget, Argument argVal)
+    protected OpPropInPlaceAssign(PropertyConstant idProp, Argument argTarget, Argument argVal)
         {
-        super(constProperty);
+        super(idProp);
 
         m_argTarget = argTarget;
         m_argValue = argVal;
@@ -99,16 +98,15 @@ public abstract class OpPropInPlaceAssign
      */
     protected int processProperty(Frame frame, ObjectHandle hTarget, ObjectHandle hValue)
         {
-        PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
-        String sPropName = constProperty.getName();
+        PropertyConstant idProp = (PropertyConstant) frame.getConstant(m_nPropId);
 
-        return complete(frame, hTarget, sPropName, hValue);
+        return complete(frame, hTarget, idProp, hValue);
         }
 
     /**
      * The completion of processing.
      */
-    protected int complete(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
+    protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue)
         {
         throw new UnsupportedOperationException();
         }
@@ -122,107 +120,14 @@ public abstract class OpPropInPlaceAssign
         m_argValue = registerArgument(m_argValue, registry);
         }
 
-    // the lambda for the binary actions
-    protected interface Action
+    @Override
+    public String toString()
         {
-        int action(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
+        return super.toString()
+                + ", " + Argument.toIdString(m_argTarget, m_nTarget)
+                + ", " + Argument.toIdString(m_argValue, m_nValue);
         }
 
-    /**
-     * Helper class for in-place property mutations.
-     */
-    protected static class InPlace
-            implements Frame.Continuation
-        {
-        private final ClassTemplate template;
-        private final ObjectHandle hTarget;
-        private final ObjectHandle hValue;
-        private final String sPropName;
-        private final Action action;
-
-        private ObjectHandle hValueOld;
-        private ObjectHandle hValueNew;
-        private int ixStep = -1;
-
-        public InPlace(ClassTemplate template, ObjectHandle hTarget,
-                       ObjectHandle hValue, String sPropName, Action action)
-            {
-            this.template = template;
-            this.hTarget = hTarget;
-            this.hValue = hValue;
-            this.sPropName = sPropName;
-            this.action = action;
-            }
-
-        @Override
-        public int proceed(Frame frameCaller)
-            {
-            updateResult(frameCaller);
-
-            return doNext(frameCaller);
-            }
-
-        protected void updateResult(Frame frameCaller)
-            {
-            switch (ixStep)
-                {
-                case 0: // getProperty
-                    hValueOld = frameCaller.popStack();
-                    break;
-
-                case 1: // the action
-                    hValueNew = frameCaller.popStack();
-                    break;
-
-                default:
-                    throw new IllegalStateException();
-                }
-            }
-
-        public int doNext(Frame frameCaller)
-            {
-            while (true)
-                {
-                int nStep = ++ixStep;
-
-                int iResult;
-                switch (nStep)
-                    {
-                    case 0: // get
-                        iResult = template.getPropertyValue(frameCaller, hTarget, sPropName, A_STACK);
-                        break;
-
-                    case 1:
-                        iResult = action.action(frameCaller, hValueOld, hValue, A_STACK);
-                        break;
-
-                    case 2:
-                        return template.setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-
-
-                switch (iResult)
-                    {
-                    case Op.R_NEXT:
-                        updateResult(frameCaller);
-                        break;
-
-                    case Op.R_CALL:
-                        frameCaller.m_frameNext.setContinuation(this);
-                        return Op.R_CALL;
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalArgumentException();
-                    }
-                }
-            }
-        }
 
 
     // ----- data fields ---------------------------------------------------------------------------

@@ -23,13 +23,13 @@ public class PIP_Mul
     /**
      * Construct a PIP_MUL op based on the passed arguments.
      *
-     * @param constProperty  the property constant
-     * @param argTarget      the target Argument
-     * @param argValue       the value Argument
+     * @param idProp     the property id
+     * @param argTarget  the target Argument
+     * @param argValue   the value Argument
      */
-    public PIP_Mul(PropertyConstant constProperty, Argument argTarget, Argument argValue)
+    public PIP_Mul(PropertyConstant idProp, Argument argTarget, Argument argValue)
         {
-        super(constProperty, argTarget, argValue);
+        super(idProp, argTarget, argValue);
         }
 
     /**
@@ -51,8 +51,8 @@ public class PIP_Mul
         }
 
     @Override
-    protected int complete(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
+    protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue)
         {
-        return hTarget.getTemplate().invokePropertyMul(frame, hTarget, sPropName, hValue);
+        return hTarget.getTemplate().invokePropertyMul(frame, hTarget, idProp, hValue);
         }
     }

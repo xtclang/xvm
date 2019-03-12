@@ -22,6 +22,7 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.TypeConstant.Origin;
 
@@ -927,6 +928,35 @@ public class TypeInfo
                     {
                     return prop;
                     }
+                }
+            }
+
+        return null;
+        }
+
+    /**
+     * Look up the property by its nested identity.
+     * <p/>
+     * Note: this lookup is not cached since the results are always cached by the caller.
+     *
+     * @param nid  the id (String | NestedIdentity)
+     *
+     * @return the PropertyInfo for the specified constant, or null
+     */
+    public PropertyInfo findPropertyByNid(Object nid)
+        {
+        if (nid instanceof String)
+            {
+            return findProperty((String) nid);
+            }
+
+        NestedIdentity nidThis = (NestedIdentity) nid;
+        for (Entry<PropertyConstant, PropertyInfo> entry : m_mapProps.entrySet())
+            {
+            PropertyConstant idThat = entry.getKey();
+            if (nidThis.equals(idThat.getNestedIdentity()))
+                {
+                return entry.getValue();
                 }
             }
 

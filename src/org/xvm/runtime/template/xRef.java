@@ -9,6 +9,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
+import org.xvm.asm.constants.PropertyConstant;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
@@ -268,7 +269,7 @@ public class xRef
                 {
                 ObjectHandle hDelegate = hTarget.getValue();
                 return hDelegate.getTemplate().getPropertyValue(
-                    frame, hDelegate, hTarget.getName(), iReturn);
+                    frame, hDelegate, hTarget.getPropertyId(), iReturn);
                 }
 
             case RefHandle.REF_ARRAY:
@@ -426,18 +427,19 @@ public class xRef
         /**
          * Create a RefHandle for a given property.
          *
-         * @param clazz      the class of the Ref (e.g. FutureRef<String>)
-         * @param hTarget    the target object
-         * @param sPropName  the property name
+         * @param clazz    the class of the Ref (e.g. FutureRef<String>)
+         * @param hTarget  the target object
+         * @param idProp   the property id
          */
-        public RefHandle(TypeComposition clazz, ObjectHandle hTarget, String sPropName)
+        public RefHandle(TypeComposition clazz, ObjectHandle hTarget, PropertyConstant idProp)
             {
             super(clazz);
 
             assert hTarget != null;
 
             m_hDelegate = hTarget;
-            m_sName = sPropName;
+            m_idProp = idProp;
+            m_sName = idProp.getNestedIdentity().toString();
             m_fMutable = hTarget.isMutable();
             m_iVar = REF_PROPERTY;
             }
@@ -538,6 +540,11 @@ public class xRef
             return sName;
             }
 
+        public PropertyConstant getPropertyId()
+            {
+            return m_idProp;
+            }
+
         public VarSupport getVarSupport()
             {
             return (VarSupport) getOpSupport();
@@ -548,9 +555,22 @@ public class xRef
             switch (m_iVar)
                 {
                 case REF_REFERENT:
-                case REF_PROPERTY:
                     return m_hDelegate != null;
 
+                case REF_PROPERTY:
+                    {
+                    GenericHandle hTarget = (GenericHandle) m_hDelegate;
+                    ObjectHandle  hValue  = hTarget.getField(m_idProp);
+                    if (hValue == null)
+                        {
+                        return false;
+                        }
+                    if (hValue instanceof RefHandle && hTarget.isRefAnnotated(m_idProp))
+                        {
+                        return ((RefHandle) hValue).isAssigned();
+                        }
+                    return true;
+                    }
                 case REF_REF:
                     return ((RefHandle) m_hDelegate).isAssigned();
 
@@ -596,6 +616,7 @@ public class xRef
             }
 
         protected ObjectHandle m_hDelegate; // can point to another Ref for the same referent
+        protected PropertyConstant m_idProp;
         protected String m_sName;
         protected Frame m_frame;
         protected int m_iVar;

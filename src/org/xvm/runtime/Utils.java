@@ -8,6 +8,7 @@ import java.util.concurrent.CompletableFuture;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -205,11 +206,11 @@ public abstract class Utils
 
                 if (hArg instanceof DeferredPropertyHandle)
                     {
-                    ObjectHandle hThis = frameCaller.getThis();
-                    String       sProp = ((DeferredPropertyHandle) hArg).getPropertyName();
+                    ObjectHandle     hThis  = frameCaller.getThis();
+                    PropertyConstant idProp = ((DeferredPropertyHandle) hArg).getPropertyId();
 
                     switch (hThis.getTemplate().getPropertyValue(
-                            frameCaller, hThis, sProp, Op.A_STACK))
+                            frameCaller, hThis, idProp, Op.A_STACK))
                         {
                         case Op.R_NEXT:
                             // replace the property handle with the value
@@ -604,18 +605,18 @@ public abstract class Utils
         private final UnaryAction action;
         private final ClassTemplate template;
         private final ObjectHandle hTarget;
-        private final String sPropName;
+        private final PropertyConstant idProp;
         private final boolean fPost;
         private final int iReturn;
 
         protected InPlacePropertyUnary(UnaryAction action, ClassTemplate template,
-                                       ObjectHandle hTarget, String sPropName, boolean fPost,
+                                       ObjectHandle hTarget, PropertyConstant idProp, boolean fPost,
                                        int iReturn)
             {
             this.action = action;
             this.template = template;
             this.hTarget = hTarget;
-            this.sPropName = sPropName;
+            this.idProp = idProp;
             this.fPost = fPost;
             this.iReturn = iReturn;
             }
@@ -629,7 +630,7 @@ public abstract class Utils
                     {
                     case 0:
                         iResult = template.
-                            getPropertyValue(frameCaller, hTarget, sPropName, Op.A_STACK);
+                            getPropertyValue(frameCaller, hTarget, idProp, Op.A_STACK);
                         break;
 
                     case 1:
@@ -638,7 +639,7 @@ public abstract class Utils
 
                     case 2:
                         iResult = template.
-                            setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
+                            setPropertyValue(frameCaller, hTarget, idProp, hValueNew);
                         break;
 
                     case 3:
@@ -677,16 +678,16 @@ public abstract class Utils
         private final BinaryAction action;
         private final ClassTemplate template;
         private final ObjectHandle hTarget;
-        private final String sPropName;
+        private final PropertyConstant idProp;
         private final ObjectHandle hArg;
 
         protected InPlacePropertyBinary(BinaryAction action, ClassTemplate template,
-                                        ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+                                        ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
             {
             this.action = action;
             this.template = template;
             this.hTarget = hTarget;
-            this.sPropName = sPropName;
+            this.idProp = idProp;
             this.hArg = hArg;
             }
 
@@ -698,7 +699,7 @@ public abstract class Utils
                 switch (++ixStep)
                     {
                     case 0:
-                        iResult = template.getPropertyValue(frameCaller, hTarget, sPropName, Op.A_STACK);
+                        iResult = template.getPropertyValue(frameCaller, hTarget, idProp, Op.A_STACK);
                         break;
 
                     case 1:
@@ -706,7 +707,7 @@ public abstract class Utils
                         break;
 
                     case 2:
-                        return template.setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
+                        return template.setPropertyValue(frameCaller, hTarget, idProp, hValueNew);
 
                     default:
                         throw new IllegalStateException();

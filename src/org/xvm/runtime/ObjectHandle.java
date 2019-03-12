@@ -8,6 +8,8 @@ import java.util.Map;
 import org.xvm.asm.Constants;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.util.ListMap;
@@ -124,19 +126,19 @@ public abstract class ObjectHandle
         return m_clazz.ensureAccess(this, access);
         }
 
-    public boolean isRefAnnotated(String sPropName)
+    public boolean isRefAnnotated(PropertyConstant idProp)
         {
-        return m_clazz.isRefAnnotated(sPropName);
+        return m_clazz.isRefAnnotated(idProp);
         }
 
-    public boolean isInjected(String sPropName)
+    public boolean isInjected(PropertyConstant idProp)
         {
-        return m_clazz.isInjected(sPropName);
+        return m_clazz.isInjected(idProp);
         }
 
-    public boolean isAtomic(String sPropName)
+    public boolean isAtomic(PropertyConstant idProp)
         {
-        return m_clazz.isInjected(sPropName);
+        return m_clazz.isInjected(idProp);
         }
 
     /**
@@ -196,23 +198,37 @@ public abstract class ObjectHandle
             m_mapFields = clazz.createFields();
             }
 
-        public boolean containsField(String sName)
+        public boolean containsField(PropertyConstant idProp)
             {
-            return m_mapFields != null && m_mapFields.containsKey(sName);
+            return m_mapFields != null && m_mapFields.containsKey(idProp.getNestedIdentity());
             }
 
-        public ObjectHandle getField(String sName)
+        public ObjectHandle getField(PropertyConstant idProp)
             {
-            return m_mapFields == null ? null : m_mapFields.get(sName);
+            return m_mapFields == null ? null : m_mapFields.get(idProp.getNestedIdentity());
             }
 
-        public void setField(String sName, ObjectHandle hValue)
+        public ObjectHandle getField(String sProp)
+            {
+            return m_mapFields == null ? null : m_mapFields.get(sProp);
+            }
+
+        public void setField(PropertyConstant idProp, ObjectHandle hValue)
             {
             if (m_mapFields == null)
                 {
                 m_mapFields = new ListMap<>();
                 }
-            m_mapFields.put(sName, hValue);
+            m_mapFields.put(idProp.getNestedIdentity(), hValue);
+            }
+
+        public void setField(String sProp, ObjectHandle hValue)
+            {
+            if (m_mapFields == null)
+                {
+                m_mapFields = new ListMap<>();
+                }
+            m_mapFields.put(sProp, hValue);
             }
 
         @Override
@@ -237,16 +253,22 @@ public abstract class ObjectHandle
             List<String> listUnassigned = null;
             if (m_mapFields != null)
                 {
-                for (Map.Entry<String, ObjectHandle> entry : m_mapFields.entrySet())
+                for (Map.Entry<Object, ObjectHandle> entry : m_mapFields.entrySet())
                     {
                     ObjectHandle hValue = entry.getValue();
                     if (hValue == null)
                         {
+                        Object idProp = entry.getKey();
+                        if (idProp instanceof NestedIdentity)
+                            {
+                            // must be a private property, which is always implicitly "@Unassigned"
+                            continue;
+                            }
                         if (listUnassigned == null)
                             {
                             listUnassigned = new ArrayList<>();
                             }
-                        listUnassigned.add(entry.getKey());
+                        listUnassigned.add((String) idProp);
                         }
                     // no need to recurse to a field; it would throw during its own construction
                     }
@@ -266,8 +288,8 @@ public abstract class ObjectHandle
                 return false;
                 }
 
-            Map<String, ObjectHandle> map1 = h1.m_mapFields;
-            Map<String, ObjectHandle> map2 = h2.m_mapFields;
+            Map<Object, ObjectHandle> map1 = h1.m_mapFields;
+            Map<Object, ObjectHandle> map2 = h2.m_mapFields;
 
             if (map1 == map2)
                 {
@@ -279,11 +301,12 @@ public abstract class ObjectHandle
                 return false;
                 }
 
-            for (String sProp : map1.keySet())
+            for (Object idProp : map1.keySet())
                 {
-                ObjectHandle hV1 = map1.get(sProp);
-                ObjectHandle hV2 = map2.get(sProp);
+                ObjectHandle hV1 = map1.get(idProp);
+                ObjectHandle hV2 = map2.get(idProp);
 
+                // TODO: need to prevent a potential infinite loop
                 ClassTemplate template = hV1.getTemplate();
                 if (template != hV2.getTemplate() || !template.compareIdentity(hV1, hV2))
                     {
@@ -300,8 +323,8 @@ public abstract class ObjectHandle
             return false;
             }
 
-        // keyed by the property name
-        private Map<String, ObjectHandle> m_mapFields;
+        // keyed by the property name or a NestedIdentity
+        private Map<Object, ObjectHandle> m_mapFields;
 
         public final static String OUTER = "$outer";
         }

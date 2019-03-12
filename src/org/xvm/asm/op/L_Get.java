@@ -28,12 +28,12 @@ public class L_Get
     /**
      * Construct an L_GET op based on the specified arguments.
      *
-     * @param constProperty  the property constant
-     * @param argReturn      the return Argument
+     * @param idProp     the property id
+     * @param argReturn  the return Argument
      */
-    public L_Get(PropertyConstant constProperty, Argument argReturn)
+    public L_Get(PropertyConstant idProp, Argument argReturn)
         {
-        super(constProperty);
+        super(idProp);
 
         m_argReturn = argReturn;
         }
@@ -84,8 +84,7 @@ public class L_Get
             frame.introducePropertyVar(m_nRetValue, A_THIS, constProperty);
             }
 
-        return hTarget.getTemplate().getPropertyValue(
-                frame, hTarget, constProperty.getName(), m_nRetValue);
+        return hTarget.getTemplate().getPropertyValue(frame, hTarget, constProperty, m_nRetValue);
         }
 
     @Override

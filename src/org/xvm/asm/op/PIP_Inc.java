@@ -23,12 +23,12 @@ public class PIP_Inc
     /**
      * Construct a PIP_INC op based on the passed arguments.
      *
-     * @param constProperty  the property constant
-     * @param argTarget    the target Argument
+     * @param idProp     the property id
+     * @param argTarget  the target Argument
      */
-    public PIP_Inc(PropertyConstant constProperty, Argument argTarget)
+    public PIP_Inc(PropertyConstant idProp, Argument argTarget)
         {
-        super(constProperty, argTarget);
+        super(idProp, argTarget);
         }
 
     /**
@@ -56,8 +56,8 @@ public class PIP_Inc
         }
 
     @Override
-    protected int complete(Frame frame, ObjectHandle hTarget, String sPropName)
+    protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp)
         {
-        return hTarget.getTemplate().invokePreInc(frame, hTarget, sPropName, A_IGNORE);
+        return hTarget.getTemplate().invokePreInc(frame, hTarget, idProp, A_IGNORE);
         }
     }

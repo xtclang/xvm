@@ -98,22 +98,24 @@ public interface TypeComposition
     MethodStructure ensureAutoInitializer();
 
     // create unassigned (with a null value) entries for all fields
-    Map<String, ObjectHandle> createFields();
+    Map<Object, ObjectHandle> createFields();
 
     /**
      * @return true if the specified property is Ref annotated
+     * @param idProp
      */
-    boolean isRefAnnotated(String sProperty);
+    boolean isRefAnnotated(PropertyConstant idProp);
 
     /**
      * @return true if the specified property is injected
+     * @param idProp
      */
-    boolean isInjected(String sProperty);
+    boolean isInjected(PropertyConstant idProp);
 
     /**
      * @return true if the specified property is atomic
      */
-    boolean isAtomic(String sProperty);
+    boolean isAtomic(PropertyConstant idProp);
 
     /**
      * @return a call chain for the specified signature
@@ -122,13 +124,17 @@ public interface TypeComposition
 
     /**
      * @return a call chain for the specified property's getter
+     *
+     * @param nidProp  the property nid (String | NestedIdentity)
      */
-    CallChain getPropertyGetterChain(String sProperty);
+    CallChain getPropertyGetterChain(Object nidProp);
 
     /**
      * @return a call chain for the specified property's setter
+     *
+     * @param nidProp  the property nid (String | NestedIdentity)
      */
-    CallChain getPropertySetterChain(String sProperty);
+    CallChain getPropertySetterChain(Object nidProp);
 
     /**
      * Retrieve a field value and place it to the specified register.
@@ -143,7 +149,7 @@ public interface TypeComposition
      */
     default int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
-        return getTemplate().getFieldValue(frame, hTarget, idProp.getName(), iReturn);
+        return getTemplate().getFieldValue(frame, hTarget, idProp, iReturn);
         }
 
     /**
@@ -159,7 +165,7 @@ public interface TypeComposition
      */
     default int setFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue)
         {
-        return getTemplate().setFieldValue(frame, hTarget, idProp.getName(), hValue);
+        return getTemplate().setFieldValue(frame, hTarget, idProp, hValue);
         }
 
     /**

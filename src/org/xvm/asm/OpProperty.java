@@ -18,11 +18,11 @@ public abstract class OpProperty extends Op
     /**
      * Construct an op.
      *
-     * @param constProperty  the property constant
+     * @param idProp  the property id
      */
-    protected OpProperty(PropertyConstant constProperty)
+    protected OpProperty(PropertyConstant idProp)
         {
-        m_constProperty = constProperty;
+        m_idProp = idProp;
         }
 
     /**
@@ -43,9 +43,9 @@ public abstract class OpProperty extends Op
         {
         out.writeByte(getOpCode());
 
-        if (m_constProperty != null)
+        if (m_idProp != null)
             {
-            m_nPropId = encodeArgument(m_constProperty, registry);
+            m_nPropId = encodeArgument(m_idProp, registry);
             }
 
         writePackedLong(out, m_nPropId);
@@ -54,16 +54,16 @@ public abstract class OpProperty extends Op
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
-        m_constProperty = (PropertyConstant) registerArgument(m_constProperty, registry);
+        m_idProp = (PropertyConstant) registerArgument(m_idProp, registry);
         }
 
     @Override
     public String toString()
         {
-        return super.toString() + ' ' + Argument.toIdString(m_constProperty, m_nPropId);
+        return super.toString() + ' ' + Argument.toIdString(m_idProp, m_nPropId);
         }
 
     protected int m_nPropId;
 
-    protected PropertyConstant m_constProperty;
+    protected PropertyConstant m_idProp;
     }

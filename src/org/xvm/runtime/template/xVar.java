@@ -123,7 +123,7 @@ public class xVar
                 {
                 ObjectHandle hDelegate = hTarget.getValue();
                 return hDelegate.getTemplate().setPropertyValue(
-                    frame, hDelegate, hTarget.getName(), hTarget);
+                    frame, hDelegate, hTarget.getPropertyId(), hTarget);
                 }
 
             case RefHandle.REF_ARRAY:

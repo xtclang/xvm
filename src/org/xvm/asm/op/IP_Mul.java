@@ -8,6 +8,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInPlaceAssign;
 
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
@@ -62,8 +63,8 @@ public class IP_Mul
         }
 
     @Override
-    protected int completeWithProperty(Frame frame, ObjectHandle hTarget, String sProperty, ObjectHandle hValue)
+    protected int completeWithProperty(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue)
         {
-        return hTarget.getTemplate().invokePropertyMul(frame, hTarget, sProperty, hValue);
+        return hTarget.getTemplate().invokePropertyMul(frame, hTarget, idProp, hValue);
         }
     }

@@ -30,13 +30,13 @@ public class P_Get
     /**
      * Construct a P_GET op based on the specified arguments.
      *
-     * @param constProperty  the property constant
-     * @param argTarget      the target Argument
-     * @param argReturn      the return Argument
+     * @param idProp     the property id
+     * @param argTarget  the target Argument
+     * @param argReturn  the return Argument
      */
-    public P_Get(PropertyConstant constProperty, Argument argTarget, Argument argReturn)
+    public P_Get(PropertyConstant idProp, Argument argTarget, Argument argReturn)
         {
-        super(constProperty);
+        super(idProp);
 
         m_argTarget = argTarget;
         m_argReturn = argReturn;
@@ -102,12 +102,12 @@ public class P_Get
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
                 Frame.Continuation stepNext = frameCaller ->
                     hTarget.getTemplate().getPropertyValue(
-                        frame, ahTarget[0], constProperty.getName(), m_nRetValue);
+                        frame, ahTarget[0], constProperty, m_nRetValue);
 
                 return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
                 }
             return hTarget.getTemplate().getPropertyValue(
-                frame, hTarget, constProperty.getName(), m_nRetValue);
+                    frame, hTarget, constProperty, m_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

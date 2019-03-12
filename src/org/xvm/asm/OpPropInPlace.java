@@ -27,12 +27,12 @@ public abstract class OpPropInPlace
     /**
      * Construct a "property in-place" op for the passed arguments.
      *
-     * @param constProperty  the property constant
-     * @param argTarget      the target Argument
+     * @param idProp     the property id
+     * @param argTarget  the target Argument
      */
-    protected OpPropInPlace(PropertyConstant constProperty, Argument argTarget)
+    protected OpPropInPlace(PropertyConstant idProp, Argument argTarget)
         {
-        super(constProperty);
+        super(idProp);
 
         assert(!isAssignOp());
 
@@ -42,13 +42,13 @@ public abstract class OpPropInPlace
     /**
      * Construct a "property in-place and assign" op for the passed arguments.
      *
-     * @param constProperty  the property constant
-     * @param argTarget      the target Argument
-     * @param argReturn      the Argument to store the result into
+     * @param idProp      the property id
+     * @param argTarget   the target Argument
+     * @param argReturn   the Argument to store the result into
      */
-    protected OpPropInPlace(PropertyConstant constProperty, Argument argTarget, Argument argReturn)
+    protected OpPropInPlace(PropertyConstant idProp, Argument argTarget, Argument argReturn)
         {
-        super(constProperty);
+        super(idProp);
 
         assert(isAssignOp());
 
@@ -145,15 +145,15 @@ public abstract class OpPropInPlace
      */
     protected int processProperty(Frame frame, ObjectHandle hTarget)
         {
-        PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
+        PropertyConstant idProp = (PropertyConstant) frame.getConstant(m_nPropId);
 
-        return complete(frame, hTarget, constProperty.getName());
+        return complete(frame, hTarget, idProp);
         }
 
     /**
      * A completion of the processing.
      */
-    protected int complete(Frame frame, ObjectHandle hTarget, String sPropName)
+    protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp)
         {
         throw new UnsupportedOperationException();
         }
@@ -186,6 +186,14 @@ public abstract class OpPropInPlace
             {
             m_argReturn = registerArgument(m_argReturn, registry);
             }
+        }
+
+    @Override
+    public String toString()
+        {
+        return super.toString()
+                + ", " + Argument.toIdString(m_argTarget, m_nTarget)
+                + ", " + Argument.toIdString(m_argReturn, m_nTarget);
         }
 
     protected int m_nTarget;

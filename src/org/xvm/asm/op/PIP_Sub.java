@@ -23,13 +23,13 @@ public class PIP_Sub
     /**
      * Construct a PIP_SUB op based on the passed arguments.
      *
-     * @param constProperty  the property constant
-     * @param argTarget      the target Argument
-     * @param argValue       the value Argument
+     * @param idProp     the property id
+     * @param argTarget  the target Argument
+     * @param argValue   the value Argument
      */
-    public PIP_Sub(PropertyConstant constProperty, Argument argTarget, Argument argValue)
+    public PIP_Sub(PropertyConstant idProp, Argument argTarget, Argument argValue)
         {
-        super(constProperty, argTarget, argValue);
+        super(idProp, argTarget, argValue);
         }
 
     /**
@@ -51,8 +51,8 @@ public class PIP_Sub
         }
 
     @Override
-    protected int complete(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
+    protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue)
         {
-        return hTarget.getTemplate().invokePropertySub(frame, hTarget, sPropName, hValue);
+        return hTarget.getTemplate().invokePropertySub(frame, hTarget, idProp, hValue);
         }
     }

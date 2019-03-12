@@ -23,13 +23,13 @@ public class PIP_Or
     /**
      * Construct a PIP_OR op based on the passed arguments.
      *
-     * @param constProperty  the property constant
-     * @param argTarget      the target Argument
-     * @param argValue       the value Argument
+     * @param idProp     the property id
+     * @param argTarget  the target Argument
+     * @param argValue   the value Argument
      */
-    public PIP_Or(PropertyConstant constProperty, Argument argTarget, Argument argValue)
+    public PIP_Or(PropertyConstant idProp, Argument argTarget, Argument argValue)
         {
-        super(constProperty, argTarget, argValue);
+        super(idProp, argTarget, argValue);
         }
 
     /**
@@ -51,8 +51,8 @@ public class PIP_Or
         }
 
     @Override
-    protected int complete(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
+    protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue)
         {
-        return hTarget.getTemplate().invokePropertyOr(frame, hTarget, sPropName, hValue);
+        return hTarget.getTemplate().invokePropertyOr(frame, hTarget, idProp, hValue);
         }
     }
