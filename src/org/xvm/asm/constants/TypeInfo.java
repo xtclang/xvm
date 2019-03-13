@@ -990,7 +990,7 @@ public class TypeInfo
             }
 
         NestedIdentity nidThis = (NestedIdentity) nid;
-        for (Entry<PropertyConstant, PropertyInfo> entry : m_mapProps.entrySet())
+        for (Entry<PropertyConstant, PropertyInfo> entry : f_mapProps.entrySet())
             {
             PropertyConstant idThat = entry.getKey();
             if (nidThis.equals(idThat.getNestedIdentity()))
