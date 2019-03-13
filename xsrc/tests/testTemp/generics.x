@@ -34,6 +34,11 @@ module TestGenerics.xqiz.it
         bi.createChild();
         }
 
+    interface Runnable
+        {
+        void run();
+        }
+
     class Base<BaseType>
         {
         Base<BaseType>? nextBase;

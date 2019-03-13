@@ -702,10 +702,7 @@ public class NameExpression
                     if (!((PropertyConstant) argRaw).getComponent().isStatic())
                         {
                         // there is a read of the implicit "this" variable
-                        Token tokName = getNameToken();
-                        long  lPos    = tokName.getStartPosition();
-                        Token tokThis = new Token(lPos, lPos, Id.THIS);
-                        ctx.markVarRead(tokThis, errs);
+                        ctx.requireThis(getStartPosition(), errs);
                         }
                     break;
                 }
@@ -787,10 +784,7 @@ public class NameExpression
                         if (!((PropertyConstant) m_arg).getComponent().isStatic())
                             {
                             // there is a read of the implicit "this" variable
-                            Token tokName = getNameToken();
-                            long  lPos    = tokName.getStartPosition();
-                            Token tokThis = new Token(lPos, lPos, Id.THIS);
-                            ctx.markVarRead(tokThis, errs);
+                            ctx.requireThis(getStartPosition(), errs);
                             }
                         break;
                     }

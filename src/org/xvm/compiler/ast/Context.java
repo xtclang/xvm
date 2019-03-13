@@ -793,6 +793,18 @@ public class Context
         }
 
     /**
+     * Mark an AstNode at the specified position as reliant on "this".
+     *
+     * @param lPos  the node's position
+     * @param errs  the error list to log to (optional)
+     */
+    public final void requireThis(long lPos, ErrorListener errs)
+        {
+        Token tokThis = new Token(lPos, lPos, Token.Id.THIS);
+        markVarRead(tokThis, errs);
+        }
+
+    /**
      * Mark the specified variable as being written to within this context.
      *
      * @param sName       the variable name

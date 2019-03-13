@@ -294,6 +294,7 @@ public class NewExpression
                         int nSteps = ctx.getStepsToOuterClass(clzTarget.getVirtualParent());
                         if (nSteps >= 0)
                             {
+                            ctx.requireThis(getStartPosition(), errs);
                             m_nVirtualParentSteps = nSteps;
                             }
                         else
