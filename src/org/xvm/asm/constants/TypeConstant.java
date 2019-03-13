@@ -909,32 +909,6 @@ public abstract class TypeConstant
         }
 
     /**
-     * TODO doc and move
-     *
-     * @param info
-     *
-     * @return
-     */
-    protected boolean isUpToDate(TypeInfo info)
-        {
-        ConstantPool pool       = getConstantPool();
-        int          cOldInvals = getInvalidationCount();
-        int          cNewInvals = pool.getInvalidationCount();
-        if (cNewInvals == cOldInvals)
-            {
-            return true;
-            }
-
-        if (info.needsRebuild(pool.invalidationsSince(cOldInvals)))
-            {
-            return false;
-            }
-
-        setInvalidationCount(cNewInvals);
-        return true;
-        }
-
-    /**
      * Obtain all of the information about this type, resolved from its recursive composition.
      *
      * @param errs  the error list to log errors to
@@ -1161,6 +1135,19 @@ public abstract class TypeConstant
         }
 
     /**
+     * Specify that the TypeInfo held by this type is no
+     */
+    public void invalidateTypeInfo()
+        {
+        clearTypeInfo();
+
+        if (isSingleUnderlyingClass(true))
+            {
+            getConstantPool().invalidateTypeInfos(getSingleUnderlyingClass(true));
+            }
+        }
+
+    /**
      * Clear out any cached TypeInfo for this one specific TypeConstant.
      */
     public void clearTypeInfo()
@@ -1200,6 +1187,32 @@ public abstract class TypeConstant
     private static boolean isComplete(TypeInfo info)
         {
         return rankTypeInfo(info) == 3;
+        }
+
+    /**
+     * Determine if the passed TypeInfo is up-to-date for this type.
+     *
+     * @param info  the TypeInfo
+     *
+     * @return true iff the TypeInfo can be used as-is
+     */
+    protected boolean isUpToDate(TypeInfo info)
+        {
+        ConstantPool pool       = getConstantPool();
+        int          cOldInvals = getInvalidationCount();
+        int          cNewInvals = pool.getInvalidationCount();
+        if (cNewInvals == cOldInvals)
+            {
+            return true;
+            }
+
+        if (info.needsRebuild(pool.invalidationsSince(cOldInvals)))
+            {
+            return false;
+            }
+
+        setInvalidationCount(cNewInvals);
+        return true;
         }
 
     /**
@@ -4825,6 +4838,14 @@ public abstract class TypeConstant
     public boolean isAutoNarrowing()
         {
         return isAutoNarrowing(true);
+        }
+
+    @Override
+    protected TypeConstant adoptedBy(ConstantPool pool)
+        {
+        TypeConstant that = (TypeConstant) super.adoptedBy(pool);
+        that.m_cInvalidations = 0;
+        return that;
         }
 
     @Override

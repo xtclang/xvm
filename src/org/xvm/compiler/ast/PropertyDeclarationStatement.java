@@ -428,13 +428,7 @@ public class PropertyDeclarationStatement
             // first, invalidate all TypeInfos that should have included this property, because
             // the cached TypeInfos will be wrong (this is a temporary solution, because it doesn't
             // follow the dependency graph and clean it up)
-            IdentityConstant id   = ctx.getThisClass().getIdentityConstant();
-            ConstantPool     pool = pool();
-            pool.ensureClassTypeConstant(id, Access.PUBLIC   ).clearTypeInfo();
-            pool.ensureClassTypeConstant(id, Access.PROTECTED).clearTypeInfo();
-            pool.ensureClassTypeConstant(id, Access.PRIVATE  ).clearTypeInfo();
-            pool.ensureClassTypeConstant(id, Access.STRUCT   ).clearTypeInfo();
-            ctx.getThisType().clearTypeInfo();
+            ctx.getThisType().invalidateTypeInfo();
 
             AssignmentStatement stmtNew = (AssignmentStatement) assignment.validate(ctx, errs);
             if (stmtNew == null)

@@ -822,12 +822,9 @@ public class StatementBlock
 
                         // invalidate the TypeInfo that might have been created before diving into
                         // this method to compile it
-                        // TODO this is a temporary solution, because it doesn't follow the
-                        //      dependency graph and clean it up, and it will invalidate every
-                        //      time we look this name up
                         if (idPrev == null && ctxFrom.getMethod().getChildrenCount() > 0)
                             {
-                            typeClz.clearTypeInfo();
+//                            typeClz.invalidateTypeInfo();
                             }
 
                         idPrev   = idClz;
