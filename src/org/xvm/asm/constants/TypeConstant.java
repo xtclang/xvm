@@ -1135,7 +1135,8 @@ public abstract class TypeConstant
         }
 
     /**
-     * Specify that the TypeInfo held by this type is no
+     * Specify that the TypeInfo held by this type is no longer valid, as is any other TypeInfo
+     * built from the underlying class of this type.
      */
     public void invalidateTypeInfo()
         {
