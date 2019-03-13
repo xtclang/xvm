@@ -1278,6 +1278,70 @@ public class Context
         setVars.addAll(getDefiniteAssignments().keySet());
         }
 
+    /**
+     * Calculate the number of steps ("this.outer") it takes to get from this context to the
+     * specified virtual parent.
+     *
+     * @param clzVirtualParent  the parent class
+     *
+     * @return the number of steps or -1 if the parent is not in the path
+     */
+    public int getStepsToOuterClass(ClassStructure clzVirtualParent)
+        {
+        IdentityConstant idParent  = clzVirtualParent.getIdentityConstant();
+        Component        component = getMethod().getParent().getParent(); // namespace
+        int              cSteps    = 0;
+
+        while (component != null)
+            {
+            IdentityConstant id = component.getIdentityConstant();
+
+            switch (id.getFormat())
+                {
+                case Class:
+                    {
+                    if (id.equals(idParent))
+                        {
+                        return cSteps;
+                        }
+
+                    ClassStructure clz = (ClassStructure) component;
+                    if (clz.hasContribution(idParent, true))
+                        {
+                        return cSteps;
+                        }
+
+                    if (clz.isStatic() || clz.isTopLevel())
+                        {
+                        return -1;
+                        }
+
+                    cSteps++;
+                    break;
+                    }
+
+                case Method:
+                case MultiMethod:
+                    break;
+
+                case Property:
+                    cSteps++;
+                    break;
+
+                case Module:
+                case Package:
+                    return -1;
+
+                default:
+                    throw new IllegalStateException();
+                }
+
+            component = component.getParent();
+            }
+
+        return -1;
+        }
+
     @Override
     public String toString()
         {

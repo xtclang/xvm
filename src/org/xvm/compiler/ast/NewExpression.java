@@ -28,26 +28,9 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodType;
 
-import org.xvm.asm.op.Construct_0;
-import org.xvm.asm.op.Construct_1;
-import org.xvm.asm.op.Construct_N;
-import org.xvm.asm.op.L_Set;
-import org.xvm.asm.op.MoveRef;
-import org.xvm.asm.op.MoveVar;
-import org.xvm.asm.op.NewCG_0;
-import org.xvm.asm.op.NewCG_1;
-import org.xvm.asm.op.NewCG_N;
-import org.xvm.asm.op.NewC_0;
-import org.xvm.asm.op.NewC_1;
-import org.xvm.asm.op.NewC_N;
-import org.xvm.asm.op.NewG_0;
-import org.xvm.asm.op.NewG_1;
-import org.xvm.asm.op.NewG_N;
-import org.xvm.asm.op.New_0;
-import org.xvm.asm.op.New_1;
-import org.xvm.asm.op.New_N;
-import org.xvm.asm.op.Return_0;
+import org.xvm.asm.op.*;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Constants;
 import org.xvm.compiler.Token;
@@ -305,6 +288,21 @@ public class NewExpression
                     // since we are new-ing a class that is a nest-mate of the current class, we can
                     // increase visibility from the public default all the way to private
                     typeTarget = pool.ensureAccessTypeConstant(typeTarget, Access.PRIVATE);
+
+                    if (m_fVirtualChild)
+                        {
+                        int nSteps = ctx.getStepsToOuterClass(clzTarget.getVirtualParent());
+                        if (nSteps >= 0)
+                            {
+                            m_nVirtualParentSteps = nSteps;
+                            }
+                        else
+                            {
+                            // TODO: a better error
+                            log(errs, Severity.ERROR, Compiler.INVALID_OUTER_THIS);
+                            fValid = false;
+                            }
+                        }
                     }
                 }
             }
@@ -643,7 +641,15 @@ public class NewExpression
                 {
                 if (left == null)
                     {
-                    argOuter = new Register(ctx.getThisType(), Op.A_THIS);
+                    if (m_nVirtualParentSteps == 0)
+                        {
+                        argOuter = new Register(ctx.getThisType(), Op.A_THIS);
+                        }
+                    else
+                        {
+                        argOuter = createRegister(typeTarget.getParentType(), true);
+                        code.add(new MoveThis(m_nVirtualParentSteps, argOuter));
+                        }
                     }
                 else
                     {
@@ -1193,6 +1199,10 @@ public class NewExpression
      * True if the class is a virtual child and needs to be constructed using a NEWC_ op-code.
      */
     private transient boolean               m_fVirtualChild;
+    /**
+     * In the case of "m_fVirtualChild == true" and "left == null", steps to the child's parent.
+     */
+    private transient int m_nVirtualParentSteps;
     /**
      * True if the inner class captures "this" (i.e. not static).
      */

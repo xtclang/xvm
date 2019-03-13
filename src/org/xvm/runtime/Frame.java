@@ -494,7 +494,10 @@ public class Frame
     // return "private:this"
     public ObjectHandle getThis()
         {
-        assert f_hThis != null;
+        if (f_hThis == null)
+            {
+            throw new IllegalStateException("Frame has no \"this\": " + toString());
+            }
         return f_hThis;
         }
 
