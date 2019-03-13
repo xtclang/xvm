@@ -240,8 +240,8 @@ public class AnnotatedTypeConstant
         // this can only be called from TypeConstant.buildTypeInfoImpl()
         assert getAccess() == Access.PUBLIC;
 
-        ConstantPool pool = getConstantPool();
-
+        ConstantPool pool        = getConstantPool();
+        int          cInvals     = pool.getInvalidationCount();
         TypeConstant typeThis    = pool.ensureAccessTypeConstant(this, Access.PRIVATE);
         TypeConstant typeAnno    = getAnnotationType();
         TypeConstant typePrivate = pool.ensureAccessTypeConstant(typeAnno, Access.PRIVATE);
@@ -289,7 +289,7 @@ public class AnnotatedTypeConstant
             layerOnMethod(pool, mapMethods, mapVirtMethods, entry.getKey(), entry.getValue(), errs);
             }
 
-        return new TypeInfo(typeThis, struct, 0, false, mapAnnoParams, Annotation.NO_ANNOTATIONS,
+        return new TypeInfo(typeThis, cInvals, struct, 0, false, mapAnnoParams, Annotation.NO_ANNOTATIONS,
                 infoAnno.getExtends(), infoAnno.getRebases(), infoAnno.getInto(),
                 infoAnno.getContributionList(), infoAnno.getClassChain(), infoAnno.getDefaultChain(),
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods,

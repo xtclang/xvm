@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Set;
 import java.util.function.Consumer;
 
 import org.xvm.asm.Component.ResolutionCollector;
@@ -117,6 +118,12 @@ public class UnresolvedTypeConstant
             return m_type;
             }
         throw new IllegalStateException();
+        }
+
+    @Override
+    public boolean isComposedOfAny(Set<IdentityConstant> setIds)
+        {
+        return isTypeResolved() && getResolvedType().isComposedOfAny(setIds);
         }
 
     @Override

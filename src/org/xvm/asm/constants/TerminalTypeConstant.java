@@ -97,6 +97,41 @@ public class TerminalTypeConstant
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
+    public boolean isComposedOfAny(Set<IdentityConstant> setIds)
+        {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return constId.getReferredToType().isComposedOfAny(setIds);
+            }
+
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Module:
+            case Package:
+            case Class:
+                return setIds.contains(constant);
+
+            case NativeClass:       // REVIEW GG
+            case Property:
+            case TypeParameter:
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+            case UnresolvedName:
+                return false;
+
+            case Typedef:
+                return ((TypedefConstant) constant).getReferredToType().isComposedOfAny(setIds);
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            }
+        }
+
+    @Override
     public boolean isImmutabilitySpecified()
         {
         TypeConstant type = resolveTypedefs();

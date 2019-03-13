@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.Vector;
 
 import org.xvm.asm.Constant.Format;
 
@@ -2832,11 +2833,11 @@ public class ConstantPool
         {
         assert type != null;
 
-        List<TypeConstant> list = m_tlolistDeferred.get();
+        List<TypeConstant> list = f_tlolistDeferred.get();
         if (list == null)
             {
             list = new ArrayList<>();
-            m_tlolistDeferred.set(list);
+            f_tlolistDeferred.set(list);
             }
 
         if (!list.contains(type))
@@ -2850,7 +2851,7 @@ public class ConstantPool
      */
     boolean hasDeferredTypeInfo()
         {
-        return m_tlolistDeferred.get() != null;
+        return f_tlolistDeferred.get() != null;
         }
 
     /**
@@ -2858,17 +2859,66 @@ public class ConstantPool
      */
     List<TypeConstant> takeDeferredTypeInfo()
         {
-        List<TypeConstant> list = m_tlolistDeferred.get();
+        List<TypeConstant> list = f_tlolistDeferred.get();
         if (list == null)
             {
             list = Collections.EMPTY_LIST;
             }
         else
             {
-            m_tlolistDeferred.set(null);
+            f_tlolistDeferred.set(null);
             }
 
         return list;
+        }
+
+    /**
+     * Cause all TypeInfos that are build from the specified class to re-build. This is necessary
+     * during compilation when additional information becomes visible as the compilation progresses,
+     * for example, when the compiler pierces a method boundary and discovers nested methods and/or
+     * properties.
+     *
+     * @param id  an IdentityConstant specifying a class
+     */
+    public void invalidateTypeInfos(IdentityConstant id)
+        {
+        assert id.isClass();
+        f_listInvalidated.add((IdentityConstant) register(id));
+        }
+
+    /**
+     * @return  the current TypeInfo invalidation count
+     */
+    public int getInvalidationCount()
+        {
+        return f_listInvalidated.size();
+        }
+
+    /**
+     * Determine what classes have new information since the specified invalidation count.
+     *
+     * @param cOld  the old invalidation count to start from
+     *
+     * @return a set of all the invalidated IdentityConstants of the classes causing the
+     *         invalidation to occur
+     */
+    public Set<IdentityConstant> invalidationsSince(int cOld)
+        {
+        int cNew = f_listInvalidated.size();
+        if (cOld == cNew)
+            {
+            return Collections.EMPTY_SET;
+            }
+
+        assert cNew > cOld;
+
+        HashSet<IdentityConstant> set = new HashSet<>();
+        for (int i = cOld; i < cNew; ++i)
+            {
+            set.add(f_listInvalidated.get(i));
+            }
+
+        return set;
         }
 
 
@@ -3149,7 +3199,7 @@ public class ConstantPool
      * A special TypeInfo that acts as a place-holder for "this TypeInfo is currently being built".
      */
     public final TypeInfo TYPEINFO_PLACEHOLDER = new TypeInfo(
-            typeObject(), null, 0, true, Collections.EMPTY_MAP, Annotation.NO_ANNOTATIONS,
+            typeObject(), 0, null, 0, true, Collections.EMPTY_MAP, Annotation.NO_ANNOTATIONS,
             getConstantPool().typeObject(), null, getConstantPool().typeObject(),
             Collections.EMPTY_LIST, new ListMap<>(), new ListMap<>(),
             Collections.EMPTY_MAP, Collections.EMPTY_MAP,
@@ -3166,7 +3216,12 @@ public class ConstantPool
     /**
      * A special "chicken and egg" list of TypeConstants that need to have their TypeInfos rebuilt.
      */
-    private final ThreadLocal<List<TypeConstant>> m_tlolistDeferred = new ThreadLocal<>();
+    private final ThreadLocal<List<TypeConstant>> f_tlolistDeferred = new ThreadLocal<>();
+
+    /**
+     * A list of classes that cause any derived TypeInfos to be invalidated.
+     */
+    private final List<IdentityConstant> f_listInvalidated = new Vector<>();
 
     /**
      * Thread local allowing to get the "current" ConstantPool without any context.
