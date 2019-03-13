@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.util.List;
 
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -19,8 +20,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.OpSupport;
 import org.xvm.runtime.TemplateRegistry;
-
-import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -157,6 +156,12 @@ public abstract class RelationalTypeConstant
     public TypeConstant getUnderlyingType2()
         {
         return m_constType2;
+        }
+
+    @Override
+    public boolean isComposedOfAny(Set<IdentityConstant> setIds)
+        {
+        return m_constType1.isComposedOfAny(setIds) || m_constType2.isComposedOfAny(setIds);
         }
 
     @Override

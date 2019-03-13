@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import java.util.function.Function;
@@ -171,6 +172,19 @@ public abstract class TypeConstant
     public TypeConstant getUnderlyingType2()
         {
         throw new UnsupportedOperationException();
+        }
+
+    /**
+     * Determine if this TypeConstant is composed of any of the specified identities.
+     *
+     * @param setIds the set of class IdentityConstants
+     *
+     * @return true iff this TypeConstant references any of the specified IdentityConstants for its
+     *         composition
+     */
+    public boolean isComposedOfAny(Set<IdentityConstant> setIds)
+        {
+        return isModifyingType() && getUnderlyingType().isComposedOfAny(setIds);
         }
 
     /**
@@ -904,7 +918,7 @@ public abstract class TypeConstant
     public TypeInfo ensureTypeInfo(ErrorListener errs)
         {
         TypeInfo info = getTypeInfo();
-        if (isComplete(info))
+        if (isComplete(info) && isUpToDate(info))
             {
             return info;
             }
@@ -1038,7 +1052,19 @@ public abstract class TypeConstant
     protected TypeInfo ensureTypeInfoInternal(ErrorListener errs)
         {
         TypeInfo info = getTypeInfo();
-        if (info == null)
+        if (info != null && info.isPlaceHolder())
+            {
+            // the TypeInfo is already being built, so we're in the catch-22 situation; note that it
+            // is even more complicated, because it could be being built by a different thread, so
+            // always add it to the deferred list _on this thread_ so that we will force the rebuild
+            // of the TypeInfo if necessary (imagine that the other thread is super slow, so we need
+            // to preemptively duplicate its work on this thread, so we don't have to "wait" for
+            // the other thread)
+            addDeferredTypeInfo(this);
+            return null;
+            }
+
+        if (info == null || !isUpToDate(info))
             {
             setTypeInfo(getConstantPool().TYPEINFO_PLACEHOLDER);
             info = buildTypeInfo(errs);
@@ -1050,19 +1076,6 @@ public abstract class TypeConstant
                 {
                 addDeferredTypeInfo(this);
                 }
-            return info;
-            }
-
-        if (info.isPlaceHolder())
-            {
-            // the TypeInfo is already being built, so we're in the catch-22 situation; note that it
-            // is even more complicated, because it could be being built by a different thread, so
-            // always add it to the deferred list _on this thread_ so that we will force the rebuild
-            // of the TypeInfo if necessary (imagine that the other thread is super slow, so we need
-            // to preemptively duplicate its work on this thread, so we don't have to "wait" for
-            // the other thread)
-            addDeferredTypeInfo(this);
-            return null;
             }
 
         return info;
@@ -1090,10 +1103,47 @@ public abstract class TypeConstant
         TypeInfo infoOld;
         while (rankTypeInfo(info) > rankTypeInfo(infoOld = s_typeinfo.get(this)))
             {
+            // update the TypeInfo
             if (s_typeinfo.compareAndSet(this, infoOld, info))
                 {
-                return;
+                // update the invalidation count that we have caught up to at this point
+                setInvalidationCount(info.getInvalidationCount());
                 }
+            }
+        }
+
+    /**
+     * @return the invalidation count that this TypeConstant has already processed
+     */
+    protected int getInvalidationCount()
+        {
+        return s_cInvalidations.get(this);
+        }
+
+    /**
+     * Modify the invalidation count (but don't ever regress it).
+     *
+     * @param cNew  the new invalidation count
+     */
+    protected void setInvalidationCount(int cNew)
+        {
+        int cOld;
+        while ((cOld = s_cInvalidations.get(this)) < cNew)
+            {
+            s_cInvalidations.compareAndSet(this, cOld, cNew);
+            }
+        }
+
+    /**
+     * Specify that the TypeInfo held by this type is no
+     */
+    public void invalidateTypeInfo()
+        {
+        clearTypeInfo();
+
+        if (isSingleUnderlyingClass(true))
+            {
+            getConstantPool().invalidateTypeInfos(getSingleUnderlyingClass(true));
             }
         }
 
@@ -1137,6 +1187,32 @@ public abstract class TypeConstant
     private static boolean isComplete(TypeInfo info)
         {
         return rankTypeInfo(info) == 3;
+        }
+
+    /**
+     * Determine if the passed TypeInfo is up-to-date for this type.
+     *
+     * @param info  the TypeInfo
+     *
+     * @return true iff the TypeInfo can be used as-is
+     */
+    protected boolean isUpToDate(TypeInfo info)
+        {
+        ConstantPool pool       = getConstantPool();
+        int          cOldInvals = getInvalidationCount();
+        int          cNewInvals = pool.getInvalidationCount();
+        if (cNewInvals == cOldInvals)
+            {
+            return true;
+            }
+
+        if (info.needsRebuild(pool.invalidationsSince(cOldInvals)))
+            {
+            return false;
+            }
+
+        setInvalidationCount(cNewInvals);
+        return true;
         }
 
     /**
@@ -1231,6 +1307,9 @@ public abstract class TypeConstant
             throw new IllegalStateException("Unable to determine class for " + getValueString(), e);
             }
 
+        // get a snapshot of the current invalidation count BEFORE building the TypeInfo
+        int cInvalidations = getConstantPool().getInvalidationCount();
+
         // we're going to build a map from name to param info, including whatever parameters are
         // specified by this class/interface, but also each of the contributing classes/interfaces
         Map<Object, ParamInfo> mapTypeParams = collectTypeParameters(constId, struct, errs);
@@ -1272,7 +1351,7 @@ public abstract class TypeConstant
 
         Annotation[] aannoClass = listAnnos.toArray(Annotation.NO_ANNOTATIONS);
 
-        return new TypeInfo(this, struct, 0, false, mapTypeParams, aannoClass,
+        return new TypeInfo(this, cInvalidations, struct, 0, false, mapTypeParams, aannoClass,
                 typeExtends, typeRebase, typeInto,
                 listProcess, listmapClassChain, listmapDefaultChain,
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods,
@@ -1298,8 +1377,9 @@ public abstract class TypeConstant
         Map<Object          , PropertyInfo> mapVirtProps = new HashMap<>();
 
         ConstantPool pool    = getConstantPool();
-        TypeInfo     infoPri = pool.ensureAccessTypeConstant(getUnderlyingType(), Access.PRIVATE).
-                               ensureTypeInfoInternal(errs);
+        int          cInvals = pool.getInvalidationCount();
+        TypeInfo     infoPri = pool.ensureAccessTypeConstant(getUnderlyingType(), Access.PRIVATE)
+                               .ensureTypeInfoInternal(errs);
         if (infoPri == null)
             {
             return null;
@@ -1400,7 +1480,7 @@ public abstract class TypeConstant
                 }
             }
 
-        return new TypeInfo(this, infoPri.getClassStructure(), 0,
+        return new TypeInfo(this, cInvals, infoPri.getClassStructure(), 0,
                 false, infoPri.getTypeParams(), infoPri.getClassAnnotations(),
                 infoPri.getExtends(), infoPri.getRebases(), infoPri.getInto(),
                 infoPri.getContributionList(), infoPri.getClassChain(), infoPri.getDefaultChain(),
@@ -4761,6 +4841,14 @@ public abstract class TypeConstant
         }
 
     @Override
+    protected TypeConstant adoptedBy(ConstantPool pool)
+        {
+        TypeConstant that = (TypeConstant) super.adoptedBy(pool);
+        that.m_cInvalidations = 0;
+        return that;
+        }
+
+    @Override
     protected void setPosition(int iPos)
         {
         super.setPosition(iPos);
@@ -4992,10 +5080,13 @@ public abstract class TypeConstant
     /**
      * The resolved information about the type, its properties, and its methods.
      */
-    private transient volatile int m_cRecursiveDepth;
     private transient volatile TypeInfo m_typeinfo;
     private static final AtomicReferenceFieldUpdater<TypeConstant, TypeInfo> s_typeinfo =
             AtomicReferenceFieldUpdater.newUpdater(TypeConstant.class, TypeInfo.class, "m_typeinfo");
+    private transient volatile int m_cRecursiveDepth;
+    private transient volatile int m_cInvalidations;
+    private static final AtomicIntegerFieldUpdater<TypeConstant> s_cInvalidations =
+            AtomicIntegerFieldUpdater.newUpdater(TypeConstant.class, "m_cInvalidations");
 
     /**
      * A cache of "isA" responses.

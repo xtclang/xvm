@@ -23,6 +23,7 @@ import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -516,6 +517,19 @@ public class MethodDeclarationStatement
             {
             // we are in an error state; we choose not to proceed with compilation
             mgr.deferChildren();
+            }
+        else if (method.getChildrenCount() > 0)
+            {
+            // the discovery of new structures means that any TypeInfo that was already created will
+            // be wrong
+            IdentityConstant idClz    = method.getContainingClass().getIdentityConstant();
+            ConstantPool     poolStmt = pool();
+            ConstantPool     poolId   = idClz.getConstantPool();
+            poolStmt.invalidateTypeInfos(idClz);
+            if (poolId != poolStmt)
+                {
+                poolId.invalidateTypeInfos(idClz);
+                }
             }
         }
 

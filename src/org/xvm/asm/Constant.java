@@ -303,7 +303,7 @@ public abstract class Constant
      *
      * @return the new Constant
      */
-    Constant adoptedBy(ConstantPool pool)
+    protected Constant adoptedBy(ConstantPool pool)
         {
         Constant that;
         try

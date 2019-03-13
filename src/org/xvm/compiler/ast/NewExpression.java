@@ -431,7 +431,7 @@ public class NewExpression
 
                         // since we just modified the component, flush the TypeInfo cache for
                         // the type of the anonymous inner class
-                        typeTarget.clearTypeInfo();
+                        typeTarget.invalidateTypeInfo();
                         }
                     }
                 else
@@ -1027,9 +1027,7 @@ public class NewExpression
         {
         if (anon != null)
             {
-            TypeConstant type = getType();
-            type.clearTypeInfo();
-            pool().ensureAccessTypeConstant(type, Access.PRIVATE).clearTypeInfo();
+            getType().invalidateTypeInfo();
             }
         }
 

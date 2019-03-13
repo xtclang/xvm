@@ -241,15 +241,16 @@ public class IntersectionTypeConstant
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
         // we've been asked to resolve some type defined as "T1 | T2";  first, resolve T1 and T2
-        TypeInfo info1 = getUnderlyingType().ensureTypeInfoInternal(errs);
-        TypeInfo info2 = getUnderlyingType2().ensureTypeInfoInternal(errs);
-
+        int      cInvals = getConstantPool().getInvalidationCount();
+        TypeInfo info1   = getUnderlyingType().ensureTypeInfoInternal(errs);
+        TypeInfo info2   = getUnderlyingType2().ensureTypeInfoInternal(errs);
         if (info1 == null || info2 == null)
             {
             return null;
             }
 
         return new TypeInfo(this,
+                            cInvals,
                             null,                   // struct
                             0,                      // depth
                             false,                  // synthetic
