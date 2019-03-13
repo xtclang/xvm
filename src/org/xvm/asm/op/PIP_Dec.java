@@ -22,12 +22,12 @@ public class PIP_Dec
     /**
      * Construct a PIP_DEC op based on the passed arguments.
      *
-     * @param constProperty  the property constant
-     * @param argTarget    the target Argument
+     * @param idProp     the property id
+     * @param argTarget  the target Argument
      */
-    public PIP_Dec(PropertyConstant constProperty, Argument argTarget)
+    public PIP_Dec(PropertyConstant idProp, Argument argTarget)
         {
-        super(constProperty, argTarget);
+        super(idProp, argTarget);
         }
 
     /**
@@ -55,8 +55,8 @@ public class PIP_Dec
         }
 
     @Override
-    protected int complete(Frame frame, ObjectHandle hTarget, String sPropName)
+    protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp)
         {
-        return hTarget.getTemplate().invokePreDec(frame, hTarget, sPropName, A_IGNORE);
+        return hTarget.getTemplate().invokePreDec(frame, hTarget, idProp, A_IGNORE);
         }
     }

@@ -2,6 +2,7 @@ package org.xvm.runtime;
 
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -234,21 +235,21 @@ public class ClassComposition
         }
 
     @Override
-    public boolean isRefAnnotated(String sProperty)
+    public boolean isRefAnnotated(PropertyConstant idProp)
         {
-        return f_typeInception.ensureTypeInfo().findProperty(sProperty).isRefAnnotated();
+        return f_typeInception.ensureTypeInfo().findProperty(idProp).isRefAnnotated();
         }
 
     @Override
-    public boolean isInjected(String sProperty)
+    public boolean isInjected(PropertyConstant idProp)
         {
-        return f_typeInception.ensureTypeInfo().findProperty(sProperty).isInjected();
+        return f_typeInception.ensureTypeInfo().findProperty(idProp).isInjected();
         }
 
     @Override
-    public boolean isAtomic(String sProperty)
+    public boolean isAtomic(PropertyConstant idProp)
         {
-        return f_typeInception.ensureTypeInfo().findProperty(sProperty).isAtomic();
+        return f_typeInception.ensureTypeInfo().findProperty(idProp).isAtomic();
         }
 
     @Override
@@ -265,26 +266,26 @@ public class ClassComposition
         }
 
     @Override
-    public CallChain getPropertyGetterChain(String sProperty)
+    public CallChain getPropertyGetterChain(Object nidProp)
         {
-        return f_mapGetters.computeIfAbsent(sProperty,
-            sName ->
+        return f_mapGetters.computeIfAbsent(nidProp,
+            nid ->
                 {
                 TypeInfo     info = f_typeInception.ensureTypeInfo();
-                PropertyInfo prop = info.findProperty(sName);
+                PropertyInfo prop = info.findPropertyByNid(nid);
 
                 return new CallChain(info.getOptimizedGetChain(prop.getIdentity()));
                 });
         }
 
     @Override
-    public CallChain getPropertySetterChain(String sProperty)
+    public CallChain getPropertySetterChain(Object nidProp)
         {
-        return f_mapGetters.computeIfAbsent(sProperty,
-            sName ->
+        return f_mapGetters.computeIfAbsent(nidProp,
+            nid ->
                 {
                 TypeInfo     info = f_typeInception.ensureTypeInfo();
-                PropertyInfo prop = info.findProperty(sName);
+                PropertyInfo prop = info.findPropertyByNid(nid);
 
                 return new CallChain(info.getOptimizedSetChain(prop.getIdentity()));
                 });
@@ -293,8 +294,30 @@ public class ClassComposition
     @Override
     public Set<String> getFieldNames()
         {
-        Map mapCached = f_mapFields;
-        return mapCached == null ? Collections.EMPTY_SET : mapCached.keySet();
+        Set<String> setNames = m_setNames;
+        if (setNames == null)
+            {
+            Map<Object, TypeComposition> mapFields = f_mapFields;
+            if (mapFields == null)
+                {
+                setNames = Collections.EMPTY_SET;
+                }
+            else
+                {
+                setNames = new HashSet<>(mapFields.size());
+                for (Object nid : mapFields.keySet())
+                    {
+                    // disregard nested (private) properties
+                    if (nid instanceof String)
+                        {
+                        setNames.add((String) nid);
+                        }
+                    }
+                }
+            m_setNames = setNames;
+            }
+
+        return setNames;
         }
 
     @Override
@@ -338,25 +361,25 @@ public class ClassComposition
         }
 
     @Override
-    public Map<String, ObjectHandle> createFields()
+    public Map<Object, ObjectHandle> createFields()
         {
-        Map<String, TypeComposition> mapCached = f_mapFields;
+        Map<Object, TypeComposition> mapCached = f_mapFields;
         if (mapCached == null)
             {
             return null;
             }
 
-        Map<String, ObjectHandle> mapFields = new ListMap<>();
-        for (Map.Entry<String, TypeComposition> entry : f_mapFields.entrySet())
+        Map<Object, ObjectHandle> mapFields = new ListMap<>();
+        for (Map.Entry<Object, TypeComposition> entry : f_mapFields.entrySet())
             {
-            String          sName  = entry.getKey();
-            TypeComposition clzRef = entry.getValue();
-            ObjectHandle    hValue = null;
+            Object          nidProp = entry.getKey();
+            TypeComposition clzRef  = entry.getValue();
+            ObjectHandle    hValue  = null;
             if (clzRef != null)
                 {
-                hValue = ((VarSupport) clzRef.getSupport()).createRefHandle(clzRef, sName);
+                hValue = ((VarSupport) clzRef.getSupport()).createRefHandle(clzRef, nidProp.toString());
                 }
-            mapFields.put(sName, hValue);
+            mapFields.put(nidProp, hValue);
             }
         return mapFields;
         }
@@ -393,7 +416,7 @@ public class ClassComposition
      *
      * @return a prototype map
      */
-    private Map<String, TypeComposition> ensureFields()
+    private Map<Object, TypeComposition> ensureFields()
         {
         ConstantPool pool = f_typeInception.getConstantPool();
 
@@ -406,11 +429,11 @@ public class ClassComposition
         TypeConstant typeStruct = pool.ensureAccessTypeConstant(typePublic, Access.STRUCT);
         TypeInfo     infoStruct = typeStruct.ensureTypeInfo();
 
-        Map<String, TypeComposition> mapFields = new ListMap<>();
+        Map<Object, TypeComposition> mapFields = new ListMap<>();
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoStruct.getProperties().entrySet())
             {
-            String       sPropName = entry.getKey().getName();
-            PropertyInfo infoProp  = entry.getValue();
+            PropertyConstant idProp   = entry.getKey();
+            PropertyInfo     infoProp = entry.getValue();
 
             if (infoProp.hasField())
                 {
@@ -424,7 +447,7 @@ public class ClassComposition
                     clzRef = f_template.f_templates.resolveClass(infoProp.getBaseRefType());
                     }
 
-                mapFields.put(sPropName, clzRef);
+                mapFields.put(idProp.getNestedIdentity(), clzRef);
                 }
             }
         return mapFields.isEmpty() ? null : mapFields;
@@ -493,14 +516,17 @@ public class ClassComposition
     // cached method call chain (the top-most method first)
     private final Map<SignatureConstant, CallChain> f_mapMethods;
 
-    // cached property getter call chain (the top-most method first)
-    private final Map<String, CallChain> f_mapGetters;
+    // cached property getter call chain by nid (the top-most method first)
+    private final Map<Object, CallChain> f_mapGetters;
 
-    // cached property setter call chain (the top-most method first)
-    private final Map<String, CallChain> f_mapSetters;
+    // cached property setter call chain by nid (the top-most method first)
+    private final Map<Object, CallChain> f_mapSetters;
 
     // cached map of fields (values are either nulls or TypeComposition for refs)
-    private final Map<String, TypeComposition> f_mapFields;
+    private final Map<Object, TypeComposition> f_mapFields;
+
+    // cached set of field names
+    private Set<String> m_setNames;
 
     // cached array of field name handles
     private StringHandle[] m_ashFieldNames;

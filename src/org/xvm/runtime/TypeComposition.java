@@ -6,7 +6,9 @@ import java.util.Set;
 
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -96,36 +98,88 @@ public interface TypeComposition
     MethodStructure ensureAutoInitializer();
 
     // create unassigned (with a null value) entries for all fields
-    Map<String, ObjectHandle> createFields();
+    Map<Object, ObjectHandle> createFields();
 
     /**
      * @return true if the specified property is Ref annotated
+     * @param idProp
      */
-    boolean isRefAnnotated(String sProperty);
+    boolean isRefAnnotated(PropertyConstant idProp);
 
     /**
      * @return true if the specified property is injected
+     * @param idProp
      */
-    boolean isInjected(String sProperty);
+    boolean isInjected(PropertyConstant idProp);
 
     /**
      * @return true if the specified property is atomic
      */
-    boolean isAtomic(String sProperty);
+    boolean isAtomic(PropertyConstant idProp);
 
+    /**
+     * @return a call chain for the specified signature
+     */
     CallChain getMethodCallChain(SignatureConstant sig);
 
-    // retrieve the call chain for the specified property
-    CallChain getPropertyGetterChain(String sProperty);
+    /**
+     * @return a call chain for the specified property's getter
+     *
+     * @param nidProp  the property nid (String | NestedIdentity)
+     */
+    CallChain getPropertyGetterChain(Object nidProp);
 
-    CallChain getPropertySetterChain(String sProperty);
+    /**
+     * @return a call chain for the specified property's setter
+     *
+     * @param nidProp  the property nid (String | NestedIdentity)
+     */
+    CallChain getPropertySetterChain(Object nidProp);
 
-    // return the set of field names
+    /**
+     * Retrieve a field value and place it to the specified register.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param idProp   the property id
+     * @param iReturn  the register id to place a result of the operation into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    default int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
+        {
+        return getTemplate().getFieldValue(frame, hTarget, idProp, iReturn);
+        }
+
+    /**
+     * Set a field value.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param idProp   the property id
+     * @param hValue   the new value
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    default int setFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue)
+        {
+        return getTemplate().setFieldValue(frame, hTarget, idProp, hValue);
+        }
+
+    /**
+     * @return a set of field names
+     */
     Set<String> getFieldNames();
 
-    // return an array of field name handles
+    /**
+     * @return an array of field name handles
+     */
     StringHandle[] getFieldNameArray();
 
-    // return an array of field value handles
+    /**
+     * @return an array of field value handles
+     */
     ObjectHandle[] getFieldValueArray(GenericHandle hValue);
     }

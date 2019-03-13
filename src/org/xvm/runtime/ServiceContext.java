@@ -13,6 +13,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IdentityConstant;
 
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.op.Return_0;
 
 import org.xvm.runtime.Fiber.FiberStatus;
@@ -501,22 +502,22 @@ public class ServiceContext
 
     // send and asynchronous property "read" operation message
     public CompletableFuture<ObjectHandle> sendProperty01Request(Frame frameCaller,
-                                            String sPropName, PropertyOperation01 op)
+                                                                 PropertyConstant idProp, PropertyOperation01 op)
         {
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
-        addRequest(new PropertyOpRequest(frameCaller, sPropName, null, 1, future, op));
+        addRequest(new PropertyOpRequest(frameCaller, idProp, null, 1, future, op));
 
         return future;
         }
 
     // send and asynchronous property "update" operation message
     public void sendProperty10Request(Frame frameCaller,
-                                      String sPropName, ObjectHandle hValue, PropertyOperation10 op)
+                                      PropertyConstant idProp, ObjectHandle hValue, PropertyOperation10 op)
         {
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
-        addRequest(new PropertyOpRequest(frameCaller, sPropName, hValue, 0, future, op));
+        addRequest(new PropertyOpRequest(frameCaller, idProp, hValue, 0, future, op));
 
         frameCaller.f_fiber.registerUncapturedRequest(future);
         }
@@ -865,19 +866,19 @@ public class ServiceContext
     public static class PropertyOpRequest
             extends Message
         {
-        private final String f_sPropName;
+        private final PropertyConstant f_idProp;
         private final ObjectHandle f_hValue;
         private final int f_cReturns;
         private final CompletableFuture<ObjectHandle> f_future;
         private final PropertyOperation f_op;
 
-        public PropertyOpRequest(Frame frameCaller, String sPropName,
+        public PropertyOpRequest(Frame frameCaller, PropertyConstant idProp,
                                  ObjectHandle hValue, int cReturns,
                                  CompletableFuture<ObjectHandle> future, PropertyOperation op)
             {
             super(frameCaller);
 
-            f_sPropName = sPropName;
+            f_idProp = idProp;
             f_hValue = hValue;
             f_cReturns = cReturns;
             f_future = future;
@@ -894,10 +895,10 @@ public class ServiceContext
                 public int process(Frame frame, int iPC)
                     {
                     return cReturns == 0
-                            ? ((PropertyOperation10) f_op).invoke(frame, context.m_hService, f_sPropName, f_hValue)
+                            ? ((PropertyOperation10) f_op).invoke(frame, context.m_hService, f_idProp, f_hValue)
                        : f_hValue == null
-                            ? ((PropertyOperation01) f_op).invoke(frame, context.m_hService, f_sPropName, 0)
-                            : ((PropertyOperation11) f_op).invoke(frame, context.m_hService, f_sPropName, f_hValue, 0);
+                            ? ((PropertyOperation01) f_op).invoke(frame, context.m_hService, f_idProp, 0)
+                            : ((PropertyOperation11) f_op).invoke(frame, context.m_hService, f_idProp, f_hValue, 0);
                     }
 
                 public String toString()

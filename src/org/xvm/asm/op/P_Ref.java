@@ -32,13 +32,13 @@ public class P_Ref
     /**
      * Construct a P_REF op based on the specified arguments.
      *
-     * @param constProperty  the property constant
-     * @param argTarget      the target Argument
-     * @param argReturn      the return Argument
+     * @param idProp     the property id
+     * @param argTarget  the target Argument
+     * @param argReturn  the return Argument
      */
-    public P_Ref(PropertyConstant constProperty, Argument argTarget, Argument argReturn)
+    public P_Ref(PropertyConstant idProp, Argument argTarget, Argument argReturn)
         {
-        super(constProperty);
+        super(idProp);
 
         m_argTarget = argTarget;
         m_argReturn = argReturn;
@@ -116,7 +116,7 @@ public class P_Ref
             frame.introduceResolvedVar(m_nRetValue, constProperty.getRefType(null));
             }
 
-        return hTarget.getComposition().getTemplate().
+        return hTarget.getTemplate().
             createPropertyRef(frame, hTarget, constProperty, true, m_nRetValue);
         }
 
@@ -139,6 +139,14 @@ public class P_Ref
 
         m_argTarget = registerArgument(m_argTarget, registry);
         m_argReturn = registerArgument(m_argReturn, registry);
+        }
+
+    @Override
+    public String toString()
+        {
+        return super.toString()
+                + ", " + Argument.toIdString(m_argTarget, m_nTarget)
+                + ", " + Argument.toIdString(m_argReturn, m_nRetValue);
         }
 
     private int m_nTarget;

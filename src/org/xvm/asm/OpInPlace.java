@@ -149,10 +149,9 @@ public abstract class OpInPlace
                     frame.introduceVarCopy(m_nRetValue, nTarget);
                     }
 
-                PropertyConstant constProperty = (PropertyConstant)
-                    frame.getConstant(nTarget);
+                PropertyConstant idProp = (PropertyConstant) frame.getConstant(nTarget);
 
-                return completeWithProperty(frame, constProperty.getName());
+                return completeWithProperty(frame, idProp);
                 }
             }
         catch (ExceptionHandle.WrapperException e)
@@ -171,7 +170,7 @@ public abstract class OpInPlace
         throw new UnsupportedOperationException();
         }
 
-    protected int completeWithProperty(Frame frame, String sProperty)
+    protected int completeWithProperty(Frame frame, PropertyConstant idProp)
         {
         throw new UnsupportedOperationException();
         }

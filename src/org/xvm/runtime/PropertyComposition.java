@@ -19,6 +19,8 @@ import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
+import org.xvm.runtime.template.xRef;
+import org.xvm.runtime.template.xRef.RefHandle;
 import org.xvm.runtime.template.xString.StringHandle;
 
 /**
@@ -51,6 +53,8 @@ public class PropertyComposition
         f_mapGetters = new ConcurrentHashMap<>();
         f_mapSetters = new ConcurrentHashMap<>();
         }
+
+    // ----- TypeComposition interface -------------------------------------------------------------
 
     @Override
     public OpSupport getSupport()
@@ -127,25 +131,25 @@ public class PropertyComposition
         }
 
     @Override
-    public Map<String, ObjectHandle> createFields()
+    public Map<Object, ObjectHandle> createFields()
         {
         return f_clzRef.createFields();
         }
 
     @Override
-    public boolean isRefAnnotated(String sProperty)
+    public boolean isRefAnnotated(PropertyConstant idProp)
         {
-        return f_clzRef.isRefAnnotated(sProperty);
+        return f_clzRef.isRefAnnotated(idProp);
         }
 
     @Override
-    public boolean isInjected(String sProperty)
+    public boolean isInjected(PropertyConstant idProp)
         {
         return false;
         }
 
     @Override
-    public boolean isAtomic(String sProperty)
+    public boolean isAtomic(PropertyConstant idProp)
         {
         return false;
         }
@@ -167,36 +171,52 @@ public class PropertyComposition
         }
 
     @Override
-    public CallChain getPropertyGetterChain(String sProperty)
+    public CallChain getPropertyGetterChain(Object nidProp)
         {
-        return f_mapGetters.computeIfAbsent(sProperty,
-            sName ->
+        return f_mapGetters.computeIfAbsent(nidProp,
+            nid ->
                 {
                 // see if there's a nested property first; default to the base otherwise
                 PropertyConstant idNested = (PropertyConstant) f_infoProp.getIdentity().
-                    appendNestedIdentity(ConstantPool.getCurrentPool(), sName);
+                    appendNestedIdentity(ConstantPool.getCurrentPool(), nid);
 
                 PropertyInfo infoProp = f_infoParent.findProperty(idNested);
                 return infoProp == null
-                    ? f_clzRef.getPropertyGetterChain(sName)
+                    ? f_clzRef.getPropertyGetterChain(nid)
                     : new CallChain(infoProp.ensureOptimizedGetChain(f_infoParent));
                 });
         }
 
     @Override
-    public CallChain getPropertySetterChain(String sProperty)
+    public CallChain getPropertySetterChain(Object nidProp)
         {
-        return f_mapSetters.computeIfAbsent(sProperty,
-            sName ->
+        return f_mapSetters.computeIfAbsent(nidProp,
+            nid ->
                 {
                 PropertyConstant idNested = (PropertyConstant) f_infoProp.getIdentity().
-                    appendNestedIdentity(ConstantPool.getCurrentPool(), sName);
+                    appendNestedIdentity(ConstantPool.getCurrentPool(), nid);
 
                 PropertyInfo infoProp = f_infoParent.findProperty(idNested);
                 return infoProp == null
-                    ? f_clzRef.getPropertySetterChain(sName)
+                    ? f_clzRef.getPropertySetterChain(nid)
                     : new CallChain(infoProp.ensureOptimizedSetChain(f_infoParent));
                 });
+        }
+
+    @Override
+    public int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
+        {
+        assert f_infoProp.getIdentity().equals(idProp);
+
+        return ((xRef) getTemplate()).get(frame, (RefHandle) hTarget, iReturn);
+        }
+
+    @Override
+    public int setFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue)
+        {
+        assert f_infoProp.getIdentity().equals(idProp);
+
+        return ((xRef) getTemplate()).set(frame, (RefHandle) hTarget, hValue);
         }
 
     @Override
@@ -234,9 +254,9 @@ public class PropertyComposition
     // cached method call chain (the top-most method first)
     private final Map<SignatureConstant, CallChain> f_mapMethods;
 
-    // cached property getter call chain (the top-most method first)
-    private final Map<String, CallChain> f_mapGetters;
+    // cached property getter call chain by nid (the top-most method first)
+    private final Map<Object, CallChain> f_mapGetters;
 
-    // cached property setter call chain (the top-most method first)
-    private final Map<String, CallChain> f_mapSetters;
+    // cached property setter call chain by nid (the top-most method first)
+    private final Map<Object, CallChain> f_mapSetters;
     }

@@ -8,6 +8,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInPlace;
 
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
@@ -67,10 +68,10 @@ public class IP_Dec
         }
 
     @Override
-    protected int completeWithProperty(Frame frame, String sProperty)
+    protected int completeWithProperty(Frame frame, PropertyConstant idProp)
         {
         ObjectHandle hTarget = frame.getThis();
 
-        return hTarget.getTemplate().invokePostDec(frame, hTarget, sProperty, A_IGNORE);
+        return hTarget.getTemplate().invokePostDec(frame, hTarget, idProp, A_IGNORE);
         }
     }

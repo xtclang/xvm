@@ -683,40 +683,40 @@ public abstract class ClassTemplate
     /**
      * Retrieve a property value.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target handle
-     * @param sPropName  the property name
-     * @param iReturn    the register id to place a result of the operation into
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param idProp   the property id
+     * @param iReturn  the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int getPropertyValue(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+    public int getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
-        if (sPropName == null)
+        if (idProp == null)
             {
             throw new IllegalStateException(f_sName);
             }
 
         TypeComposition clzTarget = hTarget.getComposition();
 
-        CallChain chain = clzTarget.getPropertyGetterChain(sPropName);
+        CallChain chain = clzTarget.getPropertyGetterChain(idProp.getNestedIdentity());
         if (chain.isNative())
             {
-            return invokeNativeGet(frame, sPropName, hTarget, iReturn);
+            return invokeNativeGet(frame, idProp.getName(), hTarget, iReturn);
             }
 
         if (clzTarget.isStruct() || chain.isField())
             {
-            return getFieldValue(frame, hTarget, sPropName, iReturn);
+            return getFieldValue(frame, hTarget, idProp, iReturn);
             }
 
         MethodStructure method = chain.getTop();
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
 
         GenericHandle hValue = (GenericHandle) hTarget;
-        ObjectHandle  hProp  = hValue.getField(sPropName);
-        if (hProp instanceof RefHandle && hTarget.isRefAnnotated(sPropName))
+        ObjectHandle  hProp  = hValue.getField(idProp);
+        if (hProp instanceof RefHandle && hTarget.isRefAnnotated(idProp))
             {
             switch (((RefHandle) hProp).ensureInitialized(frame, hValue))
                 {
@@ -742,49 +742,49 @@ public abstract class ClassTemplate
     /**
      * Retrieve a field value.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target handle
-     * @param sPropName  the property name
-     * @param iReturn    the register id to place a result of the operation into
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param idProp   the property id
+     * @param iReturn  the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int getFieldValue(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+    public int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
-        if (sPropName == null)
+        if (idProp == null)
             {
             throw new IllegalStateException(f_sName);
             }
 
         GenericHandle hThis = (GenericHandle) hTarget;
-        ObjectHandle hValue = hThis.getField(sPropName);
+        ObjectHandle hValue = hThis.getField(idProp);
 
         if (hValue == null)
             {
             String sErr;
-            if (hThis.isInjected(sPropName))
+            if (hThis.isInjected(idProp))
                 {
                 TypeInfo     info = hThis.getType().ensureTypeInfo();
-                PropertyInfo prop = info.findProperty(sPropName);
-                hValue = frame.f_context.f_container.getInjectable(sPropName, prop.getType());
+                PropertyInfo prop = info.findProperty(idProp);
+                hValue = frame.f_context.f_container.getInjectable(idProp.getName(), prop.getType());
                 if (hValue != null)
                     {
-                    hThis.setField(sPropName, hValue);
+                    hThis.setField(idProp, hValue);
                     return frame.assignValue(iReturn, hValue);
                     }
                 sErr = "Unknown injectable property ";
                 }
             else
                 {
-                sErr = hThis.containsField(sPropName) ?
+                sErr = hThis.containsField(idProp) ?
                         "Un-initialized property \"" : "Invalid property \"";
                 }
 
-            return frame.raiseException(xException.makeHandle(sErr + sPropName + '"'));
+            return frame.raiseException(xException.makeHandle(sErr + idProp + '"'));
             }
 
-        if (hTarget.isRefAnnotated(sPropName))
+        if (hTarget.isRefAnnotated(idProp))
             {
             RefHandle hRef = (RefHandle) hValue;
             switch (hRef.ensureInitialized(frame, hThis))
@@ -812,18 +812,18 @@ public abstract class ClassTemplate
     /**
      * Set a property value.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target handle
-     * @param sPropName  the property name
-     * @param hValue     the new value
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param idProp   the property id
+     * @param hValue   the new value
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
     public int setPropertyValue(Frame frame, ObjectHandle hTarget,
-                                 String sPropName, ObjectHandle hValue)
+                                PropertyConstant idProp, ObjectHandle hValue)
         {
-        if (sPropName == null)
+        if (idProp == null)
             {
             throw new IllegalStateException(f_sName);
             }
@@ -831,7 +831,7 @@ public abstract class ClassTemplate
         TypeComposition clzTarget = hTarget.getComposition();
         if (clzTarget.isStruct())
             {
-            return setFieldValue(frame, hTarget, sPropName, hValue);
+            return setFieldValue(frame, hTarget, idProp, hValue);
             }
 
         if (!hTarget.isMutable())
@@ -839,13 +839,7 @@ public abstract class ClassTemplate
             return frame.raiseException(xException.immutableObject());
             }
 
-        CallChain chain = clzTarget.getPropertySetterChain(sPropName);
-
-//        if (chain.getDepth() == 0)
-//            {
-//            return frame.raiseException(
-//                xException.makeHandle("Read-only property: " + property.getName()));
-//            }
+        CallChain chain = clzTarget.getPropertySetterChain(idProp.getNestedIdentity());
 
         if (chain.isNative())
             {
@@ -854,17 +848,17 @@ public abstract class ClassTemplate
 
         if (chain.isField())
             {
-            return setFieldValue(frame, hTarget, sPropName, hValue);
+            return setFieldValue(frame, hTarget, idProp, hValue);
             }
 
         MethodStructure method = chain.getTop();
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
         ahVar[0] = hValue;
 
-        if (hTarget.isRefAnnotated(sPropName))
+        if (hTarget.isRefAnnotated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
-            RefHandle hRef = (RefHandle) hThis.getField(sPropName);
+            RefHandle hRef = (RefHandle) hThis.getField(idProp);
 
             switch (hRef.ensureInitialized(frame, hThis))
                 {
@@ -891,29 +885,29 @@ public abstract class ClassTemplate
     /**
      * Set a field value.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target handle
-     * @param sPropName  the property name
-     * @param hValue     the new value
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param idProp   the property name
+     * @param hValue   the new value
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
     public int setFieldValue(Frame frame, ObjectHandle hTarget,
-                              String sPropName, ObjectHandle hValue)
+                             PropertyConstant idProp, ObjectHandle hValue)
         {
-        if (sPropName == null)
+        if (idProp == null)
             {
             throw new IllegalStateException(f_sName);
             }
 
         GenericHandle hThis = (GenericHandle) hTarget;
 
-        assert hThis.containsField(sPropName);
+        assert hThis.containsField(idProp);
 
-        if (hThis.isRefAnnotated(sPropName))
+        if (hThis.isRefAnnotated(idProp))
             {
-            RefHandle hRef = (RefHandle) hThis.getField(sPropName);
+            RefHandle hRef = (RefHandle) hThis.getField(idProp);
             switch (hRef.ensureInitialized(frame, hThis))
                 {
                 case Op.R_NEXT:
@@ -933,7 +927,7 @@ public abstract class ClassTemplate
             return hRef.getVarSupport().set(frame, hRef, hValue);
             }
 
-        hThis.setField(sPropName, hValue);
+        hThis.setField(idProp, hValue);
         return Op.R_NEXT;
         }
 
@@ -981,22 +975,22 @@ public abstract class ClassTemplate
      *
      * @param frame      the current frame
      * @param hTarget    the target handle
-     * @param sPropName  the property name
+     * @param idProp  the property name
      * @param iReturn    the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int invokePreInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+    public int invokePreInc(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
-        if (hTarget.isRefAnnotated(sPropName))
+        if (hTarget.isRefAnnotated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
-            RefHandle hRef = (RefHandle) hThis.getField(sPropName);
+            RefHandle hRef = (RefHandle) hThis.getField(idProp);
             return hRef.getVarSupport().invokeVarPreInc(frame, hRef, iReturn);
             }
         return new InPlacePropertyUnary(
-            UnaryAction.INC, this, hTarget, sPropName, false, iReturn).doNext(frame);
+            UnaryAction.INC, this, hTarget, idProp, false, iReturn).doNext(frame);
         }
 
     /**
@@ -1004,22 +998,22 @@ public abstract class ClassTemplate
      *
      * @param frame      the current frame
      * @param hTarget    the target handle
-     * @param sPropName  the property name
+     * @param idProp  the property name
      * @param iReturn    the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int invokePostInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+    public int invokePostInc(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
-        if (hTarget.isRefAnnotated(sPropName))
+        if (hTarget.isRefAnnotated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
-            RefHandle hRef = (RefHandle) hThis.getField(sPropName);
+            RefHandle hRef = (RefHandle) hThis.getField(idProp);
             return hRef.getVarSupport().invokeVarPostInc(frame, hRef, iReturn);
             }
         return new InPlacePropertyUnary(
-            UnaryAction.INC, this, hTarget, sPropName, true, iReturn).doNext(frame);
+            UnaryAction.INC, this, hTarget, idProp, true, iReturn).doNext(frame);
         }
 
     /**
@@ -1027,22 +1021,22 @@ public abstract class ClassTemplate
      *
      * @param frame      the current frame
      * @param hTarget    the target handle
-     * @param sPropName  the property name
+     * @param idProp  the property name
      * @param iReturn    the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int invokePreDec(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+    public int invokePreDec(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
-        if (hTarget.isRefAnnotated(sPropName))
+        if (hTarget.isRefAnnotated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
-            RefHandle hRef = (RefHandle) hThis.getField(sPropName);
+            RefHandle hRef = (RefHandle) hThis.getField(idProp);
             return hRef.getVarSupport().invokeVarPreDec(frame, hRef, iReturn);
             }
         return new InPlacePropertyUnary(
-            UnaryAction.DEC, this, hTarget, sPropName, false, iReturn).doNext(frame);
+            UnaryAction.DEC, this, hTarget, idProp, false, iReturn).doNext(frame);
         }
 
     /**
@@ -1050,22 +1044,22 @@ public abstract class ClassTemplate
      *
      * @param frame      the current frame
      * @param hTarget    the target handle
-     * @param sPropName  the property name
+     * @param idProp  the property name
      * @param iReturn    the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int invokePostDec(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+    public int invokePostDec(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
-        if (hTarget.isRefAnnotated(sPropName))
+        if (hTarget.isRefAnnotated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
-            RefHandle hRef = (RefHandle) hThis.getField(sPropName);
+            RefHandle hRef = (RefHandle) hThis.getField(idProp);
             return hRef.getVarSupport().invokeVarPostDec(frame, hRef, iReturn);
             }
         return new InPlacePropertyUnary(
-            UnaryAction.DEC, this, hTarget, sPropName, true, iReturn).doNext(frame);
+            UnaryAction.DEC, this, hTarget, idProp, true, iReturn).doNext(frame);
         }
 
     /**
@@ -1073,23 +1067,23 @@ public abstract class ClassTemplate
      *
      * @param frame      the current frame
      * @param hTarget    the target handle
-     * @param sPropName  the property name
+     * @param idProp  the property name
      * @param hArg       the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int invokePropertyAdd(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+    public int invokePropertyAdd(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
-        if (hTarget.isRefAnnotated(sPropName))
+        if (hTarget.isRefAnnotated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
-            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            RefHandle     hRef  = (RefHandle) hThis.getField(idProp);
             return hRef.getVarSupport().invokeVarAdd(frame, hRef, hArg);
             }
 
         return new InPlacePropertyBinary(
-            BinaryAction.ADD, this, hTarget, sPropName, hArg).doNext(frame);
+            BinaryAction.ADD, this, hTarget, idProp, hArg).doNext(frame);
         }
 
     /**
@@ -1097,23 +1091,23 @@ public abstract class ClassTemplate
      *
      * @param frame      the current frame
      * @param hTarget    the target handle
-     * @param sPropName  the property name
+     * @param idProp  the property name
      * @param hArg       the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int invokePropertySub(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+    public int invokePropertySub(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
-        if (hTarget.isRefAnnotated(sPropName))
+        if (hTarget.isRefAnnotated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
-            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            RefHandle     hRef  = (RefHandle) hThis.getField(idProp);
             return hRef.getVarSupport().invokeVarSub(frame, hRef, hArg);
             }
 
         return new InPlacePropertyBinary(
-            BinaryAction.SUB, this, hTarget, sPropName, hArg).doNext(frame);
+            BinaryAction.SUB, this, hTarget, idProp, hArg).doNext(frame);
         }
 
     /**
@@ -1121,23 +1115,23 @@ public abstract class ClassTemplate
      *
      * @param frame      the current frame
      * @param hTarget    the target handle
-     * @param sPropName  the property name
+     * @param idProp  the property name
      * @param hArg       the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int invokePropertyMul(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+    public int invokePropertyMul(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
-        if (hTarget.isRefAnnotated(sPropName))
+        if (hTarget.isRefAnnotated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
-            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            RefHandle     hRef  = (RefHandle) hThis.getField(idProp);
             return hRef.getVarSupport().invokeVarMul(frame, hRef, hArg);
             }
 
         return new InPlacePropertyBinary(
-            BinaryAction.MUL, this, hTarget, sPropName, hArg).doNext(frame);
+            BinaryAction.MUL, this, hTarget, idProp, hArg).doNext(frame);
         }
 
     /**
@@ -1145,23 +1139,23 @@ public abstract class ClassTemplate
      *
      * @param frame      the current frame
      * @param hTarget    the target handle
-     * @param sPropName  the property name
+     * @param idProp  the property name
      * @param hArg       the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int invokePropertyDiv(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+    public int invokePropertyDiv(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
-        if (hTarget.isRefAnnotated(sPropName))
+        if (hTarget.isRefAnnotated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
-            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            RefHandle     hRef  = (RefHandle) hThis.getField(idProp);
             return hRef.getVarSupport().invokeVarDiv(frame, hRef, hArg);
             }
 
         return new InPlacePropertyBinary(
-            BinaryAction.DIV, this, hTarget, sPropName, hArg).doNext(frame);
+            BinaryAction.DIV, this, hTarget, idProp, hArg).doNext(frame);
         }
 
     /**
@@ -1169,23 +1163,23 @@ public abstract class ClassTemplate
      *
      * @param frame      the current frame
      * @param hTarget    the target handle
-     * @param sPropName  the property name
+     * @param idProp  the property name
      * @param hArg       the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int invokePropertyMod(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+    public int invokePropertyMod(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
-        if (hTarget.isRefAnnotated(sPropName))
+        if (hTarget.isRefAnnotated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
-            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            RefHandle     hRef  = (RefHandle) hThis.getField(idProp);
             return hRef.getVarSupport().invokeVarMod(frame, hRef, hArg);
             }
 
         return new InPlacePropertyBinary(
-            BinaryAction.MOD, this, hTarget, sPropName, hArg).doNext(frame);
+            BinaryAction.MOD, this, hTarget, idProp, hArg).doNext(frame);
         }
 
     /**
@@ -1193,23 +1187,23 @@ public abstract class ClassTemplate
      *
      * @param frame      the current frame
      * @param hTarget    the target handle
-     * @param sPropName  the property name
+     * @param idProp  the property name
      * @param hArg       the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int invokePropertyShl(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+    public int invokePropertyShl(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
-        if (hTarget.isRefAnnotated(sPropName))
+        if (hTarget.isRefAnnotated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
-            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            RefHandle     hRef  = (RefHandle) hThis.getField(idProp);
             return hRef.getVarSupport().invokeVarShl(frame, hRef, hArg);
             }
 
         return new InPlacePropertyBinary(
-            BinaryAction.SHL, this, hTarget, sPropName, hArg).doNext(frame);
+            BinaryAction.SHL, this, hTarget, idProp, hArg).doNext(frame);
         }
 
     /**
@@ -1217,23 +1211,23 @@ public abstract class ClassTemplate
      *
      * @param frame      the current frame
      * @param hTarget    the target handle
-     * @param sPropName  the property name
+     * @param idProp  the property name
      * @param hArg       the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int invokePropertyShr(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+    public int invokePropertyShr(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
-        if (hTarget.isRefAnnotated(sPropName))
+        if (hTarget.isRefAnnotated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
-            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            RefHandle     hRef  = (RefHandle) hThis.getField(idProp);
             return hRef.getVarSupport().invokeVarShr(frame, hRef, hArg);
             }
 
         return new InPlacePropertyBinary(
-            BinaryAction.SHR, this, hTarget, sPropName, hArg).doNext(frame);
+            BinaryAction.SHR, this, hTarget, idProp, hArg).doNext(frame);
         }
 
     /**
@@ -1241,23 +1235,23 @@ public abstract class ClassTemplate
      *
      * @param frame      the current frame
      * @param hTarget    the target handle
-     * @param sPropName  the property name
+     * @param idProp  the property name
      * @param hArg       the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int invokePropertyShrAll(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+    public int invokePropertyShrAll(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
-        if (hTarget.isRefAnnotated(sPropName))
+        if (hTarget.isRefAnnotated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
-            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            RefHandle     hRef  = (RefHandle) hThis.getField(idProp);
             return hRef.getVarSupport().invokeVarShrAll(frame, hRef, hArg);
             }
 
         return new InPlacePropertyBinary(
-            BinaryAction.USHR, this, hTarget, sPropName, hArg).doNext(frame);
+            BinaryAction.USHR, this, hTarget, idProp, hArg).doNext(frame);
         }
 
     /**
@@ -1265,23 +1259,23 @@ public abstract class ClassTemplate
      *
      * @param frame      the current frame
      * @param hTarget    the target handle
-     * @param sPropName  the property name
+     * @param idProp  the property name
      * @param hArg       the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int invokePropertyAnd(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+    public int invokePropertyAnd(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
-        if (hTarget.isRefAnnotated(sPropName))
+        if (hTarget.isRefAnnotated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
-            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            RefHandle     hRef  = (RefHandle) hThis.getField(idProp);
             return hRef.getVarSupport().invokeVarAnd(frame, hRef, hArg);
             }
 
         return new InPlacePropertyBinary(
-            BinaryAction.AND, this, hTarget, sPropName, hArg).doNext(frame);
+            BinaryAction.AND, this, hTarget, idProp, hArg).doNext(frame);
         }
 
     /**
@@ -1289,23 +1283,23 @@ public abstract class ClassTemplate
      *
      * @param frame      the current frame
      * @param hTarget    the target handle
-     * @param sPropName  the property name
+     * @param idProp  the property name
      * @param hArg       the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int invokePropertyOr(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+    public int invokePropertyOr(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
-        if (hTarget.isRefAnnotated(sPropName))
+        if (hTarget.isRefAnnotated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
-            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            RefHandle     hRef  = (RefHandle) hThis.getField(idProp);
             return hRef.getVarSupport().invokeVarOr(frame, hRef, hArg);
             }
 
         return new InPlacePropertyBinary(
-            BinaryAction.OR, this, hTarget, sPropName, hArg).doNext(frame);
+            BinaryAction.OR, this, hTarget, idProp, hArg).doNext(frame);
         }
 
     /**
@@ -1313,23 +1307,23 @@ public abstract class ClassTemplate
      *
      * @param frame      the current frame
      * @param hTarget    the target handle
-     * @param sPropName  the property name
+     * @param idProp  the property name
      * @param hArg       the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int invokePropertyXor(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+    public int invokePropertyXor(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
-        if (hTarget.isRefAnnotated(sPropName))
+        if (hTarget.isRefAnnotated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
-            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            RefHandle     hRef  = (RefHandle) hThis.getField(idProp);
             return hRef.getVarSupport().invokeVarXor(frame, hRef, hArg);
             }
 
         return new InPlacePropertyBinary(
-            BinaryAction.XOR, this, hTarget, sPropName, hArg).doNext(frame);
+            BinaryAction.XOR, this, hTarget, idProp, hArg).doNext(frame);
         }
 
 
@@ -1340,26 +1334,25 @@ public abstract class ClassTemplate
      *
      * @param frame       the ConstantPool to place a potentially created new type into
      * @param hTarget    the target handle
-     * @param constProp  the property constant
+     * @param idProp  the property constant
      * @param fRO        true iff a Ref is required; Var otherwise
      * @param iReturn    the register to place the result in
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      */
     public int createPropertyRef(Frame frame, ObjectHandle hTarget,
-                                       PropertyConstant constProp, boolean fRO, int iReturn)
+                                 PropertyConstant idProp, boolean fRO, int iReturn)
         {
         GenericHandle hThis = (GenericHandle) hTarget;
 
-        String sPropName = constProp.getName();
-        if (!hThis.containsField(sPropName))
+        if (!hThis.containsField(idProp))
             {
-            throw new IllegalStateException("Unknown property: (" + f_sName + ")." + constProp);
+            throw new IllegalStateException("Unknown property: (" + f_sName + ")." + idProp);
             }
 
-        if (hTarget.isRefAnnotated(sPropName))
+        if (hTarget.isRefAnnotated(idProp))
             {
-            RefHandle hRef = (RefHandle) hThis.getField(sPropName);
+            RefHandle hRef = (RefHandle) hThis.getField(idProp);
             switch (hRef.ensureInitialized(frame, hThis))
                 {
                 case Op.R_NEXT:
@@ -1380,13 +1373,13 @@ public abstract class ClassTemplate
             }
 
         ConstantPool pool         = frame.poolContext();
-        TypeConstant typeReferent = constProp.getType().resolveGenerics(pool, hTarget.getType());
+        TypeConstant typeReferent = idProp.getType().resolveGenerics(pool, hTarget.getType());
 
         ClassComposition clzRef = fRO
             ? xRef.INSTANCE.ensureParameterizedClass(pool, typeReferent)
             : xVar.INSTANCE.ensureParameterizedClass(pool, typeReferent);
 
-        RefHandle hRef = new RefHandle(clzRef, hThis, sPropName);
+        RefHandle hRef = new RefHandle(clzRef, hThis, idProp);
         return frame.assignValue(iReturn, hRef, false);
         }
 

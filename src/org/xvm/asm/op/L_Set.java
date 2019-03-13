@@ -29,12 +29,12 @@ public class L_Set
     /**
      * Construct an L_SET op based on the specified arguments.
      *
-     * @param constProperty  the property constant
-     * @param argValue       the value Argument
+     * @param idProp    the property id
+     * @param argValue  the value Argument
      */
-    public L_Set(PropertyConstant constProperty, Argument argValue)
+    public L_Set(PropertyConstant idProp, Argument argValue)
         {
-        super(constProperty);
+        super(idProp);
 
         m_argValue = argValue;
         }
@@ -86,19 +86,18 @@ public class L_Set
 
             ObjectHandle hTarget = frame.getThis();
 
-            PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
-            String sProperty = constProperty.getName();
+            PropertyConstant idProp = (PropertyConstant) frame.getConstant(m_nPropId);
 
             if (isDeferred(hValue))
                 {
                 ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
                 Frame.Continuation stepNext = frameCaller -> hTarget.getTemplate().
-                    setPropertyValue(frameCaller, hTarget, sProperty, ahValue[0]);
+                    setPropertyValue(frameCaller, hTarget, idProp, ahValue[0]);
 
                 return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
                 }
 
-            return hTarget.getTemplate().setPropertyValue(frame, hTarget, sProperty, hValue);
+            return hTarget.getTemplate().setPropertyValue(frame, hTarget, idProp, hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

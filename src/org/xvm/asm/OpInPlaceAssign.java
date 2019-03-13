@@ -117,7 +117,7 @@ public abstract class OpInPlaceAssign
                 }
             else
                 {
-                PropertyConstant constProperty = (PropertyConstant) frame.getConstant(nTarget);
+                PropertyConstant idProp = (PropertyConstant) frame.getConstant(nTarget);
 
                 ObjectHandle hTarget = frame.getThis();
 
@@ -125,11 +125,11 @@ public abstract class OpInPlaceAssign
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hValue};
                     Frame.Continuation stepNext = frameCaller ->
-                        completeWithProperty(frameCaller, hTarget, constProperty.getName(), ahArg[0]);
+                        completeWithProperty(frameCaller, hTarget, idProp, ahArg[0]);
 
                     return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                     }
-                return completeWithProperty(frame, hTarget, constProperty.getName(), hValue);
+                return completeWithProperty(frame, hTarget, idProp, hValue);
                 }
             }
         catch (ExceptionHandle.WrapperException e)
@@ -157,7 +157,8 @@ public abstract class OpInPlaceAssign
     /**
      * The completion of processing.
      */
-    protected int completeWithProperty(Frame frame, ObjectHandle hTarget, String sProperty, ObjectHandle hValue)
+    protected int completeWithProperty(Frame frame, ObjectHandle hTarget, PropertyConstant idProp,
+                                       ObjectHandle hValue)
         {
         throw new UnsupportedOperationException();
         }
@@ -167,6 +168,14 @@ public abstract class OpInPlaceAssign
         {
         m_argTarget = registerArgument(m_argTarget, registry);
         m_argValue = registerArgument(m_argValue, registry);
+        }
+
+    @Override
+    public String toString()
+        {
+        return super.toString()
+                + ", " + Argument.toIdString(m_argTarget, m_nTarget)
+                + ", " + Argument.toIdString(m_argValue, m_nArgValue);
         }
 
     protected int m_nTarget;

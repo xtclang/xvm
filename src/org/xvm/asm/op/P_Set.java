@@ -30,13 +30,13 @@ public class P_Set
     /**
      * Construct a P_SET op based on the specified arguments.
      *
-     * @param constProperty  the property constant
-     * @param argTarget      the target Argument
-     * @param argValue       the value Argument
+     * @param idProp     the property id
+     * @param argTarget  the target Argument
+     * @param argValue   the value Argument
      */
-    public P_Set(PropertyConstant constProperty, Argument argTarget, Argument argValue)
+    public P_Set(PropertyConstant idProp, Argument argTarget, Argument argValue)
         {
-        super(constProperty);
+        super(idProp);
 
         m_argTarget = argTarget;
         m_argValue = argValue;
@@ -88,20 +88,19 @@ public class P_Set
                 return R_REPEAT;
                 }
 
-            PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
-            String sProperty = constProperty.getName();
+            PropertyConstant idProp = (PropertyConstant) frame.getConstant(m_nPropId);
 
             if (anyDeferred(ahArg))
                 {
                 Frame.Continuation stepNext = frameCaller ->
                     ahArg[0].getTemplate().setPropertyValue(
-                        frame, ahArg[0], sProperty, ahArg[1]);
+                        frame, ahArg[0], idProp, ahArg[1]);
 
                 return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
             return ahArg[0].getTemplate().setPropertyValue(
-                frame, ahArg[0], sProperty, ahArg[1]);
+                frame, ahArg[0], idProp, ahArg[1]);
             }
         catch (ExceptionHandle.WrapperException e)
             {

@@ -72,9 +72,9 @@ public class xProperty
             return f_property;
             }
 
-        public String getPropertyName()
+        public PropertyConstant getPropertyId()
             {
-            return f_property.getName();
+            return f_property;
             }
 
         @Override

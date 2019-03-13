@@ -652,12 +652,11 @@ public class Frame
                 try
                     {
                     // the value must point to a local property
-                    PropertyConstant constProperty = (PropertyConstant) getConstant(nVar);
-                    ObjectHandle hThis = getThis();
+                    PropertyConstant idProp = (PropertyConstant) getConstant(nVar);
+                    ObjectHandle     hThis  = getThis();
 
                     // TODO: check the "weak" assignment (here or inside)
-                    return hThis.getTemplate().setPropertyValue(
-                            this, hThis, constProperty.getName(), hValue);
+                    return hThis.getTemplate().setPropertyValue(this, hThis, idProp, hValue);
                     }
                 catch (ClassCastException e)
                     {

@@ -23,13 +23,13 @@ public class PIP_PostDec
     /**
      * Construct a PIP_DECA op based on the passed arguments.
      *
-     * @param constProperty  the property constant
-     * @param argTarget      the target Argument
-     * @param argReturn      the Argument to move the result into (Register or local property)
+     * @param idProp     the property id
+     * @param argTarget  the target Argument
+     * @param argReturn  the Argument to move the result into (Register or local property)
      */
-    public PIP_PostDec(PropertyConstant constProperty, Argument argTarget, Argument argReturn)
+    public PIP_PostDec(PropertyConstant idProp, Argument argTarget, Argument argReturn)
         {
-        super(constProperty, argTarget, argReturn);
+        super(idProp, argTarget, argReturn);
         }
 
     /**
@@ -51,8 +51,8 @@ public class PIP_PostDec
         }
 
     @Override
-    protected int complete(Frame frame, ObjectHandle hTarget, String sPropName)
+    protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp)
         {
-        return hTarget.getTemplate().invokePostDec(frame, hTarget, sPropName, m_nRetValue);
+        return hTarget.getTemplate().invokePostDec(frame, hTarget, idProp, m_nRetValue);
         }
     }

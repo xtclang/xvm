@@ -838,7 +838,7 @@ public class StatementBlock
                         {
                         // we're at a class level
                         IdentityConstant idResult = null;
-                        PropertyInfo     prop     = info.ensurePropertiesByName().get(sName);
+                        PropertyInfo     prop     = info.findProperty(sName);
                         if (prop == null)
                             {
                             if (info.containsMultiMethod(sName))
