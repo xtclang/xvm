@@ -158,19 +158,45 @@ public class Container
 
     protected void initResources()
         {
-        // +++ RuntimeClock
         ClassTemplate templateClock = f_templates.getTemplate("Clock");
         if (templateClock != null)
             {
             TypeConstant typeClock = templateClock.getCanonicalType();
 
+            // +++ RuntimeClock TODO DEPRECATED
             ClassTemplate templateRTClock = f_templates.getTemplate("_native.RuntimeClock");
-
             Supplier<ObjectHandle> supplierClock = () ->
                 xService.makeHandle(createServiceContext("RuntimeClock", f_moduleRoot),
                     templateRTClock.getCanonicalClass(), typeClock);
-
             f_mapResources.put(new InjectionKey("runtimeClock", typeClock), supplierClock);
+
+            // +++ LoResRealTimeClock
+            ClassTemplate templateRealTimeClock = f_templates.getTemplate("_native.LoResRealTimeClock");
+            supplierClock = () ->
+                xService.makeHandle(createServiceContext("LowResRealTimeClock", f_moduleRoot),
+                        templateRealTimeClock.getCanonicalClass(), typeClock);
+            f_mapResources.put(new InjectionKey("defaultClock", typeClock), supplierClock);
+            f_mapResources.put(new InjectionKey("realtimeClock", typeClock), supplierClock);
+            f_mapResources.put(new InjectionKey("loresClock", typeClock), supplierClock);
+
+            // TODO hiresClock
+            }
+
+        ClassTemplate templateTimer = f_templates.getTemplate("Timer");
+        if (templateTimer != null)
+            {
+            TypeConstant typeTimer = templateTimer.getCanonicalType();
+
+            // +++ LoResRealTimeTimer
+            ClassTemplate templateRealTimeTimer = f_templates.getTemplate("_native.LoResRealTimeTimer");
+            Supplier<ObjectHandle> supplierTimer = () ->
+                xService.makeHandle(createServiceContext("LowResRealTimeTimer", f_moduleRoot),
+                        templateRealTimeTimer.getCanonicalClass(), typeTimer);
+            f_mapResources.put(new InjectionKey("defaultTimer", typeTimer), supplierTimer);
+            f_mapResources.put(new InjectionKey("realtimeTimer", typeTimer), supplierTimer);
+            f_mapResources.put(new InjectionKey("loresTimer", typeTimer), supplierTimer);
+
+            // TODO hiresTimer
             }
 
         // +++ Console

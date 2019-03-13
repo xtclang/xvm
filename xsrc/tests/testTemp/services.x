@@ -19,7 +19,7 @@ module TestServices.xqiz.it
             {
             console.println("[main] calling service future-style: " + svc);
             @Future Int result = svc.calcSomethingBig(new Duration(0));
-            &result.thenDo(() -> {console.println("[main] future-style result=" + result);});
+            &result.thenDo(() -> {console.println("[main] future-style result=" + result);} );
             }
         }
 
