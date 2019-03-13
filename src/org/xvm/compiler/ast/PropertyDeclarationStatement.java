@@ -371,7 +371,7 @@ public class PropertyDeclarationStatement
                     assert !type.containsUnresolved();
 
                     // create an initializer function
-                    MethodStructure methodInit = prop.createMethod(true, Access.PRIVATE,
+                    MethodStructure methodInit = prop.createMethod(isStatic(), Access.PRIVATE,
                             org.xvm.asm.Annotation.NO_ANNOTATIONS,
                             new Parameter[] {new Parameter(pool(), type, null, null, true, 0, false)},
                             "=", Parameter.NO_PARAMS, true, false);

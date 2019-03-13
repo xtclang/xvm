@@ -30,6 +30,7 @@ import org.xvm.asm.constants.TypeConstant.Relation;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.Call_01;
+import org.xvm.asm.op.Invoke_01;
 import org.xvm.asm.op.L_Set;
 import org.xvm.asm.op.Return_0;
 
@@ -2270,20 +2271,15 @@ public class ClassStructure
      */
     public MethodStructure createInitializer(TypeConstant typeStruct)
         {
-        ConstantPool   pool       = ConstantPool.getCurrentPool();
-        int            nFlags     = Format.METHOD.ordinal() | Access.PUBLIC.FLAGS | Component.STATIC_BIT;
-        TypeConstant[] atypeParam = new TypeConstant[] {typeStruct};
-        Parameter[]    aParam     = new Parameter[]
-           {
-           new Parameter(pool, typeStruct, "struct", null, false, 0, false)
-           };
+        ConstantPool pool   = ConstantPool.getCurrentPool();
+        int          nFlags = Format.METHOD.ordinal() | Access.PUBLIC.FLAGS;
 
         // create an orphaned transient MethodStructure (using current pool)
         MethodConstant idMethod = pool.ensureMethodConstant(
-                getIdentityConstant(), "default", atypeParam, TypeConstant.NO_TYPES);
+                getIdentityConstant(), "default", TypeConstant.NO_TYPES, TypeConstant.NO_TYPES);
 
         MethodStructure method = new MethodStructure(this, nFlags, idMethod, null,
-                Annotation.NO_ANNOTATIONS, Parameter.NO_PARAMS, aParam, true, false);
+                Annotation.NO_ANNOTATIONS, Parameter.NO_PARAMS, Parameter.NO_PARAMS, true, false);
 
         MethodStructure.Code code = method.createCode();
 
@@ -2314,7 +2310,15 @@ public class ClassStructure
                     }
                 else if (idInit != null)
                     {
-                    code.add(new Call_01(idInit, idField));
+                    MethodStructure methodInit = (MethodStructure) idInit.getComponent();
+                    if (methodInit.isFunction())
+                        {
+                        code.add(new Call_01(idInit, idField));
+                        }
+                    else
+                        {
+                        code.add(new Invoke_01(new Register(typeStruct, Op.A_TARGET), idInit, idField));
+                        }
                     }
                 }
             }

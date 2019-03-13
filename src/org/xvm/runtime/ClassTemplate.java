@@ -443,7 +443,7 @@ public abstract class ClassTemplate
             return frame.call(frameCD);
             }
 
-        Frame frameID = frame.createFrame1(methodID, hStruct, ahVar, Op.A_IGNORE);
+        Frame frameID = frame.createFrame1(methodID, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE);
 
         frameID.setContinuation(frameCaller -> frameCaller.call(frameCD));
 
@@ -828,8 +828,7 @@ public abstract class ClassTemplate
             throw new IllegalStateException(f_sName);
             }
 
-        TypeComposition clzTarget = hTarget.getComposition();
-        if (clzTarget.isStruct())
+        if (hTarget.isStruct())
             {
             return setFieldValue(frame, hTarget, idProp, hValue);
             }
@@ -839,7 +838,7 @@ public abstract class ClassTemplate
             return frame.raiseException(xException.immutableObject());
             }
 
-        CallChain chain = clzTarget.getPropertySetterChain(idProp.getNestedIdentity());
+        CallChain chain = hTarget.getComposition().getPropertySetterChain(idProp.getNestedIdentity());
 
         if (chain.isNative())
             {

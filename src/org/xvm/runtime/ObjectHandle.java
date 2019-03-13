@@ -142,6 +142,14 @@ public abstract class ObjectHandle
         }
 
     /**
+     * @return true iff the handle represents a struct
+     */
+    public boolean isStruct()
+        {
+        return m_clazz.isStruct();
+        }
+
+    /**
      * @return true iff the handle itself could be used for the equality check
      */
     public boolean isNativeEqual()
