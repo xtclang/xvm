@@ -205,6 +205,7 @@ public class ClassStructure
                 case ENUMVALUE:
                 case INTERFACE:
                 case CLASS:
+                case MIXIN:
                 case CONST:
                 case SERVICE:
                     return (ClassStructure) parent;
