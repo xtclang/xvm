@@ -7,6 +7,7 @@
  */
 class ExtHashMap<KeyType, ValueType>
         implements Map<KeyType, ValueType>
+        incorporates Stringer
     {
     // ----- constructors --------------------------------------------------------------------------
 

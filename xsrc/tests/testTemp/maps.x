@@ -12,11 +12,13 @@ module TestMaps.xqiz.it
     void testBasic()
         {
         Map<Int, String> map = new ExtHashMap();
-        map.put(1, "hello from Map");
+        map.put(1, "Hello from Map");
+        map.put(2, "Goodbye from Map");
 
         if (String s : map.get(1))
             {
             console.println(s);
             }
+        console.println(map);
         }
     }

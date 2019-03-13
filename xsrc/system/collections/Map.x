@@ -29,6 +29,7 @@
 interface Map<KeyType, ValueType>
         extends UniformIndexed<KeyType, ValueType>
         extends ConstAble
+        extends Stringable
     {
     // ----- Entry interface -----------------------------------------------------------------------
 
@@ -1022,5 +1023,108 @@ interface Map<KeyType, ValueType>
             assert Ref.equals(Map.this, newMap);
             return true, this;
             }
+        }
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        Int capacity = 2; // allow for "{}"
+        if (KeyType.is(Type<Stringable>))
+            {
+            for (KeyType key : keys)
+                {
+                capacity += key.estimateStringLength() + 3; // allow for "=" and ", "
+                }
+            }
+        else
+            {
+            for (KeyType key : keys)
+                {
+                if (key.is(Stringable))
+                    {
+                    capacity += key.estimateStringLength() + 3;
+                    }
+                else
+                    {
+                    capacity += 2;
+                    }
+                }
+            }
+
+        if (ValueType.is(Type<Stringable>))
+            {
+            for (ValueType value : values)
+                {
+                capacity += value.estimateStringLength();
+                }
+            }
+        else
+            {
+            for (ValueType value : values)
+                {
+                if (value.is(Stringable))
+                    {
+                    capacity += value.estimateStringLength();
+                    }
+                }
+            }
+
+        return capacity;
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        appender.add('{');
+
+        if (KeyType.is(Type<Stringable>) && ValueType.is(Type<Stringable>))
+            {
+            Append:
+            for (Entry entry : entries)
+                {
+                if (!Append.first)
+                    {
+                    appender.add(", ");
+                    }
+                entry.key.appendTo(appender);
+                appender.add('=');
+                entry.value.appendTo(appender);
+                }
+            }
+        else
+            {
+            Append:
+            for (Entry entry : entries)
+                {
+                if (!Append.first)
+                    {
+                    appender.add(", ");
+                    }
+                KeyType key = entry.key;
+                if (key.is(Stringable))
+                    {
+                    key.appendTo(appender);
+                    }
+                else
+                    {
+                    appender.add(key.to<String>());
+                    }
+
+                appender.add('=');
+
+                ValueType value = entry.value;
+                if (value.is(Stringable))
+                    {
+                    value.appendTo(appender);
+                    }
+                else
+                    {
+                    appender.add(value.to<String>());
+                    }
+                }
+            }
+        appender.add(']');
         }
     }
