@@ -587,7 +587,7 @@ public class MethodDeclarationStatement
 
         if (body != null)
             {
-            compileMethod(mgr, body, method, errs);
+            body.compileMethod(method.createCode(), errs);
             }
         }
 
@@ -604,70 +604,6 @@ public class MethodDeclarationStatement
         }
 
     // ----- internal ------------------------------------------------------------------------------
-
-    protected void compileMethod(StageMgr mgr, StatementBlock stmt,
-                                 MethodStructure method, ErrorListener errs)
-        {
-        MethodConstant  idMethod  = method.getIdentityConstant();
-        ModuleStructure module    = (ModuleStructure) idMethod.getModuleConstant().getComponent();
-        String          sPath     = module.getName() + "/" + idMethod.getPathString();
-        Code            code      = method.createCode();
-        ErrorList       errsTemp  = new ErrorList(10);
-        try
-            {
-            stmt.compileMethod(code, errsTemp);
-
-            // copy over errors
-            for (ErrorInfo info : errsTemp.getErrors())
-                {
-                errs.log(info.getSeverity(), info.getCode(), info.getParams(), getSource(), info.getPos(), info.getEndPos());
-                }
-
-            // TODO: temporary
-            if (errsTemp.getSeriousErrorCount() > 0)
-                {
-                mgr.deferChildren();
-                if (System.getProperty("GG") != null)
-                    {
-                    method.setNative(true);
-                    }
-
-                if (sPath.contains("Test"))
-                    {
-                    if (sPath.contains("ExpectedFailure"))
-                        {
-                        System.out.println("Successfully failed test compilation: " + sPath);
-                        errsTemp.clear();
-                        }
-                    }
-                }
-            else
-                {
-                if (sPath.contains("Test"))
-                    {
-                    if (sPath.contains("ExpectedFailure"))
-                        {
-                        System.err.println("Compilation should have failed: " + sPath);
-                        }
-                    }
-                }
-            }
-        catch (Throwable e) // TODO temporary
-            {
-            mgr.deferChildren();
-
-            // copy over errors
-            for (ErrorInfo info : errsTemp.getErrors())
-                {
-                errs.log(info.getSeverity(), info.getCode(), info.getParams(), getSource(), info.getPos(), info.getEndPos());
-                }
-
-            method.setNative(true);
-
-            System.err.println("Compilation error: " + sPath + " " + e);
-            e.printStackTrace(System.err);
-            }
-        }
 
     protected org.xvm.asm.Annotation[] buildAnnotations(ConstantPool pool)
         {

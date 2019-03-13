@@ -2873,7 +2873,7 @@ public class ConstantPool
         }
 
     /**
-     * Cause all TypeInfos that are build from the specified class to re-build. This is necessary
+     * Cause all TypeInfos that are built from the specified class to re-build. This is necessary
      * during compilation when additional information becomes visible as the compilation progresses,
      * for example, when the compiler pierces a method boundary and discovers nested methods and/or
      * properties.
