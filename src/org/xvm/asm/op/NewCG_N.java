@@ -171,6 +171,12 @@ public class NewCG_N
         registerArguments(m_aArgValue, registry);
         }
 
+    @Override
+    protected String getParamsString()
+        {
+        return getParamsString(m_anArgValue, m_aArgValue);
+        }
+
     private int   m_nParentValue;
     private int   m_nTypeValue;
     private int[] m_anArgValue;
