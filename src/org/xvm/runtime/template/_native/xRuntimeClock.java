@@ -35,7 +35,7 @@ import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
 public class xRuntimeClock
         extends ClassTemplate
     {
-    public static Timer TIMER = new Timer("RuntimeClock", true);
+    public static Timer TIMER = xLoResRealTimeClock.TIMER;
 
     public xRuntimeClock(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {

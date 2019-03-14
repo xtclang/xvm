@@ -36,7 +36,7 @@ import org.xvm.runtime.template.xUInt128;
 public class xLoResRealTimeTimer
         extends ClassTemplate
     {
-    public static Timer TIMER = new Timer("RuntimeTimer", true);
+    public static Timer TIMER = xLoResRealTimeClock.TIMER;
 
     public xLoResRealTimeTimer(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -46,21 +46,19 @@ public class xLoResRealTimeTimer
     @Override
     public void initDeclared()
         {
-        markNativeGetter("now");
-        markNativeGetter("timezone");
-        markNativeMethod("scheduleAlarm", new String[]{"DateTime", "Timer.Alarm"}, null);
+        markNativeGetter("elapsed");
+        markNativeMethod("pause" , new String[0], null);
+        markNativeMethod("resume", new String[0], null);
+        markNativeMethod("exit"  , new String[0], null);
+        markNativeMethod("scheduleAlarm", new String[]{"Duration", "Timer.Alarm"}, null);
         }
 
     @Override
     protected int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
-        switch (sPropName)
+        if (sPropName.equals("elapsed"))
             {
-            case "now":
-                return frame.assignValue(iReturn, dateTimeNow());
-
-            case "timezone":
-                return frame.assignValue(iReturn, timezone());
+            return frame.assignValue(iReturn, ());
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -143,10 +141,10 @@ public class xLoResRealTimeTimer
 
     protected TypeComposition ensureDateTimeClass()
         {
-        TypeComposition clz = m_clzDateTime;
+        TypeComposition clz = m_clzDuration;
         if (clz == null)
             {
-            clz = m_clzDateTime =
+            clz = m_clzDuration =
                 f_templates.getTemplate("DateTime").getCanonicalClass();
             }
         return clz;
@@ -189,14 +187,9 @@ public class xLoResRealTimeTimer
         }
 
     /**
-     * Cached DateTime class.
+     * Cached Duration class.
      */
-    private TypeComposition m_clzDateTime;
-
-    /**
-     * Cached TimeZone handle.
-     */
-    private GenericHandle m_hTimeZone;
+    private TypeComposition m_clzDuration;
 
     private static LongLong PICOS_PER_MILLI = new LongLong(1_000_000_000);
     }
