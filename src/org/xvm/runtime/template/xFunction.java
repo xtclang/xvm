@@ -284,12 +284,12 @@ public class xFunction
             }
         }
 
-    public static class NativeMethodHandle
+    public static class NativeFunctionHandle
             extends FunctionHandle
         {
         final protected xService.NativeOperation f_op;
 
-        public NativeMethodHandle(xService.NativeOperation op)
+        public NativeFunctionHandle(xService.NativeOperation op)
             {
             super(INSTANCE.getCanonicalClass(), null);
 

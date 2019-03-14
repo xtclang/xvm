@@ -21,7 +21,7 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
-import org.xvm.runtime.template.xFunction.NativeMethodHandle;
+import org.xvm.runtime.template.xFunction.NativeFunctionHandle;
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xService.PropertyOperation;
 import org.xvm.runtime.template.xService.PropertyOperation10;
@@ -538,7 +538,7 @@ public class ServiceContext
         FunctionHandle hFunction = m_hExceptionHandler;
         if (hFunction == null)
             {
-            hFunction = new NativeMethodHandle((frame, ahArg, iReturn) ->
+            hFunction = new NativeFunctionHandle((frame, ahArg, iReturn) ->
                 {
                 switch (Utils.callToString(frame, ahArg[0]))
                     {

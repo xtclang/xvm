@@ -22,7 +22,7 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.LongLong;
 import org.xvm.runtime.template.xBaseInt128.LongLongHandle;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
-import org.xvm.runtime.template.xFunction.NativeMethodHandle;
+import org.xvm.runtime.template.xFunction.NativeFunctionHandle;
 import org.xvm.runtime.template.xInt64;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xUInt128;
@@ -88,7 +88,7 @@ public class xRuntimeClock
 
                 TIMER.schedule(task, cDelay);
 
-                FunctionHandle hCancel = new NativeMethodHandle((_frame, _ah, _iReturn) ->
+                FunctionHandle hCancel = new NativeFunctionHandle((_frame, _ah, _iReturn) ->
                     {
                     task.m_fCanceled = true;
                     return Op.R_NEXT;
