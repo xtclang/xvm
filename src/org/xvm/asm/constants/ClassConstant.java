@@ -4,6 +4,7 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
@@ -53,6 +54,25 @@ public class ClassConstant
 
 
     // ----- ClassConstant methods -----------------------------------------------------------------
+
+    /**
+     * Find the specified constructor of this class.
+     *
+     * @param types  the types of the constructor parameters
+     *
+     * @return the constructor; never null
+     *
+     * @throws IllegalStateException if the constructor cannot be found
+     */
+    public MethodConstant findConstructor(TypeConstant... types)
+        {
+        ClassStructure structClz = (ClassStructure) getComponent();
+        if (structClz == null)
+            {
+            throw new IllegalStateException("could not find class " + this);
+            }
+        return structClz.findConstructor(types).getIdentityConstant();
+        }
 
     /**
      * @return the next outer class, or null if there is none

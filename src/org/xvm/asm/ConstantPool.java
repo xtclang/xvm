@@ -919,50 +919,6 @@ public class ConstantPool
         }
 
     /**
-     * Find the specified constructor of the specified class in the Ecstasy module.
-     *
-     * @param constClass  the class to find a constructor for
-     * @param types       the types of the constructor parameters
-     *
-     * @return the constructor; never null
-     *
-     * @throws IllegalStateException if the constructor cannot be found
-     */
-    public MethodConstant ensureEcstasyConstructor(ClassConstant constClass, TypeConstant... types)
-        {
-        ClassStructure structClz = (ClassStructure) constClass.getComponent();
-        if (structClz == null)
-            {
-            throw new IllegalStateException("could not find class " + constClass);
-            }
-
-        MultiMethodStructure structMM = (MultiMethodStructure) structClz.getChild("construct");
-        if (structMM == null)
-            {
-            throw new IllegalStateException("no constructors on " + constClass);
-            }
-
-        int cParams = types.length;
-        NextMethod: for (MethodStructure structMethod : structMM.methods())
-            {
-            if (structMethod.getParamCount() == cParams)
-                {
-                for (int i = 0; i < cParams; ++i)
-                    {
-                    if (!structMethod.getParam(i).getType().equals(types[i]))
-                        {
-                        continue NextMethod;
-                        }
-                    }
-
-                return structMethod.getIdentityConstant();
-                }
-            }
-
-        throw new IllegalStateException("no such constructor for " + cParams + " params on " + constClass);
-        }
-
-    /**
      * This is the implementation of the "automatically imported" names that constitute the default
      * set of known names in the language. This implementation should correspond to the source file
      * "implicit.x".
