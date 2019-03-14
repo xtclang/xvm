@@ -7,7 +7,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -18,7 +17,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.LongLong;
 import org.xvm.runtime.template.xBaseInt128.LongLongHandle;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
-import org.xvm.runtime.template.xFunction.NativeMethodHandle;
+import org.xvm.runtime.template.xFunction.NativeFunctionHandle;
 import org.xvm.runtime.template.xUInt128;
 
 import org.xvm.runtime.template._native.xLocalClock.Alarm;
@@ -56,7 +55,7 @@ public class xNanosTimer
             {
             case "elapsed":
                 {
-                return frame.assignValue(iReturn, elpasedDuration());
+                return frame.assignValue(iReturn, elapsedDuration());
                 }
             }
 
@@ -115,7 +114,7 @@ public class xNanosTimer
                 Alarm           task    = new Alarm(frame, hAlarm);
                 TIMER.schedule(task, cMillis);
 
-                FunctionHandle hCancel = new NativeMethodHandle((_frame, _ah, _iReturn) ->
+                FunctionHandle hCancel = new NativeFunctionHandle((_frame, _ah, _iReturn) ->
                     {
                     task.cancel();
                     return Op.R_NEXT;
@@ -129,7 +128,7 @@ public class xNanosTimer
 
     // -----  helpers -----
 
-    protected GenericHandle elpasedDuration()
+    protected GenericHandle elapsedDuration()
         {
         long cNanosTotal = m_cNanosPrevSum;
         if (m_nStart != 0)
