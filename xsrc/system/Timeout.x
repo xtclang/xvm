@@ -87,7 +87,7 @@ const Timeout
             duration = duration.minOf(previousTimeout.remainingTime);
             }
 
-        startTime = runtimeClock.now;
+        startTime = clock.now;
         deadline  = startTime + duration;
         }
     finally
@@ -97,8 +97,9 @@ const Timeout
 
     /**
      * The clock selected by the runtime to manage timeouts.
+     * TODO use timer instead of clock
      */
-    @Inject Clock runtimeClock;
+    @Inject Clock clock;
 
     /**
      * The {@code Timeout} that this timeout replaced, if any.
@@ -123,7 +124,7 @@ const Timeout
     Duration duration;
 
     /**
-     * The time according to the {@link runtimeClock} at which this time timeout is expired.
+     * The time according to the {@link clock} at which this time timeout is expired.
      */
     DateTime deadline;
 
@@ -133,7 +134,7 @@ const Timeout
      */
     Duration remainingTime.get()
         {
-        return (deadline - runtimeClock.now).maxOf(Duration.NONE);
+        return (deadline - clock.now).maxOf(Duration.NONE);
         }
 
     /**
@@ -141,7 +142,7 @@ const Timeout
      */
     Boolean expired.get()
         {
-        return runtimeClock.now > deadline;
+        return clock.now > deadline;
         }
 
     /**

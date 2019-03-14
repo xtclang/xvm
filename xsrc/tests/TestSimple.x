@@ -31,9 +31,9 @@ module TestSimple.xqiz.it
     void test3(String s = "again!!!")
         {
         @Inject X.io.Console console;
-        @Inject X.Clock runtimeClock;
+        @Inject X.Clock clock;
 
-        console.println(runtimeClock.now.to<String>() + ": Hello " + s);
+        console.println(clock.now.to<String>() + ": Hello " + s);
         }
 
     void testIn()

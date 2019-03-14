@@ -1,6 +1,8 @@
 /**
  * A Timer is used to determine elapsed time. It can be paused and resumed, and its elapsed time can
  * be obtained and reset.
+ * <p/>
+ * TODO describe injection: (a) names (b) timer is running initially
  */
 interface Timer
     {

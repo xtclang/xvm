@@ -59,7 +59,7 @@ const CriticalSection
         this.reentrancy = reentrancy.maxOf(previousReentrancy);
 
         // keep track of when the critical section began
-        startTime = previousCriticalSection?.startTime : runtimeClock.now;
+        startTime = previousCriticalSection?.startTime : clock.now;
         }
     finally
         {
@@ -69,8 +69,9 @@ const CriticalSection
 
     /**
      * The clock selected by the runtime to measure CriticalSection duration.
+     * TODO use timer instead of clock
      */
-    @Inject Clock runtimeClock;
+    @Inject Clock clock;
 
     /**
      * The service {@code Reentrancy} setting that this CriticalSection replaced, if any.
@@ -97,7 +98,7 @@ const CriticalSection
      */
     Duration duration.get()
         {
-        return runtimeClock.now - startTime;
+        return clock.now - startTime;
         }
 
     /**

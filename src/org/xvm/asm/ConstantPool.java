@@ -947,10 +947,14 @@ public class ConstantPool
             case "Boolean":
             case "Char":
             case "Class":
+            case "Clock":
+            case "Closeable":
             case "Const":
+            case "Date":
+            case "DateTime":
+            case "Duration":
             case "Enum":
             case "Enumeration":
-            case "Closeable":
             case "Exception":
             case "Function":
             case "FPLiteral":
@@ -970,6 +974,9 @@ public class ConstantPool
             case "Stringable":
             case "StringBuffer":
             case "Struct":
+            case "Time":
+            case "Timer":
+            case "TimeZone":
             case "Type":
             case "Orderable":
             case "Sequential":
@@ -1125,6 +1132,11 @@ public class ConstantPool
             case "Unchecked":
                 sPkg = "annotations";
                 sClz = "UncheckedInt";
+                break;
+
+            case "Console":
+                sPkg = "io";
+                sClz = sName;
                 break;
 
             default:

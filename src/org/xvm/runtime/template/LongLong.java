@@ -269,7 +269,7 @@ public class LongLong
 
             if (l1L > 0)
                 {
-                return new LongLong(l1H/l);
+                return new LongLong(l1L/l);
                 }
             }
 
