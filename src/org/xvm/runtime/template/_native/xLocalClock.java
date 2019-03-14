@@ -20,6 +20,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.LongLong;
+import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
 import org.xvm.runtime.template.xBaseInt128.LongLongHandle;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xFunction.NativeMethodHandle;
@@ -27,17 +28,16 @@ import org.xvm.runtime.template.xInt64;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xUInt128;
 
-import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
 
 /**
- * TODO:
+ * Native implementation of a simple wall clock using Java's millisecond-resolution "System" clock.
  */
-public class xRuntimeClock
+public class xLocalClock
         extends ClassTemplate
     {
-    public static Timer TIMER = xLoResRealTimeClock.TIMER;
+    public static Timer TIMER = new Timer("Ecstasy:LocalClock", true);
 
-    public xRuntimeClock(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xLocalClock(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure);
         }
@@ -65,7 +65,6 @@ public class xRuntimeClock
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
-
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
         {
@@ -79,18 +78,15 @@ public class xRuntimeClock
                 // assert (hWakeup.timezone == NoTZ) == (this.timezone == NoTZ)
                 LongLongHandle llEpoch = (LongLongHandle) hWakeup.getField("epochPicos");
 
-                long ldtNow    = System.currentTimeMillis();
-                long ldtWakeup = llEpoch.getValue().divUnsigned(1_000_000_000).getLowValue();
-
-                long cDelay = Math.max(0, ldtWakeup - ldtNow);
-
-                CancellableTask task = new CancellableTask(frame, hAlarm, ldtWakeup);
-
+                long  ldtNow    = System.currentTimeMillis();
+                long  ldtWakeup = llEpoch.getValue().divUnsigned(PICOS_PER_MILLI).getLowValue();
+                long  cDelay    = Math.max(0, ldtWakeup - ldtNow);
+                Alarm task      = new Alarm(frame, hAlarm);
                 TIMER.schedule(task, cDelay);
 
                 FunctionHandle hCancel = new NativeMethodHandle((_frame, _ah, _iReturn) ->
                     {
-                    task.m_fCanceled = true;
+                    task.cancel();
                     return Op.R_NEXT;
                     });
                 return frame.assignValue(iReturn, hCancel);
@@ -107,7 +103,7 @@ public class xRuntimeClock
         TypeComposition clzDateTime = ensureDateTimeClass();
         GenericHandle hDateTime = new GenericHandle(clzDateTime);
 
-        LongLong llNow = new LongLong(System.currentTimeMillis()).mul(PICOS_PER_MILLI);
+        LongLong llNow = new LongLong(System.currentTimeMillis()).mul(PICOS_PER_MILLI_LL);
         hDateTime.setField("epochPicos", xUInt128.INSTANCE.makeLongLong(llNow));
         hDateTime.setField("timezone", timezone());
 
@@ -151,40 +147,23 @@ public class xRuntimeClock
         return clz;
         }
 
-    protected static class CancellableTask
+    protected static class Alarm
             extends TimerTask
         {
-        final private Frame f_frame;
-        final private FunctionHandle f_hFunction;
-        final private long f_ldtWakeup;
-
-        public volatile boolean m_fCanceled;
-
-        public CancellableTask(Frame frame, FunctionHandle hFunction, long ldtWakeup)
+        public Alarm(Frame frame, FunctionHandle hFunction)
             {
-            f_frame = frame;
+            f_frame     = frame;
             f_hFunction = hFunction;
-            f_ldtWakeup = ldtWakeup;
             }
 
         @Override
         public void run()
             {
-            if (!m_fCanceled)
-                {
-                // ensure the clock didn't go back
-                long ldtNow = System.currentTimeMillis();
-                if (ldtNow >= f_ldtWakeup)
-                    {
-                    f_frame.f_context.callLater(f_hFunction, Utils.OBJECTS_NONE);
-                    }
-                else
-                    {
-                    // reschedule
-                    TIMER.schedule(this, f_ldtWakeup - ldtNow);
-                    }
-                }
+            f_frame.f_context.callLater(f_hFunction, Utils.OBJECTS_NONE);
             }
+
+        final private Frame          f_frame;
+        final private FunctionHandle f_hFunction;
         }
 
     /**
@@ -197,5 +176,6 @@ public class xRuntimeClock
      */
     private GenericHandle m_hTimeZone;
 
-    private static LongLong PICOS_PER_MILLI = new LongLong(1_000_000_000);
+    protected static final long     PICOS_PER_MILLI    = 1_000_000_000;
+    protected static final LongLong PICOS_PER_MILLI_LL = new LongLong(PICOS_PER_MILLI);
     }

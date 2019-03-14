@@ -2203,3 +2203,133 @@ service ReadBuffer
 
     void release();
     }
+
+// --- Strings, take 10
+
+// instead of the box, we do need something that gives us:
+// - basically any characters are legal, even "escapes", white space, and what-not
+// - multi-line support
+// - basically like taking a file and pasting it in
+// - ideally easy to do by hand
+// - parsable
+// - looks good
+//
+// example: here's the code that I want to paste in as a string:
+
+<%@ taglib uri="/WEB-INF/jspwiki.tld" prefix="wiki" %>
+<%@ taglib uri="http://stripes.sourceforge.net/stripes.tld" prefix="stripes" %>
+<stripes:useActionBean binding="/View.action" />
+<wiki:Include page="ViewTemplate.jsp" />
+String myString = "This is my string\n" +
+        " which I want to be \n" +
+        "on multiple lines.";
+|s = """ this is a very
+        long string if I had the
+        energy to type more and more ..."""
+`string text`
+
+`string text line 1
+ string text line 2`
+
+`string text ${expression} string text`
+
+tag `string text ${expression} string text`
+//const char* p = "\xfff"; // error: hex escape sequence out of range
+const char* p = "\xff""f"; // OK: the literal is const char[3] holding {'\xff','f','\0'}
+
+
+// here's how it would look in Ecstasy:
+
+String s = |<%@ taglib uri="/WEB-INF/jspwiki.tld" prefix="wiki" %>
+           |<%@ taglib uri="http://stripes.sourceforge.net/stripes.tld" prefix="stripes" %>
+           |<stripes:useActionBean binding="/View.action" />
+           |<wiki:Include page="ViewTemplate.jsp" />
+           |String myString = "This is my string\n" +
+           |        " which I want to be \n" +
+           |        "on multiple lines.";
+           ||s = """ this is a very
+           |        long string if I had the
+           |        energy to type more and more ..."""
+           |`string text`
+           |
+           |`string text line 1
+           | string text line 2`
+           |
+           |`string text ${expression} string text`
+           |
+           |tag `string text ${expression} string text`
+           |//const char* p = "\xfff"; // error: hex escape sequence out of range
+           |const char* p = "\xff""f"; // OK: the literal is const char[3] holding {'\xff','f','\0'}
+          ; // semi-colon is the end of the declaration statement
+
+// also, it nests:
+String s2 = |// here's how it would look in Ecstasy:
+            |
+            |String s = |<%@ taglib uri="/WEB-INF/jspwiki.tld" prefix="wiki" %>
+            |           |<%@ taglib uri="http://stripes.sourceforge.net/stripes.tld" prefix="stripes" %>
+            |           |<stripes:useActionBean binding="/View.action" />
+            |           |<wiki:Include page="ViewTemplate.jsp" />
+            |           |String myString = "This is my string\n" +
+            |           |        " which I want to be \n" +
+            |           |        "on multiple lines.";
+            |           ||s = """ this is a very
+            |           |        long string if I had the
+            |           |        energy to type more and more ..."""
+            |           |`string text`
+            |           |
+            |           |`string text line 1
+            |           | string text line 2`
+            |           |
+            |           |`string text ${expression} string text`
+            |           |
+            |           |tag `string text ${expression} string text`
+            |           |//const char* p = "\xfff"; // error: hex escape sequence out of range
+            |           |const char* p = "\xff""f"; // OK: the literal is const char[3] holding {'\xff','f','\0'}
+            |          ; // semi-colon is the end of the declaration statement
+; // this has to go on a new line, otherwise it's part of the raw string
+
+// (and so on!)
+
+String s3 = | // also, it nests:
+            | String s2 = |// here's how it would look in Ecstasy:
+            |             |
+            |             |String s = |<%@ taglib uri="/WEB-INF/jspwiki.tld" prefix="wiki" %>
+            |             |           |<%@ taglib uri="http://stripes.sourceforge.net/stripes.tld" prefix="stripes" %>
+            ...
+
+// also supports the "$" concept:
+
+String s = $|...
+
+// also handles long long long lines well:
+
+String s = "When she had a child, it had to be sent out to nurse. When he came home, the lad was spoilt as if he were a prince. His mother stuffed him with jam; his father let him run about barefoot, and, playing the philosopher, even said he might as well go about quite naked like the young of animals. As opposed to the maternal ideas, he had a certain virile idea of childhood on which he sought to mould his son, wishing him to be brought up hardily, like a Spartan, to give him a strong constitution. He sent him to bed without any fire, taught him to drink off large draughts of rum and to jeer at religious processions. But, peaceable by nature, the lad answered only poorly to his notions. His mother always kept him near her; she cut out cardboard for him, told him tales, entertained him with endless monologues full of melancholy gaiety and charming nonsense. In her life’s isolation she centered on the child’s head all her shattered, broken little vanities. She dreamed of high station; she already saw him, tall, handsome, clever, settled as an engineer or in the law. She taught him to read, and even, on an old piano, she had taught him two or three little songs. But to all this Monsieur Bovary, caring little for letters, said, “It was not worth while. Would they ever have the means to send him to a public school, to buy him a practice, or start him in business? Besides, with cheek a man always gets on in the world.” Madame Bovary bit her lips, and the child knocked about the village.\nHe went after the labourers, drove away with clods of earth the ravens that were flying about. He ate blackberries along the hedges, minded the geese with a long switch, went haymaking during ..."
+
+// or:
+
+String s = |When she had a child, it had to be sent out to nurse. When he came home, the lad was
+         + | spoilt as if he were a prince. His mother stuffed him with jam; his father let him run
+         + | about barefoot, and, playing the philosopher, even said he might as well go about quite
+         + | naked like the young of animals. As opposed to the maternal ideas, he had a certain
+         + | virile idea of childhood on which he sought to mould his son, wishing him to be brought
+         + | up hardily, like a Spartan, to give him a strong constitution. He sent him to bed
+         + | without any fire, taught him to drink off large draughts of rum and to jeer at
+         + | religious processions. But, peaceable by nature, the lad answered only poorly to his
+         + | notions. His mother always kept him near her; she cut out cardboard for him, told him
+         + | tales, entertained him with endless monologues full of melancholy gaiety and charming
+         + | nonsense. In her life’s isolation she centered on the child’s head all her shattered,
+         + | broken little vanities. She dreamed of high station; she already saw him, tall,
+         + | handsome, clever, settled as an engineer or in the law. She taught him to read, and
+         + | even, on an old piano, she had taught him two or three little songs. But to all this
+         + | Monsieur Bovary, caring little for letters, said, “It was not worth while. Would they
+         + | ever have the means to send him to a public school, to buy him a practice, or start him
+         + | in business? Besides, with cheek a man always gets on in the world.” Madame Bovary bit
+         + | her lips, and the child knocked about the village.
+           |He went after the labourers, drove away with clods of earth the ravens that were flying
+         + | about. He ate blackberries along the hedges, minded the geese with a long switch, went
+         + | haymaking during ..."
+
+
+// downsides of this approach:
+// - trailing whitespace could be an issue (solution: use the file include syntax instead)
+// - when used with $, there is a number of rules that have to be ordered for precedence, such as escapes

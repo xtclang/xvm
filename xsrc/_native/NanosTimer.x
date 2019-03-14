@@ -1,7 +1,7 @@
 /**
- * Simple timer (stop-watch) using Java's millisecond-resolution "System" clock.
+ * Simple timer (stop-watch) using Java's nanosecond-resolution "System" clock.
  */
-class LoResRealTimeTimer
+class NanosTimer
         implements Timer
     {
     @Override
@@ -19,7 +19,7 @@ class LoResRealTimeTimer
     @Override
     Duration resolution.get()
         {
-        return Duration.MILLISEC;
+        return Duration.NANOSEC;
         }
 
     @Override

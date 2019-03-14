@@ -4,7 +4,7 @@ module TestMisc.xqiz.it
     import X.DateTime;
 
     @Inject X.io.Console console;
-    @Inject X.Clock runtimeClock;
+    @Inject X.Clock clock;
 
     void run()
         {
@@ -555,7 +555,7 @@ module TestMisc.xqiz.it
     class Order(String id)
         {
         Int lineCount;
-        DateTime date = runtimeClock.now;
+        DateTime date = clock.now;
 
         @Override
         String to<String>()

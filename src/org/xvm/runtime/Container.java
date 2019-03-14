@@ -28,32 +28,11 @@ import org.xvm.runtime.template.xModule.ModuleHandle;
 
 /**
  * TODO: for now Container == SecureContainer
+ * TODO this is currently building the container like it's the outermost container, not a nested
+ *      container (e.g. one that could replace, hide, or add any number of injections)
  */
 public class Container
     {
-    public final Runtime f_runtime;
-    public final ModuleRepository f_repository;
-    public final TemplateRegistry f_templates;
-    public final Adapter f_adapter;
-    public final ObjectHeap f_heapGlobal;
-
-    final protected ModuleStructure f_moduleRoot;
-    final protected ModuleConstant f_constModule;
-
-    // service context map (concurrent set)
-    final Map<ServiceContext, ServiceContext> f_mapServices = new ConcurrentHashMap<>();
-
-    // the service context for the container itself
-    private ServiceContext m_contextMain;
-
-    // the module
-    private final String f_sAppName;
-    private ModuleHandle m_hModule;
-    private ClassTemplate m_app; // replace with m_hModule
-
-    // the values are: ObjectHandle | Supplier<ObjectHandle>
-    final Map<InjectionKey, Object> f_mapResources = new HashMap<>();
-
     public Container(Runtime runtime, String sAppName, ModuleRepository repository)
         {
         f_runtime = runtime;
@@ -158,45 +137,28 @@ public class Container
 
     protected void initResources()
         {
+        // +++ LocalClock
         ClassTemplate templateClock = f_templates.getTemplate("Clock");
         if (templateClock != null)
             {
             TypeConstant typeClock = templateClock.getCanonicalType();
 
-            // +++ RuntimeClock TODO DEPRECATED
-            ClassTemplate templateRTClock = f_templates.getTemplate("_native.RuntimeClock");
-            Supplier<ObjectHandle> supplierClock = () ->
-                xService.makeHandle(createServiceContext("RuntimeClock", f_moduleRoot),
-                    templateRTClock.getCanonicalClass(), typeClock);
-            f_mapResources.put(new InjectionKey("runtimeClock", typeClock), supplierClock);
-
-            // +++ LoResRealTimeClock
-            ClassTemplate templateRealTimeClock = f_templates.getTemplate("_native.LoResRealTimeClock");
-            supplierClock = () ->
-                xService.makeHandle(createServiceContext("LowResRealTimeClock", f_moduleRoot),
-                        templateRealTimeClock.getCanonicalClass(), typeClock);
-            f_mapResources.put(new InjectionKey("defaultClock", typeClock), supplierClock);
-            f_mapResources.put(new InjectionKey("realtimeClock", typeClock), supplierClock);
-            f_mapResources.put(new InjectionKey("loresClock", typeClock), supplierClock);
-
-            // TODO hiresClock
+            f_mapResources.put(new InjectionKey("clock"     , typeClock), (Supplier<ObjectHandle>) this::ensureDefaultClock);
+            f_mapResources.put(new InjectionKey("localClock", typeClock), (Supplier<ObjectHandle>) this::ensureLocalClock);
+            f_mapResources.put(new InjectionKey("utcClock"  , typeClock), (Supplier<ObjectHandle>) this::ensureUTCClock);
             }
 
+        // +++ NanosTimer
         ClassTemplate templateTimer = f_templates.getTemplate("Timer");
         if (templateTimer != null)
             {
             TypeConstant typeTimer = templateTimer.getCanonicalType();
 
-            // +++ LoResRealTimeTimer
-            ClassTemplate templateRealTimeTimer = f_templates.getTemplate("_native.LoResRealTimeTimer");
+            ClassTemplate templateRealTimeTimer = f_templates.getTemplate("_native.NanosTimer");
             Supplier<ObjectHandle> supplierTimer = () ->
-                xService.makeHandle(createServiceContext("LowResRealTimeTimer", f_moduleRoot),
+                xService.makeHandle(createServiceContext("Timer", f_moduleRoot),
                         templateRealTimeTimer.getCanonicalClass(), typeTimer);
-            f_mapResources.put(new InjectionKey("defaultTimer", typeTimer), supplierTimer);
-            f_mapResources.put(new InjectionKey("realtimeTimer", typeTimer), supplierTimer);
-            f_mapResources.put(new InjectionKey("loresTimer", typeTimer), supplierTimer);
-
-            // TODO hiresTimer
+            f_mapResources.put(new InjectionKey("timer", typeTimer), supplierTimer);
             }
 
         // +++ Console
@@ -213,6 +175,37 @@ public class Container
 
             f_mapResources.put(new InjectionKey("console", typeConsole), supplierConsole);
             }
+        }
+
+    protected ObjectHandle ensureDefaultClock()
+        {
+        // TODO
+        return ensureLocalClock();
+        }
+
+    protected ObjectHandle ensureLocalClock()
+        {
+        ObjectHandle hClock = m_hLocalClock;
+        if (hClock == null)
+            {
+            ClassTemplate templateClock = f_templates.getTemplate("Clock");
+            if (templateClock != null)
+                {
+                TypeConstant typeClock = templateClock.getCanonicalType();
+                ClassTemplate templateRealTimeClock = f_templates.getTemplate("_native.LocalClock");
+                m_hLocalClock = hClock = xService.makeHandle(createServiceContext("LocalClock",
+                        f_moduleRoot), templateRealTimeClock.getCanonicalClass(), typeClock);
+
+                }
+            }
+
+        return hClock;
+        }
+
+    protected ObjectHandle ensureUTCClock()
+        {
+        // TODO
+        return ensureDefaultClock();
         }
 
     public ServiceContext createServiceContext(String sName, ModuleStructure module)
@@ -326,4 +319,29 @@ public class Container
             return "Key: " + f_sName + ", " + f_type;
             }
         }
+
+    public final Runtime f_runtime;
+    public final ModuleRepository f_repository;
+    public final TemplateRegistry f_templates;
+    public final Adapter f_adapter;
+    public final ObjectHeap f_heapGlobal;
+
+    final protected ModuleStructure f_moduleRoot;
+    final protected ModuleConstant f_constModule;
+
+    // service context map (concurrent set)
+    final Map<ServiceContext, ServiceContext> f_mapServices = new ConcurrentHashMap<>();
+
+    // the service context for the container itself
+    private ServiceContext m_contextMain;
+
+    // the module
+    private final String f_sAppName;
+    private ModuleHandle m_hModule;
+    private ClassTemplate m_app; // replace with m_hModule
+
+    private ObjectHandle m_hLocalClock;
+
+    // the values are: ObjectHandle | Supplier<ObjectHandle>
+    final Map<InjectionKey, Object> f_mapResources = new HashMap<>();
     }

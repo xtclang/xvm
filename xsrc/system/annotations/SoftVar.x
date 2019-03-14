@@ -15,6 +15,8 @@
  * enqueued into the service's runtime event queue each time that the soft reference is cleared by
  * the garbage collector; see {@link Service.pendingRuntimeEvents} and
  * {@link Service.dispatchRuntimeEvents}.
+ *
+ * TODO use timer instead of clock
  */
 mixin SoftVar<RefType>(function void ()? notify)
         into Var<RefType>
@@ -24,7 +26,7 @@ mixin SoftVar<RefType>(function void ()? notify)
      * clock is a clock optimized for a high number of accesses, and not for correctness with
      * respect to wall clock time.
      */
-    public/private @Inject Clock runtimeClock;
+    public/private @Inject Clock clock;
 
     /**
      * The last time that this reference was accessed, maintained for the use of the garbage
@@ -67,9 +69,9 @@ mixin SoftVar<RefType>(function void ()? notify)
             {
             assert (&this).incorporates_(LazyVar);
 
-            DateTime start = runtimeClock.now;
+            DateTime start = clock.now;
             RefType  value = super();
-            DateTime stop  = runtimeClock.now;
+            DateTime stop  = clock.now;
 
             ++accessCount;
             lastAccessTime   = stop;
@@ -79,7 +81,7 @@ mixin SoftVar<RefType>(function void ()? notify)
             }
 
         ++accessCount;
-        lastAccessTime = runtimeClock.now;
+        lastAccessTime = clock.now;
         return super();
         }
     }

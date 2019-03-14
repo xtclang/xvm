@@ -1,7 +1,7 @@
 /**
- * Simple runtime clock.
+ * Simple wall clock using Java's millisecond-resolution "System" clock.
  */
-class RuntimeClock
+class LocalClock
         implements Clock
     {
     @Override
