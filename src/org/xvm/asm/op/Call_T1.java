@@ -195,6 +195,12 @@ public class Call_T1
         m_argReturn = registerArgument(m_argReturn, registry);
         }
 
+    @Override
+    protected String getParamsString()
+        {
+        return Argument.toIdString(m_argValue, m_nArgTupleValue);
+        }
+
     private int m_nArgTupleValue;
 
     private Argument m_argValue;

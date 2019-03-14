@@ -183,6 +183,12 @@ public class Call_T0
         m_argValue = registerArgument(m_argValue, registry);
         }
 
+    @Override
+    protected String getParamsString()
+        {
+        return Argument.toIdString(m_argValue, m_nArgTupleValue);
+        }
+
     private int m_nArgTupleValue;
 
     private Argument m_argValue;

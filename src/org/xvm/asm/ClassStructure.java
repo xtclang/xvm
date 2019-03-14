@@ -1531,6 +1531,43 @@ public class ClassStructure
         }
 
     /**
+     * Find the specified constructor of this class.
+     *
+     * @param types  the types of the constructor parameters
+     *
+     * @return the constructor; never null
+     *
+     * @throws IllegalStateException if the constructor cannot be found
+     */
+    public MethodStructure findConstructor(TypeConstant... types)
+        {
+        MultiMethodStructure structMM = (MultiMethodStructure) getChild("construct");
+        if (structMM == null)
+            {
+            throw new IllegalStateException("no constructors on " + this);
+            }
+
+        int cParams = types.length;
+        NextMethod: for (MethodStructure structMethod : structMM.methods())
+            {
+            if (structMethod.getParamCount() == cParams)
+                {
+                for (int i = 0; i < cParams; ++i)
+                    {
+                    if (!structMethod.getParam(i).getType().equals(types[i]))
+                        {
+                        continue NextMethod;
+                        }
+                    }
+
+                return structMethod;
+                }
+            }
+
+        throw new IllegalStateException("no such constructor for " + cParams + " params on " + this);
+        }
+
+    /**
      * For this class structure representing an R-Value, find a contribution assignable to the
      * specified L-Value type.
      *

@@ -201,7 +201,7 @@ public class TodoExpression
         // throw new UnsupportedOperationException(message, null)
         ConstantPool   pool     = pool();
         ClassConstant  constEx  = pool.ensureEcstasyClassConstant("UnsupportedOperationException");
-        MethodConstant constNew = pool.ensureEcstasyConstructor(constEx, pool.typeString१(), pool.typeException१());
+        MethodConstant constNew = constEx.findConstructor(pool.typeString१(), pool.typeException१());
         Argument       argEx    = new Register(constEx.getType());
         Argument       argMsg   = message == null
                 ? pool.valNull()
