@@ -127,6 +127,14 @@ const IntNumber
     IntNumber reverseBytes();
 
 
+    // ----- Number --------------------------------------------------------------------------------
+
+    @Override
+    @RO IntNumber! magnitude.get()
+        {
+        return super();
+        }
+
     // ----- Sequential ----------------------------------------------------------------------------
 
     @Override

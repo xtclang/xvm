@@ -16,16 +16,11 @@ module TestServices.xqiz.it
             {
             console.println("[main] calling service future-style: " + i);
             @Future Int result = svc.calcSomethingBig(Duration.ofSeconds(i));
-            function void (Int?, Exception?) f = showResult;
-            FutureVar<Int> future = &result;
-            future.whenComplete(f);
-            //&result.whenComplete(showResult);
+            &result.whenComplete((n, e) ->
+                {
+                console.println("[main] result=" + (n ?: e ?: "???"));
+                });
             }
-        }
-
-    void showResult(Int? n, Exception? e)
-        {
-        console.println("[main] result=" + (n ?: e ?: "???"));
         }
 
     service TestService
