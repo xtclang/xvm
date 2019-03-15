@@ -23,9 +23,8 @@ module TestServices.xqiz.it
             }
         }
 
-    static void showResult(Int? n, Exception? e)
+    void showResult(Int? n, Exception? e)
         {
-        @Inject Console console;
         console.println("[main] result=" + (n ?: e ?: "???"));
         }
 
