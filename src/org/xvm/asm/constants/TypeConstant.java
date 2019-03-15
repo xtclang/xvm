@@ -1263,17 +1263,6 @@ public abstract class TypeConstant
                 return buildStructInfo(errs);
 
             case PRIVATE:
-                // annotated types require special handling
-                if (isAnnotated())
-                    {
-                    TypeConstant typeAnno = getUnderlyingType();
-                    if (typeAnno instanceof AnnotatedTypeConstant)
-                        {
-                        return ((AnnotatedTypeConstant) typeAnno).buildPrivateInfo(errs);
-                        }
-                    throw new IllegalStateException("Unsupported type: " + getValueString());
-                    }
-
                 // this is the one type that actually gets built by this method
                 break;
 
@@ -1306,6 +1295,17 @@ public abstract class TypeConstant
         catch (RuntimeException e)
             {
             throw new IllegalStateException("Unable to determine class for " + getValueString(), e);
+            }
+
+        // annotated types require special handling
+        if (isAnnotated())
+            {
+            TypeConstant typeAnno = getUnderlyingType();
+            if (typeAnno instanceof AnnotatedTypeConstant)
+                {
+                return ((AnnotatedTypeConstant) typeAnno).buildPrivateInfo(constId, errs);
+                }
+            throw new IllegalStateException("Unsupported type: " + getValueString());
             }
 
         // get a snapshot of the current invalidation count BEFORE building the TypeInfo
@@ -2792,7 +2792,7 @@ public abstract class TypeConstant
                 : null;
         PropertyInfo propResult = propBase == null
                 ? propContrib
-                : propBase.layerOn(propContrib, fSelf, errs);
+                : propBase.layerOn(propContrib, fSelf, false, errs);
 
         // formal properties don't delegate
         if (idDelegate != null && !propResult.isTypeParam())

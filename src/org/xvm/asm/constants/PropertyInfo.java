@@ -8,8 +8,6 @@ import java.util.List;
 import java.util.Set;
 
 import org.xvm.asm.Annotation;
-import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
@@ -70,12 +68,14 @@ public class PropertyInfo
      * PropertyInfo.
      *
      * @param that   the "contribution" PropertyInfo to layer on top of this property
-     * @param fSelf  true if the layer being added represents the "Equals" contribution of the type
+     * @param fSelf  true if the layer being added ("that") represents the "Equals" contribution of
+     *               the type
+     * @param fAnno  true if the layer(s) being added ("that") represents an annotation
      * @param errs   the error list to log any conflicts to
      *
      * @return a PropertyInfo representing the combined information
      */
-    public PropertyInfo layerOn(PropertyInfo that, boolean fSelf, ErrorListener errs)
+    public PropertyInfo layerOn(PropertyInfo that, boolean fSelf, boolean fAnno, ErrorListener errs)
         {
         assert that != null && errs != null;
 
@@ -118,8 +118,9 @@ public class PropertyInfo
                     constId.getValueString());
             }
 
-        // types must match
-        if (!that.getType().isA(this.getType()))
+        // types must match (but it is possible that an annotation is wider than the specific type
+        // that it annotates)
+        if (!(that.getType().isA(this.getType()) || fAnno && this.getType().isA(that.getType())))
             {
             constId.log(errs, Severity.ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
                     constId.getValueString(),
@@ -214,10 +215,11 @@ public class PropertyInfo
                     // type has been narrowed
                     typeResult = typeAdd;
                     }
-                // the property type can only be wider if it is a read-only interface/into method;
-                // otherwise it is an error
+                // the property type can only be wider if it is a read-only interface/into method
+                // or the layer-on is an annotation; otherwise it is an error
                 else if (!(exAdd != Existence.Class && bodyAdd.isRO() && typeResult.isA(typeAdd))
-                        && !bodyAdd.getStructure().isSynthetic())   // synthetic might not be marked
+                        && !bodyAdd.getStructure().isSynthetic()    // synthetic might not be marked
+                        && !fAnno)
                     {
                     constId.log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_REQUIRED,
                             constId.getValueString(),
@@ -380,7 +382,7 @@ public class PropertyInfo
                     Effect.BlocksSuper, fRO ? Effect.None : Effect.BlocksSuper, false, false, null, null)
                 : new PropertyBody(struct, Implementation.SansCode, null, getType(), fRO, false, false,
                     Effect.None, Effect.None, !fRO, false, null, null);
-        return layerOn(new PropertyInfo(bodyNew), false, errs);
+        return layerOn(new PropertyInfo(bodyNew), false, false, errs);
         }
 
     /**

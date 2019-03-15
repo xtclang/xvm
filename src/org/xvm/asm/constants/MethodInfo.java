@@ -88,7 +88,7 @@ public class MethodInfo
         int          cOld = aOld.length;
         MethodBody[] aNew = new MethodBody[cOld+1];
 
-        aNew[0] = new MethodBody(idCap, sigThis, Implementation.Capped, sigThat);
+        aNew[0] = new MethodBody(idCap, sigThis, Implementation.Capped, idThat.getNestedIdentity());
         System.arraycopy(aOld, 0, aNew, 1, cOld);
 
         return new MethodInfo(aNew);
@@ -380,8 +380,8 @@ public class MethodInfo
             {
             if (body.getImplementation() == Implementation.Capped)
                 {
-                SignatureConstant sig = body.getNarrowingNestedIdentity();
-                return infoType.getMethodBySignature(sig).getTopmostMethodStructure(infoType);
+                Object nid = body.getNarrowingNestedIdentity();
+                return infoType.getMethodByNestedId(nid).getTopmostMethodStructure(infoType);
                 }
 
             MethodStructure method = body.getMethodStructure();

@@ -39,34 +39,36 @@ public class MethodBody
     /**
      * Construct a method body with an optional target.
      *
-     * @param id           the method constant that this body represents
-     * @param sig          the resolved signature of the method
-     * @param impl         specifies the implementation of the MethodBody
-     * @param constTarget  a <i>resolved</i> SignatureConstant from the "narrowing" chain for a
-     *                     Capped Implementation; a PropertyConstant for a Delegating or Field
-     *                     Implementation; otherwise null
+     * @param id      the method constant that this body represents
+     * @param sig     the resolved signature of the method
+     * @param impl    specifies the implementation of the MethodBody
+     * @param target  a <i>resolved</i> nid (a SignatureConstant for non-nested) from the
+     *                "narrowing" chain for a Capped Implementation;
+     *                a PropertyConstant for a Delegating or Field Implementation;
+     *                otherwise null
      */
-    public MethodBody(MethodConstant id, SignatureConstant sig, Implementation impl, Constant constTarget)
+    public MethodBody(MethodConstant id, SignatureConstant sig, Implementation impl, Object target)
         {
         assert id != null && sig != null && impl != null;
         switch (impl)
             {
             case Capped:
-                assert constTarget instanceof SignatureConstant;
+                assert target instanceof SignatureConstant
+                    || target instanceof IdentityConstant.NestedIdentity;
                 break;
             case Delegating:
             case Field:
-                assert constTarget instanceof PropertyConstant;
+                assert target instanceof PropertyConstant;
                 break;
             default:
-                assert constTarget == null;
+                assert target == null;
                 break;
             }
 
-        m_id          = id;
-        m_sig         = sig;
-        m_impl        = impl;
-        m_constTarget = constTarget;
+        m_id     = id;
+        m_sig    = sig;
+        m_impl   = impl;
+        m_target = target;
         }
 
     /**
@@ -77,10 +79,10 @@ public class MethodBody
      */
     public MethodBody(MethodBody body, Implementation impl)
         {
-        m_id          = body.m_id;
-        m_sig         = body.m_sig;
-        m_constTarget = body.m_constTarget;
-        m_impl        = impl;
+        m_id     = body.m_id;
+        m_sig    = body.m_sig;
+        m_target = body.m_target;
+        m_impl   = impl;
         }
 
     /**
@@ -288,19 +290,17 @@ public class MethodBody
     public PropertyConstant getPropertyConstant()
         {
         return m_impl == Implementation.Delegating || m_impl == Implementation.Field
-                ? (PropertyConstant) m_constTarget
+                ? (PropertyConstant) m_target
                 : null;
         }
 
     /**
-     * @return the <i>resolved</i> SignatureConstant of the method that narrowed this method, iff
-     *         this MethodBody is a cap
+     * @return the <i>resolved</i> nid of the method that narrowed this method, iff this MethodBody
+     *         is a cap
      */
-    public SignatureConstant getNarrowingNestedIdentity()
+    public Object getNarrowingNestedIdentity()
         {
-        return m_impl == Implementation.Capped
-                ? (SignatureConstant) m_constTarget
-                : null;
+        return m_impl == Implementation.Capped ? m_target : null;
         }
 
     /**
@@ -412,7 +412,7 @@ public class MethodBody
         return this.m_impl == that.m_impl
             && Handy.equals(this.m_id, that.m_id)
             && Handy.equals(this.m_sig, that.m_sig)
-            && Handy.equals(this.m_constTarget, that.m_constTarget);
+            && Handy.equals(this.m_target, that.m_target);
         }
 
     @Override
@@ -425,10 +425,10 @@ public class MethodBody
           .append(", impl=")
           .append(m_impl);
 
-        if (m_constTarget != null)
+        if (m_target != null)
             {
             sb.append(", target=")
-              .append(m_constTarget.getValueString());
+              .append(m_target instanceof Constant ? ((Constant) m_target).getValueString() : m_target);
             }
 
         return sb.append('}').toString();
@@ -537,8 +537,8 @@ public class MethodBody
     /**
      * The constant denoting additional information (if required) for the MethodBody implementation:
      * <ul>
-     * <li>For Implementation Capped, this specifies a <i>resolved</i> SignatureConstant from the
-     * narrowing method that the cap redirects execution to via a virtual method call;</li>
+     * <li>For Implementation Capped, this specifies a <i>resolved</i> nid for the narrowing method
+     * that the cap redirects execution to via a virtual method call;</li>
      * <li>For Implementation Delegating, this specifies the property which contains the reference
      * to delegate to.</li>
      * <li>For Implementation Field, this specifies the property that the method body corresponds
@@ -546,7 +546,7 @@ public class MethodBody
      * property.</li>
      * </ul>
      */
-    private final Constant m_constTarget;
+    private final Object m_target;
 
     /**
      * The cached method structure.

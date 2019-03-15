@@ -16,6 +16,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.GenericTypeResolver;
 
 import org.xvm.runtime.AnnotationSupport;
 import org.xvm.runtime.Frame;
@@ -231,11 +232,12 @@ public class AnnotatedTypeConstant
     /**
      * Create a TypeInfo for the private access type of this type.
      *
-     * @param errs  the error list to log any errors to
+     * @param idBase  the identity of the class (etc) that is being annotated
+     * @param errs    the error list to log any errors to
      *
      * @return a new TypeInfo representing this annotated type
      */
-    TypeInfo buildPrivateInfo(ErrorListener errs)
+    TypeInfo buildPrivateInfo(IdentityConstant idBase, ErrorListener errs)
         {
         // this can only be called from TypeConstant.buildTypeInfoImpl()
         assert getAccess() == Access.PUBLIC;
@@ -257,12 +259,12 @@ public class AnnotatedTypeConstant
             return null;
             }
 
-        IdentityConstant constId;
-        ClassStructure   struct;
+        IdentityConstant idAnno;
+        ClassStructure   structAnno;
         try
             {
-            constId = (IdentityConstant) typeAnno.getDefiningConstant();
-            struct  = (ClassStructure)   constId.getComponent();
+            idAnno     = (IdentityConstant) typeAnno.getDefiningConstant();
+            structAnno = (ClassStructure)   idAnno.getComponent();
             }
         catch (RuntimeException e)
             {
@@ -281,15 +283,15 @@ public class AnnotatedTypeConstant
 
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapAnnoProps.entrySet())
             {
-            layerOnProp(pool, mapProps, mapVirtProps, entry.getKey(), entry.getValue(), errs);
+            layerOnProp(pool, idBase, mapProps, mapVirtProps, entry.getKey(), entry.getValue(), errs);
             }
 
         for (Map.Entry<MethodConstant, MethodInfo> entry : mapAnnoMethods.entrySet())
             {
-            layerOnMethod(pool, mapMethods, mapVirtMethods, entry.getKey(), entry.getValue(), errs);
+            layerOnMethod(pool, idBase, mapMethods, mapVirtMethods, entry.getKey(), entry.getValue(), errs);
             }
 
-        return new TypeInfo(typeThis, cInvals, struct, 0, false, mapAnnoParams, Annotation.NO_ANNOTATIONS,
+        return new TypeInfo(typeThis, cInvals, structAnno, 0, false, mapAnnoParams, Annotation.NO_ANNOTATIONS,
                 infoAnno.getExtends(), infoAnno.getRebases(), infoAnno.getInto(),
                 infoAnno.getContributionList(), infoAnno.getClassChain(), infoAnno.getDefaultChain(),
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods,
@@ -300,13 +302,15 @@ public class AnnotatedTypeConstant
      * Layer on the passed annotation (mixin) property contributions onto the base properties.
      *
      * @param pool          the constant pool to use
+     * @param idBaseClass   the identity of the class (etc) that is being annotated
      * @param mapProps      properties already collected from the base
      * @param mapVirtProps  virtual properties already collected from the base
      * @param idAnno        the identity of the property at the annotation (mixin)
      * @param propAnno      the property info from the annotation (mixin)
      * @param errs          the error listener
      */
-    protected void layerOnProp(ConstantPool pool, Map<PropertyConstant, PropertyInfo> mapProps,
+    protected void layerOnProp(ConstantPool pool, IdentityConstant idBaseClass,
+                               Map<PropertyConstant, PropertyInfo> mapProps,
                                Map<Object, PropertyInfo> mapVirtProps,
                                PropertyConstant idAnno, PropertyInfo propAnno, ErrorListener errs)
         {
@@ -316,8 +320,9 @@ public class AnnotatedTypeConstant
             return;
             }
 
-        Object       nidContrib = idAnno.resolveNestedIdentity(pool, this);
-        PropertyInfo propBase   = mapVirtProps.get(nidContrib);
+        Object           nidContrib = idAnno.resolveNestedIdentity(pool, this);
+        PropertyConstant idResult   = (PropertyConstant) idBaseClass.appendNestedIdentity(pool, nidContrib);
+        PropertyInfo     propBase   = mapVirtProps.get(nidContrib);
         if (propBase != null && propAnno.getIdentity().equals(propBase.getIdentity()))
             {
             // keep whatever the base has got
@@ -331,21 +336,10 @@ public class AnnotatedTypeConstant
             }
         else
             {
-            // it's possible that the base has a narrower property type then the mixin,
-            // in which case, the mixin's info should be ignored/replaced
-            TypeConstant typeBase = propBase.getType();
-            TypeConstant typeAnno = propAnno.getType();
-            if (!typeBase.equals(typeAnno) && typeBase.isA(typeAnno))
-                {
-                propResult = propBase;
-                }
-            else
-                {
-                propResult = propBase.layerOn(propAnno, false, errs);
-                }
+            propResult = propBase.layerOn(propAnno, false, true, errs);
             }
 
-        mapProps.put(idAnno, propResult);
+        mapProps.put(idResult, propResult);
         mapVirtProps.put(nidContrib, propResult);
         }
 
@@ -353,13 +347,15 @@ public class AnnotatedTypeConstant
      * Layer on the passed annotation (mixin) method contributions onto the base methods.
      *
      * @param pool            the constant pool to use
+     * @param idBaseClass     the identity of the class (etc) that the annotation is being applied to
      * @param mapMethods      methods already collected from the base
      * @param mapVirtMethods  virtual methods already collected from the base
      * @param idAnno          the identity of the method at the annotation (mixin)
      * @param methodAnno      the method info from the annotation (mixin)
      * @param errs            the error listener
      */
-    private void layerOnMethod(ConstantPool pool, Map<MethodConstant, MethodInfo> mapMethods,
+    private void layerOnMethod(ConstantPool pool, IdentityConstant idBaseClass,
+                               Map<MethodConstant, MethodInfo> mapMethods,
                                Map<Object, MethodInfo> mapVirtMethods, MethodConstant idAnno,
                                MethodInfo methodAnno, ErrorListener errs)
         {
@@ -369,8 +365,9 @@ public class AnnotatedTypeConstant
             return;
             }
 
-        Object nidContrib = idAnno.resolveNestedIdentity(pool,
-                methodAnno.isFunction() || methodAnno.isConstructor() ? null : this);
+        GenericTypeResolver resolver   = methodAnno.isFunction() || methodAnno.isConstructor() ? null : this;
+        Object              nidContrib = idAnno.resolveNestedIdentity(pool, resolver);
+        MethodConstant      idResult   = (MethodConstant) idBaseClass.appendNestedIdentity(pool, nidContrib);
 
         MethodInfo methodBase = mapVirtMethods.get(nidContrib);
         if (methodBase != null && methodBase.getIdentity().equals(methodAnno.getIdentity()))
@@ -402,7 +399,7 @@ public class AnnotatedTypeConstant
                 }
             }
 
-        mapMethods.put(idAnno, methodResult);
+        mapMethods.put(idResult, methodResult);
         mapVirtMethods.put(sigContrib, methodResult);
         }
 
