@@ -40,6 +40,7 @@ import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
 import org.xvm.asm.op.L_Get;
+import org.xvm.asm.op.MBind;
 import org.xvm.asm.op.MoveRef;
 import org.xvm.asm.op.MoveThis;
 import org.xvm.asm.op.MoveVar;
@@ -931,6 +932,13 @@ public class NameExpression
                             : new MoveRef(regRVal, argLVal));
                     return;
                     }
+
+                case Bind:
+                    {
+                    MethodConstant idMethod = (MethodConstant) argRaw;
+                    code.add(new MBind(new Register(ctx.getThisType(), Op.A_TARGET), idMethod, argLVal));
+                    return;
+                    }
                 }
             }
 
@@ -1069,6 +1077,18 @@ public class NameExpression
             case Singleton:
                 assert isConstant();
                 return super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
+
+            case Bind:
+                {
+                MethodConstant idMethod  = (MethodConstant) argRaw;
+                Argument       argTarget = left == null
+                        ? new Register(ctx.getThisType(), Op.A_TARGET)
+                        : left.generateArgument(ctx, code, true, true, errs);
+
+                Register regFunction = createRegister(idMethod.getType(), fUsedOnce);
+                code.add(new MBind(argTarget, idMethod, regFunction));
+                return regFunction;
+                }
 
             default:
                 throw new IllegalStateException("arg=" + argRaw);
@@ -1750,7 +1770,9 @@ public class NameExpression
 
             case Method:
                 // the constant refers to a method or function
-                m_plan = Plan.None;
+                m_plan = ((MethodConstant) argRaw).isFunction()
+                        ? Plan.None
+                        : Plan.Bind;
                 return constant.getType();
 
             case MultiMethod:
@@ -2048,7 +2070,8 @@ public class NameExpression
      * produce as part of compilation, if it is asked to produce an argument, an assignable, or an
      * assignment.
      */
-    enum Plan {None, OuterThis, OuterRef, RegisterRef, PropertyDeref, PropertyRef, TypeOfClass, TypeOfTypedef, Singleton}
+    enum Plan {None, OuterThis, OuterRef, RegisterRef, PropertyDeref, PropertyRef, TypeOfClass,
+               TypeOfTypedef, Singleton, Bind}
 
     /**
      * Cached validation info: The optional TargetInfo that provides context for the initial name,

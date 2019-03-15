@@ -209,7 +209,7 @@ public class MethodConstant
      *
      * @return true iff this method represents a function
      */
-    boolean isFunction()
+    public boolean isFunction()
         {
         assert !isNascent();
         MethodStructure method = (MethodStructure) getComponent();

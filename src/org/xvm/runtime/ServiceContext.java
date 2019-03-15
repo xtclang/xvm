@@ -226,7 +226,7 @@ public class ServiceContext
                 throw new IllegalStateException();
             }
 
-        Op[] abOp = frame.f_aOp;
+        Op[] aOp = frame.f_aOp;
         int  nOps = 0;
 
     nextOp:
@@ -242,7 +242,7 @@ public class ServiceContext
                     return frame;
                     }
 
-                iPC = abOp[iPC].process(frame, iPCLast = iPC);
+                iPC = aOp[iPC].process(frame, iPCLast = iPC);
 
                 if (iPC == Op.R_NEXT)
                     {
@@ -258,7 +258,7 @@ public class ServiceContext
                     frame.m_iPC = iPCLast + 1;
                     frame.m_frameNext = null;
                     frame = m_frameCurrent;
-                    abOp = frame.f_aOp;
+                    aOp = frame.f_aOp;
                     // a new frame can already be in the "exception" state
                     iPC = frame.m_hException == null ? 0 : Op.R_EXCEPTION;
                     break;
@@ -301,7 +301,7 @@ public class ServiceContext
                                     {
                                     frame.setContinuation(frameCaller -> Op.R_BLOCK_RETURN);
                                     }
-                                abOp = frame.f_aOp;
+                                aOp = frame.f_aOp;
                                 iPC = 0;
                                 continue nextOp;
 
@@ -331,7 +331,7 @@ public class ServiceContext
                         fiber.setStatus(FiberStatus.Waiting);
                         return frame;
                         }
-                    abOp = frame.f_aOp;
+                    aOp = frame.f_aOp;
                     break;
                     }
 
@@ -351,7 +351,7 @@ public class ServiceContext
                             {
                             // handled exception; go to the handler
                             m_frameCurrent = frame;
-                            abOp = frame.f_aOp;
+                            aOp = frame.f_aOp;
                             break;
                             }
 
