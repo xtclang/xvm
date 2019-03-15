@@ -161,6 +161,7 @@ public class FBind
 
     protected int complete(Frame frame, FunctionHandle hFunction, ObjectHandle[] ahParam)
         {
+        // TODO: introduce bindMulti() method to reduce array copying
         // we assume that the indexes are sorted in the ascending order
         for (int i = 0, c = m_anParamIx.length; i < c; i++)
             {
