@@ -62,8 +62,6 @@ public class xFunction
             MethodConstant constFunction = (MethodConstant) constant;
             MethodStructure function = (MethodStructure) constFunction.getComponent();
 
-            assert function.isFunction();
-
             TypeConstant typeFunction = function.getIdentityConstant().getType();
 
             frame.pushStack(new FunctionHandle(ensureClass(typeFunction), function));

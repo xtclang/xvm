@@ -1,22 +1,22 @@
 package org.xvm.runtime.template;
 
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Constants.Access;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.ClassComposition;
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.Utils;
 
 
 /**
@@ -47,23 +47,26 @@ public class xModule
         {
         if (constant instanceof ModuleConstant)
             {
-            frame.pushStack(ensureModuleHandle((ModuleConstant) constant));
-            return Op.R_NEXT;
+            ModuleConstant   constModule = (ModuleConstant) constant;
+            TypeConstant     typeModule  = constModule.getType();
+            ClassComposition clazz       = ensureClass(typeModule, typeModule);
+
+            MethodStructure methodID = clazz.ensureAutoInitializer();
+            if (methodID == null)
+                {
+                return frame.assignValue(Op.A_STACK, new ModuleHandle(clazz, f_struct.getName()));
+                }
+
+            ModuleHandle hStruct = new ModuleHandle(clazz.ensureAccess(Access.STRUCT), f_struct.getName());
+            Frame        frameID = frame.createFrame1(methodID, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE);
+
+            frameID.setContinuation(frameCaller ->
+                frameCaller.assignValue(Op.A_STACK, hStruct.ensureAccess(Access.PUBLIC)));
+
+            return frame.call(frame.ensureInitialized(methodID, frameID));
             }
 
         return super.createConstHandle(frame, constant);
-        }
-
-    /**
-     * @return a ModuleHandle for the specified ModuleConstant
-     */
-    public ModuleHandle ensureModuleHandle(ModuleConstant constModule)
-        {
-        TypeConstant     typeModule = constModule.getType();
-        ClassComposition clazz      = ensureClass(typeModule, typeModule);
-
-        return f_mapModules.computeIfAbsent(constModule.getName(),
-            sName -> new ModuleHandle(clazz, sName));
         }
 
     public static class ModuleHandle extends GenericHandle
@@ -77,6 +80,4 @@ public class xModule
             m_sName = sName;
             }
         }
-
-    private final Map<String, ModuleHandle> f_mapModules = new ConcurrentHashMap<>(3);
     }

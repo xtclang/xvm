@@ -4,6 +4,7 @@ package org.xvm.runtime.template;
 import java.util.List;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -480,35 +481,20 @@ public class xRef
         /**
          * Ensure the RefHandle fields are initialized (only necessary for stateful Ref/Var mixins).
          *
-         * @param frame    the current frame
-         * @param hParent  an optional "outer" synthetic property value
+         * @param frame  the current frame
          *
          * @return R_NEXT, R_CALL or R_EXCEPTION
          */
-        public int ensureInitialized(Frame frame, GenericHandle hParent)
+        public int initializeCustomFields(Frame frame)
             {
-            if (m_fInit)
-                {
-                return Op.R_NEXT;
-                }
-
-            m_fInit = true;
-
-            if (hParent != null)
-                {
-                setField(GenericHandle.OUTER, hParent);
-                }
-
             MethodStructure methodInit = getComposition().ensureAutoInitializer();
             if (methodInit == null)
                 {
                 return Op.R_NEXT;
                 }
 
-            // strictly speaking, we need to pass a "struct" clone
-            //      this.ensureAccess(Access.STRUCT);
-            // but since the auto-initializer is auto-generated, we can skip that expense
-            Frame frameID = frame.createFrame1(methodInit, this, Utils.OBJECTS_NONE, Op.A_IGNORE);
+            Frame frameID = frame.createFrame1(methodInit,
+                    this.ensureAccess(Access.STRUCT), Utils.OBJECTS_NONE, Op.A_IGNORE);
 
             frameID.setContinuation(frameCaller ->
                 {
@@ -565,7 +551,7 @@ public class xRef
                         {
                         return false;
                         }
-                    if (hValue instanceof RefHandle && hTarget.isRefAnnotated(m_idProp))
+                    if (hTarget.isInflated(m_idProp))
                         {
                         return ((RefHandle) hValue).isAssigned();
                         }
@@ -615,12 +601,16 @@ public class xRef
                 }
             }
 
+        /**
+         * Synthetic property holding the referent's value.
+         */
+        public final static String VALUE = "$value";
+
         protected ObjectHandle m_hDelegate; // can point to another Ref for the same referent
         protected PropertyConstant m_idProp;
         protected String m_sName;
         protected Frame m_frame;
         protected int m_iVar;
-        protected boolean m_fInit;
 
         // indicates that the m_hDelegate field holds a referent
         protected static final int REF_REFERENT = -1;

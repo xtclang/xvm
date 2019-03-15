@@ -38,7 +38,7 @@ public class ClassComposition
         implements TypeComposition
     {
     /**
-     * Construct the TypeComposition for a given "inception" type and a "revealed" type.
+     * Construct the ClassComposition for a given "inception" type and a "revealed" type.
      *
      * The guarantees for the inception type are:
      *  - it has to be a class (TypeConstant.isClass())
@@ -77,7 +77,7 @@ public class ClassComposition
         }
 
     /**
-     * Construct a TypeComposition for the specified revealed type.
+     * Construct a ClassComposition clone for the specified revealed type.
      */
     private ClassComposition(ClassComposition clzInception, TypeConstant typeRevealed)
         {
@@ -155,6 +155,16 @@ public class ClassComposition
         }
 
     @Override
+    public ObjectHandle ensureAccess(ObjectHandle handle, Access access)
+        {
+        assert handle.getComposition() == this;
+
+        return access == f_typeRevealed.getAccess()
+            ? handle
+            : handle.cloneAs(ensureAccess(access));
+        }
+
+    @Override
     public ClassComposition ensureAccess(Access access)
         {
         TypeConstant typeCurrent = f_typeRevealed;
@@ -226,18 +236,23 @@ public class ClassComposition
     @Override
     public MethodStructure ensureAutoInitializer()
         {
+        if (f_mapFields == null)
+            {
+            return null;
+            }
+
         MethodStructure method = m_methodInit;
         if (method == null)
             {
-            m_methodInit = method = f_template.f_struct.createInitializer(f_typeStructure);
+            m_methodInit = method = f_template.f_struct.createInitializer(f_typeStructure, f_mapFields);
             }
         return method.isAbstract() ? null : method;
         }
 
     @Override
-    public boolean isRefAnnotated(PropertyConstant idProp)
+    public boolean isInflated(PropertyConstant idProp)
         {
-        return f_typeInception.ensureTypeInfo().findProperty(idProp).isRefAnnotated();
+        return f_mapFields != null && f_mapFields.get(idProp.getNestedIdentity()) != null;
         }
 
     @Override
@@ -259,7 +274,9 @@ public class ClassComposition
         return f_mapMethods.computeIfAbsent(signature,
             sig ->
                 {
-                TypeInfo info = f_typeInception.ensureTypeInfo();
+                TypeInfo info = isStruct()
+                        ? f_typeStructure.ensureTypeInfo()
+                        : f_typeInception.ensureTypeInfo();
                 return new CallChain(info.getOptimizedMethodChain(sig));
                 }
             );
@@ -509,6 +526,11 @@ public class ClassComposition
     private final TypeConstant f_typeRevealed;
 
     /**
+     * Template for class fields (values are either nulls or TypeComposition for refs).
+     */
+    private final Map<Object, TypeComposition> f_mapFields;
+
+    /**
      * A cache of derivative TypeCompositions keyed by the "revealed type".
      */
     private final Map<TypeConstant, ClassComposition> f_mapCompositions;
@@ -521,9 +543,6 @@ public class ClassComposition
 
     // cached property setter call chain by nid (the top-most method first)
     private final Map<Object, CallChain> f_mapSetters;
-
-    // cached map of fields (values are either nulls or TypeComposition for refs)
-    private final Map<Object, TypeComposition> f_mapFields;
 
     // cached set of field names
     private Set<String> m_setNames;

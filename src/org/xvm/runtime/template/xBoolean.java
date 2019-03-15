@@ -114,7 +114,7 @@ public class xBoolean
         @Override
         public String toString()
             {
-            return m_index == 0 ? "false" : "true";
+            return m_index == 0 ? "False" : "True";
             }
         }
     }

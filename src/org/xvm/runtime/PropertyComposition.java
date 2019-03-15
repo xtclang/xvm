@@ -6,7 +6,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -32,11 +32,8 @@ public class PropertyComposition
     /**
      * Construct the PropertyComposition for a given property of the specified parent.
      *
-     * The guarantees for the inception type are:
-     *  - it has to be a class (TypeConstant.isClass())
-     *  - it cannot be abstract
-     *  @param clzParent  the parent's type composition
-     * @param infoProp  the property name
+     * @param clzParent  the parent's ClassComposition
+     * @param infoProp   the property name
      */
     protected PropertyComposition(ClassComposition clzParent, PropertyInfo infoProp)
         {
@@ -53,6 +50,7 @@ public class PropertyComposition
         f_mapGetters = new ConcurrentHashMap<>();
         f_mapSetters = new ConcurrentHashMap<>();
         }
+
 
     // ----- TypeComposition interface -------------------------------------------------------------
 
@@ -95,21 +93,30 @@ public class PropertyComposition
         }
 
     @Override
-    public ObjectHandle ensureAccess(ObjectHandle handle, Constants.Access access)
+    public ObjectHandle ensureAccess(ObjectHandle handle, Access access)
         {
-        throw new UnsupportedOperationException();
+        assert handle.getComposition() == this;
+
+        return access == f_clzParent.getType().getAccess()
+            ? handle
+            : handle.cloneAs(ensureAccess(access));
         }
 
     @Override
-    public TypeComposition ensureAccess(Constants.Access access)
+    public TypeComposition ensureAccess(Access access)
         {
-        throw new UnsupportedOperationException();
+        ClassComposition clzParent = f_clzParent.ensureAccess(access);
+        if (clzParent == f_clzParent)
+            {
+            return this;
+            }
+        return new PropertyComposition(clzParent, f_infoProp);
         }
 
     @Override
     public boolean isStruct()
         {
-        return false;
+        return f_clzParent.isStruct();
         }
 
     @Override
@@ -137,9 +144,9 @@ public class PropertyComposition
         }
 
     @Override
-    public boolean isRefAnnotated(PropertyConstant idProp)
+    public boolean isInflated(PropertyConstant idProp)
         {
-        return f_clzRef.isRefAnnotated(idProp);
+        return f_clzRef.isInflated(idProp);
         }
 
     @Override

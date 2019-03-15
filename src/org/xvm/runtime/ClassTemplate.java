@@ -1,6 +1,7 @@
 package org.xvm.runtime;
 
 
+import java.sql.Ref;
 import java.util.List;
 import java.util.Map;
 
@@ -712,30 +713,13 @@ public abstract class ClassTemplate
             }
 
         MethodStructure method = chain.getTop();
-        ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
+        ObjectHandle[]  ahVar  = new ObjectHandle[method.getMaxVars()];
 
-        GenericHandle hValue = (GenericHandle) hTarget;
-        ObjectHandle  hProp  = hValue.getField(idProp);
-        if (hProp instanceof RefHandle && hTarget.isRefAnnotated(idProp))
+        if (hTarget.isInflated(idProp))
             {
-            switch (((RefHandle) hProp).ensureInitialized(frame, hValue))
-                {
-                case Op.R_NEXT:
-                    break;
-
-                case Op.R_CALL:
-                    frame.m_frameNext.setContinuation(frameCaller ->
-                        frame.invoke1(chain, 0, hProp, ahVar, iReturn));
-                    return Op.R_CALL;
-
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
-
-                default:
-                    throw new IllegalStateException();
-                }
-            hTarget = hProp;
+            hTarget = ((GenericHandle) hTarget).getField(idProp);
             }
+
         return frame.invoke1(chain, 0, hTarget, ahVar, iReturn);
         }
 
@@ -784,26 +768,9 @@ public abstract class ClassTemplate
             return frame.raiseException(xException.makeHandle(sErr + idProp + '"'));
             }
 
-        if (hTarget.isRefAnnotated(idProp))
+        if (hTarget.isInflated(idProp))
             {
-            RefHandle hRef = (RefHandle) hValue;
-            switch (hRef.ensureInitialized(frame, hThis))
-                {
-                case Op.R_NEXT:
-                    break;
-
-                case Op.R_CALL:
-                    frame.m_frameNext.setContinuation(frameCaller ->
-                         hRef.getVarSupport().get(frameCaller, hRef, iReturn));
-                    return Op.R_CALL;
-
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
-
-                default:
-                    throw new IllegalStateException();
-                }
-            return hRef.getVarSupport().get(frame, hRef, iReturn);
+            hValue = ((RefHandle) hValue).getField(RefHandle.VALUE);
             }
 
         return frame.assignValue(iReturn, hValue);
@@ -854,28 +821,9 @@ public abstract class ClassTemplate
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
         ahVar[0] = hValue;
 
-        if (hTarget.isRefAnnotated(idProp))
+        if (hTarget.isInflated(idProp))
             {
-            GenericHandle hThis = (GenericHandle) hTarget;
-            RefHandle hRef = (RefHandle) hThis.getField(idProp);
-
-            switch (hRef.ensureInitialized(frame, hThis))
-                {
-                case Op.R_NEXT:
-                    break;
-
-                case Op.R_CALL:
-                    frame.m_frameNext.setContinuation(frameCaller ->
-                        frameCaller.invoke1(chain, 0, hRef, ahVar, Op.A_IGNORE));
-                    return Op.R_CALL;
-
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
-
-                default:
-                    throw new IllegalStateException();
-                }
-            hTarget = hRef;
+            hTarget = ((GenericHandle) hTarget).getField(idProp);
             }
 
         return frame.invoke1(chain, 0, hTarget, ahVar, Op.A_IGNORE);
@@ -904,29 +852,15 @@ public abstract class ClassTemplate
 
         assert hThis.containsField(idProp);
 
-        if (hThis.isRefAnnotated(idProp))
+        if (hThis.isInflated(idProp))
             {
             RefHandle hRef = (RefHandle) hThis.getField(idProp);
-            switch (hRef.ensureInitialized(frame, hThis))
-                {
-                case Op.R_NEXT:
-                    break;
-
-                case Op.R_CALL:
-                    frame.m_frameNext.setContinuation(frameCaller ->
-                        hRef.getVarSupport().set(frameCaller, hRef, hValue));
-                    return Op.R_CALL;
-
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
-
-                default:
-                    throw new IllegalStateException();
-                }
-            return hRef.getVarSupport().set(frame, hRef, hValue);
+            hRef.setField(RefHandle.VALUE, hValue);
             }
-
-        hThis.setField(idProp, hValue);
+        else
+            {
+            hThis.setField(idProp, hValue);
+            }
         return Op.R_NEXT;
         }
 
@@ -982,7 +916,7 @@ public abstract class ClassTemplate
      */
     public int invokePreInc(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
-        if (hTarget.isRefAnnotated(idProp))
+        if (hTarget.isInflated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle hRef = (RefHandle) hThis.getField(idProp);
@@ -1005,7 +939,7 @@ public abstract class ClassTemplate
      */
     public int invokePostInc(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
-        if (hTarget.isRefAnnotated(idProp))
+        if (hTarget.isInflated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle hRef = (RefHandle) hThis.getField(idProp);
@@ -1028,7 +962,7 @@ public abstract class ClassTemplate
      */
     public int invokePreDec(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
-        if (hTarget.isRefAnnotated(idProp))
+        if (hTarget.isInflated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle hRef = (RefHandle) hThis.getField(idProp);
@@ -1051,7 +985,7 @@ public abstract class ClassTemplate
      */
     public int invokePostDec(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
-        if (hTarget.isRefAnnotated(idProp))
+        if (hTarget.isInflated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle hRef = (RefHandle) hThis.getField(idProp);
@@ -1074,7 +1008,7 @@ public abstract class ClassTemplate
      */
     public int invokePropertyAdd(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
-        if (hTarget.isRefAnnotated(idProp))
+        if (hTarget.isInflated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(idProp);
@@ -1098,7 +1032,7 @@ public abstract class ClassTemplate
      */
     public int invokePropertySub(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
-        if (hTarget.isRefAnnotated(idProp))
+        if (hTarget.isInflated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(idProp);
@@ -1122,7 +1056,7 @@ public abstract class ClassTemplate
      */
     public int invokePropertyMul(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
-        if (hTarget.isRefAnnotated(idProp))
+        if (hTarget.isInflated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(idProp);
@@ -1146,7 +1080,7 @@ public abstract class ClassTemplate
      */
     public int invokePropertyDiv(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
-        if (hTarget.isRefAnnotated(idProp))
+        if (hTarget.isInflated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(idProp);
@@ -1170,7 +1104,7 @@ public abstract class ClassTemplate
      */
     public int invokePropertyMod(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
-        if (hTarget.isRefAnnotated(idProp))
+        if (hTarget.isInflated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(idProp);
@@ -1194,7 +1128,7 @@ public abstract class ClassTemplate
      */
     public int invokePropertyShl(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
-        if (hTarget.isRefAnnotated(idProp))
+        if (hTarget.isInflated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(idProp);
@@ -1218,7 +1152,7 @@ public abstract class ClassTemplate
      */
     public int invokePropertyShr(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
-        if (hTarget.isRefAnnotated(idProp))
+        if (hTarget.isInflated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(idProp);
@@ -1242,7 +1176,7 @@ public abstract class ClassTemplate
      */
     public int invokePropertyShrAll(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
-        if (hTarget.isRefAnnotated(idProp))
+        if (hTarget.isInflated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(idProp);
@@ -1266,7 +1200,7 @@ public abstract class ClassTemplate
      */
     public int invokePropertyAnd(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
-        if (hTarget.isRefAnnotated(idProp))
+        if (hTarget.isInflated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(idProp);
@@ -1290,7 +1224,7 @@ public abstract class ClassTemplate
      */
     public int invokePropertyOr(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
-        if (hTarget.isRefAnnotated(idProp))
+        if (hTarget.isInflated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(idProp);
@@ -1314,7 +1248,7 @@ public abstract class ClassTemplate
      */
     public int invokePropertyXor(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
-        if (hTarget.isRefAnnotated(idProp))
+        if (hTarget.isInflated(idProp))
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(idProp);
@@ -1349,25 +1283,9 @@ public abstract class ClassTemplate
             throw new IllegalStateException("Unknown property: (" + f_sName + ")." + idProp);
             }
 
-        if (hTarget.isRefAnnotated(idProp))
+        if (hTarget.isInflated(idProp))
             {
             RefHandle hRef = (RefHandle) hThis.getField(idProp);
-            switch (hRef.ensureInitialized(frame, hThis))
-                {
-                case Op.R_NEXT:
-                    break;
-
-                case Op.R_CALL:
-                    frame.m_frameNext.setContinuation(frameCaller ->
-                        frameCaller.assignValue(iReturn, hRef, false));
-                    return Op.R_CALL;
-
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
-
-                default:
-                    throw new IllegalStateException();
-                }
             return frame.assignValue(iReturn, hRef, false);
             }
 

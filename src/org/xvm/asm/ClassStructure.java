@@ -34,6 +34,13 @@ import org.xvm.asm.op.Invoke_01;
 import org.xvm.asm.op.L_Set;
 import org.xvm.asm.op.Return_0;
 
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
+import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.Utils;
+
+import org.xvm.runtime.template.xRef.RefHandle;
+
 import org.xvm.util.ListMap;
 
 
@@ -2303,10 +2310,11 @@ public class ClassStructure
      *       to initialize.
      *
      * @param typeStruct  the type, for which a default constructor is to be created
+     * @param mapFields   the fields template
      *
      * @return the [synthetic] MethodStructure for the corresponding default constructor
      */
-    public MethodStructure createInitializer(TypeConstant typeStruct)
+    public MethodStructure createInitializer(TypeConstant typeStruct, Map<Object, TypeComposition> mapFields)
         {
         ConstantPool pool   = ConstantPool.getCurrentPool();
         int          nFlags = Format.METHOD.ordinal() | Access.PUBLIC.FLAGS;
@@ -2320,43 +2328,84 @@ public class ClassStructure
 
         MethodStructure.Code code = method.createCode();
 
+        assert typeStruct.getAccess() == Access.STRUCT;
+
         TypeInfo infoType = typeStruct.ensureTypeInfo();
-        for (PropertyInfo infoProp : infoType.getProperties().values())
+        for (Map.Entry<Object, TypeComposition> entry : mapFields.entrySet())
             {
-            if (infoProp.hasField())
+            Object          nid      = entry.getKey();
+            TypeComposition clzRef   = entry.getValue();
+            PropertyInfo    infoProp = infoType.findPropertyByNid(nid);
+
+            if (infoProp == null)
                 {
-                PropertyConstant idField = infoProp.getFieldIdentity();
-                MethodConstant   idInit  = null;
-                Constant         constInit;
-                if (infoProp.isInitialized())
+                // synthetic field; skip
+                continue;
+                }
+
+            PropertyConstant idField = infoProp.getFieldIdentity();
+
+            MethodConstant   idInit  = null;
+            Constant         constInit;
+            if (infoProp.isInitialized())
+                {
+                constInit = infoProp.getInitialValue();
+                if (constInit == null)
                     {
-                    constInit = infoProp.getInitialValue();
-                    if (constInit == null)
-                        {
-                        idInit = infoProp.getInitializer();
-                        }
+                    idInit = infoProp.getInitializer();
+                    }
+                }
+            else
+                {
+                constInit = infoProp.getType().getDefaultValue();
+                }
+
+            if (constInit != null)
+                {
+                code.add(new L_Set(idField, constInit));
+                }
+            else if (idInit != null)
+                {
+                MethodStructure methodInit = (MethodStructure) idInit.getComponent();
+                if (methodInit.isFunction())
+                    {
+                    code.add(new Call_01(idInit, idField));
                     }
                 else
                     {
-                    constInit = infoProp.getType().getDefaultValue();
+                    code.add(new Invoke_01(new Register(typeStruct, Op.A_TARGET), idInit, idField));
                     }
+                }
 
-                if (constInit != null)
+            if (clzRef != null)
+                {
+                // this is a ref; recurse
+                MethodStructure methodInitRef = clzRef.ensureAutoInitializer();
+                code.add(new Op()
                     {
-                    code.add(new L_Set(idField, constInit));
-                    }
-                else if (idInit != null)
-                    {
-                    MethodStructure methodInit = (MethodStructure) idInit.getComponent();
-                    if (methodInit.isFunction())
+                    @Override
+                    public int process(Frame frame, int iPC)
                         {
-                        code.add(new Call_01(idInit, idField));
+                        GenericHandle hStruct = (GenericHandle) frame.getThis();
+                        RefHandle     hRef    = (RefHandle) hStruct.getField(idField);
+
+                        hRef.setField(GenericHandle.OUTER, hStruct);
+                        hRef = (RefHandle) hRef.ensureAccess(Access.STRUCT);
+
+                        return frame.call1(methodInitRef, hRef, Utils.OBJECTS_NONE, A_IGNORE);
                         }
-                    else
+
+                    @Override
+                    public void write(DataOutput out, ConstantRegistry registry)
                         {
-                        code.add(new Invoke_01(new Register(typeStruct, Op.A_TARGET), idInit, idField));
                         }
-                    }
+
+                    @Override
+                    public String toString()
+                        {
+                        return "initRef: " + idField;
+                        }
+                    });
                 }
             }
 

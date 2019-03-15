@@ -250,6 +250,7 @@ public class ServiceContext
                     }
                 }
 
+            boolean fBlockReturn = false;
             switch (iPC)
                 {
                 case Op.R_CALL:
@@ -263,6 +264,7 @@ public class ServiceContext
                     break;
 
                 case Op.R_BLOCK_RETURN:
+                    fBlockReturn = true;
                     // fall through
                 case Op.R_RETURN:
                     {
@@ -295,7 +297,7 @@ public class ServiceContext
                                 frame.m_frameNext = null;
                                 frame = m_frameCurrent;
 
-                                if (iPC == Op.R_BLOCK_RETURN)
+                                if (fBlockReturn)
                                     {
                                     frame.setContinuation(frameCaller -> Op.R_BLOCK_RETURN);
                                     }
@@ -324,7 +326,7 @@ public class ServiceContext
                         return null;
                         }
 
-                    if (iPC == Op.R_BLOCK_RETURN)
+                    if (fBlockReturn)
                         {
                         fiber.setStatus(FiberStatus.Waiting);
                         return frame;

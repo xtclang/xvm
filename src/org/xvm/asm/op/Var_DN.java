@@ -118,7 +118,7 @@ public class Var_DN
                 }
             else
                 {
-                iRet = hRef.ensureInitialized(frame, null);
+                iRet = hRef.initializeCustomFields(frame);
                 }
             }
 

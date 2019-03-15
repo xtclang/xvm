@@ -70,6 +70,6 @@ public class Var_D
 
         frame.introduceResolvedVar(m_nVar, clz.getType(), null, Frame.VAR_DYNAMIC_REF, hRef);
 
-        return hRef.ensureInitialized(frame, null);
+        return hRef.initializeCustomFields(frame);
         }
     }

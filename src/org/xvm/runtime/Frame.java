@@ -393,7 +393,7 @@ public class Frame
                 return f_hThis.ensureAccess(Access.STRUCT);
 
             case Op.A_SERVICE:
-                return ServiceContext.getCurrentContext().m_hService;
+                return f_context.m_hService;
 
             // TODO remove the rest of these?
             case Op.A_THIS:
@@ -411,7 +411,8 @@ public class Frame
                 return f_hThis.getType().getTypeHandle();
 
             case Op.A_MODULE:
-                return f_context.f_container.getModule();
+                return f_context.f_heapGlobal.
+                    ensureConstHandle(this, f_context.f_module.getIdentityConstant());
 
             default:
                 throw new IllegalStateException("Invalid argument " + iArgId);

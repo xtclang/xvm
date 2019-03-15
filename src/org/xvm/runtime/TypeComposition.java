@@ -60,14 +60,7 @@ public interface TypeComposition
     /**
      * @return an equivalent ObjectHandle for the specified access
      */
-    default ObjectHandle ensureAccess(ObjectHandle handle, Access access)
-        {
-        assert handle.getComposition() == this;
-
-        return access == getType().getAccess()
-            ? handle
-            : handle.cloneAs(ensureAccess(access));
-        }
+    ObjectHandle ensureAccess(ObjectHandle handle, Access access);
 
     /**
      * @return an associated TypeComposition for the specified access
@@ -101,10 +94,14 @@ public interface TypeComposition
     Map<Object, ObjectHandle> createFields();
 
     /**
-     * @return true if the specified property is Ref annotated
-     * @param idProp
+     * Check whether or not the property referred by the specified constant has a custom code or
+     * Ref-annotation.
+     *
+     * @param idProp  the property to check
+     *
+     * @return true iff the specified property has custom code or is Ref-annotated
      */
-    boolean isRefAnnotated(PropertyConstant idProp);
+    boolean isInflated(PropertyConstant idProp);
 
     /**
      * @return true if the specified property is injected

@@ -13,17 +13,17 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
-import org.xvm.runtime.template.xModule;
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
-import org.xvm.runtime.template.xModule.ModuleHandle;
+import org.xvm.runtime.template.xFunction.NativeFunctionHandle;
 
 
 /**
@@ -50,7 +50,7 @@ public class Container
             {
             throw new IllegalStateException("Unable to load module \"" + sAppName + "\"");
             }
-        f_constModule = module.getIdentityConstant();
+        f_idModule = module.getIdentityConstant();
         }
 
     public void start()
@@ -66,11 +66,10 @@ public class Container
 
         ConstantPool.setCurrentPool(null);
 
-        ModuleStructure structModule = (ModuleStructure) f_constModule.getComponent();
+        ModuleStructure structModule = (ModuleStructure) f_idModule.getComponent();
         ConstantPool.setCurrentPool(structModule.getConstantPool());
 
-        m_app = f_templates.getTemplate(f_constModule);
-        m_hModule = ((xModule) m_app).ensureModuleHandle(f_constModule);
+        m_templateModule = f_templates.getTemplate(f_idModule);
 
         m_contextMain = createServiceContext(f_sAppName, structModule);
         xService.makeHandle(m_contextMain,
@@ -84,13 +83,12 @@ public class Container
 
     public void invoke0(String sMethodName, ObjectHandle... ahArg)
         {
-        // REVIEW GG
         ConstantPool poolPrev = ConstantPool.getCurrentPool();
         ConstantPool.setCurrentPool(f_moduleRoot.getConstantPool());
 
         try
             {
-            TypeInfo infoApp = m_app.getCanonicalType().ensureTypeInfo();
+            TypeInfo infoApp = m_templateModule.getCanonicalType().ensureTypeInfo();
             int cArgs = ahArg == null ? 0 : ahArg.length;
 
             TypeConstant[] atypeArg;
@@ -112,22 +110,37 @@ public class Container
 
             if (idMethod == null)
                 {
-                System.err.println("Missing: " +  sMethodName + " method for " + m_app);
+                System.err.println("Missing: " +  sMethodName + " method for " + m_templateModule);
                 return;
                 }
 
-            FunctionHandle hFunction;
+            TypeConstant     typeModule = f_idModule.getType();
+            ClassComposition clzModule  = m_templateModule.ensureClass(typeModule, typeModule);
+            CallChain        chain      = clzModule.getMethodCallChain(idMethod.getSignature());
+            FunctionHandle   hFunction  = xFunction.makeHandle(chain, 0);
 
-            CallChain chain = m_hModule.getComposition().
-                getMethodCallChain(idMethod.getSignature());
-            hFunction = xFunction.makeHandle(chain, 0);
-            hFunction = hFunction.bindTarget(m_hModule);
+            FunctionHandle hInstantiateModuleAndRun = new NativeFunctionHandle((frame, ah, iReturn) ->
+                {
+                ObjectHandle hModule = frame.f_context.f_heapGlobal.ensureConstHandle(frame, f_idModule);
 
-            m_contextMain.callLater(hFunction, ahArg);
+                if (Op.isDeferred(hModule))
+                    {
+                    ObjectHandle[] ahModule = new ObjectHandle[] {hModule};
+
+                    Frame.Continuation stepNext = frameCaller ->
+                        hFunction.call1(frameCaller, ahModule[0], ahArg, Op.A_IGNORE);
+
+                    return new Utils.GetArguments(ahModule, stepNext).doNext(frame);
+                    }
+
+                return hFunction.call1(frame, hModule, ahArg, Op.A_IGNORE);
+                });
+
+            m_contextMain.callLater(hInstantiateModuleAndRun, Utils.OBJECTS_NONE);
             }
         catch (Exception e)
             {
-            throw new RuntimeException("failed to run: " + f_constModule, e);
+            throw new RuntimeException("failed to run: " + f_idModule, e);
             }
         finally
             {
@@ -248,11 +261,6 @@ public class Container
         return hResource;
         }
 
-    public ModuleHandle getModule()
-        {
-        return m_hModule;
-        }
-
     public ServiceContext getMainContext()
         {
         return m_contextMain;
@@ -274,7 +282,7 @@ public class Container
     @Override
     public String toString()
         {
-        return "Container: " + f_constModule.getName();
+        return "Container: " + f_idModule.getName();
         }
 
     public static class InjectionKey
@@ -327,7 +335,7 @@ public class Container
     public final ObjectHeap f_heapGlobal;
 
     final protected ModuleStructure f_moduleRoot;
-    final protected ModuleConstant f_constModule;
+    final protected ModuleConstant f_idModule;
 
     // service context map (concurrent set)
     final Map<ServiceContext, ServiceContext> f_mapServices = new ConcurrentHashMap<>();
@@ -337,8 +345,7 @@ public class Container
 
     // the module
     private final String f_sAppName;
-    private ModuleHandle m_hModule;
-    private ClassTemplate m_app; // replace with m_hModule
+    private ClassTemplate m_templateModule;
 
     private ObjectHandle m_hLocalClock;
 

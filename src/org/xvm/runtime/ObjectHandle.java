@@ -126,9 +126,17 @@ public abstract class ObjectHandle
         return m_clazz.ensureAccess(this, access);
         }
 
-    public boolean isRefAnnotated(PropertyConstant idProp)
+    /**
+     * Check whether or not the property referred by the specified constant has a custom code or
+     * Ref-annotation.
+     *
+     * @param idProp  the property to check
+     *
+     * @return true iff the specified property has custom code or is Ref-annotated
+     */
+    public boolean isInflated(PropertyConstant idProp)
         {
-        return m_clazz.isRefAnnotated(idProp);
+        return m_clazz.isInflated(idProp);
         }
 
     public boolean isInjected(PropertyConstant idProp)
@@ -334,6 +342,9 @@ public abstract class ObjectHandle
         // keyed by the property name or a NestedIdentity
         private Map<Object, ObjectHandle> m_mapFields;
 
+        /**
+         * Synthetic property holding a reference to a parent instance.
+         */
         public final static String OUTER = "$outer";
         }
 
