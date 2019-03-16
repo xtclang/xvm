@@ -77,6 +77,8 @@ public abstract class OpCondJump
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_argVal != null)
             {
             m_nArg = encodeArgument(m_argVal, registry);
@@ -85,8 +87,6 @@ public abstract class OpCondJump
                 m_nArg2 = encodeArgument(m_argVal2, registry);
                 }
             }
-
-        out.writeByte(getOpCode());
 
         writePackedLong(out, m_nArg);
         writePackedLong(out, m_ofJmp);

@@ -62,12 +62,12 @@ public class JumpInt
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_argVal != null)
             {
             m_nArg = encodeArgument(m_argVal, registry);
             }
-
-        out.writeByte(getOpCode());
 
         writePackedLong(out, m_nArg);
         writeIntArray(out, m_aofCase);

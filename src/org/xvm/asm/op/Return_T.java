@@ -55,12 +55,13 @@ public class Return_T
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_argT != null)
             {
             m_nArg = encodeArgument(m_argT, registry);
             }
 
-        out.writeByte(OP_RETURN_T);
         writePackedLong(out, m_nArg);
         }
 

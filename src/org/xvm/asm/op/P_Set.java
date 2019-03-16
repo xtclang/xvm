@@ -61,6 +61,8 @@ public class P_Set
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_argTarget != null)
             {
             m_nTarget = encodeArgument(m_argTarget, registry);

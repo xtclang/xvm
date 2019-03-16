@@ -53,7 +53,7 @@ public class Nop extends Op
         m_cLines = readPackedInt(in);
         m_nOp    = nopForLines(m_cLines);
         }
-    
+
     static int nopForLines(int cLines)
         {
         switch (cLines)
@@ -75,10 +75,9 @@ public class Nop extends Op
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        int nOp = getOpCode();
-        out.writeByte(nOp);
+        super.write(out, registry);
 
-        if (nOp == OP_LINE_N)
+        if (getOpCode() == OP_LINE_N)
             {
             writePackedLong(out, m_cLines);
             }

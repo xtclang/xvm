@@ -83,6 +83,8 @@ public class GuardStart
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_aOpCatch != null)
             {
             int   cCatch   = m_aOpCatch.length;
@@ -98,8 +100,6 @@ public class GuardStart
             m_anTypeId = anTypeId;
             m_anNameId = anNameId;
             }
-
-        out.writeByte(OP_GUARD);
 
         int c = m_anTypeId.length;
         writePackedLong(out, c);

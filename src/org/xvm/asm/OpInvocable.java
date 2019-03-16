@@ -55,13 +55,13 @@ public abstract class OpInvocable extends Op
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_argTarget != null)
             {
             m_nTarget = encodeArgument(m_argTarget, registry);
             m_nMethodId = encodeArgument(m_constMethod, registry);
             }
-
-        out.writeByte(getOpCode());
 
         writePackedLong(out, m_nTarget);
         writePackedLong(out, m_nMethodId);

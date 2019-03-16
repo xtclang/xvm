@@ -76,6 +76,8 @@ public class AssertV
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_argTest != null)
             {
             m_nTest = encodeArgument(m_argTest, registry);
@@ -83,7 +85,6 @@ public class AssertV
             m_anValue = encodeArguments(m_aArgValue, registry);
             }
 
-        out.writeByte(OP_ASSERT_V);
         writePackedLong(out, m_nTest);
         writePackedLong(out, m_nMsgConstId);
         writeIntArray(out, m_anValue);

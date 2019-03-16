@@ -72,6 +72,8 @@ public abstract class OpIndex
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_argTarget != null)
             {
             m_nTarget = encodeArgument(m_argTarget, registry);
@@ -81,8 +83,6 @@ public abstract class OpIndex
                 m_nRetValue = encodeArgument(m_argReturn,  registry);
                 }
             }
-
-        out.writeByte(getOpCode());
 
         writePackedLong(out, m_nTarget);
         writePackedLong(out, m_nIndex);

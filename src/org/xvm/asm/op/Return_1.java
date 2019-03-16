@@ -50,12 +50,13 @@ public class Return_1
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_arg != null)
             {
             m_nArg = encodeArgument(m_arg, registry);
             }
 
-        out.writeByte(OP_RETURN_1);
         writePackedLong(out, m_nArg);
         }
 

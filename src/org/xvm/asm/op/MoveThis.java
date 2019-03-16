@@ -58,12 +58,13 @@ public class MoveThis
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_argTo != null)
             {
             m_nToValue = encodeArgument(m_argTo, registry);
             }
 
-        out.writeByte(getOpCode());
         out.writeByte(m_cSteps);
         writePackedLong(out, m_nToValue);
         }

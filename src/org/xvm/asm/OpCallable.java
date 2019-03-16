@@ -53,12 +53,12 @@ public abstract class OpCallable extends Op
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_argFunction != null)
             {
             m_nFunctionId = encodeArgument(m_argFunction, registry);
             }
-
-        out.writeByte(getOpCode());
 
         writePackedLong(out, m_nFunctionId);
         }

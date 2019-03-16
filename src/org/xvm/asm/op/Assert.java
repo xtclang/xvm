@@ -53,12 +53,13 @@ public class Assert
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_argTest != null)
             {
             m_nTest = encodeArgument(m_argTest, registry);
             }
 
-        out.writeByte(OP_ASSERT);
         writePackedLong(out, m_nTest);
         }
 

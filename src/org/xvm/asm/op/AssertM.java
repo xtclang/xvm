@@ -58,13 +58,14 @@ public class AssertM
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_argTest != null)
             {
             m_nTest = encodeArgument(m_argTest, registry);
             m_nMsgConstId = encodeArgument(m_constMsg, registry);
             }
 
-        out.writeByte(OP_ASSERT_M);
         writePackedLong(out, m_nTest);
         writePackedLong(out, m_nMsgConstId);
         }

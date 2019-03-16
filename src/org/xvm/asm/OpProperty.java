@@ -41,7 +41,7 @@ public abstract class OpProperty extends Op
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(getOpCode());
+        super.write(out, registry);
 
         if (m_idProp != null)
             {

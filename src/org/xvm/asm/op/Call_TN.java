@@ -65,6 +65,8 @@ public class Call_TN
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_argValue != null)
             {
             m_nArgTupleValue = encodeArgument(m_argValue, registry);

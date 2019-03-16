@@ -72,6 +72,8 @@ public abstract class OpInPlace
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_argTarget != null)
             {
             m_nTarget = encodeArgument(m_argTarget, registry);
@@ -80,8 +82,6 @@ public abstract class OpInPlace
                 m_nRetValue = encodeArgument(m_argReturn,  registry);
                 }
             }
-
-        out.writeByte(getOpCode());
 
         writePackedLong(out, m_nTarget);
         if (isAssignOp())

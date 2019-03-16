@@ -44,13 +44,14 @@ public abstract class OpMove
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_argFrom != null)
             {
             m_nFromValue = encodeArgument(m_argFrom, registry);
             m_nToValue   = encodeArgument(m_argTo, registry);
             }
 
-        out.writeByte(getOpCode());
         writePackedLong(out, m_nFromValue);
         writePackedLong(out, m_nToValue);
         }

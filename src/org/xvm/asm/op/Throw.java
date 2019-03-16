@@ -52,12 +52,13 @@ public class Throw
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_argValue != null)
             {
             m_nArgValue = encodeArgument(m_argValue, registry);
             }
 
-        out.writeByte(OP_THROW);
         writePackedLong(out, m_nArgValue);
         }
 

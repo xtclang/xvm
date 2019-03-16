@@ -63,14 +63,14 @@ public class GP_DivMod
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_argTarget != null)
             {
             m_nTarget    = encodeArgument(m_argTarget, registry);
             m_nArgValue  = encodeArgument(m_argValue,  registry);
             m_anRetValue = encodeArguments(m_aargReturn, registry);
             }
-
-        out.writeByte(getOpCode());
 
         writePackedLong(out, m_nTarget);
         writePackedLong(out, m_nArgValue);

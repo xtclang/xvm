@@ -46,6 +46,8 @@ public class Return_N
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_aArg != null)
             {
             Argument[] aArg = m_aArg;
@@ -58,7 +60,6 @@ public class Return_N
             m_anArg = anArg;
             }
 
-        out.writeByte(OP_RETURN_N);
         writeIntArray(out, m_anArg);
         }
 

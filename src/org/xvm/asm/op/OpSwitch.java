@@ -65,12 +65,12 @@ public abstract class OpSwitch
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_aConstCase != null)
             {
             m_anConstCase = encodeArguments(m_aConstCase, registry);
             }
-
-        out.writeByte(getOpCode());
 
         int[] anArgCase = m_anConstCase;
         int[] aofCase   = m_aofCase;

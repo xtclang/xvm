@@ -73,6 +73,8 @@ public abstract class OpTest
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_argVal1 != null)
             {
             m_nValue1 = encodeArgument(m_argVal1, registry);
@@ -83,7 +85,6 @@ public abstract class OpTest
             m_nRetValue = encodeArgument(m_argReturn, registry);
             }
 
-        out.writeByte(getOpCode());
         writePackedLong(out, m_nValue1);
         if (isBinaryOp())
             {
