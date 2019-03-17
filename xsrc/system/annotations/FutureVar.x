@@ -184,10 +184,10 @@ mixin FutureVar<RefType>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-// TODO: CP
+// TODO: GG?
 //    <NewType> FutureVar!<NewType> transform(function NewType (RefType) convert)
 //        {
-//        return chain(new TransformStep<NewType, RefType>(convert));
+//        return chain(new FutureVar<NewType>.TransformStep<RefType>(convert));
 //        }
 
     /**
@@ -227,10 +227,10 @@ mixin FutureVar<RefType>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-// TODO: CP
+// TODO: GG?
 //    <NewType> FutureVar!<NewType> transformOrHandle(function NewType (RefType?, Exception?) convert)
 //        {
-//        return chain(new Transform2Step<NewType, RefType>(convert));
+//        return chain(new FutureVar<NewType>.Transform2Step<RefType>(convert));
 //        }
 
     /**
@@ -331,10 +331,10 @@ mixin FutureVar<RefType>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-// TODO: CP
+// TODO: GG?
 //    <NewType> FutureVar!<NewType> createContinuation(function NewType (RefType) async)
 //        {
-//        return chain(new ContinuationStep<NewType, RefType>(async));
+//        return chain(new FutureVar<NewType>.ContinuationStep<RefType>(async));
 //        }
 
     // ----- completion handling -------------------------------------------------------------------
