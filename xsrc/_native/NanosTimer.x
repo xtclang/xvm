@@ -5,23 +5,23 @@ class NanosTimer
         implements Timer
     {
     @Override
-    void pause();
-
-    @Override
-    void resume();
-
-    @Override
-    void reset();
+    void start();
 
     @Override
     @RO Duration elapsed;
+
+    @Override
+    Cancellable schedule(Duration delay, Alarm alarm);
+
+    @Override
+    void stop();
+
+    @Override
+    void reset();
 
     @Override
     Duration resolution.get()
         {
         return Duration.NANOSEC;
         }
-
-    @Override
-    Cancellable scheduleAlarm(Duration durationBeforeAlarm, Alarm alarm);
     }

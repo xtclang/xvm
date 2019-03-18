@@ -28,6 +28,8 @@ import static org.xvm.runtime.template._native.xLocalClock.PICOS_PER_MILLI;
 /**
  * Native implementation of a simple timer (stop-watch) using Java's nanosecond-resolution "System"
  * clock.
+ *
+ * TODO API changes
  */
 public class xNanosTimer
         extends ClassTemplate
