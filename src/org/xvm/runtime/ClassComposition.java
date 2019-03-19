@@ -250,9 +250,9 @@ public class ClassComposition
         }
 
     @Override
-    public boolean isInflated(PropertyConstant idProp)
+    public boolean isInflated(Object nid)
         {
-        return f_mapFields != null && f_mapFields.get(idProp.getNestedIdentity()) != null;
+        return f_mapFields != null && f_mapFields.get(nid) != null;
         }
 
     @Override
