@@ -1,7 +1,7 @@
 /**
  * FileStore represents hierarchical file storage, but at a relatively abstract level.
  *
- * The Filestore interface is not intended to provide all of the capabilities of a file system, in
+ * The FileStore interface is not intended to provide all of the capabilities of a file system, in
  * terms of metadata, links, security management, and so on. Rather, it represents the most common
  * operations that an application would need access to, in order to read and write and manage files
  * for the application itself.
