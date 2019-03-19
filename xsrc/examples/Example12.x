@@ -2333,3 +2333,53 @@ String s = |When she had a child, it had to be sent out to nurse. When he came h
 // downsides of this approach:
 // - trailing whitespace could be an issue (solution: use the file include syntax instead)
 // - when used with $, there is a number of rules that have to be ordered for precedence, such as escapes
+
+
+
+// -- IO thoughts
+
+Path.Root + "library" +
+Path.Current
+Path.Parent
+
+FileStore
+  @RO Boolean readonly;
+  conditional Int usedBytes();
+  conditional Int capacityBytes();
+  conditional Int unusedBytes();
+  @RO Directory root;
+  conditional Directory|File find(Path)
+  Cancellable watch(Path, FileWatcher)
+
+Node
+  @RO Path path
+  @RO String name
+  @RO Boolean exists
+  delete()
+  @RO Int size
+  Cancellable watch(FileWatcher)
+
+Directory
+  names
+  directories
+  files
+  conditional Node find(String name)
+  conditional Directory createDirectory(String name)
+
+  Cancellable watchRecursively(FileWatcher)
+
+File
+  delete
+  create
+  created / last-updated / last-accessed
+  readable / writable / deletable
+
+  Cancellable watchRecursively(FileWatcher)
+
+FileWatcher
+  Boolean directoryCreated(Directory)
+  Boolean directoryDeleted(Directory)
+  Boolean fileCreated(File)
+  Boolean fileDeleted(File)
+  Boolean fileModified(File)
+  Boolean notificationsDiscarded()
