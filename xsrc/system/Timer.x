@@ -1,54 +1,73 @@
 /**
- * A Timer is used to determine elapsed time. It can be paused and resumed, and its elapsed time can
- * be obtained and reset.
- * <p/>
- * TODO describe injection: (a) names (b) timer is running initially
+ * A Timer is used to determine elapsed time, analogous to a stop-watch or a kitchen timer in the
+ * real world. A Timer can be stopped and started; its elapsed time can be obtained and reset; and
+ * alarms can be registered for triggering after a specified period of time.
+ *
+ * The Timer interface is designed to support injection. Usually, obtaining a Timer is as simple as:
+ *
+ *   @Inject Timer timer;
+ *   timer.start();
+ *   // do some work here
+ *   Duration elapsed = timer.elapsed;
  */
 interface Timer
     {
+    /**
+     * If the Timer is stopped, then this method starts the Timer, such that the elapsed time begins
+     * accumulating again. If the Timer is already started, then this method has no effect.
+     */
+    void start();
+
+    /**
+     * Obtain the duration of time that has elapsed on this timer. An elapsed value from this Timer
+     * should only be compared with other elapsed values from this Timer, because the manner of time
+     * measurement can differ from one Timer implementation to another, and even from one machine to
+     * another.
+     */
+    @RO Duration elapsed;
+
     typedef function void () Alarm;
     typedef function void () Cancellable;
 
     /**
-     * If the Timer is not already paused, then this method pauses the Timer, such that the elapsed
-     * time stops accumulating until the Timer is resumed. If the Timer is already paused, then this
+     * Schedule an Alarm that will be invoked after the specified Duration has elapsed.
+     */
+    Cancellable schedule(Duration delay, Alarm alarm);
+
+    /**
+     * If the Timer is started, then this method stops the Timer, such that the elapsed time stops
+     * accumulating. If the Timer is already stopped, then this
      * method has no effect.
      *
      * This method also affects any previously registered alarms that have not already triggered,
-     * such that the accumulation of elapsed time for those alarms is also paused until the Timer
+     * such that the accumulation of elapsed time for those alarms is also stopped until the Timer
      * is resumed.
      */
-    void pause();
+    void stop();
 
     /**
-     * If the Timer is not paused, then this method resumes the Timer, such that the elapsed time
-     * begins accumulating again. If the Timer is already running, then this method has no effect.
+     * Restart the timer, as if the timer were stopped, reset, and re-started.
      */
-    void resume();
+    void restart()
+        {
+        stop();
+        reset();
+        start();
+        }
 
     /**
      * Resets the Timer such that the elapsed time starts accumulating again from zero.
      *
-     * This method does not resume the Timer if the Timer has been paused.
+     * This method does not change the running state of the Timer: It neither starts the Timer if
+     * the Timer is stopped, nor stops the Timer if the Timer is running.
      *
-     * This method resets any previously registered alarms that have not already triggered, such
-     * that the period of elapsed time for those alarms is also reset to zero.
+     * This method also resets any previously registered alarms that have not already triggered;
+     * the alarms are not destroyed, but the period of elapsed time for each alarm is reset to zero.
      */
     void reset();
 
     /**
-     * Obtain the duration of time that has elapsed on this timer. Durations from this
-     * Timer should only be compared with other Durations from this Timer.
-     */
-    @RO Duration elapsed;
-
-    /**
-     * Determine the resolution of this timer.
+     * Determine the theoretical resolution of this timer. This is for informational use only.
      */
     @RO Duration resolution;
-
-    /**
-     * Schedule an Alarm that will be invoked after the specified Duration completes.
-     */
-    Cancellable scheduleAlarm(Duration durationBeforeAlarm, Alarm alarm);
     }

@@ -32,7 +32,7 @@ module TestServices.xqiz.it
             console.println("[svc ] calculating for: " + delay);
             @Inject Timer timer;
             @Future Int result;
-            timer.scheduleAlarm(delay, () ->
+            timer.schedule(delay, () ->
                 {
                 console.println("[svc ] setting result");
                 result=delay.seconds;
