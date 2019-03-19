@@ -56,7 +56,7 @@ public class NullableTypeExpression
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant()
+    protected TypeConstant instantiateTypeConstant(Context ctx)
         {
         ConstantPool pool = pool();
         return pool.ensureIntersectionTypeConstant(pool.typeNullable(), type.ensureTypeConstant());

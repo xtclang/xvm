@@ -61,7 +61,7 @@ interface Sequence<ElementType>
     @Override
     Iterator<ElementType> iterator()
         {
-        return new Iterator<ElementType>()
+        return new Iterator()
             {
             private Int i = 0;
 

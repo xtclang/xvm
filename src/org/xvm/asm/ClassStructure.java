@@ -1922,12 +1922,6 @@ public class ClassStructure
                 }
             }
 
-        if (isVirtualChild() && !isStatic())
-            {
-            return ((ClassStructure) getParent()).
-                 consumesFormalTypeImpl(sName, access, listActual, false);
-            }
-
         return false;
         }
 
@@ -1943,13 +1937,7 @@ public class ClassStructure
     protected boolean producesFormalTypeImpl(String sName, Access access,
                                              List<TypeConstant> listActual, boolean fAllowInto)
         {
-        if (indexOfGenericParameter(sName) < 0)
-            {
-            // soft assert; this should be reported by the parser
-            System.err.println("Invalid formal parameter: " + sName +
-                               " passed to " + ClassStructure.this);
-            return false;
-            }
+        assert indexOfGenericParameter(sName) >= 0;
 
         ConstantPool pool = ConstantPool.getCurrentPool();
         for (Component child : children())
@@ -2073,12 +2061,6 @@ public class ClassStructure
                     return true;
                     }
                 }
-            }
-
-        if (isVirtualChild() && !isStatic())
-            {
-            return ((ClassStructure) getParent()).
-                 producesFormalTypeImpl(sName, access, listActual, false);
             }
 
         return false;

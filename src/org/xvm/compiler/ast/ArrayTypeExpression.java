@@ -77,7 +77,7 @@ public class ArrayTypeExpression
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant()
+    protected TypeConstant instantiateTypeConstant(Context ctx)
         {
         final ConstantPool pool = pool();
         return pool.ensureClassTypeConstant(pool.clzArray(), null, type.ensureTypeConstant());

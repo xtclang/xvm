@@ -14,15 +14,12 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 
-import org.xvm.asm.constants.ChildClassConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.ResolvableConstant;
-import org.xvm.asm.constants.ThisClassConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
 
@@ -166,6 +163,14 @@ public class NamedTypeExpression
     public boolean isExplicitlyNonAutoNarrowing()
         {
         return nonnarrow != null;
+        }
+
+    /**
+     * @return true iff the type represents a virtual child
+     */
+    public boolean isVirtualChild()
+        {
+        return m_fVirtualChild;
         }
 
     /**
@@ -318,7 +323,7 @@ public class NamedTypeExpression
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant()
+    protected TypeConstant instantiateTypeConstant(Context ctx)
         {
         Constant             constId    = getIdentityConstant();
         Access               access     = getExplicitAccess();
@@ -347,14 +352,14 @@ public class NamedTypeExpression
         TypeConstant type;
         if (left == null)
             {
-            type = calculateDefaultType(null, constId);
+            type = calculateDefaultType(ctx, constId);
             if (listParams != null)
                 {
                 int            cParams     = listParams.size();
                 TypeConstant[] atypeParams = new TypeConstant[cParams];
                 for (int i = 0; i < cParams; ++i)
                     {
-                    atypeParams[i] = listParams.get(i).ensureTypeConstant();
+                    atypeParams[i] = listParams.get(i).ensureTypeConstant(ctx);
                     }
 
                 type = pool.ensureParameterizedTypeConstant(type, atypeParams);
@@ -377,7 +382,7 @@ public class NamedTypeExpression
             }
         else
             {
-            type = left.ensureTypeConstant();
+            type = left.ensureTypeConstant(ctx);
 
             for (Token name : names)
                 {
@@ -390,13 +395,24 @@ public class NamedTypeExpression
                 TypeConstant[] atypParams = new TypeConstant[cParams];
                 for (int i = 0; i < cParams; ++i)
                     {
-                    atypParams[i] = listParams.get(i).ensureTypeConstant();
+                    atypParams[i] = listParams.get(i).ensureTypeConstant(ctx);
                     }
                 type = pool.ensureParameterizedTypeConstant(type, atypParams);
                 }
             }
 
         return type;
+        }
+
+    @Override
+    protected void setTypeConstant(TypeConstant constType)
+        {
+        if (!constType.containsUnresolved())
+            {
+            m_constId = constType;
+            }
+
+        super.setTypeConstant(constType);
         }
 
     @Override
@@ -506,22 +522,7 @@ public class NamedTypeExpression
         boolean              fValid     = true;
         TypeConstant         type       = null;
 
-        if (m_fVirtualChild)
-            {
-            Expression   exprLeft = ((NewExpression) getParent()).left;
-            TypeConstant typeLeft = exprLeft.getType();
-            TypeInfo     infoLeft = typeLeft.ensureTypeInfo(errs);
-            String       sChild   = getName();
-
-            type = infoLeft.getChildType(sChild);
-            if (type == null)
-                {
-                log(errs, Severity.ERROR, Constants.VE_NEW_UNRELATED_PARENT,
-                        sChild, typeLeft.getValueString());
-                fValid = false;
-                }
-            }
-        else if (m_constId == null || m_constId.containsUnresolved())
+        if (m_constId == null || m_constId.containsUnresolved())
             {
             // this can only mean that the name resolution ended in an error
             // and has been deferred
@@ -541,9 +542,14 @@ public class NamedTypeExpression
                     ? null
                     : finishValidation(typeRequired, exprNew.getType(), TypeFit.Fit, null, errs);
             }
-        else if (left == null)
+
+        if (left == null)
             {
-            if (listParams == null)
+            if (m_constId instanceof TypeConstant)
+                {
+                type = (TypeConstant) m_constId;
+                }
+            else if (listParams == null)
                 {
                 type = calculateDefaultType(ctx, m_constId);
                 }

@@ -42,7 +42,20 @@ public abstract class TypeExpression
      */
     public TypeConstant ensureTypeConstant()
         {
-        TypeConstant constType = getTypeConstant();
+        return ensureTypeConstant(null);
+        }
+
+    /**
+     * Obtain the TypeConstant currently associated with this TypeExpression, creating an unresolved
+     * TypeConstant if necessary.
+     *
+     * @param ctx  an optional Context; may be null
+     *
+     * @return a TypeConstant
+     */
+    public TypeConstant ensureTypeConstant(Context ctx)
+        {
+        TypeConstant constType = m_constType;
         if (constType == null)
             {
             if (isValidated())
@@ -54,18 +67,20 @@ public abstract class TypeExpression
                 }
             else
                 {
-                constType = instantiateTypeConstant();
+                constType = instantiateTypeConstant(ctx);
                 }
 
-            setTypeConstant(constType);
+            m_constType = constType;
             }
         return constType;
         }
 
     /**
+     * @param ctx  an optional Context; may be null
+     *
      * @return a TypeConstant for this TypeExpression
      */
-    protected abstract TypeConstant instantiateTypeConstant();
+    protected abstract TypeConstant instantiateTypeConstant(Context ctx);
 
     /**
      * @return the TypeConstant currently associated with this TypeExpression, or null
@@ -80,6 +95,8 @@ public abstract class TypeExpression
      */
     protected void setTypeConstant(TypeConstant constType)
         {
+        resetTypeConstant();
+
         // store the new type constant
         m_constType = constType;
         }

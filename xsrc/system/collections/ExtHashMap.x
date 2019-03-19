@@ -242,7 +242,7 @@ class ExtHashMap<KeyType, ValueType>
         @Override
         Iterator<HashEntry> iterator()
             {
-            return new Iterator<HashEntry>()
+            return new Iterator()
                 {
                 HashEntry?[] buckets     = ExtHashMap.this.buckets;
                 Int          nextBucket  = 0;

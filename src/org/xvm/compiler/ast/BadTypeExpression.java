@@ -26,7 +26,7 @@ public class BadTypeExpression
     // ----- TypeExpression methods ----------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant()
+    protected TypeConstant instantiateTypeConstant(Context ctx)
         {
         throw new UnsupportedOperationException();
         }
