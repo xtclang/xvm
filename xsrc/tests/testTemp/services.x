@@ -30,9 +30,9 @@ module TestServices.xqiz.it
             @Inject Console console;
 
             console.println("[svc ] calculating for: " + delay);
-            @Inject Timer timer;
+            @Inject Clock clock;
             @Future Int result;
-            timer.schedule(delay, () ->
+            clock.schedule(delay, () ->
                 {
                 console.println("[svc ] setting result");
                 result=delay.seconds;

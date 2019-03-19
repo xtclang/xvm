@@ -23,5 +23,5 @@ class LocalClock
         }
 
     @Override
-    Cancellable scheduleAlarm(DateTime when, Alarm alarm);
+    Cancellable schedule(DateTime when, Alarm alarm);
     }

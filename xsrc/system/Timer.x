@@ -31,6 +31,9 @@ interface Timer
 
     /**
      * Schedule an Alarm that will be invoked after the specified Duration has elapsed.
+     *
+     * Invoking the returned Cancellable will _attempt_ to cancel the invocation of the #Alarm, but
+     * cancellation is not guaranteed, since the Clock may have already invoked the Alarm.
      */
     Cancellable schedule(Duration delay, Alarm alarm);
 
@@ -67,7 +70,8 @@ interface Timer
     void reset();
 
     /**
-     * Determine the theoretical resolution of this timer. This is for informational use only.
+     * The resolution of a Timer is the length (or "period") of the "tick" of the Timer; it defines
+     * the lower bound of the smallest time unit that can be measured.
      */
     @RO Duration resolution;
     }
