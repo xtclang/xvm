@@ -159,6 +159,12 @@ public class VirtualChildTypeConstant
         }
 
     @Override
+    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
+        {
+        return pool.ensureVirtualChildTypeConstant(type, m_constName.getValue());
+        }
+
+    @Override
     public boolean isAutoNarrowing(boolean fAllowVirtChild)
         {
         return fAllowVirtChild;
@@ -176,7 +182,6 @@ public class VirtualChildTypeConstant
         return constClz.getComponent().resolveName(sName, Access.PUBLIC, collector);
         }
 
-
     @Override
     public TypeConstant resolveTypedefs()
         {
@@ -184,7 +189,7 @@ public class VirtualChildTypeConstant
         TypeConstant typeResolved = typeOriginal.resolveTypedefs();
         return typeOriginal == typeResolved
                 ? this
-                : getConstantPool().ensureVirtualChildTypeConstant(typeResolved, m_constName.getValue());
+                : cloneSingle(getConstantPool(), typeResolved);
         }
 
     @Override
@@ -194,7 +199,7 @@ public class VirtualChildTypeConstant
         TypeConstant typeResolved = typeOriginal.resolveGenerics(pool, resolver);
         return typeOriginal == typeResolved
                 ? this
-                : pool.ensureVirtualChildTypeConstant(typeResolved, m_constName.getValue());
+                : cloneSingle(pool, typeResolved);
         }
 
     @Override
@@ -240,7 +245,7 @@ public class VirtualChildTypeConstant
             }
         return typeOriginal == typeResolved
                 ? this
-                : pool.ensureVirtualChildTypeConstant(typeResolved, m_constName.getValue());
+                : cloneSingle(pool, typeResolved);
         }
 
     @Override
