@@ -111,7 +111,7 @@ interface Collection<ElementType>
      */
     ElementType[] to<ElementType[]>()
         {
-        ElementType[] array = new ElementType[size];
+        ElementType[] array = new Array<ElementType>(size);
         Int i = 0;
         for (ElementType el : this)
             {

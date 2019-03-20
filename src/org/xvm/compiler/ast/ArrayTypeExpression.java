@@ -5,9 +5,17 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
 
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.compiler.Compiler;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -71,6 +79,43 @@ public class ArrayTypeExpression
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ----- compile phases ------------------------------------------------------------------------
+
+    @Override
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+        {
+        ArrayTypeExpression exprNew = (ArrayTypeExpression) super.validate(ctx, typeRequired, errs);
+        if (exprNew == null || dims == 0)
+            {
+            return exprNew;
+            }
+
+        // array[capacity] is a fixed size array and is allowed only for types with default values
+        TypeConstant typeArray   = exprNew.ensureTypeConstant();
+        TypeConstant typeElement = typeArray.getParamsCount() > 0
+                ? typeArray.getParamTypesArray()[0]
+                : pool().typeObject();
+
+        if (typeElement.getDefaultValue() == null)
+            {
+            log(errs, Severity.ERROR, Compiler.NO_DEFAULT_VALUE, typeElement.getValueString());
+            return null;
+            }
+        return exprNew;
+        }
+
+    /**
+     * @return the id of the two-argument array constructor
+     */
+    public MethodConstant getArrayConstructor2()
+        {
+        ClassConstant  idArray  = pool().clzArray();
+        ClassStructure clzArray = (ClassStructure) idArray.getComponent();
+
+        return clzArray.findMethod("construct", 2).getIdentityConstant();
         }
 
 

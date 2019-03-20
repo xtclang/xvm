@@ -25,7 +25,7 @@ class ExtHashMap<KeyType, ValueType>
 
         // allocate the initial capacity
         (Int bucketCount, this.growAt) = calcBucketCount(initCapacity);
-        buckets = new HashEntry?[bucketCount, (i) -> Null];
+        buckets = new HashEntry?[bucketCount];
         }
 
     /**

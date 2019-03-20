@@ -21,6 +21,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 import org.xvm.asm.Assignment;
 
+import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeCollector;
@@ -360,9 +361,35 @@ public class LambdaExpression
             return calcFit(ctx, getImplicitType(ctx), typeRequired);
             }
 
-        TypeConstant[] atypeReqParams  = pool.extractFunctionParams(typeRequired);
-        TypeConstant[] atypeReqReturns = pool.extractFunctionReturns(typeRequired);
-        int            cParams         = getParamCount();
+        if (typeRequired instanceof IntersectionTypeConstant)
+            {
+            Set<TypeConstant> setFunctions = ((IntersectionTypeConstant) typeRequired).
+                    collectMatching(pool.typeFunction(), null);
+            for (TypeConstant typeFunction : setFunctions)
+                {
+                TypeConstant[] atypeReqParams  = pool.extractFunctionParams(typeFunction);
+                TypeConstant[] atypeReqReturns = pool.extractFunctionReturns(typeFunction);
+
+                fit = calculateTypeFitImpl(ctx, atypeReqParams, atypeReqReturns);
+                if (fit.isFit())
+                    {
+                    return fit;
+                    }
+                }
+            return TypeFit.NoFit;
+            }
+        else
+            {
+            TypeConstant[] atypeReqParams  = pool.extractFunctionParams(typeRequired);
+            TypeConstant[] atypeReqReturns = pool.extractFunctionReturns(typeRequired);
+
+            return calculateTypeFitImpl(ctx, atypeReqParams, atypeReqReturns);
+            }
+        }
+
+    public TypeFit calculateTypeFitImpl(Context ctx, TypeConstant[] atypeReqParams, TypeConstant[] atypeReqReturns)
+        {
+        int cParams = getParamCount();
         if (atypeReqParams != null && atypeReqParams.length == cParams && atypeReqReturns != null)
             {
             String[]       asParams    = cParams == 0 ? NO_NAMES : new String[cParams];
@@ -392,7 +419,6 @@ public class LambdaExpression
                 return TypeFit.Fit;
                 }
             }
-
         return TypeFit.NoFit;
         }
 
@@ -417,8 +443,26 @@ public class LambdaExpression
 
         if (typeRequired != null)
             {
-            atypeReqParams  = pool.extractFunctionParams(typeRequired);
-            atypeReqReturns = pool.extractFunctionReturns(typeRequired);
+            if (typeRequired instanceof IntersectionTypeConstant)
+                {
+                Set<TypeConstant> setFunctions = ((IntersectionTypeConstant) typeRequired).
+                        collectMatching(pool.typeFunction(), null);
+                for (TypeConstant typeFunction : setFunctions)
+                    {
+                    atypeReqParams  = pool.extractFunctionParams(typeFunction);
+                    atypeReqReturns = pool.extractFunctionReturns(typeFunction);
+
+                    if (calculateTypeFitImpl(ctx, atypeReqParams, atypeReqReturns).isFit())
+                        {
+                        break;
+                        }
+                    }
+                }
+            else
+                {
+                atypeReqParams  = pool.extractFunctionParams(typeRequired);
+                atypeReqReturns = pool.extractFunctionReturns(typeRequired);
+                }
             }
 
         boolean fValid      = true;

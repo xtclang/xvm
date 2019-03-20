@@ -143,7 +143,6 @@ public class JumpVal_N
 
     protected int explodeConstants(Frame frame, int iPC, ObjectHandle[] ahValue, int iRow)
         {
-        ObjectHeap heap = frame.f_context.f_heapGlobal;
         for (int cRows = m_aofCase.length; iRow < cRows; iRow++)
             {
             int            cColumns     = ahValue.length;
@@ -165,7 +164,7 @@ public class JumpVal_N
                     continue;
                     }
 
-                ObjectHandle hCase = ahCases[iC] = heap.ensureConstHandle(frame, constCase);
+                ObjectHandle hCase = ahCases[iC] = frame.getConstHandle(constCase);
                 if (hCase instanceof DeferredCallHandle)
                     {
                     fDeferred = true;

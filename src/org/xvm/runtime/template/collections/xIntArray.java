@@ -5,8 +5,8 @@ import java.util.Arrays;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
 import org.xvm.asm.Op;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
@@ -25,7 +25,7 @@ import org.xvm.runtime.template.xString;
 
 
 /**
- * TODO:
+ * Native Array implementation for elements that fit into Java long.
  */
 public class xIntArray
         extends xArray
@@ -64,6 +64,15 @@ public class xIntArray
             al[i] = ((JavaLong) ahArg[i]).getValue();
             }
         return new IntArrayHandle(clzArray, al);
+        }
+
+    @Override
+    protected void fill(ArrayHandle hArray, int cSize, ObjectHandle hValue)
+        {
+        IntArrayHandle ha = (IntArrayHandle) hArray;
+
+        Arrays.fill(ha.m_alValue, 0, cSize, ((JavaLong) hValue).getValue());
+        ha.m_cSize = cSize;
         }
 
     @Override

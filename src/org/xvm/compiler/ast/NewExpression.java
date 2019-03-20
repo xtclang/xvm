@@ -46,12 +46,6 @@ import static org.xvm.util.Handy.indentLines;
 
 /**
  * "New object" expression.
- *
- * <p/> TODO constructor - create the specified constructor (same sig as super class by default)
- * <p/> TODO implicit captures - will alter the constructor that we create (add each as a constructor param)
- * <p/> TODO pass the arguments to the constructor, including the implicit captures
- * <p/> TODO no other constructors allowed (either the default created one or any explicit ones) on the inner class
- * <p/> TODO capture of outer "this" means that the inner class is non-static
  */
 public class NewExpression
         extends Expression
@@ -366,6 +360,36 @@ public class NewExpression
                             log(errs, Severity.ERROR, Compiler.INVALID_OUTER_THIS);
                             fValid = false;
                             }
+                        }
+                    }
+                else if (exprTypeNew instanceof ArrayTypeExpression)
+                    {
+                    // this is a "new X[]", "new X[c1]" or "new X[c1, ...]" construct
+                    ArrayTypeExpression exprArray = (ArrayTypeExpression) exprTypeNew;
+                    int                 cDims     = exprArray.getDimensions();
+                    switch (cDims)
+                        {
+                        case 0:
+                            // dynamically growing array; go the normal route
+                            assert args == null || args.isEmpty();
+                            break;
+
+                        case 1:
+                            // fixed size array; we'll continue with the standard validation relying
+                            // on the fact that Array has two constructors:
+                            //      construct(Int capacity)
+                            //      construct(Int size, ElementType | function ElementType (Int) supply)
+                            // since we know that the ArrayTypeExpression has successfully validated,
+                            // we will emit the second constructor in leu of the first one
+                            // using the default value for the element type as the second argument
+                            assert args.size() == 1;
+                            m_fFixedSizeArray = true;
+                            break;
+
+                        default:
+                            log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED, "Multi-dimensional array");
+                            fValid = false;
+                            break;
                         }
                     }
                 }
@@ -702,7 +726,18 @@ public class NewExpression
                             break;
 
                         case 1:
-                            code.add(new NewG_1(idConstruct, typeTarget, aArgs[0], argResult));
+                            if (m_fFixedSizeArray)
+                                {
+                                Argument[] aArg2 = new Argument[2];
+                                aArg2[0] = aArgs[0];
+                                aArg2[1] = Register.DEFAULT;
+                                idConstruct = ((ArrayTypeExpression) type).getArrayConstructor2();
+                                code.add(new NewG_N(idConstruct, typeTarget, aArg2, argResult));
+                                }
+                            else
+                                {
+                                code.add(new NewG_1(idConstruct, typeTarget, aArgs[0], argResult));
+                                }
                             break;
 
                         default:
@@ -1296,6 +1331,10 @@ public class NewExpression
      * True if the class is a virtual child and needs to be constructed using a NEWC_ op-code.
      */
     private transient boolean               m_fVirtualChild;
+    /**
+     * True if the class is a fixed size array to be filled with the corresponding default value.
+     */
+    private transient boolean               m_fFixedSizeArray;
     /**
      * In the case of "m_fVirtualChild == true" and "left == null", steps to the child's parent.
      */

@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -82,6 +83,37 @@ public class IntersectionTypeConstant
             return type1;
             }
         return cloneRelational(pool, type1, type2);
+        }
+
+    /**
+     * Collect all parts of this intersection type that extend the specified type.
+     *
+     * @param typeMatch  the type to match
+     * @param setTypes   (optional) the set to add matching types to
+     *
+     * @return a set containing all matching types
+     */
+    public Set<TypeConstant> collectMatching(TypeConstant typeMatch, Set<TypeConstant> setTypes)
+        {
+        if (setTypes == null)
+            {
+            setTypes = new HashSet<>();
+            }
+        testMatch(m_constType1, typeMatch, setTypes);
+        testMatch(m_constType2, typeMatch, setTypes);
+        return setTypes;
+        }
+
+    private void testMatch(TypeConstant type1, TypeConstant typeMatch, Set<TypeConstant> set)
+        {
+        if (type1 instanceof IntersectionTypeConstant)
+            {
+            ((IntersectionTypeConstant) type1).collectMatching(typeMatch, set);
+            }
+        else if (type1.isA(typeMatch))
+            {
+            set.add(type1);
+            }
         }
 
 

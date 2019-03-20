@@ -106,12 +106,11 @@ public class xConst
 
             Constant     const1 = constInterval.getFirst();
             Constant     const2 = constInterval.getLast();
-            ObjectHeap   heap   = frame.f_context.f_heapGlobal;
-            ObjectHandle h1     = heap.ensureConstHandle(frame, const1);
-            ObjectHandle h2     = heap.ensureConstHandle(frame, const2);
+            ObjectHandle h1     = frame.getConstHandle(const1);
+            ObjectHandle h2     = frame.getConstHandle(const2);
 
-            TypeConstant     typeInterval = heap.getConstType(constInterval);
-            ClassComposition clzInterval  = heap.f_templates.resolveClass(typeInterval);
+            TypeConstant     typeInterval = frame.f_context.f_heapGlobal.getConstType(constInterval);
+            ClassComposition clzInterval  = f_templates.resolveClass(typeInterval);
             MethodStructure  constructor  = INTERVAL_CONSTRUCT;
 
             ObjectHandle[] ahArg = new ObjectHandle[constructor.getMaxVars()];
