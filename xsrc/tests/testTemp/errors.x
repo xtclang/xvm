@@ -25,7 +25,10 @@ module TestCompilerErrors.xqiz.it
         {
         Object test = ["hello", "cruel", "world", "!"] [1..-1];
         }
-
+    void testConstruct()
+        {
+        Int[] array = new Int[7, (i) -> -1];
+        }
     // tuples
     void testTOOB1()
         {
@@ -55,15 +58,13 @@ module TestCompilerErrors.xqiz.it
     // asserts
     void testAssert()
         {
-        console.println("\n** testAssert()");
         assert;
-        console.println("(done)");
+        String s = "testAssert";
         }
 
     void testAssertFalse()
         {
-        console.println("\n** testAssertFalse()");
         assert false;
-        console.println("(done)");
+        String s = "testAssertFalse";
         }
     }
