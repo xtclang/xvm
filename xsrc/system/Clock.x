@@ -48,20 +48,18 @@ interface Clock
      * Request an Alarm to be scheduled on the Clock to go off at a specific point in time.
      *
      * Invoking the returned #Cancellable will _attempt_ to cancel the invocation of the #Alarm, but
-     * cancellation is not guaranteed. This can occur if the Clock is able to concurrently invoke
-     * the alarm, or if the alarm has already been invoked.
+     * cancellation is not guaranteed, since the Clock may have already invoked the Alarm.
      */
-    Cancellable scheduleAlarm(DateTime when, Alarm alarm);
+    Cancellable schedule(DateTime when, Alarm alarm);
 
     /**
      * Request an Alarm to be scheduled on the Clock to go off after a specified period of time.
      *
      * Invoking the returned #Cancellable will _attempt_ to cancel the invocation of the #Alarm, but
-     * cancellation is not guaranteed. This can occur if the Clock is able to concurrently invoke
-     * the alarm, or if the alarm has already been invoked.
+     * cancellation is not guaranteed, since the Clock may have already invoked the Alarm.
      */
-    Cancellable scheduleAlarm(Duration delay, Alarm alarm)
+    Cancellable schedule(Duration delay, Alarm alarm)
         {
-        return scheduleAlarm(now+delay, alarm);
+        return schedule(now+delay, alarm);
         }
     }

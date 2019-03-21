@@ -123,8 +123,8 @@ interface Service()
      *   invokes service A).
      * * Forbidden: absolutely no re-entrancy is allowed; a request must complete and return before
      *   a new request can begin. This setting is dangerous because of its ability to easily create
-     *   deadlock situations, which will result in a DeadlockException. Note that runtime events can
-     *   still be processed (e.g. by calling {@link yield}) even when reentrancy is Forbidden.
+     *   deadlock situations, which will result in a Deadlock exception. Note that runtime events
+     *   can still be processed (e.g. by calling {@link yield}) even when reentrancy is Forbidden.
      */
     enum Reentrancy {Open, Prioritized, Exclusive, Forbidden}
 
@@ -323,6 +323,6 @@ interface Service()
     @Override
     immutable Service makeImmutable()
         {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperation();
         }
     }

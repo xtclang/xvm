@@ -31,7 +31,7 @@ Map<String, Int> map =
 class MyColl
         extends BaseColl
 //      implements Collection
-        delegates Collection(throw new UnsupportedOperationException("I haven't yet implemented Collection");)
+        delegates Collection(throw new UnsupportedOperation("I haven't yet implemented Collection");)
     {
 
     Collection foo.get()

@@ -1,7 +1,7 @@
 /**
  * Buffer represents a transferable holder for a uniform array of immutable data elements.
  */
-interface Buffer<DataType extends Const>
+interface Buffer<DataType extends immutable Const>
         extends collections.UniformIndexed<Int, DataType>
     {
     /**
@@ -55,7 +55,8 @@ interface Buffer<DataType extends Const>
      *
      * @throws BufferException if the specified position is beyond the buffer's limit
      */
-    @Override @Op("getElement")
+    @Override
+    @Op("[]")
     DataType getElement(Int ix);
 
     /**
@@ -72,7 +73,7 @@ interface Buffer<DataType extends Const>
      * @throws BufferException if the specified position is beyond the buffer's limit or this buffer
      *                         is read-only
      */
-    @Op("setElement")
+    @Op("[]=")
     void put(Int ix, DataType el);
 
     /**

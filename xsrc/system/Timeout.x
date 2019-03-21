@@ -2,7 +2,7 @@
  * A Timeout is used to constrain the wall-clock time limit for calls made to other services
  * from this service. Specifically, once a timeout is put in place, all service invocations that
  * originate from this service will carry the timeout, such that those service invocations will
- * need to complete within the remainder of that timeout, or risk a TimeoutException being raised.
+ * need to complete within the remainder of that timeout, or risk a TimedOut exception being raised.
  *
  * The Timeout mechanism is a cooperative mechanism, and is not intended to be used as a strict
  * resource management mechanism. Rather, it is intended for uses in which returning with a bad
@@ -186,11 +186,11 @@ const Timeout
 
     /**
      * This method is invoked when the timeout determines that it has expired. The default behavior
-     * of this method is to throw a TimeoutException.
+     * of this method is to throw a TimedOut exception.
      */
     protected void onExpiry()
         {
-        throw new TimeoutException(this);
+        throw new TimedOut(this);
         }
 
     /**

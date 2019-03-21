@@ -12,6 +12,7 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
+import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -92,7 +93,7 @@ public class xNanosTimer
                 // instructions in picoseconds
                 LongLongHandle  llPicos = (LongLongHandle) hDuration.getField("picosecondsTotal");
                 long            cNanos  = Math.max(0, llPicos.getValue().divUnsigned(PICOS_PER_NANO).getLowValue());
-                Alarm           alarm   = schedule(cNanos, frame, hAlarm);
+                Alarm           alarm   = schedule(cNanos, frame.f_context, hAlarm);
 
                 FunctionHandle hCancel = new NativeFunctionHandle((_frame, _ah, _iReturn) ->
                     {
@@ -158,14 +159,14 @@ public class xNanosTimer
      * Create and schedule an alarm to go off if a specified number of nanoseconds.
      *
      * @param cNanosDelay  the delay before triggering the alarm
-     * @param frame        the runtime frame to use when the alarm triggers
+     * @param context      the runtime service context to use when the alarm triggers
      * @param hFunction    the runtime function to call when the alarm triggers
      *
      * @return the new Alarm
      */
-    public Alarm schedule(long cNanosDelay, Frame frame, FunctionHandle hFunction)
+    public Alarm schedule(long cNanosDelay, ServiceContext context, FunctionHandle hFunction)
         {
-        return new Alarm(++s_cAlarms, cNanosDelay, frame, hFunction);
+        return new Alarm(++s_cAlarms, cNanosDelay, context, hFunction);
         }
 
     /**
@@ -182,13 +183,13 @@ public class xNanosTimer
                 }
 
             m_cNanosStart = 0;
-            }
 
-        synchronized (f_setAlarms)
-            {
-            for (Alarm alarm : f_setAlarms)
+            synchronized (f_setAlarms)
                 {
-                alarm.stop();
+                for (Alarm alarm : f_setAlarms)
+                    {
+                    alarm.stop();
+                    }
                 }
             }
         }
@@ -251,14 +252,14 @@ public class xNanosTimer
          *
          * @param id           a unique id for the alarm
          * @param cNanosDelay  the delay before triggering the alarm
-         * @param frame        the runtime frame to use when the alarm triggers
+         * @param context      the runtime service context to use when the alarm triggers
          * @param hFunction    the runtime function to call when the alarm triggers
          */
-        public Alarm(int id, long cNanosDelay, Frame frame, FunctionHandle hFunction)
+        public Alarm(int id, long cNanosDelay, ServiceContext context, FunctionHandle hFunction)
             {
             f_id          = id;
             f_cNanosDelay = cNanosDelay;
-            f_frame       = frame;
+            f_context     = context;
             f_hFunction   = hFunction;
 
             xNanosTimer timer = xNanosTimer.this;
@@ -356,7 +357,7 @@ public class xNanosTimer
                 }
 
             xNanosTimer.this.unregister(this);
-            f_frame.f_context.callLater(f_hFunction, Utils.OBJECTS_NONE);
+            f_context.callLater(f_hFunction, Utils.OBJECTS_NONE);
             }
 
         /**
@@ -415,7 +416,7 @@ public class xNanosTimer
                 }
             }
 
-        private final    Frame          f_frame;
+        private final    ServiceContext f_context;
         private final    FunctionHandle f_hFunction;
         private final    int            f_id;
         private final    long           f_cNanosDelay;

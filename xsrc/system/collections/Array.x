@@ -17,7 +17,7 @@ class Array<ElementType>
         {
         if (capacity < 0)
             {
-            throw new IllegalArgumentException("capacity " + capacity + " must be >= 0");
+            throw new IllegalArgument("capacity " + capacity + " must be >= 0");
             }
         this.capacity   = capacity;
         this.mutability = Mutable;
@@ -86,10 +86,10 @@ class Array<ElementType>
         switch (mutability)
             {
             case Constant:
-                throw new IllegalStateException("Array is constant");
+                throw new IllegalState("Array is constant");
 
             case Persistent:
-                throw new IllegalStateException("Array is persistent; use the \"replace\" API instead");
+                throw new IllegalState("Array is persistent; use the \"replace\" API instead");
 
             default:
                 elementAt(index).set(value);
@@ -102,7 +102,7 @@ class Array<ElementType>
         {
         if (index < 0 || index >= size)
             {
-            throw new BoundsException("index=" + index + ", size=" + size);
+            throw new OutOfBounds("index=" + index + ", size=" + size);
             }
 
         Element element = head.as(Element);
@@ -137,10 +137,10 @@ class Array<ElementType>
         switch (mutability)
             {
             case Constant:
-                throw new IllegalStateException("Array is constant");
+                throw new IllegalState("Array is constant");
 
             case FixedSize:
-                throw new IllegalStateException("Array is fixed size");
+                throw new IllegalState("Array is fixed size");
 
             case Persistent:
                 ElementType[] newArray = new Array<ElementType>(this.size + 1,
@@ -169,10 +169,10 @@ class Array<ElementType>
         switch (mutability)
             {
             case Constant:
-                throw new IllegalStateException("Array is constant");
+                throw new IllegalState("Array is constant");
 
             case FixedSize:
-                throw new IllegalStateException("Array is fixed size");
+                throw new IllegalState("Array is fixed size");
 
             case Persistent:
                 ElementType[] newArray = new Array<ElementType>(this.size + that.size,
@@ -194,7 +194,7 @@ class Array<ElementType>
         switch (mutability)
             {
             case Constant:
-                throw new IllegalStateException("Array is constant");
+                throw new IllegalState("Array is constant");
 
             case Persistent:
                 ElementType[] that = new Array<ElementType>(size, (i) -> this[i]);
@@ -370,7 +370,7 @@ class Array<ElementType>
             switch (mutability)
                 {
                 case Constant:
-                    throw new IllegalStateException("Array is constant");
+                    throw new IllegalState("Array is constant");
 
                 case Persistent:
                 case Mutable:
@@ -415,7 +415,7 @@ class Array<ElementType>
             switch (mutability)
                 {
                 case Constant:
-                    throw new IllegalStateException("Array is constant");
+                    throw new IllegalState("Array is constant");
 
                 case FixedSize:
                 case Mutable:

@@ -1,10 +1,7 @@
 module TestMisc.xqiz.it
     {
-    import X.IllegalArgumentException;
-    import X.DateTime;
-
-    @Inject X.io.Console console;
-    @Inject X.Clock clock;
+    @Inject Console console;
+    @Inject Clock clock;
 
     void run()
         {
@@ -396,7 +393,7 @@ module TestMisc.xqiz.it
         Exception e = new Exception("test");
         console.println("e=" + e);
 
-        e = new IllegalArgumentException("test");
+        e = new IllegalArgument("test");
         console.println("e=" + e);
         }
 

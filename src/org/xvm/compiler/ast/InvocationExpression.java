@@ -812,7 +812,8 @@ public class InvocationExpression
     protected boolean allowsShortCircuit(Expression exprChild)
         {
         // invocation does not allow the arguments to short circuit
-        return exprChild == expr;
+        // REVIEW with GG - rationale for allowing arguments to short-circuit (???)
+        return exprChild == expr || args.contains(exprChild);
         }
 
     @Override
@@ -1518,9 +1519,14 @@ public class InvocationExpression
                     // - methods are included because there is a left, but since it is to obtain a
                     //   method reference, there must not be any arg binding or actual invocation
                     // - functions are included because the left is identity-mode
-                    // TODO: if left is a super class or a "nest mate", use PROTECTED access as well
-                    Access     access     = fConstruct ? Access.PROTECTED : Access.PUBLIC;
-                    TypeInfo   infoLeft   = nameLeft.getIdentity(ctx).ensureTypeInfo(access, errs);
+                    IdentityConstant idLeft = nameLeft.getIdentity(ctx);
+                    Access           access = fConstruct ? Access.PROTECTED : Access.PUBLIC;
+                    // TODO: if left is a super class or other contribution, use PROTECTED access as well
+                    if (ctx.getRootContext().getThisClass().getIdentityConstant().isNestMateOf(idLeft))
+                        {
+                        access = Access.PRIVATE;
+                        }
+                    TypeInfo   infoLeft   = idLeft.ensureTypeInfo(access, errs);
                     MethodType methodType = fConstruct ? MethodType.Constructor
                             : fNoFBind && fNoCall ? MethodType.Either : MethodType.Function;
                     Argument   arg        = findCallable(ctx, infoLeft, sName, methodType, atypeReturn, errs);

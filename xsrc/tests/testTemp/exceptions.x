@@ -37,7 +37,7 @@ module TestTry.xqiz.it
     void testThrow()
         {
         console.println("in testThrow()");
-        throw new X.IllegalStateException("test");
+        throw new IllegalState("test");
         }
 
     void testBasic()

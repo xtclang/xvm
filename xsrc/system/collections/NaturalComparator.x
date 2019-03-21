@@ -10,8 +10,8 @@ const NaturalComparator<DataType extends Orderable>
      * Obtain the function that can compare two instances of the _Resolved Declarative Type_ for
      * the purpose of determining equality.
      *
-     * @throws UnsupportedOperationException if the Comparator does not support comparison of the
-     *         {@code DataType} for the purpose of determining equality
+     * @throws UnsupportedOperation  if the Comparator does not support comparison of the
+     *                               {@code DataType} for the purpose of determining equality
      */
     @RO function Boolean (DataType, DataType) compareForEquality.get()
         {
@@ -22,8 +22,8 @@ const NaturalComparator<DataType extends Orderable>
      * Obtain the function that can compare two instances of the _Resolved Declarative Type_ for
      * the purpose of determining order.
      *
-     * @throws UnsupportedOperationException if the Comparator does not support comparison of the
-     *         {@code DataType} for the purpose of determining order
+     * @throws UnsupportedOperation  if the Comparator does not support comparison of the
+     *                               {@code DataType} for the purpose of determining order
      */
     @RO function Ordered (DataType, DataType) compareForOrder.get()
         {

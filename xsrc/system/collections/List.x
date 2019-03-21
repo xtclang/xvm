@@ -31,8 +31,8 @@ interface List<ElementType>
          * (inclusive) and {@code size} (inclusive). If the index is equal to {@code size}, then the
          * cursor is "beyond the end of the list", and refers to a non-existent element.
          *
-         * @throws BoundsException  if an attempt is made to set the index to a position less than
-         *                          {@code 0} or more than {@code size}
+         * @throws OutOfBounds  if an attempt is made to set the index to a position less than
+         *                      {@code 0} or more than {@code size}
          */
         Int index;
 
@@ -62,9 +62,9 @@ interface List<ElementType>
          * exception), but _setting_ the value is legal, and will append the specified value to the
          * end of the list.
          *
-         * @throws ReadOnlyException  if the List is not _mutable_ or _fixed-size_
-         * @throws BoundsException    if an attempt is made to access the value when the cursor is
-         *                            beyond the end of the list
+         * @throws ReadOnly     if the List is not _mutable_ or _fixed-size_
+         * @throws OutOfBounds  if an attempt is made to access the value when the cursor is
+         *                      beyond the end of the list
          */
         ElementType value;
 
@@ -76,7 +76,7 @@ interface List<ElementType>
          * After this method completes successfully, the cursor will be positioned on the newly
          * inserted element.
          *
-         * @throws ReadOnlyException  if the List is not _mutable_
+         * @throws ReadOnly  if the List is not _mutable_
          */
         void insert(ElementType value);
 
@@ -89,9 +89,9 @@ interface List<ElementType>
          * element "beyond the end of the list" if the element deleted was the last element in the
          * list.
          *
-         * @throws ReadOnlyException  if the List is not _mutable_
-         * @throws BoundsException    if an attempt is made to delete the value when the cursor is
-         *                            beyond the end of the list
+         * @throws ReadOnly     if the List is not _mutable_
+         * @throws OutOfBounds  if an attempt is made to delete the value when the cursor is
+         *                      beyond the end of the list
          */
         void delete();
         }
@@ -104,8 +104,8 @@ interface List<ElementType>
      *
      * @return a new Cursor positioned at the specified index in the List
      *
-     * @throws BoundsException  if the specified index is outside of range {@code 0} (inclusive) to
-     *         {@code size} (inclusive)
+     * @throws OutOfBounds  if the specified index is outside of range {@code 0} (inclusive) to
+     *                      {@code size} (inclusive)
      */
     Cursor cursor(Int index = 0)
         {
@@ -126,8 +126,8 @@ interface List<ElementType>
      *
      * @return the resultant list, which is the same as {@code this} for a mutable list
      *
-     * @throws BoundsException  if the specified index is outside of range {@code 0} (inclusive) to
-     *         {@code size} (inclusive)
+     * @throws OutOfBounds  if the specified index is outside of range {@code 0} (inclusive) to
+     *                      {@code size} (inclusive)
      */
     List insert(Int index, ElementType value)
         {
@@ -148,8 +148,8 @@ interface List<ElementType>
      *
      * @return the resultant list, which is the same as {@code this} for a mutable list
      *
-     * @throws BoundsException  if the specified index is outside of range {@code 0} (inclusive) to
-     *         {@code size} (inclusive)
+     * @throws OutOfBounds  if the specified index is outside of range {@code 0} (inclusive) to
+     *                      {@code size} (inclusive)
      */
     List insertAll(Int index, Sequence<ElementType> | Collection<ElementType> values)
         {
@@ -176,8 +176,8 @@ interface List<ElementType>
      *
      * @return the resultant list, which is the same as {@code this} for a mutable list
      *
-     * @throws BoundsException  if the specified index is outside of range {@code 0} (inclusive) to
-     *         {@code size} (exclusive)
+     * @throws OutOfBounds  if the specified index is outside of range {@code 0} (inclusive) to
+     *                      {@code size} (exclusive)
      */
     List delete(Int index)
         {
@@ -196,8 +196,8 @@ interface List<ElementType>
      *
      * @return the resultant list, which is the same as {@code this} for a mutable list
      *
-     * @throws BoundsException  if the specified index is outside of range {@code 0} (inclusive) to
-     *         {@code size} (exclusive)
+     * @throws OutOfBounds  if the specified index is outside of range {@code 0} (inclusive) to
+     *                      {@code size} (exclusive)
      */
     List delete(Range<Int> range)
         {
@@ -292,7 +292,7 @@ interface List<ElementType>
             {
             if (index < 0 || index > List.this.size)
                 {
-                throw new BoundsException();
+                throw new OutOfBounds();
                 }
             internalIndex = index;
             }
@@ -316,7 +316,7 @@ interface List<ElementType>
                 {
                 if (i < 0 || i > List.this.size)
                     {
-                    throw new BoundsException();
+                    throw new OutOfBounds();
                     }
                 internalIndex = i;
                 }
@@ -349,7 +349,7 @@ interface List<ElementType>
             @Override
             ElementType get()
                 {
-                // may throw BoundsException
+                // may throw OutOfBounds
                 return List.this[index];
                 }
 
@@ -360,7 +360,7 @@ interface List<ElementType>
                 Int size = List.this.size;
                 if (i < size)
                     {
-                    // may throw ReadOnlyException
+                    // may throw ReadOnly
                     List.this[i] = value;
                     }
                 else

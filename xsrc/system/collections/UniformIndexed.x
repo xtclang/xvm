@@ -16,7 +16,7 @@ interface UniformIndexed<IndexType, ElementType>
     @Op("[]=")
     void setElement(IndexType index, ElementType value)
         {
-        throw new ReadOnlyException();
+        throw new ReadOnly();
         }
 
     /**

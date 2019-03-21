@@ -25,7 +25,7 @@ interface Matrix<ElementType>
     @Op("[]=")
     void setElement(Int col, Int row, ElementType value)
         {
-        throw new ReadOnlyException();
+        throw new ReadOnly();
         }
 
     /**
@@ -40,7 +40,7 @@ interface Matrix<ElementType>
     @Op("[_,?]=")
     void setCol(Int col, ElementType[] vector)
         {
-        throw new ReadOnlyException();
+        throw new ReadOnly();
         }
 
     /**
@@ -55,7 +55,7 @@ interface Matrix<ElementType>
     @Op("[?,_]=")
     void setRow(Int row, ElementType[] vector)
         {
-        throw new ReadOnlyException();
+        throw new ReadOnly();
         }
 
     /**
@@ -73,8 +73,8 @@ interface Matrix<ElementType>
      *
      * @return a slice of this Matrix corresponding to the specified ranges of columns and rows
      *
-     * @throws BoundsException if the specified ranges exceed either the lower or upper bounds of
-     *         the dimensions of this Matrix
+     * @throws OutOfBounds  if the specified ranges exceed either the lower or upper bounds of
+     *                      the dimensions of this Matrix
      */
     @Op("[..]") Matrix slice(Range<Int> colRange, Range<Int> rowRange);
 

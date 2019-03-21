@@ -26,14 +26,14 @@ interface Sequential
      * @return the number of times that next() (or prev(), if negative) would need to be called to
      *         sequentially transition from _this_ to _that_
      *
-     * @throws BoundsException  if the span cannot be represented in a 64-bit integer value
+     * @throws OutOfBounds  if the span cannot be represented in a 64-bit integer value
      */
     Int stepsTo(Sequential that);
 
     /**
      * @return the value that precedes this value.
      *
-     * @throws BoundsException  if there is no previous value
+     * @throws OutOfBounds  if there is no previous value
      */
     Sequential prevValue()
         {
@@ -42,13 +42,13 @@ interface Sequential
             return value;
             }
 
-        throw new BoundsException();
+        throw new OutOfBounds();
         }
 
     /**
      * @return the value that follows this value.
      *
-     * @throws BoundsException  if there is no next value
+     * @throws OutOfBounds  if there is no next value
      */
     Sequential nextValue()
         {
@@ -57,6 +57,6 @@ interface Sequential
             return value;
             }
 
-        throw new BoundsException();
+        throw new OutOfBounds();
         }
     }

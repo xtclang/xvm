@@ -54,8 +54,8 @@ interface Map<KeyType, ValueType>
          * The value property is not settable if the containing map is a _persistent_ or
          * {@code const} map.
          *
-         * @throws ReadOnlyException if an attempt is made to write the value of the entry when
-         *         the map is _persistent_ or {@code const}
+         * @throws ReadOnly if an attempt is made to write the value of the entry when
+     *                      the map is _persistent_ or {@code const}
          */
         ValueType value;
 
@@ -104,12 +104,12 @@ interface Map<KeyType, ValueType>
          * {@code const} map.
          *
          * If the entry does not {@link exist}, then the value is not readable; an attempt to get
-         * the value of an will raise a {@link BoundsException}
+         * the value of an will raise a {@link OutOfBounds}
          *
-         * @throws BoundsException if an attempt is made to read the value of the entry when {@link
-         *         exists} is false
-         * @throws ReadOnlyException if an attempt is made to write the value of the entry when
-         *         the map is _persistent_ or {@code const}
+         * @throws OutOfBounds if an attempt is made to read the value of the entry when {@link
+         *                     exists} is false
+         * @throws ReadOnly if an attempt is made to write the value of the entry when
+         *                     the map is _persistent_ or {@code const}
          */
         @Override
         ValueType value;
@@ -120,7 +120,7 @@ interface Map<KeyType, ValueType>
          * The entry is removable if the containing map is _mutable_; it is not removable if the
          * containing map is _fixed size_, _persistent_, or {@code const}.
          *
-         * @throws ReadOnlyException if the map is _fixed size_, _persistent_, or {@code const}
+         * @throws ReadOnly if the map is _fixed size_, _persistent_, or {@code const}
          */
         void remove();
 
@@ -414,8 +414,9 @@ interface Map<KeyType, ValueType>
      *
      * @return the result of the specified function
      *
-     * @throws ReadOnlyException if an attempt is made to add or remove an entry in a map that is
-     *         not _mutable_, or to modify an entry in a map that is not _mutable_ or _fixed size_
+     * @throws ReadOnly if an attempt is made to add or remove an entry in a map that is not
+     *                  _mutable_, or to modify an entry in a map that is not _mutable_ or
+     *                  _fixed size_
      */
     <ResultType> ResultType process(KeyType key,
             function ResultType (ProcessableEntry) compute);
@@ -431,8 +432,8 @@ interface Map<KeyType, ValueType>
      * @return a conditional true and the result of the specified function iff the entry exists;
      *         otherwise a conditional false
      *
-     * @throws ReadOnlyException if an attempt is made to modify an entry in a map that is not
-     *         _mutable_ or _fixed size_
+     * @throws ReadOnly if an attempt is made to modify an entry in a map that is not
+     *                  _mutable_ or _fixed size_
      */
     <ResultType> conditional ResultType processIfPresent(KeyType key,
             function ResultType (ProcessableEntry) compute)
@@ -465,8 +466,7 @@ interface Map<KeyType, ValueType>
      * @return the value for the specified key, which may have already existed in the map, or may
      *         have just been calculated by the specified function and placed into the map
      *
-     * @throws ReadOnlyException if an attempt is made to add an entry in a map that is not
-     *         _mutable_
+     * @throws ReadOnly if an attempt is made to add an entry in a map that is not _mutable_
      */
     ValueType computeIfAbsent(KeyType key, function ValueType () compute)
         {
@@ -495,7 +495,7 @@ interface Map<KeyType, ValueType>
      *
      * @return the value associated with the specified index (key)
      *
-     * @throws BoundsException if the specified index (key) does not exist
+     * @throws OutOfBounds if the specified index (key) does not exist
      */
     @Override
     @Op ValueType getElement(KeyType index)
@@ -504,7 +504,7 @@ interface Map<KeyType, ValueType>
             {
             return value;
             }
-        throw new BoundsException();
+        throw new OutOfBounds();
         }
 
     /**
@@ -516,9 +516,9 @@ interface Map<KeyType, ValueType>
      * @param index  the index (key) of the element to store
      * @param value  the value to store associated with the specified index (key)
      *
-     * @throws BoundsException if the specified index (key) does not exist and the map is not
-     *         of the _mutable_ variety
-     * @throws ReadOnlyException if the map is of the _persistent_ or {@code const} variety
+     * @throws OutOfBounds  if the specified index (key) does not exist and the map is not
+     *                      of the _mutable_ variety
+     * @throws ReadOnly     if the map is of the _persistent_ or {@code const} variety
      */
     @Override
     @Op void setElement(KeyType index, ValueType value)
@@ -538,7 +538,7 @@ interface Map<KeyType, ValueType>
             {
             return makeImmutable();
             }
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperation();
         }
 
     // ----- equality ------------------------------------------------------------------------------
@@ -787,7 +787,7 @@ interface Map<KeyType, ValueType>
                     {
                     return value;
                     }
-                throw new BoundsException();
+                throw new OutOfBounds();
                 }
 
             @Override

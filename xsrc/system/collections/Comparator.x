@@ -15,8 +15,8 @@ const Comparator<DataType>
      * Obtain the function that can compare two instances of the _Resolved Declarative Type_ for
      * the purpose of determining equality.
      *
-     * @throws UnsupportedOperationException if the Comparator does not support comparison of the
-     *         {@code DataType} for the purpose of determining equality
+     * @throws UnsupportedOperation if the Comparator does not support comparison of the
+     *                              {@code DataType} for the purpose of determining equality
      */
     @RO function Boolean (DataType, DataType) compareForEquality.get()
         {
@@ -27,8 +27,8 @@ const Comparator<DataType>
      * Obtain the function that can compare two instances of the _Resolved Declarative Type_ for
      * the purpose of determining order.
      *
-     * @throws UnsupportedOperationException if the Comparator does not support comparison of the
-     *         {@code DataType} for the purpose of determining order
+     * @throws UnsupportedOperation if the Comparator does not support comparison of the
+     *                              {@code DataType} for the purpose of determining order
      */
     public/private function Ordered (DataType, DataType) compareForOrder;
     }

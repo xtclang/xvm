@@ -31,84 +31,66 @@ module Ecstasy.xtclang.org
     enum Ordered(String symbol) { Lesser("<"), Equal("="), Greater(">") }
 
     /**
-     * A DeadlockException is raised by the runtime in response to a situation in which re-entrancy
+     * A Deadlock exception is raised by the runtime in response to a situation in which re-entrancy
      * to a service is necessary, but for one of several reasons cannot be accomplished.
      */
-    const DeadlockException(String? text = null, Exception? cause = null)
-            extends Exception(text, cause)
-        {
-        }
+    const Deadlock(String? text = null, Exception? cause = null)
+            extends Exception(text, cause);
 
     /**
-     * A TimeoutException is raised by the runtime in response to a thread-of-execution exceeding a
-     * timeout (wall clock time) limitation within which it was running.
+     * A TimedOut exception is raised by the runtime in response to a thread-of-execution exceeding
+     * a timeout (wall clock time) limitation within which it was running.
      */
-    const TimeoutException(Timeout timeout, String? text = null, Exception? cause = null)
-            extends Exception(text, cause)
-        {
-        }
+    const TimedOut(Timeout timeout, String? text = null, Exception? cause = null)
+            extends Exception(text, cause);
 
     /**
-     * A ReadOnlyException is raised when an attempt is made to modify a read-only value.
+     * A ReadOnly exception is raised when an attempt is made to modify a read-only value.
      */
-    const ReadOnlyException(String? text = null, Exception? cause = null)
-            extends Exception(text, cause)
-        {
-        }
+    const ReadOnly(String? text = null, Exception? cause = null)
+            extends Exception(text, cause);
 
     /**
-     * A BoundsException is raised when an attempt is made to invoke an operation with a value that
-     * is out-of-bounds, or if the operation would result in an out-of-bounds condition.
+     * An OutOfBounds exception is raised when an attempt is made to invoke an operation with a
+     * value that is out-of-bounds, or if the operation would result in an out-of-bounds condition.
      */
-    const BoundsException(String? text = null, Exception? cause = null)
-            extends Exception(text, cause)
-        {
-        }
+    const OutOfBounds(String? text = null, Exception? cause = null)
+            extends Exception(text, cause);
 
     /**
-     * A ConcurrentModificationException is raised when an object detects a modification that it was
-     * not expecting, and is unable to predictably continue processing according to the contracts
-     * that it provides.
+     * A ConcurrentModification exception is raised when an object detects a modification that it
+     * was not expecting, and is unable to predictably continue processing according to the
+     * contracts that it provides.
      */
-    const ConcurrentModificationException(String? text = null, Exception? cause = null)
-            extends Exception(text, cause)
-        {
-        }
+    const ConcurrentModification(String? text = null, Exception? cause = null)
+            extends Exception(text, cause);
 
     /**
-     * An AssertionException is raised when an assert fails.
+     * An Assertion exception is raised when an assert fails.
      */
-    const AssertionException(String? text = null, Exception? cause = null)
-            extends Exception(text, cause)
-        {
-        }
+    const Assertion(String? text = null, Exception? cause = null)
+            extends Exception(text, cause);
 
     /**
-     * An IllegalArgumentException is raised when an invalid argument is passed to a method or a
+     * An IllegalArgument exception is raised when an invalid argument is passed to a method or a
      * function.
      */
-    const IllegalArgumentException(String? text = null, Exception? cause = null)
-            extends Exception(text, cause)
-        {
-        }
+    const IllegalArgument(String? text = null, Exception? cause = null)
+            extends Exception(text, cause);
 
     /**
-     * An IllegalStateException is raised when a data structure is not in a consistent state
+     * An IllegalState exception is raised when a data structure is not in a consistent state
      * to perform a requested operation.
      */
-    const IllegalStateException(String? text = null, Exception? cause = null)
-            extends Exception(text, cause)
-        {
-        }
+    const IllegalState(String? text = null, Exception? cause = null)
+            extends Exception(text, cause);
 
     /**
-     * An UnsupportedOperationException is raised when an attempt is made to invoke functionality
+     * An UnsupportedOperation exception is raised when an attempt is made to invoke functionality
      * that is not present or has not yet been implemented.
      */
-    const UnsupportedOperationException(String? text = null, Exception? cause = null)
-            extends Exception(text, cause)
-        {
-        }
+    const UnsupportedOperation(String? text = null, Exception? cause = null)
+            extends Exception(text, cause);
 
     /**
      * The interface associated with objects that are automatically closed by the {@code using} and

@@ -61,7 +61,7 @@ Int x
         }
     public Void set(Int v)
         {
-        throw new ReadOnlyException();
+        throw new ReadOnly();
         }
     private Void set(Int v)
         {
@@ -80,7 +80,7 @@ Int x
         }
     public Void set(Int v)
         {
-        throw new ReadOnlyException();
+        throw new ReadOnly();
         }
     private Void set(Int v)
         {
@@ -2333,3 +2333,77 @@ String s = |When she had a child, it had to be sent out to nurse. When he came h
 // downsides of this approach:
 // - trailing whitespace could be an issue (solution: use the file include syntax instead)
 // - when used with $, there is a number of rules that have to be ordered for precedence, such as escapes
+
+
+
+// -- IO thoughts
+
+Path.Root + "library" +
+Path.Current
+Path.Parent
+
+FileStore
+    @RO Boolean readonly;
+    conditional Int usedBytes();
+    conditional Int capacityBytes();
+    conditional Int unusedBytes();
+    @RO Directory root;
+    conditional Directory|File find(Path)
+    Cancellable watch(Path, FileWatcher)
+    Cancellable watchRecursively(Path, FileWatcher)
+
+Node
+    @RO Path path
+    @RO String name
+    @RO Boolean exists
+    conditional Directory|File rename(String)
+    Boolean create()
+    Boolean delete()
+    @RO Int size
+    Cancellable watch(FileWatcher)
+
+Directory
+    Iterator<String> names()
+    Iterator<Directory> dirs()
+    Iterator<File> files()
+    conditional Directory|File find(String name)
+    Directory assumeDir(String name)
+    File assumeFile(String name)
+    conditional Directory createDir(String name)
+    deleteRecursively()
+    conditional File createFile(String sName)
+    Cancellable watchRecursively(FileWatcher)
+
+File
+    Boolean truncate()
+    created / last-updated / last-accessed
+    readable / writable / deletable
+    @RO Byte[] contents
+    FileChannel open(Boolean read=true, Boolean write=true, )
+
+FileWatcher
+    Boolean directoryCreated(Directory)
+    Boolean directoryDeleted(Directory)
+    Boolean fileCreated(File)
+    Boolean fileDeleted(File)
+    Boolean fileModified(File)
+    Boolean notificationsDiscarded()
+
+const Path implements Sequence<Path>
+    @RO String name
+    @RO Path? parent
+    Boolean startsWith(Path)
+    Boolean endsWith(Path)
+    @RO Boolean absolute
+    @RO Boolean relative = !absolute
+    @RO Boolean normalized
+    Path normalize()
+    Path resolve(Path)
+    Path relativize(Path)
+    Path sibling(String)
+    Path sibling(Path)
+    Path add(String)
+    Path add(Path)
+
+
+PathElement {Root, Parent, Current, Name}

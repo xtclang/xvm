@@ -98,7 +98,7 @@ mixin FutureVar<RefType>
      * * A call to get() will block until the future has completed (subject to any time-outs being
      *   enforced by the runtime).
      * * If the future completes exceptionally, then get() throws an exception. Note that a time-out
-     *   results in a TimeoutException.
+     *   results in a TimedOut.
      * * If the future completes successfully, get() returns the result of the future.
      */
     @Override

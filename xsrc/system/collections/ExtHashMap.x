@@ -254,7 +254,7 @@ class ExtHashMap<KeyType, ValueType>
                     {
                     if (addSnapshot != ExtHashMap.this.addCount)
                         {
-                        throw new ConcurrentModificationException();
+                        throw new ConcurrentModification();
                         }
 
                     Int bucketCount = buckets.size;
@@ -428,7 +428,7 @@ class ExtHashMap<KeyType, ValueType>
                 }
 
             // the real entry does not actually exist
-            throw new BoundsException();
+            throw new OutOfBounds();
             }
         }
 

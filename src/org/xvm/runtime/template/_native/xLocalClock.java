@@ -47,7 +47,7 @@ public class xLocalClock
         {
         markNativeGetter("now");
         markNativeGetter("timezone");
-        markNativeMethod("scheduleAlarm", new String[]{"DateTime", "Clock.Alarm"}, null);
+        markNativeMethod("schedule", new String[]{"DateTime", "Clock.Alarm"}, null);
         }
 
     @Override
@@ -70,7 +70,7 @@ public class xLocalClock
         {
         switch (method.getName())
             {
-            case "scheduleAlarm": // alarm, wakeUp
+            case "schedule": // alarm, wakeUp
                 {
                 GenericHandle  hWakeup = (GenericHandle) ahArg[0];
                 FunctionHandle hAlarm  = (FunctionHandle) ahArg[1];

@@ -3205,6 +3205,9 @@ public class Parser
             case THROW:
                 return new ThrowExpression(expect(Id.THROW), parseTernaryExpression());
 
+            case ASSERT:
+                return new ThrowExpression(expect(Id.ASSERT), null);
+
             case TODO:
                 return parseTodoExpression();
 
