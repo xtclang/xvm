@@ -1720,6 +1720,13 @@ public class NameExpression
                             type = infoProp.getType();
                             }
                         }
+
+                    // check for a narrowed property type
+                    Argument argNarrowed = ctx.getVar(prop.getName());
+                    if (argNarrowed instanceof TargetInfo)
+                        {
+                        type = argNarrowed.getType();
+                        }
                     }
                 else
                     {

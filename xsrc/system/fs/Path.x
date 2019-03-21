@@ -263,13 +263,16 @@ const Path
         Int length = name.size;
         // prepend the parent path and the path separator; if the parent is the root, then no
         // additional separator is added
-        if (parent?.form == Root)
+        if (parent != null)
             {
-            ++length;
-            }
-        else
-            {
-            length += parent?.estimateStringLength() + 1;
+            if (parent.form == Root)
+                {
+                ++length;
+                }
+            else
+                {
+                length += parent.estimateStringLength() + 1;
+                }
             }
         return length;
         }
@@ -279,10 +282,13 @@ const Path
         {
         // prepend the parent path and the path separator; if the parent is the root, then no
         // additional separator is added
-        parent?.appendTo(appender);
-        if (parent?.form != Root)
+        if (parent != null)
             {
-            appender.add('/');
+            parent.appendTo(appender);
+            if (parent.form != Root)
+                {
+                appender.add('/');
+                }
             }
 
         name.appendTo(appender);

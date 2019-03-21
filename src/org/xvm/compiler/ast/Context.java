@@ -26,7 +26,6 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeParameterConstant;
 
-import org.xvm.compiler.ast.StatementBlock.RootContext;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
 import org.xvm.compiler.Compiler;
@@ -1087,6 +1086,12 @@ public class Context
             {
             assert exprName.isValidated();
 
+            if (exprName.left != null)
+                {
+                // TODO: to allow an expression "a.b.c" to be narrowed, all parents have to be immutable
+                return;
+                }
+
             String   sName = exprName.getName();
             Argument arg   = exprName.resolveRawArgument(this, false, ErrorListener.BLACKHOLE);
 
@@ -1102,20 +1107,54 @@ public class Context
                     {
                     TargetInfo       info = (TargetInfo) arg;
                     IdentityConstant id   = info.id;
-                    if (id instanceof PropertyConstant
-                            && ((PropertyConstant) id).isTypeParameter())
+                    if (id instanceof PropertyConstant)
                         {
+                        PropertyConstant idProp = (PropertyConstant) arg;
+
                         assert sName.equals(id.getName());
 
-                        narrowFormalType(sName, new TargetInfo(info, typeNarrow), branch);
+                        if (idProp.isTypeParameter())
+                            {
+                            narrowFormalType(sName, branch, new TargetInfo(info, typeNarrow));
+                            }
+                        else  // allow narrowing for immutable properties
+                            {
+                            TypeConstant     typeTarget = info.typeTarget;
+                            IdentityConstant idTarget   = typeTarget.getSingleUnderlyingClass(false);
+                            if (idTarget.equals(getThisClass().getIdentityConstant()) &&
+                                    getMethod().isConstructor())
+                                {
+                                // no property narrowing in the constructor
+                                }
+                            else if (typeTarget.isImmutable())
+                                {
+                                narrowProperty(sName, idProp, branch, new TargetInfo(info, typeNarrow));
+                                }
+                            }
                         }
                     }
-                else if (arg instanceof PropertyConstant
-                        && ((PropertyConstant) arg).isTypeParameter())
+                else if (arg instanceof PropertyConstant)
                     {
-                    assert sName.equals(((PropertyConstant) arg).getName());
+                    PropertyConstant idProp = (PropertyConstant) arg;
 
-                    narrowFormalType(sName, new Register(typeNarrow), branch);
+                    assert sName.equals(idProp.getName());
+
+                    if (idProp.isTypeParameter())
+                        {
+                        narrowFormalType(sName, branch, new Register(typeNarrow));
+                        }
+                    else // allow narrowing for immutable properties
+                        {
+                        if (getMethod().isConstructor())
+                            {
+                            // no property narrowing in the constructor
+                            }
+                        else if (getThisClass().isConst())
+                            {
+                            TargetInfo info = new TargetInfo(sName, idProp, true, getThisType(), 0);
+                            narrowProperty(sName, idProp, branch, new TargetInfo(info, typeNarrow));
+                            }
+                        }
                     }
                 else if (arg instanceof TypeParameterConstant)
                     {
@@ -1156,13 +1195,33 @@ public class Context
     /**
      * Narrow the formal parameter's type in this context.
      */
-    protected void narrowFormalType(String sName, Argument argNarrow, Branch branch)
+    protected void narrowFormalType(String sName, Branch branch, Argument argNarrow)
         {
         // place the argument with the narrowed formal type (used by NamedTypeExpression)
         putLocalVar(sName, branch, argNarrow);
 
         // keep the narrow type to resolve parameterized types coming from outer scopes
         ensureFormalTypeMap(branch).put(sName, argNarrow.getType());
+        }
+
+    /**
+     * Narrow the type of the specified property in this context for the specified branch.
+     */
+    protected void narrowProperty(String sName, PropertyConstant idProp,
+                                  Branch branch, Argument argNarrow)
+        {
+        TypeConstant typeProp = idProp.getType();
+
+        assert argNarrow.getType().isA(typeProp);
+
+        if (branch == Branch.Always)
+            {
+            ensureNameMap().put(sName, argNarrow);
+            }
+        else
+            {
+            ensureNarrowingMap(branch == Branch.WhenTrue).put(sName, argNarrow);
+            }
         }
 
     /**
