@@ -69,7 +69,7 @@ const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
      * property, which returns a {@code Ref}) to represent the property type, and thus (due to the
      * the methods on {@code Ref<T>}) appears to _"consume T"_; however, if the type containing
      * the property is explicitly immutable, or the method returning the {@code Ref<T>}) is
-     * annotated with {@code @RO}/{@code ReadOnly}, then _m_ is assumed to not _"consume T"_.
+     * annotated with {@code @RO}, then _m_ is assumed to not _"consume T"_.
      */
     Boolean consumesFormalType(String typeName, Boolean ignoreImmediateProduction = false)
         {

@@ -11,6 +11,11 @@
  */
 interface FileStore
     {
+    // TODO temporary
+    interface File {}
+    interface Directory {}
+    interface FileWatcher {}
+
     /**
      * Specifies whether this FileStorage is known to be explicitly read-only.
      */
@@ -59,7 +64,9 @@ interface FileStore
      *
      * @return the Directory or File at that path, only if is exists
      */
-    conditional Directory|File find(Path)
+    conditional Directory|File find(Path path);
+
+    typedef function void () Cancellable;
 
     /**
      * Watch a specified path within this FileStore, and report events related to that path.
@@ -69,5 +76,5 @@ interface FileStore
      *
      * @return a Cancellable object that allows the caller to cancel the watch
      */
-    Cancellable watch(Path path, FileWatcher watch)
+    Cancellable watch(Path path, FileWatcher watch);
     }

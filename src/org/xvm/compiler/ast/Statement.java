@@ -107,6 +107,22 @@ public abstract class Statement
         throw new IllegalStateException();
         }
 
+    // REVIEW need to think through "any statement allows expression to short circuit by default" decision
+    // TODO how to clean up the stack (A_STACK register) when short-circuit occurs?
+
+    @Override
+    protected boolean allowsShortCircuit(Expression exprChild)
+        {
+        return true;
+        }
+
+    @Override
+    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
+        {
+        assert allowsShortCircuit(exprChild);
+        return getEndLabel();
+        }
+
 
     // ----- compilation ---------------------------------------------------------------------------
 

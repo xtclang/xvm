@@ -61,7 +61,7 @@ Int x
         }
     public Void set(Int v)
         {
-        throw new ReadOnlyException();
+        throw new ReadOnly();
         }
     private Void set(Int v)
         {
@@ -80,7 +80,7 @@ Int x
         }
     public Void set(Int v)
         {
-        throw new ReadOnlyException();
+        throw new ReadOnly();
         }
     private Void set(Int v)
         {

@@ -3,14 +3,18 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.Label;
+import org.xvm.asm.op.New_0;
 import org.xvm.asm.op.Throw;
 
 import org.xvm.compiler.Token;
@@ -18,6 +22,9 @@ import org.xvm.compiler.Token;
 
 /**
  * A "throw expression" is a non-completing expression that throws an exception.
+ *
+ * TODO serious issues with types, because the expression cannot complete, yet it factors into type analysis.
+ *      for example, "if (x?.y : assert)" does not evaluate to Boolean
  */
 public class ThrowExpression
         extends Expression
@@ -50,7 +57,7 @@ public class ThrowExpression
     @Override
     public long getEndPosition()
         {
-        return expr.getEndPosition();
+        return expr == null ? keyword.getEndPosition() : expr.getEndPosition();
         }
 
     @Override
@@ -113,15 +120,18 @@ public class ThrowExpression
 
     protected boolean validateThrow(Context ctx, ErrorListener errs)
         {
-        // validate the throw value expressions
-        Expression exprNew = expr.validate(ctx, pool().typeException(), errs);
-        if (exprNew != expr)
+        if (expr != null)
             {
-            if (exprNew == null)
+            // validate the throw value expressions
+            Expression exprNew = expr.validate(ctx, pool().typeException(), errs);
+            if (exprNew != expr)
                 {
-                return false;
+                if (exprNew == null)
+                    {
+                    return false;
+                    }
+                expr = exprNew;
                 }
-            expr = exprNew;
             }
         return true;
         }
@@ -141,7 +151,7 @@ public class ThrowExpression
     @Override
     public boolean isShortCircuiting()
         {
-        return expr.isShortCircuiting();
+        return expr != null && expr.isShortCircuiting();
         }
 
     @Override
@@ -186,7 +196,23 @@ public class ThrowExpression
      */
     protected void generateThrow(Context ctx, Code code, ErrorListener errs)
         {
-        code.add(new Throw(expr.generateArgument(ctx, code, true, true, errs)));
+        Argument arg;
+        if (expr == null)
+            {
+            ConstantPool   pool = pool();
+            TypeConstant   type = pool.ensureEcstasyTypeConstant("Assertion");
+            TypeInfo       info = type.ensureTypeInfo(errs);
+            MethodConstant id   = info.findConstructor(null, null);
+                           arg  = createRegister(type, true);
+
+            code.add(new New_0(id, arg));
+            }
+        else
+            {
+            arg = expr.generateArgument(ctx, code, true, true, errs);
+            }
+
+        code.add(new Throw(arg));
         }
 
 

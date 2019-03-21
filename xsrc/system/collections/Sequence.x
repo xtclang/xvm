@@ -25,8 +25,8 @@ interface Sequence<ElementType>
      *
      * @return a slice of this sequence corresponding to the specified range of indexes
      *
-     * @throws BoundsException if the specified range exceeds either the lower or upper bounds of
-     *         this sequence
+     * @throws OutOfBounds  if the specified range exceeds either the lower or upper bounds of
+     *                      this sequence
      */
     @Op("[..]")
     Sequence slice(Range<Int> range);
@@ -160,7 +160,7 @@ interface Sequence<ElementType>
 //            last  = range.upperBound;
 //            if (first < 0 || last >= size)
 //                {
-//                throw new BoundsException();
+//                throw new OutOfBounds();
 //                }
 //
 //            if (range.reversed)

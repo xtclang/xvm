@@ -943,44 +943,53 @@ public class ConstantPool
                 break;
 
             case "Appender":
+            case "Assertion":
             case "Bit":
             case "Boolean":
             case "Char":
             case "Class":
             case "Clock":
             case "Closeable":
+            case "ConcurrentModification":
             case "Const":
             case "Date":
             case "DateTime":
+            case "Deadlock":
             case "Duration":
             case "Enum":
             case "Enumeration":
             case "Exception":
             case "Function":
             case "FPLiteral":
+            case "IllegalArgument":
+            case "IllegalState":
             case "Interval":
             case "IntLiteral":
             case "Iterable":
             case "Iterator":
             case "Module":
             case "Nullable":
+            case "Number":
             case "Ordered":
             case "Object":
+            case "Orderable":
+            case "OutOfBounds":
             case "Package":
             case "Range":
+            case "ReadOnly":
             case "Ref":
+            case "Sequential":
             case "Service":
             case "String":
             case "Stringable":
             case "StringBuffer":
             case "Struct":
             case "Time":
+            case "TimedOut":
             case "Timer":
             case "TimeZone":
             case "Type":
-            case "Orderable":
-            case "Sequential":
-            case "Number":
+            case "UnsupportedOperation":
             case "Var":
                 sClz = sName;
                 break;
@@ -1105,13 +1114,9 @@ public class ConstantPool
             case "AnnotateRef":
             case "AnnotateVar":
             case "Override":
-                sPkg = "annotations";
-                sClz = sName;
-                break;
-
             case "RO":
                 sPkg = "annotations";
-                sClz = "ReadOnly";
+                sClz = sName;
                 break;
 
             case "Soft":
@@ -3010,6 +3015,7 @@ public class ConstantPool
      */
     private final Set<ConstantPool> m_setValidPools = Collections.newSetFromMap(new IdentityHashMap());
 
+    // REVIEW GG do you remember this? can we get rid of it?
     private static final Set<String> KNOWN_CONSTS = new HashSet<>();
     static
         {
@@ -3022,8 +3028,8 @@ public class ConstantPool
                 + "Float16,Float32,Float64,Float128,VarFloat,"
                 + "Interval,Range,Char,String,Date,Time,DateTime,Duration,"
                 + "CriticalSection,Timeout,"
-                + "Exception,DeadlockException,TimeoutException,ReadOnlyException,BoundsException,"
-                + "ConcurrentModificationException,AssertionException,UnsupportedOperationException";
+                + "Exception,Deadlock,TimedOut,ReadOnly,OutOfBounds,"
+                + "ConcurrentModification,Assertion,UnsupportedOperation";
         for (String s : parseDelimitedString(names, ','))
             {
             KNOWN_CONSTS.add(s);

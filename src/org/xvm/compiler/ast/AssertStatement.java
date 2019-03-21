@@ -10,6 +10,7 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Assert;
+import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Token;
 
@@ -53,6 +54,18 @@ public class AssertStatement
 
 
     // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    protected boolean allowsShortCircuit(Expression exprChild)
+        {
+        return true;
+        }
+
+    @Override
+    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
+        {
+        return getEndLabel();
+        }
 
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)

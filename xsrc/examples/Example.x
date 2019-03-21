@@ -1974,7 +1974,7 @@ try (new Timeout(Duration:"1s"))
         {
         // ...
         }
-    catch (TimeoutException e)
+    catch (TimedOut e)
         {
         // ...
         }
@@ -2718,7 +2718,7 @@ for any method m of a parameterized type with a type parameter T:
    - there is a notable exception to this rule for a method on a type corresponding to a property,
      which returns a Ref to represent the property type, and thus (due to the methods on Ref<T>)
      appears to "consume T"; however, if the type containing the property is explicitly immutable,
-     or the method returning the Ref<T> is annotated with @ro/ReadOnly, then m is assumed to not
+     or the method returning the Ref<T> is annotated with @RO, then m is assumed to not
      "consume T"
  3. m has a parameter type that "produces T".
 

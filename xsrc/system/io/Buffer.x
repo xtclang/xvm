@@ -1,7 +1,7 @@
 /**
  * Buffer represents a transferable holder for a uniform array of immutable data elements.
  */
-interface Buffer<DataType extends Const>
+interface Buffer<DataType extends immutable Const>
         extends collections.UniformIndexed<Int, DataType>
     {
     /**

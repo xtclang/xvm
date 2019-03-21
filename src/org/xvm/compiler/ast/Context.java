@@ -26,6 +26,7 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeParameterConstant;
 
+import org.xvm.compiler.ast.StatementBlock.RootContext;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
 import org.xvm.compiler.Compiler;
@@ -57,6 +58,20 @@ public class Context
     protected Context getOuterContext()
         {
         return m_ctxOuter;
+        }
+
+    /**
+     * @return the outermost (root) context
+     */
+    protected RootContext getRootContext()
+        {
+        Context ctxRoot = this;
+        Context ctxNext;
+        while ((ctxNext = ctxRoot.getOuterContext()) != null)
+            {
+            ctxRoot = ctxNext;
+            }
+        return (RootContext) ctxRoot;
         }
 
     /**

@@ -15,6 +15,6 @@ const UIntNumber
     @Override
     UIntNumber neg()
         {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperation();
         }
     }

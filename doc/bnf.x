@@ -734,6 +734,7 @@ PrimaryExpression
     "new" TypeExpression "(" Arguments-opt ")" AnonClassBody-opt
     "throw" TernaryExpression
     "T0D0" TodoFinish-opt
+    "assert"
     "&"-opt "construct"-opt QualifiedName TypeParameterTypeList-opt
     StatementExpression
     SwitchExpression

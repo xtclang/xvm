@@ -93,7 +93,7 @@ public class IfStatement
     protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
         {
         // TODO snap-shot the assignment-info-delta
-        return super.getShortCircuitLabel(ctx, exprChild);
+        return getElseLabel();
         }
 
 
