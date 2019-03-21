@@ -1522,7 +1522,7 @@ public class InvocationExpression
                     IdentityConstant idLeft = nameLeft.getIdentity(ctx);
                     Access           access = fConstruct ? Access.PROTECTED : Access.PUBLIC;
                     // TODO: if left is a super class or other contribution, use PROTECTED access as well
-                    if (ctx.getRootContext().getThisClass().getIdentityConstant().isNestMateOf(idLeft))
+                    if (ctx.getThisClass().getIdentityConstant().isNestMateOf(idLeft))
                         {
                         access = Access.PRIVATE;
                         }

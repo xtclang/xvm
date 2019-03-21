@@ -8,17 +8,17 @@ const Path
     static Path PARENT  = new Path(null, Parent);
     static Path CURRENT = new Path(null, Current);
 
-    construct(Path? parent, String name)
-        {
-        construct Path(parent, Name, name);
-        }
-
     enum ElementForm(String text, Int depth)
         {
         Root   ("/"   ,  0),
         Parent (".."  , -1),
         Current("."   ,  0),
         Name   ("name",  1)
+        }
+
+    construct(Path? parent, String name)
+        {
+        construct Path(parent, Name, name);
         }
 
     construct(Path? parent, ElementForm form)
@@ -53,10 +53,7 @@ const Path
     /**
      * The name of this Path element.
      */
-    String name.get()
-        {
-        return form == Name ? super() : form.text;
-        }
+    String name;
 
     /**
      * The number of Path elements that make up this Path.
@@ -119,7 +116,7 @@ const Path
             assert parent.size == 1;
             return new Path(null, form, name);
             }
-            
+
         if (form == Parent && parent.form == Name)
             {
             // remove both this and the parent, since this cancels out the parent; if there's
@@ -224,7 +221,7 @@ const Path
         {
         TODO
         }
-        
+
 
     // ----- Sequence methods --------------------------------------------------------------------
 
@@ -263,7 +260,7 @@ const Path
     @Override
     Int estimateStringLength()
         {
-        Int length = (form == Name ? name : form.text).size;
+        Int length = name.size;
         // prepend the parent path and the path separator; if the parent is the root, then no
         // additional separator is added
         if (parent?.form == Root)
@@ -280,17 +277,14 @@ const Path
     @Override
     void appendTo(Appender<Char> appender)
         {
-        if (parent != null)
+        // prepend the parent path and the path separator; if the parent is the root, then no
+        // additional separator is added
+        parent?.appendTo(appender);
+        if (parent?.form != Root)
             {
-            // prepend the parent path and the path separator; if the parent is the root, then no
-            // additional separator is added
-            parent.appendTo(appender); // TODO how does this compile without "parent?"
-            if (parent?.form != Root)  // TODO yet this cannot compile with "parent" instead of "parent?"
-                {
-                appender.add('/');
-                }
+            appender.add('/');
             }
 
-        (form == Name ? name : form.text).appendTo(appender);
+        name.appendTo(appender);
         }
     }

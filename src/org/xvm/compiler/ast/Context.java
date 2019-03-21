@@ -61,20 +61,6 @@ public class Context
         }
 
     /**
-     * @return the outermost (root) context
-     */
-    protected RootContext getRootContext()
-        {
-        Context ctxRoot = this;
-        Context ctxNext;
-        while ((ctxNext = ctxRoot.getOuterContext()) != null)
-            {
-            ctxRoot = ctxNext;
-            }
-        return (RootContext) ctxRoot;
-        }
-
-    /**
      * @return true iff this context demuxes assignment data as it pushes it outwards
      */
     protected boolean isDemuxing()

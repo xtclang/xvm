@@ -1454,7 +1454,8 @@ public class ConstantPool
     public TypeConstant ensureImmutableTypeConstant(TypeConstant constType)
         {
         TypeConstant constant;
-        if (constType.isImmutabilitySpecified() || KNOWN_CONSTS.contains(constType.getEcstasyClassName()))
+        if (constType.isImmutabilitySpecified() ||
+                (!constType.containsUnresolved() && constType.isImmutable()))
             {
             constant = constType;
             }
@@ -3014,27 +3015,6 @@ public class ConstantPool
      * may be referred to (directly or indirectly) from constants stored in this pool.
      */
     private final Set<ConstantPool> m_setValidPools = Collections.newSetFromMap(new IdentityHashMap());
-
-    // REVIEW GG do you remember this? can we get rid of it?
-    private static final Set<String> KNOWN_CONSTS = new HashSet<>();
-    static
-        {
-        String names = "Module,Package,Class,"
-                + "Boolean,Boolean.True,Boolean.False,Nullable,Nullable.Null,"
-                + "Ordered,Ordered.Lesser,Ordered.Equal,Ordered.Greater,"
-                + "IntLiteral,Bit,Nibble,Int8,Int16,Int32,Int64,Int128,VarInt,"
-                + "UInt8,UInt16,UInt32,UInt64,UInt128,VarUInt,"
-                + "FPLiteral,Dec32,Dec64,Dec128,VarDec,"
-                + "Float16,Float32,Float64,Float128,VarFloat,"
-                + "Interval,Range,Char,String,Date,Time,DateTime,Duration,"
-                + "CriticalSection,Timeout,"
-                + "Exception,Deadlock,TimedOut,ReadOnly,OutOfBounds,"
-                + "ConcurrentModification,Assertion,UnsupportedOperation";
-        for (String s : parseDelimitedString(names, ','))
-            {
-            KNOWN_CONSTS.add(s);
-            }
-        }
 
     /**
      * Tracks whether the ConstantPool should recursively register constants.
