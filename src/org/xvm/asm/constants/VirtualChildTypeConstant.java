@@ -126,9 +126,7 @@ public class VirtualChildTypeConstant
     @Override
     public int getMaxParamsCount()
         {
-        ClassConstant  constClz = (ClassConstant) getDefiningConstant();
-        ClassStructure clz      = (ClassStructure) constClz.getComponent();
-        return clz.getTypeParams().size();
+        return getChildStructure().getTypeParams().size();
         }
 
     @Override
@@ -178,8 +176,7 @@ public class VirtualChildTypeConstant
             return ResolutionResult.POSSIBLE;
             }
 
-        ClassConstant constClz = (ClassConstant) getDefiningConstant();
-        return constClz.getComponent().resolveName(sName, Access.PUBLIC, collector);
+        return getChildStructure().resolveName(sName, Access.PUBLIC, collector);
         }
 
     @Override
@@ -211,8 +208,7 @@ public class VirtualChildTypeConstant
             atypeParams = ConstantPool.NO_TYPES;
             }
 
-        IdentityConstant idClz = getSingleUnderlyingClass(true);
-        ClassStructure   clz   = (ClassStructure) idClz.getComponent();
+        ClassStructure clz = getChildStructure();
         if (clz.isParameterized())
             {
             return pool.ensureParameterizedTypeConstant(this,
@@ -263,15 +259,13 @@ public class VirtualChildTypeConstant
     @Override
     public boolean extendsClass(IdentityConstant constClass)
         {
-        ClassConstant idClass = (ClassConstant) getDefiningConstant();
-        return ((ClassStructure) idClass.getComponent()).extendsClass(constClass);
+        return getChildStructure().extendsClass(constClass);
         }
 
     @Override
     public Category getCategory()
         {
-        ClassConstant  idClass = (ClassConstant) getDefiningConstant();
-        ClassStructure clz     = (ClassStructure) idClass.getComponent();
+        ClassStructure clz = getChildStructure();
         return clz.getFormat() == Component.Format.INTERFACE
                 ? Category.IFACE : Category.CLASS;
         }
@@ -310,9 +304,7 @@ public class VirtualChildTypeConstant
             return true;
             }
 
-        ClassStructure clz = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
-
-        return clz.containsGenericParamType(sName);
+        return getChildStructure().containsGenericParamType(sName);
         }
 
     @Override
@@ -324,9 +316,8 @@ public class VirtualChildTypeConstant
             return typeParent.getGenericParamType(sName);
             }
 
-        ClassStructure clz = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
-
-        return clz.getGenericParamType(getConstantPool(), sName, Collections.EMPTY_LIST);
+        return getChildStructure().getGenericParamType(
+                getConstantPool(), sName, Collections.EMPTY_LIST);
         }
 
 
@@ -336,8 +327,7 @@ public class VirtualChildTypeConstant
     protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessLeft,
                                                                List<TypeConstant> listLeft)
         {
-        ClassConstant  idClass = (ClassConstant) getDefiningConstant();
-        ClassStructure clz     = (ClassStructure) idClass.getComponent();
+        ClassStructure clz = getChildStructure();
 
         assert clz.getFormat() == Component.Format.INTERFACE;
 
@@ -348,10 +338,7 @@ public class VirtualChildTypeConstant
     public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
                                                List<TypeConstant> listParams)
         {
-        ClassConstant  idClass = (ClassConstant) getDefiningConstant();
-        ClassStructure clz     = (ClassStructure) idClass.getComponent();
-
-        return clz.containsSubstitutableMethod(signature, access, listParams);
+        return getChildStructure().containsSubstitutableMethod(signature, access, listParams);
         }
 
     @Override
@@ -359,8 +346,7 @@ public class VirtualChildTypeConstant
         {
         if (!listParams.isEmpty())
             {
-            ClassConstant  idClass = (ClassConstant) getDefiningConstant();
-            ClassStructure clz     = (ClassStructure) idClass.getComponent();
+            ClassStructure clz = getChildStructure();
 
             Map<StringConstant, TypeConstant> mapFormal = clz.getTypeParams();
 
@@ -392,8 +378,7 @@ public class VirtualChildTypeConstant
         {
         if (!listParams.isEmpty())
             {
-            ClassConstant  idClass = (ClassConstant) getDefiningConstant();
-            ClassStructure clz     = (ClassStructure) idClass.getComponent();
+            ClassStructure clz = getChildStructure();
 
             Map<StringConstant, TypeConstant> mapFormal = clz.getTypeParams();
 
