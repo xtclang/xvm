@@ -141,8 +141,8 @@ public class CommandLine
 
         // expression resolution
         validateExpressions();
-        // checkCompilerErrors();
-        // checkTerminalFailure();
+        checkCompilerErrors();
+        checkTerminalFailure();
 
         // assembling the actual code
         generateCode();
@@ -896,9 +896,9 @@ public class CommandLine
         // determine if the errors are bad enough to quit
         if (error || (!deferred.isEmpty() && opts.strictLevel == Options.Strictness.Stickler))
             {
-//            err("xtc: Terminating.");
-//            System.exit(1);
-//            throw new IllegalStateException();
+            err("xtc: Terminating.");
+            System.exit(1);
+            throw new IllegalStateException();
             }
 
         // reset error conditions

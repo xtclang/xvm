@@ -110,7 +110,7 @@ public class AnnotatedTypeExpression
     // ----- TypeExpression methods ----------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant()
+    protected TypeConstant instantiateTypeConstant(Context ctx)
         {
         // this is a bit complicated:
         // 1) we need the class of the annotation, which is resolved during validateContent()

@@ -12,6 +12,8 @@ import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.template.xRef.RefHandle;
+
 import org.xvm.util.ListMap;
 
 
@@ -136,17 +138,32 @@ public abstract class ObjectHandle
      */
     public boolean isInflated(PropertyConstant idProp)
         {
-        return m_clazz.isInflated(idProp);
+        return m_clazz.isInflated(idProp.getNestedIdentity());
         }
 
+    /**
+     * Check whether or not the property referred by the specified constant has an injected value.
+     *
+     * @param idProp  the property to check
+     *
+     * @return true iff the specified property has an injected value
+     */
     public boolean isInjected(PropertyConstant idProp)
         {
         return m_clazz.isInjected(idProp);
         }
 
+    /**
+     * Check whether or not the property referred by the specified constant has to be treated as
+     * an atomic value.
+     *
+     * @param idProp  the property to check
+     *
+     * @return true iff the specified property has an atomic value
+     */
     public boolean isAtomic(PropertyConstant idProp)
         {
-        return m_clazz.isInjected(idProp);
+        return m_clazz.isAtomic(idProp);
         }
 
     /**
@@ -245,6 +262,32 @@ public abstract class ObjectHandle
                 m_mapFields = new ListMap<>();
                 }
             m_mapFields.put(sProp, hValue);
+            }
+
+        @Override
+        public ObjectHandle cloneAs(TypeComposition clazz)
+            {
+            boolean fCloneFields = isStruct();
+
+            GenericHandle hClone = (GenericHandle) super.cloneAs(clazz);
+
+            if (fCloneFields && m_mapFields != null)
+                {
+                for (Map.Entry<Object, ObjectHandle> entry : m_mapFields.entrySet())
+                    {
+                    if (clazz.isInflated(entry.getKey()))
+                        {
+                        RefHandle    hValue = (RefHandle) entry.getValue();
+                        ObjectHandle hOuter = hValue.getField(OUTER);
+                        if (hOuter != null)
+                            {
+                            assert hOuter == this;
+                            hValue.setField(OUTER, hClone);
+                            }
+                        }
+                    }
+                }
+            return hClone;
             }
 
         @Override

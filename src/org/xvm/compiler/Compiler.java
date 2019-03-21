@@ -1119,6 +1119,10 @@ public class Compiler
      */
     public static final String PROP_SETTER_ACCESS_TOO_ACCESSIBLE  = "COMPILER-122";
     /**
+     * Type {0} doesn't have a default value. Use "new Array<ElementType>(...)" instead.
+     */
+    public static final String NO_DEFAULT_VALUE                   = "COMPILER-123";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

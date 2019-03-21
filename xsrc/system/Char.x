@@ -3,6 +3,7 @@ import io.UTFDataFormatException;
 const Char
         implements Sequential
         implements Stringable
+        default('\u0000')
     {
     construct(UInt32 codepoint)
         {

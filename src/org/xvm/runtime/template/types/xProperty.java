@@ -45,7 +45,7 @@ public class xProperty
             PropertyConstant  idProp = (PropertyConstant) constant;
             PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
             ObjectHandle      hValue = prop.isStatic()
-                ? frame.f_context.f_heapGlobal.ensureConstHandle(frame, prop.getInitialValue())
+                ? frame.getConstHandle(prop.getInitialValue())
                 : new DeferredPropertyHandle(idProp);
 
             frame.pushStack(hValue);

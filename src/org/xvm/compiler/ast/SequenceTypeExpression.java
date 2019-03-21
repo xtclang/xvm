@@ -60,7 +60,7 @@ public class SequenceTypeExpression
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant()
+    protected TypeConstant instantiateTypeConstant(Context ctx)
         {
         // build an Array type
         ConstantPool pool = pool();

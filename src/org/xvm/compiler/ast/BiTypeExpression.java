@@ -61,7 +61,7 @@ public class BiTypeExpression
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant()
+    protected TypeConstant instantiateTypeConstant(Context ctx)
         {
         TypeConstant constType1 = type1.ensureTypeConstant();
         TypeConstant constType2 = type2.ensureTypeConstant();

@@ -1,9 +1,5 @@
 /**
  * An array is a container of elements of a particular type.
- *
- * TODO need a growable-from-empty array a-la ArrayList (maybe with max and/or init capacity?)
- * TODO need a fixed size array that inits each element based on a value or fn()
- * TODO need a const array
  */
 class Array<ElementType>
         implements List<ElementType>
@@ -30,21 +26,36 @@ class Array<ElementType>
     /**
      * Construct a fixed size array with the specified size and initial value.
      */
-    construct(Int size, function ElementType (Int) supply)
+    construct(Int size, ElementType | function ElementType (Int) supply)
         {
         construct Array(size);
 
         Element? head = null;
         if (size > 0)
             {
-            Element tail = new Element(supply(0));
-            head = tail;
-
-            for (Int i : 1..size)
+            if (supply.is(ElementType))
                 {
-                Element node = new Element(supply(i));
-                tail.next = node;
-                tail      = node;
+                Element tail = new Element(supply);
+                head = tail;
+
+                for (Int i : 1..size)
+                    {
+                    Element node = new Element(supply);
+                    tail.next = node;
+                    tail      = node;
+                    }
+                }
+            else
+                {
+                Element tail = new Element(supply(0));
+                head = tail;
+
+                for (Int i : 1..size)
+                    {
+                    Element node = new Element(supply(i));
+                    tail.next = node;
+                    tail      = node;
+                    }
                 }
             }
 
@@ -110,8 +121,8 @@ class Array<ElementType>
         Int to   = range.upperBound;
 
         ElementType[] that = range.reversed
-            ? new ElementType[range.size, (i) -> this[to   - i]]
-            : new ElementType[range.size, (i) -> this[from + i]];
+            ? new Array<ElementType>(range.size, (i) -> this[to   - i])
+            : new Array<ElementType>(range.size, (i) -> this[from + i]);
         return that;
         }
 
@@ -132,8 +143,8 @@ class Array<ElementType>
                 throw new IllegalState("Array is fixed size");
 
             case Persistent:
-                ElementType[] newArray = new ElementType[this.size + 1,
-                    (i) -> (i < this.size ? this[i] : element)];
+                ElementType[] newArray = new Array<ElementType>(this.size + 1,
+                    (i) -> (i < this.size ? this[i] : element));
                 newArray.mutability = Persistent;
                 return newArray;
 
@@ -164,8 +175,8 @@ class Array<ElementType>
                 throw new IllegalState("Array is fixed size");
 
             case Persistent:
-                ElementType[] newArray = new ElementType[this.size + that.size,
-                    (i) -> (i < this.size ? this[i] : that[i-this.size])];
+                ElementType[] newArray = new Array<ElementType>(this.size + that.size,
+                    (i) -> (i < this.size ? this[i] : that[i-this.size]));
                 newArray.mutability = Persistent;
                 return newArray;
 
@@ -186,7 +197,7 @@ class Array<ElementType>
                 throw new IllegalState("Array is constant");
 
             case Persistent:
-                ElementType[] that = new ElementType[size, (i) -> this[i]];
+                ElementType[] that = new Array<ElementType>(size, (i) -> this[i]);
                 that[index] = value;
                 that.mutability = Persistent;
                 return that;
@@ -337,7 +348,7 @@ class Array<ElementType>
             case Persistent:
             case FixedSize:
                 {
-                ElementType[] that = new ElementType[size, (i) -> this[i]];
+                ElementType[] that = new Array<ElementType>(size, (i) -> this[i]);
                 that.mutability = Mutable;
                 return that;
                 }
@@ -378,7 +389,7 @@ class Array<ElementType>
                 case Persistent:
                 case Mutable:
                     {
-                    ElementType[] that = new ElementType[size, (i) -> this[i]];
+                    ElementType[] that = new Array<ElementType>(size, (i) -> this[i]);
                     that.mutability = FixedSize;
                     return that;
                     }
@@ -423,7 +434,7 @@ class Array<ElementType>
                 case FixedSize:
                 case Mutable:
                     {
-                    ElementType[] that = new ElementType[size, (i) -> this[i]];
+                    ElementType[] that = new Array<ElementType>(size, (i) -> this[i]);
                     that.mutability = Persistent;
                     return that;
                     }
@@ -457,7 +468,7 @@ class Array<ElementType>
             }
 
         // otherwise, create a constant copy of this
-        ElementType[] that = new ElementType[size];
+        ElementType[] that = new Array<ElementType>(size);
         for (Int i : 0..size-1)
             {
             ElementType el = this[i];

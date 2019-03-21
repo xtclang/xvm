@@ -51,7 +51,7 @@ public class VariableTypeExpression
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant()
+    protected TypeConstant instantiateTypeConstant(Context ctx)
         {
         // this will be replaced after the actual type is known
         return pool().typeObject();

@@ -2,11 +2,17 @@ module TestMaps.xqiz.it
     {
     import X.collections.ExtHashMap;
 
+    import X.Duration;
+
     @Inject X.io.Console console;
+    @Inject X.Timer      timer;
 
     void run()
         {
         testBasic();
+
+        function void () run = &testFill100();
+        profile(run, 10);
         }
 
     void testBasic()
@@ -20,5 +26,26 @@ module TestMaps.xqiz.it
             console.println(s);
             }
         console.println(map);
+        }
+
+    static void testFill100()
+        {
+        Map<Int, Int> map = new ExtHashMap();
+        for (Int i = 0; i < 100; i++)
+            {
+            map.put(i, i);
+            }
+        }
+
+    void profile(function void () run, Int iterations)
+        {
+        timer.reset();
+        for (Int i = 0; i < iterations; i++)
+            {
+            run();
+            }
+        Duration time = timer.elapsed;
+        console.println("Elapsed " + time.millisecondsTotal +" ms");
+        console.println("Latency " + (time / iterations).milliseconds + " ms");
         }
     }

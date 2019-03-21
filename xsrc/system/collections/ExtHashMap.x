@@ -25,7 +25,7 @@ class ExtHashMap<KeyType, ValueType>
 
         // allocate the initial capacity
         (Int bucketCount, this.growAt) = calcBucketCount(initCapacity);
-        buckets = new HashEntry?[bucketCount, (i) -> Null];
+        buckets = new HashEntry?[bucketCount];
         }
 
     /**
@@ -242,7 +242,7 @@ class ExtHashMap<KeyType, ValueType>
         @Override
         Iterator<HashEntry> iterator()
             {
-            return new Iterator<HashEntry>()
+            return new Iterator()
                 {
                 HashEntry?[] buckets     = ExtHashMap.this.buckets;
                 Int          nextBucket  = 0;

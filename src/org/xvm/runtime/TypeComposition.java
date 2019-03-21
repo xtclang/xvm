@@ -90,22 +90,26 @@ public interface TypeComposition
      */
     MethodStructure ensureAutoInitializer();
 
-    // create unassigned (with a null value) entries for all fields
+    /**
+     * Create entries for all fields. Non-inflated fields will have null values; inflated
+     * will contain non-initialized RefHandle objects.
+     *
+     * @return a map containing object fields
+     */
     Map<Object, ObjectHandle> createFields();
 
     /**
-     * Check whether or not the property referred by the specified constant has a custom code or
+     * Check whether or not the property referred by the specified nid has a custom code or
      * Ref-annotation.
      *
-     * @param idProp  the property to check
+     * @param nid  the property nid
      *
      * @return true iff the specified property has custom code or is Ref-annotated
      */
-    boolean isInflated(PropertyConstant idProp);
+    boolean isInflated(Object nid);
 
     /**
      * @return true if the specified property is injected
-     * @param idProp
      */
     boolean isInjected(PropertyConstant idProp);
 

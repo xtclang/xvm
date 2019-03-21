@@ -55,7 +55,7 @@ public class DecoratedTypeExpression
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant()
+    protected TypeConstant instantiateTypeConstant(Context ctx)
         {
         switch (keyword.getId())
             {

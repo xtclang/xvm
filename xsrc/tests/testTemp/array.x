@@ -62,31 +62,6 @@ module TestArray.xqiz.it
         console.println("array[2..1]=" + cruel2);
         }
 
-    void testOOB1()
-        {
-        Object test = ["hello", "cruel", "world", "!"] [-1];
-        }
-    void testOOB2()
-        {
-        Object test = ["hello", "cruel", "world", "!"] [4];
-        }
-    void testOOB3()
-        {
-        Object test = ["hello", "cruel", "world", "!"] [1..4];
-        }
-    void testOOB4()
-        {
-        Object test = ["hello", "cruel", "world", "!"] [4..1];
-        }
-    void testOOB5()
-        {
-        Object test = ["hello", "cruel", "world", "!"] [-1..1];
-        }
-    void testOOB6()
-        {
-        Object test = ["hello", "cruel", "world", "!"] [1..-1];
-        }
-
     void testArrayList()
         {
         console.println("\n** testArrayList()");

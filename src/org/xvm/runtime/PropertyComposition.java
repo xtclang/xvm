@@ -144,9 +144,9 @@ public class PropertyComposition
         }
 
     @Override
-    public boolean isInflated(PropertyConstant idProp)
+    public boolean isInflated(Object nid)
         {
-        return f_clzRef.isInflated(idProp);
+        return f_clzRef.isInflated(nid);
         }
 
     @Override

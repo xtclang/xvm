@@ -26,7 +26,7 @@ import org.xvm.runtime.template.xString;
 
 
 /**
- * TODO:
+ * Native Array implementation for chars.
  */
 public class xCharArray
         extends xArray
@@ -65,6 +65,15 @@ public class xCharArray
             al[i] = (char) ((JavaLong) ahArg[i]).getValue();
             }
         return new CharArrayHandle(clzArray, al);
+        }
+
+    @Override
+    protected void fill(ArrayHandle hArray, int cSize, ObjectHandle hValue)
+        {
+        CharArrayHandle ha = (CharArrayHandle) hArray;
+
+        Arrays.fill(ha.m_achValue, 0, cSize, (char) ((JavaLong) hValue).getValue());
+        ha.m_cSize = cSize;
         }
 
     @Override

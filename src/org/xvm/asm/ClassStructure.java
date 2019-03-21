@@ -1538,6 +1538,33 @@ public class ClassStructure
         }
 
     /**
+     * Helper method to find a method by the name and number of arguments.
+     *
+     * @param sName  the method name to find
+     * @param cArgs  the number of arguments
+     *
+     * @return the specified MethodStructure; never null
+     *
+     * @throws IllegalStateException if the method cannot be found
+     */
+    public MethodStructure findMethod(String sName, int cArgs)
+        {
+        MultiMethodStructure structMM = (MultiMethodStructure) getChild(sName);
+        if (structMM != null)
+            {
+            for (MethodStructure structMethod : structMM.methods())
+                {
+                if (structMethod.getParamCount() == cArgs)
+                    {
+                    return structMethod;
+                    }
+                }
+            }
+
+        throw new IllegalStateException("no method " + sName + " with " + cArgs + " params on " + this);
+        }
+
+    /**
      * Find the specified constructor of this class.
      *
      * @param types  the types of the constructor parameters
@@ -1922,12 +1949,6 @@ public class ClassStructure
                 }
             }
 
-        if (isVirtualChild() && !isStatic())
-            {
-            return ((ClassStructure) getParent()).
-                 consumesFormalTypeImpl(sName, access, listActual, false);
-            }
-
         return false;
         }
 
@@ -1943,13 +1964,7 @@ public class ClassStructure
     protected boolean producesFormalTypeImpl(String sName, Access access,
                                              List<TypeConstant> listActual, boolean fAllowInto)
         {
-        if (indexOfGenericParameter(sName) < 0)
-            {
-            // soft assert; this should be reported by the parser
-            System.err.println("Invalid formal parameter: " + sName +
-                               " passed to " + ClassStructure.this);
-            return false;
-            }
+        assert indexOfGenericParameter(sName) >= 0;
 
         ConstantPool pool = ConstantPool.getCurrentPool();
         for (Component child : children())
@@ -2073,12 +2088,6 @@ public class ClassStructure
                     return true;
                     }
                 }
-            }
-
-        if (isVirtualChild() && !isStatic())
-            {
-            return ((ClassStructure) getParent()).
-                 producesFormalTypeImpl(sName, access, listActual, false);
             }
 
         return false;

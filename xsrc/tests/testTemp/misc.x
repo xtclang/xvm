@@ -342,25 +342,10 @@ module TestMisc.xqiz.it
         console.println("5+3=" + {return 5.to<Int>() + 3;});
         }
 
-// TODO move the asserts to their own module
-    void testAssert()
-        {
-        console.println("\n** testAssert()");
-        assert;
-        console.println("(done)");
-        }
-
     void testAssertTrue()
         {
         console.println("\n** testAssertTrue()");
         assert true;
-        console.println("(done)");
-        }
-
-    void testAssertFalse()
-        {
-        console.println("\n** testAssertFalse()");
-        assert false;
         console.println("(done)");
         }
 
@@ -412,7 +397,6 @@ module TestMisc.xqiz.it
         console.println("e=" + e);
         }
 
-    // TODO
     void testTupleConv()
         {
         console.println("\n** testTupleConv()");
@@ -420,7 +404,8 @@ module TestMisc.xqiz.it
         Tuple<String, IntLiteral> t1 = getTupleSI();
         console.println("t1 = " + t1);
 
-        Tuple<String, Int> t2 = getTupleSI();
+        // TODO: should the following compile?
+        // Tuple<String, Int> t2 = getTupleSI();
         }
 
     Tuple<String, IntLiteral> getTupleSI()
@@ -447,7 +432,6 @@ module TestMisc.xqiz.it
         return i < 0 ? false : (true, "positive");
         }
 
-    // TODO
     void testMap()
         {
         console.println("\n** testMap()");

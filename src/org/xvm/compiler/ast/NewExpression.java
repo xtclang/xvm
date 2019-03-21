@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -45,12 +46,6 @@ import static org.xvm.util.Handy.indentLines;
 
 /**
  * "New object" expression.
- *
- * <p/> TODO constructor - create the specified constructor (same sig as super class by default)
- * <p/> TODO implicit captures - will alter the constructor that we create (add each as a constructor param)
- * <p/> TODO pass the arguments to the constructor, including the implicit captures
- * <p/> TODO no other constructors allowed (either the default created one or any explicit ones) on the inner class
- * <p/> TODO capture of outer "this" means that the inner class is non-static
  */
 public class NewExpression
         extends Expression
@@ -198,9 +193,14 @@ public class NewExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
+        if (isValidated())
+            {
+            return getType();
+            }
+
         if (body == null)
             {
-            TypeConstant typeTarget = type.ensureTypeConstant();
+            TypeConstant typeTarget = type.ensureTypeConstant(ctx);
             if (typeTarget.containsUnresolved() || !typeTarget.isSingleUnderlyingClass(false))
                 {
                 // unknown or not a class; someone will report an error later
@@ -232,40 +232,96 @@ public class NewExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        boolean fValid = true;
-        boolean fAnon  = anon != null;
+        boolean      fValid     = true;
+        ConstantPool pool       = pool();
+        TypeConstant typeSuper  = null;   // the super class type of the anon inner class
+        TypeConstant typeTarget = null;   // the type being constructed (might be private etc.)
+        TypeConstant typeResult = null;   // the type being returned (always public)
+
+        // being able to obtain a type for a "new anon inner class" expression requires the
+        // inner class to exist (so we create a temporary one)
+        boolean fAnon = body != null;
         if (fAnon)
             {
-            ensureInnerClass(ctx, /*fTemp*/ false, /*fRO*/ true, errs);
-            assert left == null;
+            ensureInnerClass(ctx, AnonPurpose.RoughDraft, errs);
             }
 
-        ConstantPool pool       = pool();
-        TypeConstant typeTarget = null;
-        TypeInfo     infoSuper  = null;
         if (left == null)
             {
-            // we intentionally don't pass the required type to the TypeExpression; instead, let's take
-            // whatever type it produces and later validate the resulting type against the required type
-            TypeExpression exprTypeOld = this.type;
-            TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx, null, errs);
-            TypeConstant   typeSuper   = null;
-            if (exprTypeNew == null)
+            // infer type information from the required type; that information needs to be used to
+            // inform the validation of the type that we are "new-ing"
+            typeTarget = type.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool);
+            }
+        else
+            {
+            // it must not be possible for this to parse: "left.new T() {...}"
+            assert body == null;
+
+            // validate the expression that occurs _before_ the new, e.g. x in "x.new Y()", which
+            // specifies an "outer this" that provides support for virtual construction
+            Expression exprLeftOld = this.left;
+            Expression exprLeftNew = exprLeftOld.validate(ctx, null, errs);
+            if (exprLeftNew == null)
                 {
                 fValid = false;
                 }
             else
                 {
-                this.type = exprTypeNew;
+                this.left = exprLeftNew;
 
-                typeTarget = exprTypeNew.ensureTypeConstant().resolveAutoNarrowingBase(pool);
-                if (typeRequired != null)
+                TypeConstant typeLeft = exprLeftNew.getType();
+                TypeInfo     infoLeft = typeLeft.ensureTypeInfo(errs);
+
+                NamedTypeExpression exprType = (NamedTypeExpression) type;
+                String              sChild   = exprType.getName();
+
+                assert exprType.isVirtualChild();
+
+                typeTarget = infoLeft.getChildType(sChild);
+                if (typeTarget == null)
                     {
-                    TypeConstant typeInferred = inferTypeFromRequired(typeTarget, typeRequired);
-                    if (typeInferred != null)
-                        {
-                        typeTarget = typeInferred;
-                        }
+                    log(errs, Severity.ERROR, Constants.VE_NEW_UNRELATED_PARENT,
+                            sChild, typeLeft.getValueString());
+                    fValid = false;
+                    }
+                else
+                    {
+                    exprType.setTypeConstant(typeTarget);
+                    }
+                }
+            }
+
+        if (fValid && typeRequired != null)
+            {
+            TypeConstant typeInferred = inferTypeFromRequired(typeTarget, typeRequired);
+            if (typeInferred != null)
+                {
+                typeTarget = typeInferred;
+                type.setTypeConstant(typeTarget);
+                }
+            }
+
+        // we intentionally do NOT pass the required type to the TypeExpression; instead, we use
+        // the inferred target type
+        TypeExpression exprTypeOld = this.type;
+        TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx,
+                typeTarget == null ? null : typeTarget.getType(), errs);
+        if (exprTypeNew == null)
+            {
+            fValid = false;
+            }
+        else
+            {
+            this.type  = exprTypeNew;
+            typeTarget = exprTypeNew.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool);
+            typeResult = typeTarget;
+
+            if (left == null)
+                {
+                // now we should have enough type information to create the real anon inner class
+                if (fAnon)
+                    {
+                    ensureInnerClass(ctx, AnonPurpose.Actual, errs);
                     }
 
                 boolean fNestMate = isNestMate(ctx, typeTarget);
@@ -275,19 +331,20 @@ public class NewExpression
                     // the public default to protected, which we get when a class "extends" another;
                     // the real target, though, is not the specified type being "new'd", but rather the
                     // anonymous inner class
-                    typeSuper  = pool.ensureAccessTypeConstant(typeTarget, fNestMate ? Access.PRIVATE : Access.PROTECTED);
-                    infoSuper  = typeSuper.ensureTypeInfo(errs);
-                    typeTarget = pool.ensureAccessTypeConstant(getAnonymousInnerClassType(ctx), Access.PRIVATE);
+                    typeSuper  = pool.ensureAccessTypeConstant(typeTarget,
+                            fNestMate ? Access.PRIVATE : Access.PROTECTED);
+                    typeResult = getAnonymousInnerClassType(ctx);
+                    typeTarget = pool.ensureAccessTypeConstant(typeResult, Access.PRIVATE);
                     }
                 else if (fNestMate)
                     {
                     ClassStructure clzTarget = (ClassStructure)
-                        typeTarget.getSingleUnderlyingClass(false).getComponent();
+                            typeTarget.getSingleUnderlyingClass(false).getComponent();
                     m_fVirtualChild = clzTarget.isVirtualChild();
 
                     // since we are new-ing a class that is a nest-mate of the current class, we can
                     // increase visibility from the public default all the way to private
-                    typeTarget = pool.ensureAccessTypeConstant(typeTarget, Access.PRIVATE);
+                    typeTarget = pool.ensureAccessTypeConstant(typeResult, Access.PRIVATE);
 
                     if (m_fVirtualChild)
                         {
@@ -305,38 +362,43 @@ public class NewExpression
                             }
                         }
                     }
-                }
-            }
-        else // left != null
-            {
-            // validate the expression that occurs _before_ the new, e.g. x in "x.new Y()", which
-            // specifies an "outer this" that provides support for virtual construction
-            Expression exprLeftOld = this.left;
-            Expression exprLeftNew = exprLeftOld.validate(ctx, null, errs);
-            if (exprLeftNew == null)
-                {
-                fValid = false;
-                }
-            else
-                {
-                this.left = exprLeftNew;
-
-                TypeExpression exprTypeOld = this.type;
-                TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx, null, errs);
-                if (exprTypeNew == null)
+                else if (exprTypeNew instanceof ArrayTypeExpression)
                     {
-                    fValid = false;
-                    }
-                else
-                    {
-                    this.type       = exprTypeNew;
-                    m_fVirtualChild = true;
-                    typeTarget      = exprTypeNew.ensureTypeConstant();
-
-                    if (isNestMate(ctx, typeTarget))
+                    // this is a "new X[]", "new X[c1]" or "new X[c1, ...]" construct
+                    ArrayTypeExpression exprArray = (ArrayTypeExpression) exprTypeNew;
+                    int                 cDims     = exprArray.getDimensions();
+                    switch (cDims)
                         {
-                        typeTarget = pool.ensureAccessTypeConstant(typeTarget, Access.PRIVATE);
+                        case 0:
+                            // dynamically growing array; go the normal route
+                            assert args == null || args.isEmpty();
+                            break;
+
+                        case 1:
+                            // fixed size array; we'll continue with the standard validation relying
+                            // on the fact that Array has two constructors:
+                            //      construct(Int capacity)
+                            //      construct(Int size, ElementType | function ElementType (Int) supply)
+                            // since we know that the ArrayTypeExpression has successfully validated,
+                            // we will emit the second constructor in leu of the first one
+                            // using the default value for the element type as the second argument
+                            assert args.size() == 1;
+                            m_fFixedSizeArray = true;
+                            break;
+
+                        default:
+                            log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED, "Multi-dimensional array");
+                            fValid = false;
+                            break;
                         }
+                    }
+                }
+            else // left != null
+                {
+                m_fVirtualChild = true;
+                if (isNestMate(ctx, typeTarget))
+                    {
+                    typeTarget = pool.ensureAccessTypeConstant(typeResult, Access.PRIVATE);
                     }
                 }
             }
@@ -413,7 +475,8 @@ public class NewExpression
                     // replaced by a constructor with the same signature as the super's constructor
                     // (note: the automatic creation of the synthetic no-arg constructor in the
                     // absence of any explicit constructor must do this same check)
-                    MethodConstant idSuper = findMethod(ctx, infoSuper, "construct", listArgs, MethodType.Constructor, null, errs);
+                    MethodConstant idSuper = findMethod(ctx, typeSuper.ensureTypeInfo(errs),
+                            "construct", listArgs, MethodType.Constructor, null, errs);
                     if (idSuper == null)
                         {
                         fValid = false;
@@ -500,23 +563,23 @@ public class NewExpression
             // in which the expression validations are done (which means that the inner class will
             // end up emitting code); fortunately, all of that work can be done with temporary
             // structures, such that we can revert it after we collect the information about the
-            // captures
-            destroyTempInnerClass();
+            // captures; force a temp clone of the inner class to go through its validate() stage so
+            // that we can determine what variables get captured (and if they are effectively final)
+            ensureInnerClass(ctx, AnonPurpose.CaptureAnalysis, ErrorListener.BLACKHOLE);
 
-            // force a temp clone of the inner class to go through its validate() stage so that we
-            // can determine what variables get captured (and if they are effectively final)
-            ensureInnerClass(ctx, /*fTemp*/ true, /*fRO*/ false, ErrorListener.BLACKHOLE);
+            // the capture information gets collected in a specialized Context that was created with
+            // the inner class
+            AnonInnerClassContext ctxAnon = m_ctxCapture;
 
             if (!new StageMgr(anon, Stage.Emitted, errs).fastForward(20))
                 {
                 fValid = false;
                 }
 
-            // clean up temporary inner class and transfer the capture context information
-            destroyTempInnerClass();
-
-            AnonInnerClassContext ctxAnon = m_ctxCapture;
             ctxAnon.exit();
+
+            // clean up temporary inner class
+            destroyTempInnerClass();
 
             // at this point we have a fair bit of data about which variables get captured, but we
             // still lack the effectively final data that will only get reported when the various
@@ -529,13 +592,7 @@ public class NewExpression
             m_ctxCapture     = null;
             }
 
-        // remove the access modifier
-        if (typeTarget != null && typeTarget.isAccessSpecified())
-            {
-            typeTarget = typeTarget.getUnderlyingType();
-            }
-
-        Expression exprResult = finishValidation(typeRequired, typeTarget,
+        Expression exprResult = finishValidation(typeRequired, typeResult,
                 fValid ? TypeFit.Fit : TypeFit.NoFit, null, errs);
         clearAnonTypeInfos();
         return exprResult;
@@ -669,7 +726,18 @@ public class NewExpression
                             break;
 
                         case 1:
-                            code.add(new NewG_1(idConstruct, typeTarget, aArgs[0], argResult));
+                            if (m_fFixedSizeArray)
+                                {
+                                Argument[] aArg2 = new Argument[2];
+                                aArg2[0] = aArgs[0];
+                                aArg2[1] = Register.DEFAULT;
+                                idConstruct = ((ArrayTypeExpression) type).getArrayConstructor2();
+                                code.add(new NewG_N(idConstruct, typeTarget, aArg2, argResult));
+                                }
+                            else
+                                {
+                                code.add(new NewG_1(idConstruct, typeTarget, aArgs[0], argResult));
+                                }
                             break;
 
                         default:
@@ -742,7 +810,7 @@ public class NewExpression
         {
         if (anon == null)
             {
-            ensureInnerClass(ctx, /*fTemp*/ true, /*fRO*/ true, ErrorListener.BLACKHOLE);
+            ensureInnerClass(ctx, AnonPurpose.RoughDraft, ErrorListener.BLACKHOLE);
             }
 
         // there must be an anonymous inner class skeleton by this point
@@ -753,86 +821,115 @@ public class NewExpression
     /**
      * Create the necessary AST and Component nodes for the anonymous inner class.
      *
-     * @param ctx    the current compilation context
-     * @param fTemp  true to specify that the inner class is only being created on a temporary basis
-     * @param fRO    true to specify that any changes to the capture context should be discarded
-     * @param errs   the error listener to log any errors to
+     * @param ctx      the current compilation context
+     * @param purpose  explains what the inner class that we're creating here will be used for
+     * @param errs     the error listener to log any errors to
      */
-    private void ensureInnerClass(Context ctx, boolean fTemp, boolean fRO, ErrorListener errs)
+    private void ensureInnerClass(Context ctx, AnonPurpose purpose, ErrorListener errs)
         {
         assert body != null;
 
+        // check if we're already done
+        if (m_purposeCurrent == purpose)
+            {
+            return;
+            }
+
         // check if there is already a temp copy of the anonymous inner class floating around, and
         // if so, get rid of it
-        if (m_anonActual != null)
+        destroyTempInnerClass();
+
+        if (m_purposeCurrent == purpose)
             {
-            destroyTempInnerClass();
+            // we've already accomplished the purpose at this point (either "None" or "Actual")
+            return;
+            }
+
+        // backup the actual inner class, if it exists
+        if (m_purposeCurrent == AnonPurpose.Actual)
+            {
+            assert anon != null;
+            assert anon.getComponent() != null;
+
+            m_anonActualBackup = anon;
+            m_clzActualBackup  = (ClassStructure) anon.getComponent();
             }
 
         // select a unique (and purposefully syntactically illegal) name for the anonymous inner
         // class
-        if (anon == null)
+        AnonInnerClass info     = type.inferAnonInnerClass(errs);
+        Component      parent   = getComponent();
+        String         sDefault = info.getDefaultName();
+        int            nSuffix  = 1;
+        String         sName;
+        while (parent.getChild(sName = sDefault + ":" + nSuffix) != null)
             {
-            AnonInnerClass info     = type.inferAnonInnerClass(errs);
-            Component      parent   = getComponent();
-            String         sDefault = info.getDefaultName();
-            int            nSuffix  = 1;
-            String         sName;
-            while (parent.getChild(sName = sDefault + ":" + nSuffix) != null)
-                {
-                ++nSuffix;
-                }
-            Token tokName = new Token(type.getStartPosition(), type.getEndPosition(), Id.IDENTIFIER, sName);
+            ++nSuffix;
+            }
+        Token tokName = new Token(type.getStartPosition(), type.getEndPosition(), Id.IDENTIFIER, sName);
 
-            this.anon = adopt(new TypeCompositionStatement(
-                    this,
-                    info.getAnnotations(),
-                    info.getCategory(),
-                    tokName,
-                    info.getCompositions(),
-                    args,
-                    body,
-                    type.getStartPosition(),
-                    body.getEndPosition()));
+        switch (purpose)
+            {
+            case RoughDraft:
+                // until we create the actual inner class composition, we need to avoid destroying
+                // the virgin AST nodes
+                assert m_purposeCurrent == AnonPurpose.None;
+                anon = adopt(new TypeCompositionStatement(
+                        this,
+                        clone(info.getAnnotations()),
+                        info.getCategory(),
+                        tokName,
+                        clone(info.getCompositions()),
+                        clone(args),
+                        (StatementBlock) body.clone(),
+                        type.getStartPosition(),
+                        body.getEndPosition()));
+                break;
+
+            case Actual:
+                // at this point, we are creating the inner class composition that will ultimately
+                // generate the final code
+                anon = adopt(new TypeCompositionStatement(
+                        this,
+                        info.getAnnotations(),
+                        info.getCategory(),
+                        tokName,
+                        info.getCompositions(),
+                        args,
+                        body,
+                        type.getStartPosition(),
+                        body.getEndPosition()));
+                break;
+
+            case CaptureAnalysis:
+                // the current inner class composition statement MUST be the "actual" one
+                assert m_purposeCurrent == AnonPurpose.Actual;
+                anon = (TypeCompositionStatement) adopt(anon.clone());
+                anon.setComponent(m_clzActualBackup.replaceWithTemporary());
+                break;
             }
 
-        if (fTemp)
-            {
-            TypeCompositionStatement anonActual = anon;
-            ClassStructure           clzActual  = (ClassStructure) anon.getComponent();
-
-            anon = adopt((TypeCompositionStatement) anonActual.clone());
-            if (clzActual != null)
-                {
-                Component componentParent = clzActual.getParent();
-                assert componentParent == getComponent(); // the parent should be this method
-
-                anon.setComponent(clzActual.replaceWithTemporary());
-                }
-
-            m_anonActual = anonActual;
-            m_clzActual  = clzActual;
-            }
-
-        AnonInnerClassContext ctxAnon = new AnonInnerClassContext(ctx);
-        m_ctxCapture = ctxAnon;
+        m_ctxCapture = new AnonInnerClassContext(ctx);
 
         catchUpChildren(errs);
 
-        if (fRO)
+        if (purpose != AnonPurpose.CaptureAnalysis)
             {
-            // we intentionally don't call "ctxAnon.exit()"
+            // the context is ONLY retained to provide capture information
             m_ctxCapture = null;
             }
+
+        m_purposeCurrent = purpose;
         }
 
     /**
      * If the inner class was created on a temporary basis, then clean up the temporary data and
-     * objects.
+     * objects. If there was an actual inner class before the temporary was created, then restore
+     * that actual inner class.
      */
     private void destroyTempInnerClass()
         {
-        if (m_anonActual != null)
+        if (anon != null && m_purposeCurrent != AnonPurpose.Actual)
             {
             ClassStructure clzTemp = (ClassStructure) anon.getComponent();
             if (clzTemp != null)
@@ -840,20 +937,29 @@ public class NewExpression
                 Component componentParent = clzTemp.getParent();
                 assert componentParent == getComponent();       // the parent should be this method
 
-                ClassStructure clzReal = m_clzActual;
-                if (clzReal == null)
+                ClassStructure clzActual = m_clzActualBackup;
+                if (clzActual == null)
                     {
                     componentParent.removeChild(clzTemp);
                     }
                 else
                     {
-                    clzTemp.replaceTemporaryWith(clzReal);
+                    clzTemp.replaceTemporaryWith(clzActual);
                     }
                 }
 
-            anon         = m_anonActual;
-            m_anonActual = null;
-            m_clzActual  = null;
+            if (m_anonActualBackup == null)
+                {
+                anon             = null;
+                m_purposeCurrent = AnonPurpose.None;
+                }
+            else
+                {
+                anon               = m_anonActualBackup;
+                m_anonActualBackup = null;
+                m_clzActualBackup  = null;
+                m_purposeCurrent   = AnonPurpose.Actual;
+                }
             }
         }
 
@@ -870,6 +976,28 @@ public class NewExpression
             {
             clz.getChild("construct").removeChild(constrDefault);
             }
+        }
+
+    /**
+     * Helper to clone a list of AST nodes.
+     *
+     * @param list  the list of AST nodes (may be null)
+     *
+     * @return a deeply cloned list
+     */
+    private <T extends AstNode> List<T> clone(List<? extends AstNode> list)
+        {
+        if (list == null || list.isEmpty())
+            {
+            return (List<T>) list;
+            }
+
+        List listCopy = new ArrayList<>(list.size());
+        for (AstNode node : list)
+            {
+            listCopy.add(node.clone());
+            }
+        return listCopy;
         }
 
     /**
@@ -1168,6 +1296,8 @@ public class NewExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    private enum AnonPurpose {None, RoughDraft, CaptureAnalysis, Actual}
+
     protected Expression               left;
     protected Token                    operator;
     protected TypeExpression           type;
@@ -1180,8 +1310,9 @@ public class NewExpression
     private transient boolean         m_fTupleArg;  // indicates that arguments come from a tuple
     private transient int             m_cDefaults;  // number of default arguments
 
-    private transient TypeCompositionStatement m_anonActual;
-    private transient ClassStructure           m_clzActual;
+    private transient AnonPurpose              m_purposeCurrent = AnonPurpose.None;
+    private transient TypeCompositionStatement m_anonActualBackup;
+    private transient ClassStructure           m_clzActualBackup;
 
     /**
      * The capture context, while it is active.
@@ -1200,6 +1331,10 @@ public class NewExpression
      * True if the class is a virtual child and needs to be constructed using a NEWC_ op-code.
      */
     private transient boolean               m_fVirtualChild;
+    /**
+     * True if the class is a fixed size array to be filled with the corresponding default value.
+     */
+    private transient boolean               m_fFixedSizeArray;
     /**
      * In the case of "m_fVirtualChild == true" and "left == null", steps to the child's parent.
      */

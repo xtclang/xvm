@@ -50,28 +50,4 @@ module TestTuples.xqiz.it
         console.println("tuple[1..0]=" + blind2);
         }
 
-    void testOOB1()
-        {
-        Tuple test = (3, "blind", "mice", "!") [-1..1];
-        }
-    void testOOB2()
-        {
-        Tuple test = (3, "blind", "mice", "!") [1..4];
-        }
-    void testOOB3()
-        {
-        Tuple test = (3, "blind", "mice", "!") [4..1];
-        }
-    void testOOB4()
-        {
-        Tuple test = (3, "blind", "mice", "!") [1..-1];
-        }
-    void testOOB5()
-        {
-        Object test = (3, "blind", "mice", "!") [-1];
-        }
-    void testOOB6()
-        {
-        Object test = (3, "blind", "mice", "!") [4];
-        }
     }

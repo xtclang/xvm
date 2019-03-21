@@ -411,8 +411,7 @@ public class Frame
                 return f_hThis.getType().getTypeHandle();
 
             case Op.A_MODULE:
-                return f_context.f_heapGlobal.
-                    ensureConstHandle(this, f_context.f_module.getIdentityConstant());
+                return getConstHandle(f_context.f_module.getIdentityConstant());
 
             default:
                 throw new IllegalStateException("Invalid argument " + iArgId);
@@ -968,6 +967,14 @@ public class Frame
     /**
      * @return an ObjectHandle for the constant (could be a DeferredCallHandle)
      */
+    public ObjectHandle getConstHandle(Constant constant)
+        {
+        return f_context.f_heapGlobal.ensureConstHandle(this, constant);
+        }
+
+    /**
+     * @return an ObjectHandle for the constant id (could be a DeferredCallHandle)
+     */
     public ObjectHandle getConstHandle(int iArg)
         {
         return f_context.f_heapGlobal.ensureConstHandle(this, getConstant(iArg));
@@ -1144,7 +1151,7 @@ public class Frame
                     throw xException.makeHandle("Unknown default value for argument \"" +
                         f_function.getParam(iArg).getName() + '"').getException();
                     }
-                return f_context.f_heapGlobal.ensureConstHandle(this, constValue);
+                return getConstHandle(constValue);
                 }
 
             if (info != null)

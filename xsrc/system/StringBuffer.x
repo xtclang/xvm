@@ -14,7 +14,7 @@ class StringBuffer
      */
     construct(Int capacity = 0)
         {
-        chars = new Char[capacity];
+        chars = new Array<Char>(capacity);
         }
 
     /**

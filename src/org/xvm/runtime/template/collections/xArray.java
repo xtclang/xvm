@@ -35,7 +35,7 @@ import org.xvm.runtime.template.xString;
 
 
 /**
- * TODO:
+ * Native generic Array implementation.
  */
 public class xArray
         extends ClassTemplate
@@ -132,12 +132,10 @@ public class xArray
         Constant[] aconst = constArray.getValue();
         int cSize = aconst.length;
 
-        ObjectHeap heap = frame.f_context.f_heapGlobal;
-
         ObjectHandle[] ahValue = new ObjectHandle[cSize];
         for (int i = 0; i < cSize; i++)
             {
-            ObjectHandle hValue = heap.ensureConstHandle(frame, aconst[i]);
+            ObjectHandle hValue = frame.getConstHandle(aconst[i]);
 
             if (hValue instanceof DeferredCallHandle)
                 {
@@ -207,16 +205,39 @@ public class xArray
             {
             hArray.m_mutability = MutabilityConstraint.FixedSize;
 
-            long cSize = cCapacity;
+            int cSize = (int) cCapacity;
             if (cSize > 0)
                 {
-                FunctionHandle hSupplier = (FunctionHandle) ahVar[1];
-
-                return new Fill(this, hArray, cSize, hSupplier, iReturn).doNext(frame);
+                ObjectHandle hSupplier = ahVar[1];
+                if (hSupplier == ObjectHandle.DEFAULT)
+                    {
+                    TypeConstant typeEl = clzArray.getType().getParamTypesArray()[0];
+                    ObjectHandle hValue = frame.getConstHandle(typeEl.getDefaultValue());
+                    fill(hArray, cSize, hValue);
+                    }
+                else
+                    {
+                    return new Fill(this, hArray, cSize, (FunctionHandle) hSupplier, iReturn).doNext(frame);
+                    }
                 }
             }
 
         return frame.assignValue(iReturn, hArray);
+        }
+
+    /**
+     * Fill the array content with the specified value.
+     *
+     * @param hArray  the array
+     * @param cSize   the number of elements to fill
+     * @param hValue  the value
+     */
+    protected void fill(ArrayHandle hArray, int cSize, ObjectHandle hValue)
+        {
+        GenericArrayHandle ha = (GenericArrayHandle) hArray;
+
+        Arrays.fill(ha.m_ahValue, 0, cSize, hValue);
+        ha.m_cSize = cSize;
         }
 
     @Override

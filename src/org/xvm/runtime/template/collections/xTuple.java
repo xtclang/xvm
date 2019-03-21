@@ -82,8 +82,6 @@ public class xTuple
 
         assert constTuple.getFormat() == Constant.Format.Tuple;
 
-        ObjectHeap heap = frame.f_context.f_heapGlobal;
-
         Constant[] aconst = constTuple.getValue();
         int c = aconst.length;
 
@@ -99,7 +97,7 @@ public class xTuple
         ObjectHandle[] ahValue = new ObjectHandle[c];
         for (int i = 0; i < c; i++)
             {
-            ahValue[i] = heap.ensureConstHandle(frame, aconst[i]);
+            ahValue[i] = frame.getConstHandle(aconst[i]);
 
             if (ahValue[i] instanceof DeferredCallHandle)
                 {

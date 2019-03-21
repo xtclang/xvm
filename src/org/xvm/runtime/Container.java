@@ -121,7 +121,7 @@ public class Container
 
             FunctionHandle hInstantiateModuleAndRun = new NativeFunctionHandle((frame, ah, iReturn) ->
                 {
-                ObjectHandle hModule = frame.f_context.f_heapGlobal.ensureConstHandle(frame, f_idModule);
+                ObjectHandle hModule = frame.getConstHandle(f_idModule);
 
                 if (Op.isDeferred(hModule))
                     {
