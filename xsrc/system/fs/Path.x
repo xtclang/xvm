@@ -1,5 +1,5 @@
 /**
- * Path TODO
+ * Path represents a path to a file.
  */
 const Path
         implements Sequence<Path>
@@ -132,7 +132,13 @@ const Path
         }
 
     /**
-     * TODO doc
+     * Determine if this path begins with the specified path. For example, "/a/b/c" starts with
+     * "/a/b".
+     *
+     * @param that  another path
+     *
+     * @return true iff this path begins with the same sequence of path elements as contained in the
+     *         specified path
      */
     Boolean startsWith(Path that)
         {
@@ -152,7 +158,13 @@ const Path
         }
 
     /**
-     * TODO doc
+     * Determine if this path ends with the specified path. For example, "/a/b/c" ends with
+     * "/b/c".
+     *
+     * @param that  another path
+     *
+     * @return true iff this path ends with the same sequence of path elements as contained in the
+     *         specified path
      */
     Boolean endsWith(Path that)
         {
@@ -175,35 +187,54 @@ const Path
         }
 
     /**
-     * TODO doc
+     * Resolve the specified path against this path.
+     *
+     * If the specified path is absolute, then that absolute path is the result.
+     * Otherwise, this path is treated as a directory, and the specified relative path is appended
+     * to this path.
+     *
+     * @param that  the path to resolve against this path
+     *
+     * @return  the resulting path
      */
     Path resolve(Path that)
         {
-        TODO
+        return that.absolute ? that : this + that;
         }
 
     /**
-     * TODO doc
+     * Calculate the relative path from this path that would result in the specified path.
+     * For example, if this path is "/a/b/c", and that path is "/a/p/d/q", then the relative path
+     * is "../../p/d/q".
      */
     Path relativize(Path that)
         {
+        assert this.absolute == that.absolute;
         TODO
         }
 
     /**
-     * TODO doc
+     * Resolve the specified name against this path's parent path.
+     *
+     * @param that  the name to resolve against this path's parent path
+     *
+     * @return the resulting path
      */
     Path sibling(String name)
         {
-        TODO
+        return parent?.resolve(name) : new Path(null, Name, name);
         }
 
     /**
-     * TODO doc
+     * Resolve the specified path against this path's parent path.
+     *
+     * @param that  the relative path to resolve against this path's parent path
+     *
+     * @return the resulting path
      */
     Path sibling(Path that)
         {
-        TODO
+        return parent?.resolve(that) : that;
         }
 
     /**
@@ -256,7 +287,37 @@ const Path
     @Op("[..]")
     Path slice(Range<Int> range)
         {
-        TODO
+        Int lower = range.lowerBound;
+        Int upper = range.upperBound;
+        if (lower < 0)
+            {
+            throw new OutOfBounds(lower.to<String>() + " < 0");
+            }
+        if (upper >= size)
+            {
+            throw new OutOfBounds(upper.to<String>() + " >= " + size);
+            }
+        assert lower <= upper;
+
+        if (lower == 0)
+            {
+            if (range.reversed)
+                {
+                assert relative;
+                }
+            else
+                {
+                return this[upper];
+                }
+            }
+
+        Path? slice = null;
+        for (Int index : range)
+            {
+            Path part = this[index];
+            slice = new Path(slice, part.form, part.name);
+            }
+        return slice ?: assert;
         }
 
 
