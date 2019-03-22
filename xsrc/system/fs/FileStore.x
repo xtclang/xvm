@@ -11,11 +11,6 @@
  */
 interface FileStore
     {
-    // TODO temporary
-    interface File {}
-    interface Directory {}
-    interface FileWatcher {}
-
     /**
      * Specifies whether this FileStorage is known to be explicitly read-only.
      */

@@ -222,7 +222,7 @@ const Path
      */
     Path sibling(String name)
         {
-        return parent?.resolve(name) : new Path(null, Name, name);
+        return parent? + name : new Path(null, Name, name);
         }
 
     /**
