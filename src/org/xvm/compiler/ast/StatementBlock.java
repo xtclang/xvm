@@ -971,7 +971,8 @@ public class StatementBlock
                 if (fSameFile && node instanceof StatementBlock)
                     {
                     // the name may specify an import
-                    ImportStatement stmtImport = getImport(sName);
+                    StatementBlock  block      = (StatementBlock) node;
+                    ImportStatement stmtImport = block.getImport(sName);
                     if (stmtImport != null)
                         {
                         NameResolver resolver = stmtImport.getNameResolver();
@@ -981,7 +982,7 @@ public class StatementBlock
 
                     // see if we're crossing a source file boundary (because imports are only used
                     // when they are local to the file in which they occur)
-                    if (((StatementBlock) node).isFileBoundary())
+                    if (block.isFileBoundary())
                         {
                         fSameFile = false;
                         }
