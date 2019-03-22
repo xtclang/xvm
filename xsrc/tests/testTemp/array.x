@@ -116,7 +116,7 @@ module TestArray.xqiz.it
         {
         console.println("\n** testNew()");
 
-        String[] array = new String[10];
+        String[] array = new Array<String>(10);
         console.println("array=" + array + ", size=" + array.size);
 
         for (Int i : 1..10)
