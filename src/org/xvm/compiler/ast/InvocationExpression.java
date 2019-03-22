@@ -805,7 +805,7 @@ public class InvocationExpression
     @Override
     public boolean isShortCircuiting()
         {
-        return expr.isShortCircuiting();
+        return expr.isShortCircuiting() || args.stream().anyMatch(Expression::isShortCircuiting);
         }
 
     @Override

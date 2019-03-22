@@ -207,19 +207,24 @@ const Path
         }
 
     /**
-     * TODO doc
+     * Add a name to this path, creating a new path.
      */
+    @Op("+")
     Path add(String name)
         {
-        TODO
+        return new Path(this, name);
         }
 
     /**
-     * TODO doc
+     * Add a relative path to this path, creating a new path.
      */
+    @Op("+")
     Path add(Path that)
         {
-        TODO
+        assert that.relative;
+
+        Path parent = this.add(that.parent?) : this;
+        return new Path(parent, that.form, that.name);
         }
 
 

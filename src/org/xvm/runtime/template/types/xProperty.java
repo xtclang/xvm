@@ -3,6 +3,8 @@ package org.xvm.runtime.template.types;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
@@ -44,9 +46,27 @@ public class xProperty
             {
             PropertyConstant  idProp = (PropertyConstant) constant;
             PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
-            ObjectHandle      hValue = prop.isStatic()
-                ? frame.getConstHandle(prop.getInitialValue())
-                : new DeferredPropertyHandle(idProp);
+            ObjectHandle      hValue;
+            if (prop.isStatic())
+                {
+                Constant constVal = prop.getInitialValue();
+                if (constVal == null)
+                    {
+                    // there must be an initializer
+                    MultiMethodStructure mmInit     = (MultiMethodStructure) prop.getChild("=");
+                    MethodStructure      methodInit = mmInit.methods().iterator().next();
+                    frame.call1(methodInit, null, new ObjectHandle[methodInit.getMaxVars()], Op.A_STACK);
+                    hValue = new DeferredCallHandle(frame.m_frameNext);
+                    }
+                else
+                    {
+                    hValue = frame.getConstHandle(constVal);
+                    }
+                }
+            else
+                {
+                hValue = new DeferredPropertyHandle(idProp);
+                }
 
             frame.pushStack(hValue);
             return Op.R_NEXT;

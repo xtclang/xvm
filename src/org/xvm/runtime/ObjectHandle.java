@@ -523,7 +523,7 @@ public abstract class ObjectHandle
         {
         protected Frame f_frameNext;
 
-        protected DeferredCallHandle(Frame frameNext)
+        public DeferredCallHandle(Frame frameNext)
             {
             super(null);
 

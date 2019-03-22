@@ -1236,6 +1236,7 @@ public class NameExpression
                     case Package:
                     case Class:
                     case Typedef:
+                    case Property:
                         m_arg = arg;
                         break;
 
@@ -1697,8 +1698,14 @@ public class NameExpression
                     type = id.getReferredToType();
                     assert !m_fAssignable;
                     }
+                else if (prop.isConstant())
+                    {
+                    m_plan = Plan.PropertyDeref;
+                    return type;
+                    }
                 else if (left == null)
                     {
+                    // REVIEW we should NOT just assume "this", because the property could be on a different type
                     typeLeft = pool.ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE);
 
                     ClassStructure clz = ctx.getThisClass();

@@ -605,7 +605,7 @@ TypeDefStatement
 #   |               bitwise OR               11     left to right
 #   &&              conditional AND          12     left to right
 #   ||              conditional OR           13     left to right
-#   ?:              conditional elvis        14     right to left
+#   ?:              conditional elvis        14     right to left       // TODO move this up! (and is it right to left or left to right?)
 #   ? :             conditional ternary      15     right to left
 #   :               conditional ELSE         16     right to left
 
