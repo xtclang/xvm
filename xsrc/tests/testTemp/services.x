@@ -8,10 +8,11 @@ module TestServices.xqiz.it
 
         console.println("[main] creating service");
         TestService svc = new TestService();
+
         console.println("[main] calling service async/wait-style: " + svc);
         Int n = svc.calcSomethingBig(new Duration(0));
-
         console.println("[main] async/wait-style result=" + n);
+
         for (Int i : 0..4)
             {
             console.println("[main] calling service future-style: " + i);
