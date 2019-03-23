@@ -557,6 +557,7 @@ interface Map<KeyType, ValueType>
 
         for (CompileType.KeyType key1, CompileType.ValueType value1 : map1)
             {
+            // REVIEW GG does this need to say CompileType.ValueType ???
             if (ValueType value2 : map2.get(key1))
                 {
                 if (value2 == value1)
