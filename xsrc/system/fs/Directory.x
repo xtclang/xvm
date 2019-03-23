@@ -2,6 +2,7 @@
  * Directory represents a directory in a FileStore.
  */
 interface Directory
+        extends FileNode
     {
     /**
      *
@@ -12,19 +13,50 @@ interface Directory
 
     Iterator<File> files();
 
-    // TODO other ways to "visit" including recursive
+    Iterator<File> filesRecursively();
 
+    typedef function void (File) FileVisitor;
+
+    void visitFiles(FileVisitor visit);
+    // TODO other ways to "visit" including directories, all, recursive
+
+    /**
+     * Obtain the Directory or File for the specified name.
+     *
+     * @param name  the name of the Directory or File to find
+     *
+     * @return the Directory or File with that name, only if is exists
+     */
     conditional Directory|File find(String name);
 
-    Directory assumeDir(String name);
+    /**
+     * Obtain a Directory object for the specified path, whether or not the directory actually
+     * exists. This method allows the caller to obtain a Directory object that can be watched,
+     * created, etc., even if the directory did not previously exist.
+     *
+     * If a file exists at the location specified by the path, then it will still be possible to
+     * obtain a Directory object for the path, but the Directory will not exist, and it will not
+     * be able to be created without first deleting the file.
+     */
+    Directory directoryFor(String name);
 
-    conditional Directory createDir(String name);
+    /**
+     * Obtain a File object for the specified path, whether or not the file actually exists.
+     * This method allows the caller to obtain a File object that can be watched, created, etc.,
+     * even if the file did not previously exist.
+     *
+     * If a directory exists at the location specified by the path, then it will still be possible
+     * to obtain a File object for the path, but the file will not exist, and it will not be able
+     * to be created without first deleting the directory.
+     */
+    File fileFor(String name);
 
-    Boolean deleteRecursively();
-
-    File assumeFile(String name);
-
-    conditional File createFile(String sName);
+    /**
+     * Delete the contents of this directory, if any, and then delete this directory, if it exists.
+     *
+     * @return True iff the directory did exist, and now does not
+     */
+    Boolean deleteRecursively(); // TODO conditional FileNode ??
 
     typedef function void () Cancellable;
 

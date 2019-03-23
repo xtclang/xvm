@@ -14,32 +14,69 @@ interface FileNode
     @RO String name;
 
     /**
-     * True iff the file-node entry actually exists in the directory.
+     * True iff the file-node entry actually exists in the directory that contains it.
      */
     @RO Boolean exists;
 
     /**
-     * Rename the file-node.
+     * The date/time at which the file node was created. The value has no meaning for a
+     * file-node that does not exist, or in a file system that does not track creation times.
+     */
+    @RO DateTime created;
+
+    /**
+     * The date/time at which the file node was last modified. The value has no meaning for a
+     * file-node that does not exist, or in a file system that does not track modification times.
+     *
+     * Some file systems allow the modified time to be updated.
+     */
+    DateTime modified;
+
+    /**
+     * The date/time at which the file node was last accessed. The value has no meaning for a
+     * file-node that does not exist, or in a file system that does not track access times.
+     */
+    @RO DateTime accessed;
+
+    /**
+     * True iff the file node is readable.
+     */
+    @RO Boolean readable;
+
+    /**
+     * True iff the file node is writable.
+     */
+    @RO Boolean writable;
+
+    /**
+     * Create the file-node only iff it does not already exist. This operation is atomic.
+     *
+     * @return this FileNode iff the file-node did not exist, and now it does
+     */
+    conditional FileNode create();
+
+    /**
+     * Create the file-node if it does not already exist.
+     *
+     * @return this FileNode iff the file-node now exists
+     */
+    conditional FileNode ensure();
+
+    /**
+     * Delete the file-node if it exists. This operation may not be atomic.
+     *
+     * @return this FileNode iff the file-node did exist, and now does not
+     */
+    conditional FileNode delete();
+
+    /**
+     * Attempt to rename the file-node.
      *
      * @param name  the new name for the file-node
      *
      * @return the new FileNode, iff the file-node exists and the rename was successful
      */
-    conditional FileNode rename(String name);
-
-    /**
-     * Create the file-node only if it does not exist. This operation is atomic.
-     *
-     * @return True iff the file-node did not exist, and now it does
-     */
-    Boolean create();
-
-    /**
-     * Delete the file-node if it exists. This operation may not be atomic.
-     *
-     * @return True iff the file-node did exist, and now does not
-     */
-    Boolean delete();
+    conditional FileNode renameTo(String name);
 
     /**
      * The number of bytes represented by the file-node; for a directory, this value may require

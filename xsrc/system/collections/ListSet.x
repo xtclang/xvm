@@ -12,6 +12,11 @@ class ListSet<ElementType extends Hashable>
         TODO
         }
 
+    construct(ElementType[] elements)
+        {
+        TODO
+        }
+
     @Override
     Int size.get()
         {

@@ -2,7 +2,9 @@
  * File represents a file in a FileStore.
  */
 interface File
+        extends FileNode
     {
+
     /**
      *
      *
@@ -10,19 +12,11 @@ interface File
      */
     Boolean truncate();
 
-    @RO DateTime created;
-    @RO DateTime updated;
-    @RO DateTime accessed;
-
-    @RO Boolean readable;
-    @RO Boolean writable;
-    @RO Boolean deletable;
+    /**
+     * The contents of the file, as an Array of Byte.
+     */
+    Byte[] contents;
 
     // TODO - other open options
     FileChannel open(Boolean read=true, Boolean write=true);
-
-    /**
-     * ...
-     */
-    Byte[] contents;
     }
