@@ -35,6 +35,12 @@ public class xOrdered
             }
         }
 
+    @Override
+    protected EnumHandle makeEnumHandle(int iOrdinal)
+        {
+        return new EnumHandle(getCanonicalClass(), iOrdinal);
+        }
+
     /**
      * Trivial helper.
      */

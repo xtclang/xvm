@@ -56,12 +56,8 @@ module TestFiles.xqiz.it
         // console.println("path[2..0]=" + path[2..0]);
 
         // TODO GG
-        // 2019-03-22 14:17:13.192 Service "TestFiles.xqiz.it" (id=0), fiber 1: Unhandled exception: Ecstasy:Exception{cause=Null, text=Un-initialized property "Property{property=text}", stackTrace=
-        //   - Frame: fs.Path.construct(Ecstasy:Nullable | Ecstasy:fs.Path, Ecstasy:fs.Path.ElementForm) (line=27, op=P_Get)
-        //   - Frame: fs.Path.ROOT.=() (line=7, op=New_N)
-        //   - Frame: testPaths() (line=64, op=GP_Add)
-        //
-        // path = ROOT + path;
-        // console.println("path=" + path);
+        // Suspicious assignment from: Ecstasy:fs.Path to: Ecstasy:String
+        path = ROOT + path;
+        console.println("path=" + path);
         }
     }

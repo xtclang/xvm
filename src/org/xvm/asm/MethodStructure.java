@@ -22,7 +22,6 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -1079,8 +1078,7 @@ public class MethodStructure
 
                     case Property:
                         {
-                        PropertyStructure property = (PropertyStructure)
-                            ((PropertyConstant) constValue).getComponent();
+                        PropertyStructure property = (PropertyStructure) constValue.getComponent();
                         // use property value or function to initialize
                         throw new UnsupportedOperationException("not implemented"); // TODO
                         }
@@ -1091,46 +1089,52 @@ public class MethodStructure
                         ClassStructure clz = (ClassStructure) constClz.getComponent();
 
                         ClassTemplate template = heap.f_templates.getTemplate(constClz);
+                        int iResult;
 
-                        if (template.f_struct.getFormat() == Format.ENUMVALUE ||
-                            template.f_struct.getFormat() == Format.ENUM)
+                        Format format = template.f_struct.getFormat();
+                        if (format == Format.ENUMVALUE || format == Format.ENUM)
                             {
-                            // TODO: rework this when enum values constructors are generated
-                            if (constSingleton.getHandle() == null)
+                            // this can happen if the constant's handle was not initialized or
+                            // assigned on a different constant pool
+                            iResult = template.createConstHandle(frame, constSingleton);
+                            }
+                        else
+                            {
+                            // the class must have a no-params constructor to call
+                            MethodStructure constructor = clz.findMethod(getConstantPool().sigConstruct());
+                            if (constructor == null)
                                 {
-                                // this can happen if the constant's handle was assigned on
-                                // a different constant pool
-                                switch (template.createConstHandle(frame, constSingleton))
-                                    {
-                                    case Op.R_NEXT:
-                                        constSingleton.setHandle(frame.popStack());
-                                        break;
-                                    case Op.R_EXCEPTION:
-                                        return OpGeneral.R_EXCEPTION;
-                                    default:
-                                        throw new IllegalStateException();
-                                    }
+                                frame.raiseException(xException.makeHandle(
+                                    "Missing default constructor at " + clz.getSimpleName()));
+                                iResult = Op.R_EXCEPTION;
                                 }
-                            continue;
+                            else
+                                {
+                                iResult = template.construct(frame, constructor,
+                                    template.getCanonicalClass(), null, Utils.OBJECTS_NONE, Op.A_STACK);
+                                }
                             }
 
-                        // the class must have a no-params constructor to call
-                        MethodStructure constructor = clz.findMethod(getConstantPool().sigConstruct());
-                        if (constructor == null)
+                        switch (iResult)
                             {
-                            frame.raiseException(xException.makeHandle(
-                                "Missing default constructor at " + clz.getSimpleName()));
-                            return Op.R_EXCEPTION;
-                            }
+                            case Op.R_NEXT:
+                                constSingleton.setHandle(frame.popStack());
+                                continue; // next constant
 
-                        template.construct(frame, constructor,
-                            template.getCanonicalClass(), null, Utils.OBJECTS_NONE, Op.A_STACK);
-                        frame.m_frameNext.setContinuation(frameCaller ->
-                            {
-                            constSingleton.setHandle(frameCaller.popStack());
-                            return ensureInitialized(frameCaller, frameNext);
-                            });
-                        return Op.R_CALL;
+                            case Op.R_EXCEPTION:
+                                return Op.R_EXCEPTION;
+
+                            case Op.R_CALL:
+                                frame.m_frameNext.setContinuation(frameCaller ->
+                                    {
+                                    constSingleton.setHandle(frameCaller.popStack());
+                                    return ensureInitialized(frameCaller, frameNext);
+                                    });
+                                return Op.R_CALL;
+
+                            default:
+                                throw new IllegalStateException();
+                            }
                         }
 
                     default:

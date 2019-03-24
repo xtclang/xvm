@@ -9,9 +9,12 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants.Access;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.SingletonConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
@@ -19,6 +22,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Utils;
 
 
 /**
@@ -72,7 +76,12 @@ public class xEnum
                     EnumHandle hValue = makeEnumHandle(cValues++);
                     listHandles.add(hValue);
 
-                    pool.ensureSingletonConstConstant(child.getIdentityConstant()).setHandle(hValue);
+                    // native enums don't require any initialization
+                    if (!hValue.isStruct())
+                        {
+                        pool.ensureSingletonConstConstant(child.getIdentityConstant()).
+                                setHandle(hValue);
+                        }
                     }
                 }
             m_listNames = listNames;
@@ -93,7 +102,9 @@ public class xEnum
      */
     protected EnumHandle makeEnumHandle(int iOrdinal)
         {
-        return new EnumHandle(getCanonicalClass(), iOrdinal);
+        // create an un-initialized struct, which will be properly initialized
+        // by createConstHandle() below; overridden by native enums
+        return new EnumHandle(getCanonicalClass().ensureAccess(Access.STRUCT), iOrdinal);
         }
 
     @Override
@@ -110,9 +121,21 @@ public class xEnum
                 xEnum templateEnum = f_struct.getFormat() == Component.Format.ENUMVALUE
                         ? (xEnum) getSuper()
                         : this;
+
                 hValue = templateEnum.m_listHandles.get(iOrdinal);
                 constValue.setHandle(hValue);
+
+                if (hValue.isStruct())
+                    {
+                    MethodStructure constructor = f_struct.findConstructor(TypeConstant.NO_TYPES);
+                    MethodStructure methodInit  = getCanonicalClass().ensureAutoInitializer();
+                    int             cVars       = constructor.getMaxVars();
+                    ObjectHandle[]  ahVar       = Utils.ensureSize(Utils.OBJECTS_NONE, cVars);
+
+                    return callConstructor(frame, constructor, methodInit, hValue, ahVar, Op.A_STACK);
+                    }
                 }
+
             frame.pushStack(hValue);
             return Op.R_NEXT;
             }
@@ -129,7 +152,7 @@ public class xEnum
             {
             case "name":
                 return frame.assignValue(iReturn,
-                        xString.makeHandle(m_listNames.get((int) hEnum.getValue())));
+                        xString.makeHandle(m_listNames.get(hEnum.getValue())));
 
             case "ordinal":
                 return frame.assignValue(iReturn, xInt64.makeHandle(hEnum.getValue()));

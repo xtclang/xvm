@@ -15,7 +15,7 @@ import org.xvm.runtime.TemplateRegistry;
 public class xNullable
         extends xEnum
     {
-    public static NullHandle NULL;
+    public static EnumHandle NULL;
 
     public xNullable(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -33,7 +33,7 @@ public class xNullable
 
             super.initDeclared();
 
-            NULL = (NullHandle) m_listHandles.get(0);
+            NULL = m_listHandles.get(0);
             }
         else
             {
@@ -44,15 +44,6 @@ public class xNullable
     @Override
     protected EnumHandle makeEnumHandle(int iOrdinal)
         {
-        return new NullHandle(getCanonicalClass());
-        }
-
-    private static class NullHandle
-                extends EnumHandle
-        {
-        NullHandle(TypeComposition clz)
-            {
-            super(clz, 0);
-            }
+        return new EnumHandle(getCanonicalClass(), 0);
         }
     }

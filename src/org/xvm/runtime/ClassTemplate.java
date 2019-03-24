@@ -1,7 +1,6 @@
 package org.xvm.runtime;
 
 
-import java.sql.Ref;
 import java.util.List;
 import java.util.Map;
 
@@ -398,11 +397,20 @@ public abstract class ClassTemplate
             ((GenericHandle) hStruct).setField(GenericHandle.OUTER, hParent);
             }
 
-        // assume that we have class D with an auto-generated initializer (ID), a constructor (CD),
+        return callConstructor(frame, constructor, clazz.ensureAutoInitializer(), hStruct, ahVar, iReturn);
+        }
+
+    /**
+     * Continuation of the {@link #construct} sequence.
+     */
+    public int callConstructor(Frame frame, MethodStructure constructor, MethodStructure methodAI,
+                               ObjectHandle hStruct, ObjectHandle[] ahVar, int iReturn)
+        {
+        // assume that we have class D with an auto-generated initializer (AI), a constructor (CD),
         // and a finalizer (FD) that extends B with a constructor (CB) and a finalizer (FB)
         // the call sequence should be:
         //
-        //  ("new" op-code) => ID -> CD => CB -> FB -> FD -> "assign" (continuation)
+        //  ("new" op-code) => AI -> CD => CB -> FB -> FD -> "assign" (continuation)
         //
         // -> indicates a call via continuation
         // => indicates a call via Construct op-code
@@ -413,8 +421,7 @@ public abstract class ClassTemplate
         Frame.Continuation contAssign = frameCaller ->
             frameCaller.assignValue(iReturn, hStruct.ensureAccess(Access.PUBLIC));
 
-        Frame frameCD = frame.ensureInitialized(constructor,
-            frame.createFrame1(constructor, hStruct, ahVar, Op.A_IGNORE));
+        Frame frameCD = frame.createFrame1(constructor, hStruct, ahVar, Op.A_IGNORE);
 
         // we need a non-null anchor (see Frame#chainFinalizer)
         frameCD.m_hfnFinally = Utils.makeFinalizer(constructor, hStruct, ahVar); // hF1
@@ -424,7 +431,7 @@ public abstract class ClassTemplate
             List<String> listUnassigned;
             if ((listUnassigned = hStruct.validateFields()) != null)
                 {
-                return frame.raiseException(xException.unassignedFields(listUnassigned));
+                return frameCaller.raiseException(xException.unassignedFields(listUnassigned));
                 }
 
             if (isConstructImmutable())
@@ -438,17 +445,17 @@ public abstract class ClassTemplate
             return hFD.callChain(frameCaller, Access.PUBLIC, contAssign);
             });
 
-        MethodStructure methodID = clazz.ensureAutoInitializer();
-        if (methodID == null)
+        if (methodAI == null)
             {
-            return frame.call(frameCD);
+            return frame.call(frame.ensureInitialized(constructor, frameCD));
             }
 
-        Frame frameID = frame.createFrame1(methodID, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE);
+        Frame frameInit = frame.createFrame1(methodAI, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE);
 
-        frameID.setContinuation(frameCaller -> frameCaller.call(frameCD));
+        frameInit.setContinuation(frameCaller ->
+            frameCaller.call(frame.ensureInitialized(constructor, frameCD)));
 
-        return frame.call(frame.ensureInitialized(methodID, frameID));
+        return frame.call(frame.ensureInitialized(methodAI, frameInit));
         }
 
     /**
@@ -859,6 +866,12 @@ public abstract class ClassTemplate
             }
         else
             {
+            // TODO: remove temporary check
+            if (!hValue.getType().isA(idProp.getType()))
+                {
+                System.err.println("Suspicious property assignment for property \"" + idProp.getName()
+                    + "\" to: " + hValue.getType().getValueString());
+                }
             hThis.setField(idProp, hValue);
             }
         return Op.R_NEXT;

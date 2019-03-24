@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -247,10 +248,10 @@ public class PropertyStructure
 
         m_aPropAnno = listPropAnno == null
                 ? Annotation.NO_ANNOTATIONS
-                : listPropAnno.toArray(new Annotation[listPropAnno.size()]);
+                : listPropAnno.toArray(Annotation.NO_ANNOTATIONS);
         m_aRefAnno = listRefAnno == null
                 ? Annotation.NO_ANNOTATIONS
-                : listRefAnno.toArray(new Annotation[listRefAnno.size()]);
+                : listRefAnno.toArray(Annotation.NO_ANNOTATIONS);
         }
 
     public void indicateInitialValue()
@@ -288,6 +289,24 @@ public class PropertyStructure
         {
         m_fHasValue = false;
         m_constVal  = constVal;
+        }
+
+    /**
+     * @return the MethodStructure representing the initializer of the property, or null if the
+     *         property is not initialized using an initializer function
+     */
+    public MethodStructure getInitializer()
+        {
+        MultiMethodStructure mmInit = (MultiMethodStructure) getChild("=");
+        if (mmInit != null)
+            {
+            Collection<MethodStructure> methods = mmInit.methods();
+            if (methods != null && !methods.isEmpty())
+                {
+                return methods.iterator().next();
+                }
+            }
+        return null;
         }
 
     /**
