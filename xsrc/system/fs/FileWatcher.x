@@ -8,12 +8,17 @@ interface FileWatcher
 
     enum Event {Created, Modified, Deleted}
 
+    // REVIEW GG this requires me to say "Set<Event>"; it does not infer the parameter
+    static Set<Event> ALL_EVENTS = new collections.ListSet<Event>(
+            // REVIEW GG why do I need "Event." for these? ;-)
+            [Event.Created, Event.Modified, Event.Deleted]).ensureConst(true);
+
     /**
      * If the mechanism that is detecting and reporting the changes to this FileWatcher is capable
      * of selectively delivering events, then it may ask this FileWatcher for the desired subjects
      * of detection and/or notification.
      *
-     * This value is considered to be _advisory_; The FileWatcher must be written in a manner that
+     * This value is considered to be _advisory_; the FileWatcher must be written in a manner that
      * ignores events that it does not desire.
      */
     @RO Subject desiredSubject.get()
@@ -26,13 +31,12 @@ interface FileWatcher
      * of selectively delivering events, then it may ask this FileWatcher for the desired events
      * of detection and/or notification.
      *
-     * This value is considered to be _advisory_; The FileWatcher must be written in a manner that
+     * This value is considered to be _advisory_; the FileWatcher must be written in a manner that
      * ignores events that it does not desire.
      */
     @RO Set<Event> desiredEvents.get()
         {
-        // REVIEW GG why do I need "Event." for these? ;-)
-        return new collections.ListSet([Event.Created, Event.Modified, Event.Deleted]);
+        return ALL_EVENTS;
         }
 
     /**
@@ -42,7 +46,9 @@ interface FileWatcher
      * detection and/or notification. The desired period may then be used to speed up or slow down
      * the aggressiveness of change detection and/or the delivery of the corresponding events.
      *
-     * This value is considered to be _advisory_, and not definitive.
+     * This value is considered to be _advisory_, and not definitive; the FileWatcher must be
+     * written in a manner that is tolerant of event delivery delays, or conversely, of events
+     * being delivered at a higher-than-desired rate.
      */
     @RO Duration desiredPeriod.get()
         {
@@ -57,7 +63,7 @@ interface FileWatcher
      *
      * @return True to cancel the watch that caused this event to be delivered
      */
-    Boolean dir(Directory dir, Event event)
+    Boolean onEvent(Event event, Directory dir)
         {
         return false;
         }
@@ -70,7 +76,7 @@ interface FileWatcher
      *
      * @return True to cancel the watch that caused this event to be delivered
      */
-    Boolean file(File file, Event event)
+    Boolean onEvent(Event event, File file)
         {
         return false;
         }

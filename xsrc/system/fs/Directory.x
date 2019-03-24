@@ -5,20 +5,27 @@ interface Directory
         extends FileNode
     {
     /**
-     *
+     * Obtain an iterator of all of the names that exist immediately under this directory, including
+     * names of both files and directories.
      */
     Iterator<String> names();
 
+    /**
+     * Obtain an iterator of all of the directories that exist immediately under this directory.
+     */
     Iterator<Directory> dirs();
 
+    /**
+     * Obtain an iterator of all of the files that exist immediately under this directory.
+     */
     Iterator<File> files();
 
+    /**
+     * Obtain an iterator of all of the files that exist within this directory, including those
+     * that exist immediately under this directory, and also those contained in sub-directories
+     * (at any level) under this directory.
+     */
     Iterator<File> filesRecursively();
-
-    typedef function void (File) FileVisitor;
-
-    void visitFiles(FileVisitor visit);
-    // TODO other ways to "visit" including directories, all, recursive
 
     /**
      * Obtain the Directory or File for the specified name.
@@ -38,7 +45,7 @@ interface Directory
      * obtain a Directory object for the path, but the Directory will not exist, and it will not
      * be able to be created without first deleting the file.
      */
-    Directory directoryFor(String name);
+    Directory dirFor(String name);
 
     /**
      * Obtain a File object for the specified path, whether or not the file actually exists.
@@ -54,9 +61,11 @@ interface Directory
     /**
      * Delete the contents of this directory, if any, and then delete this directory, if it exists.
      *
-     * @return True iff the directory did exist, and now does not
+     * @return this directory iff it did exist, and now does not
+     *
+     * @throws AccessDenied  if permission to delete the file has not been granted
      */
-    Boolean deleteRecursively(); // TODO conditional FileNode ??
+    conditional Directory deleteRecursively();
 
     typedef function void () Cancellable;
 

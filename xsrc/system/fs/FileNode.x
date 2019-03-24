@@ -29,6 +29,9 @@ interface FileNode
      * file-node that does not exist, or in a file system that does not track modification times.
      *
      * Some file systems allow the modified time to be updated.
+     *
+     * @throws AccessDenied  if an attempt is made to modify the value, and permission to change the
+     *                       metadata for the file has not been granted
      */
     DateTime modified;
 
@@ -49,39 +52,53 @@ interface FileNode
     @RO Boolean writable;
 
     /**
-     * Create the file-node only iff it does not already exist. This operation is atomic.
+     * Create the file-node only if and only if it does not already exist. This operation is atomic.
      *
      * @return this FileNode iff the file-node did not exist, and now it does
+     *
+     * @throws AccessDenied  if the file does not exist, and permission to create the file has
+     *                       not been granted
      */
     conditional FileNode create();
 
     /**
      * Create the file-node if it does not already exist.
      *
-     * @return this FileNode iff the file-node now exists
+     * @return the FileNode
+     *
+     * @throws AccessDenied  if the file does not exist, and permission to create the file has
+     *                       not been granted
      */
-    conditional FileNode ensure();
+    FileNode ensure();
 
     /**
-     * Delete the file-node if it exists. This operation may not be atomic.
+     * Delete the file-node if and only if it exists. This operation may not be atomic.
      *
      * @return this FileNode iff the file-node did exist, and now does not
+     *
+     * @throws AccessDenied  if permission to delete the file has not been granted
      */
     conditional FileNode delete();
 
     /**
-     * Attempt to rename the file-node.
+     * Attempt to rename the file-node. This operation is atomic.
      *
      * @param name  the new name for the file-node
      *
-     * @return the new FileNode, iff the file-node exists and the rename was successful
+     * @return the new FileNode, iff the file-node existed and the rename was successful
+     *
+     * @throws AccessDenied       if permission to rename the file has not been granted
+     * @throws FileAlreadyExists  if a file-node already exists with the new name
      */
     conditional FileNode renameTo(String name);
 
     /**
-     * The number of bytes represented by the file-node; for a directory, this value may require
-     * an extensive calculation, since the size of the directory is the sum of the sizes of its
-     * contents.
+     * The number of bytes represented by the file-node.
+     *
+     * For a directory, this value may require an extensive calculation, since the size of the
+     * directory is the sum of the sizes of its contents.
+     *
+     * For a non-existent file-node, the size is always 0.
      */
     @RO Int size;
 

@@ -49,6 +49,90 @@ interface FileStore
      */
     File fileFor(Path path);
 
+    /**
+     * Copy the contents specified by the source path to the destination path.
+     *
+     * * If the source path specifies a non-existent file-node, then a FileNotFound is thrown.
+     * * If the destination path specifies an existent file, then a FileAlreadyExists is thrown.
+     * * If the source path specifies a file and the destination path specifies an existent
+     *   directory, then a FileAlreadyExists is thrown. (This behavior is notably different from
+     *   most command-line "copy" commands, which would automatically copy the file _under_ the
+     *   destination path; this method, on the other hand, is specified such that the resulting
+     *   file *always* has the same exact path as specified in the destination path parameter.)
+     * * If the source path specifies a file and the destination path specifies a non-existent
+     *   file-node, then a copy of the file is created such that the destination path refers to the
+     *   newly copied file. If the parent directory of the destination path did not exist, then it
+     *   is automatically created (recursively, as necessary) as part of the copy process.
+     * * If the source path specifies a directory, and the destination path specifies an existent
+     *   directory, then an analysis of the result of the copy is performed (before copying any
+     *   contents), and a determination is made whether the result of the copy would modify the
+     *   contents of any *file* in the destination directory; if the copy would alter any existent
+     *   *file*, or if any directory/file mismatch exists between the source and the destination,
+     *   then a FileAlreadyExists exception is thrown.
+     * * Otherwise, if the source path specifies a directory, then all of the contents of the source
+     *   directory are copied to the destination directory, maintaining the same hierarchical
+     *   structure. If the parent directory of the destination path did not exist, then it is
+     *   automatically created (recursively, as necessary) as part of the copy process. The
+     *   implementation may choose _not_ to copy files that have an identical copy of the file
+     *   already in the corresponding destination location.
+     *
+     * This operation does not alter the source.
+     *
+     * @return the File or Directory for the new copy; note that the path of the new File or
+     *         Directory will always be the exact specified destination path
+     *
+     * @throws FileNotFound       if the source path does not exist
+     * @throws AccessDenied       if access to read from the source path is denied, or access to
+     *                            write to the destination path is denied
+     * @throws FileAlreadyExists  if a file or directory exists at (or under) the destination path
+     *                            in a manner that prevents a successful copy from being performed
+     */
+    Directory|File copy(Path source, Path dest);
+
+    /**
+     * Move the contents specified by the source path to the destination path. This operation is
+     * likely to be dramatically more efficient than first copying and then subsequently deleting
+     * the source, since most file systems can perform a move operation in a manner similar to a
+     * file renaming operation.
+     *
+     * * If the source path specifies a non-existent file-node, then a FileNotFound is thrown.
+     * * If the destination path specifies an existent file, then a FileAlreadyExists is thrown.
+     * * If the source path specifies a file and the destination path specifies an existent
+     *   directory, then a FileAlreadyExists is thrown. (This behavior is notably different from
+     *   most command-line "move" commands, which would automatically move the file _under_ the
+     *   destination path; this method, on the other hand, is specified such that the resulting
+     *   file *always* has the same exact path as specified in the destination path parameter.)
+     * * If the source path specifies a file and the destination path specifies a non-existent
+     *   file-node, then the file is moved such that the destination path refers to the resulting
+     *   file. If the parent directory of the destination path did not exist, then it is
+     *   automatically created (recursively, as necessary) as part of the move process.
+     * * If the source path specifies a directory, and the destination path specifies an existent
+     *   directory, then an analysis of the result of the move is performed (before moving any
+     *   contents), and a determination is made whether the result of the move would modify the
+     *   contents of any *file* in the destination directory; if the move would alter any existent
+     *   *file*, or if any directory/file mismatch exists between the source and the destination,
+     *   then a FileAlreadyExists exception is thrown.
+     * * Otherwise, if the source path specifies a directory, then all of the contents of the source
+     *   directory are moved to the destination directory, maintaining the same hierarchical
+     *   structure. If the parent directory of the destination path did not exist, then it is
+     *   automatically created (recursively, as necessary) as part of the move process. The
+     *   implementation may choose _not_ to move files that have an identical copy of the file
+     *   already in the corresponding destination location.
+     *
+     * At the successful conclusion of this operation, the specified source path will no longer
+     * exist.
+     *
+     * @return the File or Directory for the new copy; note that the path of the new File or
+     *         Directory will always be the exact specified destination path
+     *
+     * @throws FileNotFound       if the source path does not exist
+     * @throws AccessDenied       if access to read from the source path is denied, or access to
+     *                            write to the destination path is denied
+     * @throws FileAlreadyExists  if a file or directory exists at (or under) the destination path
+     *                            in a manner that prevents a successful move from being performed
+     */
+    Directory|File move(Path source, Path dest);
+
     typedef function void () Cancellable;
 
     /**
