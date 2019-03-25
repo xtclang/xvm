@@ -357,6 +357,6 @@ const Path
                 }
             }
 
-        name.appendTo(appender);
+        appender.add(name);
         }
     }

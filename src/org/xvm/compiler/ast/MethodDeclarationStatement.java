@@ -586,9 +586,10 @@ public class MethodDeclarationStatement
                 }
             }
 
-        if (body != null)
+        if (body != null && !body.compileMethod(method.createCode(), errs))
             {
-            body.compileMethod(method.createCode(), errs);
+            // the compilation has failed; no further progress is possible
+            mgr.deferChildren();
             }
         }
 

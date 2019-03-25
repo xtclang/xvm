@@ -15,6 +15,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Utils;
 
 
 /**
@@ -47,21 +48,20 @@ public class xProperty
             PropertyConstant  idProp = (PropertyConstant) constant;
             PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
             ObjectHandle      hValue;
+
             if (prop.isStatic())
                 {
                 Constant constVal = prop.getInitialValue();
                 if (constVal == null)
                     {
                     // there must be an initializer
-                    MultiMethodStructure mmInit     = (MultiMethodStructure) prop.getChild("=");
-                    MethodStructure      methodInit = mmInit.methods().iterator().next();
-                    frame.call1(methodInit, null, new ObjectHandle[methodInit.getMaxVars()], Op.A_STACK);
-                    hValue = new DeferredCallHandle(frame.m_frameNext);
+                    MethodStructure methodInit = prop.getInitializer();
+                    ObjectHandle[]  ahVar      =
+                        Utils.ensureSize(Utils.OBJECTS_NONE, methodInit.getMaxVars());
+
+                    return frame.call1(methodInit, null, ahVar, Op.A_STACK);
                     }
-                else
-                    {
-                    hValue = frame.getConstHandle(constVal);
-                    }
+                hValue = frame.getConstHandle(constVal);
                 }
             else
                 {

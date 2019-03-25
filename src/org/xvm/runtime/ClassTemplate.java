@@ -1,11 +1,12 @@
 package org.xvm.runtime;
 
 
-import java.sql.Ref;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
+
 import java.util.function.Function;
 
 import org.xvm.asm.ClassStructure;
@@ -25,6 +26,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -37,11 +39,9 @@ import org.xvm.runtime.Utils.UnaryAction;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
-import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction.FullyBoundHandle;
 import org.xvm.runtime.template.xObject;
-import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xRef;
 import org.xvm.runtime.template.xRef.RefHandle;
 import org.xvm.runtime.template.xString;
@@ -398,11 +398,20 @@ public abstract class ClassTemplate
             ((GenericHandle) hStruct).setField(GenericHandle.OUTER, hParent);
             }
 
-        // assume that we have class D with an auto-generated initializer (ID), a constructor (CD),
+        return callConstructor(frame, constructor, clazz.ensureAutoInitializer(), hStruct, ahVar, iReturn);
+        }
+
+    /**
+     * Continuation of the {@link #construct} sequence.
+     */
+    public int callConstructor(Frame frame, MethodStructure constructor, MethodStructure methodAI,
+                               ObjectHandle hStruct, ObjectHandle[] ahVar, int iReturn)
+        {
+        // assume that we have class D with an auto-generated initializer (AI), a constructor (CD),
         // and a finalizer (FD) that extends B with a constructor (CB) and a finalizer (FB)
         // the call sequence should be:
         //
-        //  ("new" op-code) => ID -> CD => CB -> FB -> FD -> "assign" (continuation)
+        //  ("new" op-code) => AI -> CD => CB -> FB -> FD -> "assign" (continuation)
         //
         // -> indicates a call via continuation
         // => indicates a call via Construct op-code
@@ -413,8 +422,7 @@ public abstract class ClassTemplate
         Frame.Continuation contAssign = frameCaller ->
             frameCaller.assignValue(iReturn, hStruct.ensureAccess(Access.PUBLIC));
 
-        Frame frameCD = frame.ensureInitialized(constructor,
-            frame.createFrame1(constructor, hStruct, ahVar, Op.A_IGNORE));
+        Frame frameCD = frame.createFrame1(constructor, hStruct, ahVar, Op.A_IGNORE);
 
         // we need a non-null anchor (see Frame#chainFinalizer)
         frameCD.m_hfnFinally = Utils.makeFinalizer(constructor, hStruct, ahVar); // hF1
@@ -424,7 +432,7 @@ public abstract class ClassTemplate
             List<String> listUnassigned;
             if ((listUnassigned = hStruct.validateFields()) != null)
                 {
-                return frame.raiseException(xException.unassignedFields(listUnassigned));
+                return frameCaller.raiseException(xException.unassignedFields(listUnassigned));
                 }
 
             if (isConstructImmutable())
@@ -438,17 +446,17 @@ public abstract class ClassTemplate
             return hFD.callChain(frameCaller, Access.PUBLIC, contAssign);
             });
 
-        MethodStructure methodID = clazz.ensureAutoInitializer();
-        if (methodID == null)
+        if (methodAI == null)
             {
-            return frame.call(frameCD);
+            return frame.call(frame.ensureInitialized(constructor, frameCD));
             }
 
-        Frame frameID = frame.createFrame1(methodID, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE);
+        Frame frameInit = frame.createFrame1(methodAI, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE);
 
-        frameID.setContinuation(frameCaller -> frameCaller.call(frameCD));
+        frameInit.setContinuation(frameCaller ->
+            frameCaller.call(frame.ensureInitialized(constructor, frameCD)));
 
-        return frame.call(frame.ensureInitialized(methodID, frameID));
+        return frame.call(frame.ensureInitialized(methodAI, frameInit));
         }
 
     /**
@@ -1361,20 +1369,8 @@ public abstract class ClassTemplate
                 new ObjectHandle[]{type.getTypeHandle(), hValue1, hValue2}, iReturn);
             }
 
-        // only Const and Enum classes have automatic implementations
-        switch (f_struct.getFormat())
-            {
-            case ENUMVALUE:
-                EnumHandle hV1 = (EnumHandle) hValue1;
-                EnumHandle hV2 = (EnumHandle) hValue2;
-
-                return frame.assignValue(iReturn,
-                        xOrdered.makeHandle(hV1.getValue() - hV2.getValue()));
-
-            default:
-                throw new IllegalStateException(
-                        "No implementation for \"compare()\" function at " + f_sName);
-            }
+        throw new IllegalStateException(
+                "No implementation for \"compare()\" function at " + f_sName);
         }
 
     /**
@@ -1409,111 +1405,111 @@ public abstract class ClassTemplate
     @Override
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "add", 1).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "add", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "sub", 1).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "sub", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "mul", 1).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "mul", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "div", 1).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "div", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "mod", 1).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "mod", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "shiftLeft", 1).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "shiftLeft", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "shiftRight", 1).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "shiftRight", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeShrAll(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "shiftAllRight", 1).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "shiftAllRight", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "and", 1).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "and", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "or", 1).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "or", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "xor", 1).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "xor", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeDivMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
         {
-        return getOpChain(hTarget, "divmod", 1).invoke(frame, hTarget, hArg, aiReturn);
+        return getOpChain(hTarget, "divmod", hArg).invoke(frame, hTarget, hArg, aiReturn);
         }
 
     @Override
     public int invokeDotDot(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "through", 1).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "through", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return getOpChain(hTarget, "neg", 0).invoke(frame, hTarget, iReturn);
+        return getOpChain(hTarget, "neg", null).invoke(frame, hTarget, iReturn);
         }
 
     @Override
     public int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return getOpChain(hTarget, "not", 0).invoke(frame, hTarget, iReturn);
+        return getOpChain(hTarget, "not", null).invoke(frame, hTarget, iReturn);
         }
 
     @Override
     public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return getOpChain(hTarget, "next", 0).invoke(frame, hTarget, iReturn);
+        return getOpChain(hTarget, "next", null).invoke(frame, hTarget, iReturn);
         }
 
     @Override
     public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return getOpChain(hTarget, "prev", 0).invoke(frame, hTarget, iReturn);
+        return getOpChain(hTarget, "prev", null).invoke(frame, hTarget, iReturn);
         }
 
     /**
      * @return a call chain for the specified op; throw if non exists
      */
-    protected CallChain getOpChain(ObjectHandle hTarget, String sOp, int cArgs)
+    protected CallChain getOpChain(ObjectHandle hTarget, String sOp, ObjectHandle hArg)
         {
-        CallChain chain = findOpChain(hTarget, sOp, cArgs);
+        CallChain chain = findOpChain(hTarget, sOp, hArg);
         if (chain == null)
             {
             throw new IllegalStateException("Invalid op for " + this);
@@ -1524,22 +1520,47 @@ public abstract class ClassTemplate
     /**
      * @return a call chain for the specified op or null if non exists
      */
-    protected CallChain findOpChain(ObjectHandle hTarget, String sOp, int cArgs)
+    protected CallChain findOpChain(ObjectHandle hTarget, String sOp, ObjectHandle hArg)
         {
         TypeComposition clz = hTarget.getComposition();
         TypeInfo info = clz.getType().ensureTypeInfo();
 
-        // TODO: what if there is more than one valid method?
-
-        for (MethodConstant constMethod: info.findOpMethods(sOp, sOp, cArgs))
+        Set<MethodConstant> setMethods = info.findOpMethods(sOp, sOp, hArg == null ? 0 : 1);
+        switch (setMethods.size())
             {
-            CallChain chain = clz.getMethodCallChain(constMethod.getSignature());
-            if (chain.getDepth() > 0)
+            case 0:
+                return null;
+
+
+            case 1:
                 {
-                return chain;
+                MethodConstant idMethod = setMethods.iterator().next();
+                return clz.getMethodCallChain(idMethod.getSignature());
+                }
+
+            default:
+                {
+                if (hArg != null)
+                    {
+                    TypeConstant typeArg = hArg.getType();
+                    for (MethodConstant idMethod : setMethods)
+                        {
+                        SignatureConstant sig       = idMethod.getSignature();
+                        TypeConstant      typeParam = sig.getRawParams()[0];
+
+                        if (typeArg.isA(typeParam))
+                            {
+                            return clz.getMethodCallChain(sig);
+                            }
+                        }
+                    }
+
+                // sof assert
+                System.err.println("Ambiguous \"" + sOp + "\" operation on " +
+                        hTarget.getType().getValueString());
+                return null;
                 }
             }
-        return null;
         }
 
 

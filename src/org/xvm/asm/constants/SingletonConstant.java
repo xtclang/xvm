@@ -107,8 +107,14 @@ public class SingletonConstant
      */
     public void setHandle(ObjectHandle handle)
         {
-        // not re-settable
-        assert handle != null && (m_handle == null || m_handle == handle);
+        // the only scenario when the singleton value can be reset is when it turns from
+        // a struct to an immutable
+        assert handle != null;
+
+        if (m_handle != null && handle != m_handle)
+            {
+            assert m_handle.isStruct() && !handle.isStruct();
+            }
 
         m_handle        = handle;
         m_fInitializing = false;
