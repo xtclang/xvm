@@ -508,8 +508,7 @@ class ExtHashMap<KeyType, ValueType>
      * @return the suggested number of buckets to achieve the specified capacity, and the
      *         suggested grow and shrink thresholds
      */
-// TODO named return values: protected static (Int bucketCount, Int growAt, Int shrinkAt)
-    protected static (Int, Int, Int) calcBucketCount(Int capacity)
+    protected static (Int bucketCount, Int growAt, Int shrinkAt) calcBucketCount(Int capacity)
         {
         assert capacity >= 0;
 
