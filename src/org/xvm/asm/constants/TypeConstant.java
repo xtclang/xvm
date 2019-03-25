@@ -3924,8 +3924,10 @@ public abstract class TypeConstant
                         }
                     else
                         {
-                        relation = typeLeft.isInterfaceAssignableFrom(
-                                typeRight, Access.PUBLIC, Collections.EMPTY_LIST).isEmpty()
+                        TypeConstant typeLeftN  = typeLeft.normalizeParameters(pool);
+                        TypeConstant typeRightN = typeRight.normalizeParameters(pool);
+                        relation = typeLeftN.isInterfaceAssignableFrom(
+                                typeRightN, Access.PUBLIC, Collections.EMPTY_LIST).isEmpty()
                             ? Relation.IS_A : Relation.INCOMPATIBLE;
                         }
                     }
