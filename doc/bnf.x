@@ -280,13 +280,17 @@ MethodIdentity
 ReturnList
     "void"
     SingleReturnList
-    MultiReturnList
+    "(" MultiReturnList ")"
 
 SingleReturnList
     TypeExpression
 
 MultiReturnList
-    "(" TypeExpressionList ")"
+    MultiReturn
+    MultiReturnList "," MultiReturn
+
+MultiReturn
+    TypeExpression Name-opt
 
 RedundantReturnSpecifier
     "<" TypeExpressionList ">"

@@ -53,7 +53,7 @@ public class MethodDeclarationStatement
                                       List<Annotation>     annotations,
                                       List<Parameter>      typeParams,
                                       Token                conditional,
-                                      List<TypeExpression> returns,
+                                      List<Parameter>      returns,
                                       Token                name,
                                       List<TypeExpression> redundant,
                                       List<Parameter>      params,
@@ -351,8 +351,9 @@ public class MethodDeclarationStatement
                         }
                     for (int i = ofReturn; i < cReturns; ++i)
                         {
+                        Parameter param = returns.get(i-ofReturn);
                         aReturns[i] = new org.xvm.asm.Parameter(pool,
-                                returns.get(i-ofReturn).ensureTypeConstant(), null, null, true, i, false);
+                                param.getType().ensureTypeConstant(), param.getName(), null, true, i, false);
                         }
                     }
 
@@ -814,7 +815,7 @@ public class MethodDeclarationStatement
             {
             sb.append(" (");
             boolean first = true;
-            for (TypeExpression type : returns)
+            for (Parameter param : returns)
                 {
                 if (first)
                     {
@@ -824,7 +825,7 @@ public class MethodDeclarationStatement
                     {
                     sb.append(", ");
                     }
-                sb.append(type);
+                sb.append(param);
                 }
             sb.append(") ");
             }
@@ -946,7 +947,7 @@ public class MethodDeclarationStatement
     protected List<Annotation>     annotations;
     protected List<Parameter>      typeParams;
     protected Token                conditional;
-    protected List<TypeExpression> returns;
+    protected List<Parameter>      returns;
     protected Token                name;
     protected List<TypeExpression> redundant;
     protected List<Parameter>      params;
