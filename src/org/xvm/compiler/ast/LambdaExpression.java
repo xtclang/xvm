@@ -286,7 +286,10 @@ public class LambdaExpression
         //   have to emit the code corresponding to the lambda
         if (catchUpChildren(errs))
             {
-            body.compileMethod(method.createCode(), errs);
+            if (!body.compileMethod(method.createCode(), errs))
+                {
+                mgr.deferChildren();
+                }
             }
         }
 

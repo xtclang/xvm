@@ -256,38 +256,44 @@ public class StatementBlock
      *
      * @param code  the code object to which the assembly is added
      * @param errs  the error listener to log to
+     *
+     * @return true if nothing occurred during the compilation that should stop further progress
      */
-    public void compileMethod(Code code, ErrorListener errs)
+    public boolean compileMethod(Code code, ErrorListener errs)
         {
         RootContext ctx = new RootContext(code.getMethodStructure());
 
         SevTrackingErrorListener errsValidation = new SevTrackingErrorListener(errs);
         Statement that = this.validate(ctx.validatingContext(), errsValidation);
-        if (that != null && !errsValidation.hasEncountered(Severity.ERROR) && !errs.isAbortDesired())
+        if (that == null || errsValidation.hasEncountered(Severity.ERROR) || errs.isAbortDesired())
             {
-            boolean fCompletes = that.completes(ctx.emittingContext(code), true, code, errs);
+            return false;
+            }
 
-            if (fCompletes)
+        boolean fCompletes = that.completes(ctx.emittingContext(code), true, code, errs);
+
+        if (fCompletes)
+            {
+            if (code.getMethodStructure().getReturns().isEmpty())
                 {
-                if (code.getMethodStructure().getReturns().isEmpty())
-                    {
-                    // a void method has an implicit "return;" at the end of it
-                    code.add(new Return_0());
-                    }
-                else
-                    {
-                    errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED, null, source,
-                            getEndPosition(), getEndPosition());
-                    }
+                // a void method has an implicit "return;" at the end of it
+                code.add(new Return_0());
                 }
             else
                 {
-                // it is is possible that there is a dangling label at the end that is unreachable,
-                // and it will not have been eliminated at this point, so "cap" the op code stream
-                // with a Nop that will get removed by "dead code elimination"
-                code.add(new Nop());
+                errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED, null, source,
+                        getEndPosition(), getEndPosition());
                 }
             }
+        else
+            {
+            // it is is possible that there is a dangling label at the end that is unreachable,
+            // and it will not have been eliminated at this point, so "cap" the op code stream
+            // with a Nop that will get removed by "dead code elimination"
+            code.add(new Nop());
+            }
+
+        return true;
         }
 
     @Override
