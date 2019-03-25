@@ -55,8 +55,6 @@ module TestFiles.xqiz.it
         // console.println("path[0..1]=" + path[0..1]);
         // console.println("path[2..0]=" + path[2..0]);
 
-        // TODO GG
-        // Suspicious assignment from: Ecstasy:fs.Path to: Ecstasy:String
         path = ROOT + path;
         console.println("path=" + path);
         }
