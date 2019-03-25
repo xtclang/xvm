@@ -357,16 +357,6 @@ const Path
                 }
             }
 
-        // TODO GG:
-        // 2019-03-24 14:22:20.861 Service "TestFiles.xqiz.it" (id=0), fiber 0: Unhandled exception at Frame: Appender.add(Ecstasy:collections.Sequence<Ecstasy:Appender.ElementType>); line=49
-        // java.lang.ClassCastException: org.xvm.runtime.template.xConst cannot be cast to org.xvm.runtime.template.IndexSupport
-        //	 at org.xvm.asm.op.I_Get.complete(I_Get.java:57)
-        //	 at org.xvm.asm.OpIndex.processArgs(OpIndex.java:140)
-        //	 at org.xvm.asm.OpIndex.process(OpIndex.java:125)
-        //	 at org.xvm.runtime.ServiceContext.execute(ServiceContext.java:245)
-        //
-        // appender.add(name);
-
-        name.appendTo(appender);
+        appender.add(name);
         }
     }
