@@ -20,7 +20,7 @@ public class FunctionTypeExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public FunctionTypeExpression(Token function, List<TypeExpression> returnValues,
+    public FunctionTypeExpression(Token function, List<Parameter> returnValues,
             List<TypeExpression> params, long lEndPos)
         {
         this.function     = function;
@@ -32,7 +32,7 @@ public class FunctionTypeExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
-    public List<TypeExpression> getReturnValues()
+    public List<Parameter> getReturnValues()
         {
         return returnValues;
         }
@@ -69,7 +69,7 @@ public class FunctionTypeExpression
         ConstantPool pool = pool();
         return pool.ensureClassTypeConstant(pool.clzFunction(), null,
                 toTupleType(toTypeConstantArray(paramTypes)),
-                toTupleType(toTypeConstantArray(returnValues)));
+                toTupleType(toParamTypeConstantArray(returnValues)));
         }
 
     private TypeConstant toTupleType(TypeConstant[] aconstTypes)
@@ -85,6 +85,17 @@ public class FunctionTypeExpression
         for (int i = 0; i < c; ++i)
             {
             aconst[i] = list.get(i).ensureTypeConstant();
+            }
+        return aconst;
+        }
+
+    private static TypeConstant[] toParamTypeConstantArray(List<Parameter> list)
+        {
+        int            c      = list.size();
+        TypeConstant[] aconst = new TypeConstant[c];
+        for (int i = 0; i < c; ++i)
+            {
+            aconst[i] = list.get(i).getType().ensureTypeConstant();
             }
         return aconst;
         }
@@ -110,7 +121,7 @@ public class FunctionTypeExpression
         else
             {
             boolean first = true;
-            for (TypeExpression type : returnValues)
+            for (Parameter param : returnValues)
                 {
                 if (first)
                     {
@@ -118,9 +129,9 @@ public class FunctionTypeExpression
                     }
                 else
                     {
-                    sb.append('.');
+                    sb.append(", ");
                     }
-                sb.append(type);
+                sb.append(param);
                 }
             }
 
@@ -155,7 +166,7 @@ public class FunctionTypeExpression
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token                function;
-    protected List<TypeExpression> returnValues;
+    protected List<Parameter>      returnValues;
     protected List<TypeExpression> paramTypes;
     protected long                 lEndPos;
 

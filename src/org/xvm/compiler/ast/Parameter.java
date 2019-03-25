@@ -14,6 +14,11 @@ public class Parameter
     {
     // ----- constructors --------------------------------------------------------------------------
 
+    public Parameter(TypeExpression type)
+        {
+        this (type, null);
+        }
+
     public Parameter(TypeExpression type, Token name)
         {
         this (type, name, null);
@@ -36,7 +41,7 @@ public class Parameter
 
     public String getName()
         {
-        return name.getValueText();
+        return name == null ? null : name.getValueText();
         }
 
     public Token getNameToken()
@@ -53,7 +58,11 @@ public class Parameter
     @Override
     public long getEndPosition()
         {
-        return value == null ? name.getEndPosition() : value.getEndPosition();
+        return value == null
+                ? name == null
+                        ? type.getEndPosition()
+                        : name.getEndPosition()
+                : value.getEndPosition();
         }
 
     @Override
@@ -69,9 +78,13 @@ public class Parameter
     public String toString()
         {
         StringBuilder sb = new StringBuilder();
-        sb.append(type)
-          .append(' ')
-          .append(name.getValue());
+        sb.append(type);
+
+        if (name != null)
+            {
+            sb.append(' ')
+              .append(name.getValue());
+            }
 
         if (value != null)
             {
@@ -84,6 +97,7 @@ public class Parameter
 
     public String toTypeParamString()
         {
+        assert name != null;
         String s = String.valueOf(name.getValue());
         return type == null ? s : (s + " extends " + type);
         }

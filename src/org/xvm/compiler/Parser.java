@@ -795,199 +795,15 @@ public class Parser
 
                 return parseTypeDefStatement(exprCondition, tokAccess);
 
-            case L_PAREN:
-                {
-                // it's a property or a method, but the property type is parenthesized (odd!) or
-                // the method return types are parenthesized (multi-return), which means we have to
-                // either find a list of types inside the parenthesis, or we have to go
-                // past the name and find a '<' or '(' to know it's a method. additionally, if
-                // we're inside a method, it could be a multi-assignment (tuple result), a
-                // variable declaration starting with a parenthesized type (odd!), or just an
-                // expression. start by assuming it's just a list of expressions (we can always
-                // change them into types later), and switch to a statement mode the first time
-                // that we find something that could be a type declaration (i.e. some instance of
-                // "expression expression" instead of "expression ,")
-                List<TypeExpression> returns = null;
-
-                if (fInMethod && modifiers == null && annotations == null)
-                    {
-                    Mark             mark  = mark();
-                    List<Expression> exprs = new ArrayList<>();
-                    List<AstNode>    LVals = null;
-
-                    // eliminate the possibility of a multi-assignment first, because it is the most
-                    // insanely complicated possibility
-                    Token start = expect(Id.L_PAREN);
-                    ParseList: while (true)
-                        {
-                        boolean    fVarDecl = peek().getId() == Id.VAR || peek().getId() == Id.VAL;
-                        Expression expr     = fVarDecl
-                                ? new VariableTypeExpression(current())
-                                : parseExpression();
-                        exprs.add(expr);
-
-                        if (fVarDecl || peek().getId() != Id.COMMA && peek().getId() != Id.R_PAREN)
-                            {
-                            // so there appears to be a second expression to parse, which indicates
-                            // that the first one had to be a type
-                            if (LVals == null)
-                                {
-                                // build a statements list to match the expressions list (except for
-                                // the last expression)
-                                LVals = new ArrayList<>();
-                                for (int i = 0, c = exprs.size() - 1; i < c; ++i)
-                                    {
-                                    LVals.add(exprs.get(i));
-                                    }
-                                }
-
-                            // create a statement that represents a variable declaration
-                            LVals.add(new VariableDeclarationStatement(expr.toTypeExpression(), expect(Id.IDENTIFIER), false));
-                            }
-                        else
-                            {
-                            // this one was just an expression, but previous ones were more than
-                            // that (i.e. at least one created a statement), so we need to keep the
-                            // list of statements in sync with the list of expressions (these will
-                            // eventually all be used as "l-values" for an assignment)
-                            if (LVals != null)
-                                {
-                                LVals.add(expr);
-                                }
-                            }
-
-                        // check if we're all done with the list
-                        if (match(Id.R_PAREN) != null)
-                            {
-                            break ParseList;
-                            }
-
-                        expect(Id.COMMA);
-                        }
-
-                    // peek ahead to see if this is an multi-assignment that we didn't see coming
-                    if (peek().getId() == Id.ASN && LVals == null)
-                        {
-                        // even though there were no new variable declarations, it does appear to
-                        // be a multi-declaration/assignment
-                        LVals = new ArrayList<>(exprs);
-                        }
-
-                    // at this point, if there are statements, then it has to be a
-                    // multi-declaration/assignment
-                    if (LVals != null)
-                        {
-                        if (LVals.size() <= 1)
-                            {
-                            log(Severity.ERROR, NOT_MULTI_ASN, start.getStartPosition(), peek().getEndPosition());
-                            throw new CompilerException("multi assignment has only " + LVals.size() + " l-values");
-                            }
-
-                        Token      op    = expect(Id.ASN);
-                        Expression value = parseExpression();
-                        expect(Id.SEMICOLON);
-                        return new AssignmentStatement(new MultipleLValueStatement(LVals), op, value);
-                        }
-
-                    // at this point, all we encountered was a list of expressions inside of
-                    // parenthesis:
-                    // - if there were multiple expressions, then it has to be either a method
-                    //   declaration or an expression statement (for example, a tuple literal)
-                    // - if there was only one expression, then it could be an expression statement,
-                    //   a type expression for a property or variable declaration (or even a method
-                    //   declaration); regardless, it has to be re-parsed as a single exception from
-                    //   the beginning, because there must have been a reason to have the
-                    //   parenthesis there in the first place
-                    if (exprs.size() == 1)
-                        {
-                        restore(mark);
-                        exprs.set(0, parseExpression());
-                        }
-
-                    // the method/property/variable declaration statement will have a "name" next;
-                    // otherwise, we were wrong, and this was just an expression statement
-                    if (peek().getId() == Id.IDENTIFIER)
-                        {
-                        // the expressions should have been parsed as types
-                        returns = new ArrayList<>();
-                        for (int i = 0, c = exprs.size(); i < c; ++i)
-                            {
-                            returns.add(exprs.get(i).toTypeExpression());
-                            }
-                        }
-                    else
-                        {
-                        // the entire thing should have been parsed as an expression statement
-                        Expression expr;
-                        if (exprs.size() == 1)
-                            {
-                            expr = exprs.get(0);
-                            }
-                        else
-                            {
-                            restore(mark);
-                            expr = parseExpression();
-                            }
-                        expect(Id.SEMICOLON);
-                        return new ExpressionStatement(expr);
-                        }
-                    }
-
-                // there are two possible paths: parseTypeExpression on the whole thing (because
-                // it's the type of a property) or call parseTypeExpression on each item in the
-                // parenthesized list (because it's the return types from a method)
-
-                // assume it's a method
-                if (returns == null || returns.size() > 0)
-                    {
-                    if (returns == null)
-                        {
-                        // look for multiple return types
-                        try (SafeLookAhead attempt = new SafeLookAhead())
-                            {
-                            returns = parseReturnList();
-                            if (attempt.isClean() && returns != null && returns.size() > 1)
-                                {
-                                attempt.keepResults();
-                                }
-                            else
-                                {
-                                // we struck out
-                                returns = null;
-                                }
-                            }
-                        catch (CompilerException e) {}
-                        }
-
-                    if (returns != null)
-                        {
-                        return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
-                                modifiers, annotations, null, null, returns, expect(Id.IDENTIFIER));
-                        }
-                    }
-
-                // if it wasn't a method, re-parse as a property
-                assert returns == null || returns.size() == 1;
-                TypeExpression type = returns == null ? parseTypeExpression() : returns.get(0);
-                Token          name = expect(Id.IDENTIFIER);
-
-                // if we're in a method and there is no modifier (i.e. static), then this is a
-                // local variable declaration
-                if (fInMethod && modifiers == null)
-                    {
-                    return parseVariableDeclarationAfterName(annotations, type, name);
-                    }
-
-                return parsePropertyDeclarationFinish(lStartPos, exprCondition, doc, modifiers, annotations, type, name);
-                }
-
             case COMP_LT:
+            case CONDITIONAL:
+            case VOID:
                 {
                 // it's definitely a method or a function
-                List<Parameter>      typeVars    = parseTypeParameterList(true);
-                Token                conditional = match(Id.CONDITIONAL);
-                List<TypeExpression> returns     = parseReturnList();
-                Token                name        = expect(Id.IDENTIFIER);
+                List<Parameter> typeVars    = peek().getId() == Id.COMP_LT ? parseTypeParameterList(true) : null;
+                Token           conditional = match(Id.CONDITIONAL);
+                List<Parameter> returns     = parseReturnList();
+                Token           name        = expect(Id.IDENTIFIER);
                 return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
                         modifiers, annotations, typeVars, conditional, returns, name);
                 }
@@ -1017,22 +833,119 @@ public class Parser
                     expect(Id.SEMICOLON);
                     return stmtAsn;
                     }
-
-            case CONDITIONAL:
-            case VOID:
-            default:
-                {
-                // method may have a "conditional" return value
-                Token conditional = match(Id.CONDITIONAL);
-
-                if (match(Id.VOID) != null)
+                else
                     {
-                    return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc, modifiers,
-                            annotations, null, conditional, Collections.emptyList(), expect(Id.IDENTIFIER));
+                    // attempting to parse a type expression should log an error and throw
+                    parseTypeExpression();
+                    throw new CompilerException("var or val keyword outside of method");
                     }
 
+            case L_PAREN:
+                {
+                // it's a property or a method, but the property type is parenthesized (odd!) or
+                // the method return types (with optional names) are parenthesized (multi-return),
+                // which means that to know it's a method, we have to find one of:
+                //  - a list of types inside the parenthesis;
+                //  - a type followed by a name inside the parenthesis; or
+                //  - a '<' or '(' after the name.
+                //
+                // additionally, if we're inside a method, it could be a multi-assignment (tuple
+                // result), a variable declaration starting with a parenthesized type (odd!), or
+                // just an expression.
+
+                // start by assuming it's a parenthesized list of types and/or type/name combos
+                Mark             mark      = mark();
+                List<Expression> listExpr  = new ArrayList<>();
+                List<Token>      listName  = new ArrayList<>();
+                boolean          fAnyNames = false;
+
+                Token start = expect(Id.L_PAREN);
+                do
+                    {
+                    listExpr.add(fInMethod && peek().getId() == Id.VAR || peek().getId() == Id.VAL
+                            ? new VariableTypeExpression(current()) : parseExpression());
+                    Token tokName = match(Id.IDENTIFIER);
+                    fAnyNames |= tokName != null;
+                    listName.add(tokName);
+                    }
+                while (match(Id.COMMA) != null);
+
+                // if the next thing is not the closing parenthesis, then we _might_ be on the
+                // right path
+                if (match(Id.R_PAREN) != null)
+                    {
+                    // if the next token is an assignment operator, then this is a multi
+                    // declaration/assignment
+                    Token tokAssign;
+                    if (fInMethod && modifiers == null && (tokAssign = match(Id.ASN)) != null)
+                        {
+                        // compile as multiple assignment (and possible variable declarations)
+                        int cLVals = listExpr.size();
+                        if (cLVals <= 1)
+                            {
+                            log(Severity.ERROR, NOT_MULTI_ASN, start.getStartPosition(), peek().getEndPosition());
+                            throw new CompilerException("multi assignment has only " + cLVals + " l-values");
+                            }
+
+                        Expression value = parseExpression();
+                        expect(Id.SEMICOLON);
+
+                        // build a list of LValues
+                        List<AstNode> listLVals = new ArrayList<>(cLVals);
+                        for (int i = 0; i < cLVals; ++i)
+                            {
+                            Expression expr    = listExpr.get(i);
+                            Token      tokName = listName.get(i);
+                            if (tokName == null)
+                                {
+                                if (expr.isLValueSyntax())
+                                    {
+                                    listLVals.add(expr);
+                                    }
+                                else
+                                    {
+                                    // TODO log error
+                                    throw new CompilerException("not LValue: " + expr);
+                                    }
+                                }
+                            else
+                                {
+                                listLVals.add(new VariableDeclarationStatement(
+                                        expr.toTypeExpression(), tokName, false));
+                                }
+                            }
+
+                        return new AssignmentStatement(new MultipleLValueStatement(listLVals), tokAssign, value);
+                        }
+
+                    // if there were any names, then this must be a method declaration; if there
+                    // were multiple expressions, then this must be a method declaration; if there
+                    // were no names, and only one expression, then it could still be a method
+                    // declaration (but that can be handled more easily by dropping through to the
+                    // default handling)
+                    if (fAnyNames || listExpr.size() > 1)
+                        {
+                        int cReturns = listExpr.size();
+                        List<Parameter> returns = new ArrayList<>(cReturns);
+                        for (int i = 0; i < cReturns; ++i)
+                            {
+                            Expression expr    = listExpr.get(i);
+                            Token      tokName = listName.get(i);
+                            returns.add(new Parameter(expr.toTypeExpression(), tokName));
+                            }
+                        return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
+                                modifiers, annotations, null, null, returns, expect(Id.IDENTIFIER));
+                        }
+                    }
+
+                restore(mark);
+                }
+            // fall through
+
+            default:
+                {
                 TypeExpression type;
-                if (fInMethod && modifiers == null && annotations == null && conditional == null)
+                if (fInMethod && modifiers == null && annotations == null)
                     {
                     Expression expr = parseExpression();
 
@@ -1051,12 +964,12 @@ public class Parser
 
                 // it's a constant, property, or method
                 Token name = expect(Id.IDENTIFIER);
-                if (conditional != null || peek().getId() == Id.COMP_LT || peek().getId() == Id.L_PAREN)
+                if (peek().getId() == Id.COMP_LT || peek().getId() == Id.L_PAREN)
                     {
                     // '<' indicates redundant return type list
                     // '(' indicates parameters
                     return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc, modifiers,
-                            annotations, null, conditional, Collections.singletonList(type), name);
+                            annotations, null, null, Collections.singletonList(new Parameter(type)), name);
                     }
                 else
                     {
@@ -1165,7 +1078,7 @@ public class Parser
      */
     MethodDeclarationStatement parseMethodDeclarationAfterName(long lStartPos,
             Expression exprCondition, Token doc, List<Token> modifiers, List<Annotation> annotations,
-            List<Parameter> typeVars, Token conditional, List<TypeExpression> returns, Token name)
+            List<Parameter> typeVars, Token conditional, List<Parameter> returns, Token name)
         {
         List<TypeExpression> redundantReturns = parseTypeParameterTypeList(false);
         List<Parameter>      params           = parseParameterList(true);
@@ -4112,7 +4025,7 @@ public class Parser
         Token function = expect(Id.FUNCTION);
 
         // return values
-        List<TypeExpression> listReturn = parseReturnList();
+        List<Parameter> listReturn = parseReturnList();
 
         // see if the parameters precede the name
         List<TypeExpression> listParam = parseParameterTypeList(false);
@@ -4735,29 +4648,38 @@ public class Parser
      * ReturnList
      *     "void"
      *     SingleReturnList
-     *     MultiReturnList
+     *     "(" MultiReturnList ")"
      *
      * SingleReturnList
      *     TypeExpression
      *
      * MultiReturnList
-     *     "(" TypeExpressionList ")"
+     *     MultiReturn
+     *     MultiReturnList "," MultiReturn
+     *
+     * MultiReturn
+     *     TypeExpression Name-opt
      * </pre></code>
      */
-    List<TypeExpression> parseReturnList()
+    List<Parameter> parseReturnList()
         {
-        List<TypeExpression> listReturn;
+        List<Parameter> listReturn;
         if (match(Id.VOID) != null)
             {
             listReturn = Collections.EMPTY_LIST;
             }
         else if (match(Id.L_PAREN) == null)
             {
-            listReturn = Collections.singletonList(parseTypeExpression());
+            listReturn = Collections.singletonList(new Parameter(parseTypeExpression()));
             }
         else
             {
-            listReturn = parseTypeExpressionList();
+            listReturn = new ArrayList<>();
+            do
+                {
+                listReturn.add(new Parameter(parseTypeExpression(), match(Id.IDENTIFIER)));
+                }
+            while (match(Id.COMMA) != null);
             expect(Id.R_PAREN);
             }
         return listReturn;
