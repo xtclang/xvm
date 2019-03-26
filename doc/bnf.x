@@ -169,24 +169,8 @@ Versions
     Version
     Versions, Version
 
-# note: the StringLiteral must contain a VersionString
 Version
-    "v:" NoWhitespace StringLiteral
-
-VersionString
-    VersionFinish
-    VersionString . VersionFinish
-
-VersionFinish:
-    NonGAPrefix-opt DigitsNoUnderscores
-    NonGAPrefix DigitsNoUnderscores-opt
-
-NonGAPrefix:
-    "dev"
-    "ci"
-    "alpha"
-    "beta"
-    "rc"
+    VersionLiteral
 
 # note: EnumBody is only valid (and is not actually optional) for the "enum" category, but that
 # check can be deferred to a syntactic or semantic analysis phase
@@ -448,10 +432,12 @@ ElseStatement
     "else" StatementBlock
 
 ImportStatement
-    "import" QualifiedName ImportAlias-opt ";"
+    "import" QualifiedName ImportFinish
 
-ImportAlias
-    "as" Name
+ImportFinish
+    ";"
+    "as" Name ";"
+    NoWhitespace ".*" ";"
 
 ReturnStatement
     "return" ReturnValue-opt ";"
@@ -570,7 +556,6 @@ TypeDefStatement
 #   .new            postfix object creation
 #   .as             postfix type assertion
 #   .is             postfix type comparison
-#   .instanceof     postfix type comparison
 #
 #   ++              pre-increment             2     right to left
 #   --              pre-decrement
@@ -581,37 +566,38 @@ TypeDefStatement
 #   &               reference-of
 #   new             object creation
 #
-#   *               multiplicative            3     left to right
+#   ?:              conditional elvis         3     left to right
+#
+#   *               multiplicative            4     left to right
 #   /
 #   %
 #   /%
 #
-#   +               additive                  4     left to right
+#   +               additive                  5     left to right
 #   -
 #
-#   << >>           shift                     5     left to right
+#   << >>           bitwise                   6     left to right
 #   >>>
+#   &
+#   ^
+#   |
 #
-#   ..              range/interval            6     left to right
+#   ..              range/interval            7     left to right
 #
-#   <  <=           relational                7     left to right
+#   <  <=           relational                8     left to right
 #   >  >=
-#   <=>             order
+#   <=>             order ("star-trek")
 #   as              type assertion
 #   is              type comparison
-#   instanceof      type comparison
 #
-#   ==              equality                  8     left to right
+#   ==              equality                  9     left to right
 #   !=
 #
-#   &               bitwise AND               9     left to right
-#   ^               bitwise XOR              10     left to right
-#   |               bitwise OR               11     left to right
-#   &&              conditional AND          12     left to right
-#   ||              conditional OR           13     left to right
-#   ?:              conditional elvis        14     right to left       // TODO move this up! (and is it right to left or left to right?)
-#   ? :             conditional ternary      15     right to left
-#   :               conditional ELSE         16     right to left
+#   &&              conditional AND          10     left to right
+#   ^^              conditional XOR          11     left to right
+#   ||              conditional OR           12     left to right
+#   ? :             conditional ternary      13     right to left
+#   :               conditional ELSE         14     right to left
 
 Expression
     TernaryExpression
@@ -803,28 +789,44 @@ TodoFinish
     NoWhitespace "(" Expression ")"
 
 Literal
-    IntLiteral
-    FPDecimalLiteral
-    FPBinaryLiteral
-    CharLiteral
+    IntLiteral                  # defined in language spec
+    FPDecimalLiteral            # defined in language spec
+    FPBinaryLiteral             # defined in language spec
+    CharLiteral                 # defined in language spec
     StringLiteral
     BinaryLiteral
     TupleLiteral
     ListLiteral
     MapLiteral
     VersionLiteral
-    CustomLiteral
-    # TODO need an external (file) literal
+    DateLiteral
+    TimeLiteral
+    DateTimeLiteral
+    TimeZoneLiteral
+    DurationLiteral
+    FileLiteral
 
-# TODO unformatted text: $"text"
-# TODO type literal from text: T:$"text" / T:"text"
 StringLiteral
-    "$"-opt "\"" CharacterString-opt "\""
-    "$"-opt FreeformLiteral
+    "$"-opt NoWhitespace '"' CharacterString-opt '"'
+    "$"-opt NoWhitespace FreeformLiteral
+
+FreeformLiteral
+    FreeformLine
+    FreeformLines FreeformLine
+
+FreeformLine
+    Whitespace-opt "|" FreeformChars LineTerminator
+
+FreeformChars
+    FreeformChar
+    FreeformChars FreeformChar
+
+FreeformChar
+    InputCharacter except LineTerminator
 
 # all BinaryLiteral contents must be whitespace or nibbles
 BinaryLiteral
-    "Binary:{" AcceptableBinaryContent "}"
+    "Byte[]:" AcceptableBinaryContent
 
 AcceptableBinaryContent
     StringLiteral
@@ -838,18 +840,17 @@ Nibbles
 Nibble: one of ...
     "0" "1" "2" "3" "4" "5" "6" "7" "8" "9" "A" "a" "B" "b" "C" "c" "D" "d" "E" "e" "F" "f"
 
-# TODO replace "{}" with "[]" in literals?
 TupleLiteral
-    "(" ExpressionList "," Expression ")"
-    "Tuple" NoWhitespace TypeParameterTypeList-opt NoWhitespace ":(" ExpressionList-opt ")"
-    "Tuple" NoWhitespace TypeParameterTypeList-opt NoWhitespace ":{" ExpressionList-opt "}"
+    "(" ExpressionList "," Expression ")"                       # compile/runtime type is Tuple
+    TypeExpression NoWhitespace ":(" ExpressionList-opt ")"     # type must be a Tuple
 
-ListLiteral
-    "[" ExpressionList-opt "]"
-    "List" NoWhitespace TypeParameterTypeList-opt NoWhitespace ":{" ExpressionList-opt "}"
+CollectionLiteral
+    "[" ExpressionList-opt "]"                                  # compile/runtime type is Array
+    TypeExpression ":[" ExpressionList-opt "]"                  # type must be a collection
 
 MapLiteral
-    "Map" NoWhitespace TypeParameterTypeList-opt NoWhitespace ":{" Entries-opt "}"
+    "[" Entries-opt "]"                                         # compile/runtime type is Map
+    TypeExpression ":[" Entries-opt "]"                         # type must be a Map or Entry
 
 Entries
     Entry
@@ -858,135 +859,122 @@ Entries
 Entry
     Expression "=" Expression
 
-# TODO version literal from text: Version:"2.0" / v:"2.0"
+# note: the StringLiteral must contain a VersionString
 VersionLiteral
-    "v" ":{" Version "}"
-    "Version" ":{" Version "}"
+    "v:" NoWhitespace StringLiteral
 
-CustomLiteral
-    TypeExpression NoWhitespace ":{" Expression "}"
+VersionString
+    NonGASuffix
+    VersionNumbers VersionFinish-opt
 
+VersionNumbers
+    DigitsNoUnderscores
+    VersionNumbers "." DigitsNoUnderscores
 
-#   ╔═════════════════════╗
-#   ║This could be any    ║
-#   ║freeform text that   ║
-#   ║could be inside of an║
-#   ║Ecstasy source file  ║
-#   ╚═════════════════════╝
-#
-#        U+2550
-# U+2554 ╔═════╗ U+2557
-# U+2551 ║     ║ U+2551
-# U+255A ╚═════╝ U+255D
-#        U+2550
-#
-#
-#           U+2500
-# U+256D ╭─────╮ U+256E
-# U+2502 │     │ U+2502
-# U+2570 ╰─────╯ U+256F
-#           U+2500
-#
-FreeformLiteral
-    FreeformTop FreeformLines FreeformBottom
+VersionFinish:
+     "." NonGASuffix
 
-FreeformTop
-    Whitespace-opt FreeformUpperLeft NoWhitespace FreeformHorizontals NoWhitespace FreeformUpperRight Whitespace-opt LineTerminator
+NonGASuffix
+      NonGAPrefix DigitsNoUnderscores-opt
 
-FreeformLines
-    FreeformLine
-    FreeformLines FreeformLine
+NonGAPrefix:
+    "dev"           # developer build (default compiler stamp)
+    "ci"            # continuous integration build (automated build, automated test)
+    "qc"            # build selected for internal Quality Control
+    "alpha"         # build selected for external alpha test (pre-release)
+    "beta"          # build selected for external beta test (pre-release)
+    "rc"            # build selected as a release candidate (pre-release; GA pending)
 
-FreeformLine
-    Whitespace-opt FreeformVertical FreeformChars FreeformLineEnd
+DateLiteral
+    "Date:" Digit Digit Digit Digit "-" Digit Digit "-" Digit Digit         # NoWhitespace
 
-FreeformLineEnd
-    FreeformVertical Whitespace-opt LineTerminator
-    "\" NoWhitespace LineTerminator
+TimeLiteral
+    "Time:" Digit Digit ":" Digit Digit Seconds-opt                         # NoWhitespace
 
-FreeformChars
-    FreeformChar
-    FreeformChars FreeformChars
+Seconds
+     ":" Digit Digit SecondsFraction-opt                                    # NoWhitespace
 
-FreeformChar
-    InputCharacter except FreeFormReserved or LineTerminator
+SecondsFraction
+     "." Digits                                                             # NoWhitespace
 
-FreeformBottom
-    Whitespace-opt FreeformLowerLeft NoWhitespace FreeformHorizontals NoWhitespace FreeformLowerRight
+DateTimeLiteral
+    "DateTime:" Digit Digit Digit Digit "-" Digit Digit "-" Digit Digit "T" Digit Digit ":" Digit Digit Seconds-opt TimeZone-opt
+                                                                            # NoWhitespace
+TimeZoneLiteral
+    "TimeZone:" TimeZone                                                    # NoWhitespace
 
-FreeFormReserved
-    FreeformUpperLeft
-    FreeformUpperRight
-    FreeformLowerLeft
-    FreeformLowerRight
-    FreeformHorizontal
-    FreeformVertical
+TimeZone
+    "Z"
+    "+" Digit Digit MinutesOffset-opt                                       # NoWhitespace
+    "-" Digit Digit MinutesOffset-opt                                       # NoWhitespace
 
-FreeformUpperLeft
-    U+250C  ┌
-    U+250D  ┍
-    U+250E  ┎
-    U+250F  ┏
-    U+2552  ╒
-    U+2553  ╓
-    U+2554  ╔
-    U+256D  ╭
+MinutesOffset
+    ":" Digit Digit                                                         # NoWhitespace
 
-FreeformUpperRight
-    U+2510  ┐
-    U+2511  ┑
-    U+2512  ┒
-    U+2513  ┓
-    U+2555  ╕
-    U+2556  ╖
-    U+2557  ╗
-    U+256E  ╮
+# using ISO 8601 "PnYnMnDTnHnMnS" format
+DurationLiteral
+    "Duration:P" YearsDuration-opt MonthsDuration-opt DaysDuration-opt TimeDuration-opt
+                                                                            # NoWhitespace
+TimeDuration
+     "T" HoursDuration-opt MinutesDuration-opt SecondsDuration-opt          # NoWhitespace
 
-FreeformLowerLeft
-    U+2514  └
-    U+2515  ┕
-    U+2516  ┖
-    U+2517  ┗
-    U+2558  ╘
-    U+2559  ╙
-    U+255A  ╚
-    U+2570  ╰
+YearsDuration
+    DigitsNoUnderscores "Y"                                                 # NoWhitespace
 
-FreeformLowerRight
-    U+2518  ┘
-    U+2519  ┙
-    U+251A  ┚
-    U+251B  ┛
-    U+255B  ╛
-    U+255C  ╜
-    U+255D  ╝
-    U+256F  ╯
+MonthsDuration
+    DigitsNoUnderscores "M"                                                 # NoWhitespace
 
-FreeformHorizontals
-    FreeformHorizontal
-    FreeformHorizontals NoWhitespace FreeformHorizontal
+DaysDuration
+    DigitsNoUnderscores "D"                                                 # NoWhitespace
 
-FreeformHorizontal
-    U+2500  ─
-    U+2501  ━
-    U+2504  ┄
-    U+2505  ┅
-    U+2508  ┈
-    U+2509  ┉
-    U+254C  ╌
-    U+254D  ╍
-    U+2550  ═
+HoursDuration
+    DigitsNoUnderscores "H"                                                 # NoWhitespace
 
-FreeformVertical
-    U+2502  │
-    U+2503  ┃
-    U+2506  ┆
-    U+2507  ┇
-    U+250A  ┊
-    U+250B  ┋
-    U+254E  ╎
-    U+254F  ╏
-    U+2551  ║
+MinutesDuration
+    DigitsNoUnderscores "M"                                                 # NoWhitespace
+
+SecondsDuration
+    DigitsNoUnderscores "S"                                                 # NoWhitespace
+
+# FileLiterals are not intended to support all possible file names -- just the ones likely to
+# actually occur in the real world; as such, names in a FileLiteral are not permitted to end
+# with a dot, to contain 2 dots in a row, etc.
+FileLiteral
+    "$"-opt NoWhitespace Path
+
+Path
+    "/" NoWhitespace PathRemainder
+    "./" NoWhitespace PathRemainder
+    "../" NoWhitespace PathRemainder
+
+PathRemainder
+    PathName
+    PathElements NoWhitespace "/" NoWhitespace PathName
+
+PathElements
+    PathElement
+    PathElements NoWhitespace "/" NoWhitespace PathElement
+
+PathElement
+    ".."
+    PathName
+
+PathName
+    "."-opt NoWhitespace PathNameParts      # allows UNIX-style hidden files, e.g. ".gitignore"
+
+PathNameParts
+    PathNamePart
+    PathNameParts NoWhitespace "." NoWhitespace PathNamePart
+
+PathNamePart
+    IdentifierTrails
+
+IdentifierTrails
+    IdentifierTrail
+    IdentifierTrails IdentifierTrail
+
+IdentifierTrail
+    # defined by the Ecstasy spec as Unicdoe categories Lu Ll Lt Lm Lo Mn Mc Me Nd Nl No Sc plus U+005F
 
 #
 # types
