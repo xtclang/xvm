@@ -2327,7 +2327,8 @@ String s = |When she had a child, it had to be sent out to nurse. When he came h
          + | her lips, and the child knocked about the village.
            |He went after the labourers, drove away with clods of earth the ravens that were flying
          + | about. He ate blackberries along the hedges, minded the geese with a long switch, went
-         + | haymaking during ..."
+         + | haymaking during ...
+; // this has to go on a new line, otherwise it's part of the raw string
 
 
 // downsides of this approach:
