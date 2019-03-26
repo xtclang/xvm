@@ -844,6 +844,7 @@ public abstract class Constant
         ParameterizedType,
         TurtleType,
         VirtualChildType,
+        AnonymousClassType,
         PropertyClassType,
         UnionType,
         IntersectionType,

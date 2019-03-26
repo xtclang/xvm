@@ -723,7 +723,7 @@ public class InvocationExpression
                                 typeLeft = pool.ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE);
                                 }
                             PropertyConstant idProp   = (PropertyConstant) argMethod;
-                            PropertyInfo     infoProp = typeLeft.ensureTypeInfo().findProperty(idProp);
+                            PropertyInfo     infoProp = typeLeft.ensureTypeInfo(errs).findProperty(idProp);
 
                             typeFn = infoProp == null ? pool.typeObject() : infoProp.getType();
                             }

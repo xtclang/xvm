@@ -118,13 +118,14 @@ public class NewG_T
         {
         MethodStructure  constructor = getMethodStructure(frame);
         ClassComposition clzTarget   = frame.resolveClass(m_nTypeValue);
+        ObjectHandle     hParent     = clzTarget.isInstanceChild() ? frame.getThis() : null;
 
         if (frame.isNextRegister(m_nRetValue))
             {
             frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
             }
 
-        return clzTarget.getTemplate().construct(frame, constructor, clzTarget, null,
+        return clzTarget.getTemplate().construct(frame, constructor, clzTarget, hParent,
             Utils.ensureSize(ahArg, constructor.getMaxVars()), m_nRetValue);
         }
 

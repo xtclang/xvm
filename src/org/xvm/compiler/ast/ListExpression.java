@@ -81,7 +81,7 @@ public class ListExpression
                 {
                 return null;
                 }
-            if (typeExplicit.getGenericParamType("ElementType") != null)
+            if (typeExplicit.resolveGenericType("ElementType") != null)
                 {
                 return typeExplicit;
                 }
@@ -117,7 +117,7 @@ public class ListExpression
             // matching the logic in "validate": if there is a required element type,
             // we'll force the expressions to convert to that type if necessary
             typeIn = pool.ensureParameterizedTypeConstant(pool.typeArray(),
-                        typeOut.getGenericParamType("ElementType"));
+                        typeOut.resolveGenericType("ElementType"));
             }
         return super.calcFit(ctx, typeIn, typeOut);
         }
@@ -138,7 +138,7 @@ public class ListExpression
             {
             // if there is a required element type, then we'll use that to force the expressions to
             // convert to that type if necessary
-            typeElement = typeRequired.getGenericParamType("ElementType");
+            typeElement = typeRequired.resolveGenericType("ElementType");
             if (typeElement != null)
                 {
                 typeActual = pool.ensureParameterizedTypeConstant(typeActual, typeElement);
@@ -163,7 +163,7 @@ public class ListExpression
                     }
                 typeActual = exprNewType.ensureTypeConstant().resolveAutoNarrowingBase(pool);
 
-                TypeConstant typeElementTemp = typeActual.getGenericParamType("ElementType");
+                TypeConstant typeElementTemp = typeActual.resolveGenericType("ElementType");
                 if (typeElementTemp == null)
                     {
                     if (typeElement != null)

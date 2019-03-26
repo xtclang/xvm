@@ -54,7 +54,7 @@ public class xInjectedRef
         ObjectHandle hValue = hInjected.getValue();
         if (hValue == null)
             {
-            TypeConstant typeEl = hInjected.getType().getGenericParamType("RefType");
+            TypeConstant typeEl = hInjected.getType().resolveGenericType("RefType");
 
             hValue = frame.f_context.f_container.getInjectable(hInjected.getName(), typeEl);
             if (hValue == null)

@@ -221,11 +221,11 @@ public class IntersectionTypeConstant
         }
 
     @Override
-    public TypeConstant getGenericParamType(String sName)
+    protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
         {
         // for Intersection types, both sides need to find it and we'll take the wider one
-        TypeConstant typeActual1 = m_constType1.getGenericParamType(sName);
-        TypeConstant typeActual2 = m_constType2.getGenericParamType(sName);
+        TypeConstant typeActual1 = m_constType1.getGenericParamType(sName, listParams);
+        TypeConstant typeActual2 = m_constType2.getGenericParamType(sName, listParams);
 
         if (typeActual1 == null || typeActual2 == null)
             {

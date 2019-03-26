@@ -2016,7 +2016,7 @@ public class Frame
         public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
             {
             TypeConstant typeRef = frame.getVarInfo(nTargetReg).getType();
-            return typeRef.getGenericParamType("RefType");
+            return typeRef.resolveGenericType("RefType");
             }
         };
     }

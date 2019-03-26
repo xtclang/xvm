@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.List;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.Component.ResolutionCollector;
@@ -199,9 +201,9 @@ public class PropertyClassTypeConstant
         }
 
     @Override
-    public TypeConstant getGenericParamType(String sName)
+    protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
         {
-        return getPropertyInfo().getBaseRefType().getGenericParamType(sName);
+        return getPropertyInfo().getBaseRefType().getGenericParamType(sName, listParams);
         }
 
 

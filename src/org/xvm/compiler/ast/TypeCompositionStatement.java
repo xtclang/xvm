@@ -142,6 +142,7 @@ public class TypeCompositionStatement
             List<Annotation>  annotations,
             Token             category,
             Token             name,
+            List<Parameter>   typeParams,
             List<Composition> compositions,
             List<Expression>  args,
             StatementBlock    body,
@@ -153,6 +154,7 @@ public class TypeCompositionStatement
         this.annotations  = annotations;
         this.category     = category;
         this.name         = name;
+        this.typeParams   = typeParams;
         this.compositions = compositions;
         this.args         = args;
         this.body         = body;

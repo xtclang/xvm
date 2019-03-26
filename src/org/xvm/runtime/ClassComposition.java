@@ -94,6 +94,14 @@ public class ClassComposition
         f_mapFields = f_clzInception.f_mapFields;
         }
 
+    /**
+     * @return true iff this class represents an instance inner class
+     */
+    public boolean isInstanceChild()
+        {
+        return f_template.f_struct.isInstanceChild();
+        }
+
     @Override
     public OpSupport getSupport()
         {

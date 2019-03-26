@@ -1056,21 +1056,11 @@ public class MethodStructure
                 IdentityConstant constValue = constSingleton.getValue();
 
                 ObjectHeap heap = ctxCurr.f_heapGlobal;
+                int        iResult;
                 switch (constValue.getFormat())
                     {
                     case Module:
-                        switch (xModule.INSTANCE.createConstHandle(frame, constValue))
-                            {
-                            case Op.R_NEXT:
-                                constSingleton.setHandle(frame.popStack());
-                                break;
-
-                            case Op.R_EXCEPTION:
-                                return Op.R_EXCEPTION;
-
-                            default:
-                                throw new IllegalStateException();
-                            }
+                        iResult = xModule.INSTANCE.createConstHandle(frame, constValue);
                         break;
 
                     case Package:
@@ -1089,7 +1079,6 @@ public class MethodStructure
                         ClassStructure clz = (ClassStructure) constClz.getComponent();
 
                         ClassTemplate template = heap.f_templates.getTemplate(constClz);
-                        int iResult;
 
                         Format format = template.f_struct.getFormat();
                         if (format == Format.ENUMVALUE || format == Format.ENUM)
@@ -1114,31 +1103,32 @@ public class MethodStructure
                                     template.getCanonicalClass(), null, Utils.OBJECTS_NONE, Op.A_STACK);
                                 }
                             }
-
-                        switch (iResult)
-                            {
-                            case Op.R_NEXT:
-                                constSingleton.setHandle(frame.popStack());
-                                continue; // next constant
-
-                            case Op.R_EXCEPTION:
-                                return Op.R_EXCEPTION;
-
-                            case Op.R_CALL:
-                                frame.m_frameNext.setContinuation(frameCaller ->
-                                    {
-                                    constSingleton.setHandle(frameCaller.popStack());
-                                    return ensureInitialized(frameCaller, frameNext);
-                                    });
-                                return Op.R_CALL;
-
-                            default:
-                                throw new IllegalStateException();
-                            }
+                        break;
                         }
 
                     default:
                         throw new IllegalStateException("unexpected defining constant: " + constValue);
+                    }
+
+                switch (iResult)
+                    {
+                    case Op.R_NEXT:
+                        constSingleton.setHandle(frame.popStack());
+                        break; // next constant
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    case Op.R_CALL:
+                        frame.m_frameNext.setContinuation(frameCaller ->
+                            {
+                            constSingleton.setHandle(frameCaller.popStack());
+                            return ensureInitialized(frameCaller, frameNext);
+                            });
+                        return Op.R_CALL;
+
+                    default:
+                        throw new IllegalStateException();
                     }
                 }
             }

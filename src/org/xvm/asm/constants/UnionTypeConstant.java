@@ -168,11 +168,11 @@ public class UnionTypeConstant
         }
 
     @Override
-    public TypeConstant getGenericParamType(String sName)
+    protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
         {
         // for Union types, either side needs to find it, but if both do, take the narrower one
-        TypeConstant typeActual1 = m_constType1.getGenericParamType(sName);
-        TypeConstant typeActual2 = m_constType2.getGenericParamType(sName);
+        TypeConstant typeActual1 = m_constType1.getGenericParamType(sName, listParams);
+        TypeConstant typeActual2 = m_constType2.getGenericParamType(sName, listParams);
 
         if (typeActual1 == null)
             {

@@ -3,6 +3,8 @@ package org.xvm.asm.constants;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.List;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -150,7 +152,7 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
-    public TypeConstant getGenericParamType(String sName)
+    protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
         {
         // since the formal type sequence is a Sequence of types (see above).
         // we need to report the "ElementType" formal type

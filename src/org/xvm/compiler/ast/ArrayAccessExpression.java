@@ -203,7 +203,7 @@ public class ArrayAccessExpression
                     pool.ensureParameterizedTypeConstant(pool.typeInterval(), pool.typeInt())).isFit())
                 {
                 // REVIEW this might not be quite right .. assemble the type and then find the result of the [..] and see if that isA(typeRequired)
-                TypeConstant typeElement = typeRequired.getGenericParamType("ElementType");
+                TypeConstant typeElement = typeRequired.resolveGenericType("ElementType");
                 return typeElement == null
                         ? TypeFit.Fit
                         : expr.testFit(ctx, pool.ensureParameterizedTypeConstant(
@@ -216,7 +216,7 @@ public class ArrayAccessExpression
             // figure out the index type
             TypeConstant typeIndex = typeArray == null
                     ? null
-                    : typeArray.getGenericParamType("IndexType");
+                    : typeArray.resolveGenericType("IndexType");
             if (typeIndex == null || !indexes.get(0).testFit(ctx, typeIndex).isFit())
                 {
                 typeIndex = indexes.get(0).getImplicitType(ctx);
@@ -252,7 +252,7 @@ public class ArrayAccessExpression
                                                     && exprRow.testFit(ctx, typeInterval).isFit())
                 {
                 // REVIEW same issue as array above
-                TypeConstant typeElement = typeRequired.getGenericParamType("ElementType");
+                TypeConstant typeElement = typeRequired.resolveGenericType("ElementType");
                 return typeElement == null
                         ? TypeFit.Fit
                         : expr.testFit(ctx, pool.ensureParameterizedTypeConstant(
@@ -301,7 +301,7 @@ public class ArrayAccessExpression
                         pool.ensureParameterizedTypeConstant(pool.typeInterval(), pool.typeInt())).isFit())
                     {
                     // REVIEW keep this in sync with testFit()
-                    typeElement = typeRequired.getGenericParamType("ElementType");
+                    typeElement = typeRequired.resolveGenericType("ElementType");
                     }
 
                 if (typeElement != null)
@@ -318,7 +318,7 @@ public class ArrayAccessExpression
             // figure out the index type
             TypeConstant typeIndex = typeArray == null
                     ? null
-                    : typeArray.getGenericParamType("IndexType");
+                    : typeArray.resolveGenericType("IndexType");
             if (typeIndex == null || !aexprIndexes[0].testFit(ctx, typeIndex).isFit())
                 {
                 typeIndex = aexprIndexes[0].getImplicitType(ctx);
@@ -370,7 +370,7 @@ public class ArrayAccessExpression
                         exprRow.testFit(ctx, typeIntInterval).isFit())
                         {
                         // REVIEW keep this in sync with testFit()
-                        typeElement = typeRequired.getGenericParamType("ElementType");
+                        typeElement = typeRequired.resolveGenericType("ElementType");
                         }
                     }
 

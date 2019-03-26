@@ -1690,7 +1690,7 @@ public class NameExpression
                 TypeConstant      typeLeft = null;
                 TypeConstant      type     = m_targetInfo == null
                         ? prop.getType()
-                        : m_targetInfo.typeTarget.ensureTypeInfo().findProperty(id).getType();
+                        : m_targetInfo.typeTarget.ensureTypeInfo(errs).findProperty(id).getType();
 
                 // resolve the property type
                 if (id.isTypeSequenceTypeParameter())
@@ -1721,7 +1721,7 @@ public class NameExpression
                         // the property may originate in a contribution
                         // (e.g. Range.x refers to Interval.upperBound)
                         PropertyInfo infoProp = clz.getFormalType().
-                                ensureTypeInfo().findProperty(id);
+                                ensureTypeInfo(errs).findProperty(id);
                         if (infoProp != null)
                             {
                             type = infoProp.getType();
@@ -1742,7 +1742,7 @@ public class NameExpression
                         {
                         typeLeft = pool.ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
                         }
-                    PropertyInfo infoProp = typeLeft.ensureTypeInfo().findProperty(id);
+                    PropertyInfo infoProp = typeLeft.ensureTypeInfo(errs).findProperty(id);
                     if (infoProp != null)
                         {
                         type = infoProp.getType();

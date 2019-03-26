@@ -6,9 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import java.util.function.Consumer;
@@ -27,31 +25,39 @@ import org.xvm.runtime.TemplateRegistry;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
 
-
 /**
- * A TypeConstant that represents an instance child of a class; for example:
- * <pre>
- * class Parent<ParentType>
- *     {
- *     class Child <ChildType>
- *         {
- *         }
- *     static void test()
- *         {
- *         Parent<String> p = new Parent();
- *         Child<Int>     c = p.new Child();
- *         ...
- *         }
- *     }
- * </pre>
+ * Consider the scenario from Map.x:
  *
- * The type of the variable "c" above is:
- *    ParameterizedTypeConstant(T1, Int),
- *      where T1 is VirtualChildTypeConstant(T2, "Child"),
- *      where T2 is ParameterizedTypeConstant(T3, String),
- *      where T3 is TerminalTypeConstant(Parent)
+ *    Class Map<KeyType, ValueType>
+ *        {
+ *        Iterator<KeyType> iterator()
+ *           {
+ *           return new Iterator()
+ *                {
+ *                Iterator<Entry> entryIterator = Map.this.entries.iterator();
+ *                ...
+ *                }
+ *           }
+ *        }
+ *
+ * During validation we create a synthetic (anonymous) TypeCompositionStatement
+ *
+ *  class Iterator:1<Iterator:1.KeyType>
+ *          implements Iterator<Iterator:1.KeyType>
+ *      {
+ *      ...
+ *      }
+ *
+ * and the compile time type of the returned Iterator is Iterator:1<Map.KeyType>.
+ *
+ * However, it's not enough to resolve the type of "entryIterator" at the run time, since
+ * the iterator's type has no knowledge of the parent's actual formal type values.
+ *
+ * The {@link AnonymousClassTypeConstant} represents a type assigned to that statement,
+ * carrying the "parent" type information as well - in the case of the example above it would be
+ * Map<KeyType, ValueType>.Iterator:1<Map.KeyType>.
  */
-public class VirtualChildTypeConstant
+public class AnonymousClassTypeConstant
         extends AbstractDependantTypeConstant
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -65,12 +71,12 @@ public class VirtualChildTypeConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public VirtualChildTypeConstant(ConstantPool pool, Format format, DataInput in)
+    public AnonymousClassTypeConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool, format, in);
 
-        m_iName = readIndex(in);
+        m_iAnon = readIndex(in);
         }
 
     /**
@@ -78,9 +84,9 @@ public class VirtualChildTypeConstant
      *
      * @param pool        the ConstantPool that will contain this Constant
      * @param typeParent  the parent's type
-     * @param sName       the child's name
+     * @param idAnon      the anonymous class id
      */
-    public VirtualChildTypeConstant(ConstantPool pool, TypeConstant typeParent, String sName)
+    public AnonymousClassTypeConstant(ConstantPool pool, TypeConstant typeParent, ClassConstant idAnon)
         {
         super(pool, typeParent);
 
@@ -90,34 +96,27 @@ public class VirtualChildTypeConstant
             {
             throw new IllegalArgumentException("parent's immutability, access or annotations cannot be specified");
             }
-        if (sName == null)
+        if (idAnon == null)
             {
-            throw new IllegalArgumentException("name is required");
+            throw new IllegalArgumentException("id is required");
             }
-        m_constName = pool.ensureStringConstant(sName);
+        m_idAnon = idAnon;
         }
 
     /**
-     * @return the child name of this {@link VirtualChildTypeConstant}
+     * @return the id of this {@link AnonymousClassTypeConstant}
      */
-    public String getChildName()
+    public ClassConstant getSignature()
         {
-        return m_constName.getValue();
+        return m_idAnon;
         }
 
     /**
-     * @return the child ClassStructure associated with this type
+     * @return the anonymous class ClassStructure associated with this type
      */
     public ClassStructure getChildStructure()
         {
-        ClassStructure parent = (ClassStructure)
-                m_typeParent.getSingleUnderlyingClass(true).getComponent();
-        ClassStructure child = parent.getVirtualChild(getChildName());
-        if (child == null)
-            {
-            throw new IllegalStateException();
-            }
-        return child;
+        return (ClassStructure) m_idAnon.getComponent();
         }
 
 
@@ -126,28 +125,14 @@ public class VirtualChildTypeConstant
     @Override
     public int getMaxParamsCount()
         {
-        return getChildStructure().getTypeParams().size();
+        // anonymous classes are never formal
+        return 0;
         }
 
     @Override
-    public boolean isVirtualChild()
+    public boolean isAnonymousClass()
         {
         return true;
-        }
-
-    @Override
-    public boolean isPhantom()
-        {
-        TypeConstant typeParent = m_typeParent;
-        if (typeParent.isVirtualChild() && typeParent.isPhantom())
-            {
-            // a child of a phantom is a phantom
-            return true;
-            }
-
-        ClassStructure parent = (ClassStructure)
-                typeParent.getSingleUnderlyingClass(true).getComponent();
-        return parent.getChild(getChildName()) == null;
         }
 
     @Override
@@ -159,13 +144,13 @@ public class VirtualChildTypeConstant
     @Override
     protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
-        return pool.ensureVirtualChildTypeConstant(type, m_constName.getValue());
+        return pool.ensureAnonymousClassTypeConstant(type, m_idAnon);
         }
 
     @Override
     public boolean isAutoNarrowing(boolean fAllowVirtChild)
         {
-        return fAllowVirtChild;
+        return false;
         }
 
     @Override
@@ -222,37 +207,12 @@ public class VirtualChildTypeConstant
     @Override
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams, TypeConstant typeTarget)
         {
-        TypeConstant typeOriginal = m_typeParent;
-        TypeConstant typeResolved = typeOriginal;
-
-        if (typeOriginal.isAutoNarrowing(false))
-            {
-            typeResolved = typeOriginal.resolveAutoNarrowing(pool, fRetainParams, typeTarget);
-            }
-        else if (typeTarget != null && typeTarget.isA(typeResolved))
-            {
-            // strip the immutability and access modifiers
-            while (typeTarget instanceof ImmutableTypeConstant ||
-                   typeTarget instanceof AccessTypeConstant)
-                {
-                typeTarget = typeTarget.getUnderlyingType();
-                }
-            typeResolved = typeTarget;
-            }
-        return typeOriginal == typeResolved
-                ? this
-                : cloneSingle(pool, typeResolved);
+        return this;
         }
 
     @Override
     public boolean isNarrowedFrom(TypeConstant typeSuper, TypeConstant typeCtx)
         {
-        if (typeSuper instanceof VirtualChildTypeConstant)
-            {
-            VirtualChildTypeConstant that = (VirtualChildTypeConstant) typeSuper;
-            return this.m_constName.equals(that.m_constName) &&
-                   this.m_typeParent.isNarrowedFrom(that.m_typeParent, typeCtx);
-            }
         return false;
         }
 
@@ -265,22 +225,18 @@ public class VirtualChildTypeConstant
     @Override
     public Category getCategory()
         {
-        ClassStructure clz = getChildStructure();
-        return clz.getFormat() == Component.Format.INTERFACE
-                ? Category.IFACE : Category.CLASS;
+        return Category.CLASS;
         }
 
     @Override
     public boolean isSingleUnderlyingClass(boolean fAllowInterface)
         {
-        return fAllowInterface || getExplicitClassFormat() != Component.Format.INTERFACE;
+        return true;
         }
 
     @Override
     public IdentityConstant getSingleUnderlyingClass(boolean fAllowInterface)
         {
-        assert isSingleUnderlyingClass(fAllowInterface);
-
         return getChildStructure().getIdentityConstant();
         }
 
@@ -326,11 +282,7 @@ public class VirtualChildTypeConstant
     protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessLeft,
                                                                List<TypeConstant> listLeft)
         {
-        ClassStructure clz = getChildStructure();
-
-        assert clz.getFormat() == Component.Format.INTERFACE;
-
-        return clz.isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
+        throw new IllegalStateException();
         }
 
     @Override
@@ -343,64 +295,12 @@ public class VirtualChildTypeConstant
     @Override
     public Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams)
         {
-        if (!listParams.isEmpty())
-            {
-            ClassStructure clz = getChildStructure();
-
-            Map<StringConstant, TypeConstant> mapFormal = clz.getTypeParams();
-
-            listParams = clz.normalizeParameters(ConstantPool.getCurrentPool(), listParams);
-
-            Iterator<TypeConstant> iterParams = listParams.iterator();
-            Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
-
-            while (iterParams.hasNext())
-                {
-                TypeConstant constParam = iterParams.next();
-                String       sFormal    = iterNames.next().getValue();
-
-                if (constParam.consumesFormalType(sTypeName, access)
-                        && clz.producesFormalType(sFormal, access, listParams)
-                    ||
-                    constParam.producesFormalType(sTypeName, access)
-                        && clz.consumesFormalType(sFormal, access, listParams))
-                    {
-                    return Usage.YES;
-                    }
-                }
-            }
         return Usage.NO;
         }
 
     @Override
     public Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
         {
-        if (!listParams.isEmpty())
-            {
-            ClassStructure clz = getChildStructure();
-
-            Map<StringConstant, TypeConstant> mapFormal = clz.getTypeParams();
-
-            listParams = clz.normalizeParameters(ConstantPool.getCurrentPool(), listParams);
-
-            Iterator<TypeConstant>   iterParams = listParams.iterator();
-            Iterator<StringConstant> iterNames  = mapFormal.keySet().iterator();
-
-            while (iterParams.hasNext())
-                {
-                TypeConstant constParam = iterParams.next();
-                String       sFormal    = iterNames.next().getValue();
-
-                if (constParam.producesFormalType(sTypeName, access)
-                        && clz.producesFormalType(sFormal, access, listParams)
-                    ||
-                    constParam.consumesFormalType(sTypeName, access)
-                        && clz.consumesFormalType(sFormal, access, listParams))
-                    {
-                    return Usage.YES;
-                    }
-                }
-            }
         return Usage.NO;
         }
 
@@ -419,7 +319,7 @@ public class VirtualChildTypeConstant
     @Override
     public Format getFormat()
         {
-        return Format.VirtualChildType;
+        return Format.AnonymousClassType;
         }
 
     @Override
@@ -427,7 +327,7 @@ public class VirtualChildTypeConstant
         {
         super.forEachUnderlying(visitor);
 
-        visitor.accept(m_constName);
+        visitor.accept(m_idAnon);
         }
 
     @Override
@@ -436,8 +336,9 @@ public class VirtualChildTypeConstant
         int n = super.compareDetails(obj);
         if (n == 0)
             {
-            VirtualChildTypeConstant that = (VirtualChildTypeConstant) obj;
-            return this.m_constName.compareTo(that.m_constName);
+            AnonymousClassTypeConstant that = (AnonymousClassTypeConstant) obj;
+
+            n = this.m_idAnon.compareTo(that.m_idAnon);
             }
         return n;
         }
@@ -445,7 +346,7 @@ public class VirtualChildTypeConstant
     @Override
     public String getValueString()
         {
-        return m_typeParent.getValueString() + '.' + m_constName.getValue();
+        return m_typeParent.getValueString() + '.' + m_idAnon.getValueString();
         }
 
 
@@ -457,7 +358,7 @@ public class VirtualChildTypeConstant
         {
         super.disassemble(in);
 
-        m_constName = (StringConstant) getConstantPool().getConstant(m_iName);
+        m_idAnon = (ClassConstant) getConstantPool().getConstant(m_iAnon);
         }
 
     @Override
@@ -465,7 +366,7 @@ public class VirtualChildTypeConstant
         {
         super.registerConstants(pool);
 
-        m_constName = (StringConstant) pool.register(m_constName);
+        m_idAnon = (ClassConstant) pool.register(m_idAnon);
         }
 
     @Override
@@ -474,7 +375,7 @@ public class VirtualChildTypeConstant
         {
         super.assemble(out);
 
-        writePackedLong(out, m_constName.getPosition());
+        writePackedLong(out, m_idAnon.getPosition());
         }
 
 
@@ -483,19 +384,19 @@ public class VirtualChildTypeConstant
     @Override
     public int hashCode()
         {
-        return m_typeParent.hashCode() + m_constName.hashCode();
+        return m_typeParent.hashCode() + m_idAnon.hashCode();
         }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * During disassembly, this holds the index of the StringConstant for the name.
+     * During disassembly, this holds the index of the anonymous ClassConstant.
      */
-    private transient int m_iName;
+    private transient int m_iAnon;
 
     /**
-     * The StringConstant representing this virtual child's name.
+     * The ClassConstant representing the containing method.
      */
-    protected StringConstant m_constName;
+    protected ClassConstant m_idAnon;
     }
