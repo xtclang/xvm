@@ -595,7 +595,7 @@ public abstract class Expression
             // a conversion may be necessary to deliver the required type, but only one
             // conversion (per expression value) is allowed
             if (fit.isConverting() ||
-                    (idConv = typeActual.ensureTypeInfo().findConversion(typeRequired)) == null)
+                    (idConv = typeActual.ensureTypeInfo(errs).findConversion(typeRequired)) == null)
                 {
                 // cannot provide the required type
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
@@ -754,7 +754,7 @@ public abstract class Expression
                 if (!typeActual.isA(typeRequired))
                     {
                     // look for an @Auto conversion
-                    MethodConstant idConv = typeActual.ensureTypeInfo().findConversion(typeRequired);
+                    MethodConstant idConv = typeActual.ensureTypeInfo(errs).findConversion(typeRequired);
                     if (idConv == null)
                         {
                         // cannot provide the required type
@@ -2577,7 +2577,7 @@ public abstract class Expression
                         {
                         Assignable LValTemp = LValResult != null && LValResult.isLocalArgument()
                                 ? LValResult
-                                : createTempVar(code, getType().getGenericParamType("ElementType"), fUsedOnce, errs);
+                                : createTempVar(code, getType().resolveGenericType("ElementType"), fUsedOnce, errs);
 
                         Argument argReturn = LValTemp.getLocalArgument();
                         code.add(seq.isPre()

@@ -4,11 +4,16 @@ package org.xvm.compiler.ast;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Format;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
+import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
@@ -110,6 +115,14 @@ public class AnonInnerClass
         return m_listAnnos == null ? Collections.EMPTY_LIST : m_listAnnos;
         }
 
+    /**
+     * @return the type parameters suggested for the anonymous inner class
+     */
+    public List<Parameter> getTypeParameters()
+        {
+        return m_listParams;
+        }
+
 
     // ----- data collection -----------------------------------------------------------------------
 
@@ -118,7 +131,7 @@ public class AnonInnerClass
      *
      * @return the error listener to use to report errors
      */
-    ErrorListener getErrorListener(boolean fError)
+    protected ErrorListener getErrorListener(boolean fError)
         {
         if (fError)
             {
@@ -134,7 +147,7 @@ public class AnonInnerClass
      * @param sCode    the error code that identifies the error message
      * @param aoParam  the parameters for the error message; may be null
      */
-    void logError(String sCode, Object... aoParam)
+    private void logError(String sCode, Object... aoParam)
         {
         getTypeExpression().log(getErrorListener(true), Severity.ERROR, sCode, aoParam);
         }
@@ -142,7 +155,7 @@ public class AnonInnerClass
     /**
      * Mark that the anonymous inner class cannot be instantiated due to a declaration error.
      */
-    void markInvalid()
+    private void markInvalid()
         {
         m_fError = true;
         }
@@ -150,7 +163,7 @@ public class AnonInnerClass
     /**
      * Make sure that the anonymous inner class is not already required to be immutable.
      */
-    void ensureMutable()
+    private void ensureMutable()
         {
         if (m_fmt == Format.CONST)
             {
@@ -161,7 +174,7 @@ public class AnonInnerClass
     /**
      * Mark that the anonymous inner class as defining a class of immutable objects.
      */
-    void markImmutable()
+    protected void markImmutable()
         {
         if (m_fmt == Format.SERVICE)
             {
@@ -178,7 +191,7 @@ public class AnonInnerClass
      *
      * @param anno  the annotation
      */
-    void addAnnotation(Annotation anno)
+    protected void addAnnotation(Annotation anno)
         {
         assert anno != null;
         ensureAnnotations().add(anno);
@@ -189,7 +202,7 @@ public class AnonInnerClass
      *
      * @param exprType  the type of the contribution to add
      */
-    void addContribution(TypeExpression exprType)
+    protected void addContribution(TypeExpression exprType)
         {
         TypeConstant type = exprType.ensureTypeConstant().resolveTypedefs();
         assert !type.containsUnresolved();
@@ -253,7 +266,7 @@ public class AnonInnerClass
             switch (type.getExplicitClassFormat())
                 {
                 case CLASS:
-                    setSuper(exprType);
+                    setSuper(exprType, type);
                     m_fmt = Format.CLASS;
                     return;
 
@@ -266,14 +279,14 @@ public class AnonInnerClass
                             type.getExplicitClassFormat().toString().toLowerCase());
                     // fall through
                 case CONST:
-                    setSuper(exprType);
+                    setSuper(exprType, type);
                     markImmutable();
                     m_fmt = Format.CONST;
                     return;
 
                 case SERVICE:
                     ensureMutable();
-                    setSuper(exprType);
+                    setSuper(exprType, type);
                     m_fmt = Format.SERVICE;
                     return;
 
@@ -283,6 +296,8 @@ public class AnonInnerClass
                     return;
 
                 case INTERFACE:
+                    exprType = processFormalTypes((NamedTypeExpression) exprType,
+                            type.getSingleUnderlyingClass(true));
                     // fall out of this switch
                     break;
 
@@ -332,41 +347,145 @@ public class AnonInnerClass
         }
 
     /**
-     * Create a fake token.
+     * Create a fake IDENTIFIER token.
      *
      * @param location  the location at which to create the token
-     * @param id        the identity of the token
      * @param oVal      the value of the token
      *
      * @return the token
      */
-    private Token genToken(AstNode location, Id id, Object oVal)
+    private Token genToken(AstNode location, Object oVal)
         {
         long lPos = location.getStartPosition();
-        return new Token(lPos, lPos, id, oVal);
+        return new Token(lPos, lPos, Id.IDENTIFIER, oVal);
         }
 
     /**
      * Store the super class designation in the list of contributions.
      *
-     * @param exprType  the type of the super class
+     * @param exprType  the type expression of the super class
+     * @param type      the type of the expression
+     *
+     * @return false iff the specified expression cannot be used
      */
-    private void setSuper(TypeExpression exprType)
+    private void setSuper(TypeExpression exprType, TypeConstant type)
         {
         assert exprType != null;
-
-        TypeConstant type = exprType.ensureTypeConstant();
         assert type.isClassType();
+
+        IdentityConstant idSuper = type.getSingleUnderlyingClass(false);
+        m_sName = idSuper.getName();
 
         List<Composition> list = ensureCompositions();
         if (!list.isEmpty() && list.get(0) instanceof Extends)
             {
             getTypeExpression().log(getErrorListener(true), Severity.ERROR, Compiler.ANON_CLASS_EXTENDS_MULTI,
                     list.get(0).getType().ensureTypeConstant().getValueString(), type.getValueString());
+            return;
             }
 
-        list.add(0, new Extends(null, genKeyword(exprType, Id.EXTENDS), exprType, null));
-        m_sName = type.getSingleUnderlyingClass(false).getName();
+        TypeExpression exprSuper = processFormalTypes((NamedTypeExpression) exprType, idSuper);
+
+        list.add(0, new Extends(null, genKeyword(exprSuper, Id.EXTENDS), exprSuper, null));
+        }
+
+    /**
+     * Process the formal types of the anonymous class declaration and produce a new
+     * {@link NamedTypeExpression} that represents the corresponding generic anonymous type.
+     *
+     * @param exprThis  the original expression
+     * @param idBase    the id of the underlying class
+     *
+     * @return a new {@link NamedTypeExpression} that should replace the original
+     */
+    private NamedTypeExpression processFormalTypes(NamedTypeExpression exprThis, IdentityConstant idBase)
+        {
+        // Let's imagine there is code that looks like following:
+        //
+        // Class C<ElType>
+        //     {
+        //     Map<ElType, Int> foo()
+        //        {
+        //        return new Map()
+        //             {
+        //             ...
+        //             }
+        //        }
+        //    }
+        //
+        // By default it creates a synthetic (anonymous) TypeCompositionStatement
+        //
+        //  class Map:1
+        //          implements Map<C.ElType, Int>
+        //      {
+        //      ...
+        //      }
+        //
+        // which requires creation of a special type, e.g. C<ElType>.foo().Map:1 to be handled
+        // correctly by the run-time.
+        //
+        // The idea behind this method is to transform the original expression to another
+        // synthetic TypeCompositionStatement that looks like this:
+        //
+        //  class Map:1<Map:1.ElType>
+        //          implements Map<Map:1.ElType, Int>
+        //      {
+        //      ...
+        //      }
+        //
+        // and the formal type value is "injected" by the run time
+        //
+        // This approach also solves the issue with formal type parameters:
+        //
+        // static <ElType> Map<ElType, Int> foo(Set<ElType> keys)
+        //    {
+        //    return new Map()
+        //         {
+        //         ...
+        //         }
+        //    }
+        //
+
+        ClassStructure clzBase = (ClassStructure) idBase.getComponent();
+
+        int cFormalTypes = clzBase.getTypeParamCount();
+        if (cFormalTypes == 0)
+            {
+            return exprThis;
+            }
+
+        ConstantPool         pool       = idBase.getConstantPool();
+        long                 ofEnd      = exprThis.getEndPosition();
+        List<Parameter>      listFormal = new ArrayList<>(cFormalTypes);
+        List<TypeExpression> listImpl   = new ArrayList<>(cFormalTypes);
+
+        for (Map.Entry<StringConstant, TypeConstant> entry : clzBase.getTypeParamsAsList())
+            {
+            StringConstant constName      = entry.getKey();
+            TypeConstant   typeConstraint = entry.getValue();
+
+            Token          tok            = genToken(exprThis, constName.getValue());
+            TypeExpression exprParam      = new NamedTypeExpression(null,
+                    Collections.singletonList(tok), null, null, null, ofEnd);
+
+            listImpl.add(exprParam);
+
+            TypeExpression exprExtends = null;
+            if (!typeConstraint.equals(pool.typeObject()))
+                {
+                Token tokExtends = genToken(exprThis, typeConstraint.getValueString());
+
+                exprExtends = new NamedTypeExpression(null,
+                    Collections.singletonList(tokExtends), null, null, null, ofEnd);
+                exprExtends.setTypeConstant(typeConstraint);
+                }
+            listFormal.add(new Parameter(exprExtends, tok));
+            }
+
+         m_listParams = listFormal;
+
+        return new NamedTypeExpression(exprThis.immutable, exprThis.names,
+                exprThis.access, exprThis.nonnarrow, listImpl, ofEnd);
         }
 
     /**
@@ -405,6 +524,22 @@ public class AnonInnerClass
           .append(' ')
           .append(getDefaultName());
 
+        if (m_listParams != null)
+            {
+            sb.append('<');
+            for (int i = 0, c = m_listParams.size(); i < c; i++)
+                {
+                Parameter param = m_listParams.get(i);
+                if (i > 0)
+                    {
+                    sb.append(", ");
+                    }
+
+                sb.append(param.getName());
+                }
+            sb.append('>');
+            }
+
         for (Composition comp : getCompositions())
             {
             sb.append(' ')
@@ -437,6 +572,11 @@ public class AnonInnerClass
      * The annotations that have been collected for the AnonInnerClass.
      */
     private List<Annotation> m_listAnnos;
+
+    /**
+     * The type parameters that have been collected for the AnonInnerClass.
+     */
+    private List<Parameter> m_listParams;
 
     /**
      * The contributions for the AnonInnerClass, starting with the Extends contribution, if any.

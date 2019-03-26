@@ -83,6 +83,7 @@ public class NewG_0
         {
         MethodStructure  constructor = getMethodStructure(frame);
         ClassComposition clzTarget   = frame.resolveClass(m_nTypeValue);
+        ObjectHandle     hParent     = clzTarget.isInstanceChild() ? frame.getThis() : null;
 
         if (frame.isNextRegister(m_nRetValue))
             {
@@ -92,7 +93,7 @@ public class NewG_0
         ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
 
         return clzTarget.getTemplate().
-            construct(frame, constructor, clzTarget, null, ahVar, m_nRetValue);
+            construct(frame, constructor, clzTarget, hParent, ahVar, m_nRetValue);
         }
 
     @Override

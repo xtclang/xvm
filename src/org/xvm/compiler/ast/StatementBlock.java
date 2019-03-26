@@ -573,9 +573,37 @@ public class StatementBlock
             return getStatementBlock().getSource();
             }
 
+
+        @Override
+        public TypeConstant getThisType()
+            {
+            if (isAnonInnerClass())
+                {
+                NewExpression exprNew = getAnonymousInnerClassExpression();
+                if (exprNew.isValidated())
+                    {
+                    return exprNew.getType();
+                    }
+                else
+                    {
+                    Context ctxC = exprNew.getCaptureContext();
+                    if (ctxC != null)
+                        {
+                        return ctxC.getThisType();
+                        }
+                    }
+                }
+            return super.getThisType();
+            }
+
         @Override
         public ClassStructure getThisClass()
             {
+            if (isAnonInnerClass())
+                {
+                NewExpression exprNew = getAnonymousInnerClassExpression();
+                return (ClassStructure) exprNew.anon.getComponent();
+                }
             Component parent = m_method;
             while (!(parent instanceof ClassStructure))
                 {

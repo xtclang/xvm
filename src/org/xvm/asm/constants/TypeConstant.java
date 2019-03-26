@@ -108,7 +108,7 @@ public abstract class TypeConstant
     @Override
     public TypeConstant resolveGenericType(String sFormalName)
         {
-        return getGenericParamType(sFormalName);
+        return getGenericParamType(sFormalName, Collections.EMPTY_LIST);
         }
 
 
@@ -328,14 +328,15 @@ public abstract class TypeConstant
      * For example: given a type: String[]? it's natural to decide at compile time that the type
      * for the "ElementType" formal name is String. However, at run time the answer may differ.
      *
-     * @param sName  the formal parameter name
+     * @param sName      the formal parameter name
+     * @param listParams the list of actual generic parameters
      *
      * @return the corresponding actual type or null if there is no matching formal type
      */
-    public TypeConstant getGenericParamType(String sName)
+    protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
         {
         return isModifyingType()
-                ? getUnderlyingType().getGenericParamType(sName)
+                ? getUnderlyingType().getGenericParamType(sName, listParams)
                 : null;
         }
 
@@ -353,6 +354,14 @@ public abstract class TypeConstant
     public boolean isVirtualChild()
         {
         return isModifyingType() && getUnderlyingType().isVirtualChild();
+        }
+
+    /**
+     * @return true iff this type represents an anonymous class type
+     */
+    public boolean isAnonymousClass()
+        {
+        return isModifyingType() && getUnderlyingType().isAnonymousClass();
         }
 
     /**
@@ -384,11 +393,11 @@ public abstract class TypeConstant
         }
 
     /**
-     * @return return the virtual child type's parent type
+     * @return return the virtual child type's or anonymous class type's parent type
      */
     public TypeConstant getParentType()
         {
-        assert isVirtualChild();
+        assert isVirtualChild() || isAnonymousClass();
         return getUnderlyingType().getParentType();
         }
 
@@ -1618,6 +1627,7 @@ public abstract class TypeConstant
                 case ParameterizedType:
                 case TerminalType:
                 case VirtualChildType:
+                case AnonymousClassType:
                     // we found the class specification (with optional parameters) at the end of the
                     // type constant chain
                     break NextTypeInChain;
@@ -3819,7 +3829,7 @@ public abstract class TypeConstant
 
             String       sParam = param.getName();
             PropertyInfo prop   = mapProps.get(sParam);
-            if (prop == null && isVirtualChild())
+            if (prop == null && (isVirtualChild() || isAnonymousClass()))
                 {
                 // virtual child is allowed to see the parent's type parameters
                 prop = getParentType().ensureTypeInfo(errs).findProperty(sParam);

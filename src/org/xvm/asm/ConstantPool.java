@@ -36,7 +36,6 @@ import static org.xvm.compiler.Lexer.isValidIdentifier;
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
 
 import static org.xvm.util.Handy.checkElementsNonNull;
-import static org.xvm.util.Handy.parseDelimitedString;
 import static org.xvm.util.Handy.quotedString;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -1484,6 +1483,20 @@ public class ConstantPool
     public TypeConstant ensureVirtualChildTypeConstant(TypeConstant constParent, String sName)
         {
         return (TypeConstant) register(new VirtualChildTypeConstant(this, constParent, sName));
+        }
+
+    /**
+     * Given the specified parent type and the anonymous class id, obtain a TypeConstant
+     * representing an anonymous class of that parent.
+     *
+     * @param constParent  the parent's TypeConstant (can be parameterized)
+     * @param idAnon       the anonymous class id
+     *
+     * @return the TypeConstant of the anonymous class type
+     */
+    public TypeConstant ensureAnonymousClassTypeConstant(TypeConstant constParent, ClassConstant idAnon)
+        {
+        return (TypeConstant) register(new AnonymousClassTypeConstant(this, constParent, idAnon));
         }
 
     /**

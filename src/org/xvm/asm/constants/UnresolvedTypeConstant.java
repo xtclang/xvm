@@ -5,7 +5,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.List;
 import java.util.Set;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.Component.ResolutionCollector;
@@ -194,6 +196,26 @@ public class UnresolvedTypeConstant
             {
             m_type.bindTypeParameters(idMethod);
             }
+        }
+
+    @Override
+    public boolean containsGenericParam(String sName)
+        {
+        if (isTypeResolved())
+            {
+            return getResolvedType().containsGenericParam(sName);
+            }
+        throw new IllegalStateException();
+        }
+
+    @Override
+    protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
+        {
+        if (isTypeResolved())
+            {
+            return getResolvedType().getGenericParamType(sName, listParams);
+            }
+        throw new IllegalStateException();
         }
 
     @Override

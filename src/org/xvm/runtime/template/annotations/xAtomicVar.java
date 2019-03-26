@@ -95,7 +95,7 @@ public class xAtomicVar
                             return frame.assignValue(iReturn, xBoolean.TRUE);
                             }
 
-                        TypeConstant type = hThis.getType().getGenericParamType("RefType");
+                        TypeConstant type = hThis.getType().resolveGenericType("RefType");
 
                         return new Replace(type, atomic, hExpect, hNew, iReturn).doNext(frame);
                         }
@@ -145,7 +145,7 @@ public class xAtomicVar
                             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                             }
 
-                        TypeConstant type = hThis.getType().getGenericParamType("RefType");
+                        TypeConstant type = hThis.getType().resolveGenericType("RefType");
 
                         return new ReplaceFailed(type, atomic, hExpect, hNew, aiReturn).doNext(frame);
                         }

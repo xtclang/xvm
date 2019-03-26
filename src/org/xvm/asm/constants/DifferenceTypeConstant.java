@@ -135,10 +135,10 @@ public class DifferenceTypeConstant
         }
 
     @Override
-    public TypeConstant getGenericParamType(String sName)
+    protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
         {
         // only the left side needs to have it and it doesn't matter what the right side has
-        return m_constType1.getGenericParamType(sName);
+        return m_constType1.getGenericParamType(sName, listParams);
         }
 
     @Override

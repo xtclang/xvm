@@ -811,7 +811,7 @@ public class ClassStructure
             if (typeContrib.isVirtualChild())
                 {
                 // check the paren't formal type
-                TypeConstant typeFormal = typeContrib.getParentType().getGenericParamType(sName);
+                TypeConstant typeFormal = typeContrib.getParentType().resolveGenericType(sName);
                 if (typeFormal != null)
                     {
                     collector.resolvedConstant(typeFormal.getDefiningConstant());
@@ -2149,7 +2149,7 @@ public class ClassStructure
                 MultiMethodStructure mms = (MultiMethodStructure) child;
                 for (MethodStructure method : mms.methods())
                     {
-                    if (method.isStatic() || !method.isAccessible(accessLeft) || method.hasCode())
+                    if (method.isStatic() || !method.isAccessible(accessLeft))
                         {
                         continue;
                         }

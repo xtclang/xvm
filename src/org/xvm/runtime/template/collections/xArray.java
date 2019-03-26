@@ -126,7 +126,7 @@ public class xArray
         assert constArray.getFormat() == Constant.Format.Array;
 
         TypeConstant typeArray = constArray.getType();
-        TypeConstant typeEl = typeArray.getGenericParamType("ElementType");
+        TypeConstant typeEl = typeArray.resolveGenericType("ElementType");
         ClassComposition clzArray = ensureParameterizedClass(frame.poolContext(), typeEl);
 
         Constant[] aconst = constArray.getValue();
@@ -520,7 +520,7 @@ public class xArray
     @Override
     public TypeConstant getElementType(ObjectHandle hTarget, long lIndex)
         {
-        return hTarget.getType().getGenericParamType("ElementType");
+        return hTarget.getType().resolveGenericType("ElementType");
         }
 
     @Override

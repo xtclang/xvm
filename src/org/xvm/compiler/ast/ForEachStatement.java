@@ -141,7 +141,7 @@ public class ForEachStatement
         assert m_plan != Plan.MAP;
         assert m_exprRValue != null;
 
-        TypeConstant type = m_exprRValue.getType().getGenericParamType("ElementType");
+        TypeConstant type = m_exprRValue.getType().resolveGenericType("ElementType");
         return type == null ? pool().typeObject() : type;
         }
 
@@ -180,7 +180,7 @@ public class ForEachStatement
             }
         else
             {
-            TypeConstant type = typeMap.getGenericParamType(sProp);
+            TypeConstant type = typeMap.resolveGenericType(sProp);
             return type == null ? pool().typeObject() : type;
             }
         }

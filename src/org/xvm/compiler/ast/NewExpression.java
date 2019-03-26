@@ -22,6 +22,7 @@ import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
@@ -210,7 +211,15 @@ public class NewExpression
             }
         else
             {
-            return getAnonymousInnerClassType(ctx);
+            if (anon == null)
+                {
+                ensureInnerClass(ctx, AnonPurpose.RoughDraft, ErrorListener.BLACKHOLE);
+                return type.ensureTypeConstant();
+                }
+
+            // there must be an anonymous inner class skeleton by this point
+            assert anon != null && anon.getComponent() != null;
+            return ((ClassStructure) anon.getComponent()).getFormalType();
             }
         }
 
@@ -331,9 +340,15 @@ public class NewExpression
                     // the public default to protected, which we get when a class "extends" another;
                     // the real target, though, is not the specified type being "new'd", but rather the
                     // anonymous inner class
-                    typeSuper  = pool.ensureAccessTypeConstant(typeTarget,
+                    typeSuper = pool.ensureAccessTypeConstant(typeTarget,
                             fNestMate ? Access.PRIVATE : Access.PROTECTED);
-                    typeResult = getAnonymousInnerClassType(ctx);
+
+                    ClassStructure clzAnon = (ClassStructure) anon.getComponent();
+
+                    typeResult = pool.ensureAnonymousClassTypeConstant(ctx.getThisType(),
+                        (ClassConstant) clzAnon.getIdentityConstant());
+                    typeResult = typeResult.adoptParameters(pool, clzAnon.getFormalType());
+                    typeResult = typeResult.resolveGenerics(pool, typeTarget);
                     typeTarget = pool.ensureAccessTypeConstant(typeResult, Access.PRIVATE);
                     }
                 else if (fNestMate)
@@ -804,21 +819,6 @@ public class NewExpression
         }
 
     /**
-     * @return the type of the anonymous inner class
-     */
-    private TypeConstant getAnonymousInnerClassType(Context ctx)
-        {
-        if (anon == null)
-            {
-            ensureInnerClass(ctx, AnonPurpose.RoughDraft, ErrorListener.BLACKHOLE);
-            }
-
-        // there must be an anonymous inner class skeleton by this point
-        assert anon != null && anon.getComponent() != null;
-        return anon.getComponent().getIdentityConstant().getType();
-        }
-
-    /**
      * Create the necessary AST and Component nodes for the anonymous inner class.
      *
      * @param ctx      the current compilation context
@@ -879,6 +879,7 @@ public class NewExpression
                         clone(info.getAnnotations()),
                         info.getCategory(),
                         tokName,
+                        clone(info.getTypeParameters()),
                         clone(info.getCompositions()),
                         clone(args),
                         (StatementBlock) body.clone(),
@@ -894,6 +895,7 @@ public class NewExpression
                         info.getAnnotations(),
                         info.getCategory(),
                         tokName,
+                        info.getTypeParameters(),
                         info.getCompositions(),
                         args,
                         body,
@@ -1282,6 +1284,20 @@ public class NewExpression
         public AnonInnerClassContext(Context ctxOuter)
             {
             super(ctxOuter);
+            }
+
+        @Override
+        public TypeConstant getThisType()
+            {
+            TypeConstant typeBase = type.ensureTypeConstant();
+            TypeConstant typeThis = getThisClass().getFormalType();
+            return typeThis.resolveGenerics(pool(), typeBase);
+            }
+
+        @Override
+        public ClassStructure getThisClass()
+            {
+            return (ClassStructure) anon.getComponent();
             }
 
         /**

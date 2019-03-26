@@ -13,7 +13,6 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -82,12 +81,19 @@ public class ParameterizedTypeConstant
             {
             throw new IllegalArgumentException("type is already parameterized");
             }
-        if (!(constType instanceof TerminalTypeConstant ||
-              constType instanceof VirtualChildTypeConstant ||
-              constType instanceof UnresolvedTypeConstant))
+
+        switch (constType.getFormat())
             {
-            throw new IllegalArgumentException("must refer to a terminal or instance child type");
+            case TerminalType:
+            case VirtualChildType:
+            case AnonymousClassType:
+            case UnresolvedType:
+                break;
+
+            default:
+                throw new IllegalArgumentException("Invalid format: " + constType);
             }
+
         if (constTypeParams == null)
             {
             throw new IllegalArgumentException("must have parameters");
@@ -133,18 +139,10 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public TypeConstant getGenericParamType(String sName)
+    protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
         {
-        if (isSingleUnderlyingClass(true))
-            {
-            // because isA() uses this method, there is a chicken-and-egg problem, so instead of
-            // materializing the TypeInfo at this point, just answer the question without it
-            ClassStructure clz = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
-
-            return clz.getGenericParamType(getConstantPool(), sName, getParamTypes());
-            }
-
-        return null;
+        assert listParams.isEmpty();
+        return super.getGenericParamType(sName, getParamTypes());
         }
 
     @Override

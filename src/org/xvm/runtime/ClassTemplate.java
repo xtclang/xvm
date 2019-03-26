@@ -887,7 +887,7 @@ public abstract class ClassTemplate
         {
         if (hTarget.getType().containsGenericParam(sPropName))
             {
-            TypeConstant type = hTarget.getType().getGenericParamType(sPropName);
+            TypeConstant type = hTarget.getType().resolveGenericType(sPropName);
 
             return frame.assignValue(iReturn, type.getTypeHandle());
             }

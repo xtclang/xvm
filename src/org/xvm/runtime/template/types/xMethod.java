@@ -132,7 +132,7 @@ public class xMethod
 
         public TypeConstant getTarget()
             {
-            return getType().getGenericParamType("TargetType");
+            return getType().resolveGenericType("TargetType");
             }
 
         @Override

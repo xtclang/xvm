@@ -284,20 +284,19 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public TypeConstant getGenericParamType(String sName)
+    protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
         {
         if (!isSingleDefiningConstant())
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return constId.getReferredToType().getGenericParamType(sName);
+            return constId.getReferredToType().getGenericParamType(sName, listParams);
             }
 
         // because isA() uses this method, there is a chicken-and-egg problem, so instead of
         // materializing the TypeInfo at this point, just answer the question without it
         ClassStructure clz = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
-
-        return clz.getGenericParamType(getConstantPool(), sName, Collections.EMPTY_LIST);
+        return clz.getGenericParamType(getConstantPool(), sName, listParams);
         }
 
     @Override
