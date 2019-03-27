@@ -1495,13 +1495,13 @@ public abstract class ClassTemplate
     @Override
     public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return getOpChain(hTarget, "next", null).invoke(frame, hTarget, iReturn);
+        return getOpChain(hTarget, "nextValue", null).invoke(frame, hTarget, iReturn);
         }
 
     @Override
     public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return getOpChain(hTarget, "prev", null).invoke(frame, hTarget, iReturn);
+        return getOpChain(hTarget, "prevValue", null).invoke(frame, hTarget, iReturn);
         }
 
     /**
