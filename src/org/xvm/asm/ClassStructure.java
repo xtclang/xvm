@@ -284,7 +284,43 @@ public class ClassStructure
                     return true;
 
                 default:
-                    throw new IllegalStateException(parent.getIdentityConstant() + " format=" + parent.getFormat());
+                    throw new IllegalStateException(
+                        parent.getIdentityConstant() + " format=" + parent.getFormat());
+                }
+
+            parent = parent.getParent();
+            }
+        }
+
+    /**
+     * @return an "outer this" class structure
+     */
+    public ClassStructure getOuter()
+        {
+        assert hasOuter();
+
+        Component parent = getParent();
+        while (true)
+            {
+            switch (parent.getFormat())
+                {
+                case MULTIMETHOD:
+                case METHOD:
+                case PROPERTY:
+                    break;
+
+                case INTERFACE:
+                case CLASS:
+                case CONST:
+                case SERVICE:
+                case ENUM:
+                case ENUMVALUE:
+                case MIXIN:
+                    return (ClassStructure) parent;
+
+                default:
+                    throw new IllegalStateException(
+                        parent.getIdentityConstant() + " format=" + parent.getFormat());
                 }
 
             parent = parent.getParent();

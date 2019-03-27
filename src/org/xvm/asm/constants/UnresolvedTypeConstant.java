@@ -257,16 +257,6 @@ public class UnresolvedTypeConstant
         }
 
     @Override
-    public TypeConstant getOuterType()
-        {
-        if (isTypeResolved())
-            {
-            return getResolvedType().getOuterType();
-            }
-        throw new IllegalStateException();
-        }
-
-    @Override
     public TypeInfo getTypeInfo()
         {
         if (isTypeResolved())

@@ -608,7 +608,14 @@ public class TypeInfo
     public TypeConstant getOuterType()
         {
         assert hasOuter();
-        return getType().getOuterType();
+
+        TypeConstant type = getType();
+        if (type.isVirtualChild() || type.isAnonymousClass())
+            {
+            return type.getParentType();
+            }
+        // REVIEW: it's not clear what type to return: formal, canonical or naked
+        return f_struct.getOuter().getIdentityConstant().getType();
         }
 
     /**
