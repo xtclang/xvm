@@ -8,11 +8,14 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpIndex;
 
+import org.xvm.runtime.CallChain;
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
 import org.xvm.runtime.template.IndexSupport;
+import org.xvm.runtime.template.xException;
 
 
 /**
@@ -54,8 +57,27 @@ public class I_Get
     @Override
     protected int complete(Frame frame, ObjectHandle hTarget, JavaLong hIndex)
         {
-        IndexSupport template = (IndexSupport) hTarget.getOpSupport();
+        ClassTemplate template = hTarget.getTemplate();
+        if (template instanceof IndexSupport)
+            {
+            return ((IndexSupport) template).
+                extractArrayValue(frame, hTarget, hIndex.getValue(), m_nRetValue);
+            }
 
-        return template.extractArrayValue(frame, hTarget, hIndex.getValue(), m_nRetValue);
+        CallChain chain = getOpChain(hTarget.getType());
+        if (chain == null)
+            {
+            chain = template.findOpChain(hTarget, "[]", hIndex);
+            if (chain == null)
+                {
+                return frame.raiseException(xException.makeHandle("Invalid op: \"[]\""));
+                }
+            saveOpChain(hTarget.getType(), chain);
+            }
+
+        ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
+        ahVar[0] = hIndex;
+
+        return hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, m_nRetValue);
         }
     }

@@ -72,7 +72,7 @@ public class xVar
     @Override
     public int invokeVarPreInc(Frame frame, RefHandle hTarget, int iReturn)
         {
-        CallChain chain = findOpChain(hTarget, "preInc", null);
+        CallChain chain = findOpChain(hTarget, "preInc");
         return chain == null
             ? new InPlaceVarUnary(UnaryAction.INC, hTarget, false, iReturn).doNext(frame)
             : chain.invoke(frame, hTarget, iReturn);
@@ -81,7 +81,7 @@ public class xVar
     @Override
     public int invokeVarPostInc(Frame frame, RefHandle hTarget, int iReturn)
         {
-        CallChain chain = findOpChain(hTarget, "postInc", null);
+        CallChain chain = findOpChain(hTarget, "postInc");
         return chain == null
             ? new InPlaceVarUnary(UnaryAction.INC, hTarget, true, iReturn).doNext(frame)
             : chain.invoke(frame, hTarget, iReturn);
@@ -90,7 +90,7 @@ public class xVar
     @Override
     public int invokeVarPreDec(Frame frame, RefHandle hTarget, int iReturn)
         {
-        CallChain chain = findOpChain(hTarget, "preDec", null);
+        CallChain chain = findOpChain(hTarget, "preDec");
         return chain == null
             ? new InPlaceVarUnary(UnaryAction.DEC, hTarget, false, iReturn).doNext(frame)
             : chain.invoke(frame, hTarget, iReturn);
@@ -99,7 +99,7 @@ public class xVar
     @Override
     public int invokeVarPostDec(Frame frame, RefHandle hTarget, int iReturn)
         {
-        CallChain chain = findOpChain(hTarget, "postDec", null);
+        CallChain chain = findOpChain(hTarget, "postDec");
         return chain == null
             ? new InPlaceVarUnary(UnaryAction.DEC, hTarget, true, iReturn).doNext(frame)
             : chain.invoke(frame, hTarget, iReturn);

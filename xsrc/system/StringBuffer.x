@@ -79,7 +79,7 @@ class StringBuffer
     @Override
     StringBuffer add(Char[] array)
         {
-        chars.addElements(array); // TODO: chars += array;
+        chars += array;
         return this;
         }
 
