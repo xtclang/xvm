@@ -136,8 +136,7 @@
 
 - ast.Annotation - use the InvocationExpression's approach for argument validation
 
-- AssignmentStatement - narrow Nullable type if possible (deferred due to loops and reference taking
-  complications)
+- AssignmentStatement - avoid narrowing if reference is taken
 
 - create native xBitArray
 
@@ -149,14 +148,23 @@
 
 - consider a FormalTypeConstant instead of TerminalType(PropertyConstant)
 
--- review the argument generation approach (regarding stack, and local prop) for all ops that use
-   Frame.getArguments() similar to InvocationExpression and NewExpression
+- make TypeConstant.resolveGeneric() idempotent
 
 -- tuple support
    - InvocationExpression - needs to generate _xT ops (i.e. it must be able to testFit & validate for a tuple type)
    - verify (and test) the logic in ReturnStatement that gens RETURN_T
    - assignment w/ multi-LVal needs to testFit for Tuple if testFit for multi fails
      (and use Expression.packedExpression and unpackedExpressions for code gen?)
+
+- base class for VirtChild and AnonymousClass
+
+- refactor AnonInnerClass to process errors correctly
+
+- finish nesting call chain support
+
+- AnnotationTypeConstant method layers processing should be similar to properties
+
+- heap.getType() vs. Constant.getType()
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
