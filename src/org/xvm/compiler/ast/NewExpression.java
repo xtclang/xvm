@@ -1199,8 +1199,7 @@ public class NewExpression
         }
 
     /**
-     * REVIEW: should we move this to TypeConstant?
-     * @return iff the specified type has any generic portion
+     * @return iff the specified type has any generic portion (excluding virtual children)
      */
     private static boolean isGeneric(TypeConstant type)
         {
@@ -1208,7 +1207,7 @@ public class NewExpression
             {
             return true;
             }
-        if (type.isVirtualChild() || type.isAnonymousClass())
+        if (type.isAnonymousClass())
             {
             return isGeneric(type.getParentType());
             }
