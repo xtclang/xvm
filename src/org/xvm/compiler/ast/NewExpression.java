@@ -686,6 +686,7 @@ public class NewExpression
         {
         MethodConstant idConstruct = m_constructor.getIdentityConstant();
         TypeConstant   typeTarget  = getType();
+        boolean        fGeneric    = isGeneric(typeTarget);
         int            cAll        = idConstruct.getRawParams().length;
         int            cArgs       = aArgs.length;
         int            cDefaults   = m_cDefaults;
@@ -730,7 +731,7 @@ public class NewExpression
                     }
                 }
 
-            if (typeTarget.isParamsSpecified())
+            if (fGeneric)
                 {
                 if (argOuter == null)
                     {
@@ -1197,6 +1198,22 @@ public class NewExpression
         return FVar || !reg.isEffectivelyFinal();
         }
 
+    /**
+     * REVIEW: should we move this to TypeConstant?
+     * @return iff the specified type has any generic portion
+     */
+    private static boolean isGeneric(TypeConstant type)
+        {
+        if (type.isParamsSpecified())
+            {
+            return true;
+            }
+        if (type.isVirtualChild() || type.isAnonymousClass())
+            {
+            return isGeneric(type.getParentType());
+            }
+        return false;
+        }
 
     // ----- debugging assistance ------------------------------------------------------------------
 
