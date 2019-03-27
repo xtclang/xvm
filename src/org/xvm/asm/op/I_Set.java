@@ -6,13 +6,17 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Op;
 import org.xvm.asm.OpIndexInPlace;
 
+import org.xvm.runtime.CallChain;
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
 import org.xvm.runtime.template.IndexSupport;
+import org.xvm.runtime.template.xException;
 
 
 /**
@@ -54,8 +58,28 @@ public class I_Set
     @Override
     protected int complete(Frame frame, ObjectHandle hTarget, JavaLong hIndex, ObjectHandle hValue)
         {
-        IndexSupport template = (IndexSupport) hTarget.getOpSupport();
+        ClassTemplate template = hTarget.getTemplate();
+        if (template instanceof IndexSupport)
+            {
+            return ((IndexSupport) template).
+                assignArrayValue(frame, hTarget, hIndex.getValue(), hValue);
+            }
 
-        return template.assignArrayValue(frame, hTarget, hIndex.getValue(), hValue);
+        CallChain chain = getOpChain(hTarget.getType()); // REVIEW: should we respect the value type?
+        if (chain == null)
+            {
+            chain = template.findOpChain(hTarget, "[]=", new ObjectHandle[] {hIndex, hValue});
+            if (chain == null)
+                {
+                return frame.raiseException(xException.makeHandle("Invalid op: \"[]=\""));
+                }
+            saveOpChain(hTarget.getType(), chain);
+            }
+
+        ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
+        ahVar[0] = hIndex;
+        ahVar[1] = hValue;
+
+        return hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, Op.A_IGNORE);
         }
     }

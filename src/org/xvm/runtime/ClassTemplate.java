@@ -1505,7 +1505,7 @@ public abstract class ClassTemplate
         }
 
     /**
-     * @return a call chain for the specified op; throw if non exists
+     * @return a call chain for the specified op; throw if none exists
      */
     protected CallChain getOpChain(ObjectHandle hTarget, String sOp, ObjectHandle hArg)
         {
@@ -1518,19 +1518,45 @@ public abstract class ClassTemplate
         }
 
     /**
-     * @return a call chain for the specified op or null if non exists
+     * @return a call chain for the specified op or null if none exists
      */
-    protected CallChain findOpChain(ObjectHandle hTarget, String sOp, ObjectHandle hArg)
+    public CallChain findOpChain(ObjectHandle hTarget, String sOp)
         {
-        TypeComposition clz = hTarget.getComposition();
-        TypeInfo info = clz.getType().ensureTypeInfo();
+        TypeComposition clz  = hTarget.getComposition();
+        TypeInfo        info = clz.getType().ensureTypeInfo();
+
+        Set<MethodConstant> setMethods = info.findOpMethods(sOp, sOp, 0);
+        switch (setMethods.size())
+            {
+            case 0:
+                return null;
+
+            case 1:
+                {
+                MethodConstant idMethod = setMethods.iterator().next();
+                return clz.getMethodCallChain(idMethod.getSignature());
+                }
+
+            default:
+                // sof assert
+                System.err.println("Ambiguous \"" + sOp + "\" operation on " +
+                        hTarget.getType().getValueString());
+                return null;
+            }
+        }
+    /**
+     * @return a call chain for the specified op and argument or null if none exists
+     */
+    public CallChain findOpChain(ObjectHandle hTarget, String sOp, ObjectHandle hArg)
+        {
+        TypeComposition clz  = hTarget.getComposition();
+        TypeInfo        info = clz.getType().ensureTypeInfo();
 
         Set<MethodConstant> setMethods = info.findOpMethods(sOp, sOp, hArg == null ? 0 : 1);
         switch (setMethods.size())
             {
             case 0:
                 return null;
-
 
             case 1:
                 {
@@ -1553,6 +1579,56 @@ public abstract class ClassTemplate
                             return clz.getMethodCallChain(sig);
                             }
                         }
+                    }
+
+                // sof assert
+                System.err.println("Ambiguous \"" + sOp + "\" operation on " +
+                        hTarget.getType().getValueString());
+                return null;
+                }
+            }
+        }
+
+    /**
+     * @return a call chain for the specified op and arguments or null if none exists
+     */
+    public CallChain findOpChain(ObjectHandle hTarget, String sOp, ObjectHandle[] ahArg)
+        {
+        TypeComposition clz   = hTarget.getComposition();
+        TypeInfo        info  = clz.getType().ensureTypeInfo();
+        int             cArgs = ahArg.length;
+
+        Set<MethodConstant> setMethods = info.findOpMethods(sOp, sOp, cArgs);
+        switch (setMethods.size())
+            {
+            case 0:
+                return null;
+
+            case 1:
+                {
+                MethodConstant idMethod = setMethods.iterator().next();
+                return clz.getMethodCallChain(idMethod.getSignature());
+                }
+
+            default:
+                {
+                NextMethod:
+                for (MethodConstant idMethod : setMethods)
+                    {
+                    SignatureConstant sig = idMethod.getSignature();
+
+                    for (int i = 0; i < cArgs; i++)
+                        {
+                        ObjectHandle hArg      = ahArg[i];
+                        TypeConstant typeArg   = hArg.getType();
+                        TypeConstant typeParam = sig.getRawParams()[i];
+
+                        if (!typeArg.isA(typeParam))
+                            {
+                            continue NextMethod;
+                            }
+                        }
+                    return clz.getMethodCallChain(sig);
                     }
 
                 // sof assert

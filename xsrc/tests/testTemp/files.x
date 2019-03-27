@@ -24,19 +24,7 @@ module TestFiles.xqiz.it
 
         for (Int i : 0..2)
             {
-            // TODO GG
-            // 2019-03-22 14:15:07.749 Service "TestFiles.xqiz.it" (id=0), fiber 0: Unhandled exception at Frame: testPaths(); line=28
-            // java.lang.ClassCastException: org.xvm.runtime.template.xConst cannot be cast to org.xvm.runtime.template.IndexSupport
-            // 	at org.xvm.asm.op.I_Get.complete(I_Get.java:57)
-            // 	at org.xvm.asm.OpIndex.processArgs(OpIndex.java:140)
-            // 	at org.xvm.asm.OpIndex.process(OpIndex.java:125)
-            // 	at org.xvm.runtime.ServiceContext.execute(ServiceContext.java:245)
-            // 	at org.xvm.runtime.DaemonPool.run(DaemonPool.java:123)
-            // 	at java.lang.Thread.run(Thread.java:748)
-            //
-            // console.println("path[" + i + "]=" + path[i]);
-
-            console.println("path[" + i + "]=" + path.getElement(i));
+            console.println("path[" + i + "]=" + path[i]);
             }
 
         // TODO GG

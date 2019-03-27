@@ -386,7 +386,7 @@ public class AnnotationSupport
     // ----- helpers--------------------------------------------------------------------------------
 
     /**
-     * @return a call chain for the specified op or null if non exists
+     * @return a call chain for the specified op or null if none exists
      */
     protected CallChain getOpChain(String sOp, int cArgs)
         {

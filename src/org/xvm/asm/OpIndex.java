@@ -5,6 +5,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
@@ -150,6 +153,26 @@ public abstract class OpIndex
         frame.introduceElementVar(m_nTarget, nIndex);
         }
 
+    /**
+     * Retrieve cached call chain.
+     */
+    protected CallChain getOpChain(TypeConstant typeTarget)
+        {
+        CallChain chain = m_chain;
+        return chain == null || !typeTarget.equals(m_typeTarget)
+                ? null
+                : chain;
+        }
+
+    /**
+     * Cache the specified call chain for the given target.
+     */
+    protected void saveOpChain(TypeConstant typeTarget, CallChain chain)
+        {
+        m_typeTarget = typeTarget;
+        m_chain      = chain;
+        }
+
     protected int complete(Frame frame, ObjectHandle hTarget, JavaLong hIndex)
         {
         throw new UnsupportedOperationException();
@@ -200,4 +223,8 @@ public abstract class OpIndex
     private Argument m_argTarget;
     private Argument m_argIndex;
     private Argument m_argReturn;
+
+    // cached CallChain and the corresponding target type
+    protected CallChain    m_chain;
+    protected TypeConstant m_typeTarget;
     }
