@@ -2408,3 +2408,246 @@ const Path implements Sequence<Path>
 
 
 PathElement {Root, Parent, Current, Name}
+
+//
+
+TypeInfo: TerminalType{type=Ecstasy:rt.Version} (format=CONST, newable)
+- Parameters (3)
+  [0] ElementType=<Ecstasy:rt.Version>
+  [1] GA.RefType=<Ecstasy:Boolean>
+  [2] IndexType=<Ecstasy:Int64>
+- Rebases: Native(Ecstasy:Const)
+- Extends: Ecstasy:Object
+- Class Chain (3)
+  [0] Ecstasy:rt.Version (Anchored)
+  [1] Native(Ecstasy:Const)
+  [2] Ecstasy:Object
+- Default Chain (8)
+  [0] Ecstasy:collections.Sequence
+  [1] Ecstasy:collections.UniformIndexed
+  [2] Ecstasy:Iterable
+  [3] Ecstasy:Stringable
+  [4] Ecstasy:Sequential
+  [5] Ecstasy:Orderable
+  [6] Ecstasy:Const
+  [7] Ecstasy:collections.Hashable
+- Properties (18)
+  [0] (v) Property{property=GA#assigned}=Ecstasy:Boolean assigned
+    [0] Ecstasy:Boolean assigned; (id=Ecstasy:Ref.assigned, impl=Native, RO, @RO)
+    [1] Ecstasy:Boolean assigned; (id=Ecstasy:Ref.assigned, impl=Declared, RO, @RO)
+  [1] (v) Property{property=GA#refName}=Ecstasy:Nullable | Ecstasy:String refName
+    [0] Ecstasy:Nullable | Ecstasy:String refName; (id=Ecstasy:Ref.refName, impl=Native, RO, @RO)
+    [1] Ecstasy:Nullable | Ecstasy:String refName; (id=Ecstasy:Ref.refName, impl=Declared, RO, @RO)
+  [2] (v) Property{property=GA#const_}=Ecstasy:Boolean const_
+    [0] Ecstasy:Boolean const_; (id=Ecstasy:Referent.const_, impl=Native, has-code, @RO)
+    [1] Ecstasy:Boolean const_; (id=Ecstasy:Referent.const_, impl=Declared, RO, @RO)
+    [2] Ecstasy:Boolean const_; (id=Ecstasy:Referent.const_, impl=Declared, RO, @RO)
+  [3] (v) Property{property=number}=Ecstasy:Int64 number, require-field
+    [0] Ecstasy:Int64 number; (id=Ecstasy:rt.Version.number, impl=Explicit, has-field)
+  [4] (v) Property{property=ElementType}=Ecstasy:Type<Ecstasy:rt.Version> ElementType
+    [0] Ecstasy:Type<Ecstasy:rt.Version> ElementType; (id=Ecstasy:Iterable.ElementType, impl=Native, type-param, RO)
+  [5] (v) Property{property=GA#service_}=Ecstasy:Boolean service_
+    [0] Ecstasy:Boolean service_; (id=Ecstasy:Referent.service_, impl=Native, has-code, @RO)
+    [1] Ecstasy:Boolean service_; (id=Ecstasy:Referent.service_, impl=Declared, RO, @RO)
+    [2] Ecstasy:Boolean service_; (id=Ecstasy:Referent.service_, impl=Declared, RO, @RO)
+  [6] (v) Property{property=build}=Ecstasy:Nullable | Ecstasy:String build, require-field
+    [0] Ecstasy:Nullable | Ecstasy:String build; (id=Ecstasy:rt.Version.build, impl=Explicit, has-field)
+  [7] (v) Property{property=GA#immutable_}=Ecstasy:Boolean immutable_
+    [0] Ecstasy:Boolean immutable_; (id=Ecstasy:Referent.immutable_, impl=Native, has-code, @RO)
+    [1] Ecstasy:Boolean immutable_; (id=Ecstasy:Referent.immutable_, impl=Declared, RO, @RO)
+    [2] Ecstasy:Boolean immutable_; (id=Ecstasy:Referent.immutable_, impl=Declared, RO, @RO)
+  [8] (v) Property{property=IndexType}=Ecstasy:Type<Ecstasy:Int64> IndexType
+    [0] Ecstasy:Type<Ecstasy:Int64> IndexType; (id=Ecstasy:collections.UniformIndexed.IndexType, impl=Native, type-param, RO)
+  [9] (v) Property{property=form}=Ecstasy:rt.Version.Form form, require-field
+    [0] Ecstasy:rt.Version.Form form; (id=Ecstasy:rt.Version.form, impl=Explicit, has-field)
+  [10] (v) Property{property=hash}=Ecstasy:Int64 hash
+    [0] Ecstasy:Int64 hash; (id=Ecstasy:Const.hash, impl=Native, RO, @Override, @RO)
+    [1] Ecstasy:Int64 hash; (id=Ecstasy:Const.hash, impl=Declared, RO, @Override, @RO)
+    [2] Ecstasy:Int64 hash; (id=Ecstasy:collections.Hashable.hash, impl=Declared, RO, @RO)
+    [3] Ecstasy:Int64 hash; (id=Ecstasy:collections.Hashable.hash, impl=Declared, RO, @RO)
+  [11] (v) Property{property=GA#selfContained}=Ecstasy:Boolean selfContained
+    [0] Ecstasy:Boolean selfContained; (id=Ecstasy:Ref.selfContained, impl=Native, RO, @RO)
+    [1] Ecstasy:Boolean selfContained; (id=Ecstasy:Ref.selfContained, impl=Declared, RO, @RO)
+  [12] (v) Property{property=GA#RefType}=Ecstasy:Type<Ecstasy:Boolean> RefType
+    [0] Ecstasy:Type<Ecstasy:Boolean> RefType; (id=Ecstasy:Ref.RefType, impl=Native, type-param, RO)
+  [13] (v) Property{property=parent}=Ecstasy:Nullable | this:class(Ecstasy:rt.Version) parent, require-field
+    [0] Ecstasy:Nullable | this:class(Ecstasy:rt.Version) parent; (id=Ecstasy:rt.Version.parent, impl=Explicit, has-field)
+  [14] (v) Property{property=size}=Ecstasy:Int64 size, require-field
+    [0] Ecstasy:Int64 size; (id=Ecstasy:rt.Version.size, impl=Explicit, @Override)
+    [1] Ecstasy:Int64 size; (id=Ecstasy:collections.Sequence.size, impl=Declared, RO, @RO)
+  [15] (v) Property{property=GA#byteLength}=Ecstasy:Int64 byteLength
+    [0] Ecstasy:Int64 byteLength; (id=Ecstasy:Ref.byteLength, impl=Native, RO, @RO)
+    [1] Ecstasy:Int64 byteLength; (id=Ecstasy:Ref.byteLength, impl=Declared, RO, @RO)
+  [16] (v) Property{property=GA}=Ecstasy:Boolean GA
+    [0] Ecstasy:Boolean GA; (id=Ecstasy:rt.Version.GA, impl=Explicit, RO, has-code)
+  [17] (v) Property{property=GA#actualType}=Ecstasy:Type actualType
+    [0] Ecstasy:Type actualType; (id=Ecstasy:Ref.actualType, impl=Native, RO, @Override, @RO)
+    [1] Ecstasy:Type actualType; (id=Ecstasy:Ref.actualType, impl=Declared, RO, @Override, @RO)
+    [2] Ecstasy:Type actualType; (id=Ecstasy:Referent.actualType, impl=Declared, RO, @RO)
+    [3] Ecstasy:Type actualType; (id=Ecstasy:Referent.actualType, impl=Declared, RO, @RO)
+- Methods (54)
+  [0] (v) Method{name=nextValue, signature=this:class(Ecstasy:Sequential) nextValue()}=this:class(Ecstasy:Sequential) nextValue()
+    [*] Sequential.nextValue() {sig=this:class(Ecstasy:Sequential) nextValue(), impl=Default}
+  [1] (v) Method{name=through, signature=Ecstasy:Interval<this:class(Ecstasy:Orderable)> through(this:class(Ecstasy:Orderable))}=Ecstasy:Interval<this:class(Ecstasy:Orderable)> through(this:class(Ecstasy:Orderable))
+    [*] Orderable.through(this:class(Ecstasy:Orderable)) {sig=Ecstasy:Interval<this:class(Ecstasy:Orderable)> through(this:class(Ecstasy:Orderable)), impl=Default}
+    [0] Orderable.through(this:class(Ecstasy:Orderable)) {sig=Ecstasy:Interval<this:class(Ecstasy:Orderable)> through(this:class(Ecstasy:Orderable)), impl=Explicit}
+    [*] Orderable.through(this:class(Ecstasy:Orderable)) {sig=Ecstasy:Interval<this:class(Ecstasy:Orderable)> through(this:class(Ecstasy:Orderable)), impl=Default}
+    [*] Orderable.through(this:class(Ecstasy:Orderable)) {sig=Ecstasy:Interval<this:class(Ecstasy:Orderable)> through(this:class(Ecstasy:Orderable)), impl=Default}
+  [2] (v) Method{name=GA#peek, signature=(Ecstasy:Boolean, Ecstasy:Boolean) peek()}=(Ecstasy:Boolean, Ecstasy:Boolean) peek()
+    [0] Ref.peek() {sig=(Ecstasy:Boolean, Ecstasy:Boolean) peek(), impl=Explicit}
+    [*] Ref.peek() {sig=(Ecstasy:Boolean, Ecstasy:Boolean) peek(), impl=Default}
+  [3] (v) Method{name=GA#instanceOf, signature=Ecstasy:Boolean instanceOf(Ecstasy:Type)}=Ecstasy:Boolean instanceOf(Ecstasy:Type)
+    [0] Referent.instanceOf(Ecstasy:Type) {sig=Ecstasy:Boolean instanceOf(Ecstasy:Type), impl=Native}
+    [*] Referent.instanceOf(Ecstasy:Type) {sig=Ecstasy:Boolean instanceOf(Ecstasy:Type), impl=Declared}
+    [*] Referent.instanceOf(Ecstasy:Type) {sig=Ecstasy:Boolean instanceOf(Ecstasy:Type), impl=Declared}
+  [4] (v) Method{name=next, signature=(Ecstasy:Boolean, this:class(Ecstasy:Sequential)) next()}=(Ecstasy:Boolean, this:class(Ecstasy:Sequential)) next()
+    [0] rt.Version.next() {sig=(Ecstasy:Boolean, this:class(Ecstasy:Sequential)) next(), impl=Capped, target=(Ecstasy:Boolean, this:class(Ecstasy:rt.Version)) next()}
+    [*] Sequential.next() {sig=(Ecstasy:Boolean, this:class(Ecstasy:Sequential)) next(), impl=Declared}
+  [5] (v) Method{name=next, signature=(Ecstasy:Boolean, this:class(Ecstasy:rt.Version)) next()}=(Ecstasy:Boolean, this:class(Ecstasy:rt.Version)) next()
+    [0] rt.Version.next() {sig=(Ecstasy:Boolean, this:class(Ecstasy:rt.Version)) next(), impl=Explicit}
+    [*] Sequential.next() {sig=(Ecstasy:Boolean, this:class(Ecstasy:Sequential)) next(), impl=Declared}
+  [6] (v) Method{name=elementAt, signature=Ecstasy:Ref<Ecstasy:rt.Version> elementAt(Ecstasy:Int64)}=Ecstasy:Ref<Ecstasy:rt.Version> elementAt(Ecstasy:Int64)
+    [*] collections.UniformIndexed.elementAt(Ecstasy:collections.UniformIndexed.IndexType) {sig=Ecstasy:Ref<Ecstasy:rt.Version> elementAt(Ecstasy:Int64), impl=Default}
+  [7] (v) Method{name=slice, signature=this:class(Ecstasy:collections.Sequence)<Ecstasy:rt.Version> slice(Ecstasy:Range<Ecstasy:Int64>)}=this:class(Ecstasy:collections.Sequence)<Ecstasy:rt.Version> slice(Ecstasy:Range<Ecstasy:Int64>)
+    [0] rt.Version.slice(Ecstasy:Range<Ecstasy:Int64>) {sig=this:class(Ecstasy:collections.Sequence)<Ecstasy:rt.Version> slice(Ecstasy:Range<Ecstasy:Int64>), impl=Capped, target=this:class(Ecstasy:rt.Version) slice(Ecstasy:Range<Ecstasy:Int64>)}
+    [*] collections.Sequence.slice(Ecstasy:Range<Ecstasy:Int64>) {sig=this:class(Ecstasy:collections.Sequence)<Ecstasy:rt.Version> slice(Ecstasy:Range<Ecstasy:Int64>), impl=Declared}
+  [8] (v) Method{name=slice, signature=this:class(Ecstasy:rt.Version) slice(Ecstasy:Range<Ecstasy:Int64>)}=this:class(Ecstasy:rt.Version) slice(Ecstasy:Range<Ecstasy:Int64>)
+    [0] rt.Version.slice(Ecstasy:Range<Ecstasy:Int64>) {sig=this:class(Ecstasy:rt.Version) slice(Ecstasy:Range<Ecstasy:Int64>), impl=Explicit}
+    [*] collections.Sequence.slice(Ecstasy:Range<Ecstasy:Int64>) {sig=this:class(Ecstasy:collections.Sequence)<Ecstasy:rt.Version> slice(Ecstasy:Range<Ecstasy:Int64>), impl=Declared}
+  [9] (v) Method{name=lastIndexOf, signature=(Ecstasy:Boolean, Ecstasy:Int64) lastIndexOf(Ecstasy:rt.Version, Ecstasy:Int64)}=(Ecstasy:Boolean, Ecstasy:Int64) lastIndexOf(Ecstasy:rt.Version, Ecstasy:Int64)
+    [*] collections.Sequence.lastIndexOf(Ecstasy:collections.Sequence.ElementType, Ecstasy:Int64) {sig=(Ecstasy:Boolean, Ecstasy:Int64) lastIndexOf(Ecstasy:rt.Version, Ecstasy:Int64), impl=Default}
+  [10] (v) Method{name=getElement, signature=Ecstasy:rt.Version getElement(Ecstasy:Int64)}=Ecstasy:rt.Version getElement(Ecstasy:Int64)
+    [0] rt.Version.getElement(Ecstasy:Int64) {sig=Ecstasy:rt.Version getElement(Ecstasy:Int64), impl=Capped, target=this:class(Ecstasy:rt.Version) getElement(Ecstasy:Int64)}
+    [*] collections.UniformIndexed.getElement(Ecstasy:collections.UniformIndexed.IndexType) {sig=Ecstasy:rt.Version getElement(Ecstasy:Int64), impl=Declared}
+  [11] (v) Method{name=getElement, signature=this:class(Ecstasy:rt.Version) getElement(Ecstasy:Int64)}=this:class(Ecstasy:rt.Version) getElement(Ecstasy:Int64)
+    [0] rt.Version.getElement(Ecstasy:Int64) {sig=this:class(Ecstasy:rt.Version) getElement(Ecstasy:Int64), impl=Explicit}
+    [*] collections.UniformIndexed.getElement(Ecstasy:collections.UniformIndexed.IndexType) {sig=Ecstasy:rt.Version getElement(Ecstasy:Int64), impl=Declared}
+  [12] (v) Method{name=maxOf, signature=this:class(Ecstasy:Orderable) maxOf(this:class(Ecstasy:Orderable))}=this:class(Ecstasy:Orderable) maxOf(this:class(Ecstasy:Orderable))
+    [*] Orderable.maxOf(this:class(Ecstasy:Orderable)) {sig=this:class(Ecstasy:Orderable) maxOf(this:class(Ecstasy:Orderable)), impl=Default}
+    [0] Orderable.maxOf(this:class(Ecstasy:Orderable)) {sig=this:class(Ecstasy:Orderable) maxOf(this:class(Ecstasy:Orderable)), impl=Explicit}
+    [*] Orderable.maxOf(this:class(Ecstasy:Orderable)) {sig=this:class(Ecstasy:Orderable) maxOf(this:class(Ecstasy:Orderable)), impl=Default}
+    [*] Orderable.maxOf(this:class(Ecstasy:Orderable)) {sig=this:class(Ecstasy:Orderable) maxOf(this:class(Ecstasy:Orderable)), impl=Default}
+  [13] (v) Method{name=GA#extends_, signature=Ecstasy:Boolean extends_(Ecstasy:Class)}=Ecstasy:Boolean extends_(Ecstasy:Class)
+    [0] Referent.extends_(Ecstasy:Class) {sig=Ecstasy:Boolean extends_(Ecstasy:Class), impl=Native}
+    [*] Referent.extends_(Ecstasy:Class) {sig=Ecstasy:Boolean extends_(Ecstasy:Class), impl=Declared}
+    [*] Referent.extends_(Ecstasy:Class) {sig=Ecstasy:Boolean extends_(Ecstasy:Class), impl=Declared}
+  [14] (v) Method{name=GA#get, signature=Ecstasy:Boolean get()}=Ecstasy:Boolean get()
+    [0] rt.Version.GA.get() {sig=Ecstasy:Boolean get(), impl=Explicit}
+    [1] Ref.get() {sig=Ecstasy:Boolean get(), impl=Native}
+    [*] Ref.get() {sig=Ecstasy:Boolean get(), impl=Declared}
+  [15] (v) Method{name=indexOf, signature=(Ecstasy:Boolean, Ecstasy:Int64) indexOf(Ecstasy:rt.Version, Ecstasy:Int64)}=(Ecstasy:Boolean, Ecstasy:Int64) indexOf(Ecstasy:rt.Version, Ecstasy:Int64)
+    [*] collections.Sequence.indexOf(Ecstasy:collections.Sequence.ElementType, Ecstasy:Int64) {sig=(Ecstasy:Boolean, Ecstasy:Int64) indexOf(Ecstasy:rt.Version, Ecstasy:Int64), impl=Default}
+  [16] (v) Method{name=GA#incorporates_, signature=Ecstasy:Boolean incorporates_(Ecstasy:Class)}=Ecstasy:Boolean incorporates_(Ecstasy:Class)
+    [0] Referent.incorporates_(Ecstasy:Class) {sig=Ecstasy:Boolean incorporates_(Ecstasy:Class), impl=Native}
+    [*] Referent.incorporates_(Ecstasy:Class) {sig=Ecstasy:Boolean incorporates_(Ecstasy:Class), impl=Declared}
+    [*] Referent.incorporates_(Ecstasy:Class) {sig=Ecstasy:Boolean incorporates_(Ecstasy:Class), impl=Declared}
+  [17] (v) Method{name=to, signature=Ecstasy:String to()}=Ecstasy:String to()
+    [0] Const.to() {sig=Ecstasy:String to(), impl=Explicit}
+    [*] Const.to() {sig=Ecstasy:String to(), impl=Default}
+    [*] Object.to() {sig=Ecstasy:String to(), impl=Implicit}
+    [1] Object.to() {sig=Ecstasy:String to(), impl=Explicit}
+  [18] (v) Method{name=to, signature=Ecstasy:collections.Array<this:class(Ecstasy:Object)> to()}=Ecstasy:collections.Array<this:class(Ecstasy:Object)> to()
+    [*] Object.to() {sig=Ecstasy:collections.Array<this:class(Ecstasy:Object)> to(), impl=Implicit}
+    [0] Object.to() {sig=Ecstasy:collections.Array<this:class(Ecstasy:Object)> to(), impl=Explicit}
+  [19] (v) Method{name=to, signature=Ecstasy:collections.Tuple<this:class(Ecstasy:Object)> to()}=Ecstasy:collections.Tuple<this:class(Ecstasy:Object)> to()
+    [*] Object.to() {sig=Ecstasy:collections.Tuple<this:class(Ecstasy:Object)> to(), impl=Implicit}
+    [0] Object.to() {sig=Ecstasy:collections.Tuple<this:class(Ecstasy:Object)> to(), impl=Explicit}
+  [20] (v) Method{name=to, signature=Ecstasy:Function<Ecstasy:collections.Tuple<>, Ecstasy:collections.Tuple<this:class(Ecstasy:Object)>> to()}=Ecstasy:Function<Ecstasy:collections.Tuple<>, Ecstasy:collections.Tuple<this:class(Ecstasy:Object)>> to()
+    [*] Object.to() {sig=Ecstasy:Function<Ecstasy:collections.Tuple<>, Ecstasy:collections.Tuple<this:class(Ecstasy:Object)>> to(), impl=Implicit}
+    [0] Object.to() {sig=Ecstasy:Function<Ecstasy:collections.Tuple<>, Ecstasy:collections.Tuple<this:class(Ecstasy:Object)>> to(), impl=Explicit}
+  [21] Method{name=construct, signature=void construct(Ecstasy:String)}=void construct(Ecstasy:String)
+    [0] rt.Version.construct(Ecstasy:String) {sig=void construct(Ecstasy:String), impl=Explicit}
+  [22] (v) Method{name=GA#maskAs, signature=maskAs.AsType maskAs(Ecstasy:Type<Ecstasy:Object>)}=maskAs.AsType maskAs(Ecstasy:Type<Ecstasy:Object>)
+    [0] Referent.maskAs(Ecstasy:Type<Ecstasy:Object>) {sig=maskAs.AsType maskAs(Ecstasy:Type<Ecstasy:Object>), impl=Native}
+    [*] Referent.maskAs(Ecstasy:Type<Ecstasy:Object>) {sig=maskAs.AsType maskAs(Ecstasy:Type<Ecstasy:Object>), impl=Declared}
+    [*] Referent.maskAs(Ecstasy:Type<Ecstasy:Object>) {sig=maskAs.AsType maskAs(Ecstasy:Type<Ecstasy:Object>), impl=Declared}
+  [23] Method{name=construct, signature=void construct(Ecstasy:Nullable | Ecstasy:rt.Version, Ecstasy:Int64, Ecstasy:Nullable | Ecstasy:String)}=void construct(Ecstasy:Nullable | Ecstasy:rt.Version, Ecstasy:Int64, Ecstasy:Nullable | Ecstasy:String)
+    [0] rt.Version.construct(Ecstasy:Nullable | Ecstasy:rt.Version, Ecstasy:Int64, Ecstasy:Nullable | Ecstasy:String) {sig=void construct(Ecstasy:Nullable | Ecstasy:rt.Version, Ecstasy:Int64, Ecstasy:Nullable | Ecstasy:String), impl=Explicit}
+  [24] Method{name=construct, signature=void construct(Ecstasy:Nullable | Ecstasy:rt.Version, Ecstasy:rt.Version.Form, Ecstasy:Nullable | Ecstasy:String)}=void construct(Ecstasy:Nullable | Ecstasy:rt.Version, Ecstasy:rt.Version.Form, Ecstasy:Nullable | Ecstasy:String)
+    [0] rt.Version.construct(Ecstasy:Nullable | Ecstasy:rt.Version, Ecstasy:rt.Version.Form, Ecstasy:Nullable | Ecstasy:String) {sig=void construct(Ecstasy:Nullable | Ecstasy:rt.Version, Ecstasy:rt.Version.Form, Ecstasy:Nullable | Ecstasy:String), impl=Explicit}
+  [25] (v) Method{name=minOf, signature=this:class(Ecstasy:Orderable) minOf(this:class(Ecstasy:Orderable))}=this:class(Ecstasy:Orderable) minOf(this:class(Ecstasy:Orderable))
+    [*] Orderable.minOf(this:class(Ecstasy:Orderable)) {sig=this:class(Ecstasy:Orderable) minOf(this:class(Ecstasy:Orderable)), impl=Default}
+    [0] Orderable.minOf(this:class(Ecstasy:Orderable)) {sig=this:class(Ecstasy:Orderable) minOf(this:class(Ecstasy:Orderable)), impl=Explicit}
+    [*] Orderable.minOf(this:class(Ecstasy:Orderable)) {sig=this:class(Ecstasy:Orderable) minOf(this:class(Ecstasy:Orderable)), impl=Default}
+    [*] Orderable.minOf(this:class(Ecstasy:Orderable)) {sig=this:class(Ecstasy:Orderable) minOf(this:class(Ecstasy:Orderable)), impl=Default}
+  [26] (v) Method{name=prev, signature=(Ecstasy:Boolean, this:class(Ecstasy:Sequential)) prev()}=(Ecstasy:Boolean, this:class(Ecstasy:Sequential)) prev()
+    [0] rt.Version.prev() {sig=(Ecstasy:Boolean, this:class(Ecstasy:Sequential)) prev(), impl=Capped, target=(Ecstasy:Boolean, this:class(Ecstasy:rt.Version)) prev()}
+    [*] Sequential.prev() {sig=(Ecstasy:Boolean, this:class(Ecstasy:Sequential)) prev(), impl=Declared}
+  [27] (v) Method{name=GA#makeImmutable, signature=immutable this:class(Ecstasy:Object) makeImmutable()}=immutable this:class(Ecstasy:Object) makeImmutable()
+    [*] Object.makeImmutable() {sig=immutable this:class(Ecstasy:Object) makeImmutable(), impl=Implicit}
+    [0] Object.makeImmutable() {sig=immutable this:class(Ecstasy:Object) makeImmutable(), impl=Explicit}
+  [28] (v) Method{name=GA#revealAs, signature=(Ecstasy:Boolean, revealAs.AsType) revealAs(Ecstasy:Type<Ecstasy:Object>)}=(Ecstasy:Boolean, revealAs.AsType) revealAs(Ecstasy:Type<Ecstasy:Object>)
+    [0] Referent.revealAs(Ecstasy:Type<Ecstasy:Object>) {sig=(Ecstasy:Boolean, revealAs.AsType) revealAs(Ecstasy:Type<Ecstasy:Object>), impl=Native}
+    [*] Referent.revealAs(Ecstasy:Type<Ecstasy:Object>) {sig=(Ecstasy:Boolean, revealAs.AsType) revealAs(Ecstasy:Type<Ecstasy:Object>), impl=Declared}
+    [*] Referent.revealAs(Ecstasy:Type<Ecstasy:Object>) {sig=(Ecstasy:Boolean, revealAs.AsType) revealAs(Ecstasy:Type<Ecstasy:Object>), impl=Declared}
+  [29] (v) Method{name=prev, signature=(Ecstasy:Boolean, this:class(Ecstasy:rt.Version)) prev()}=(Ecstasy:Boolean, this:class(Ecstasy:rt.Version)) prev()
+    [0] rt.Version.prev() {sig=(Ecstasy:Boolean, this:class(Ecstasy:rt.Version)) prev(), impl=Explicit}
+    [*] Sequential.prev() {sig=(Ecstasy:Boolean, this:class(Ecstasy:Sequential)) prev(), impl=Declared}
+  [30] Method{name=GA#equals, signature=Ecstasy:Boolean equals(Ecstasy:Type<Ecstasy:Object>, equals.CompileType, equals.CompileType)}=Ecstasy:Boolean equals(Ecstasy:Type<Ecstasy:Object>, equals.CompileType, equals.CompileType)
+    [0] Object.equals(Ecstasy:Type<Ecstasy:Object>, equals.CompileType, equals.CompileType) {sig=Ecstasy:Boolean equals(Ecstasy:Type<Ecstasy:Object>, equals.CompileType, equals.CompileType), impl=Explicit}
+  [31] Method{name=GA#equals, signature=Ecstasy:Boolean equals(Ecstasy:Type<Ecstasy:Ref<Ecstasy:Ref.RefType>>, equals.CompileType, equals.CompileType)}=Ecstasy:Boolean equals(Ecstasy:Type<Ecstasy:Ref<Ecstasy:Boolean>>, equals.CompileType, equals.CompileType)
+    [0] Ref.equals(Ecstasy:Type<Ecstasy:Ref<Ecstasy:Ref.RefType>>, equals.CompileType, equals.CompileType) {sig=Ecstasy:Boolean equals(Ecstasy:Type<Ecstasy:Ref<Ecstasy:Boolean>>, equals.CompileType, equals.CompileType), impl=Explicit}
+  [32] (v) Method{name=matches, signature=Ecstasy:Boolean matches(this:class(Ecstasy:rt.Version))}=Ecstasy:Boolean matches(this:class(Ecstasy:rt.Version))
+    [0] rt.Version.matches(this:class(Ecstasy:rt.Version)) {sig=Ecstasy:Boolean matches(this:class(Ecstasy:rt.Version)), impl=Explicit}
+  [33] (v) Method{name=stepsTo, signature=Ecstasy:Int64 stepsTo(this:class(Ecstasy:Sequential))}=Ecstasy:Int64 stepsTo(this:class(Ecstasy:Sequential))
+    [0] rt.Version.stepsTo(this:class(Ecstasy:Sequential)) {sig=Ecstasy:Int64 stepsTo(this:class(Ecstasy:Sequential)), impl=Capped, target=Ecstasy:Int64 stepsTo(Ecstasy:Sequential)}
+    [*] Sequential.stepsTo(this:class(Ecstasy:Sequential)) {sig=Ecstasy:Int64 stepsTo(this:class(Ecstasy:Sequential)), impl=Declared}
+  [34] (v) Method{name=stepsTo, signature=Ecstasy:Int64 stepsTo(Ecstasy:Sequential)}=Ecstasy:Int64 stepsTo(Ecstasy:Sequential)
+    [0] rt.Version.stepsTo(Ecstasy:Sequential) {sig=Ecstasy:Int64 stepsTo(Ecstasy:Sequential), impl=Explicit}
+    [*] Sequential.stepsTo(this:class(Ecstasy:Sequential)) {sig=Ecstasy:Int64 stepsTo(this:class(Ecstasy:Sequential)), impl=Declared}
+  [35] (v) Method{name=normalize, signature=this:class(Ecstasy:rt.Version) normalize()}=this:class(Ecstasy:rt.Version) normalize()
+    [0] rt.Version.normalize() {sig=this:class(Ecstasy:rt.Version) normalize(), impl=Explicit}
+  [36] (v) Method{name=GA#to, signature=Ecstasy:String to()}=Ecstasy:String to()
+    [*] Object.to() {sig=Ecstasy:String to(), impl=Implicit}
+    [0] Object.to() {sig=Ecstasy:String to(), impl=Explicit}
+  [37] (v) Method{name=GA#to, signature=Ecstasy:collections.Array<this:class(Ecstasy:Object)> to()}=Ecstasy:collections.Array<this:class(Ecstasy:Object)> to()
+    [*] Object.to() {sig=Ecstasy:collections.Array<this:class(Ecstasy:Object)> to(), impl=Implicit}
+    [0] Object.to() {sig=Ecstasy:collections.Array<this:class(Ecstasy:Object)> to(), impl=Explicit}
+  [38] (v) Method{name=GA#to, signature=Ecstasy:collections.Tuple<this:class(Ecstasy:Object)> to()}=Ecstasy:collections.Tuple<this:class(Ecstasy:Object)> to()
+    [*] Object.to() {sig=Ecstasy:collections.Tuple<this:class(Ecstasy:Object)> to(), impl=Implicit}
+    [0] Object.to() {sig=Ecstasy:collections.Tuple<this:class(Ecstasy:Object)> to(), impl=Explicit}
+  [39] (v) Method{name=GA#to, signature=Ecstasy:Function<Ecstasy:collections.Tuple<>, Ecstasy:collections.Tuple<this:class(Ecstasy:Object)>> to()}=Ecstasy:Function<Ecstasy:collections.Tuple<>, Ecstasy:collections.Tuple<this:class(Ecstasy:Object)>> to()
+    [*] Object.to() {sig=Ecstasy:Function<Ecstasy:collections.Tuple<>, Ecstasy:collections.Tuple<this:class(Ecstasy:Object)>> to(), impl=Implicit}
+    [0] Object.to() {sig=Ecstasy:Function<Ecstasy:collections.Tuple<>, Ecstasy:collections.Tuple<this:class(Ecstasy:Object)>> to(), impl=Explicit}
+  [40] (v) Method{name=setElement, signature=void setElement(Ecstasy:Int64, Ecstasy:rt.Version)}=void setElement(Ecstasy:Int64, Ecstasy:rt.Version)
+    [*] collections.UniformIndexed.setElement(Ecstasy:collections.UniformIndexed.IndexType, Ecstasy:collections.UniformIndexed.ElementType) {sig=void setElement(Ecstasy:Int64, Ecstasy:rt.Version), impl=Default}
+  [41] Method{name=compare, signature=Ecstasy:Ordered compare(Ecstasy:Type<Ecstasy:Orderable>, compare.CompileType, compare.CompileType)}=Ecstasy:Ordered compare(Ecstasy:Type<Ecstasy:Orderable>, compare.CompileType, compare.CompileType)
+    [*] Orderable.compare(Ecstasy:Type<Ecstasy:Orderable>, compare.CompileType, compare.CompileType) {sig=Ecstasy:Ordered compare(Ecstasy:Type<Ecstasy:Orderable>, compare.CompileType, compare.CompileType), impl=Default}
+  [42] Method{name=compare, signature=Ecstasy:Ordered compare(Ecstasy:Type<Ecstasy:Const>, compare.CompileType, compare.CompileType)}=Ecstasy:Ordered compare(Ecstasy:Type<Ecstasy:Const>, compare.CompileType, compare.CompileType)
+    [0] Const.compare(Ecstasy:Type<Ecstasy:Const>, compare.CompileType, compare.CompileType) {sig=Ecstasy:Ordered compare(Ecstasy:Type<Ecstasy:Const>, compare.CompileType, compare.CompileType), impl=Explicit}
+  [43] (v) Method{name=estimateStringLength, signature=Ecstasy:Int64 estimateStringLength()}=Ecstasy:Int64 estimateStringLength()
+    [0] rt.Version.estimateStringLength() {sig=Ecstasy:Int64 estimateStringLength(), impl=Explicit}
+    [*] collections.Sequence.estimateStringLength() {sig=Ecstasy:Int64 estimateStringLength(), impl=Default}
+    [*] Stringable.estimateStringLength() {sig=Ecstasy:Int64 estimateStringLength(), impl=Declared}
+    [1] Stringable.estimateStringLength() {sig=Ecstasy:Int64 estimateStringLength(), impl=Native}
+    [*] Stringable.estimateStringLength() {sig=Ecstasy:Int64 estimateStringLength(), impl=Declared}
+    [*] Stringable.estimateStringLength() {sig=Ecstasy:Int64 estimateStringLength(), impl=Declared}
+  [44] (v) Method{name=makeImmutable, signature=immutable this:class(Ecstasy:Object) makeImmutable()}=immutable this:class(Ecstasy:Object) makeImmutable()
+    [*] Object.makeImmutable() {sig=immutable this:class(Ecstasy:Object) makeImmutable(), impl=Implicit}
+    [0] Object.makeImmutable() {sig=immutable this:class(Ecstasy:Object) makeImmutable(), impl=Explicit}
+  [45] (v) Method{name=reify, signature=this:class(Ecstasy:collections.Sequence)<Ecstasy:rt.Version> reify()}=this:class(Ecstasy:collections.Sequence)<Ecstasy:rt.Version> reify()
+    [*] collections.Sequence.reify() {sig=this:class(Ecstasy:collections.Sequence)<Ecstasy:rt.Version> reify(), impl=Default}
+  [46] (v) Method{name=iterator, signature=Ecstasy:Iterator<Ecstasy:rt.Version> iterator()}=Ecstasy:Iterator<Ecstasy:rt.Version> iterator()
+    [*] collections.Sequence.iterator() {sig=Ecstasy:Iterator<Ecstasy:rt.Version> iterator(), impl=Default}
+    [*] Iterable.iterator() {sig=Ecstasy:Iterator<Ecstasy:rt.Version> iterator(), impl=Declared}
+  [47] (v) Method{name=appendTo, signature=void appendTo(Ecstasy:Appender<Ecstasy:Char>)}=void appendTo(Ecstasy:Appender<Ecstasy:Char>)
+    [0] rt.Version.appendTo(Ecstasy:Appender<Ecstasy:Char>) {sig=void appendTo(Ecstasy:Appender<Ecstasy:Char>), impl=Explicit}
+    [*] collections.Sequence.appendTo(Ecstasy:Appender<Ecstasy:Char>) {sig=void appendTo(Ecstasy:Appender<Ecstasy:Char>), impl=Default}
+    [*] Stringable.appendTo(Ecstasy:Appender<Ecstasy:Char>) {sig=void appendTo(Ecstasy:Appender<Ecstasy:Char>), impl=Declared}
+    [1] Stringable.appendTo(Ecstasy:Appender<Ecstasy:Char>) {sig=void appendTo(Ecstasy:Appender<Ecstasy:Char>), impl=Native}
+    [*] Stringable.appendTo(Ecstasy:Appender<Ecstasy:Char>) {sig=void appendTo(Ecstasy:Appender<Ecstasy:Char>), impl=Declared}
+    [*] Stringable.appendTo(Ecstasy:Appender<Ecstasy:Char>) {sig=void appendTo(Ecstasy:Appender<Ecstasy:Char>), impl=Declared}
+  [48] (v) Method{name=appendTo, signature=void appendTo(Ecstasy:Appender<Ecstasy:Char>, Ecstasy:Boolean)}=void appendTo(Ecstasy:Appender<Ecstasy:Char>, Ecstasy:Boolean)
+    [0] rt.Version.appendTo(Ecstasy:Appender<Ecstasy:Char>, Ecstasy:Boolean) {sig=void appendTo(Ecstasy:Appender<Ecstasy:Char>, Ecstasy:Boolean), impl=Explicit}
+  [49] (v) Method{name=iterator, signature=Ecstasy:Iterator<Ecstasy:rt.Version> iterator(Ecstasy:Function<Ecstasy:collections.Tuple<Ecstasy:rt.Version>, Ecstasy:collections.Tuple<Ecstasy:Boolean>>)}=Ecstasy:Iterator<Ecstasy:rt.Version> iterator(Ecstasy:Function<Ecstasy:collections.Tuple<Ecstasy:rt.Version>, Ecstasy:collections.Tuple<Ecstasy:Boolean>>)
+    [*] Iterable.iterator(Ecstasy:Function<Ecstasy:collections.Tuple<Ecstasy:Iterable.ElementType>, Ecstasy:collections.Tuple<Ecstasy:Boolean>>) {sig=Ecstasy:Iterator<Ecstasy:rt.Version> iterator(Ecstasy:Function<Ecstasy:collections.Tuple<Ecstasy:rt.Version>, Ecstasy:collections.Tuple<Ecstasy:Boolean>>), impl=Default}
+  [50] Method{name=equals, signature=Ecstasy:Boolean equals(Ecstasy:Type<Ecstasy:Object>, equals.CompileType, equals.CompileType)}=Ecstasy:Boolean equals(Ecstasy:Type<Ecstasy:Object>, equals.CompileType, equals.CompileType)
+    [0] Object.equals(Ecstasy:Type<Ecstasy:Object>, equals.CompileType, equals.CompileType) {sig=Ecstasy:Boolean equals(Ecstasy:Type<Ecstasy:Object>, equals.CompileType, equals.CompileType), impl=Explicit}
+  [51] Method{name=equals, signature=Ecstasy:Boolean equals(Ecstasy:Type<Ecstasy:Const>, equals.CompileType, equals.CompileType)}=Ecstasy:Boolean equals(Ecstasy:Type<Ecstasy:Const>, equals.CompileType, equals.CompileType)
+    [0] Const.equals(Ecstasy:Type<Ecstasy:Const>, equals.CompileType, equals.CompileType) {sig=Ecstasy:Boolean equals(Ecstasy:Type<Ecstasy:Const>, equals.CompileType, equals.CompileType), impl=Explicit}
+  [52] (v) Method{name=GA#implements_, signature=Ecstasy:Boolean implements_(Ecstasy:Class)}=Ecstasy:Boolean implements_(Ecstasy:Class)
+    [0] Referent.implements_(Ecstasy:Class) {sig=Ecstasy:Boolean implements_(Ecstasy:Class), impl=Native}
+    [*] Referent.implements_(Ecstasy:Class) {sig=Ecstasy:Boolean implements_(Ecstasy:Class), impl=Declared}
+    [*] Referent.implements_(Ecstasy:Class) {sig=Ecstasy:Boolean implements_(Ecstasy:Class), impl=Declared}
+  [53] (v) Method{name=prevValue, signature=this:class(Ecstasy:Sequential) prevValue()}=this:class(Ecstasy:Sequential) prevValue()
+    [*] Sequential.prevValue() {sig=this:class(Ecstasy:Sequential) prevValue(), impl=Default}

@@ -675,7 +675,7 @@ public class Version
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private static final String[] PREFIX = {"dev", "ci", "alpha", "beta", "rc"};
+    private static final String[] PREFIX = {"dev", "ci", "qc", "alpha", "beta", "rc"};
 
     protected String   literal;
     protected String[] strs;
