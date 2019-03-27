@@ -205,7 +205,7 @@ public class AnnotationSupport
     @Override
     public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("next", 0);
+        CallChain chain = getOpChain("nextValue", 0);
         return chain == null
             ? f_support.invokeNext(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);
@@ -214,7 +214,7 @@ public class AnnotationSupport
     @Override
     public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("prev", 0);
+        CallChain chain = getOpChain("prevValue", 0);
         return chain == null
             ? f_support.invokePrev(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);
