@@ -8,11 +8,13 @@ interface Sequential
     /**
      * @return the value that precedes this value, if there is one.
      */
+    @Op
     conditional Sequential prev();
 
     /**
      * @return the value that follows this value, if there is one.
      */
+    @Op
     conditional Sequential next();
 
     /**

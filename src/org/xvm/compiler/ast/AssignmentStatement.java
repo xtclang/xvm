@@ -262,6 +262,14 @@ public class AssignmentStatement
         }
 
     @Override
+    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
+        {
+        return getParent() instanceof ForEachStatement // TODO
+                ? getParent().getShortCircuitLabel(ctx, exprChild)
+                : super.getShortCircuitLabel(ctx, exprChild);
+        }
+
+    @Override
     public long getStartPosition()
         {
         return lvalue.getStartPosition();
