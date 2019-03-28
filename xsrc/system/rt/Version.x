@@ -42,7 +42,7 @@
  * while this Version class does _support_ Semantic Versioning, it does not _enforce_ it.
  * Additionally, this design constrains the use of alpha-numeric forms in two different ways:
  *
- * * Only six alpha-numeric forms are supported ("CI", "DEV", "QC", "alpha", "beta", and "rc"),
+ * * Only six alpha-numeric forms are supported ("CI", "Dev", "QC", "alpha", "beta", and "rc"),
  *   with the first three representing internal versions and the remainder representing published
  *   versions. (The use of uppercase names for the first three is not accidental; ASCII uppercase
  *   precedes ASCII lowercase, which achieves compliance with the ASCII ordering specified by the
@@ -77,12 +77,12 @@ const Version
         /**
          * Development (or "engineering") version. This is an "internal" version, i.e. not intended
          * for distribution. In the absence of a Version being specified, the Ecstasy compiler will
-         * simply use "DEV" as the default version when it emits a module.
+         * simply use "Dev" as the default version when it emits a module.
          */
-        Dev  ("DEV"  , -5),
+        Dev  ("Dev"  , -5),
         /**
          * Quality Control (QC) version. This is an "internal" version, i.e. not intended for
-         * distribution. It is expected that when a DEV or CI version is selected for testing,
+         * distribution. It is expected that when a Dev or CI version is selected for testing,
          * it will be stamped with a QC version. Development and integration builds are extremely
          * frequent, and tend to be discarded with a high degree of frequency; to ensure the
          * reproducibility of logged errors, a QC version is expected to be archived at least
@@ -125,7 +125,82 @@ const Version
      */
     construct(String version)
         {
-        TODO parse from the end, and recursively construct
+        // check for "+" (start of build string)
+        Int     end   = version.size-1;
+        String? build = null;
+        if (Int buildStart : version.indexOf('+'))
+            {
+            if (buildStart < end)
+                {
+                build = version[buildStart+1..end];
+                }
+            end = buildStart-1;
+            }
+
+
+        // start at the end, walking backwards until we encounter:
+        //   "." (version delimiter)
+        //   "-" (precedes non-numeric version indicator)
+        //   a shift from numbers to letters, or letters to numbers
+        //   the beginning of the string
+        Boolean  fAnyChars = false;
+        Boolean  fAnyNums  = false;
+        Int      start     = end;
+        Version? parent    = null;
+        scan: for (Int of = end; of >= 0; --of)
+            {
+            switch (Char ch = version[start])
+                {
+                case '.':
+                case '-':
+                    if (of == 0)
+                        {
+                        throw new IllegalArgument("version (" + version
+                                + ") must not begin with a version delimiter (" + ch + ")");
+                        }
+                    parent = new Version(version[0..of-1]);
+                    start  = of+1;
+                    break scan;
+
+                case 'A'..'Z':
+                case 'a'..'z':
+                    if (fAnyNums)
+                        {
+                        // something like "rc2" needs to stop rewinding after the "2"
+                        parent = new Version(version[0..of]);
+                        start  = of+1;
+                        break scan;
+                        }
+
+                    fAnyChars = true;
+                    break;
+
+                case '0'..'9':
+                    fAnyNums = true;
+                    break;
+                }
+            }
+
+        if (fAnyChars)
+            {
+            String name = version[start..end];
+            if (Form form : Form.byName.get(name))
+                {
+                construct Version(parent, form, build);
+                }
+            else
+                {
+                throw new IllegalArgument("Invalid version indicator: \"" + name + "\"");
+                }
+            }
+        else if (fAnyNums)
+            {
+            construct Version(parent, new IntLiteral(version[start..end]).to<Int>(), build);
+            }
+        else
+            {
+            throw new IllegalArgument("Invalid version string: \"" + version + "\"");
+            }
         }
 
     /**
@@ -250,7 +325,7 @@ const Version
         }
 
     /**
-     * Determine if this version matches the requested version.
+     * Determine if this version satisfies the specified required version.
      *
      * The actual version `v<sub>A</sub>` is **substitutable for** the requested version
      * `v<sub>R</sub>` iff each version indicator of the requested version from the most
@@ -265,7 +340,7 @@ const Version
      * @return true iff this version can be used as a match for the requested version based on the
      *         rules of version substitutability
      */
-    Boolean matches(Version that)
+    Boolean satisfies(Version that)
         {
         TODO
 //        Int tailSize = this.size - that.size;
@@ -303,11 +378,32 @@ const Version
         }
 
     @Override
-    Int stepsTo(Sequential that)
+    Int stepsTo(Version that)
         {
-        TODO
-        }
+        // common scenario: two versions with different ending number but common root
+        // e.g. "1.2.beta3" to "1.2.beta5"
+        Int sizeDiff = this.size - that.size;
+        if (sizeDiff == 0 && this.form == Num && that.form == Num && (this.parent? == that.parent? : true))
+            {
+            return that.number - this.number;
+            }
 
+        // compare a numbered version to a non-numbered version
+        // e.g. "1.2.beta3" to "1.2.beta"
+        if (sizeDiff == 1 && that.form != Num && this.parent? == that)
+            {
+            return -this.number;
+            }
+
+        // compare a non-numbered version to a numbered version
+        // e.g. "1.2.beta" to "1.2.beta3"
+        else if (sizeDiff == -1 && this.form != Num && this == that.parent?)
+            {
+            return that.number;
+            }
+
+        throw new OutOfBounds("no sequential steps from \"" + this + "\" to \"" + that + "\"");
+        }
 
 
     // ----- Sequence methods ----------------------------------------------------------------------
@@ -376,7 +472,8 @@ const Version
         each: while (version != null)
             {
             // check if we accidentally assumed a separator character between the current
-            // pre-release version indicator and the following version indicator
+            // pre-release version indicator and the following version indicator (e.g. "beta.2"
+            // should be "beta2")
             if (version.form != Num && !each.first)
                 {
                 --length;
