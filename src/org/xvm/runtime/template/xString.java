@@ -39,7 +39,7 @@ public class xString
         if (fInstance)
             {
             INSTANCE = this;
-            EMPTY_STRING = makeHandle(new char[0]);
+            EMPTY_STRING = new StringHandle(INSTANCE.getCanonicalClass(), new char[0]);
             EMPTY_ARRAY = makeHandle(new char[] {'[', ']'});
             }
         }
