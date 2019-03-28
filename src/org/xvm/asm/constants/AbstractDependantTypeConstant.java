@@ -186,12 +186,6 @@ public abstract class AbstractDependantTypeConstant
         return false;
         }
 
-    @Override
-    public TypeConstant getOuterType()
-        {
-        return m_typeParent;
-        }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 

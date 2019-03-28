@@ -5,7 +5,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -721,57 +720,6 @@ public class TerminalTypeConstant
 
         return idClz.equals(getConstantPool().clzTuple()) ||
                 ((ClassStructure) idClz.getComponent()).isTuple();
-        }
-
-    @Override
-    public TypeConstant getOuterType()
-        {
-        if (!isSingleDefiningConstant())
-            {
-            return null;
-            }
-
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat())
-            {
-            case Module:
-            case Package:
-            case NativeClass:
-            case Property:
-            case TypeParameter:
-                return null;
-
-            case Class:
-                {
-                ClassConstant outer = ((ClassConstant) constant).getOuterClass();
-                return outer == null
-                        ? null
-                        : getConstantPool().ensureTerminalTypeConstant(outer);
-                }
-
-            case ThisClass:
-            case ParentClass:
-                {
-                IdentityConstant idChild = ((PseudoConstant) constant).getDeclarationLevelClass();
-                if (idChild instanceof ClassConstant)
-                    {
-                    ClassConstant outer = ((ClassConstant) idChild).getOuterClass();
-                    if (outer != null)
-                        {
-                        ConstantPool pool = getConstantPool();
-                        return pool.ensureTerminalTypeConstant(
-                                pool.ensureParentClassConstant((PseudoConstant) constant));
-                        }
-                    }
-                return null;
-                }
-
-            case ChildClass:
-                return getConstantPool().ensureTerminalTypeConstant(((ChildClassConstant) constant).getParent());
-
-            default:
-                throw new IllegalStateException("unexpected defining constant: " + constant);
-            }
         }
 
     @Override

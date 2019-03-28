@@ -55,7 +55,8 @@ public class xBit
         JavaLong h1 = (JavaLong) hValue1;
         JavaLong h2 = (JavaLong) hValue2;
 
-        return frame.assignValue(iReturn, xBoolean.makeHandle(h1.getValue() == h2.getValue()));
+        return frame.assignValue(iReturn,
+            xBoolean.makeHandle(h1.getValue() == h2.getValue()));
         }
 
     @Override
@@ -65,7 +66,8 @@ public class xBit
         JavaLong h1 = (JavaLong) hValue1;
         JavaLong h2 = (JavaLong) hValue2;
 
-        return frame.assignValue(iReturn, xOrdered.makeHandle(h1.getValue() - h2.getValue()));
+        return frame.assignValue(iReturn,
+            xOrdered.makeHandle(Long.compare(h1.getValue(), h2.getValue())));
         }
 
     @Override
