@@ -27,7 +27,7 @@
  *   ConstAble} interface.
  */
 interface Map<KeyType, ValueType>
-        extends UniformIndexed<KeyType, ValueType>
+        extends UniformIndexed<KeyType, ValueType> // TODO make this "ValueType?" and use getOrNull
         extends ConstAble
         extends Stringable
     {
