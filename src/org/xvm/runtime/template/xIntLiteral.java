@@ -2,6 +2,7 @@ package org.xvm.runtime.template;
 
 
 import java.math.BigInteger;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
@@ -10,11 +11,14 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
+
+import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.util.PackedInteger;
 
@@ -40,6 +44,8 @@ public class xIntLiteral
     @Override
     public void initDeclared()
         {
+        markNativeMethod("construct", STRING, VOID);
+
         markNativeMethod("to", VOID, STRING);
 
         markNativeMethod("to", VOID, new String[]{"Int128"});
@@ -67,6 +73,27 @@ public class xIntLiteral
         VarIntHandle hIntLiteral = makeIntLiteral(constVal.getPackedInteger());
 
         return frame.assignValue(Op.A_STACK, hIntLiteral);
+        }
+
+    @Override
+    public int construct(Frame frame, MethodStructure constructor, ClassComposition clazz,
+                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
+        {
+        String sText = ((StringHandle) ahVar[0]).getStringValue();
+
+        // TODO: large numbers
+        try
+            {
+            long lValue = Long.parseLong(sText);
+
+            return frame.assignValue(iReturn,
+                makeIntLiteral(new PackedInteger(lValue)));
+            }
+        catch (NumberFormatException e)
+            {
+            return frame.raiseException(
+                xException.makeHandle("Invalid number \"" + sText + "\""));
+            }
         }
 
     @Override
