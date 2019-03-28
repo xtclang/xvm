@@ -194,7 +194,12 @@ const Version
             }
         else if (fAnyNums)
             {
-            construct Version(parent, new IntLiteral(version[start..end]).to<Int>(), build);
+@Inject Console console;
+console.println("start="+start +", end="+end);
+            String s = version[start..end];
+            IntLiteral lit = new IntLiteral(s);
+            Int num = lit.to<Int>();
+            construct Version(parent, num, build);
             }
         else
             {
