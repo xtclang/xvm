@@ -188,7 +188,7 @@ public class JumpVal
 
         return Index == null
             ? iPC + m_ofDefault
-            : iPC + Index.intValue();
+            : iPC + m_aofCase[Index.intValue()];
         }
 
     protected int findNatural(Frame frame, int iPC, ObjectHandle hValue)
