@@ -447,7 +447,7 @@ public class xArray
         ObjectHandle[] ahValue = hArray.m_ahValue;
         try
             {
-            ObjectHandle[] ahNew     = Arrays.copyOfRange(ahValue, (int) ixFrom, (int) ixTo);
+            ObjectHandle[] ahNew     = Arrays.copyOfRange(ahValue, (int) ixFrom, (int) ixTo + 1);
             ArrayHandle    hArrayNew = new GenericArrayHandle(hTarget.getComposition(), ahNew);
             hArrayNew.m_mutability = MutabilityConstraint.Mutable;
 
