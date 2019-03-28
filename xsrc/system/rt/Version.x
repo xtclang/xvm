@@ -137,7 +137,6 @@ const Version
             end = buildStart-1;
             }
 
-
         // start at the end, walking backwards until we encounter:
         //   "." (version delimiter)
         //   "-" (precedes non-numeric version indicator)

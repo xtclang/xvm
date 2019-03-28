@@ -50,7 +50,7 @@ public class xString
         markNativeGetter("size");
         markNativeGetter("chars");
         markNativeMethod("construct", new String[]{"collections.Array<Char>"}, VOID);
-        markNativeMethod("indexOf", new String[]{"String", "Int64"}, new String[]{"Boolean", "Int64"});
+        markNativeMethod("indexOf", new String[]{"Char", "Int64"}, new String[]{"Boolean", "Int64"});
         markNativeMethod("substring", INT, STRING);
         }
 
@@ -134,14 +134,6 @@ public class xString
             case 2:
                 switch (method.getName())
                     {
-                    // TODO: this signature is only used by the legacy test; remove
-                    case "indexOf": // indexOf(String that, Int startAt)
-                        {
-                        StringHandle hThat    = (StringHandle) ahArg[0];
-                        int          ofStart  = (int) ((JavaLong) ahArg[1]).getValue();
-                        int          ofResult = indexOf(hThis.m_achValue, hThat.m_achValue, ofStart);
-                        return frame.assignValue(iReturn, xInt64.makeHandle(ofResult));
-                        }
                     }
                 break;
             }
@@ -194,11 +186,17 @@ public class xString
             case 2:
                 switch (method.getName())
                     {
-                    case "indexOf": // (Boolean, Int) indexOf(String that, Int startAt)
+                    case "indexOf": // (Boolean, Int) indexOf(Char value, Int startAt)
                         {
-                        StringHandle hThat    = (StringHandle) ahArg[0];
-                        int          ofStart  = (int) ((JavaLong) ahArg[1]).getValue();
-                        int          ofResult = indexOf(hThis.m_achValue, hThat.m_achValue, ofStart);
+                        ObjectHandle hValue = ahArg[0];
+                        ObjectHandle hStart = ahArg[1];
+
+                        char chValue = (char) ((JavaLong) hValue).getValue();
+                        int  ofStart = hStart == ObjectHandle.DEFAULT
+                            ? 0
+                            : (int) ((JavaLong) hStart).getValue();
+
+                        int  ofResult = indexOf(hThis.m_achValue, chValue, ofStart);
                         return ofResult < 0
                             ? frame.assignValues(aiReturn, xBoolean.FALSE, null)
                             : frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(ofResult));

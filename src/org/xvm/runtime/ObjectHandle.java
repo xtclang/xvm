@@ -30,7 +30,14 @@ public abstract class ObjectHandle
     protected TypeComposition m_clazz;
     protected boolean m_fMutable = false;
 
-    public static final ObjectHandle DEFAULT = new ObjectHandle(null) {};
+    public static final ObjectHandle DEFAULT = new ObjectHandle(null)
+        {
+        @Override
+        public String toString()
+            {
+            return "<default>";
+            }
+        };
 
     protected ObjectHandle(TypeComposition clazz)
         {
