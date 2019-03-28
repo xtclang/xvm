@@ -7,6 +7,8 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.CharConstant;
 
+import org.xvm.runtime.ClassComposition;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
@@ -80,6 +82,31 @@ public class xChar
             }
 
         return frame.assignValue(iReturn, makeHandle(l + 1));
+        }
+
+
+    // ----- comparison support -----
+
+    @Override
+    public int callEquals(Frame frame, ClassComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        JavaLong h1 = (JavaLong) hValue1;
+        JavaLong h2 = (JavaLong) hValue2;
+
+        return frame.assignValue(iReturn,
+            xBoolean.makeHandle(h1.getValue() == h2.getValue()));
+        }
+
+    @Override
+    public int callCompare(Frame frame, ClassComposition clazz,
+                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        JavaLong h1 = (JavaLong) hValue1;
+        JavaLong h2 = (JavaLong) hValue2;
+
+        return frame.assignValue(iReturn,
+            xOrdered.makeHandle(Long.compare(h1.getValue(), h2.getValue())));
         }
 
     @Override

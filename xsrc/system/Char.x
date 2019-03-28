@@ -23,12 +23,6 @@ const Char
 
     UInt32 codepoint;
 
-    @Override
-    @Auto String to<String>()
-        {
-        return new String(to<Char[]>());
-        }
-
     /**
      * A direct conversion from the Char to a Byte is supported because of ASCII. An
      * out-of-range value will result in an exception.
