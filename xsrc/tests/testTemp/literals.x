@@ -37,7 +37,6 @@ module TestLiterals.xqiz.it
         console.println("++version=" + ++version);
 
         // e.g. "1.2.beta3" to "1.2.beta5"
-DEBUG;
         version = new Version("1.2");
         console.println("version for String 1.2=" + version);
         }
