@@ -286,7 +286,7 @@ const Version
 
     // ----- Sequential methods --------------------------------------------------------------------
 
-    @Override @Op
+    @Override
     conditional Version prev()
         {
         return form == Num && number > 0
@@ -294,7 +294,7 @@ const Version
                 : false;
         }
 
-    @Override @Op
+    @Override
     conditional Version next()
         {
         return true, form == Num
@@ -325,8 +325,8 @@ const Version
             throw new OutOfBounds(index.to<String>() + " >= " + size);
             }
 
-        Version version  = this;
-        Int  steps = size - index - 1;
+        Version version = this;
+        Int     steps   = size - index - 1;
         while (steps-- > 0)
             {
             version = version.parent ?: assert;

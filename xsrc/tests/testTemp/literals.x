@@ -33,7 +33,7 @@ module TestLiterals.xqiz.it
 
 //        console.println("version[1..2]=" + version[1..2]);
 //        console.println("version[0..1]=" + version[0..1]);
-DEBUG;
+        
         console.println("--version=" + --version);
         console.println("++version=" + ++version);
         }
