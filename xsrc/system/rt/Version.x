@@ -144,11 +144,11 @@ const Version
         //   the beginning of the string
         Boolean  fAnyChars = false;
         Boolean  fAnyNums  = false;
-        Int      start     = end;
+        Int      start     = 0;
         Version? parent    = null;
         scan: for (Int of = end; of >= 0; --of)
             {
-            switch (Char ch = version[start])
+            switch (Char ch = version[of])
                 {
                 case '.':
                 case '-':
