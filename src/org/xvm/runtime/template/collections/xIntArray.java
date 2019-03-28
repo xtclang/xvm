@@ -247,7 +247,7 @@ public class xIntArray
         long[] alValue = hArray.m_alValue;
         try
             {
-            long[]          alNew     = Arrays.copyOfRange(alValue, (int) ixFrom, (int) ixTo);
+            long[]          alNew     = Arrays.copyOfRange(alValue, (int) ixFrom, (int) ixTo + 1);
             IntArrayHandle  hArrayNew = new IntArrayHandle(hTarget.getComposition(), alNew);
             hArrayNew.m_mutability = MutabilityConstraint.Mutable;
 

@@ -248,7 +248,7 @@ public class xCharArray
         char[] achValue = hArray.m_achValue;
         try
             {
-            char[]           achNew    = Arrays.copyOfRange(achValue, (int) ixFrom, (int) ixTo);
+            char[]           achNew    = Arrays.copyOfRange(achValue, (int) ixFrom, (int) ixTo + 1);
             CharArrayHandle  hArrayNew = new CharArrayHandle(hTarget.getComposition(), achNew);
             hArrayNew.m_mutability = MutabilityConstraint.Mutable;
 

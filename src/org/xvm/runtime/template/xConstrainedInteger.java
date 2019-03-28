@@ -8,6 +8,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.ThisClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
@@ -491,7 +492,12 @@ public abstract class xConstrainedInteger
      */
     public static ClassTemplate getTemplateByType(TypeConstant type)
         {
-        String sName = ((ClassConstant) type.getDefiningConstant()).getPathElementString();
+        Constant constant = type.getDefiningConstant();
+        if (constant instanceof ThisClassConstant)
+            {
+            constant = ((ThisClassConstant) constant).getDeclarationLevelClass();
+            }
+        String sName = ((ClassConstant) constant).getPathElementString();
 
         switch (sName)
             {
