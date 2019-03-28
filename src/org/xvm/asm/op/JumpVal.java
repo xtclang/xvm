@@ -188,7 +188,7 @@ public class JumpVal
 
         return Index == null
             ? iPC + m_ofDefault
-            : iPC + m_aofCase[Index.intValue()];
+            : iPC + Index;
         }
 
     protected int findNatural(Frame frame, int iPC, ObjectHandle hValue)
@@ -224,7 +224,7 @@ public class JumpVal
                     // this must be an interval of native values
                     m_algorithm = Algorithm.NativeInterval;
 
-                    addInterval((GenericHandle) hCase, i);
+                    addInterval((GenericHandle) hCase, aofCase[i]);
                     }
                 }
             else // natural comparison
