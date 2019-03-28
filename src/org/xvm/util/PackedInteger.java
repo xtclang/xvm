@@ -541,31 +541,64 @@ public class PackedInteger
             return;
             }
 
-        // the size of the integer value is defined by the third to fifth bit,
+        // the size of the integer value is defined by the third to seventh bit,
         // such that the number of bytes is (1 << nSize)
-        final int cBytes = 1 << ((b & 0x1C) >> 2);
-        if (cBytes == 8)
+        switch (b & 0xFC)
             {
-            setLong(in.readLong());
+            case 0b0_0_0000_00:
+                setLong(in.readByte());
+                return;
+
+            case 0b0_0_0001_00:
+                setLong(in.readShort());
+                return;
+
+            case 0b0_0_0010_00:
+                setLong(in.readInt());
+                return;
+
+            case 0b0_0_0011_00:
+                setLong(in.readLong());
+                return;
+
+            case 0b1_0_0000_00:
+                setLong(in.readUnsignedByte());
+                return;
+
+            case 0b1_0_0001_00:
+                setLong(in.readUnsignedShort());
+                return;
+
+            case 0b1_0_0010_00:
+                // unsigned int
+                setLong(in.readInt() & 0x00000000FFFFFFFFL);
+                return;
             }
-        else if (cBytes == 4)
+
+        final boolean fAnyLen = (b & 0x40) != 0;
+        final int     cBytes  = fAnyLen
+                ? in.readUnsignedByte()
+                : 1 << ((b & 0x3C) >> 2);
+        if (cBytes == 0)
             {
-            setLong(in.readInt());
+            setLong(0);
+            return;
             }
-        else if (cBytes == 2)
+
+        byte[] ab = new byte[cBytes];
+        in.readFully(ab);
+
+        final boolean fUnsigned = (b & 0x80) != 0;
+        if (fUnsigned && (ab[0] & 0x80) != 0)
             {
-            setLong(in.readShort());
+            // need to prepend a zero byte so that the value doesn't get interpreted as a negative
+            // value
+            byte[] abUnsigned = new byte[cBytes+1];
+            System.arraycopy(ab, 0, abUnsigned, 1, cBytes);
+            ab = abUnsigned;
             }
-        else if (cBytes == 1)
-            {
-            setLong(in.readByte());
-            }
-        else
-            {
-            byte[] ab = new byte[cBytes];
-            in.readFully(ab);
-            setBigInteger(new BigInteger(ab));
-            }
+
+        setBigInteger(new BigInteger(ab));
         }
 
     /**
@@ -584,22 +617,31 @@ public class PackedInteger
             {
             // the value is supposed to be "big", so figure out how many bytes
             // (minimum) it needs to hold its significant bits
-            byte[] abBits = m_bigint.toByteArray();
-            int    cbBits = abBits.length;
-            assert cbBits > 8;
+            byte[] ab = m_bigint.toByteArray();
+            int    cb = ab.length;
+            int    of = 0;
+            assert cb > 8;
 
-            // the size to write needs to be at least as big as the minimum size
-            // of the byte array necessary to hold the significant bits
-            int    cbWrite = getSignedByteSize();
-            assert cbWrite == 16 || cbWrite == 32;
-            assert cbWrite >= cbBits;
-
-            out.write(cbWrite == 16 ? 0b10000 : 0b10100);
-            if (cbWrite > cbBits)
+            boolean fNeg  = (ab[0] & 0x80) != 0;
+            int     bSkip = fNeg ? 0xFF : 0x00;
+            while (of < cb-1 && ab[of] == bSkip && (ab[of+1] & 0x80) == (bSkip & 0x80))
                 {
-                out.write(EMPTY, 0, cbWrite - cbBits);
+                ++of;
                 }
-            out.write(abBits);
+            cb -= of;
+            assert cb > 0 && cb <= 0x100;
+
+            if (Integer.bitCount(cb) == 1)
+                {
+                out.writeByte((~bSkip & 0x80) | (Integer.numberOfTrailingZeros(cb) << 2));
+                }
+            else
+                {
+                out.writeByte((~bSkip & 0x80) | 0x40);
+                out.writeByte(cb);
+                }
+
+            out.write(ab, of, cb);
             }
         else
             {

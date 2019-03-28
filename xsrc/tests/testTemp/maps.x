@@ -1,6 +1,7 @@
 module TestMaps.xqiz.it
     {
     import X.collections.ExtHashMap;
+    import X.collections.ListMap;
 
     import X.Duration;
 
@@ -13,6 +14,8 @@ module TestMaps.xqiz.it
 
         function void () run = &testFill100();
         profile(run, 10);
+
+        testListMap();
         }
 
     void testBasic()
@@ -47,5 +50,14 @@ module TestMaps.xqiz.it
         Duration time = timer.elapsed;
         console.println("Elapsed " + time.millisecondsTotal +" ms");
         console.println("Latency " + (time / iterations).milliseconds + " ms");
+        }
+
+    void testListMap()
+        {
+        Map map = new ListMap<String, String>();
+        console.println("empty map=" + map);
+
+        map.put("hello", "world");
+        console.println("map=" + map);
         }
     }
