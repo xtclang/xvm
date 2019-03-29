@@ -469,7 +469,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
         Boolean different = false;
         for (TypeParameter paramNew : params)
             {
-            TypeParameter paramOld = mapParams[paramNew.name];
+            TypeParameter paramOld = mapParams[paramNew.name] ?: assert;
             if (paramNew != paramOld)
                 {
                 assert paramOld.type.isA(paramNew.type);

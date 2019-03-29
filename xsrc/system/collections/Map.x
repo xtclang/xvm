@@ -27,7 +27,6 @@
  *   ConstAble} interface.
  */
 interface Map<KeyType, ValueType>
-        extends UniformIndexed<KeyType, ValueType> // TODO make this "ValueType?" and use getOrNull
         extends ConstAble
         extends Stringable
     {
@@ -55,7 +54,7 @@ interface Map<KeyType, ValueType>
          * {@code const} map.
          *
          * @throws ReadOnly if an attempt is made to write the value of the entry when
-     *                      the map is _persistent_ or {@code const}
+         *                  the map is _persistent_ or {@code const}
          */
         ValueType value;
 
@@ -197,6 +196,7 @@ interface Map<KeyType, ValueType>
      *
      * @return the value for the associated key if it exists in the map; otherwise null
      */
+    @Op("[]")
     ValueType? getOrNull(KeyType key)
         {
         if (ValueType value : get(key))
@@ -285,6 +285,7 @@ interface Map<KeyType, ValueType>
      *
      * @return the resultant map, which is the same as {@code this} for a mutable map
      */
+    @Op("[]=")
     Map put(KeyType key, ValueType value);
 
     /**
@@ -484,49 +485,6 @@ interface Map<KeyType, ValueType>
                 }
             return value;
             });
-        }
-
-    // ----- UniformedIndex ------------------------------------------------------------------------
-
-    /**
-     * Obtain the value of the specified element.
-     *
-     * @param index  the index (key) of the element to obtain the value of
-     *
-     * @return the value associated with the specified index (key)
-     *
-     * @throws OutOfBounds if the specified index (key) does not exist
-     */
-    @Override
-    @Op ValueType getElement(KeyType index)
-        {
-        if (ValueType value : get(index))
-            {
-            return value;
-            }
-        throw new OutOfBounds();
-        }
-
-    /**
-     * Modify the value in the specified element.
-     *
-     * This is equivalent to:
-     *   put(index, value);
-     *
-     * @param index  the index (key) of the element to store
-     * @param value  the value to store associated with the specified index (key)
-     *
-     * @throws OutOfBounds  if the specified index (key) does not exist and the map is not
-     *                      of the _mutable_ variety
-     * @throws ReadOnly     if the map is of the _persistent_ or {@code const} variety
-     */
-    @Override
-    @Op void setElement(KeyType index, ValueType value)
-        {
-        // this must be overridden by map implementations that are not of the "mutable" variety
-        Map map    = this;
-        Map newMap = map.put(index, value);
-        assert &map == &newMap;
         }
 
     // ----- ConstAble -----------------------------------------------------------------------------

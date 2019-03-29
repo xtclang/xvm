@@ -183,7 +183,8 @@ const Version
         if (fAnyChars)
             {
             String name = version[start..end];
-            if (Form form : Form.byName.get(name))
+            // if (Form form : Form.byName.get(name))
+            if (Form form : Form_byName_get(name))
                 {
                 construct Version(parent, form, build);
                 }
@@ -194,16 +195,29 @@ const Version
             }
         else if (fAnyNums)
             {
-@Inject Console console;
-console.println("start="+start +", end="+end);
-            String s = version[start..end];
-            IntLiteral lit = new IntLiteral(s);
-            Int num = lit.to<Int>();
+            Int num = new IntLiteral(version[start..end]).to<Int>();
             construct Version(parent, num, build);
             }
         else
             {
             throw new IllegalArgument("Invalid version string: \"" + version + "\"");
+            }
+        }
+
+    // TODO remove temporary hack
+    static conditional Form Form_byName_get(String name)
+        {
+        switch (name)
+            {
+            // TODO GG inference didn't work here?
+            // TODO (also, switch expression didn't work)
+            case "CI"   : return true, Form.CI;
+            case "Dev"  : return true, Form.Dev;
+            case "QC"   : return true, Form.QC;
+            case "alpha": return true, Form.Alpha;
+            case "beta" : return true, Form.Beta;
+            case "rc"   : return true, Form.RC;
+            default     : return false;
             }
         }
 

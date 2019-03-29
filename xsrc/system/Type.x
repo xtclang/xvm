@@ -200,7 +200,7 @@ const Type<DataType>
         nextMethod: for (Method m1 : that.allMethods)
             {
             // find the corresponding method on this type
-            for (Method m2 : this.allMethodsByName[m1.name].methods)
+            for (Method m2 : this.allMethodsByName[m1.name]?.methods)
                 {
                 if (m2.isSubstitutableFor(m1))
                     {
