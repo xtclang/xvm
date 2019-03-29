@@ -111,8 +111,8 @@ public abstract class xConstrainedInteger
                 {
                 if (f_fSigned)
                     {
-                    hTarget = getComplimentaryTemplate().makeJavaLong(
-                        ((JavaLong) hTarget).getValue());
+                    long l = ((JavaLong) hTarget).getValue();
+                    hTarget = getComplimentaryTemplate().makeJavaLong(l < 0 ? -l : l);
                     }
                 return frame.assignValue(iReturn, hTarget);
                 }

@@ -49,5 +49,11 @@ module TestLiterals.xqiz.it
             }
 
         // "1.2-beta3" to "1.2-beta5"
+        console.println("steps from 1.2-beta to 1.2-beta5="
+                + new Version("1.2-beta").stepsTo(new Version("1.2-beta5")));
+        console.println("steps from 1.2-beta3 to 1.2-beta="
+                + new Version("1.2-beta3").stepsTo(new Version("1.2-beta")));
+        console.println("steps from 1.2-beta3 to 1.2-beta5="
+                + new Version("1.2-beta3").stepsTo(new Version("1.2-beta5")));
         }
     }
