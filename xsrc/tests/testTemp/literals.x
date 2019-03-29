@@ -36,14 +36,7 @@ module TestLiterals.xqiz.it
         console.println("--version=" + --version);
         console.println("++version=" + ++version);
 
-//        Range<Int> range = 0..0;
-//        console.println("range="+range);
-//        console.println("range.size="+range.size);
-//
-//        String s = "hello";
-//        console.println(s + "[" + range  + "]=" + s[range]);
-
-        for (String s : ["1", "alpha", "1.0", "beta2", "5.6.7.8-alpha", "1.2-beta5"])
+        for (String s : ["1", "alpha", "1.0", "beta2", "5.6.7.8-alpha", "1.2-beta5", "1.2beta5"])
             {
             console.println("version for String " + s + "=" + new Version(s));
             }

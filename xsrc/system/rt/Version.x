@@ -175,6 +175,15 @@ const Version
                     break;
 
                 case '0'..'9':
+                    if (fAnyChars)
+                        {
+                        // there should be a "-" before the alphabetic characters, but it's not
+                        // strictly required
+                        parent = new Version(version[0..of]);
+                        start  = of+1;
+                        break scan;
+                        }
+
                     fAnyNums = true;
                     break;
                 }
@@ -297,6 +306,7 @@ const Version
 
     /**
      * The form of this Version element.
+     * REVIEW I think we can get rid of this field (make it a calc'd ".get(){..}" property) because "number" fully represents this value
      */
     Form form;
 
@@ -479,6 +489,68 @@ const Version
         return slice ?: assert;
         }
 
+
+    // ----- Hashable ------------------------------------------------------------------------------
+
+    @Override
+    @RO Int hash.get()
+        {
+        return (parent?.hash.rotateLeft(1) : 0) ^ number;
+        }
+
+// TODO GG - appears to be two issues: (1) nullable and (2) CompileType comparability with Version
+// [1] /Users/cameron/Development/xvm/xsrc/system/rt/Version.x [508:48..508:76] COMPILER-92: The types "equals.CompileType" and "this:class(Ecstasy:rt.Version)" are not comparable. ("version1 == version2.parent?")
+// [2] /Users/cameron/Development/xvm/xsrc/system/rt/Version.x [515:48..515:76] COMPILER-92: The types "this:class(Ecstasy:rt.Version)" and "equals.CompileType" are not comparable. ("version1.parent? == version2")
+// [3] /Users/cameron/Development/xvm/xsrc/system/rt/Version.x [528:39..528:68] COMPILER-92: The types "compare.CompileType" and "this:class(Ecstasy:rt.Version)" are not comparable. ("version1 <=> version2.parent?")
+// [4] /Users/cameron/Development/xvm/xsrc/system/rt/Version.x [540:39..540:68] COMPILER-92: The types "this:class(Ecstasy:rt.Version)" and "compare.CompileType" are not comparable. ("version1.parent? <=> version2")
+//
+//    /**
+//     * Two entries are equal iff they contain equal keys and equal values.
+//     */
+//    static <CompileType extends Version> Boolean equals(CompileType version1, CompileType version2)
+//        {
+//        switch (version1.size <=> version2.size)
+//            {
+//            case Lesser:
+//                return version2.number == 0 && version1 == version2.parent? : assert;
+//
+//            case Equal:
+//                return version1.number == version2.number
+//                    && version1.parent == version2.parent;
+//
+//            case Greater:
+//                return version1.number == 0 && version1.parent? == version2 : assert;
+//            }
+//        }
+//
+//    /**
+//     * The existence of a real implementation of comparison for Orderable instances will be checked
+//     * by the run-time.
+//     */
+//    static <CompileType extends Version> Ordered compare(CompileType version1, CompileType version2)
+//        {
+//        switch (version1.size <=> version2.size)
+//            {
+//            case Lesser:
+//                Ordered parentOrder = version1 <=> version2.parent? : assert;
+//                return parentOrder == Equal
+//                        ? 0 <=> version2.number
+//                        : parentOrder;
+//
+//            case Equal:
+//                Ordered parentOrder = version1.parent? <=> version2.parent? : Equal;
+//                return parentOrder == Equal
+//                        ? version1.number <=> version2.number
+//                        : parentOrder;
+//
+//            case Greater:
+//                Ordered parentOrder = version1.parent? <=> version2 : assert;
+//                return parentOrder == Equal
+//                        ? version1.number <=> 0
+//                        : parentOrder;
+//            }
+//        }
+        
 
     // ----- Stringable methods --------------------------------------------------------------------
 
