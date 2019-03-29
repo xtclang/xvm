@@ -449,6 +449,22 @@ public class xString
             }
 
         @Override
+        public int hashCode()
+            {
+            return (int) getHashCode().getValue();
+            }
+
+        @Override
+        public boolean equals(Object obj)
+            {
+            if (obj instanceof StringHandle)
+                {
+                return Arrays.equals(m_achValue, ((StringHandle) obj).m_achValue);
+                }
+            return false;
+            }
+
+        @Override
         public String toString()
             {
             return super.toString() + getStringValue();
