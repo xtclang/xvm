@@ -199,7 +199,7 @@ public class ObjectHeap
             case AnnotatedType:
             case ParameterizedType:
             case TerminalType:
-                return f_poolRoot.typeClass(); // REVIEW type vs. class
+                return f_poolRoot.typeType();
 
             case ImmutableType:
             case AccessType:
