@@ -21,12 +21,9 @@ public class CallChain
     // Construct the CallChain
     public CallChain(MethodBody[] aMethods)
         {
-        if (aMethods == null || aMethods.length == 0)
-            {
-            throw new IllegalArgumentException("methods are missing");
-            }
-
-        f_aMethods = aMethods;
+        f_aMethods = aMethods == null
+                ? MethodBody.NO_BODIES
+                : aMethods;
         }
 
     // Construct a CallChain for a lambda

@@ -127,14 +127,23 @@ public abstract class OpInvocable extends Op
             return m_chain;
             }
 
-        MethodConstant    idMethod = (MethodConstant) frame.getConstant(m_nMethodId);
-        SignatureConstant sig      = idMethod.getSignature().
-                resolveGenericTypes(frame.poolContext(), frame.getGenericsResolver());
+        TypeComposition clazz    = m_clazz = hTarget.getComposition();
+        MethodConstant  idMethod = (MethodConstant) frame.getConstant(m_nMethodId);
+        if (idMethod.isLambda())
+            {
+            return m_chain = new CallChain(idMethod);
+            }
 
-        TypeComposition clazz = m_clazz = hTarget.getComposition();
-        return m_chain = idMethod.isLambda()
-                ? new CallChain(idMethod)
-                : clazz.getMethodCallChain(sig);
+        SignatureConstant sig = idMethod.getSignature().resolveGenericTypes(
+            frame.poolContext(), frame.getGenericsResolver());
+        CallChain chain = clazz.getMethodCallChain(sig);
+        if (chain.getDepth() == 0)
+            {
+            // TODO: create an exception throwing chain
+            throw new IllegalStateException("No call chain for method \"" + sig.getValueString() +
+                "\" on " + hTarget.getType().getValueString());
+            }
+        return m_chain = chain;
         }
 
     // check if a register for the return value needs to be allocated
