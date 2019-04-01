@@ -21,7 +21,7 @@ public class DefaultMap<K, V>
         return false;
         }
 
-    public boolean containsKey(Object key)
+    public boolean contains(Object key)
         {
         for (K k : keys())
             {
@@ -85,7 +85,7 @@ public class DefaultMap<K, V>
     public boolean replace(K key, V oldValue, V newValue) {
         Object curValue = get(key);
         if (!Objects.equals(curValue, oldValue) ||
-            (curValue == null && !containsKey(key))) {
+            (curValue == null && !contains(key))) {
             return false;
         }
         put(key, newValue);
@@ -94,7 +94,7 @@ public class DefaultMap<K, V>
 
     public V replace(K key, V value) {
         V curValue;
-        if (((curValue = get(key)) != null) || containsKey(key)) {
+        if (((curValue = get(key)) != null) || contains(key)) {
             curValue = put(key, value);
         }
         return curValue;
@@ -141,7 +141,7 @@ public class DefaultMap<K, V>
         V newValue = remappingFunction.apply(key, oldValue);
         if (newValue == null) {
             // delete mapping
-            if (oldValue != null || containsKey(key)) {
+            if (oldValue != null || contains(key)) {
                 // something to remove
                 remove(key);
                 return null;
