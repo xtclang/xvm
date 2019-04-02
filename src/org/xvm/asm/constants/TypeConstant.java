@@ -2925,7 +2925,8 @@ public abstract class TypeConstant
                 // contribution (because @Override means there MUST be a super method)
 
                 List<Object> listMatches = collectPotentialSuperMethods(
-                    nidContrib, sigContrib, mapVirtMethods);
+                        methodContrib.getHead().getMethodStructure(),
+                        nidContrib, sigContrib, mapVirtMethods);
 
                 if (listMatches.isEmpty())
                     {
@@ -3109,12 +3110,15 @@ public abstract class TypeConstant
     /**
      * Collect all methods that could be the "super" of the specified method signature.
      *
-     * @param nidSub     the nested identity of the method that is searching for a super
+     * @param method     the method structure for the method that is searching for a super
+     * @param nidSub     the nested identity of the method
+     * @param sigSub     the signature of the method that is searching for a super
      * @param mapSupers  map of super methods to select from
      *
      * @return a list of all matching nested identities
      */
     protected List<Object> collectPotentialSuperMethods(
+            MethodStructure         method,
             Object                  nidSub,
             SignatureConstant       sigSub,
             Map<Object, MethodInfo> mapSupers)
@@ -3127,9 +3131,30 @@ public abstract class TypeConstant
             if (IdentityConstant.isNestedSibling(nidSub, nidCandidate))
                 {
                 SignatureConstant sigCandidate  = entry.getValue().getSignature(); // resolved
-                if (sigSub.isSubstitutableFor(sigCandidate, this))
+                if (sigCandidate.getName().equals(sigSub.getName()))
                     {
-                    listMatch.add(nidCandidate);
+                    if (sigSub.isSubstitutableFor(sigCandidate, this))
+                        {
+                        listMatch.add(nidCandidate);
+                        }
+                    else
+                        {
+                        // allow default parameters
+                        int cDefault = method.getDefaultParamCount();
+                        if (cDefault > 0)
+                            {
+                            int cParamsReq = sigCandidate.getParamCount();
+                            int cParamsSub = sigSub.getParamCount();
+                            if (cParamsSub - cDefault == cParamsReq)
+                                {
+                                SignatureConstant sigSubReq = sigSub.truncateParams(cParamsReq);
+                                if (sigSubReq.isSubstitutableFor(sigCandidate, this))
+                                    {
+                                    listMatch.add(nidCandidate);
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

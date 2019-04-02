@@ -550,7 +550,7 @@ const Version
 //                        : parentOrder;
 //            }
 //        }
-        
+
 
     // ----- Stringable methods --------------------------------------------------------------------
 
@@ -584,12 +584,7 @@ const Version
         }
 
     @Override
-    // void appendTo(Appender<Char> appender, Boolean suppressBuild=false)
-    void appendTo(Appender<Char> appender)
-        {
-        appendTo(appender, false);
-        }
-    void appendTo(Appender<Char> appender, Boolean suppressBuild)
+    void appendTo(Appender<Char> appender, Boolean suppressBuild=false)
         {
         parent?.appendTo(appender, true);
 

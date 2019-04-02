@@ -426,6 +426,17 @@ public class SignatureConstant
                 pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_aconstReturns));
         }
 
+    /**
+     * @return a new SignatureConstant that has the specified (lesser than original) number of
+     *         parameters
+     */
+    public SignatureConstant truncateParams(int cParams)
+        {
+        assert cParams < m_aconstParams.length;
+
+        return getConstantPool().ensureSignatureConstant(getName(),
+                Arrays.copyOf(m_aconstParams, cParams), m_aconstReturns);
+        }
 
     // ----- Constant methods ----------------------------------------------------------------------
 
