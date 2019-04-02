@@ -6,7 +6,7 @@
  * providing the rationale for the name of the _Ext_HashMap.
  */
 class ExtHashMap<KeyType, ValueType>
-        implements Map<KeyType, ValueType>
+        extends IterableKeysMap<KeyType, ValueType> // TODO temporary
         incorporates Stringer
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -88,7 +88,7 @@ class ExtHashMap<KeyType, ValueType>
         }
 
     @Override
-    conditional HashEntry getEntry(KeyType key)
+    conditional HashEntry find(KeyType key)
         {
         Int        keyhash  = hasher.hashOf(key);
         Int        bucketId = keyhash % buckets.size;
@@ -422,7 +422,7 @@ class ExtHashMap<KeyType, ValueType>
         @Override
         Entry reify()
             {
-            if (HashEntry entry : ExtHashMap.this.getEntry(key))
+            if (HashEntry entry : ExtHashMap.this.find(key))
                 {
                 return entry;
                 }

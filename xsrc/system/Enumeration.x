@@ -129,7 +129,7 @@ mixin Enumeration<EnumType extends Enum>
                 EnumType instance = clz.singleton;
 
                 assert instance.ordinal == map.size;
-                assert !map.containsKey(clz.name);
+                assert !map.contains(clz.name);
                 map.put(clz.name, instance);
                 }
             }

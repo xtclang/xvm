@@ -3,7 +3,7 @@
  * insertion.
  */
 class ListMap<KeyType extends immutable Hashable, ValueType>
-         implements Map<KeyType, ValueType>
+         extends IterableKeysMap<KeyType, ValueType>
     {
     private Entry[] array;
 
@@ -23,7 +23,7 @@ class ListMap<KeyType extends immutable Hashable, ValueType>
         }
 
     @Override
-    conditional Entry getEntry(KeyType key)
+    conditional Entry find(KeyType key)
         {
         if (Int index : indexOf(key))
             {
