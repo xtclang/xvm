@@ -1316,7 +1316,7 @@ public class ClassStructure
             {
             TypeConstant typeContrib = contrib.getTypeConstant();
 
-            if (!typeContrib.isSingleUnderlyingClass(true))
+            if (typeContrib.containsUnresolved() || !typeContrib.isSingleUnderlyingClass(true))
                 {
                 // TODO: how do we process relational types?
                 continue;
@@ -1386,7 +1386,7 @@ public class ClassStructure
             {
             TypeConstant typeContrib = contrib.getTypeConstant();
 
-            if (!typeContrib.isSingleUnderlyingClass(true))
+            if (typeContrib.containsUnresolved() || !typeContrib.isSingleUnderlyingClass(true))
                 {
                 // TODO: how do we process relational types?
                 continue;

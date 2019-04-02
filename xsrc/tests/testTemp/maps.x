@@ -54,7 +54,7 @@ module TestMaps.xqiz.it
 
     void testListMap()
         {
-        Map map = new ListMap<String, String>();
+        Map<String, String> map = new ListMap();
         console.println("empty map=" + map);
 
         map.put("hello", "world");
