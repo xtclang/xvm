@@ -168,21 +168,21 @@ public class ForEachStatement
         {
         assert m_plan == Plan.MAP;
         assert m_exprRValue != null;
-        assert m_exprRValue.getType().isA(pool().typeMap());
 
         TypeConstant typeMap = m_exprRValue.getType();
+
+        assert typeMap.isA(pool().typeMap());
+
         if (typeMap.isFormalType())
             {
-            // TODO: change this when FormalTypeConstant is introduced
-            PropertyConstant idProp = ((PropertyStructure) pool().clzMap().
-                getComponent().getChild(sProp)).getIdentityConstant();
-            return idProp.getFormalType();
+            // TODO change this when FormalTypeConstant is introduced:
+            // typeMap = ((FormalType) typeMap.getDefiningConstant()).getReferredToType();
+            // assert typeMap.isA(pool.typeMap());
+            typeMap = pool().clzMap().getFormalType();
             }
-        else
-            {
-            TypeConstant type = typeMap.resolveGenericType(sProp);
-            return type == null ? pool().typeObject() : type;
-            }
+
+        TypeConstant type = typeMap.resolveGenericType(sProp);
+        return type == null ? pool().typeObject() : type;
         }
 
     /**
