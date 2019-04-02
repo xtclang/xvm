@@ -229,15 +229,14 @@ interface Map<KeyType, ValueType>
      * is already present in the map.
      *
      * A _mutable_ map will perform the operation in place. A _fixed size_ map will perform the
-     * operation in place iff the key is currently present in the map. In all other cases, including
-     * all other modes of map, a new map will be returned reflecting the requested change.
+     * operation in place iff the key is currently present in the map. A _persistent_ or _const_
+     * map will return a new map reflecting the requested change.
      *
      * @param key    the key to store in the map
      * @param value  the value to associate with the specified key
      *
      * @return the resultant map, which is the same as `this` for a mutable map
      */
-    @Op("[]=")
     conditional Map put(KeyType key, ValueType value)
         {
         TODO entry addition and modification is not supported
@@ -428,7 +427,7 @@ interface Map<KeyType, ValueType>
         ListMap<KeyType, ResultType> result = new ListMap(keys.size);
         for (KeyType key : keys)
             {
-            map.put(key, process(key));
+            map.put(key, process(key, compute));
             }
         return result;
         }
@@ -520,14 +519,8 @@ interface Map<KeyType, ValueType>
 
         /**
          * The value associated with the entry's key.
-         *
-         * The value property is not settable if the containing map is a _persistent_ or
-         * `const` map.
-         *
-         * @throws ReadOnly if an attempt is made to write the value of the entry when
-         *                  the map is _persistent_ or `const`
          */
-        ValueType value;
+        @RO ValueType value;
 
         /**
          * If the entry is a temporary object, for example an entry that can be re-used to represent
