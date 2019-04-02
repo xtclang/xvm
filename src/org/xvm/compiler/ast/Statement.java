@@ -137,6 +137,11 @@ public abstract class Statement
      */
     protected final Statement validate(Context ctx, ErrorListener errs)
         {
+        if (errs.isAbortDesired())
+            {
+            return null;
+            }
+        
         // before validating the nested code, associate this statement with the context so that any
         // "break" or "continue" can find the context to apply assignment data to
         m_ctx = ctx;

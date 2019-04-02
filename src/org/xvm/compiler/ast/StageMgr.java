@@ -62,7 +62,7 @@ public class StageMgr
     public boolean isComplete()
         {
         // complete if it isn't currently processing and there's nothing queued to process
-        return m_cur == null && m_listRevisit == null;
+        return getErrorListener().isAbortDesired() || m_cur == null && m_listRevisit == null;
         }
 
     /**
@@ -73,11 +73,20 @@ public class StageMgr
      */
     public boolean processComplete()
         {
+        if (getErrorListener().isAbortDesired())
+            {
+            return true;
+            }
+
         if (m_listRevisit != null)
             {
             for (AstNode node : takeRevisitList())
                 {
                 processInternal(node);
+                if (getErrorListener().isAbortDesired())
+                    {
+                    return true;
+                    }
                 }
             }
 
@@ -157,6 +166,11 @@ public class StageMgr
      */
     protected boolean processInternal(AstNode node)
         {
+        if (getErrorListener().isAbortDesired())
+            {
+            return true;
+            }
+
         boolean fDone      = true;
         AstNode nodePrev   = m_cur;
         byte    nFlagsPrev = m_nFlags;

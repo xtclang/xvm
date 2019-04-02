@@ -775,6 +775,7 @@ public class Handy
         final int cBits = 1 << ((b & 0x1C) >> 2) + 3;
         if (cBits == 64)
             {
+            // TODO convert to switch and add unsigned knowledge
             return in.readLong();
             }
         else if (cBits == 32)
