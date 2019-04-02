@@ -66,30 +66,18 @@ interface Map<KeyType, ValueType>
         }
 
     /**
-     * Obtain the Entry for the specified key, if the entry exists in the Map.
-     *
-     * This operation is expected to be relatively expensive for Map implementations that do not
-     * manage their contents as entries that can be exposed to a caller.
-     *
-     * @param key  the key to find the entry for
-     *
-     * @return the conditional Entry if the key exists in the Map
-     */
-    conditional Entry find(KeyType key);
-
-    /**
-     * Obtain a ProcessableEntry for the specified key, whether or not the entry exists in the
-     * Map. Attempts to mutate the Map through the ProcessableEntry will fail with a ReadOnly
+     * Obtain a Entry for the specified key, whether or not the entry exists in the
+     * Map. Attempts to mutate the Map through the Entry will fail with a ReadOnly
      * exception if the Map is immutable, or if the Map [mutability] is `Persistent` or `Constant`.
      *
      * This operation is expected to be relatively expensive for Map implementations that do not
-     * manage their contents as entries that can be exposed to a caller.
+     * manage their contents as entries that can be readily exposed to a caller.
      *
      * @param key  the key to obtain an entry for
      *
-     * @return the requested ProcessableEntry
+     * @return the requested Entry
      */
-    ProcessableEntry entryFor(KeyType key);
+    Entry entryFor(KeyType key);
 
     /**
      * Obtain the value associated with the specified key, iff that key is present in the map. If
@@ -132,12 +120,12 @@ interface Map<KeyType, ValueType>
         }
 
     /**
-     * Obtain the value associated with the specified key, or the value `null` if the key is
+     * Obtain the value associated with the specified key, or the value `Null` if the key is
      * not present in the map.
      *
      * @param key  the key to look up in the map
      *
-     * @return the value for the associated key if it exists in the map; otherwise null
+     * @return the value for the associated key if it exists in the map; otherwise Null
      */
     @Op("[]")
     ValueType? getOrNull(KeyType key)
@@ -147,7 +135,7 @@ interface Map<KeyType, ValueType>
             return value;
             }
 
-        return null;
+        return Null;
         }
 
     /**
@@ -173,17 +161,17 @@ interface Map<KeyType, ValueType>
 
     /**
      * Obtain the value associated with the specified key, or if the key does not already exist in
-     * the map, compute a default value using the specified function. Note that his method does not
-     * store the result of the computation; it simply returns the computed value. To store the
-     * result, use [computeIfAbsent] instead.
+     * the map, compute a default value using the specified function. Note that his method does
+     * **not** store the result of the computation; it simply returns the computed value. To store
+     * the result, use [computeIfAbsent] instead.
      *
      * @param key      specifies the key that may or may not already be present in the map
      * @param compute  the function that will be called iff the key does not exist in the map
      *
-     * @return the value for the specified key if it exists in the map; otherwise, the result of the
-     *         specified function
+     * @return the value associated with the specified key iff the key exists in the map; otherwise,
+     *         the result from the provided function
      */
-    ValueType getOrCalc(KeyType key, function ValueType () compute)
+    ValueType getOrCompute(KeyType key, function ValueType () compute)
         {
         if (ValueType value : get(key))
             {
@@ -206,20 +194,19 @@ interface Map<KeyType, ValueType>
     @RO Set<KeyType> keys;
 
     /**
-     * Obtain the set of all entries (key/value pairs) in the map.
-     *
-     * The returned set is expected to support mutation operations iff the map is _mutable_; the
-     * returned set is not expected to support the `add` or `addAll` operations.
-     */
-    @RO Set<Entry> entries;
-
-    /**
      * Obtain the collection of all values (one for each key) in the map.
      *
      * The returned collection is expected to support mutation operations iff the map is _mutable_;
      * the returned collection is _not_ expected to support the `add` or `addAll` operations.
      */
     @RO Collection<ValueType> values;
+
+    /**
+     * Obtain the set of all entries (key/value pairs) in the map.
+     *
+     * The returned set is expected to support mutation operations iff the map is _mutable_.
+     */
+    @RO Set<Entry> entries;
 
 
     // ----- write operations ----------------------------------------------------------------------
@@ -379,12 +366,12 @@ interface Map<KeyType, ValueType>
      * A _mutable_ map will perform the operation in place; all other modes of map will return a
      * new map that reflects the requested changes.
      *
-     * @return the resultant map, which is the same as `this` for a mutable map
+     * @return the resultant map, which will be `this` for a mutable map
      */
     conditional Map clear();
 
 
-    // ----- ProcessableEntry operations -----------------------------------------------------------
+    // ----- Entry operations -----------------------------------------------------------
 
     /**
      * Apply the specified function to the entry for the specified key. If that key does not exist
@@ -395,7 +382,7 @@ interface Map<KeyType, ValueType>
      * present in the map.
      *
      * @param key      specifies which entry to process
-     * @param compute  the function that will operate against the ProcessableEntry
+     * @param compute  the function that will operate against the Entry
      *
      * @return the result of the specified function
      *
@@ -403,16 +390,16 @@ interface Map<KeyType, ValueType>
      *                  _mutable_, or to modify an entry in a map that is not _mutable_ or
      *                  _fixed size_
      */
-    <ResultType> ResultType process(KeyType key, function ResultType (ProcessableEntry) compute)
+    <ResultType> ResultType process(KeyType key, function ResultType (Entry) compute)
         {
         return compute(entryFor(key));
         }
 
     /**
-     * Apply the specified function to the ProcessableEntry objects for the specified keys.
+     * Apply the specified function to the Entry objects for the specified keys.
      *
      * @param keys     specifies which keys to process
-     * @param compute  the function that will operate against each ProcessableEntry
+     * @param compute  the function that will operate against each Entry
      *
      * @return a Map containing the results from the specified function applied against the entries
      *         for the specified keys
@@ -422,7 +409,7 @@ interface Map<KeyType, ValueType>
      *                  `Mutable` or `FixedSize`
      */
     <ResultType> Map<KeyType, ResultType> processAll(Collection<KeyType> keys,
-            function ResultType (ProcessableEntry) compute)
+            function ResultType (Entry) compute)
         {
         ListMap<KeyType, ResultType> result = new ListMap(keys.size);
         for (KeyType key : keys)
@@ -437,7 +424,7 @@ interface Map<KeyType, ValueType>
      * the map.
      *
      * @param key      specifies which entry to process
-     * @param compute  the function that will operate against the ProcessableEntry, iff the entry
+     * @param compute  the function that will operate against the Entry, iff the entry
      *                 already exists in the map
      *
      * @return a conditional true and the result of the specified function iff the entry exists;
@@ -446,8 +433,8 @@ interface Map<KeyType, ValueType>
      * @throws ReadOnly if an attempt is made to modify an entry in a map that is not
      *                  _mutable_ or _fixed size_
      */
-    <ResultType> conditional ResultType processIfPresent(KeyType key,
-            function ResultType (ProcessableEntry) compute)
+    <ResultType> conditional ResultType processIfPresent(
+            KeyType key, function ResultType (Entry) compute)
         {
         // this implementation can be overridden to combine the contains() and process() into
         // a single step
@@ -506,9 +493,13 @@ interface Map<KeyType, ValueType>
      * A Map Entry represents a single mapping from a particular key to its value. The Entry
      * interface is designed to allow a Map implementor to re-use a temporary Entry instance to
      * represent a _current_ Entry, for example during iteration; this allows a single Entry object
-     * to represent every Entry in the Map. As a consequence of this approach, an Entry consumer
+     * to represent every Entry in the Map. As a consequence of this decision, an Entry consumer
      * *must* call [reify] on each entry that will be held beyond the scope of the current
      * iteration.
+     *
+     * When used for A consumer can determine whether an entry exists (is present in a map), to cause an entry to exist (if it
+     * did not exist) by assigning a value, to change the value of an entry that does exist, and to
+     * remove the entry if it exists.
      */
     interface Entry
         {
@@ -518,73 +509,25 @@ interface Map<KeyType, ValueType>
         @RO KeyType key;
 
         /**
-         * The value associated with the entry's key.
-         */
-        @RO ValueType value;
-
-        /**
-         * If the entry is a temporary object, for example an entry that can be re-used to represent
-         * multiple logical entries within an entry iterator, then obtain a reference to the same
-         * entry that is _not_ temporary, allowing the resulting reference to be held indefinitely.
-         *
-         * @return an Entry object that can be retained indefinitely; changes to the values in the
-         *         map may or may not be reflected in the returned Entry
-         */
-        Entry reify()
-            {
-            return this;
-            }
-
-        /**
-         * Two entries are equal iff they contain equal keys and equal values.
-         */
-        static <CompileType extends Entry> Boolean equals(CompileType entry1, CompileType entry2)
-            {
-            if (entry1.key != entry2.key)
-                {
-                return false;
-                }
-
-            Boolean exists1 = (!entry1.is(ProcessableEntry) || entry1.exists);
-            Boolean exists2 = (!entry2.is(ProcessableEntry) || entry2.exists);
-            return exists1 ?  exists2 && entry1.value == entry2.value
-                           : !exists2;
-            }
-        }
-
-
-    // ----- ProcessableEntry interface ------------------------------------------------------------
-
-    /**
-     * A ProcessableEntry represents an extension to the Entry interface that allows a consumer to
-     * determine whether an entry exists (is present in a map), to cause an entry to exist (if it
-     * did not exist) by assigning a value, to change the value of an entry that does exist, and to
-     * remove the entry if it exists.
-     */
-    interface ProcessableEntry
-            extends Entry
-        {
-        /**
          * True iff the entry is existent in its map. An entry does not exist in its map before its
-         * [value] is assigned, or after a call to [remove].
+         * [value] has been assigned, or after a call to [remove].
          */
         @RO Boolean exists;
 
         /**
          * The value associated with the entry's key.
          *
-         * The value property is not settable if the containing map is a _persistent_ or
-         * `const` map.
+         * The value property is not settable and the entry is not removable if the containing map
+         * is _persistent_.
          *
          * If the entry does not [exist](exists), then the value is not readable; an attempt to get
-         * the value of an will raise a [OutOfBounds]
+         * the value of an will raise an `OutOfBounds`
          *
          * @throws OutOfBounds if an attempt is made to read the value of the entry when {@link
          *                     exists} is false
-         * @throws ReadOnly if an attempt is made to write the value of the entry when
+         * @throws ReadOnly    if an attempt is made to write the value of the entry when
          *                     the map is _persistent_ or `const`
          */
-        @Override
         ValueType value;
 
         /**
@@ -602,13 +545,11 @@ interface Map<KeyType, ValueType>
          * multiple logical entries within an entry iterator, then obtain a reference to the same
          * entry that is _not_ temporary, allowing the resulting reference to be held indefinitely.
          *
-         * Note that a ProcessableEntry interface is defined as returning only an Entry, not a
-         * ProcessableEntry.
+         * Holding the Entry will likely prevent the garbage-collection of the Map.
          *
          * @return an Entry object that can be retained indefinitely; changes to the values in the
          *         map may or may not be reflected in the returned Entry
          */
-        @Override
         Entry reify()
             {
             return this;
@@ -664,33 +605,33 @@ interface Map<KeyType, ValueType>
         return (3 * size)   // allow for "[]", for "=" on each entry, and ", " between each entry
                 + estimateStringLength(keys)
                 + estimateStringLength(values);
-        }
 
-    private static Int estimateStringLength(Collection coll)
-        {
-        if (coll.ElementType.is(Type<Stringable>))
+        private static Int estimateStringLength(Collection coll)
             {
-            for (coll.ElementType element : coll)
+            if (coll.ElementType.is(Type<Stringable>))
                 {
-                capacity += element.estimateStringLength();
-                }
-            }
-        else
-            {
-            for (coll.ElementType element : coll)
-                {
-                if (element.is(Stringable))
+                for (coll.ElementType element : coll)
                     {
                     capacity += element.estimateStringLength();
                     }
-                else
+                }
+            else
+                {
+                for (coll.ElementType element : coll)
                     {
-                    // completely arbitrary estimate
-                    capacity += 8;
+                    if (element.is(Stringable))
+                        {
+                        capacity += element.estimateStringLength();
+                        }
+                    else
+                        {
+                        // completely arbitrary estimate
+                        capacity += 8;
+                        }
                     }
                 }
+            return capacity;
             }
-        return capacity;
         }
 
     @Override

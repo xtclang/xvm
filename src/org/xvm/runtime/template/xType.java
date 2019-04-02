@@ -2,8 +2,10 @@ package org.xvm.runtime.template;
 
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -47,6 +49,25 @@ public class xType
         {
         markNativeGetter("allMethods");
         markNativeGetter("explicitlyImmutable");
+        }
+
+    @Override
+    public int createConstHandle(Frame frame, Constant constant)
+        {
+        if (constant instanceof TypeConstant)
+            {
+            ConstantPool pool = frame.poolContext();
+
+            TypeConstant typeTarget = (TypeConstant) constant;
+            assert typeTarget.isA(pool.typeType());
+
+            TypeConstant typeData = typeTarget.getParamTypesArray()[0].
+                    resolveGenerics(pool, frame.getGenericsResolver());
+            frame.pushStack(typeData.getTypeHandle());
+            return Op.R_NEXT;
+            }
+
+        return super.createConstHandle(frame, constant);
         }
 
     @Override

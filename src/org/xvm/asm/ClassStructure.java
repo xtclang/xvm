@@ -1472,10 +1472,6 @@ public class ClassStructure
         int cParamsRight = listRight.size();
         boolean fTuple   = isTuple();
 
-        // we only have to check all the parameters on the left side,
-        // since if an assignment C<L1> = C<R1> is allowed, then
-        // an assignment C<L1> = C<R1, R2> is allowed for any R2
-
         List<Map.Entry<StringConstant, TypeConstant>> listFormalEntries = getTypeParamsAsList();
 
         if (!fTuple)
@@ -1491,9 +1487,9 @@ public class ClassStructure
             }
 
         boolean fWeak = false;
-        for (int i = 0; i < cParamsLeft; i++)
+        for (int i = 0; i < Math.max(cParamsLeft, cParamsRight); i++)
             {
-            String sName;
+            String       sName;
             TypeConstant typeCanonical;
 
             if (fTuple)
@@ -1507,6 +1503,19 @@ public class ClassStructure
 
                 sName         = entryFormal.getKey().getValue();
                 typeCanonical = entryFormal.getValue();
+                }
+
+            if (i >= cParamsLeft)
+                {
+                // if an assignment C<L1> = C<R1> is allowed, then an assignment
+                // C<L1> = C<R1, R2> is allowed for any R2, but it could be "weak"
+                if (fTuple ||
+                    (producesFormalType(sName, accessLeft, listLeft) &&
+                     consumesFormalType(sName, accessLeft, listLeft)))
+                    {
+                    fWeak = true;
+                    }
+                break;
                 }
 
             TypeConstant typeLeft = listLeft.get(i);

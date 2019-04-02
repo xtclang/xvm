@@ -1,14 +1,15 @@
 package org.xvm.runtime.template;
 
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
@@ -53,19 +54,42 @@ public class xClass
         {
         if (constant instanceof ClassConstant)
             {
-            constant = constant.getType();
-            }
-        if (constant instanceof TypeConstant)
-            {
-            TypeConstant typeTarget = (TypeConstant) constant;
+            ConstantPool   pool   = frame.poolContext();
+            ClassConstant  idClz  = (ClassConstant) constant;
+            ClassStructure struct = (ClassStructure) idClz.getComponent();
 
-            frame.pushStack(m_mapHandles.computeIfAbsent(typeTarget, type ->
-                new ClassHandle(frame.ensureClass(
-                    type.resolveGenerics(frame.poolContext(), frame.getGenericsResolver())))));
+            if (struct.getFormat() == Format.ENUM)
+                {
+                ClassTemplate templateEnum = f_templates.getTemplate(idClz);
+                // TODO: route to the native xEnumeration.java
+                }
+
+            TypeConstant typePublic    = idClz.getType();
+            TypeConstant typeProtected = pool.ensureAccessTypeConstant(typePublic, Access.PROTECTED);
+            TypeConstant typePrivate   = pool.ensureAccessTypeConstant(typePublic, Access.PRIVATE);
+            TypeConstant typeStruct    = pool.ensureAccessTypeConstant(typePublic, Access.STRUCT);
+
+            ClassComposition clz = ensureParameterizedClass(pool,
+                typePublic, typeProtected, typePrivate, typeStruct);
+
+            frame.pushStack(new ClassHandle(clz));
             return Op.R_NEXT;
             }
 
         return super.createConstHandle(frame, constant);
+        }
+
+    @Override
+    public int getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
+        {
+        String sProp = idProp.getName();
+
+        switch (sProp)
+            {
+            }
+
+        return frame.raiseException(
+            xException.makeHandle("Not implemented property: "  + sProp));
         }
 
     @Override
@@ -109,9 +133,9 @@ public class xClass
     public static class ClassHandle
             extends ObjectHandle
         {
-        protected ClassHandle(TypeComposition clazzTarget)
+        protected ClassHandle(TypeComposition clzTarget)
             {
-            super(clazzTarget);
+            super(clzTarget);
             }
 
         @Override
@@ -121,10 +145,4 @@ public class xClass
             }
         }
 
-    // ----- data fields -----
-
-    /**
-     * Cached ClassHandle instances.
-     */
-    private Map<TypeConstant, ClassHandle> m_mapHandles = new ConcurrentHashMap<>();
     }

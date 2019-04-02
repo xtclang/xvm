@@ -5,42 +5,52 @@ class KeyBasedMap<KeyType, ValueType>
         implements Map<KeyType, ValueType>
     {
     @Override
+    @RO MutabilityConstraint mutability;
+
+    @Override
     @RO Int size.get()
         {
         return keys.size;
         }
 
     @Override
-    conditional Entry find(KeyType key)
+    @RO Boolean empty.get()
         {
-        TODO
+        return keys.empty;
         }
 
     @Override
-    @RO Set<KeyType> keys
+    Entry entryFor(KeyType key)
         {
-        TODO
+        return new ReifiedEntry(this, key);
         }
 
     @Override
-    @RO Set<Entry> entries
+    conditional ValueType get(KeyType key);
+
+    @Override
+    @RO Set<KeyType> keys;
+
+    @Override
+    @Lazy Collection<ValueType> values.calc()
         {
-        TODO
+        return new ValuesCollection();
         }
 
     @Override
-    @RO Collection<ValueType> values
+    @Lazy Set<Entry> entries.calc()
         {
+        return new EntrySet();
         }
-
-    @Override
-    @RO MutabilityConstraint mutability;
 
     @Override
     Map put(KeyType key, ValueType value);
 
     @Override
-    Map remove(KeyType key);
+    Map remove(KeyType key)
+        {
+        keys.remove(key);
+        }
 
     @Override
     Map clear();
@@ -48,89 +58,12 @@ class KeyBasedMap<KeyType, ValueType>
     @Override
     <ResultType> ResultType process(KeyType key, function ResultType (ProcessableEntry) compute);
 
-    // ----- keys set implementations --------------------------------------------------------------
-
-    /**
-     * An implementation of the Set for the {@link Map.keys} property that delegates back
-     * to the map and to the map's {@link Map.entries entries}.
-     */
-    class EntryBasedKeySet
-            implements Set<KeyType>
-        {
-        @Override
-        Int size.get()
-            {
-            return Map.this.size;
-            }
-
-        @Override
-        Boolean empty.get()
-            {
-            return Map.this.empty;
-            }
-
-        @Override
-        Iterator<KeyType> iterator()
-            {
-            return new Iterator()
-                {
-                Iterator<Entry> entryIterator = Map.this.entries.iterator();
-
-                @Override
-                conditional KeyType next()
-                    {
-                    if (Entry entry : entryIterator.next())
-                        {
-                        return true, entry.key;
-                        }
-                    return false;
-                    }
-                };
-            }
-
-        @Override
-        conditional EntryBasedKeySet remove(KeyType key)
-            {
-            Map newMap = Map.this.remove(key);
-            assert Ref.equals(Map.this, newMap);
-            return true, this;
-            }
-
-        @Override
-        conditional EntryBasedKeySet removeIf(function Boolean (KeyType) shouldRemove)
-            {
-            Set<KeyType> oldKeys = Map.this.keys;
-            oldKeys.removeIf(shouldRemove);
-            assert Ref.equals(Map.this.keys, oldKeys);
-            return true, this;
-            }
-
-        @Override
-        conditional EntryBasedKeySet clear()
-            {
-            Map newMap = Map.this.clear();
-            assert Ref.equals(Map.this, newMap);
-            return true, this;
-            }
-
-        @Override
-        Stream<KeyType> stream()
-            {
-            TODO
-            }
-
-        @Override
-        EntryBasedKeySet clone()
-            {
-            return this;
-            }
-        }
 
     // ----- entries set implementations -----------------------------------------------------------
 
     /**
-     * An implementation of the Set for the {@link Map.entries} property that delegates back to the
-     * map and to the map's {@link Map.keys keys}.
+     * An implementation of the Set for the [entries] property that delegates back to the map and
+     * to the map's [keys].
      */
     class KeyBasedEntrySet
             implements Set<Entry>
@@ -228,71 +161,15 @@ class KeyBasedMap<KeyType, ValueType>
     // ----- Entry implementations -----------------------------------------------------------------
 
     /**
-     * The primordial implementation of a simple Entry.
-     */
-    static class SimpleEntry(KeyType key, ValueType value)
-            implements Entry
-        {
-        @Override
-        public/private KeyType key;
-
-        @Override
-        ValueType value;
-        }
-
-    /**
-     * An implementation of ProcessableEntry that delegates back to the map for a specified key.
-     */
-    class KeyBasedEntry(KeyType key)
-            implements ProcessableEntry
-        {
-        @Override
-        public/protected KeyType key;
-
-        @Override
-        Boolean exists.get()
-            {
-            return Map.this.get(key);
-            }
-
-        @Override
-        ValueType value
-            {
-            @Override
-            ValueType get()
-                {
-                if (ValueType value : Map.this.get(key))
-                    {
-                    return value;
-                    }
-                throw new OutOfBounds();
-                }
-
-            @Override
-            void set(ValueType value)
-                {
-                Map.this.put(key, value);
-                }
-            }
-
-        @Override
-        void remove()
-            {
-            Map newMap = Map.this.remove(key);
-            assert Ref.equals(Map.this, newMap);
-            }
-        }
-
-    /**
-     * An implementation of ProcessableEntry that can be used as a cursor over any number of keys,
-     * and delegates back to the map for its functionality.
+     * An implementation of Entry that can be used as a cursor over any number of keys, and
+     * delegates back to the map for its functionality.
      */
     class KeyBasedCursorEntry
-            extends KeyBasedEntry
+            extends ReifiedEntry<KeyType, ValueType>
         {
         construct(KeyType key)
             {
-            construct KeyBasedEntry(key);
+            construct ReifiedEntry(Map.this, key);
             }
 
         /**
@@ -311,19 +188,17 @@ class KeyBasedMap<KeyType, ValueType>
         @Override
         Entry reify()
             {
-            // this entry class is re-usable for different keys, so return an entry whose key cannot
-            // be modified
-            return new KeyBasedEntry(key);
+            return Map.this.entryFor(key);
             }
         }
 
-    // ----- values collection implementations -----------------------------------------------------
+    // ----- values collection implementation ------------------------------------------------------
 
     /**
-     * An implementation of the Collection for the {@link Map.values} property that delegates back
-     * to the map and to the map's {@link Map.keys keys}.
+     * An implementation of the Collection for the [values] property that delegates back
+     * to the map and to the map's [keys].
      */
-    class KeyBasedValuesCollection
+    class ValuesCollection
             implements Collection<ValueType>
         {
         @Override
@@ -343,7 +218,7 @@ class KeyBasedMap<KeyType, ValueType>
             {
             return new Iterator()
                 {
-                Iterator<KeyType> keyIterator = Map.this.keys.iterator();
+                Iterator<KeyType> keyIterator = keys.iterator();
 
                 @Override
                 conditional ValueType next()
@@ -399,10 +274,19 @@ class KeyBasedMap<KeyType, ValueType>
         @Override
         conditional KeyBasedValuesCollection clear()
             {
-            Map newMap = Map.this.clear();
+            if (Map newMap : Map.this.clear())
+                {
+                if (Ref.equals(Map.this, newMap))
+                    {
+                    return true, this;
+                    }
+                else
+                    {
+                    throw new ReadOnly();
+                    }
+                }
 
-            assert Ref.equals(Map.this, newMap);
-            return true, this;
+            return false;
             }
         }
     }
