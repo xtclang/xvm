@@ -1,5 +1,6 @@
 /**
- * A Map is a _dictionary_ data structure that stores _values_, each identified by a _key_.
+ * A Map is a _dictionary_ data structure that stores _values_, each identified by a _key_; the
+ * combination of a key and its value is an _entry_.
  *
  * The Map is one of the most commonly used data structures, because it allows information to be
  * easily _related to_ other information.
@@ -8,6 +9,32 @@ interface Map<KeyType, ValueType>
         extends VariablyMutable
         extends Stringable
     {
+    /**
+     * Describes the mutability of this Map:
+     *
+     * * A **mutable** map is one that allows items to be added and removed, and whose values for
+     *   particular keys can be replaced, and whose contents are generally not required to be
+     *   immutable. If an implementation provides support for more than one mode, including a
+     *   **mutable** mode, then it should implement the [MutableAble] interface.
+     * * A **fixed size** map is one that does not allow items to be added or removed, but whose
+     *   values for particular keys can be replaced, and whose contents are generally not required
+     *   to be immutable. If an implementation provides support for more than one mode, including
+     *   a **fixed size** mode, then it should implement the [FixedSizeAble] interface.
+     * * A **persistent** map is one that does not allow items to be added or removed, whose values
+     *   for particular keys can not be replaced, but whose contents are generally not required to
+     *   be immutable. Requesting a persistent map to add, remove, or modify its contents will
+     *   result in a new persistent map as a result of the request. If an implementation provides
+     *   support for more than one mode, including a **persistent** mode, then it should implement
+     *   the [PersistentAble] interface.
+     * * A **const** map is one that is immutable, whose size and contents are immutable, and which
+     *   provides a new **const** map as the result of any mutating request. If an implementation
+     *   provides support for more than one mode, including a **const** mode, then it should
+     *   implement the [ConstAble] interface.
+     */
+    @Override
+    @RO MutabilityConstraint mutability;
+
+
     // ----- read operations -----------------------------------------------------------------------
 
     /**
@@ -27,7 +54,22 @@ interface Map<KeyType, ValueType>
         }
 
     /**
+     * Check if this map contains the specified key.
+     *
+     * @param key  specifies the key that may or may not already be present in the map
+     *
+     * @return the true iff the specified key exists in the map
+     */
+    Boolean contains(KeyType key)
+        {
+        return keys.contains(key);
+        }
+
+    /**
      * Obtain the Entry for the specified key, if the entry exists in the Map.
+     *
+     * This operation is expected to be relatively expensive for Map implementations that do not
+     * manage their contents as entries that can be exposed to a caller.
      *
      * @param key  the key to find the entry for
      *
@@ -36,13 +78,27 @@ interface Map<KeyType, ValueType>
     conditional Entry find(KeyType key);
 
     /**
+     * Obtain a ProcessableEntry for the specified key, whether or not the entry exists in the
+     * Map. Attempts to mutate the Map through the ProcessableEntry will fail with a ReadOnly
+     * exception if the Map is immutable, or if the Map [mutability] is `Persistent` or `Constant`.
+     *
+     * This operation is expected to be relatively expensive for Map implementations that do not
+     * manage their contents as entries that can be exposed to a caller.
+     *
+     * @param key  the key to obtain an entry for
+     *
+     * @return the requested ProcessableEntry
+     */
+    ProcessableEntry entryFor(KeyType key);
+
+    /**
      * Obtain the value associated with the specified key, iff that key is present in the map. If
-     * the key is not present in the map, then this method returns a conditional {@code false}.
+     * the key is not present in the map, then this method returns a conditional `false`.
      *
      * @param key  the key to look up in the map
      *
-     * @return a conditional true and the value for the associated key if it exists in the map;
-     *         otherwise a conditional false
+     * @return a conditional true and the value associated with the specified key if it exists in
+     *         the map; otherwise a conditional false
      */
     conditional ValueType get(KeyType key)
         {
@@ -54,7 +110,29 @@ interface Map<KeyType, ValueType>
         }
 
     /**
-     * Obtain the value associated with the specified key, or the value {@code null} if the key is
+     * Obtain the values associated with the specified keys, building a resulting Map with the
+     * results. For requested keys that are absent from this Map, the keys will be absent in the
+     * resulting Map as well.
+     *
+     * Subsequent changes to this map will not affect a map previously returned from this method.
+     *
+     * @param keys  the keys to look up in the map
+     *
+     * @return a Map containing all of the requested keys that were present in this Map, and their
+     *         corresponding values
+     */
+    Map<KeyType, ValueType> getAll(Collection<KeyType> keys)
+        {
+        ListMap<KeyType, ResultType> result = new ListMap(keys.size);
+        for (KeyType key : keys)
+            {
+            map.put(key, get(key));
+            }
+        return result;
+        }
+
+    /**
+     * Obtain the value associated with the specified key, or the value `null` if the key is
      * not present in the map.
      *
      * @param key  the key to look up in the map
@@ -116,18 +194,6 @@ interface Map<KeyType, ValueType>
         }
 
     /**
-     * Check if this map contains the specified key.
-     *
-     * @param key  specifies the key that may or may not already be present in the map
-     *
-     * @return the true iff the specified key exists in the map
-     */
-    Boolean contains(KeyType key)
-        {
-        return keys.contains(key);
-        }
-
-    /**
      * Obtain the set of all keys in the map.
      *
      * Example usage:
@@ -135,7 +201,7 @@ interface Map<KeyType, ValueType>
      *   if (map.keys.contains(name)) {...}
      *
      * The returned set is expected to support mutation operations iff the map is _mutable_; the
-     * returned set is not expected to support the {@code add} or {@code addAll} operations.
+     * returned set is not expected to support the `add` or `addAll` operations.
      */
     @RO Set<KeyType> keys;
 
@@ -143,7 +209,7 @@ interface Map<KeyType, ValueType>
      * Obtain the set of all entries (key/value pairs) in the map.
      *
      * The returned set is expected to support mutation operations iff the map is _mutable_; the
-     * returned set is not expected to support the {@code add} or {@code addAll} operations.
+     * returned set is not expected to support the `add` or `addAll` operations.
      */
     @RO Set<Entry> entries;
 
@@ -151,38 +217,10 @@ interface Map<KeyType, ValueType>
      * Obtain the collection of all values (one for each key) in the map.
      *
      * The returned collection is expected to support mutation operations iff the map is _mutable_;
-     * the returned collection is _not_ expected to support the {@code add} or {@code addAll}
-     * operations.
+     * the returned collection is _not_ expected to support the `add` or `addAll` operations.
      */
     @RO Collection<ValueType> values;
 
-    /**
-     * Provides the mutability category of this Map.
-     *
-     * * A **mutable** map is one that allows items to be added and removed, and whose values for
-     *   particular keys can be replaced, and whose contents are generally not required to be
-     *   immutable. If an implementation provides support for more than one mode, including a
-     *   **mutable** mode, then it should implement the [MutableAble] interface.
-     * * A **fixed size** map is one that does not allow items to be added or removed, but whose
-     *   values for particular keys can be replaced, and whose contents are generally not required
-     *   to be immutable. Requesting a persistent map to add or remove contents will result in a
-     *   new fixed size map as a result of the request. If an implementation provides support for
-     *   more than one mode, including a **fixed size** mode, then it should implement the
-     *   [FixedSizeAble] interface.
-     * * A **persistent** map is one that does not allow items to be added or removed, whose values
-     *   for particular keys can not be replaced, but whose contents are generally not required to
-     *   be immutable. Requesting a persistent map to add, remove, or modify its contents will
-     *   result in a new persistent map as a result of the request. If an implementation provides
-     *   support for more than one mode, including a **persistent** mode, then it should implement
-     *   the [PersistentAble] interface.
-     * * A **const** map is one that is immutable, whose size and contents are immutable, and which
-     *   provides a new **const** map as the result of any mutating request. If an implementation
-     *   provides support for more than one mode, including a **const** mode, then it should
-     *   implement the [ConstAble] interface.
-     */
-    @Override
-    @RO MutabilityConstraint mutability;
-    
 
     // ----- write operations ----------------------------------------------------------------------
 
@@ -203,6 +241,28 @@ interface Map<KeyType, ValueType>
     conditional Map put(KeyType key, ValueType value)
         {
         TODO entry addition and modification is not supported
+        }
+
+    /**
+     * Store in this map each of the mappings of key and values specified in another map, regardless
+     * of whether those keys and/or values are already present in this map.
+     *
+     * A _mutable_ map will perform the operation in place. A _fixed size_ map will perform the
+     * operation in place iff all of the keys are already present in the map. In all other cases,
+     * including all other modes of map, a new map will be returned reflecting the requested change.
+     *
+     * @param that  another map containing keys and associated values to put into this map
+     *
+     * @return the resultant map, which is the same as `this` for a mutable map
+     */
+    conditional Map putAll(Map! that)
+        {
+        Map result = this;
+        for (Entry entry : that.entries)
+            {
+            result = result.put(entry.key, entry.value);
+            }
+        return result;
         }
 
     /**
@@ -254,25 +314,15 @@ interface Map<KeyType, ValueType>
         }
 
     /**
-     * Store in this map each of the mappings of key and values specified in another map, regardless
-     * of whether those keys and/or values are already present in this map.
+     * Remove the specified key and any associated value from this map.
      *
-     * A _mutable_ map will perform the operation in place. A _fixed size_ map will perform the
-     * operation in place iff all of the keys are already present in the map. In all other cases,
-     * including all other modes of map, a new map will be returned reflecting the requested change.
+     * @param key  the key to remove from this map
      *
-     * @param that  another map containing keys and associated values to put into this map
-     *
-     * @return the resultant map, which is the same as {@code this} for a mutable map
+     * @return the resultant map, which is the same as `this` for a mutable map
      */
-    conditional Map putAll(Map! that)
+    conditional Map remove(KeyType key)
         {
-        Map result = this;
-        for (Entry entry : that.entries)
-            {
-            result = result.put(entry.key, entry.value);
-            }
-        return result;
+        TODO entry removal is not supported
         }
 
     /**
@@ -280,11 +330,25 @@ interface Map<KeyType, ValueType>
      *
      * @param key  the key to remove from this map
      *
-     * @return the resultant map, which is the same as {@code this} for a mutable map
+     * @return the resultant map, which is the same as `this` for a mutable map
      */
-    conditional Map remove(KeyType key)
+    conditional Map removeAll(Collection<KeyType> keys)
         {
-        TODO entry removal is not supported
+        Map result = this;
+        if (mutability.persistent)
+            {
+            // this begs for subclass optimization
+            for (KeyType key : keys)
+                {
+                result = result.remove(key);
+                }
+            }
+        else
+            {
+            this.keys.removeAll(keys);
+            }
+
+        return result;
         }
 
     /**
@@ -319,6 +383,122 @@ interface Map<KeyType, ValueType>
      * @return the resultant map, which is the same as `this` for a mutable map
      */
     conditional Map clear();
+
+
+    // ----- ProcessableEntry operations -----------------------------------------------------------
+
+    /**
+     * Apply the specified function to the entry for the specified key. If that key does not exist
+     * in the map, an Entry is provided to it whose [Entry.exists] property is false;
+     * setting the value of the entry will cause the entry to _appear in_ the map, which is to say
+     * that the map will contain an entry for that key with that value. Similarly, calling {@link
+     * Entry.remove remove} on the entry will ensure that the key and any associated value are _not_
+     * present in the map.
+     *
+     * @param key      specifies which entry to process
+     * @param compute  the function that will operate against the ProcessableEntry
+     *
+     * @return the result of the specified function
+     *
+     * @throws ReadOnly if an attempt is made to add or remove an entry in a map that is not
+     *                  _mutable_, or to modify an entry in a map that is not _mutable_ or
+     *                  _fixed size_
+     */
+    <ResultType> ResultType process(KeyType key, function ResultType (ProcessableEntry) compute)
+        {
+        return compute(entryFor(key));
+        }
+
+    /**
+     * Apply the specified function to the ProcessableEntry objects for the specified keys.
+     *
+     * @param keys     specifies which keys to process
+     * @param compute  the function that will operate against each ProcessableEntry
+     *
+     * @return a Map containing the results from the specified function applied against the entries
+     *         for the specified keys
+     *
+     * @throws ReadOnly if an attempt is made to add or remove an entry in a map that is not
+     *                  _mutable_, or to modify an entry in a map whose [mutability] is not
+     *                  `Mutable` or `FixedSize`
+     */
+    <ResultType> Map<KeyType, ResultType> processAll(Collection<KeyType> keys,
+            function ResultType (ProcessableEntry) compute)
+        {
+        ListMap<KeyType, ResultType> result = new ListMap(keys.size);
+        for (KeyType key : keys)
+            {
+            map.put(key, process(key));
+            }
+        return result;
+        }
+
+    /**
+     * Apply the specified function to the entry for the specified key, iff such an entry exists in
+     * the map.
+     *
+     * @param key      specifies which entry to process
+     * @param compute  the function that will operate against the ProcessableEntry, iff the entry
+     *                 already exists in the map
+     *
+     * @return a conditional true and the result of the specified function iff the entry exists;
+     *         otherwise a conditional false
+     *
+     * @throws ReadOnly if an attempt is made to modify an entry in a map that is not
+     *                  _mutable_ or _fixed size_
+     */
+    <ResultType> conditional ResultType processIfPresent(KeyType key,
+            function ResultType (ProcessableEntry) compute)
+        {
+        // this implementation can be overridden to combine the contains() and process() into
+        // a single step
+        if (contains(key))
+            {
+            return true, process(key, entry ->
+                {
+                assert entry.exists;
+                return compute(entry);
+                });
+            }
+        else
+            {
+            return false;
+            }
+        }
+
+    /**
+     * Obtain the existing value for the specified key, or if the key does not already exist in the
+     * map, create a new entry in the map containing the specified key and the result of the
+     * specified function.
+     *
+     * @param key      specifies the key that may or may not already be present in the map
+     * @param compute  the function that will be called iff the key does not already exist in the
+     *                 map, and which will return the new value to associate with that key
+     *
+     * @return the value for the specified key, which may have already existed in the map, or may
+     *         have just been calculated by the specified function and placed into the map
+     *
+     * @throws ReadOnly if an attempt is made to add an entry in a map that is not _mutable_
+     */
+    ValueType computeIfAbsent(KeyType key, function ValueType () compute)
+        {
+        return process(key, entry ->
+            {
+            if (entry.exists)
+                {
+                return entry.value;
+                }
+
+            if (mutability != Mutable)
+                {
+                throw new ReadOnly();
+                }
+
+            ValueType value = compute();
+            entry.value = value;
+            return value;
+            });
+        }
 
 
     // ----- Entry interface -----------------------------------------------------------------------
@@ -450,90 +630,6 @@ interface Map<KeyType, ValueType>
                 && entry1.exists ?  entry2.exists && entry1.value == entry2.value
                                  : !entry2.exists;
             }
-        }
-
-
-    // ----- ProcessableEntry operations -----------------------------------------------------------
-
-    /**
-     * Apply the specified function to the entry for the specified key. If that key does not exist
-     * in the map, an Entry is provided to it whose [Entry.exists] property is false;
-     * setting the value of the entry will cause the entry to _appear in_ the map, which is to say
-     * that the map will contain an entry for that key with that value. Similarly, calling {@link
-     * Entry.remove remove} on the entry will ensure that the key and any associated value are _not_
-     * present in the map.
-     *
-     * @param key      specifies which entry to process
-     * @param compute  the function that will operate against the ProcessableEntry
-     *
-     * @return the result of the specified function
-     *
-     * @throws ReadOnly if an attempt is made to add or remove an entry in a map that is not
-     *                  _mutable_, or to modify an entry in a map that is not _mutable_ or
-     *                  _fixed size_
-     */
-    <ResultType> ResultType process(KeyType key, function ResultType (ProcessableEntry) compute);
-
-    /**
-     * Apply the specified function to the entry for the specified key, iff such an entry exists in
-     * the map.
-     *
-     * @param key      specifies which entry to process
-     * @param compute  the function that will operate against the ProcessableEntry, iff the entry
-     *                 already exists in the map
-     *
-     * @return a conditional true and the result of the specified function iff the entry exists;
-     *         otherwise a conditional false
-     *
-     * @throws ReadOnly if an attempt is made to modify an entry in a map that is not
-     *                  _mutable_ or _fixed size_
-     */
-    <ResultType> conditional ResultType processIfPresent(KeyType key,
-            function ResultType (ProcessableEntry) compute)
-        {
-        // this implementation can be overridden to combine the contains() and process() into
-        // a single step
-        if (contains(key))
-            {
-            return true, process(key, entry ->
-                {
-                assert entry.exists;
-                return compute(entry);
-                });
-            }
-        else
-            {
-            return false;
-            }
-        }
-
-    /**
-     * Obtain the existing value for the specified key, or if the key does not already exist in the
-     * map, create a new entry in the map containing the specified key and the result of the
-     * specified function.
-     *
-     * @param key      specifies the key that may or may not already be present in the map
-     * @param compute  the function that will be called iff the key does not already exist in the
-     *                 map, and which will return the new value to associate with that key
-     *
-     * @return the value for the specified key, which may have already existed in the map, or may
-     *         have just been calculated by the specified function and placed into the map
-     *
-     * @throws ReadOnly if an attempt is made to add an entry in a map that is not _mutable_
-     */
-    ValueType computeIfAbsent(KeyType key, function ValueType () compute)
-        {
-        return process(key, entry ->
-            {
-            if (entry.exists)
-                {
-                return entry.value;
-                }
-
-            ValueType value = compute();
-            entry.value = value;
-            return value;
-            });
         }
 
 
