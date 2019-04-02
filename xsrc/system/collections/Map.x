@@ -62,7 +62,7 @@ interface Map<KeyType, ValueType>
      */
     Boolean contains(KeyType key)
         {
-        return keys.contains(key);
+        return get(key);
         }
 
     /**
@@ -90,7 +90,7 @@ interface Map<KeyType, ValueType>
      */
     conditional ValueType get(KeyType key)
         {
-        if (Entry entry : find(key))
+        if (Entry entry : entryFor(key))
             {
             return true, entry.value;
             }
@@ -111,7 +111,7 @@ interface Map<KeyType, ValueType>
      */
     Map<KeyType, ValueType> getAll(Collection<KeyType> keys)
         {
-        ListMap<KeyType, ResultType> result = new ListMap(keys.size);
+        ListMap<KeyType, ValueType> result = new ListMap(keys.size);
         for (KeyType key : keys)
             {
             map.put(key, get(key));

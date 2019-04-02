@@ -56,7 +56,7 @@ class KeyBasedMap<KeyType, ValueType>
     Map clear();
 
     @Override
-    <ResultType> ResultType process(KeyType key, function ResultType (ProcessableEntry) compute);
+    <ResultType> ResultType process(KeyType key, function ResultType (Entry) compute);
 
 
     // ----- entries set implementations -----------------------------------------------------------
@@ -65,7 +65,7 @@ class KeyBasedMap<KeyType, ValueType>
      * An implementation of the Set for the [entries] property that delegates back to the map and
      * to the map's [keys].
      */
-    class KeyBasedEntrySet
+    class EntrySet
             implements Set<Entry>
         {
         @Override
@@ -92,7 +92,7 @@ class KeyBasedMap<KeyType, ValueType>
                     {
                     if (KeyType key : keyIterator.next())
                         {
-                        private KeyBasedCursorEntry entry = new KeyBasedCursorEntry(key);
+                        private CursorEntry entry = new CursorEntry(key);
                         return true, entry.advance(key);
                         }
 
@@ -102,7 +102,7 @@ class KeyBasedMap<KeyType, ValueType>
             }
 
         @Override
-        conditional KeyBasedEntrySet remove(Entry entry)
+        conditional EntrySet remove(Entry entry)
             {
             // value is an Entry; remove the requested entry from the map only if the specified
             // entry's key/value pair exists in the map
@@ -119,15 +119,15 @@ class KeyBasedMap<KeyType, ValueType>
             }
 
         @Override
-        conditional KeyBasedEntrySet removeIf(
+        conditional EntrySet removeIf(
                 function Boolean (Entry) shouldRemove)
             {
             Set<KeyType> oldKeys = Map.this.keys;
 
-            KeyBasedCursorEntry? entry = null;
+            CursorEntry? entry = null;
             if (Set<KeyType> newKeys : oldKeys.removeIf(key ->
                     {
-                    entry = entry?.advance(key) : new KeyBasedCursorEntry(key);
+                    entry = entry?.advance(key) : new CursorEntry(key);
                     return shouldRemove(entry.advance(key));
                     }))
                 {
@@ -138,7 +138,7 @@ class KeyBasedMap<KeyType, ValueType>
             }
 
         @Override
-        conditional KeyBasedEntrySet clear()
+        conditional EntrySet clear()
             {
             Map newMap = Map.this.clear();
             assert Ref.equals(Map.this, newMap);
@@ -152,7 +152,7 @@ class KeyBasedMap<KeyType, ValueType>
             }
 
         @Override
-        KeyBasedEntrySet clone()
+        EntrySet clone()
             {
             return this;
             }
@@ -164,8 +164,9 @@ class KeyBasedMap<KeyType, ValueType>
      * An implementation of Entry that can be used as a cursor over any number of keys, and
      * delegates back to the map for its functionality.
      */
-    class KeyBasedCursorEntry
+    class CursorEntry
             extends ReifiedEntry<KeyType, ValueType>
+            implements Entry
         {
         construct(KeyType key)
             {
@@ -179,7 +180,7 @@ class KeyBasedMap<KeyType, ValueType>
          *
          * @return this Entry
          */
-        KeyBasedCursorEntry advance(KeyType key)
+        CursorEntry advance(KeyType key)
             {
             this.key = key;
             return this;
@@ -234,7 +235,7 @@ class KeyBasedMap<KeyType, ValueType>
             }
 
         @Override
-        conditional KeyBasedValuesCollection remove(ValueType value)
+        conditional ValuesCollection remove(ValueType value)
             {
             Map map = Map.this;
             Boolean modified = map.keys.iterator().untilAny(key ->
@@ -255,7 +256,7 @@ class KeyBasedMap<KeyType, ValueType>
             }
 
         @Override
-        conditional KeyBasedValuesCollection removeIf(function Boolean (ValueType) shouldRemove)
+        conditional ValuesCollection removeIf(function Boolean (ValueType) shouldRemove)
             {
             Map map = Map.this;
             if (Set<KeyType> newKeys : map.keys.removeIf(key ->
@@ -272,7 +273,7 @@ class KeyBasedMap<KeyType, ValueType>
             }
 
         @Override
-        conditional KeyBasedValuesCollection clear()
+        conditional ValuesCollection clear()
             {
             if (Map newMap : Map.this.clear())
                 {

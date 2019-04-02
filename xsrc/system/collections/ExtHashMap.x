@@ -6,7 +6,7 @@
  * providing the rationale for the name of the _Ext_HashMap.
  */
 class ExtHashMap<KeyType, ValueType>
-        extends IterableKeysMap<KeyType, ValueType> // TODO temporary
+        extends KeyBasedMap<KeyType, ValueType> // TODO temporary
         incorporates Stringer
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -225,18 +225,19 @@ class ExtHashMap<KeyType, ValueType>
 
     @Override
     <ResultType> ResultType process(KeyType key,
-            function ResultType (ProcessableEntry) compute)
+            function ResultType (Entry) compute)
         {
         return compute(new ProcessableHashEntry(key));
         }
 
-    // ----- HashEntry implementation --------------------------------------------------------------
+
+    // ----- EntrySet implementation ---------------------------------------------------------------
 
     /**
      * A representation of all of the HashEntry objects in the Map.
      */
-    class HashEntrySet
-            extends KeyBasedEntrySet
+    @Override
+    class EntrySet
             implements Set<HashEntry>
         {
         @Override
@@ -374,6 +375,7 @@ class ExtHashMap<KeyType, ValueType>
             }
         }
 
+
     // ----- HashEntry implementation --------------------------------------------------------------
 
     /**
@@ -408,7 +410,7 @@ class ExtHashMap<KeyType, ValueType>
         }
 
     /**
-     * This is an implementation of the ProcessableEntry interface that is implemented by delegation
+     * This is an implementation of the Entry interface that is implemented by delegation
      * to the actual map (i.e. it is not a real HashEntry), but it reifies to a real HashEntry.
      */
     protected class ProcessableHashEntry

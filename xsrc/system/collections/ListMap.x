@@ -79,7 +79,7 @@ class ListMap<KeyType extends immutable Hashable, ValueType>
 
     @Override
     <ResultType> ResultType process(KeyType key,
-            function ResultType (ProcessableEntry) compute)
+            function ResultType (Entry) compute)
         {
         TODO
         }
