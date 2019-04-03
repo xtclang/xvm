@@ -902,31 +902,45 @@ public class MethodDeclarationStatement
             }
         else
             {
-            String sBody = body.toString();
-            if (sBody.indexOf('\n') >= 0)
+            try
                 {
-                sb.append('\n')
-                  .append(indentLines(sBody, "    "));
-                }
-            else
-                {
-                sb.append(' ')
-                  .append(sBody);
-                }
-
-            if (m_bodyFinally != null)
-                {
-                String sFinally = m_bodyFinally.toString();
-                sb.append("\nfinally");
-                if (sFinally.indexOf('\n') >= 0)
+                String sBody = body.toString();
+                if (sBody.indexOf('\n') >= 0)
                     {
                     sb.append('\n')
-                      .append(indentLines(sFinally, "    "));
+                      .append(indentLines(sBody, "    "));
                     }
                 else
                     {
                     sb.append(' ')
-                      .append(sFinally);
+                      .append(sBody);
+                    }
+                }
+            catch (RuntimeException e)
+                {
+                sb.append("[body]");
+                }
+
+            if (m_bodyFinally != null)
+                {
+                try
+                    {
+                    String sFinally = m_bodyFinally.toString();
+                    sb.append("\nfinally");
+                    if (sFinally.indexOf('\n') >= 0)
+                        {
+                        sb.append('\n')
+                          .append(indentLines(sFinally, "    "));
+                        }
+                    else
+                        {
+                        sb.append(' ')
+                          .append(sFinally);
+                        }
+                    }
+                catch (RuntimeException e)
+                    {
+                    sb.append("[finally]");
                     }
                 }
             }
