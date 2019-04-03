@@ -21,7 +21,7 @@ const ContextToken<TokenType extends immutable Object>
     /**
      * The {@code ContextToken} that this contextToken replaced, if any.
      */
-    ContextToken!? previousContextToken;
+    ContextToken!<>? previousContextToken;
 
     /**
      * The name of the token.
@@ -55,11 +55,11 @@ const ContextToken<TokenType extends immutable Object>
      */
     Boolean registered.get()
         {
-        ContextToken? token = current;
+        ContextToken<>? token = current;
 
         while (token != null)
             {
-            if (this == token)
+            if (&this == &token)
                 {
                 return true;
                 }
