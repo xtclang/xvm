@@ -58,7 +58,7 @@ interface Map<KeyType, ValueType>
      *
      * @param key  specifies the key that may or may not already be present in the map
      *
-     * @return the true iff the specified key exists in the map
+     * @return the True iff the specified key exists in the map
      */
     Boolean contains(KeyType key)
         {
@@ -66,36 +66,15 @@ interface Map<KeyType, ValueType>
         }
 
     /**
-     * Obtain a Entry for the specified key, whether or not the entry exists in the
-     * Map. Attempts to mutate the Map through the Entry will fail with a ReadOnly
-     * exception if the Map is immutable, or if the Map [mutability] is `Persistent` or `Constant`.
-     *
-     * This operation is expected to be relatively expensive for Map implementations that do not
-     * manage their contents as entries that can be readily exposed to a caller.
-     *
-     * @param key  the key to obtain an entry for
-     *
-     * @return the requested Entry
-     */
-    Entry entryFor(KeyType key);
-
-    /**
      * Obtain the value associated with the specified key, iff that key is present in the map. If
-     * the key is not present in the map, then this method returns a conditional `false`.
+     * the key is not present in the map, then this method returns a conditional `False`.
      *
      * @param key  the key to look up in the map
      *
-     * @return a conditional true and the value associated with the specified key if it exists in
-     *         the map; otherwise a conditional false
+     * @return a conditional True and the value associated with the specified key if it exists in
+     *         the map; otherwise a conditional False
      */
-    conditional ValueType get(KeyType key)
-        {
-        if (Entry entry : entryFor(key))
-            {
-            return true, entry.value;
-            }
-        return false;
-        }
+    conditional ValueType get(KeyType key);
 
     /**
      * Obtain the values associated with the specified keys, building a resulting Map with the
@@ -114,7 +93,7 @@ interface Map<KeyType, ValueType>
         ListMap<KeyType, ValueType> result = new ListMap(keys.size);
         for (KeyType key : keys)
             {
-            map.put(key, get(key));
+            result.put(key, get(key));
             }
         return result;
         }
@@ -243,12 +222,16 @@ interface Map<KeyType, ValueType>
      */
     conditional Map putAll(Map! that)
         {
-        Map result = this;
+        Boolean modified = False;
+        Map     result   = this;
         for (Entry entry : that.entries)
             {
-            result = result.put(entry.key, entry.value);
+            if (result : result.put(entry.key, entry.value))
+                {
+                modified = True;
+                }
             }
-        return result;
+        return modified, result;
         }
 
     /**
@@ -262,17 +245,17 @@ interface Map<KeyType, ValueType>
      * @param value  the value to associate with the specified key iff the key does not already
      *               exist in the map
      *
-     * @return a conditional true and the resultant map if the key did not previously exist in the
-     *         map; otherwise a conditional false
+     * @return a conditional True and the resultant map if the key did not previously exist in the
+     *         map; otherwise a conditional False
      */
     conditional Map putIfAbsent(KeyType key, ValueType value)
         {
         if (keys.contains(key))
             {
-            return false;
+            return False;
             }
 
-        return true, put(key, value);
+        return put(key, value);
         }
 
     /**
@@ -283,20 +266,23 @@ interface Map<KeyType, ValueType>
      * @param valueOld  the value to verify is currently associated with the specified key
      * @param valueNew  the value to associate with the specified key
      *
-     * @return a conditional true and the resultant map if the key did exist in the map and was
-     *         associated with the previous value; otherwise a conditional false
+     * @return a conditional True and the resultant map if the key did exist in the map and was
+     *         associated with the previous value; otherwise a conditional False
      */
     conditional Map replace(KeyType key, ValueType valueOld, ValueType valueNew)
         {
-        if (ValueType valueCur : get(key))
+        if (valueOld != valueNew)
             {
-            if (valueOld == valueCur)
+            if (ValueType valueCur : get(key))
                 {
-                return true, put(key, valueNew);
+                if (valueOld == valueCur)
+                    {
+                    return put(key, valueNew);
+                    }
                 }
             }
 
-        return false;
+        return False;
         }
 
     /**
@@ -320,21 +306,25 @@ interface Map<KeyType, ValueType>
      */
     conditional Map removeAll(Collection<KeyType> keys)
         {
-        Map result = this;
+        Boolean modified = False;
+        Map     result   = this;
         if (mutability.persistent)
             {
             // this begs for subclass optimization
             for (KeyType key : keys)
                 {
-                result = result.remove(key);
+                if (result : result.remove(key))
+                    {
+                    modified = True;
+                    }
                 }
             }
         else
             {
-            this.keys.removeAll(keys);
+            modified = this.keys.removeAll(keys);
             }
 
-        return result;
+        return modified, result;
         }
 
     /**
@@ -353,11 +343,11 @@ interface Map<KeyType, ValueType>
             {
             if (value == valueOld)
                 {
-                return true, remove(key);
+                return True, remove(key);
                 }
             }
 
-        return false;
+        return False;
         }
 
     /**
@@ -375,7 +365,7 @@ interface Map<KeyType, ValueType>
 
     /**
      * Apply the specified function to the entry for the specified key. If that key does not exist
-     * in the map, an Entry is provided to it whose [Entry.exists] property is false;
+     * in the map, an Entry is provided to it whose [Entry.exists] property is False;
      * setting the value of the entry will cause the entry to _appear in_ the map, which is to say
      * that the map will contain an entry for that key with that value. Similarly, calling {@link
      * Entry.remove remove} on the entry will ensure that the key and any associated value are _not_
@@ -390,10 +380,7 @@ interface Map<KeyType, ValueType>
      *                  _mutable_, or to modify an entry in a map that is not _mutable_ or
      *                  _fixed size_
      */
-    <ResultType> ResultType process(KeyType key, function ResultType (Entry) compute)
-        {
-        return compute(entryFor(key));
-        }
+    <ResultType> ResultType process(KeyType key, function ResultType (Entry) compute);
 
     /**
      * Apply the specified function to the Entry objects for the specified keys.
@@ -414,7 +401,7 @@ interface Map<KeyType, ValueType>
         ListMap<KeyType, ResultType> result = new ListMap(keys.size);
         for (KeyType key : keys)
             {
-            map.put(key, process(key, compute));
+            result.put(key, process(key, compute));
             }
         return result;
         }
@@ -427,8 +414,8 @@ interface Map<KeyType, ValueType>
      * @param compute  the function that will operate against the Entry, iff the entry
      *                 already exists in the map
      *
-     * @return a conditional true and the result of the specified function iff the entry exists;
-     *         otherwise a conditional false
+     * @return a conditional True and the result of the specified function iff the entry exists;
+     *         otherwise a conditional False
      *
      * @throws ReadOnly if an attempt is made to modify an entry in a map that is not
      *                  _mutable_ or _fixed size_
@@ -440,7 +427,7 @@ interface Map<KeyType, ValueType>
         // a single step
         if (contains(key))
             {
-            return true, process(key, entry ->
+            return True, process(key, entry ->
                 {
                 assert entry.exists;
                 return compute(entry);
@@ -448,7 +435,7 @@ interface Map<KeyType, ValueType>
             }
         else
             {
-            return false;
+            return False;
             }
         }
 
@@ -524,7 +511,7 @@ interface Map<KeyType, ValueType>
          * the value of an will raise an `OutOfBounds`
          *
          * @throws OutOfBounds if an attempt is made to read the value of the entry when {@link
-         *                     exists} is false
+         *                     exists} is False
          * @throws ReadOnly    if an attempt is made to write the value of the entry when
          *                     the map is _persistent_ or `const`
          */
@@ -578,7 +565,7 @@ interface Map<KeyType, ValueType>
         {
         if (map1.size != map2.size)
             {
-            return false;
+            return False;
             }
 
         for (CompileType.KeyType key1, CompileType.ValueType value1 : map1)
@@ -590,10 +577,10 @@ interface Map<KeyType, ValueType>
                     continue;
                     }
                 }
-            return false;
+            return False;
             }
 
-        return true;
+        return True;
         }
 
 
@@ -605,33 +592,33 @@ interface Map<KeyType, ValueType>
         return (3 * size)   // allow for "[]", for "=" on each entry, and ", " between each entry
                 + estimateStringLength(keys)
                 + estimateStringLength(values);
+        }
 
-        private static Int estimateStringLength(Collection coll)
+    private static Int estimateStringLength(Collection coll)
+        {
+        if (coll.ElementType.is(Type<Stringable>))
             {
-            if (coll.ElementType.is(Type<Stringable>))
+            for (coll.ElementType element : coll)
                 {
-                for (coll.ElementType element : coll)
+                capacity += element.estimateStringLength();
+                }
+            }
+        else
+            {
+            for (coll.ElementType element : coll)
+                {
+                if (element.is(Stringable))
                     {
                     capacity += element.estimateStringLength();
                     }
-                }
-            else
-                {
-                for (coll.ElementType element : coll)
+                else
                     {
-                    if (element.is(Stringable))
-                        {
-                        capacity += element.estimateStringLength();
-                        }
-                    else
-                        {
-                        // completely arbitrary estimate
-                        capacity += 8;
-                        }
+                    // completely arbitrary estimate
+                    capacity += 8;
                     }
                 }
-            return capacity;
             }
+        return capacity;
         }
 
     @Override

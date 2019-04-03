@@ -477,41 +477,80 @@ const IntLiteral(String text)
     /**
      * Addition: Add another number to this number, and return the result.
      */
-    @Op IntLiteral add(IntLiteral n)
+    @Op("+") IntLiteral add(IntLiteral n)
         {
-        return this + n;
+        return new IntLiteral((this.to<VarInt>() + n.to<VarInt>()).to<String>());
         }
 
     /**
      * Subtraction: Subtract another number from this number, and return the result.
      */
-    @Op IntLiteral sub(IntLiteral n)
+    @Op("-") IntLiteral sub(IntLiteral n)
         {
-        return this - n;
+        return new IntLiteral((this.to<VarInt>() - n.to<VarInt>()).to<String>());
         }
 
     /**
      * Multiplication: Multiply this number by another number, and return the result.
      */
-    @Op IntLiteral mul(IntLiteral n)
+    @Op("*") IntLiteral mul(IntLiteral n)
         {
-        return this * n;
+        return new IntLiteral((this.to<VarInt>() * n.to<VarInt>()).to<String>());
         }
 
     /**
      * Division: Divide this number by another number, and return the result.
      */
-    @Op IntLiteral div(IntLiteral n)
+    @Op("/") IntLiteral div(IntLiteral n)
         {
-        return this / n;
+        return new IntLiteral((this.to<VarInt>() / n.to<VarInt>()).to<String>());
         }
 
     /**
      * Modulo: Return the modulo that would result from dividing this number by another number.
      */
-    @Op IntLiteral mod(IntLiteral n)
+    @Op("%") IntLiteral mod(IntLiteral n)
         {
-        return this % n;
+        return new IntLiteral((this.to<VarInt>() % n.to<VarInt>()).to<String>());
+        }
+
+    // ----- other Number-like operations ----------------------------------------------------------
+
+    @Op("+") Int64 add(Int64 n)
+        {
+        return this.to<Int>() + n;
+        }
+
+    /**
+     * Subtraction: Subtract another number from this number, and return the result.
+     */
+    @Op("-") Int64 sub(Int64 n)
+        {
+        return this.to<Int>() - n;
+        }
+
+    /**
+     * Multiplication: Multiply this number by another number, and return the result.
+     */
+    @Op("*") Int64 mul(Int64 n)
+        {
+        return this.to<Int>() * n;
+        }
+
+    /**
+     * Division: Divide this number by another number, and return the result.
+     */
+    @Op("/") Int64 div(Int64 n)
+        {
+        return this.to<Int>() / n;
+        }
+
+    /**
+     * Modulo: Return the modulo that would result from dividing this number by another number.
+     */
+    @Op("%") Int64 mod(Int64 n)
+        {
+        return this.to<Int>() % n;
         }
 
     // ----- Sequential ----------------------------------------------------------------------------

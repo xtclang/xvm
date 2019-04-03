@@ -1,3 +1,8 @@
+import maps.EntryKeys;
+import maps.EntryValues;
+import maps.ReifiedEntry;
+import maps.CursorEntry;
+
 /**
  * ExtHashMap is the base implementation of a hashed key-to-value data structure. Unlike HashMap,
  * (which despite the name, actually extends ExtHashMap), the ExtHashMap does not require keys to
@@ -6,7 +11,7 @@
  * providing the rationale for the name of the _Ext_HashMap.
  */
 class ExtHashMap<KeyType, ValueType>
-        extends KeyBasedMap<KeyType, ValueType> // TODO temporary
+        implements Map<KeyType, ValueType>
         incorporates Stringer
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -76,19 +81,8 @@ class ExtHashMap<KeyType, ValueType>
      */
     private Int removeCount = 0;
 
-    // ----- Map interface -------------------------------------------------------------------------
 
-    /**
-     * The size of the map is maintained internally.
-     */
-    @Override
-    Int size.get()
-        {
-        return addCount - removeCount;
-        }
-
-    @Override
-    conditional HashEntry find(KeyType key)
+    protected conditional HashEntry find(KeyType key)
         {
         Int        keyhash  = hasher.hashOf(key);
         Int        bucketId = keyhash % buckets.size;
@@ -104,8 +98,19 @@ class ExtHashMap<KeyType, ValueType>
         return false;
         }
 
+    // ----- Map interface -------------------------------------------------------------------------
+
+    /**
+     * The size of the map is maintained internally.
+     */
     @Override
-    ExtHashMap put(KeyType key, ValueType value)
+    Int size.get()
+        {
+        return addCount - removeCount;
+        }
+
+    @Override
+    conditional ExtHashMap put(KeyType key, ValueType value)
         {
         Int        keyhash  = hasher.hashOf(key);
         Int        bucketId = keyhash % buckets.size;
@@ -114,20 +119,27 @@ class ExtHashMap<KeyType, ValueType>
             {
             if (entry.keyhash == keyhash && hasher.areEqual(entry.key, key))
                 {
+                if (value == entry.value)
+                    {
+                    return false;
+                    }
+
                 entry.value = value;
-                return this;
+                return true, this;
                 }
+
             entry = entry.next;
             }
 
         buckets[bucketId] = new HashEntry(key, keyhash, value, buckets[bucketId]);
         ++addCount;
         checkCapacity();
-        return this;
+
+        return true, this;
         }
 
     @Override
-    ExtHashMap putAll(Map that)
+    conditional ExtHashMap putAll(Map that)
         {
         // check the capacity up front (to avoid multiple resizes); the worst case is that we end
         // up a bit bigger than we want
@@ -135,6 +147,7 @@ class ExtHashMap<KeyType, ValueType>
 
         HashEntry?[] buckets     = this.buckets;
         Int          bucketCount = buckets.size;
+        Boolean      modified    = false;
         NextPut: for (Entry entry : that.entries)
             {
             KeyType    key       = entry.key;
@@ -146,7 +159,11 @@ class ExtHashMap<KeyType, ValueType>
                 if (currEntry.keyhash == keyhash && hasher.areEqual(currEntry.key, key))
                     {
                     // an entry with the same key already exists in the ExtHashMap
-                    currEntry.value = entry.value;
+                    if (currEntry.value != entry.value)
+                        {
+                        currEntry.value = entry.value;
+                        modified        = true;
+                        }
                     continue NextPut;
                     }
                 currEntry = currEntry.next;
@@ -156,11 +173,11 @@ class ExtHashMap<KeyType, ValueType>
             ++addCount;
             }
 
-        return this;
+        return modified, this;
         }
 
     @Override
-    ExtHashMap remove(KeyType key)
+    conditional ExtHashMap remove(KeyType key)
         {
         Int        keyhash   = hasher.hashOf(key);
         Int        bucketId  = keyhash % buckets.size;
@@ -182,52 +199,55 @@ class ExtHashMap<KeyType, ValueType>
                 entry.next = null;
 
                 ++removeCount;
-                return this;
+                return true, this;
                 }
 
             prevEntry = entry;
             entry = entry.next;
             }
-        return this;
+
+        return false;
         }
 
     @Override
-    ExtHashMap clear()
+    conditional ExtHashMap clear()
         {
         Int entryCount = size;
-        if (entryCount > 0)
+        if (entryCount == 0)
             {
-            (Int bucketCount, this.growAt, this.shrinkAt) = calcBucketCount(0);
-            buckets = new HashEntry?[bucketCount];
-            removeCount += entryCount;
-            assert size == 0;
+            return false;
             }
-        return this;
+
+        (Int bucketCount, this.growAt, this.shrinkAt) = calcBucketCount(0);
+        buckets = new HashEntry?[bucketCount];
+        removeCount += entryCount;
+        assert size == 0;
+        return true, this;
         }
 
     @Override
     @Lazy public/private Set<KeyType> keys.calc()
         {
-        return new EntryBasedKeySet();
+        return new EntryKeys();
         }
 
     @Override
     @Lazy public/private Collection<ValueType> values.calc()
         {
-        return new EntryBasedValuesCollection();
+        return new EntryValues();
         }
 
     @Override
-    @Lazy public/private HashEntrySet entries.calc()
+    @Lazy public/private EntrySet entries.calc()
         {
-        return new HashEntrySet();
+        return new EntrySet();
         }
 
     @Override
     <ResultType> ResultType process(KeyType key,
             function ResultType (Entry) compute)
         {
-        return compute(new ProcessableHashEntry(key));
+        return compute(new ReifiedEntry(this, key));
         }
 
 
@@ -236,7 +256,6 @@ class ExtHashMap<KeyType, ValueType>
     /**
      * A representation of all of the HashEntry objects in the Map.
      */
-    @Override
     class EntrySet
             implements Set<HashEntry>
         {
@@ -280,7 +299,7 @@ class ExtHashMap<KeyType, ValueType>
             }
 
         // @Override
-        HashEntrySet remove(HashEntry entry)
+        EntrySet remove(HashEntry entry)
             {
             HashEntry?[] buckets   = ExtHashMap.this.buckets;
             Int          keyhash   = entry.keyhash;
@@ -323,7 +342,7 @@ class ExtHashMap<KeyType, ValueType>
             }
 
         // @Override
-        conditional HashEntrySet removeIf(function Boolean (HashEntry) shouldRemove)
+        conditional EntrySet removeIf(function Boolean (HashEntry) shouldRemove)
             {
             Boolean      modified    = false;
             HashEntry?[] buckets     = ExtHashMap.this.buckets;
@@ -369,7 +388,7 @@ class ExtHashMap<KeyType, ValueType>
             }
 
         @Override
-        HashEntrySet clone()
+        EntrySet clone()
             {
             return this;
             }
@@ -382,7 +401,6 @@ class ExtHashMap<KeyType, ValueType>
      * This is the Entry implementation used to store the ExtHashMap's keys and values.
      */
     protected static class HashEntry
-            implements Entry
         {
         construct(KeyType key, Int keyhash, ValueType value, HashEntry? next = null)
             {
@@ -409,30 +427,6 @@ class ExtHashMap<KeyType, ValueType>
         private HashEntry? next;
         }
 
-    /**
-     * This is an implementation of the Entry interface that is implemented by delegation
-     * to the actual map (i.e. it is not a real HashEntry), but it reifies to a real HashEntry.
-     */
-    protected class ProcessableHashEntry
-            extends KeyBasedEntry
-        {
-        construct(KeyType key)
-            {
-            construct Map.KeyBasedEntry(key);
-            }
-
-        @Override
-        Entry reify()
-            {
-            if (HashEntry entry : ExtHashMap.this.find(key))
-                {
-                return entry;
-                }
-
-            // the real entry does not actually exist
-            throw new OutOfBounds();
-            }
-        }
 
     // ----- helpers -------------------------------------------------------------------------------
 
