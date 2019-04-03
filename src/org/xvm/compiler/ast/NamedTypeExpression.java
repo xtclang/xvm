@@ -753,8 +753,9 @@ public class NamedTypeExpression
                     // the target is the base class itself or some of it's contributions
                     // (e.g. ExtHashMap or Map if we are inside of ExtHashMap);
                     // default to the formal type unless the type parameters are explicitly
-                    // specified by this expression
-                    if (clzTarget.isParameterized() && paramTypes == null)
+                    // specified by this expression or the context doesn't allow it (e.g. function);
+                    // REVIEW: are there scenarios when isAutoNarrowingAllowed() yields undesired result?
+                    if (clzTarget.isParameterized() && paramTypes == null && isAutoNarrowingAllowed())
                         {
                         typeTarget = pool.ensureParameterizedTypeConstant(typeTarget,
                             clzTarget.getFormalType().getParamTypesArray());

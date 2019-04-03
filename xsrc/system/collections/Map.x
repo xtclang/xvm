@@ -513,18 +513,19 @@ interface Map<KeyType, ValueType>
             return false;
             }
 
-        for (CompileType.KeyType key1, CompileType.ValueType value1 : map1)
-            {
-            // REVIEW GG does this need to say CompileType.ValueType ???
-            if (ValueType value2 : map2.get(key1))
-                {
-                if (value2 == value1)
-                    {
-                    continue;
-                    }
-                }
-            return false;
-            }
+// TODO: we need special handling for "composite" formal types
+//        for (CompileType.KeyType key1, CompileType.ValueType value1 : map1)
+//            {
+//            // REVIEW GG does this need to say CompileType.ValueType ???
+//            if (CompileType.ValueType value2 : map2.get(key1))
+//                {
+//                if (value2 == value1)
+//                    {
+//                    continue;
+//                    }
+//                }
+//            return false;
+//            }
 
         return true;
         }
