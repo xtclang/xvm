@@ -77,28 +77,6 @@ interface Map<KeyType, ValueType>
     conditional ValueType get(KeyType key);
 
     /**
-     * Obtain the values associated with the specified keys, building a resulting Map with the
-     * results. For requested keys that are absent from this Map, the keys will be absent in the
-     * resulting Map as well.
-     *
-     * Subsequent changes to this map will not affect a map previously returned from this method.
-     *
-     * @param keys  the keys to look up in the map
-     *
-     * @return a Map containing all of the requested keys that were present in this Map, and their
-     *         corresponding values
-     */
-    Map<KeyType, ValueType> getAll(Collection<KeyType> keys)
-        {
-        ListMap<KeyType, ValueType> result = new ListMap(keys.size);
-        for (KeyType key : keys)
-            {
-            result.put(key, get(key));
-            }
-        return result;
-        }
-
-    /**
      * Obtain the value associated with the specified key, or the value `Null` if the key is
      * not present in the map.
      *
@@ -295,36 +273,6 @@ interface Map<KeyType, ValueType>
     conditional Map remove(KeyType key)
         {
         TODO entry removal is not supported
-        }
-
-    /**
-     * Remove the specified key and any associated value from this map.
-     *
-     * @param key  the key to remove from this map
-     *
-     * @return the resultant map, which is the same as `this` for a mutable map
-     */
-    conditional Map removeAll(Collection<KeyType> keys)
-        {
-        Boolean modified = False;
-        Map     result   = this;
-        if (mutability.persistent)
-            {
-            // this begs for subclass optimization
-            for (KeyType key : keys)
-                {
-                if (result : result.remove(key))
-                    {
-                    modified = True;
-                    }
-                }
-            }
-        else
-            {
-            modified = this.keys.removeAll(keys);
-            }
-
-        return modified, result;
         }
 
     /**
