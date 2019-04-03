@@ -549,9 +549,9 @@ public class MethodStructure
      * <p/>
      * For example: given a method:
      *      <T, U> T foo(U u, T t)
-     * an actual argument types:
+     * actual argument types:
      *      String, Int
-     * and an actual return types:
+     * and actual return type:
      *      Number
      * this method would return a map {"T":Number, "U":String}
      *
