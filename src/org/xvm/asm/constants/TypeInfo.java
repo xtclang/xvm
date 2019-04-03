@@ -1733,8 +1733,8 @@ public class TypeInfo
         {
         ConstantPool      pool        = pool();
         SignatureConstant sigOrig     = idMethod.getSignature();
-        SignatureConstant sigResolved = sigOrig.resolveGenericTypes(pool, f_type)
-                                               .resolveAutoNarrowing(pool, f_type);
+        SignatureConstant sigResolved = method.getSignature().resolveAutoNarrowing(pool, f_type);
+
         if (!sigResolved.equals(sigOrig))
             {
             idMethod = pool.ensureMethodConstant(idMethod.getNamespace(), sigResolved);
