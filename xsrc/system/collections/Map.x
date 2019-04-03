@@ -594,8 +594,10 @@ interface Map<KeyType, ValueType>
                 + estimateStringLength(values);
         }
 
+    // TODO GG move this method to be inside of the above method
     private static Int estimateStringLength(Collection coll)
         {
+        Int capacity = 0;
         if (coll.ElementType.is(Type<Stringable>))
             {
             for (coll.ElementType element : coll)
