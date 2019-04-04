@@ -281,7 +281,7 @@ public class StatementBlock
                 }
             else
                 {
-                errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED, null, source,
+                errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED, null, getSource(),
                         getEndPosition(), getEndPosition());
                 }
             }

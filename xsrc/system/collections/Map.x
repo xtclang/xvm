@@ -346,6 +346,8 @@ interface Map<KeyType, ValueType>
     <ResultType> Map<KeyType, ResultType> processAll(Collection<KeyType> keys,
             function ResultType (Entry) compute)
         {
+        assert KeyType.is(Type<immutable Hashable>);
+
         ListMap<KeyType, ResultType> result = new ListMap(keys.size);
         for (KeyType key : keys)
             {

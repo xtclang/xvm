@@ -30,7 +30,8 @@ class HashMap<KeyType, ValueType>
 
         // allocate the initial capacity
         (Int bucketCount, this.growAt) = calcBucketCount(initCapacity);
-        buckets = new HashEntry?[bucketCount];
+        buckets    = new HashEntry?[bucketCount];
+        mutability = Mutable;
         }
 
     /**
@@ -45,7 +46,8 @@ class HashMap<KeyType, ValueType>
 
         // allocate the initial capacity
         (Int bucketCount, this.growAt) = calcBucketCount(initCapacity);
-        buckets = new HashEntry?[bucketCount];
+        buckets    = new HashEntry?[bucketCount];
+        mutability = Mutable;
         }
 
     // ----- internal state ------------------------------------------------------------------------
@@ -296,6 +298,7 @@ class HashMap<KeyType, ValueType>
             {
             this.hashEntry = hashEntry;
             this.exists    = true;
+            return this;
             }
 
         @Override

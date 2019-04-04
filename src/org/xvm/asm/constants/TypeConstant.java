@@ -1564,9 +1564,6 @@ public abstract class TypeConstant
                                 constId.getPathString(), sName,
                                 typeConstraint.getValueString(),
                                 typeActual.getValueString(), this.getValueString());
-
-                        // to avoid a repetitive errors; proceed with the constraint type
-                        typeActual = typeConstraint;
                         }
                     }
 

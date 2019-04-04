@@ -6,7 +6,7 @@ class KeyValues<KeyType, ValueType>(Map<KeyType, ValueType> map)
         implements Collection<ValueType>
     {
     public/private Map<KeyType, ValueType> map;
-    
+
     @Override
     Int size.get()
         {
@@ -65,11 +65,21 @@ class KeyValues<KeyType, ValueType>(Map<KeyType, ValueType> map)
         {
         verifyMutable();
 
-        return map.keys.removeIf(key ->
+//  TODO: unreported compilation error
+//        return map.keys.removeIf(key ->
+//                {
+//                assert ValueType value : map.get(key);
+//                return shouldRemove(value);
+//                }), this;
+        if (map.keys.removeIf(key ->
                 {
                 assert ValueType value : map.get(key);
                 return shouldRemove(value);
-                }), this;
+                }))
+            {
+            return true, this;
+            }
+        return false;
         }
 
     @Override
