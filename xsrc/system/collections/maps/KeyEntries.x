@@ -8,6 +8,12 @@ class KeyEntries<KeyType, ValueType>(Map<KeyType, ValueType> map)
     public/private Map<KeyType, ValueType> map;
 
     @Override
+    MutabilityConstraint mutability.get()
+        {
+        return Mutable;
+        }
+
+    @Override
     Int size.get()
         {
         return map.size;
