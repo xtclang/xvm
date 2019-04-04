@@ -293,7 +293,6 @@ const Version
             }
 
         this.parent = parent;
-        this.form   = form;
         this.number = number;
         this.build  = build;
         this.size   = 1 + (parent?.size : 0);
@@ -306,9 +305,21 @@ const Version
 
     /**
      * The form of this Version element.
-     * REVIEW I think we can get rid of this field (make it a calc'd ".get(){..}" property) because "number" fully represents this value
      */
-    Form form;
+    @RO Form form.get()
+        {
+        return switch (number)
+            {
+            // TODO figure out why "Form." is required for these
+            case -6: Form.CI;
+            case -5: Form.Dev;
+            case -4: Form.QC;
+            case -3: Form.Alpha;
+            case -2: Form.Beta;
+            case -1: Form.RC;
+            default: Form.Num;
+            };
+        }
 
     /**
      * The version number of this Version element.
@@ -331,7 +342,7 @@ const Version
      */
     Boolean GA.get()
         {
-        return form == Num && parent?.form == Num : true;
+        return form == Num && (parent?.form == Num : true);
         }
 
     /**
@@ -411,9 +422,11 @@ const Version
         // common scenario: two versions with different ending number but common root
         // e.g. "1.2.beta3" to "1.2.beta5"
         Int sizeDiff = this.size - that.size;
-        if (sizeDiff == 0 && this.form == Num && that.form == Num && (this.parent? == that.parent? : true))
+        if (sizeDiff == 0 && this.form == that.form && (this.parent? == that.parent? : true))
             {
-            return that.number - this.number;
+            return this.form == Num
+                    ? that.number - this.number
+                    : 0;
             }
 
         // compare a numbered version to a non-numbered version
@@ -512,14 +525,14 @@ const Version
 //        switch (version1.size <=> version2.size)
 //            {
 //            case Lesser:
-//                return version2.number == 0 && version1 == version2.parent? : assert;
+//                return version2.number == 0 && version1 == version2.parent;
 //
 //            case Equal:
 //                return version1.number == version2.number
 //                    && version1.parent == version2.parent;
 //
 //            case Greater:
-//                return version1.number == 0 && version1.parent? == version2 : assert;
+//                return version1.number == 0 && version1.parent == version2;
 //            }
 //        }
 //

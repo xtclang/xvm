@@ -1,26 +1,62 @@
 package collections
     {
     /**
-     * Some data structures have variable constraints on their mutability. Specifically, a data
-     * structure may support up to four well-known degrees of mutability/immutability:
-     * * _Mutable_ - a data structure permitting valid mutations to occur to itself;
-     * * _Fixed-Size_ - a container data structure that does not permit changes to its _size_;
-     * * _Persistent_ - a container data structure that does not permit changes to its _size_ or its
-     *   _contents_;
-     * * {@code const} - an immutable data structure.
+     * Some data structures are capable of mutating their data in-place, while others (called
+     * "persistent" data structures) create a new copy (or representation) of the data structure
+     * when a mutating operation is executed. (The use of the term "persistent" in this context is
+     * not related to persistent _storage_, such as in a database or on disk; it refers instead to
+     * the "persistence" of the state of the _old_ data structure, even after a change is made that
+     * resulted in the creation of a _new_ data structure.) In Ecstasy, when a data structure can
+     * support more than one of the following forms of mutability and data structure persistence,
+     * then that data structure should implement the `VariablyMutable` interface to represent that
+     * capability:
      *
-     * (Note: The term "container data type" is not related to Ecstasy's {@link Container}
-     * functionality, and the term "persistent" is not related to the concept of persistent
-     * storage.)
+     * * _Mutable_    - a data structure permitting valid mutations to occur to itself, including
+     *                  changes in its _size_;
+     *
+     * * _Fixed-Size_ - a mutable data structure does not permit changes to its _size_;
+     *
+     * * _Persistent_ - a container data structure that does not permit changes to its _size_ or its
+     *                  _contents_, but instead creates a new data structure to represent the result
+     *                  of a requested mutating operation;
+     *
+     * * `const`      - a persistent data structure that holds immutable data, and is itself
+     *                  immutable.
+     *
+     * (Note: The term "container data type" is not related to Ecstasy's [Container] functionality,
+     * and the term "persistent" is not related to the concept of persistent storage.)
      */
     interface VariablyMutable
         {
-        enum MutabilityConstraint {Mutable, FixedSize, Persistent, Constant}
+        enum MutabilityConstraint(Boolean persistent)
+            {
+            /*
+             * A _Mutable_  data structure allows mutations, including changes in its `size`.
+             */
+            Mutable   (False),
+            /*
+             * A _Fixed-Size_ data structure allows mutations, but not those that would alter its
+             * `size`
+             */
+            FixedSize (False),
+            /*
+             * A _Persistent_ data structure handles mutation requests by creating a new data
+             * structure with the requested changes. While a Persistent data structure does not
+             * expose mutations to its internal data, it is common for multiple persistent data
+             * structures to share mutable internal data for efficiency purposes.
+             */
+            Persistent(True ),
+            /*
+             * A _Constant_ data structure is also a persistent data structure, but additionally
+             * it must be immutable, and all of its contents must be immutable.
+             */
+            Constant  (True )
+            }
 
         /**
          * The MutabilityConstraint of the data structure.
          */
-        @RO MutabilityConstraint mutability = Mutable;
+        @RO MutabilityConstraint mutability;
         }
 
     /**
@@ -34,7 +70,7 @@ package collections
          * To ensure that the object is mutable, use the object returned from this method.
          *
          * The expected implementation of this method on a mutable object is that the method will
-         * simply return {@code this}.
+         * simply return `this`.
          */
         MutableAble ensureMutable();
         }
@@ -50,7 +86,7 @@ package collections
          * To ensure that the object is of a fixed size, use the object returned from this method.
          *
          * The expected implementation of this method on a fixed-size object is that the method will
-         * simply return {@code this}.
+         * simply return `this`.
          *
          * @param inPlace  (optional) specify that the object should convert itself to fixed-size if
          *                 it supports that form of variable mutability
@@ -71,8 +107,8 @@ package collections
      * size, nor can any of its elements have their values replaced (i.e. each element has a
      * referent, and the array will not allow any element to modify which referent it holds).
      *
-     * The benefit of a persistent data structure is similar to that of a {@code const} value, in
-     * that it is safe to share. However, only {@code const} values can be passed across a service
+     * The benefit of a persistent data structure is similar to that of a `const` value, in
+     * that it is safe to share. However, only `const` values can be passed across a service
      * boundary.
      *
      * (Note: The term "persistent" is not related to the concept of persistent storage.)
@@ -85,7 +121,7 @@ package collections
          * this method.
          *
          * The expected implementation of this method on a persistent object is that the method will
-         * simply return {@code this}.
+         * simply return `this`.
          *
          * @param inPlace  (optional) specify that the object should convert itself to persistent if
          *                 it supports that form of variable mutability
@@ -94,26 +130,26 @@ package collections
         }
 
     /**
-     * A data structure that is able to provide a {@code const} copy of itself should implement this
-     * interface, allowing the runtime to obtain a {@code const} version of the data structure when
+     * A data structure that is able to provide a `const` copy of itself should implement this
+     * interface, allowing the runtime to obtain a `const` version of the data structure when
      * necessary, such as when crossing a service boundary.
      */
     interface ConstAble
             extends VariablyMutable
         {
         /**
-         * To ensure that the object is a {@code const}, use the object returned from this method.
+         * To ensure that the object is a `const`, use the object returned from this method.
          *
-         * The expected implementation of this method on a {@code const} object is that the method
-         * will simply return {@code this}.
+         * The expected implementation of this method on a `const` object is that the method
+         * will simply return `this`.
          *
-         * If the class implements the {@link Const} interface, and {@link inPlace} is specified as
+         * If the class implements the [Const] interface, and [inPlace] is specified as
          * true, then a conceivable implementation of this method would be:
          *
          *   meta.immutable = true;
          *   return this;
          *
-         * @param inPlace  (optional) specify that the object should convert itself to {@code const}
+         * @param inPlace  (optional) specify that the object should convert itself to `const`
          *                 if it supports that form of variable mutability
          */
         immutable ConstAble ensureConst(Boolean inPlace = false);

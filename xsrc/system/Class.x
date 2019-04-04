@@ -216,7 +216,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
         ListMap<String, TypeParameter> map = new ListMap();
         for (TypeParameter param : typeParams)
             {
-            assert !map.containsKey(param.name);
+            assert !map.contains(param.name);
             map.put(param.name, param);
             }
 
@@ -382,7 +382,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
         ListMap<String, Class<>> map = new ListMap();
         for (Class<> class_ : classes)
             {
-            assert !map.containsKey(class_.name);
+            assert !map.contains(class_.name);
             map.put(class_.name, class_);
             }
 
@@ -399,7 +399,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
         ListMap<String, Property> map = new ListMap();
         for (Property property : properties)
             {
-            assert !map.containsKey(property.name);
+            assert !map.contains(property.name);
             map.put(property.name, property);
             }
 
@@ -473,8 +473,8 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
             if (paramNew != paramOld)
                 {
                 assert paramOld.type.isA(paramNew.type);
-                mapParams = mapParams.put(paramNew.name, paramNew);
-                different = true;
+                mapParams := mapParams.put(paramNew.name, paramNew);
+                different  = true;
                 }
             }
         if (!different)

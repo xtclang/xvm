@@ -756,7 +756,7 @@ public class NamedTypeExpression
                 else
                     {
                     // the target is the base class itself or some of it's contributions
-                    // (e.g. ExtHashMap or Map if we are inside of ExtHashMap);
+                    // (e.g. HashMap or Map if we are inside of HashMap);
                     // default to the formal type unless the type parameters are explicitly
                     // specified by this expression or the context doesn't allow it (e.g. function);
                     // REVIEW: are there scenarios when isAutoNarrowingAllowed() yields undesired result?

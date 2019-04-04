@@ -516,7 +516,7 @@ public class NameExpression
     @Override
     public void updateLValueFromRValueTypes(Context ctx, TypeConstant[] aTypes)
         {
-        assert aTypes != null && aTypes.length == 1;
+        assert aTypes != null && aTypes.length >= 1;
 
         TypeConstant typeNew = aTypes[0];
         TypeConstant typeOld = getType();

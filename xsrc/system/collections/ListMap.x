@@ -1,35 +1,63 @@
 /**
- * ListMap is an implementation of a Map on top of an Array to maintain the order of
- * insertion.
+ * ListMap is an implementation of a Map on top of an Array to maintain the order of insertion.
  */
 class ListMap<KeyType extends immutable Hashable, ValueType>
          implements Map<KeyType, ValueType>
+         implements MutableAble, FixedSizeAble, PersistentAble, ConstAble
     {
-    private Entry[] array;
-
     // ----- constructors --------------------------------------------------------------------------
 
     construct(Int initCapacity = 0)
         {
-        array = new Array(initCapacity);
+        listKeys = new Array(initCapacity);
+        listVals = new Array(initCapacity);
         }
+        
+
+    // ----- internal ------------------------------------------------------------------------------
+
+    private KeyType[]   listKeys;
+    private ValueType[] listVals;
+
+    protected conditional Int indexOf(KeyType key)
+        {
+        AllKeys:
+        for (KeyType eachKey : listKeys)
+            {
+            if (eachKey == key)
+                {
+                return True, AllKeys.count;
+                }
+            }
+        return False;
+        }
+
 
     // ----- Map properties and methods ------------------------------------------------------------
 
     @Override
+    public/private MutabilityConstraint mutability;
+
+    @Override
     Int size.get()
         {
-        return array.size;
+        return listKeys.size;
         }
 
     @Override
-    conditional Entry getEntry(KeyType key)
+    Boolean contains(KeyType key)
+        {
+        return indexOf(key);
+        }
+
+    @Override
+    conditional ValueType get(KeyType key)
         {
         if (Int index : indexOf(key))
             {
-            return true, array[index];
+            return True, listVals[index];
             }
-        return false;
+        return False;
         }
 
     @Override
@@ -51,51 +79,72 @@ class ListMap<KeyType extends immutable Hashable, ValueType>
         }
 
     @Override
-    ListMap put(KeyType key, ValueType value)
+    conditional ListMap put(KeyType key, ValueType value)
         {
         if (Int index : indexOf(key))
             {
-            array[index].value = value;
+            if (listVals[index] == value)
+                {
+                return False;
+                }
+
+            listVals[index] = value;
             }
         else
             {
-            array = array.addElement(new SimpleEntry(key, value));
+            listKeys.addElement(key);
+            listVals.addElement(value);
             }
-        return this;
+
+        return True, this;
         }
 
     @Override
-    ListMap remove(KeyType key)
+    conditional ListMap remove(KeyType key)
         {
         TODO
         }
 
     @Override
-    ListMap clear()
+    conditional ListMap clear()
         {
-        array = new Array(1);
-        return this;
-        }
-
-    @Override
-    <ResultType> ResultType process(KeyType key,
-            function ResultType (ProcessableEntry) compute)
-        {
-        TODO
-        }
-
-    // ----- helper methods ------------------------------------------------------------------------
-
-    protected conditional Int indexOf(KeyType key)
-        {
-        AllEntries:
-        for (Entry entry : array)
+        if (empty)
             {
-            if (entry.key == key)
-                {
-                return true, AllEntries.count;
-                }
+            return False;
             }
-        return false;
+
+        listKeys = new Array(1);
+        listVals = new Array(1);
+        return True, this;
+        }
+
+    @Override
+    <ResultType> ResultType process(KeyType key, function ResultType (Map<KeyType, ValueType>.Entry) compute)
+        {
+        TODO
+        }
+        
+    @Override
+    ListMap ensureMutable()
+        {
+        TODO
+        }
+
+    @Override
+    ListMap ensureFixedSize(Boolean inPlace = False)
+        {
+        TODO
+        }
+
+    @Override
+    ListMap ensurePersistent(Boolean inPlace = False)
+        {
+        TODO
+        }
+
+    @Override
+    immutable ListMap ensureConst(Boolean inPlace = False)
+        {
+        TODO
         }
     }
