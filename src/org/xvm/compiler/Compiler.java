@@ -3,7 +3,7 @@ package org.xvm.compiler;
 
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ErrorListener;
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
@@ -35,11 +35,11 @@ public class Compiler
      * @param stmtModule  the statement representing all of the code in the module
      * @param errs    the error list to log any errors to during the various phases of compilation
      */
-    public Compiler(ModuleRepository repos, TypeCompositionStatement stmtModule, ErrorListener errs)
+    public Compiler(ModuleRepository repos, TypeCompositionStatement stmtModule, ErrorList errs)
         {
         if (repos == null)
             {
-            throw new IllegalArgumentException("repository required");
+            throw new IllegalArgumentException("Repository required");
             }
         if (stmtModule == null)
             {
@@ -51,7 +51,7 @@ public class Compiler
             }
         if (errs == null)
             {
-            errs = ErrorListener.RUNTIME;
+            throw new IllegalArgumentException("ErrorList required");
             }
 
         m_repos      = repos;
@@ -81,9 +81,9 @@ public class Compiler
         }
 
     /**
-     * @return the ErrorListener that the compiler reports errors to
+     * @return the ErrorList that the compiler reports errors to
      */
-    public ErrorListener getErrorListener()
+    public ErrorList getErrorListener()
         {
         validateCompiler();
         return m_errs;
@@ -328,10 +328,13 @@ public class Compiler
             {
             setStage(Stage.Emitted);
 
-            // "purge" the constant pool and do a final validation on the entire module structure
-            m_structFile.reregisterConstants(true);
-            m_structFile.validate(m_errs);
-            m_structFile.setErrorListener(null);
+            if (m_errs.getSeverity().compareTo(Severity.ERROR) < 0)
+                {
+                // "purge" the constant pool and do a final validation on the entire module structure
+                m_structFile.reregisterConstants(true);
+                m_structFile.validate(m_errs);
+                m_structFile.setErrorListener(null);
+                }
             }
 
         exit();
@@ -456,7 +459,7 @@ public class Compiler
     /**
      * The ErrorListener to report errors to.
      */
-    private final ErrorListener m_errs;
+    private final ErrorList m_errs;
 
     /**
      * The FileStructure that this compiler is putting together in a series of passes.
