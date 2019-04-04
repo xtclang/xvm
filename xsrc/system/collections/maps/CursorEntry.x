@@ -5,11 +5,16 @@
 class CursorEntry<KeyType, ValueType>
         extends ReifiedEntry<KeyType, ValueType>
     {
+    construct(Map<KeyType, ValueType> map)
+        {
+        construct ReifiedEntry(map);
+        }
+
     construct(Map<KeyType, ValueType> map, KeyType key)
         {
         construct ReifiedEntry(map, key);
         }
-        
+
     /**
      * Specify the new "cursor key" for this Entry.
      *

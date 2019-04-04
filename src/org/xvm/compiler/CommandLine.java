@@ -915,11 +915,29 @@ public class CommandLine
                 {
                 err("xtc: Errors in " + compiler.getModuleStatement().getName());
 
+                boolean fSourceErrs = false;
+                boolean fOtherErrs  = false;
+                for (ErrorList.ErrorInfo err : errs.getErrors())
+                    {
+                    if (err.getSource() == null)
+                        {
+                        fOtherErrs = true;
+                        }
+                    else
+                        {
+                        fSourceErrs = true;
+                        }
+                    }
+                boolean fShowUnsourcedErrs = fOtherErrs && !fSourceErrs;
+
                 int cErrors = 0;
                 for (ErrorList.ErrorInfo err : errs.getErrors())
                     {
-                    cErrors++;
-                    err(" [" + cErrors + "] " + err);
+                    if ((err.getSource() == null) == fShowUnsourcedErrs)
+                        {
+                        cErrors++;
+                        err(" [" + cErrors + "] " + err);
+                        }
                     }
 
                 err("Compiler errors: " + cErrors);

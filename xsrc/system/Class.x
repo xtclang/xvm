@@ -473,8 +473,8 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
             if (paramNew != paramOld)
                 {
                 assert paramOld.type.isA(paramNew.type);
-                mapParams = mapParams.put(paramNew.name, paramNew);
-                different = true;
+                mapParams := mapParams.put(paramNew.name, paramNew);
+                different  = true;
                 }
             }
         if (!different)

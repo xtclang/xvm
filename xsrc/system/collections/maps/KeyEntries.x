@@ -31,7 +31,7 @@ class KeyEntries<KeyType, ValueType>(Map<KeyType, ValueType> map)
                 {
                 if (KeyType key : keyIterator.next())
                     {
-                    private CursorEntry entry = new CursorEntry(map, key);
+                    private CursorEntry entry = new CursorEntry(map);
                     return true, entry.advance(key);
                     }
 
@@ -52,10 +52,9 @@ class KeyEntries<KeyType, ValueType>(Map<KeyType, ValueType> map)
         {
         verifyMutable();
 
-        CursorEntry<KeyType, ValueType>? entry = null;
+        CursorEntry<KeyType, ValueType> entry = new CursorEntry(map);
         if (map.keys.removeIf(key ->
                 {
-                entry = entry?.advance(key) : new CursorEntry(map, key);
                 return shouldRemove(entry.advance(key));
                 }))
             {

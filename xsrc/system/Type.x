@@ -105,7 +105,7 @@ const Type<DataType>
         Map<String, Property> map = new ListMap();
         for (Property prop : properties)
             {
-            map[prop.name] = prop;
+            map.put(prop.name, prop);
             }
         return map;
         }

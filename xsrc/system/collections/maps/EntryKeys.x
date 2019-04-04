@@ -20,50 +20,47 @@ class EntryKeys<KeyType, ValueType>(Map<KeyType, ValueType> map)
         }
 
     @Override
-    Iterator<Map<KeyType, ValueType>.Entry> iterator()
+    Iterator<KeyType> iterator()
         {
         return new Iterator()
             {
-            Iterator<KeyType> keyIterator = map.keys.iterator(); // TODO verify this is a private prop
+            Iterator<Map<KeyType, ValueType>.Entry> entryIterator = map.entries.iterator(); // TODO verify this is a private prop
 
             @Override
-            conditional Map<KeyType, ValueType>.Entry next()
+            conditional KeyType next()
                 {
-                if (KeyType key : keyIterator.next())
+                if (Map<KeyType, ValueType>.Entry entry : entryIterator.next())
                     {
-                    private CursorEntry<KeyType, ValueType> entry = new CursorEntry(map, key);
-                    return true, entry.advance(key);
+                    return True, entry.key;
                     }
 
-                return false;
+                return False;
                 }
             };
         }
 
     @Override
-    conditional EntryKeys remove(Map<KeyType, ValueType>.Entry entry)
+    // TODO GG this @Override signature (and others like it) didn't cause the compiler to complain
+    // conditional EntryKeys remove(Map<KeyType, ValueType>.Entry entry)
+    conditional EntryKeys remove(KeyType key)
         {
-        verifyMutable();
-        return map.remove(entry.key, entry.value), this;
+        return verifyMutable() && map.remove(key), this;
         }
 
     @Override
-    conditional EntryKeys removeIf(
-            function Boolean (Map<KeyType, ValueType>.Entry) shouldRemove)
+    conditional EntryKeys removeIf(function Boolean (KeyType) shouldRemove)
         {
         verifyMutable();
 
-        CursorEntry<KeyType, ValueType>? entry = null;
-        if (map.keys.removeIf(key ->
+        if (map.entries.removeIf(entry ->
                 {
-                entry = entry?.advance(key) : new CursorEntry(map,key);
-                return shouldRemove(entry.advance(key));
+                return shouldRemove(entry.key);
                 }))
             {
-            return true, this;
+            return True, this;
             }
 
-        return false;
+        return False;
         }
 
     @Override
@@ -73,7 +70,7 @@ class EntryKeys<KeyType, ValueType>(Map<KeyType, ValueType> map)
         }
 
     @Override
-    Stream<Entry> stream()
+    Stream<KeyType> stream()
         {
         TODO
         }
@@ -98,6 +95,6 @@ class EntryKeys<KeyType, ValueType>(Map<KeyType, ValueType> map)
             {
             throw new ReadOnly("Map operation requires mutability==Mutable");
             }
-        return true;
+        return True;
         }
     }

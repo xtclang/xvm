@@ -1,9 +1,9 @@
 /**
- * ListMap is an implementation of a Map on top of an Array to maintain the order of
- * insertion.
+ * ListMap is an implementation of a Map on top of an Array to maintain the order of insertion.
  */
 class ListMap<KeyType extends immutable Hashable, ValueType>
          implements Map<KeyType, ValueType>
+         implements MutableAble, FixedSizeAble, PersistentAble, ConstAble
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -34,6 +34,9 @@ class ListMap<KeyType extends immutable Hashable, ValueType>
 
 
     // ----- Map properties and methods ------------------------------------------------------------
+
+    @Override
+    public/private MutabilityConstraint mutability;
 
     @Override
     Int size.get()
@@ -117,6 +120,30 @@ class ListMap<KeyType extends immutable Hashable, ValueType>
 
     @Override
     <ResultType> ResultType process(KeyType key, function ResultType (Map<KeyType, ValueType>.Entry) compute)
+        {
+        TODO
+        }
+        
+    @Override
+    ListMap ensureMutable()
+        {
+        TODO
+        }
+
+    @Override
+    ListMap ensureFixedSize(Boolean inPlace = False)
+        {
+        TODO
+        }
+
+    @Override
+    ListMap ensurePersistent(Boolean inPlace = False)
+        {
+        TODO
+        }
+
+    @Override
+    immutable ListMap ensureConst(Boolean inPlace = False)
         {
         TODO
         }

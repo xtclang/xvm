@@ -314,9 +314,9 @@ const Version
             case -6: Form.CI;
             case -5: Form.Dev;
             case -4: Form.QC;
-            case -3: Form.alpha;
-            case -2: Form.beta;
-            case -1: Form.rc;
+            case -3: Form.Alpha;
+            case -2: Form.Beta;
+            case -1: Form.RC;
             default: Form.Num;
             };
         }

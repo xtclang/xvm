@@ -546,7 +546,7 @@ interface Map<KeyType, ValueType>
     private static Int estimateStringLength(Collection coll)
         {
         Int capacity = 0;
-        if (coll.ElementType.is(Type<Stringable>))
+        if (coll.is(Collection<Stringable>))
             {
             for (coll.ElementType element : coll)
                 {

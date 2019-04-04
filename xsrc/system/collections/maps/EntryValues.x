@@ -31,10 +31,10 @@ class EntryValues<KeyType, ValueType>(Map<KeyType, ValueType> map)
                 {
                 if (Map<KeyType, ValueType>.Entry entry : entryIterator.next())
                     {
-                    return true, entry.value;
+                    return True, entry.value;
                     }
 
-                return false;
+                return False;
                 }
             };
         }
@@ -49,9 +49,9 @@ class EntryValues<KeyType, ValueType>(Map<KeyType, ValueType> map)
             if (entry.value == value)
                 {
                 assert map.entries.remove(entry);
-                return true;
+                return True;
                 }
-            return false;
+            return False;
             });
 
         return modified, this;
@@ -69,6 +69,18 @@ class EntryValues<KeyType, ValueType>(Map<KeyType, ValueType> map)
         return verifyMutable() && map.clear(), this;
         }
 
+    @Override
+    Stream<ValueType> stream()
+        {
+        TODO
+        }
+
+    @Override
+    EntryValues clone()
+        {
+        TODO
+        }
+
     /**
      * Some operations require that the containing Map be Mutable; this method throws an exception
      * if the Map is not Mutable.
@@ -83,6 +95,6 @@ class EntryValues<KeyType, ValueType>(Map<KeyType, ValueType> map)
             {
             throw new ReadOnly("Map operation requires mutability==Mutable");
             }
-        return true;
+        return True;
         }
     }

@@ -1,6 +1,6 @@
 module TestMaps.xqiz.it
     {
-    import X.collections.ExtHashMap;
+    import X.collections.HashMap;
     import X.collections.ListMap;
 
     import X.Duration;
@@ -20,7 +20,7 @@ module TestMaps.xqiz.it
 
     void testBasic()
         {
-        Map<Int, String> map = new ExtHashMap();
+        Map<Int, String> map = new HashMap();
         map.put(1, "Hello from Map");
         map.put(2, "Goodbye from Map");
 
@@ -33,7 +33,7 @@ module TestMaps.xqiz.it
 
     static void testFill100()
         {
-        Map<Int, Int> map = new ExtHashMap();
+        Map<Int, Int> map = new HashMap();
         for (Int i = 0; i < 100; i++)
             {
             map.put(i, i);
