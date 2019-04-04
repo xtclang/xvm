@@ -291,7 +291,7 @@ interface Map<KeyType, ValueType>
             {
             if (value == valueOld)
                 {
-                return True, remove(key);
+                return remove(key);
                 }
             }
 
