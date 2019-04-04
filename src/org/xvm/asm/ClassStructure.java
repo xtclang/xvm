@@ -487,7 +487,7 @@ public class ClassStructure
 
         // create the property and mark it as a type parameter
         createProperty(false, Access.PUBLIC, Access.PUBLIC, typeConstraintType, sName)
-            .markAsTypeParameter();
+            .markAsGenericTypeParameter();
         markModified();
         }
 
@@ -1690,6 +1690,7 @@ public class ClassStructure
 
             case Property:
             case TypeParameter:
+            case FormalTypeChild:
                 // r-value (this) is a real type; it cannot be assigned to a formal type
                 return Relation.INCOMPATIBLE;
 
@@ -1888,9 +1889,9 @@ public class ClassStructure
                 {
                 PropertyStructure property = (PropertyStructure) child;
 
-                if (property.isTypeParameter())
+                if (property.isGenericTypeParameter())
                     {
-                    // type properties don't consume
+                    // generic types don't consume
                     continue;
                     }
 
@@ -2029,9 +2030,9 @@ public class ClassStructure
                 {
                 PropertyStructure property = (PropertyStructure) child;
 
-                if (property.isTypeParameter())
+                if (property.isGenericTypeParameter())
                     {
-                    // type properties don't produce
+                    // generic types don't produce
                     continue;
                     }
 
@@ -2161,7 +2162,7 @@ public class ClassStructure
                 {
                 PropertyStructure prop = (PropertyStructure) child;
 
-                if (prop.isTypeParameter())
+                if (prop.isGenericTypeParameter())
                     {
                     if (!typeRight.containsGenericParam(prop.getName()))
                         {

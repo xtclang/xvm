@@ -3241,7 +3241,7 @@ public abstract class TypeConstant
             if (child instanceof PropertyStructure)
                 {
                 PropertyStructure prop = (PropertyStructure) child;
-                if (prop.isTypeParameter())
+                if (prop.isGenericTypeParameter())
                     {
                     PropertyConstant id = prop.getIdentityConstant();
 
@@ -3300,7 +3300,7 @@ public abstract class TypeConstant
         else if (structContrib instanceof PropertyStructure)
             {
             PropertyStructure prop = (PropertyStructure) structContrib;
-            if (prop.isTypeParameter())
+            if (prop.isGenericTypeParameter())
                 {
                 // type parameters have been processed by collectSelfTypeParameters()
                 return true;
@@ -4079,7 +4079,7 @@ public abstract class TypeConstant
                 // 3. r-value (this) = T (formal parameter type), constrained by U (real type)
                 //    l-value (that) = V (real type), where U "is a" V
                 PropertyConstant idRight = (PropertyConstant) constIdRight;
-                if (constIdLeft.getFormat() == Format.Property &&
+                if (constIdLeft.getFormat() == format &&
                     (((PropertyConstant) constIdLeft).getName().equals(idRight.getName())))
                     {
                     return Relation.IS_A;
@@ -4087,7 +4087,7 @@ public abstract class TypeConstant
 
                 // the typeRight is a formal parameter type and cannot have any modifiers
                 assert typeRight instanceof TerminalTypeConstant;
-                return idRight.getReferredToType().calculateRelation(typeLeft);
+                return idRight.getConstraintType().calculateRelation(typeLeft);
                 }
 
             case TypeParameter:
@@ -4102,7 +4102,7 @@ public abstract class TypeConstant
                 // 3. r-value (this) = T (type parameter type), constrained by U (real type)
                 //    l-value (that) = V (real type), where U "is a" V
                 TypeParameterConstant idRight = (TypeParameterConstant) constIdRight;
-                if (constIdLeft.getFormat() == Format.TypeParameter &&
+                if (constIdLeft.getFormat() == format &&
                     (((TypeParameterConstant) constIdLeft).getRegister() == idRight.getRegister()))
                     {
                     // Note: it's quite opportunistic to assume that type parameters with the same
@@ -4115,7 +4115,35 @@ public abstract class TypeConstant
 
                 // the typeRight is a type parameter and cannot have any modifiers
                 assert typeRight instanceof TerminalTypeConstant;
-                return idRight.getReferredToType().calculateRelation(typeLeft);
+                return idRight.getConstraintType().calculateRelation(typeLeft);
+                }
+
+            case FormalTypeChild:
+                {
+                // scenarios we can handle here are:
+                // 1. r-value (this) = T.X (formal child type)
+                //    l-value (that) = T.X (formal child type, equal by name only)
+
+                // 2. r-value (this) = T.X (formal child type), constrained by U (other formal type)
+                //    l-value (that) = U (type parameter type)
+                //
+                // 3. r-value (this) = T.X (formal child type), constrained by U (real type)
+                //    l-value (that) = V (real type), where U "is a" V
+                FormalTypeChildConstant idRight = (FormalTypeChildConstant) constIdRight;
+                if (constIdLeft.getFormat() == format &&
+                    (((FormalTypeChildConstant) constIdLeft).getName().equals(idRight.getName())))
+                    {
+                    // Note: it's quite opportunistic to assume that formal type parameters with the same
+                    // name are compatible regardless of the enclosing parent type, but we need to
+                    // assume that the caller has already (or will have) checked for the compatibility
+                    // all other elements of the containing type and the only thing left is the
+                    // name itself
+                    return Relation.IS_A;
+                    }
+
+                // the typeRight is a type parameter and cannot have any modifiers
+                assert typeRight instanceof TerminalTypeConstant;
+                return idRight.getConstraintType().calculateRelation(typeLeft);
                 }
 
             case ThisClass:
@@ -4519,11 +4547,54 @@ public abstract class TypeConstant
         }
 
     /**
-     * @return true iff the TypeConstant represents a "formal type"
+     * @return true iff the TypeConstant represents a "formal type", which could be either
+     *         generic type or type parameter
      */
     public boolean isFormalType()
         {
         return getCategory() == Category.FORMAL;
+        }
+
+    /**
+     * @return true iff the TypeConstant represents a generic type
+     */
+    public boolean isGenericType()
+        {
+        if (getCategory() == Category.FORMAL)
+            {
+            Constant constant = getDefiningConstant();
+            switch (constant.getFormat())
+                {
+                case Property:
+                    return true;
+
+                case FormalTypeChild:
+                    return ((FormalTypeChildConstant) constant).
+                        getTopParent().getFormat() == Format.Property;
+                }
+            }
+        return false;
+        }
+
+    /**
+     * @return true iff the TypeConstant represents a type parameter
+     */
+    public boolean isTypeParameter()
+        {
+        if (getCategory() == Category.FORMAL)
+            {
+            Constant constant = getDefiningConstant();
+            switch (constant.getFormat())
+                {
+                case TypeParameter:
+                    return true;
+
+                case FormalTypeChild:
+                    return ((FormalTypeChildConstant) constant).
+                        getTopParent().getFormat() == Format.TypeParameter;
+                }
+            }
+        return false;
         }
 
     /**

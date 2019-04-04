@@ -132,39 +132,23 @@ public class PropertyStructure
         }
 
     /**
-     * @return true iff this property is a type parameter
+     * @return true iff this property is a generic type parameter
      */
-    public boolean isTypeParameter()
+    public boolean isGenericTypeParameter()
         {
         return isAuxiliary();
         }
 
     /**
-     * @return mark this property as a type parameter
+     * @return mark this property as a generic type parameter
      */
-    public void markAsTypeParameter()
+    public void markAsGenericTypeParameter()
         {
         assert !isStatic()            // never a constant
             && !isSynthetic()         // never synthetic
             && m_type.isTypeOfType(); // must be "Type"
 
         setAuxiliary(true);
-        }
-
-    /**
-     * @return the base type for the type parameter, from the "extends" clause, or Object if no
-     *         explicit "extends" clause was present, or null if the property is not a type param
-     */
-    public TypeConstant getTypeParameterExtendsType()
-        {
-        if (!isTypeParameter())
-            {
-            return null;
-            }
-
-        return m_type.isParamsSpecified()
-                ? m_type.getParamTypesArray()[0]
-                : m_type.getConstantPool().typeObject();
         }
 
     /**
@@ -675,7 +659,7 @@ public class PropertyStructure
         StringBuilder sb = new StringBuilder()
                 .append("id=")
                 .append(getIdentityConstant().getValueString())
-                .append(isTypeParameter() ? ", constraint=" : ", type=")
+                .append(isGenericTypeParameter() ? ", constraint=" : ", type=")
                 .append(m_type)
                 .append(", ")
                 .append("var-access=")

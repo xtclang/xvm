@@ -113,9 +113,10 @@ public class TerminalTypeConstant
             case Class:
                 return setIds.contains(constant);
 
-            case NativeClass:       // REVIEW GG
+            case NativeClass:
             case Property:
             case TypeParameter:
+            case FormalTypeChild:
             case ThisClass:
             case ParentClass:
             case ChildClass:
@@ -156,10 +157,9 @@ public class TerminalTypeConstant
                 return true;
 
             case Property:
-                return ((PropertyConstant) constant).getReferredToType().isImmutable();
-
             case TypeParameter:
-                return (((TypeParameterConstant) constant)).getReferredToType().isImmutable();
+            case FormalTypeChild:
+                return (((FormalConstant) constant)).getConstraintType().isImmutable();
 
             case NativeClass:
                 constant = ((NativeRebaseConstant) constant).getClassConstant();
@@ -242,6 +242,7 @@ public class TerminalTypeConstant
             case Package:
             case Property:
             case TypeParameter:
+            case FormalTypeChild:
                 return 0;
 
             case Class:
@@ -378,6 +379,7 @@ public class TerminalTypeConstant
             case Package:
             case Property:
             case TypeParameter:
+            case FormalTypeChild:
                 return ResolutionResult.UNKNOWN;
 
             case NativeClass:
@@ -510,6 +512,7 @@ public class TerminalTypeConstant
 
             case Property:
             case TypeParameter:
+            case FormalTypeChild:
                 return this;
 
             case Typedef:
@@ -664,7 +667,12 @@ public class TerminalTypeConstant
                     {
                     return typeActual;
                     }
+                break;
                 }
+
+            case FormalTypeChild:
+                // this shouldn't happen
+                break;
             }
         return null;
         }
@@ -696,10 +704,9 @@ public class TerminalTypeConstant
                 break;
 
             case Property:
-                return ((PropertyConstant) constant).getReferredToType().isTuple();
-
             case TypeParameter:
-                return ((TypeParameterConstant) constant).getReferredToType().isTuple();
+            case FormalTypeChild:
+                return ((FormalConstant) constant).getConstraintType().isTuple();
 
             case ThisClass:
             case ParentClass:
@@ -742,15 +749,13 @@ public class TerminalTypeConstant
                 return super.buildTypeInfo(errs);
 
             case Property:
-                {
-                TypeConstant typeConstraint = ((PropertyConstant) constant).getReferredToType();
-                return new TypeInfo(this, typeConstraint.ensureTypeInfoInternal(errs));
-                }
             case TypeParameter:
+            case FormalTypeChild:
                 {
-                TypeConstant typeConstraint = ((TypeParameterConstant) constant).getReferredToType();
+                TypeConstant typeConstraint = ((FormalConstant) constant).getConstraintType();
                 return new TypeInfo(this, typeConstraint.ensureTypeInfoInternal(errs));
                 }
+
             case ThisClass:
             case ParentClass:
             case ChildClass:
@@ -797,10 +802,9 @@ public class TerminalTypeConstant
                         .getComponent()).extendsClass(constClass);
 
             case Property:
-                return ((PropertyConstant) constant).getReferredToType().extendsClass(constClass);
-
             case TypeParameter:
-                return ((TypeParameterConstant) constant).getReferredToType().extendsClass(constClass);
+            case FormalTypeChild:
+                return ((FormalConstant) constant).getConstraintType().extendsClass(constClass);
 
             case ThisClass:
             case ParentClass:
@@ -845,6 +849,7 @@ public class TerminalTypeConstant
 
             case Property:
             case TypeParameter:
+            case FormalTypeChild:
                 return Category.FORMAL;
 
             case ThisClass:
@@ -888,11 +893,9 @@ public class TerminalTypeConstant
                 }
 
             case Property:
-                return ((PropertyConstant) constant).getReferredToType().
-                        isSingleUnderlyingClass(fAllowInterface);
-
             case TypeParameter:
-                return ((TypeParameterConstant) constant).getReferredToType().
+            case FormalTypeChild:
+                return ((FormalConstant) constant).getConstraintType().
                         isSingleUnderlyingClass(fAllowInterface);
 
             case ThisClass:
@@ -937,11 +940,9 @@ public class TerminalTypeConstant
                 return (IdentityConstant) constant;
 
             case Property:
-                return ((PropertyConstant) constant).getReferredToType().
-                    getSingleUnderlyingClass(fAllowInterface);
-
             case TypeParameter:
-                return ((TypeParameterConstant) constant).getReferredToType().
+            case FormalTypeChild:
+                return ((FormalConstant) constant).getConstraintType().
                     getSingleUnderlyingClass(fAllowInterface);
 
             case ParentClass:
@@ -978,6 +979,7 @@ public class TerminalTypeConstant
 
             case Property:
             case TypeParameter:
+            case FormalTypeChild:
                 return false;
 
             default:
@@ -1014,8 +1016,6 @@ public class TerminalTypeConstant
                 // follow the indirection to the class structure
                 return ((PseudoConstant) constant).getDeclarationLevelClass().getComponent().getFormat();
 
-            case Property:
-            case TypeParameter:
             default:
                 throw new IllegalStateException("no class format for: " + constant);
             }
@@ -1138,6 +1138,7 @@ public class TerminalTypeConstant
 
             case Property:
             case TypeParameter:
+            case FormalTypeChild:
             case ThisClass:
             case ParentClass:
             case ChildClass:
@@ -1209,11 +1210,9 @@ public class TerminalTypeConstant
                 }
 
             case Property:
-                return ((PropertyConstant) constIdLeft).getReferredToType().
-                    isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
-
             case TypeParameter:
-                return ((TypeParameterConstant) constIdLeft).getReferredToType().
+            case FormalTypeChild:
+                return ((FormalConstant) constIdLeft).getConstraintType().
                     isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
 
             case ThisClass:
@@ -1252,11 +1251,9 @@ public class TerminalTypeConstant
                 }
 
             case Property:
-                return ((PropertyConstant) constIdThis).getReferredToType().
-                    containsSubstitutableMethod(signature, access, listParams);
-
             case TypeParameter:
-                return ((TypeParameterConstant) constIdThis).getReferredToType().
+            case FormalTypeChild:
+                return ((FormalConstant) constIdThis).getConstraintType().
                     containsSubstitutableMethod(signature, access, listParams);
 
             case ThisClass:
@@ -1285,7 +1282,9 @@ public class TerminalTypeConstant
             {
             case Module:
             case Package:
-            case Property: // Property does not consume
+            case Property: // formal types do not consume
+            case TypeParameter:
+            case FormalTypeChild:
                 return Usage.NO;
 
             case Class:
@@ -1330,10 +1329,6 @@ public class TerminalTypeConstant
                     }
                 return Usage.NO;
 
-            case TypeParameter:
-                return ((TypeParameterConstant) constId).getReferredToType().
-                    checkConsumption(sTypeName, access, listParams);
-
             case ThisClass:
             case ParentClass:
             case ChildClass:
@@ -1361,6 +1356,7 @@ public class TerminalTypeConstant
             case Module:
             case Package:
             case TypeParameter:
+            case FormalTypeChild:
                 return Usage.NO;
 
             case Property:
@@ -1441,9 +1437,6 @@ public class TerminalTypeConstant
 
             case NativeClass:
                 return registry.getTemplate(((NativeRebaseConstant) constIdThis).getClassConstant());
-
-            case TypeParameter:
-                return ((TypeParameterConstant) constIdThis).getReferredToType().getOpSupport(registry);
 
             case ThisClass:
             case ParentClass:
@@ -1570,6 +1563,7 @@ public class TerminalTypeConstant
                 case Class:
                 case Property:
                 case TypeParameter:
+                case FormalTypeChild:
                 case ThisClass:
                 case ParentClass:
                 case ChildClass:

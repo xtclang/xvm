@@ -5,8 +5,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Set;
+
 import java.util.function.Consumer;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
@@ -19,7 +22,8 @@ import static org.xvm.util.Handy.writePackedLong;
  * Represent a type parameter constant, which specifies a particular virtual machine register.
  */
 public class TypeParameterConstant
-        extends PseudoConstant
+        extends    PseudoConstant
+        implements FormalConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -94,12 +98,11 @@ public class TypeParameterConstant
         return m_iReg;
         }
 
-    /**
-     * Dereference this TypeParameterConstant to obtain its constraint type.
-     *
-     * @return the constraint type of the type parameter
-     */
-    public TypeConstant getReferredToType()
+
+    // ----- FormalConstant methods ----------------------------------------------------------------
+
+    @Override
+    public TypeConstant getConstraintType()
         {
         // the type points to a register, which means that the type is a parameterized type;
         // the type of the register will be "Type<X>", so return X
@@ -107,9 +110,29 @@ public class TypeParameterConstant
         int              nReg        = getRegister();
         TypeConstant[]   atypeParams = constMethod.getRawParams();
         assert atypeParams.length > nReg;
-        TypeConstant     typeParam   = atypeParams[nReg];
-        assert typeParam.isEcstasy("Type") && typeParam.isParamsSpecified();
-        return typeParam.getParamTypesArray()[0];
+        TypeConstant typeConstraint  = atypeParams[nReg];
+        assert typeConstraint.isEcstasy("Type") && typeConstraint.isParamsSpecified();
+
+        typeConstraint = typeConstraint.getParamTypesArray()[0];
+        if (!typeConstraint.isParamsSpecified() && typeConstraint.isSingleUnderlyingClass(true))
+            {
+            // create a normalized formal type
+            ConstantPool   pool = getConstantPool();
+            ClassStructure clz  = (ClassStructure) typeConstraint.getSingleUnderlyingClass(true).getComponent();
+            if (clz.isParameterized())
+                {
+                Set<StringConstant> setFormalNames = clz.getTypeParams().keySet();
+                TypeConstant[]      atypeFormal    = new TypeConstant[setFormalNames.size()];
+                int ix = 0;
+                for (StringConstant constName : setFormalNames)
+                    {
+                    Constant constant = pool.ensureFormalTypeChildConstant(this, constName.getValue());
+                    atypeFormal[ix++] = constant.getType();
+                    }
+                typeConstraint = pool.ensureParameterizedTypeConstant(typeConstraint, atypeFormal);
+                }
+            }
+        return typeConstraint;
         }
 
 

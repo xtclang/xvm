@@ -310,7 +310,7 @@ public class VirtualChildTypeConstant
         TypeConstant type = getChildStructure().getGenericParamType(pool, sName, listParams);
         if (type != null)
             {
-            return type.isFormalType()
+            return type.isGenericType()
                     ? type.resolveGenerics(pool, m_typeParent)
                     : type;
             }

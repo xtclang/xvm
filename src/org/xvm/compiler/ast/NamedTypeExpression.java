@@ -557,6 +557,11 @@ public class NamedTypeExpression
                 {
                 type = pool.ensureTerminalTypeConstant(m_constId);
                 }
+
+            if (type.isGenericType())
+                {
+                ctx.requireThis(getStartPosition(), errs);
+                }
             }
         else
             {

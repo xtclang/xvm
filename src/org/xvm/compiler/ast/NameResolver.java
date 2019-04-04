@@ -13,8 +13,11 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
+import org.xvm.asm.XvmStructure;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -38,14 +41,15 @@ public class NameResolver
      * (including a type, which can be treated as if it were a value) or a multi-method (which can
      * also be treated as if it were a value).
      *
-     * @param node      the node which is requesting the resolution of the name
-     * @param sName     the name to resolve
+     * @param node   the node which is requesting the resolution of the name
+     * @param sName  the name to resolve
      */
     public NameResolver(AstNode node, String sName)
         {
-        m_node     = node;
-        m_iter     = Collections.emptyIterator();
-        m_sName    = sName;
+        m_node      = node;
+        m_iter      = Collections.emptyIterator();
+        m_sName     = sName;
+        m_fTypeGoal = false;
         }
 
     /**
@@ -283,34 +287,77 @@ public class NameResolver
                 // name has to be relative to that component
                 while (m_sName != null)
                     {
-                    Component component = ensurePartiallyResolvedComponent();
-                    if (component == null)
+                    XvmStructure structure = ensurePartiallyResolvedComponent();
+                    if (structure == null)
                         {
                         return getResult();
                         }
 
-                    switch (component.resolveName(m_sName, Access.PRIVATE, this))
+                    if (structure instanceof Component)
                         {
-                        case UNKNOWN:
-                            // the component didn't know the name
-                            m_node.log(errs, Severity.ERROR, Compiler.NAME_MISSING, m_sName, m_constant);
-                            m_stage = Stage.ERROR;
-                            return Result.ERROR;
+                        Component component = (Component) structure;
+                        switch (component.resolveName(m_sName, Access.PRIVATE, this))
+                            {
+                            case UNKNOWN:
+                                // the component didn't know the name
+                                m_node.log(errs, Severity.ERROR, Compiler.NAME_MISSING, m_sName, m_constant);
+                                m_stage = Stage.ERROR;
+                                return Result.ERROR;
 
-                        case RESOLVED:
-                            // the component resolved the name; advance to the next one
-                            m_sName = m_iter.hasNext() ? m_iter.next() : null;
-                            break;
+                            case RESOLVED:
+                                // the component resolved the name; advance to the next one
+                                m_sName = m_iter.hasNext() ? m_iter.next() : null;
+                                break;
 
-                        case ERROR:
-                            m_stage = Stage.ERROR;
-                            return Result.ERROR;
+                            case ERROR:
+                                m_stage = Stage.ERROR;
+                                return Result.ERROR;
 
-                        case DEFERRED:
-                            return Result.DEFERRED;
+                            case DEFERRED:
+                                return Result.DEFERRED;
 
-                        default:
-                            throw new IllegalStateException();
+                            default:
+                                throw new IllegalStateException();
+                            }
+                        }
+                    else // must be a Parameter
+                        {
+                        Parameter    parameter = (Parameter) structure;
+                        TypeConstant typeParam = parameter.getType();
+
+                        assert typeParam.isA(getPool().typeType()) && typeParam.getParamsCount() == 1;
+
+                        typeParam = typeParam.getParamTypesArray()[0];
+
+                        if (typeParam.isSingleDefiningConstant())
+                            {
+                            Constant  id        = typeParam.getDefiningConstant();
+                            Component component = id instanceof IdentityConstant ? ((IdentityConstant) id).getComponent() : null;
+                            switch (component.resolveName(m_sName, Access.PRIVATE, this))
+                                {
+                                case UNKNOWN:
+                                    // the component didn't know the name
+                                    m_node.log(errs, Severity.ERROR, Compiler.NAME_MISSING, m_sName, m_constant);
+                                    m_stage = Stage.ERROR;
+                                    return Result.ERROR;
+
+                                case RESOLVED:
+                                    // the component resolved the name; advance to the next one
+                                    m_sName = m_iter.hasNext() ? m_iter.next() : null;
+                                    break;
+
+                                case ERROR:
+                                    m_stage = Stage.ERROR;
+                                    return Result.ERROR;
+
+                                case DEFERRED:
+                                    return Result.DEFERRED;
+
+                                default:
+                                    throw new IllegalStateException();
+                                }
+                            }
+                        break;
                         }
                     }
 
@@ -346,10 +393,10 @@ public class NameResolver
      * @return the component that is responsible for resolving the next name or null if an error
      *         has been reported
      */
-    private Component ensurePartiallyResolvedComponent()
+    private XvmStructure ensurePartiallyResolvedComponent()
         {
         Component component = m_component;
-        if (!m_fTypeMode)
+        if (m_typeMode == null)
             {
             if (component.getFormat().isDeadEnd())
                 {
@@ -440,9 +487,8 @@ public class NameResolver
                 case TypeParameter:
                     {
                     TypeParameterConstant constTypeParam = (TypeParameterConstant) id;
-                    type = constTypeParam.getMethod().getSignature().
-                            getRawParams()[constTypeParam.getRegister()];
-                    break;
+                    return ((MethodStructure) constTypeParam.getMethod().getComponent()).
+                            getParam(constTypeParam.getRegister());
                     }
 
                 case ThisClass:
@@ -537,18 +583,32 @@ public class NameResolver
             return ResolutionResult.ERROR;
             }
 
-        if (m_fTypeMode)
+        if (m_typeMode != null)
             {
             switch (component.getFormat())
                 {
                 case TYPEDEF:
-                    // typedef is allowed in type mode
+                    // typedef is allowed in type mode, but not in formal type mode
+                    if (m_typeMode == TypeMode.FORMAL_TYPE)
+                        {
+                        m_node.log(m_errs, Severity.ERROR, Compiler.TYPEDEF_UNEXPECTED);
+                        m_stage = Stage.ERROR;
+                        return ResolutionResult.ERROR;
+                        }
                     break;
 
                 case PROPERTY:
-                    // type params are allowed in type mode
-                    if (((PropertyStructure) component).isTypeParameter())
+                    // type params are allowed in type modes
+                    if (((PropertyStructure) component).isGenericTypeParameter())
                         {
+                        if (m_typeMode == TypeMode.FORMAL_TYPE)
+                            {
+                            m_component = null;
+                            m_constant  = getPool().ensureFormalTypeChildConstant(m_constant, m_sName);
+                            return ResolutionResult.RESOLVED;
+                            }
+
+                        m_typeMode = TypeMode.FORMAL_TYPE;
                         break;
                         }
                     // fall through
@@ -567,14 +627,14 @@ public class NameResolver
             switch (component.getFormat())
                 {
                 case PROPERTY:
-                    if (((PropertyStructure) component).isTypeParameter())
+                    if (((PropertyStructure) component).isGenericTypeParameter())
                         {
-                        m_fTypeMode = true;
+                        m_typeMode = TypeMode.FORMAL_TYPE;
                         }
                     break;
 
                 case TYPEDEF:
-                    m_fTypeMode = true;
+                    m_typeMode = TypeMode.TYPE;
                     break;
                 }
             }
@@ -603,7 +663,9 @@ public class NameResolver
 
         m_constant  = constant;
         m_component = null;
-        m_fTypeMode = m_fTypeGoal;
+        m_typeMode = constant instanceof TypeParameterConstant
+                ? TypeMode.FORMAL_TYPE
+                : m_fTypeGoal ? TypeMode.TYPE : null;
 
         return ResolutionResult.RESOLVED;
         }
@@ -628,6 +690,11 @@ public class NameResolver
      * The possible internal states for the resolver.
      */
     private enum Stage {CHECK_IMPORTS, RESOLVE_FIRST_NAME, RESOLVE_DOT_NAME, RESOLVE_TURTLES, RESOLVED, ERROR}
+
+    /**
+     * The possible internal type resolution modes for the resolver.
+     */
+    private enum TypeMode {TYPE, FORMAL_TYPE};
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -682,10 +749,10 @@ public class NameResolver
     private boolean m_fTypeGoal;
 
     /**
-     * Set to true when the resolution has switched into "type mode". This occurs once a type
-     * parameter or type definition has been encountered.
+     * Set to TYPE or FORMAL_TYPE mode once a type definition or a formal type parameter have been
+     * encountered.
      */
-    private boolean m_fTypeMode;
+    private TypeMode m_typeMode;
 
     /**
      * The ErrorListener to log errors to.

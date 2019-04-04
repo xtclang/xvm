@@ -5,8 +5,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Set;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.PropertyStructure;
@@ -16,7 +19,8 @@ import org.xvm.asm.PropertyStructure;
  * Represent a property constant, which identifies a particular property structure.
  */
 public class PropertyConstant
-        extends NamedConstant
+        extends    NamedConstant
+        implements FormalConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -57,6 +61,48 @@ public class PropertyConstant
             }
         }
 
+
+    // ----- FormalConstant methods ----------------------------------------------------------------
+
+    /**
+     * Dereference a property constant that is used for a type parameter, to obtain the constraint
+     * type of that type parameter.
+     *
+     * @return the constraint type of the type parameter
+     */
+    @Override
+    public TypeConstant getConstraintType()
+        {
+        assert isTypeParameter();
+
+        // the type of the property must be "Type<X>", so return X
+        TypeConstant typeConstraint = getType();
+        assert typeConstraint.isEcstasy("Type") && typeConstraint.isParamsSpecified();
+
+        typeConstraint = typeConstraint.getParamTypesArray()[0];
+
+        if (!typeConstraint.isParamsSpecified() && typeConstraint.isSingleUnderlyingClass(true))
+            {
+            // create a normalized formal type
+            ConstantPool   pool = getConstantPool();
+            ClassStructure clz  = (ClassStructure) typeConstraint.getSingleUnderlyingClass(true).getComponent();
+            if (clz.isParameterized())
+                {
+                Set<StringConstant> setFormalNames = clz.getTypeParams().keySet();
+                TypeConstant[]      atypeFormal    = new TypeConstant[setFormalNames.size()];
+                int ix = 0;
+                for (StringConstant constName : setFormalNames)
+                    {
+                    Constant constant = pool.ensureFormalTypeChildConstant(this, constName.getValue());
+                    atypeFormal[ix++] = constant.getType();
+                    }
+                typeConstraint = pool.ensureParameterizedTypeConstant(typeConstraint, atypeFormal);
+                }
+            }
+        return typeConstraint;
+        }
+
+
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
@@ -84,26 +130,12 @@ public class PropertyConstant
         }
 
     /**
-     * Dereference a property constant that is used for a type parameter, to obtain the constraint
-     * type of that type parameter.
-     *
-     * @return the constraint type of the type parameter
-     */
-    public TypeConstant getReferredToType()
-        {
-        // the type of the property must be "Type<X>", so return X
-        TypeConstant typeProp = getType();
-        assert typeProp.isEcstasy("Type") && typeProp.isParamsSpecified();
-        return typeProp.getParamTypesArray()[0];
-        }
-
-    /**
      * @return true iff this property is a type parameter
      */
     public boolean isTypeParameter()
         {
         PropertyStructure struct = (PropertyStructure) getComponent();
-        return struct != null && struct.isTypeParameter();
+        return struct != null && struct.isGenericTypeParameter();
         }
 
     /**
@@ -112,7 +144,7 @@ public class PropertyConstant
      */
     public boolean isTypeSequenceTypeParameter()
         {
-        return isTypeParameter() && getReferredToType() instanceof TypeSequenceTypeConstant;
+        return isTypeParameter() && getConstraintType() instanceof TypeSequenceTypeConstant;
         }
 
 

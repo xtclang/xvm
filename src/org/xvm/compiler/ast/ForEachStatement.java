@@ -14,9 +14,9 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
-import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IntervalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -175,10 +175,8 @@ public class ForEachStatement
 
         if (typeMap.isFormalType())
             {
-            // TODO change this when FormalTypeConstant is introduced:
-            // typeMap = ((FormalType) typeMap.getDefiningConstant()).getReferredToType();
-            // assert typeMap.isA(pool.typeMap());
-            typeMap = pool().clzMap().getFormalType();
+            typeMap = ((FormalConstant) typeMap.getDefiningConstant()).getConstraintType();
+            assert typeMap.isA(pool().typeMap());
             }
 
         TypeConstant type = typeMap.resolveGenericType(sProp);

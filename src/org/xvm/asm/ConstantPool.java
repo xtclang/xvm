@@ -1707,6 +1707,20 @@ public class ConstantPool
         }
 
     /**
+     * Given the specified FormalConstant and the name, obtain a constant representing the formal
+     * type child constant.
+     *
+     * @param constFormal  a FormalConstant parent
+     * @param sName        the child name
+     *
+     * @return the FormalTypeChildConstant corresponding to the specified parent and name
+     */
+    public FormalTypeChildConstant ensureFormalTypeChildConstant(Constant constFormal, String sName)
+        {
+        return (FormalTypeChildConstant) register(new FormalTypeChildConstant(this, constFormal, sName));
+        }
+
+    /**
      * Obtain a constant representing the type of the specified identity.
      *
      * @param constId  an identity of a class, package, module, type definition, or type parameter

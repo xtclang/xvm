@@ -1377,7 +1377,7 @@ public class NameExpression
                                     {
                                     case Property:
                                         PropertyStructure prop = (PropertyStructure) parent;
-                                        if (prop.isConstant() || prop.isTypeParameter())
+                                        if (prop.isConstant() || prop.isGenericTypeParameter())
                                             {
                                             name.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OUTER_THIS);
                                             break NextParent;
@@ -1695,7 +1695,7 @@ public class NameExpression
                 // resolve the property type
                 if (id.isTypeSequenceTypeParameter())
                     {
-                    type = id.getReferredToType();
+                    type = id.getConstraintType();
                     assert !m_fAssignable;
                     }
                 else if (prop.isConstant())
@@ -1930,7 +1930,7 @@ public class NameExpression
                     return left instanceof NameExpression && ((NameExpression) left).left == null;   // TODO grab checks from below?
                     }
 
-                return isSuppressDeref() && !prop.isConstant() && !prop.isTypeParameter()
+                return isSuppressDeref() && !prop.isConstant() && !prop.isGenericTypeParameter()
                     && left != null && ((NameExpression) left).isIdentityMode(ctx, true);
                 }
             }

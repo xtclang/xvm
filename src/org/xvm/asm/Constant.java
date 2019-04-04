@@ -829,6 +829,7 @@ public abstract class Constant
         ParentClass,
         ChildClass,
         TypeParameter,
+        FormalTypeChild,
         Signature,
         NativeClass,
         CapturedVariable,
@@ -881,6 +882,7 @@ public abstract class Constant
                 case Typedef:
                 case Property:
                 case TypeParameter:
+                case FormalTypeChild:
                 case ThisClass:
                 case ParentClass:
                 case ChildClass:
