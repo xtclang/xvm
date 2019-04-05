@@ -38,6 +38,13 @@ class ListMap<KeyType, ValueType>
         return False;
         }
 
+    void deleteIndex(Int index)
+        {
+        listKeys.delete(index);
+        listVals.delete(index);
+        ++deletes;
+        }
+
     /**
      * Some operations require that the containing Map be Mutable; this method throws an exception
      * if the Map is not Mutable.
@@ -144,9 +151,7 @@ class ListMap<KeyType, ValueType>
         {
         if (Int index : indexOf(key))
             {
-            listKeys.delete(index);
-            listVals.delete(index);
-            ++deletes;
+            deleteIndex(index);
             return True, this;
             }
 
@@ -160,9 +165,7 @@ class ListMap<KeyType, ValueType>
             {
             if (listVals[index] == value)
                 {
-                listKeys.delete(index);
-                listVals.delete(index);
-                ++deletes;
+                deleteIndex(index);
                 return True, this;
                 }
             }
@@ -254,7 +257,7 @@ class ListMap<KeyType, ValueType>
                 conditional KeyType next()
                     {
                     // the immediately previously iterated key is allowed to be deleted
-                    if (deletes != prev)
+                    if (deletes != prevDeletes)
                         {
                         if (deletes - prevDeletes == 1 && index > 0 && index < limit && listKeys[index-1] != key)
                             {
@@ -286,9 +289,7 @@ class ListMap<KeyType, ValueType>
 
             if (Int index : listKeys.indexOf(key))
                 {
-                listKeys.delete(index);
-                listVals.delete(index);
-                ++deletes;
+                deleteIndex(index);
                 return True, this;
                 }
 
@@ -305,9 +306,7 @@ class ListMap<KeyType, ValueType>
                 {
                 if (shouldRemove(listKeys[i-removed]))
                     {
-                    listKeys.delete(i-removed);
-                    listVals.delete(i-removed);
-                    ++deletes;
+                    deleteIndex(i-removed);
                     ++removed;
                     }
                 }
@@ -351,7 +350,7 @@ class ListMap<KeyType, ValueType>
         protected construct(KeyType key)
             {
             this.key    = key;
-            this.expect = mods;
+            this.expect = appends + deletes;
             }
         finally
             {
@@ -376,13 +375,13 @@ class ListMap<KeyType, ValueType>
          *
          * @param key    the key for the entry
          */
-        protected CursorEntry advance(Int index)
+        CursorEntry advance(Int index)    // REVIEW GG I would like to have this "protected"
             {
             assert cursor;
             this.key    = listKeys[index];
             this.index  = index;
             this.exists = True;
-            this.expect = mods;
+            this.expect = appends + deletes;
             return this;
             }
 
@@ -437,7 +436,6 @@ class ListMap<KeyType, ValueType>
                 if (exists)
                     {
                     listVals[index] = value;
-                    registerMod();
                     }
                 else if (cursor)
                     {
@@ -450,7 +448,8 @@ class ListMap<KeyType, ValueType>
                     listVals.addElement(value);
                     index  = listKeys.size - 1;
                     exists = True;
-                    registerMod();
+                    ++appends;
+                    ++expect;
                     }
                 }
             }
@@ -460,10 +459,9 @@ class ListMap<KeyType, ValueType>
             {
             if (verifyNotPersistent() & exists)
                 {
-                listKeys.delete(index);
-                listVals.delete(index);
+                deleteIndex(index);
                 exists = False;
-                registerMod();
+                ++expect;
                 }
             }
 
@@ -473,15 +471,9 @@ class ListMap<KeyType, ValueType>
             return new ReifiedEntry(ListMap.this, key);
             }
 
-        protected void registerMod()
-            {
-            ++expect;
-            ++mods;
-            }
-
         protected Boolean verifyNoSurprises()
             {
-            if (mods == expect)
+            if (appends + deletes == expect)
                 {
                 return True;
                 }
@@ -538,36 +530,31 @@ class ListMap<KeyType, ValueType>
             }
 
         @Override
-        conditional Entries remove(Map<KeyType, ValueType>.Entry entry)
+        conditional Entries remove(Entry entry)
             {
             verifyMutable();
-// TODO
-            if (Int index : listKeys.indexOf(entry.key))
+
+            if (Int index : indexOf(entry))
                 {
-                if (listVals[index] == entry.value)
-                    {
-                    listKeys.delete(index);
-                    listVals.delete(index);
-                    return True, this;
-                    }
+                deleteIndex(index);
+                return True, this;
                 }
 
             return False;
             }
 
         @Override
-        conditional Entries removeIf(function Boolean (KeyType) shouldRemove)
+        conditional Entries removeIf(function Boolean (Entry) shouldRemove)
             {
-// TODO
             verifyMutable();
 
-            Int removed = 0;
+            CursorEntry entry   = new CursorEntry();
+            Int         removed = 0;
             for (Int i = 0, Int c = size; i < c; ++i)
                 {
-                if (shouldRemove(listKeys[i-removed]))
+                if (shouldRemove(entry.advance(i-removed)))
                     {
-                    listKeys.delete(i-removed);
-                    listVals.delete(i-removed);
+                    entry.remove();
                     ++removed;
                     }
                 }
@@ -592,6 +579,39 @@ class ListMap<KeyType, ValueType>
             {
             TODO
             }
+
+        /**
+         * TODO
+         */
+        protected conditional Int indexOf(Entry entry)
+            {
+            // first, see if the entry knows its own index
+            KeyType key   = entry.key;
+            Int     index = -1;
+            Boolean found = False;
+            if (entry.is(CursorEntry))
+                {
+                index = entry.index;
+                if (index >= 0 && index < size && listKeys[index] == key)
+                    {
+                    found = True;
+                    }
+                }
+
+            // otherwise, search for the entry by key
+            if (!found)
+                {
+                if (index : listKeys.indexOf(entry.key))
+                    {
+                    found = True;
+                    }
+                }
+
+            // lastly, verify that the values match
+            found &&= listVals[index] == entry.value;
+
+            return found, index;
+            }
         }
 
 
@@ -613,29 +633,40 @@ class ListMap<KeyType, ValueType>
             }
 
         @Override
-        Iterator<ValueType> iterator()    // TODO mods
+        Iterator<ValueType> iterator()
             {
             return new Iterator()
                 {
-                Int count  = 0;
-                Int expect = listVals.size;
+                Int index       = 0;
+                Int limit       = size;
+                Int prevDeletes = deletes;
+                @Unassigned KeyType key;
 
                 @Override
                 conditional ValueType next()
                     {
-                    Int actual = listVals.size;
-                    Int index  = count - (expect - actual);
-                    if (index >= 0 && index < actual)
+                    // the immediately previously iterated key is allowed to be deleted
+                    if (deletes != prevDeletes)
                         {
-                        return True, listVals[index];
+                        if (deletes - prevDeletes == 1 && index > 0 && index < limit && listKeys[index-1] != key)
+                            {
+                            --limit;
+                            --index;
+                            ++prevDeletes;
+                            }
+                        else
+                            {
+                            throw new ConcurrentModification();
+                            }
                         }
 
-                    if (index == actual)
+                    if (index < limit)
                         {
-                        return False;
+                        key = listKeys[index];
+                        return True, listVals[index++];
                         }
 
-                    throw new ConcurrentModification();
+                    return False;
                     }
                 };
             }
@@ -647,9 +678,7 @@ class ListMap<KeyType, ValueType>
 
             if (Int index : listVals.indexOf(value))
                 {
-                listKeys.delete(index);
-                listVals.delete(index);
-                ++deletes;
+                deleteIndex(index);
                 return True, this;
                 }
 
@@ -666,10 +695,8 @@ class ListMap<KeyType, ValueType>
                 {
                 if (shouldRemove(listVals[i-removed]))
                     {
-                    listKeys.delete(i-removed);
-                    listVals.delete(i-removed);
+                    deleteIndex(i-removed);
                     ++removed;
-                    ++deletes;
                     }
                 }
 
