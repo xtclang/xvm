@@ -2445,9 +2445,11 @@ public class ClassStructure
                         RefHandle     hRef    = (RefHandle) hStruct.getField(idField);
 
                         hRef.setField(GenericHandle.OUTER, hStruct);
-                        hRef = (RefHandle) hRef.ensureAccess(Access.STRUCT);
 
-                        return frame.call1(methodInitRef, hRef, Utils.OBJECTS_NONE, A_IGNORE);
+                        return methodInitRef == null
+                            ? iPC + 1
+                            : frame.call1(methodInitRef, hRef.ensureAccess(Access.STRUCT),
+                                    Utils.OBJECTS_NONE, A_IGNORE);
                         }
 
                     @Override
