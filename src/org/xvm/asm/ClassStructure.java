@@ -2398,10 +2398,10 @@ public class ClassStructure
                 continue;
                 }
 
-            PropertyConstant idField = infoProp.getFieldIdentity();
+            PropertyConstant idField   = infoProp.getFieldIdentity();
+            MethodConstant   idInit    = null;
+            Constant         constInit = null;
 
-            MethodConstant   idInit  = null;
-            Constant         constInit;
             if (infoProp.isInitialized())
                 {
                 constInit = infoProp.getInitialValue();
@@ -2412,7 +2412,10 @@ public class ClassStructure
                 }
             else
                 {
-                constInit = infoProp.getType().getDefaultValue();
+                if (clzRef == null || !infoProp.isImplicitlyUnassigned())
+                    {
+                    constInit = infoProp.getType().getDefaultValue();
+                    }
                 }
 
             if (constInit != null)

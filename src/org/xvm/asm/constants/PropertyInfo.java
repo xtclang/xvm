@@ -1029,6 +1029,29 @@ public class PropertyInfo
         }
 
     /**
+     * @return return true iff this property should not be implicitly initialized
+     */
+    public boolean isImplicitlyUnassigned()
+        {
+        if (m_annotations != null)
+            {
+            ConstantPool pool = pool();
+
+            for (Annotation anno : m_annotations)
+                {
+                ClassConstant id = (ClassConstant) anno.getAnnotationClass();
+
+                if (id.equals(pool.getImplicitlyImportedIdentity("Lazy")) ||
+                    id.equals(pool.getImplicitlyImportedIdentity("Unassigned")))
+                    {
+                    return true;
+                    }
+                }
+            }
+        return false;
+        }
+
+    /**
      * @return the MethodConstant that will identify the getter (but not necessarily a
      *         MethodConstant that actually exists, because there may not be a getter, but also
      *         because the fully resolved type is used in the MethodConstant)
