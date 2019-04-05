@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Collections;
 import java.util.List;
 
 import java.util.function.Consumer;
@@ -197,13 +198,23 @@ public class PropertyClassTypeConstant
     @Override
     public boolean containsGenericParam(String sName)
         {
-        return getPropertyInfo().getBaseRefType().containsGenericParam(sName);
+        return getPropertyInfo().getBaseRefType().containsGenericParam(sName)
+            || m_typeParent.containsGenericParam(sName);
         }
 
     @Override
     protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
         {
-        return getPropertyInfo().getBaseRefType().getGenericParamType(sName, listParams);
+        TypeConstant type = getPropertyInfo().getBaseRefType().getGenericParamType(sName, listParams);
+        if (type != null)
+            {
+            return type.isGenericType()
+                    ? type.resolveGenerics(getConstantPool(), m_typeParent)
+                    : type;
+            }
+
+        // the passed in list represents the "child" and should not be used by the parent
+        return m_typeParent.getGenericParamType(sName, Collections.EMPTY_LIST);
         }
 
 
