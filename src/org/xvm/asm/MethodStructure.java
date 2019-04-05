@@ -651,6 +651,27 @@ public class MethodStructure
         return false;
         }
 
+    /**
+     * Determine the number of steeps to get to the "outer this" from this method.
+     *
+     * @return the number of steps
+     */
+    public int getThisSteps()
+        {
+        int cSteps = 0;
+        Component parent = getParent().getParent();
+        while (!(parent instanceof ClassStructure))
+            {
+            if (parent instanceof PropertyStructure
+                && ((PropertyStructure) parent).isRefAnnotated())
+                {
+                ++cSteps;
+                }
+            parent = parent.getParent();
+            }
+        return cSteps;
+        }
+
 
     // ----- run-time support ----------------------------------------------------------------------
 

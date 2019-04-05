@@ -19,7 +19,6 @@ import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -476,7 +475,9 @@ public class PropertyDeclarationStatement
             PropertyConstant idAssigned      = typeVar.ensureTypeInfo(errs)
                                                .findProperty("assigned").getIdentity();
 
-            code.add(new P_Var(idProp, ctx.resolveReservedName("this"), regPropRef));
+            Register regThis = ctx.generateThisRegister(code, true, errs);
+
+            code.add(new P_Var(idProp, regThis, regPropRef));
             code.add(new P_Get(idAssigned, regPropRef, regAssigned));
             code.add(new JumpTrue(regAssigned, labelSkipAssign));
             fCompletes = assignment.completes(ctx, fCompletes, code, errs);

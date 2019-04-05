@@ -907,7 +907,14 @@ public class StatementBlock
                             idResult = prop.getIdentity();
                             }
 
-                        if (idResult != null)
+                        if (idResult == null)
+                            {
+                            if (((PropertyStructure) idProp.getComponent()).isRefAnnotated())
+                                {
+                                ++cSteps;
+                                }
+                            }
+                        else
                             {
                             return new TargetInfo(sName, idResult, fHasThis, info.getType(), cSteps);
                             }
@@ -1060,6 +1067,7 @@ public class StatementBlock
             ConstantPool pool = pool();
             TypeConstant type;
             int          nReg;
+            int          cSteps = 0;
             switch (sName)
                 {
                 case "this":
@@ -1071,29 +1079,33 @@ public class StatementBlock
                         }
                     // fall through
                 case "this:target":
-                    type = getThisType();
-                    nReg = Op.A_TARGET;
+                    type   = getThisType();
+                    nReg   = Op.A_TARGET;
+                    cSteps = getMethod().getThisSteps();
                     break;
 
                 case "this:public":
-                    type = getThisType();
-                    assert type.getAccess() == Access.PUBLIC;
-                    nReg = Op.A_PUBLIC;
+                    type   = pool.ensureAccessTypeConstant(getThisType(), Access.PUBLIC);
+                    nReg   = Op.A_PUBLIC;
+                    cSteps = getMethod().getThisSteps();
                     break;
 
                 case "this:protected":
-                    type = pool.ensureAccessTypeConstant(getThisType(), Access.PROTECTED);
-                    nReg = Op.A_PROTECTED;
+                    type   = pool.ensureAccessTypeConstant(getThisType(), Access.PROTECTED);
+                    nReg   = Op.A_PROTECTED;
+                    cSteps = getMethod().getThisSteps();
                     break;
 
                 case "this:private":
-                    type = pool.ensureAccessTypeConstant(getThisType(), Access.PRIVATE);
-                    nReg = Op.A_PRIVATE;
+                    type   = pool.ensureAccessTypeConstant(getThisType(), Access.PRIVATE);
+                    nReg   = Op.A_PRIVATE;
+                    cSteps = getMethod().getThisSteps();
                     break;
 
                 case "this:struct":
-                    type = pool.ensureAccessTypeConstant(getThisType(), Access.STRUCT);
-                    nReg = Op.A_STRUCT;
+                    type   = pool.ensureAccessTypeConstant(getThisType(), Access.STRUCT);
+                    nReg   = Op.A_STRUCT;
+                    cSteps = getMethod().getThisSteps();
                     break;
 
                 case "this:service":
@@ -1114,7 +1126,14 @@ public class StatementBlock
                     return null;
                 }
 
-            arg = new Register(type, nReg);
+            if (cSteps == 0)
+                {
+                arg = new Register(type, nReg);
+                }
+            else
+                {
+                arg = new TargetInfo(sName, type, cSteps);
+                }
             mapByName.put(sName, arg);
             return arg;
             }
@@ -1374,13 +1393,21 @@ public class StatementBlock
     // ----- inner class: TargetInfo ---------------------------------------------------------------
 
     /**
-     * Represents the information learned when resolving a name to a multi-method or property.
+     * Represents the information learned when resolving a name to a multi-method, property or
+     * outer "this".
      */
     public static class TargetInfo
             implements Argument
         {
         /**
-         * Create a new TargetInfo.
+         * Create a new TargetInfo for a multi-method or property.
+         *
+         * @param name        the name being resolved
+         * @param id          the id of multi-method or property
+         * @param hasThis     if true, the target is instance specific; otherwise static
+         * @param typeTarget  the target container type
+         * @param stepsOut    the number of "outer" steps needed to get from the current context
+         *                    to the target container
          */
         public TargetInfo(
                 String           name,
@@ -1389,12 +1416,38 @@ public class StatementBlock
                 TypeConstant     typeTarget,
                 int              stepsOut)
             {
+            assert id instanceof PropertyConstant || id instanceof MultiMethodConstant;
+
             this.name       = name;
             this.id         = id;
             this.hasThis    = hasThis;
             this.typeTarget = typeTarget;
             this.stepsOut   = stepsOut;
-            this.typeNarrow = null;
+            this.type       = id instanceof PropertyConstant ? id.getType() : null;
+            }
+
+
+        /**
+         * Create a new TargetInfo for an "outer this".
+         *
+         * @param name        the name being resolved ("this" or "this:[access-qualifier]")
+         * @param typeTarget  the outer this type
+         * @param stepsOut    the number of "outer" steps needed to get from the current context
+         *                    to the target container
+         */
+        public TargetInfo(
+                String        name,
+                TypeConstant  typeTarget,
+                int           stepsOut)
+            {
+            assert typeTarget.isSingleUnderlyingClass(true);
+
+            this.name       = name;
+            this.id         = typeTarget.getSingleUnderlyingClass(true);
+            this.hasThis    = true;
+            this.typeTarget = typeTarget;
+            this.stepsOut   = stepsOut;
+            this.type       = typeTarget;
             }
 
         /**
@@ -1410,15 +1463,33 @@ public class StatementBlock
             this.hasThis    = that.hasThis;
             this.typeTarget = that.typeTarget;
             this.stepsOut   = that.stepsOut;
-            this.typeNarrow = typeNarrow;
+            this.type       = typeNarrow;
+            }
+
+        public IdentityConstant getId()
+            {
+            return id;
+            }
+
+        public TypeConstant getTargetType()
+            {
+            return typeTarget;
+            }
+
+        public boolean hasThis()
+            {
+            return hasThis;
+            }
+
+        public int getStepsOut()
+            {
+            return stepsOut;
             }
 
         @Override
         public TypeConstant getType()
             {
-            return typeNarrow == null
-                    ? id.getType()
-                    : typeNarrow;
+            return type;
             }
 
         @Override
@@ -1439,12 +1510,12 @@ public class StatementBlock
             return name + "->" + id.getValueString();
             }
 
-        public final String           name;
-        public final IdentityConstant id;
-        public final boolean          hasThis;
-        public final TypeConstant     typeTarget;
-        public final int              stepsOut;
-        public final TypeConstant     typeNarrow;
+        private final String           name;
+        private final IdentityConstant id;
+        private final boolean          hasThis;
+        private final TypeConstant     typeTarget;
+        private final int              stepsOut;
+        private final TypeConstant     type;
         }
 
 
