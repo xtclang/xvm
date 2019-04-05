@@ -370,6 +370,12 @@ class HashMap<KeyType, ValueType>
             implements Set<Entry>
         {
         @Override
+        MutabilityConstraint mutability.get()
+            {
+            return Mutable;
+            }
+
+        @Override
         Iterator<Entry> iterator()
             {
             return new Iterator()

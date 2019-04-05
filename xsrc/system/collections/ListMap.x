@@ -7,6 +7,7 @@ class ListMap<KeyType, ValueType>
         implements Map<KeyType, ValueType>
         implements MutableAble, FixedSizeAble, PersistentAble, ConstAble
         // TODO optimizations for: KeyType extends immutable Hashable
+        incorporates Stringer
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -513,7 +514,7 @@ class ListMap<KeyType, ValueType>
                 conditional Map<KeyType, ValueType>.Entry next()
                     {
                     Int actual = listKeys.size;
-                    Int index  = count - (expect - actual);
+                    Int index  = count++ - (expect - actual);
                     if (index >= 0 && index < actual)
                         {
                         return True, entry.advance(index);

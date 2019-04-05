@@ -34,7 +34,7 @@ const ContextToken<TokenType extends immutable Object>
     TokenType value;
 
     /**
-     * Determine whether this contextToken is the active contextToken for the current service.
+     * Find a contextToken for a given name for the current service.
      */
     ContextToken? current.get()
         {
