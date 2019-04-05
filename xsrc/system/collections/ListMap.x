@@ -338,6 +338,11 @@ class ListMap<KeyType, ValueType>
 
     /**
      * An implementation of Entry that can be used as a cursor over the keys and values.
+     *
+     * The CursorEntry uses a fail-fast model for concurrent modification detection. Once the
+     * CursorEntry is constructed (or a cursor [advance] occurs), any changes made to the ListMap
+     * that do not occur via the same CursorEntry will cause the CursorEntry to be in invalid
+     * state, and any subsequent operation on the CursorEntry will throw ConcurrentModification.
      */
     protected class CursorEntry
             implements Entry
@@ -403,11 +408,7 @@ class ListMap<KeyType, ValueType>
 
         @Override
         @Unassigned
-        public/private KeyType key.get()
-            {
-            verifyNoSurprises();
-            return super();
-            }
+        public/private KeyType key;
 
         @Override
         public/private Boolean exists.get()
@@ -477,6 +478,16 @@ class ListMap<KeyType, ValueType>
                 {
                 return True;
                 }
+
+            // TODO
+//            if (!cursor)
+//                {
+//                }
+//            if (index : indexOf(key))
+//                {
+//                exists = True;
+//                }
+//            this.expect = appends + deletes;
 
             throw new ConcurrentModification();
             }
