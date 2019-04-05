@@ -6,7 +6,13 @@ class EntryValues<KeyType, ValueType>(Map<KeyType, ValueType> map)
         implements Collection<ValueType>
     {
     public/private Map<KeyType, ValueType> map;
-    
+
+    @Override
+    MutabilityConstraint mutability.get()
+        {
+        return Mutable;
+        }
+
     @Override
     Int size.get()
         {

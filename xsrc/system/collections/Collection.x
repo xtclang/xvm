@@ -153,7 +153,7 @@ interface Collection<ElementType>
      */
     conditional Collection add(ElementType value)
         {
-        TODO element addition is not supported
+        throw new ReadOnly();
         }
 
     /**
@@ -197,7 +197,7 @@ interface Collection<ElementType>
      */
     conditional Collection remove(ElementType value)
         {
-        TODO element removal is not supported
+        throw new ReadOnly();
         }
 
     /**

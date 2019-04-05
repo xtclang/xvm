@@ -1240,6 +1240,7 @@ public class NameExpression
                         m_arg = arg;
                         break;
 
+                    // TODO if multi-method, log an error; it shouldn't cause an Exception!
                     default:
                         throw new IllegalStateException("format=" + constant.getFormat()
                                 + ", constant=" + constant);
