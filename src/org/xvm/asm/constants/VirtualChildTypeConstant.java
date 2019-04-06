@@ -299,8 +299,8 @@ public class VirtualChildTypeConstant
     @Override
     public boolean containsGenericParam(String sName)
         {
-        return m_typeParent.containsGenericParam(sName)
-            || getChildStructure().containsGenericParamType(sName);
+        return getChildStructure().containsGenericParamType(sName)
+            || m_typeParent.containsGenericParam(sName);
         }
 
     @Override

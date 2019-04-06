@@ -395,7 +395,7 @@ public class InvocationExpression
                         {
                         typeLeft = m_targetinfo == null
                                 ? ctx.getVar("this").getType() // "this" could be narrowed
-                                : m_targetinfo.typeTarget;
+                                : m_targetinfo.getTargetType();
                         }
                     return resolveTypes(resolver,
                             idMethod.resolveAutoNarrowing(pool, typeLeft).getRawReturns());
@@ -568,7 +568,7 @@ public class InvocationExpression
                             boolean   fStatic;
                             if (component == null)
                                 {
-                                TypeInfo info = m_targetinfo.typeTarget.ensureTypeInfo(errs);
+                                TypeInfo info = m_targetinfo.getTargetType().ensureTypeInfo(errs);
                                 fStatic = argMethod instanceof MethodConstant
                                         ? info.getMethodById((MethodConstant) argMethod).isFunction()
                                         : info.findProperty((PropertyConstant) argMethod).isConstant();
@@ -657,7 +657,7 @@ public class InvocationExpression
                             {
                             typeLeft = m_targetinfo == null
                                     ? ctx.getVar("this").getType() // "this" could be narrowed
-                                    : m_targetinfo.typeTarget;
+                                    : m_targetinfo.getTargetType();
                             }
 
                         ValidArgs:
@@ -888,10 +888,27 @@ public class InvocationExpression
                         Argument argTarget;
                         if (exprLeft == null)
                             {
-                            // use "this" TODO
                             MethodStructure method = code.getMethodStructure();
-                            argTarget = generateReserved(
-                                    code, method.isConstructor() ? Op.A_STRUCT : Op.A_PRIVATE, errs);
+                            if (m_targetinfo == null)
+                                {
+                                argTarget = ctx.generateThisRegister(code, method.isConstructor(), errs);
+                                }
+                            else
+                                {
+                                TypeConstant typeTarget = m_targetinfo.getTargetType();
+                                int          cStepsOut  = m_targetinfo.getStepsOut();
+
+                                if (cStepsOut > 0)
+                                    {
+                                    argTarget = createRegister(typeTarget, fTargetOnStack);
+                                    code.add(new MoveThis(m_targetinfo.getStepsOut(), argTarget));
+                                    }
+                                else
+                                    {
+                                    argTarget = new Register(typeTarget,
+                                        method.isConstructor() ? Op.A_STRUCT : Op.A_TARGET);
+                                    }
+                                }
                             }
                         else
                             {
@@ -1418,14 +1435,14 @@ public class InvocationExpression
             if (arg instanceof TargetInfo)
                 {
                 TargetInfo       target = (TargetInfo) arg;
-                TypeInfo         info   = target.typeTarget.ensureTypeInfo(errs);
-                IdentityConstant id     = target.id;
+                TypeInfo         info   = target.getTargetType().ensureTypeInfo(errs);
+                IdentityConstant id     = target.getId();
                 if (id instanceof MultiMethodConstant)
                     {
                     // find the method based on the signature
                     // TODO this only finds methods immediately contained within the class; does not find nested methods!!!
                     MethodType methodType = fConstruct ? MethodType.Constructor :
-                            (fNoCall && fNoFBind) || target.hasThis ? MethodType.Either : MethodType.Function;
+                            (fNoCall && fNoFBind) || target.hasThis() ? MethodType.Either : MethodType.Function;
                     IdentityConstant idCallable = findCallable(ctx, info, sName, methodType, atypeReturn, errs);
                     if (idCallable == null)
                         {
@@ -1434,7 +1451,7 @@ public class InvocationExpression
                         if (methodType == MethodType.Function && findCallable(ctx, info, sName,
                                 MethodType.Method, atypeReturn, ErrorListener.BLACKHOLE) != null)
                             {
-                            exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_METHOD, sName, target.typeTarget);
+                            exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_METHOD, sName, target.getTargetType());
                             }
                         return null;
                         }
@@ -1452,14 +1469,14 @@ public class InvocationExpression
                     PropertyInfo prop = info.findProperty((PropertyConstant) id);
                     if (prop == null)
                         {
-                        throw new IllegalStateException("missing property: " + id + " on " + target.typeTarget);
+                        throw new IllegalStateException("missing property: " + id + " on " + target.getTargetType());
                         }
 
                     if (testFunction(ctx, prop.getType(), atypeReturn, errs) == null)
                         {
                         return null;
                         }
-                    else if (prop.isConstant() || target.hasThis)
+                    else if (prop.isConstant() || target.hasThis())
                         {
                         m_targetinfo = target; // (only used for non-constants)
                         m_argMethod  = id;
@@ -1470,13 +1487,13 @@ public class InvocationExpression
                         // the property requires a target, but there is no "left." before the prop
                         // name, and there is no "this." (explicit or implicit) because there is no
                         // this
-                        exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_PROPERTY, sName, target.typeTarget);
+                        exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_PROPERTY, sName, target.getTargetType());
                         return null;
                         }
                     }
                 else
                     {
-                    throw new IllegalStateException("unsupport constant format: " + id);
+                    throw new IllegalStateException("unsupported constant format: " + id);
                     }
                 }
 

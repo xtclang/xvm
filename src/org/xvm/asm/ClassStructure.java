@@ -2398,10 +2398,10 @@ public class ClassStructure
                 continue;
                 }
 
-            PropertyConstant idField = infoProp.getFieldIdentity();
+            PropertyConstant idField   = infoProp.getFieldIdentity();
+            MethodConstant   idInit    = null;
+            Constant         constInit = null;
 
-            MethodConstant   idInit  = null;
-            Constant         constInit;
             if (infoProp.isInitialized())
                 {
                 constInit = infoProp.getInitialValue();
@@ -2412,7 +2412,10 @@ public class ClassStructure
                 }
             else
                 {
-                constInit = infoProp.getType().getDefaultValue();
+                if (clzRef == null || !infoProp.isImplicitlyUnassigned())
+                    {
+                    constInit = infoProp.getType().getDefaultValue();
+                    }
                 }
 
             if (constInit != null)
@@ -2445,9 +2448,11 @@ public class ClassStructure
                         RefHandle     hRef    = (RefHandle) hStruct.getField(idField);
 
                         hRef.setField(GenericHandle.OUTER, hStruct);
-                        hRef = (RefHandle) hRef.ensureAccess(Access.STRUCT);
 
-                        return frame.call1(methodInitRef, hRef, Utils.OBJECTS_NONE, A_IGNORE);
+                        return methodInitRef == null
+                            ? iPC + 1
+                            : frame.call1(methodInitRef, hRef.ensureAccess(Access.STRUCT),
+                                    Utils.OBJECTS_NONE, A_IGNORE);
                         }
 
                     @Override

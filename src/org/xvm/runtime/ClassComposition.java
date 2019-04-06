@@ -306,7 +306,7 @@ public class ClassComposition
     @Override
     public CallChain getPropertySetterChain(Object nidProp)
         {
-        return f_mapGetters.computeIfAbsent(nidProp,
+        return f_mapSetters.computeIfAbsent(nidProp,
             nid ->
                 {
                 TypeInfo     info = f_typeInception.ensureTypeInfo();
@@ -463,13 +463,16 @@ public class ClassComposition
             if (infoProp.hasField())
                 {
                 TypeComposition clzRef = null;
-                if (infoProp.isCustomLogic())
+                if (infoProp.isRefAnnotated())
                     {
-                    clzRef = new PropertyComposition(this, infoProp);
-                    }
-                else if (infoProp.isRefAnnotated())
-                    {
-                    clzRef = f_template.f_templates.resolveClass(infoProp.getBaseRefType());
+                    if (infoProp.isCustomLogic())
+                        {
+                        clzRef = new PropertyComposition(this, infoProp);
+                        }
+                    else
+                        {
+                        clzRef = f_template.f_templates.resolveClass(infoProp.getBaseRefType());
+                        }
                     }
 
                 mapFields.put(idProp.getNestedIdentity(), clzRef);

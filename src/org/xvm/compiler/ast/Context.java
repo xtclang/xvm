@@ -17,6 +17,9 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op;
+import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.Assignment;
 
@@ -25,6 +28,8 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeParameterConstant;
+
+import org.xvm.asm.op.MoveThis;
 
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
@@ -1106,7 +1111,7 @@ public class Context
                 if (arg instanceof TargetInfo)
                     {
                     TargetInfo       info = (TargetInfo) arg;
-                    IdentityConstant id   = info.id;
+                    IdentityConstant id   = info.getId();
                     if (id instanceof PropertyConstant)
                         {
                         PropertyConstant idProp = (PropertyConstant) arg;
@@ -1119,7 +1124,7 @@ public class Context
                             }
                         else  // allow narrowing for immutable properties
                             {
-                            TypeConstant     typeTarget = info.typeTarget;
+                            TypeConstant     typeTarget = info.getTargetType();
                             IdentityConstant idTarget   = typeTarget.getSingleUnderlyingClass(false);
                             if (idTarget.equals(getThisClass().getIdentityConstant()) &&
                                     getMethod().isConstructor())
@@ -1397,8 +1402,14 @@ public class Context
                     break;
 
                 case Property:
-                    cSteps++;
+                    {
+                    PropertyStructure prop = (PropertyStructure) id.getComponent();
+                    if (prop.isRefAnnotated())
+                        {
+                        cSteps++;
+                        }
                     break;
+                    }
 
                 case Module:
                 case Package:
@@ -1412,6 +1423,30 @@ public class Context
             }
 
         return -1;
+        }
+
+    /**
+     * Generate a Register for "this", which may be an "outer" one depending on the context.
+     *
+     * @param code               the code
+     * @param fAllowConstructor  if true, the returned argument may return a "struct"
+     *                           and be used in a constructor
+     * @param errs               the error listener
+     *
+     * @return the Register to use for "this" variable
+     */
+    public Register generateThisRegister(Code code, boolean fAllowConstructor, ErrorListener errs)
+        {
+        Argument arg = resolveReservedName(fAllowConstructor ? "this" : "this:target", null, errs);
+        if (arg instanceof Register)
+            {
+            return (Register) arg;
+            }
+
+        TargetInfo target  = (TargetInfo) arg;
+        Register   regTemp = new Register(target.getType(), Op.A_STACK);
+        code.add(new MoveThis(target.getStepsOut(), regTemp));
+        return regTemp;
         }
 
     @Override

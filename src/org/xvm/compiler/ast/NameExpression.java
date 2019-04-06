@@ -842,6 +842,14 @@ public class NameExpression
                         code.add(new MoveThis(cSteps, argLVal));
                         return;
                         }
+
+                    if (argRaw instanceof TypeConstant)
+                        {
+                        int cSteps = m_targetInfo.getStepsOut();
+
+                        code.add(new MoveThis(cSteps, argLVal));
+                        return;
+                        }
                     break;
                     }
 
@@ -889,7 +897,7 @@ public class NameExpression
 
                         case Outer:
                             {
-                            int      cSteps   = m_targetInfo.stepsOut;
+                            int      cSteps   = m_targetInfo.getStepsOut();
                             Register regOuter = createRegister(m_targetInfo.getType(), true);
                             code.add(new MoveThis(cSteps, regOuter));
                             code.add(new P_Get(idProp, regOuter, argLVal));
@@ -963,8 +971,6 @@ public class NameExpression
 
             case OuterThis:
                 {
-                assert getMeaning() == Meaning.Class;
-
                 // TODO: this scenario will go away (p.this for property p on Map will become this.Map.&p)
                 if (argRaw instanceof ThisClassConstant)
                     {
@@ -972,29 +978,50 @@ public class NameExpression
                     return generateReserved(code, Op.A_PUBLIC, errs);
                     }
 
-                int cSteps = ((ParentClassConstant) argRaw).getDepth();
+                TypeConstant typeOuter;
+                int          cSteps;
+                if (argRaw instanceof TypeConstant)
+                    {
+                    typeOuter = (TypeConstant) argRaw;
+                    cSteps    = m_targetInfo.getStepsOut();
+                    }
+                else
+                    {
+                    typeOuter = getType();
+                    cSteps    = ((ParentClassConstant) argRaw).getDepth();
+                    }
 
-                Register regOuter = createRegister(getType(), fUsedOnce);
+                Register regOuter = createRegister(typeOuter, fUsedOnce);
                 code.add(new MoveThis(cSteps, regOuter));
                 return regOuter;
                 }
 
             case OuterRef:
                 {
-                assert getMeaning() == Meaning.Class;
+                TypeConstant typeRef;
+                TypeConstant typeOuter;
+                int          cSteps;
+                if (argRaw instanceof TypeConstant)
+                    {
+                    typeOuter = (TypeConstant) argRaw;
+                    typeRef   = pool().ensureParameterizedTypeConstant(pool().typeRef(), typeOuter);
+                    cSteps    = m_targetInfo.getStepsOut();
+                    }
+                else
+                    {
+                    typeRef   = getType();
+                    typeOuter = typeRef.getParamTypesArray()[0];
+                    cSteps    = argRaw instanceof ThisClassConstant
+                            ? 0
+                            : ((ParentClassConstant) argRaw).getDepth();
+                    }
 
-                int cSteps = argRaw instanceof ThisClassConstant
-                        ? 0
-                        : ((ParentClassConstant) argRaw).getDepth();
+                Register regOuter = createRegister(typeOuter, fUsedOnce);
+                code.add(new MoveThis(cSteps, regOuter));
 
-                TypeConstant typeRef      = getType();
-                TypeConstant typeReferent = typeRef.getParamTypesArray()[0];
-
-                Register regOuter = createRegister(typeRef, fUsedOnce);
-                Register regTemp  = createRegister(typeReferent, false);
-                code.add(new MoveThis(cSteps, regTemp));
-                code.add(new MoveRef(regTemp, regOuter));
-                return regOuter;
+                Register regRef = createRegister(typeRef, fUsedOnce);
+                code.add(new MoveRef(regOuter, regRef));
+                return regRef;
                 }
 
             case PropertyDeref:
@@ -1023,7 +1050,7 @@ public class NameExpression
 
                     case Outer:
                         {
-                        int      cSteps   = m_targetInfo.stepsOut;
+                        int      cSteps   = m_targetInfo.getStepsOut();
                         Register regOuter = createRegister(m_targetInfo.getType(), true);
                         code.add(new MoveThis(cSteps, regOuter));
                         code.add(new P_Get(idProp, regOuter, regTemp));
@@ -1132,12 +1159,12 @@ public class NameExpression
                             break;
 
                         case Outer:
-                            for (int nDepth = target.stepsOut; --nDepth >= 0;)
+                            for (int nDepth = target.getStepsOut(); --nDepth >= 0;)
                                 {
                                 clz = clz.getContainingClass();
                                 }
                             argTarget = createRegister(clz.getFormalType(), true);
-                            code.add(new MoveThis(target.stepsOut, argTarget));
+                            code.add(new MoveThis(target.getStepsOut(), argTarget));
                             break;
 
                         default:
@@ -1249,76 +1276,90 @@ public class NameExpression
             else if (arg instanceof TargetInfo)
                 {
                 TargetInfo       target = m_targetInfo = (TargetInfo) arg;
-                TypeInfo         info   = target.typeTarget.ensureTypeInfo(errs);
-                IdentityConstant id     = target.id;
-                if (id instanceof MultiMethodConstant)
+                IdentityConstant id     = target.getId();
+
+                switch (id.getFormat())
                     {
-                    // TODO still some work here to
-                    //      (i) save off the TargetInfo
-                    //      (ii) use it in code gen
-                    //      (iii) mark the this (and out this's) as being used
-                    MultiMethodConstant idMM   = (MultiMethodConstant) id;
-                    ClassStructure      clzTop = (ClassStructure) idMM.getNamespace().getComponent();
-
-                    // we will use the private access info here since the access restrictions
-                    // must have been already checked by the "resolveName"
-                    TypeInfo infoClz = pool().ensureAccessTypeConstant(clzTop.getFormalType(),
-                            Access.PRIVATE).ensureTypeInfo(errs);
-
-                    // only include methods if this context is a method
-                    Set<MethodConstant> setMethods = infoClz.findMethods(
-                            sName, -1, ctx.isFunction() ? MethodType.Function : MethodType.Either);
-                    assert !setMethods.isEmpty();
-
-                    if (setMethods.size() == 1)
+                    case MultiMethod:
                         {
-                        m_arg = setMethods.iterator().next();
-                        }
-                    else
-                        {
-                        // return the MultiMethod; the caller will decide which to use
-                        m_arg = setMethods.iterator().next().getParentConstant();
-                        }
-                    }
-                else if (id instanceof PropertyConstant)
-                    {
-                    // TODO still some work here to mark the this (and out this's) as being used
-                    PropertyInfo prop = info.findProperty((PropertyConstant) id);
-                    if (prop == null)
-                        {
-                        throw new IllegalStateException("missing property: " + id + " on " + target.typeTarget);
+                        // TODO still some work here to
+                        //      (i) save off the TargetInfo
+                        //      (ii) use it in code gen
+                        //      (iii) mark the this (and out this's) as being used
+                        MultiMethodConstant idMM   = (MultiMethodConstant) id;
+                        ClassStructure      clzTop = (ClassStructure) idMM.getNamespace().getComponent();
+
+                        // we will use the private access info here since the access restrictions
+                        // must have been already checked by the "resolveName"
+                        TypeInfo infoClz = pool().ensureAccessTypeConstant(clzTop.getFormalType(),
+                                Access.PRIVATE).ensureTypeInfo(errs);
+
+                        // only include methods if this context is a method
+                        Set<MethodConstant> setMethods = infoClz.findMethods(sName, -1,
+                                ctx.isFunction() ? MethodType.Function : MethodType.Either);
+                        assert !setMethods.isEmpty();
+
+                        if (setMethods.size() == 1)
+                            {
+                            m_arg = setMethods.iterator().next();
+                            }
+                        else
+                            {
+                            // return the MultiMethod; the caller will decide which to use
+                            m_arg = setMethods.iterator().next().getParentConstant();
+                            }
+                        break;
                         }
 
-                    if (info.isTopLevel() && info.isStatic())
+                    case Property:
                         {
-                        m_propAccessPlan = info.getClassStructure().equals(ctx.getThisClass())
-                            ? PropertyAccess.This
-                            : PropertyAccess.Singleton;
-                        }
-                    else if (target.stepsOut == 0)
-                        {
-                        m_propAccessPlan = PropertyAccess.This;
-                        }
-                    else
-                        {
-                        m_propAccessPlan = PropertyAccess.Outer;
+                        TypeInfo info = target.getTargetType().ensureTypeInfo(errs);
+
+                        // TODO still some work here to mark the this (and out this's) as being used
+                        PropertyInfo prop = info.findProperty((PropertyConstant) id);
+                        if (prop == null)
+                            {
+                            throw new IllegalStateException("missing property: " + id + " on " + target.getTargetType());
+                            }
+
+                        if (info.isTopLevel() && info.isStatic())
+                            {
+                            m_propAccessPlan = info.getClassStructure().equals(ctx.getThisClass())
+                                ? PropertyAccess.This
+                                : PropertyAccess.Singleton;
+                            }
+                        else if (target.getStepsOut() == 0)
+                            {
+                            m_propAccessPlan = PropertyAccess.This;
+                            }
+                        else
+                            {
+                            m_propAccessPlan = PropertyAccess.Outer;
+                            }
+
+                        PropertyConstant idProp = (PropertyConstant) id;
+                        if (idProp.isTypeSequenceTypeParameter())
+                            {
+                            m_arg         = idProp;
+                            m_fAssignable = false;
+                            }
+                        else
+                            {
+                            m_arg         = prop.getIdentity();
+                            m_fAssignable = prop.isVar();
+                            }
+                        break;
                         }
 
-                    PropertyConstant idProp = (PropertyConstant) id;
-                    if (idProp.isTypeSequenceTypeParameter())
-                        {
-                        m_arg         = idProp;
-                        m_fAssignable = false;
-                        }
-                    else
-                        {
-                        m_arg         = prop.getIdentity();
-                        m_fAssignable = prop.isVar();
-                        }
-                    }
-                else
-                    {
-                    throw new IllegalStateException("unsupported constant format: " + id);
+                    case Module:
+                    case Package:
+                    case Class:
+                        // this indicates an "outer this"
+                        m_arg = target.getType();
+                        break;
+
+                    default:
+                        throw new IllegalStateException("unsupported constant format: " + id);
                     }
                 }
             }
@@ -1589,6 +1630,22 @@ public class NameExpression
                 }
             }
 
+        if (argRaw instanceof TypeConstant)
+            {
+            // this can only mean an "outer this"
+            TypeConstant typeParent = (TypeConstant) argRaw;
+            if (isSuppressDeref())
+                {
+                m_plan = Plan.OuterRef;
+                return pool.ensureParameterizedTypeConstant(pool.typeRef(), typeParent);
+                }
+            else
+                {
+                m_plan = Plan.OuterThis;
+                return typeParent;
+                }
+            }
+
         assert argRaw instanceof Constant;
         Constant constant = (Constant) argRaw;
         switch (constant.getFormat())
@@ -1691,7 +1748,7 @@ public class NameExpression
                 TypeConstant      typeLeft = null;
                 TypeConstant      type     = m_targetInfo == null
                         ? prop.getType()
-                        : m_targetInfo.typeTarget.ensureTypeInfo(errs).findProperty(id).getType();
+                        : m_targetInfo.getTargetType().ensureTypeInfo(errs).findProperty(id).getType();
 
                 // resolve the property type
                 if (id.isTypeSequenceTypeParameter())
@@ -1712,7 +1769,7 @@ public class NameExpression
                     ClassStructure clz = ctx.getThisClass();
                     if (m_propAccessPlan == PropertyAccess.Outer)
                         {
-                        for (int nDepth = m_targetInfo.stepsOut; --nDepth >= 0;)
+                        for (int nDepth = m_targetInfo.getStepsOut(); --nDepth >= 0;)
                             {
                             clz = clz.getContainingClass();
                             }
@@ -1828,12 +1885,18 @@ public class NameExpression
                     : Meaning.Variable;
             }
 
+        if (arg instanceof TypeConstant)
+            {
+            // outer this
+            return Meaning.Reserved;
+            }
+
         if (arg instanceof Constant)
             {
             Constant constant = (Constant) arg;
             switch (constant.getFormat())
                 {
-                // class ID
+                    // class ID
                 case Module:
                 case Package:
                 case Class:
@@ -1945,7 +2008,9 @@ public class NameExpression
      */
     protected IdentityConstant getIdentity(Context ctx)
         {
-        return (IdentityConstant) m_arg;
+        return m_arg instanceof IdentityConstant
+                ? (IdentityConstant) m_arg
+                : ((TypeConstant) m_arg).getSingleUnderlyingClass(true);
         }
 
     /**
