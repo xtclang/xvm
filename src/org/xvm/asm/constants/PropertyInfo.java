@@ -942,7 +942,12 @@ public class PropertyInfo
             List<Annotation> list = null;
             for (PropertyBody body : m_aBody)
                 {
-                Annotation[] aAdd = body.getStructure().getRefAnnotations();
+                PropertyStructure prop = body.getStructure();
+                if (prop == null)
+                    {
+                    continue;
+                    }
+                Annotation[] aAdd = prop.getRefAnnotations();
                 if (aAdd.length > 0)
                     {
                     if (list == null)

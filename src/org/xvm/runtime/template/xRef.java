@@ -601,11 +601,6 @@ public class xRef
                 }
             }
 
-        /**
-         * Synthetic property holding the referent's value.
-         */
-        public final static String VALUE = "$value";
-
         protected ObjectHandle m_hDelegate; // can point to another Ref for the same referent
         protected PropertyConstant m_idProp;
         protected String m_sName;

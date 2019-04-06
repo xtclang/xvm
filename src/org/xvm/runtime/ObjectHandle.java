@@ -235,7 +235,7 @@ public abstract class ObjectHandle
 
             m_fMutable = true;
 
-            m_mapFields = clazz.createFields();
+            m_mapFields = clazz.initializeStructure();
             }
 
         public boolean containsField(PropertyConstant idProp)
