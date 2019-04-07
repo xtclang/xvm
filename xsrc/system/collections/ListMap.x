@@ -6,7 +6,7 @@ import maps.ReifiedEntry;
 class ListMap<KeyType, ValueType>
         implements Map<KeyType, ValueType>
         implements MutableAble, FixedSizeAble, PersistentAble, ConstAble
-        // TODO optimizations for: KeyType extends immutable Hashable
+        // TODO GG: incorporates conditional HashIndex<KeyType extends immutable Hashable, ValueType>
         incorporates Stringer
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -20,12 +20,36 @@ class ListMap<KeyType, ValueType>
 
     // ----- internal ------------------------------------------------------------------------------
 
+    /**
+     * The list of keys in the map, in order of insertion.
+     */
     private KeyType[]   listKeys;
+
+    /**
+     * The values in the map, corresponding by index to [listKeys].
+     */
     private ValueType[] listVals;
 
+    /**
+     * A counter of the number of items added to the map. Used to detect illegal concurrent
+     * modifications.
+     */
     protected/private Int appends = 0;
+
+    /**
+     * A counter of the number of items deleted from the map. Used to detect illegal concurrent
+     * modifications.
+     */
     protected/private Int deletes = 0;
 
+    /**
+     * Find a key in the map's internal list of keys, returning its location in the list.
+     *
+     * @param key  the key to find
+     *
+     * @return True iff the key was found
+     * @return the conditional index at which the key was found
+     */
     protected conditional Int indexOf(KeyType key)
         {
         AllKeys:
@@ -39,11 +63,29 @@ class ListMap<KeyType, ValueType>
         return False;
         }
 
-    void deleteIndex(Int index)
+    /**
+     * Delete the entry at the specified index in the map's internal lists of keys and values.
+     *
+     * @param index  the index of the entry
+     */
+    protected void deleteIndex(Int index)
         {
         listKeys.delete(index);
         listVals.delete(index);
         ++deletes;
+        }
+
+    /**
+     * Append an entry to the end of the map's internal lists of keys and values.
+     *
+     * @param key    the key to append
+     * @param value  the value to append
+     */
+    protected void appendEntry(KeyType key, ValueType value)
+        {
+        listKeys.addElement(key);
+        listVals.addElement(value);
+        ++appends;
         }
 
     /**
@@ -139,9 +181,7 @@ class ListMap<KeyType, ValueType>
             }
         else
             {
-            listKeys.addElement(key);
-            listVals.addElement(value);
-            ++appends;
+            appendEntry(key, value);
             }
 
         return True, this;
@@ -227,8 +267,66 @@ class ListMap<KeyType, ValueType>
         }
 
 
+    // ----- MutableIndex mixin --------------------------------------------------------------------
+
+    protected mixin HashIndex
+            into ListMap
+        {
+        private (Int|Multi)?[]? buckets;
+
+        private static class Multi
+            {
+            }
+
+        @Override
+        protected conditional Int indexOf(KeyType key)
+            {
+            if (buckets == null)
+                {
+                return super(key);
+                }
+            else
+                {
+                // TODO
+                return False;
+                }
+            }
+
+        @Override
+        protected void deleteIndex(Int index)
+            {
+            super(index);
+
+            if (buckets != null)
+                {
+                // TODO
+                }
+            }
+
+        @Override
+        protected void appendEntry(KeyType key, ValueType value)
+            {
+            super(key, value);
+            if (buckets == null)
+                {
+                if (size > 10)
+                    {
+                    // TODO
+                    }
+                }
+            else
+                {
+                // add the entry
+                // TODO
+                }
+            }
+        }
+
     // ----- Keys Set ------------------------------------------------------------------------------
 
+    /**
+     * A custom implementation of the [keys] property.
+     */
     class Keys
             implements Set<KeyType>
         {
@@ -448,11 +546,9 @@ console.println("index=" + index + ", limit=" + limit + ", size=" + size);
                     }
                 else
                     {
-                    listKeys.addElement(key);
-                    listVals.addElement(value);
+                    appendEntry(key, value);
                     index  = listKeys.size - 1;
                     exists = True;
-                    ++appends;
                     ++expect;
                     }
                 }
@@ -475,22 +571,21 @@ console.println("index=" + index + ", limit=" + limit + ", size=" + size);
             return new ReifiedEntry(ListMap.this, key);
             }
 
+        /**
+         * Check the expected modification count for the ListMap against the actual modification
+         * count.
+         *
+         * @return True
+         *
+         * @throws ConcurrentModification if the Map has been subsequently modified in a manner
+         *                                other than through this entry
+         */
         protected Boolean verifyNoSurprises()
             {
             if (appends + deletes == expect)
                 {
                 return True;
                 }
-
-            // TODO
-//            if (!cursor)
-//                {
-//                }
-//            if (index : indexOf(key))
-//                {
-//                exists = True;
-//                }
-//            this.expect = appends + deletes;
 
             throw new ConcurrentModification();
             }
