@@ -170,7 +170,7 @@ public class PropertyComposition
                 MethodConstant idNested = (MethodConstant) f_infoProp.getIdentity().
                     appendNestedIdentity(ConstantPool.getCurrentPool(), sig);
 
-                MethodInfo info = f_infoParent.getMethodBySignature(idNested.getSignature());
+                MethodInfo info = f_infoParent.getMethodByNestedId(idNested.getNestedIdentity());
                 return info == null
                     ? f_clzRef.getMethodCallChain(sig)
                     : new CallChain(info.ensureOptimizedMethodChain(f_infoParent));

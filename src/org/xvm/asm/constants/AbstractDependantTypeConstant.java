@@ -133,12 +133,6 @@ public abstract class AbstractDependantTypeConstant
         }
 
     @Override
-    public TypeConstant getExplicitClassInto()
-        {
-        throw new IllegalStateException();
-        }
-
-    @Override
     public boolean isIntoClassType()
         {
         return false;

@@ -141,7 +141,7 @@ public class MethodStructure
     public boolean isConstructor()
         {
         String  sName        = getName();
-        boolean fConstructor = sName.equals("construct") || sName.equals("=");
+        boolean fConstructor = sName.equals("construct") || sName.endsWith("=");
         return fConstructor;
         }
 
@@ -794,7 +794,7 @@ public class MethodStructure
      * <code><pre>
      *     Int MB
      *       {
-     *       Int "="()
+     *       Int "MB="()
      *         {
      *         return KB * KB;
      *         }
@@ -802,12 +802,12 @@ public class MethodStructure
      * </pre></code>
      *
      *
-     * @return true iff this method is a public method (not function) named "get" that takes no
-     *         parameters and returns a single value
+     * @return true iff this method is a public method (not function) whose name ends with "="
+     *         that takes no parameters and returns a single value
      */
     public boolean isPotentialInitializer()
         {
-        return getName().equals("=")
+        return getName().endsWith("=")
                 && getReturnCount() == 1 && getParamCount() == 0
                 && isConstructor() && !isConditionalReturn();
         }
