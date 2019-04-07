@@ -11,15 +11,15 @@ module TestMaps.xqiz.it
     void run()
         {
         testBasic();
-
-        function void () run = &testFill100();
-        profile(run, 10);
+        testProfile();
 
         testListMap();
         }
 
     void testBasic()
         {
+        console.println("\n** testBasic()");
+
         Map<Int, String> map = new HashMap();
         map.put(1, "Hello from Map");
         map.put(2, "Goodbye from Map");
@@ -29,6 +29,13 @@ module TestMaps.xqiz.it
             console.println(s);
             }
         console.println(map);
+        }
+
+    void testProfile()
+        {
+        console.println("\n** testProfile()");
+        function void () run = &testFill100();
+        profile(run, 10);
         }
 
     static void testFill100()
@@ -54,10 +61,38 @@ module TestMaps.xqiz.it
 
     void testListMap()
         {
+        console.println("\n** testListMap()");
+
         Map<String, String> map = new ListMap();
         console.println("empty map=" + map);
 
+        console.println("adding hello=world...");        
         map.put("hello", "world");
+        
+        // TODO GG map.empty fails, map.keys.empty fails, etc.: console.println("map.size=" + map.size + ", map.empty=" + map.empty);
+        console.println("map.size=" + map.size);
+        console.println("keys.size=" + map.keys.size);
+        console.println("entries.size=" + map.entries.size);
+        console.println("values.size=" + map.values.size);
         console.println("map=" + map);
+
+        console.println("keys:");
+        loop: for (String key : map.keys)
+            {
+            console.println("[" + loop.count + "]=" + key);
+            }
+        // TODO CP "loop" should cease to exist in the context at this point
+
+        console.println("values:");
+        loop2: for (String value : map.values)
+            {
+            console.println("[" + loop2.count + "]=" + value);
+            }
+
+        console.println("entries:");
+        loop3: for (Map<String,String>.Entry entry : map.entries)
+            {
+            console.println("[" + loop3.count + "]=" + entry.key + "=" + entry.value);
+            }
         }
     }

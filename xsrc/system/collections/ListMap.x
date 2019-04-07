@@ -257,6 +257,8 @@ class ListMap<KeyType, ValueType>
                 @Override
                 conditional KeyType next()
                     {
+@Inject Console console;
+console.println("index=" + index + ", limit=" + limit + ", size=" + size);
                     // the immediately previously iterated key is allowed to be deleted
                     if (deletes != prevDeletes)
                         {
@@ -517,26 +519,36 @@ class ListMap<KeyType, ValueType>
             {
             return new Iterator()
                 {
-                Int         count  = 0;
-                Int         expect = listKeys.size;
-                CursorEntry entry  = new CursorEntry();
+                Int         index       = 0;
+                Int         limit       = size;
+                Int         prevDeletes = deletes;
+                CursorEntry entry       = new CursorEntry();
 
                 @Override
                 conditional Map<KeyType, ValueType>.Entry next()
                     {
-                    Int actual = listKeys.size;
-                    Int index  = count++ - (expect - actual);
-                    if (index >= 0 && index < actual)
+                    // the immediately previously iterated key is allowed to be deleted
+                    if (deletes != prevDeletes)
                         {
-                        return True, entry.advance(index);
+                        if (deletes - prevDeletes == 1 && index > 0 && !entry.exists)
+                            {
+                            --limit;
+                            --index;
+                            ++prevDeletes;
+                            }
+                        else
+                            {
+                            throw new ConcurrentModification();
+                            }
                         }
 
-                    if (index == actual)
+                    if (index < limit)
                         {
-                        return False;
+                        entry.advance(index++);
+                        return True, entry;
                         }
 
-                    throw new ConcurrentModification();
+                    return False;
                     }
                 };
             }
