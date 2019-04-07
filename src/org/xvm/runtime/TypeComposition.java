@@ -96,7 +96,7 @@ public interface TypeComposition
      *
      * @return a map containing object fields
      */
-    Map<Object, ObjectHandle> createFields();
+    Map<Object, ObjectHandle> initializeStructure();
 
     /**
      * Check whether or not the property referred by the specified nid has a custom code or

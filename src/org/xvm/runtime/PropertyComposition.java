@@ -138,9 +138,9 @@ public class PropertyComposition
         }
 
     @Override
-    public Map<Object, ObjectHandle> createFields()
+    public Map<Object, ObjectHandle> initializeStructure()
         {
-        return f_clzRef.createFields();
+        return f_clzRef.initializeStructure();
         }
 
     @Override

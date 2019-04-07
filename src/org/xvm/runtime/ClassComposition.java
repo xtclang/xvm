@@ -73,7 +73,7 @@ public class ClassComposition
         f_mapMethods = new ConcurrentHashMap<>();
         f_mapGetters = new ConcurrentHashMap<>();
         f_mapSetters = new ConcurrentHashMap<>();
-        f_mapFields  = f_template.isGenericHandle() ? ensureFields() : null;
+        f_mapFields  = f_template.isGenericHandle() ? createFieldLayout() : null;
         }
 
     /**
@@ -386,7 +386,7 @@ public class ClassComposition
         }
 
     @Override
-    public Map<Object, ObjectHandle> createFields()
+    public Map<Object, ObjectHandle> initializeStructure()
         {
         Map<Object, TypeComposition> mapCached = f_mapFields;
         if (mapCached == null)
@@ -441,7 +441,7 @@ public class ClassComposition
      *
      * @return a prototype map
      */
-    private Map<Object, TypeComposition> ensureFields()
+    private Map<Object, TypeComposition> createFieldLayout()
         {
         ConstantPool pool = f_typeInception.getConstantPool();
 
@@ -476,6 +476,11 @@ public class ClassComposition
                     }
 
                 mapFields.put(idProp.getNestedIdentity(), clzRef);
+                }
+            else
+                {
+                // TODO: what if the prop is annotated
+                assert !infoProp.isRefAnnotated();
                 }
             }
         return mapFields.isEmpty() ? null : mapFields;
