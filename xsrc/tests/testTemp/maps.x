@@ -66,9 +66,10 @@ module TestMaps.xqiz.it
         Map<String, String> map = new ListMap();
         console.println("empty map=" + map);
 
-        console.println("adding hello=world...");        
-        map.put("hello", "world");
-        
+        console.println("adding entries...");
+        map.put("k1", "v2");
+        map.put("k2", "v2");
+
         // TODO GG map.empty fails, map.keys.empty fails, etc.: console.println("map.size=" + map.size + ", map.empty=" + map.empty);
         console.println("map.size=" + map.size);
         console.println("keys.size=" + map.keys.size);

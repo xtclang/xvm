@@ -257,8 +257,6 @@ class ListMap<KeyType, ValueType>
                 @Override
                 conditional KeyType next()
                     {
-@Inject Console console;
-console.println("index=" + index + ", limit=" + limit + ", size=" + size);
                     // the immediately previously iterated key is allowed to be deleted
                     if (deletes != prevDeletes)
                         {
