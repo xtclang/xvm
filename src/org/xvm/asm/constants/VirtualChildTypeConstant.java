@@ -297,6 +297,18 @@ public class VirtualChildTypeConstant
         }
 
     @Override
+    public TypeConstant getExplicitClassInto()
+        {
+        ClassStructure struct = getChildStructure();
+        if (struct == null || struct.getFormat() != Component.Format.MIXIN)
+            {
+            throw new IllegalStateException("mixin=" + struct);
+            }
+
+        return struct.getTypeInto();
+        }
+
+    @Override
     public boolean containsGenericParam(String sName)
         {
         return getChildStructure().containsGenericParamType(sName)
