@@ -1143,6 +1143,11 @@ public class ConstantPool
                 sClz = sName;
                 break;
 
+            case "#Ref":
+                sPkg = "_native";
+                sClz = "Ref";
+                break;
+
             default:
                 return null;
             }
@@ -1929,6 +1934,7 @@ public class ConstantPool
     public TypeConstant      typeObject()       {TypeConstant      c = m_typeObject;      if (c == null) {m_typeObject      = c = ensureTerminalTypeConstant(clzObject()                     );} return c;}
     public TypeConstant      typeRef()          {TypeConstant      c = m_typeRef;         if (c == null) {m_typeRef         = c = ensureTerminalTypeConstant(clzRef()                        );} return c;}
     public TypeConstant      typeRefRB()        {TypeConstant      c = m_typeRefRB;       if (c == null) {m_typeRefRB       = c = makeNativeRebase(clzRef()                                  );} return c;}
+    public TypeConstant      typeRefNaked()     {TypeConstant      c = m_typeRefNaked;    if (c == null) {m_typeRefNaked    = c = ensureTerminalTypeConstant(getImplicitlyImportedIdentity("#Ref"));} return c;}
     public TypeConstant      typeVar()          {TypeConstant      c = m_typeVar;         if (c == null) {m_typeVar         = c = ensureTerminalTypeConstant(clzVar()                        );} return c;}
     public TypeConstant      typeVarRB()        {TypeConstant      c = m_typeVarRB;       if (c == null) {m_typeVarRB       = c = makeNativeRebase(clzVar()                                  );} return c;}
     public TypeConstant      typeStruct()       {TypeConstant      c = m_typeStruct;      if (c == null) {m_typeStruct      = c = ensureTerminalTypeConstant(clzStruct()                     );} return c;}
@@ -2653,6 +2659,7 @@ public class ConstantPool
         m_typeObject      = null;
         m_typeRef         = null;
         m_typeRefRB       = null;
+        m_typeRefNaked    = null;
         m_typeVar         = null;
         m_typeVarRB       = null;
         m_typeStruct      = null;
@@ -3112,6 +3119,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeObject;
     private transient TypeConstant      m_typeRef;
     private transient TypeConstant      m_typeRefRB;
+    private transient TypeConstant      m_typeRefNaked;
     private transient TypeConstant      m_typeVar;
     private transient TypeConstant      m_typeVarRB;
     private transient TypeConstant      m_typeType;
