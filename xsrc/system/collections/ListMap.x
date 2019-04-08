@@ -68,7 +68,7 @@ class ListMap<KeyType, ValueType>
      *
      * @param index  the index of the entry
      */
-    protected void deleteIndex(Int index)
+    protected void deleteEntryAt(Int index)
         {
         listKeys.delete(index);
         listVals.delete(index);
@@ -192,7 +192,7 @@ class ListMap<KeyType, ValueType>
         {
         if (Int index : indexOf(key))
             {
-            deleteIndex(index);
+            deleteEntryAt(index);
             return True, this;
             }
 
@@ -206,7 +206,7 @@ class ListMap<KeyType, ValueType>
             {
             if (listVals[index] == value)
                 {
-                deleteIndex(index);
+                deleteEntryAt(index);
                 return True, this;
                 }
             }
@@ -269,56 +269,149 @@ class ListMap<KeyType, ValueType>
 
     // ----- MutableIndex mixin --------------------------------------------------------------------
 
-    protected mixin HashIndex
-            into ListMap
+    protected mixin HashIndex<KeyType extends Hashable, ValueType>
+            into ListMap<KeyType, ValueType>
         {
-        private (Int|Multi)?[]? buckets;
+        protected typedef (Int | Int[]) OneOrN;
+        protected typedef OneOrN[] HashTree;
+        protected typedef (HashTree | OneOrN)? Bucket;
 
-        private static class Multi
-            {
-            }
+        private Bucket[]? buckets;
 
         @Override
         protected conditional Int indexOf(KeyType key)
             {
             if (buckets == null)
                 {
-                return super(key);
+                if (size > 10)
+                    {
+                    buildIndex();
+                    }
+                else
+                    {
+                    return super(key);
+                    }
+                }
+
+            Int    keyhash = key.hash;
+            Bucket bucket  = buckets[keyhash % buckets.size];
+            if (bucket == null)
+                {
+                return False;
+                }
+
+            OneOrN indexes;
+            search: if (bucket.is(HashTree))
+                {
+                // binary search the hash tree
+                HashTree tree = bucket;
+                Int lo = 0;
+                Int hi = tree.size - 1;
+                while (lo <= hi)
+                    {
+                    Int mid = (lo + hi) >>> 1;
+                    indexes = tree[mid];
+                    switch (hashFor(indexes) <=> keyhash)
+                        {
+                        case Equal:
+                            break search;
+                        case Lesser:
+                            lo = mid + 1;
+                            break;
+                        case Greater:
+                            hi = mid - 1;
+                            break;
+                        }
+                    }
+                return False;
                 }
             else
                 {
-                // TODO
-                return False;
+                indexes = bucket;
                 }
+
+            if (indexes.is(Int[]))
+                {
+                for (Int index : indexes)
+                    {
+                    if (listKeys[index] == key)
+                        {
+                        return True, index;
+                        }
+                    }
+                }
+            else
+                {
+                Int index = indexes;
+                if (listKeys[index] == key)
+                    {
+                    return True, index;
+                    }
+                }
+
+            return False;
             }
 
         @Override
-        protected void deleteIndex(Int index)
+        protected void deleteEntryAt(Int index)
             {
-            super(index);
-
             if (buckets != null)
                 {
-                // TODO
+                // update the index
+                Int keyhash  = listKeys[index].hash;
+                Int bucketid = keyhash % buckets.size;
+                buckets[bucketid] = removeKeyFrom(buckets[bucketid], keyhash, index);
                 }
+
+            super(index);
             }
 
         @Override
         protected void appendEntry(KeyType key, ValueType value)
             {
             super(key, value);
-            if (buckets == null)
+
+            if (buckets != null)
                 {
-                if (size > 10)
+                // update the index
+                Int keyhash  = key.hash;
+                Int bucketid = keyhash % buckets.size;
+                buckets[bucketid] = addKeyTo(buckets[bucketid], keyhash, index);
+
+                if (size > buckets.count)
                     {
-                    // TODO
+                    // more keys than buckets; re-hash
+                    buildIndex();
                     }
                 }
-            else
+            }
+
+        protected void buildIndex()
+            {
+            Int bucketCount = HashMap.calcBucketCount(size);
+            buckets = new Bucket[bucketCount];
+            for (KeyType key : listKeys)
                 {
-                // add the entry
                 // TODO
                 }
+            }
+
+        protected Int hashFor(OneOrN indexes)
+            {
+            Int index = indexes.is(Int)
+                    ? indexes
+                    : indexes[0];
+            return listKeys[index].hash;
+            }
+
+        protected Bucket addKeyTo(Bucket bucket, Int keyhash, Int index)
+            {
+            TODO
+            }
+
+        protected Bucket removeKeyFrom(Bucket bucket, Int keyhash, Int index)
+            {
+            TODO
             }
         }
 
@@ -388,7 +481,7 @@ class ListMap<KeyType, ValueType>
 
             if (Int index : listKeys.indexOf(key))
                 {
-                deleteIndex(index);
+                deleteEntryAt(index);
                 return True, this;
                 }
 
@@ -405,7 +498,7 @@ class ListMap<KeyType, ValueType>
                 {
                 if (shouldRemove(listKeys[i-removed]))
                     {
-                    deleteIndex(i-removed);
+                    deleteEntryAt(i-removed);
                     ++removed;
                     }
                 }
@@ -557,7 +650,7 @@ class ListMap<KeyType, ValueType>
             {
             if (verifyNotPersistent() & exists)
                 {
-                deleteIndex(index);
+                deleteEntryAt(index);
                 exists = False;
                 ++expect;
                 }
@@ -653,7 +746,7 @@ class ListMap<KeyType, ValueType>
 
             if (Int index : indexOf(entry))
                 {
-                deleteIndex(index);
+                deleteEntryAt(index);
                 return True, this;
                 }
 
@@ -795,7 +888,7 @@ class ListMap<KeyType, ValueType>
 
             if (Int index : listVals.indexOf(value))
                 {
-                deleteIndex(index);
+                deleteEntryAt(index);
                 return True, this;
                 }
 
@@ -812,7 +905,7 @@ class ListMap<KeyType, ValueType>
                 {
                 if (shouldRemove(listVals[i-removed]))
                     {
-                    deleteIndex(i-removed);
+                    deleteEntryAt(i-removed);
                     ++removed;
                     }
                 }
