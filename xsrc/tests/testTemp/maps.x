@@ -70,8 +70,7 @@ module TestMaps.xqiz.it
         map.put("k1", "v2");
         map.put("k2", "v2");
 
-        // TODO GG map.empty fails, map.keys.empty fails, etc.: console.println("map.size=" + map.size + ", map.empty=" + map.empty);
-        console.println("map.size=" + map.size);
+        console.println("map.size=" + map.size + ", map.empty=" + map.empty);
         console.println("keys.size=" + map.keys.size);
         console.println("entries.size=" + map.entries.size);
         console.println("values.size=" + map.values.size);

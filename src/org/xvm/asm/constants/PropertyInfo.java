@@ -771,6 +771,14 @@ public class PropertyInfo
         }
 
     /**
+     * @return true iff the property needs the native rebase for the get()
+     */
+    public boolean requiresNativeRef()
+        {
+        return isVar() || isTypeParam() || isInjected() || isRefAnnotated();
+        }
+
+    /**
      * @return the Access required for the Ref form of the property
      */
     public Access getRefAccess()
