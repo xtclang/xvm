@@ -230,6 +230,7 @@ public class ReturnStatement
 
         if (fValid)
             {
+            ctx.markNonCompleting();
             container.collectReturnTypes(atypeActual);
             return this;
             }

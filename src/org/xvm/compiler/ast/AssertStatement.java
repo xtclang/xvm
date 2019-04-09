@@ -109,6 +109,11 @@ public class AssertStatement
             ctx = ctx.exit();
             }
 
+        if (cond == null || (cond instanceof Expression && ((Expression) cond).isConstantFalse()))
+            {
+            ctx.markNonCompleting();
+            }
+
         return fValid
                 ? this
                 : null;
