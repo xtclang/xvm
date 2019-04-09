@@ -173,9 +173,8 @@ public class Register
      */
     public Register narrowType(TypeConstant typeNarrowed)
         {
-        return typeNarrowed.equals(getType())
-                ? this
-                : new ShadowRegister(typeNarrowed);
+        // even when the types are the same, the shadow carries "not-in-place" flag
+        return new ShadowRegister(typeNarrowed);
         }
 
     /**
@@ -656,7 +655,7 @@ public class Register
         /**
          * Indicates that this register is a replacement of the original.
          */
-        protected boolean m_fInPlace;
+        protected boolean m_fInPlace = false;
         }
 
 
