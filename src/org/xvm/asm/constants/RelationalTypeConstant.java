@@ -99,6 +99,9 @@ public abstract class RelationalTypeConstant
      */
     public static TypeConstant combineWith(ConstantPool pool, TypeConstant type1, TypeConstant type2)
         {
+        type1 = type1.resolveTypedefs();
+        type2 = type2.resolveTypedefs();
+
         if (type1.isA(type2))
             {
             return type1;
@@ -118,6 +121,9 @@ public abstract class RelationalTypeConstant
      */
     public static TypeConstant combineWithout(ConstantPool pool, TypeConstant type1, TypeConstant type2)
         {
+        type1 = type1.resolveTypedefs();
+        type2 = type2.resolveTypedefs();
+
         if (type1 instanceof RelationalTypeConstant)
             {
             TypeConstant type1_1 = type1.getUnderlyingType();
