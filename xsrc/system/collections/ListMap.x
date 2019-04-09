@@ -420,7 +420,7 @@ class ListMap<KeyType, ValueType>
                         {
                         // all of the index information for keys located after the deleted index
                         // will now be incorrect; all such indexes must be decremented
-                        decrementAllAfter(index);
+                        decrementIndexesAbove(index);
                         }
                     }
                 }
@@ -525,12 +525,12 @@ class ListMap<KeyType, ValueType>
                 }
 
             OneOrN indexes = bucket;
-            return (keyhash <=> hashFor(indexes))
+            return switch (keyhash <=> hashFor(indexes))
                 {
                 case Lesser : [index, indexes];
                 case Equal  : addIndexTo(indexes, index);
                 case Greater: [indexes, index];
-                }
+                };
             }
 
         /**
@@ -666,7 +666,7 @@ class ListMap<KeyType, ValueType>
                     case 0: tree[1];
                     case 1: tree[0];
                     default: assert;
-                    }
+                    };
                 }
 
             return tree.delete(n);
@@ -678,27 +678,49 @@ class ListMap<KeyType, ValueType>
          * HashIndex with a value greater than the index of the removed key will now be off-by-one.
          * Adjust all of those indexes accordingly.
          *
-         * @param index  the index of the key that was removed (or is being removed) from the
-         *               ListMap
+         * @param deleted  the index of the key that was removed (or is being removed) from the
+         *                 ListMap
          */
-        protected decrementAllAfter(Int index)
+        protected void decrementIndexesAbove(Int deleted)
             {
-            // TODO
             loop: for (Bucket bucket : buckets?)
                 {
                 if (bucket != null)
                     {
                     if (bucket.is(HashTree))
                         {
-                        buckets[loop.count] = decrementAllInHashTreeAfter(bucket, index);
+                        buckets[loop.count] = decrementAllInHashTreeAbove(bucket, index);
                         }
                     else
                         {
+                        buckets[loop.count] = decrementOneOrNAbove(bucket, index);
                         }
                     }
                 }
             }
-
+        protected HashTree decrementAllInHashTreeAbove(HashTree tree, Int deleted)
+            {
+            loop: for (OneOrN indexes : tree)
+                {
+                tree[loop.count] = decrementOneOrNAbove(indexes, deleted);
+                }
+            return tree;
+            }
+        protected OneOrN decrementOneOrNAbove(OneOrN indexes, Int deleted)
+            {
+            if (indexes.is(Int[]))
+                {
+                loop: for (Int index : indexes)
+                    {
+                    if (index > deleted)
+                        {
+                        indexes[loop.count] = index - 1;
+                        }
+                    }
+                return indexes;
+                }
+            return indexes - 1;
+            }
         }
 
 
