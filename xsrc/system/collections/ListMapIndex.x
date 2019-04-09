@@ -174,13 +174,14 @@ mixin ListMapIndex<KeyType extends Hashable, ValueType>
     protected void buildIndex()
         {
         Int bucketCount = HashMap.calcBucketCount(size);
-        buckets = new Bucket[bucketCount];
+        Bucket[] buckets = new Bucket[bucketCount];
         loop: for (KeyType key : listKeys)
             {
             Int keyhash  = key.hash;
             Int bucketid = keyhash % bucketCount;
             buckets[bucketid] = addKeyTo(buckets[bucketid], keyhash, loop.count);
             }
+        this.buckets = buckets;
         }
 
     /**
