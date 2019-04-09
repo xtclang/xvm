@@ -222,11 +222,11 @@ mixin ListMapIndex<KeyType extends Hashable, ValueType>
             {
             // binary search the hash tree (which is stored in an array)
             HashTree tree = bucket;
-            Int lo = 0;
-            Int hi = tree.size - 1;
+            Int lo  = 0;
+            Int hi  = tree.size - 1;
+            Int mid = (lo + hi) >>> 1;
             while (lo <= hi)
                 {
-                Int mid = (lo + hi) >>> 1;
                 OneOrN indexes = tree[mid];
                 switch (hashFor(indexes) <=> keyhash)
                     {
@@ -353,7 +353,8 @@ mixin ListMapIndex<KeyType extends Hashable, ValueType>
                     return indexes[0];
 
                 default:
-                    return indexes.remove(index);
+                    assert indexes : indexes.remove(index);
+                    return indexes;
                 }
             }
 
@@ -404,17 +405,21 @@ mixin ListMapIndex<KeyType extends Hashable, ValueType>
      */
     protected void decrementIndexesAbove(Int deleted)
         {
+        Bucket[]? buckets = this.buckets;
+
         loop: for (Bucket bucket : buckets?)
             {
+            assert buckets != null; // TODO CP short circuit assumptions
+
             if (bucket != null)
                 {
                 if (bucket.is(HashTree))
                     {
-                    buckets[loop.count] = decrementAllInHashTreeAbove(bucket, index);
+                    buckets[loop.count] = decrementAllInHashTreeAbove(bucket, deleted);
                     }
                 else
                     {
-                    buckets[loop.count] = decrementOneOrNAbove(bucket, index);
+                    buckets[loop.count] = decrementOneOrNAbove(bucket, deleted);
                     }
                 }
             }

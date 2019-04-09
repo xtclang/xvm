@@ -276,7 +276,7 @@ const Version
 
         // for a non-GA parent, only a version number indicator can be added, and only if the last
         // indicator of the parent is the pre-release indicator
-        assert parent?.GA || parent?.form != Num;
+        assert parent?.GA || parent?.form != Num;  // TODO CP: the second parent? should be just "parent"
 
         for (Char ch : build?)
             {

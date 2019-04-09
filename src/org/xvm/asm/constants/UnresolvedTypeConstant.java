@@ -170,6 +170,22 @@ public class UnresolvedTypeConstant
         }
 
     @Override
+    public boolean isNullable()
+        {
+        return isTypeResolved() && getResolvedType().isNullable();
+        }
+
+    @Override
+    public TypeConstant removeNullable(ConstantPool pool)
+        {
+        if (isTypeResolved())
+            {
+            return getResolvedType().removeNullable(pool);
+            }
+        throw new IllegalStateException();
+        }
+
+    @Override
     public Category getCategory()
         {
         return isTypeResolved() ? getResolvedType().getCategory() : Category.OTHER;

@@ -351,6 +351,26 @@ public class Register
         }
 
     @Override
+    public boolean equals(Object obj)
+        {
+        if (this == obj)
+            {
+            return true;
+            }
+
+        if (obj instanceof Register)
+            {
+            Register that = (Register) obj;
+            return this.m_iArg              == that.m_iArg
+                && this.m_fRO               == that.m_fRO
+                && this.m_fEffectivelyFinal == that.m_fEffectivelyFinal
+                && this.isInPlace()         == that.isInPlace()
+                && this.getType().equals(      that.getType());
+            }
+        return false;
+        }
+
+    @Override
     public String toString()
         {
         StringBuilder sb = new StringBuilder();
