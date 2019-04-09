@@ -2821,8 +2821,10 @@ public abstract class Component
                         final ListMap<StringConstant, TypeConstant> map = new ListMap<>();
                         for (int i = 0; i < cParams; ++i)
                             {
-                            map.put((StringConstant) pool.getConstant(readMagnitude(in)),
-                                    (TypeConstant) pool.getConstant(readMagnitude(in)));
+                            int iName = readMagnitude(in);
+                            int iType = readMagnitude(in);
+                            map.put((StringConstant) pool.getConstant(iName),
+                                    iType == 0 ? null : (TypeConstant) pool.getConstant(iType));
                             }
                         m_mapParams = map;
                         }
@@ -3134,7 +3136,7 @@ public abstract class Component
                     {
                     TypeConstant typeConstraint = iterConstraint.next();
 
-                    if (!typeParam.isA(typeConstraint))
+                    if (typeConstraint != null && !typeParam.isA(typeConstraint))
                         {
                         // this contribution doesn't apply
                         return false;
@@ -3164,8 +3166,11 @@ public abstract class Component
                 ListMap<StringConstant, TypeConstant> mapNew = new ListMap<>();
                 for (Map.Entry<StringConstant, TypeConstant> entry : mapOld.asList())
                     {
-                    mapNew.put((StringConstant) pool.register(entry.getKey()),
-                               (TypeConstant  ) pool.register(entry.getValue()));
+                    StringConstant constName = entry.getKey();
+                    TypeConstant   type      = entry.getValue();
+
+                    mapNew.put((StringConstant) pool.register(constName),
+                               (TypeConstant)   (type == null ? null : pool.register(type)));
                     }
                 m_mapParams = mapNew;
                 }
@@ -3201,8 +3206,11 @@ public abstract class Component
                         writePackedLong(out, map.size());
                         for (Map.Entry<StringConstant, TypeConstant> entry : map.entrySet())
                             {
-                            writePackedLong(out, entry.getKey().getPosition());
-                            writePackedLong(out, entry.getValue().getPosition());
+                            StringConstant constName = entry.getKey();
+                            TypeConstant   type      = entry.getValue();
+
+                            writePackedLong(out, constName.getPosition());
+                            writePackedLong(out, type == null ? 0 : type.getPosition());
                             }
                         }
                     break;

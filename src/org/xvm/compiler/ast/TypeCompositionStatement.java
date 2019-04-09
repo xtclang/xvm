@@ -1184,11 +1184,8 @@ public class TypeCompositionStatement
                                 {
                                 // type is null means no constraint
                                 TypeExpression type = constraint.getType();
-                                if (type != null)
-                                    {
-                                    mapConstraints.put(constraint.getName(),
-                                            type.ensureTypeConstant());
-                                    }
+                                mapConstraints.put(constraint.getName(),
+                                        type == null ? null : type.ensureTypeConstant());
                                 }
                             }
 
