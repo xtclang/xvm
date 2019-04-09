@@ -519,11 +519,12 @@ public class NameExpression
         assert aTypes != null && aTypes.length >= 1;
 
         TypeConstant typeNew = aTypes[0];
-        TypeConstant typeOld = getType();
+        Argument     arg     = ctx.getVar(name.getValueText());
+        TypeConstant typeOld = arg == null ? getType() : arg.getType();
 
         if (!typeOld.equals(typeNew))
             {
-            assert typeNew.isA(typeOld);
+            assert typeNew.isA(getType());
 
             ctx.narrowType(this, Context.Branch.Always, typeNew);
             }

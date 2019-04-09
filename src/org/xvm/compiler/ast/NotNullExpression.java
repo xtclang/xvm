@@ -101,7 +101,7 @@ public class NotNullExpression
             {
             expr = exprNew;
             type = exprNew.getType();
-            if (pool.typeNull().isA(type))
+            if (pool.typeNull().isA(type))  // Nullable or Object or ...
                 {
                 type = type.removeNullable(pool);
                 }
