@@ -8,7 +8,7 @@ class KeyEntries<KeyType, ValueType>(Map<KeyType, ValueType> map)
     public/private Map<KeyType, ValueType> map;
 
     @Override
-    MutabilityConstraint mutability.get()
+    Mutability mutability.get()
         {
         return Mutable;
         }

@@ -121,7 +121,7 @@ const Int8
     @Override
     Bit[] to<Bit[]>()
         {
-        return bits.clone();
+        return bits;
         }
 
     @Override

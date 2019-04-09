@@ -136,7 +136,7 @@ class ListMap<KeyType, ValueType>
     // ----- Map properties and methods ------------------------------------------------------------
 
     @Override
-    public/private MutabilityConstraint mutability = Mutable;
+    public/private Mutability mutability = Mutable;
 
     @Override
     Int size.get()
@@ -286,7 +286,7 @@ class ListMap<KeyType, ValueType>
             implements Set<KeyType>
         {
         @Override
-        MutabilityConstraint mutability.get()
+        Mutability mutability.get()
             {
             return Mutable;
             }
@@ -551,7 +551,7 @@ class ListMap<KeyType, ValueType>
             implements Set<Map<KeyType, ValueType>.Entry>
         {
         @Override
-        MutabilityConstraint mutability.get()
+        Mutability mutability.get()
             {
             return Mutable;
             }
@@ -693,7 +693,7 @@ class ListMap<KeyType, ValueType>
             implements Collection<ValueType>
         {
         @Override
-        MutabilityConstraint mutability.get()
+        Mutability mutability.get()
             {
             return Mutable;
             }

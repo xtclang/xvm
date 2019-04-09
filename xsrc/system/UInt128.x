@@ -126,7 +126,7 @@ const UInt128
     @Override
     Bit[] to<Bit[]>()
         {
-        return bits.clone();
+        return bits;
         }
 
     @Override

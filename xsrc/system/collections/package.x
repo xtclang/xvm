@@ -28,7 +28,7 @@ package collections
      */
     interface VariablyMutable
         {
-        enum MutabilityConstraint(Boolean persistent)
+        enum Mutability(Boolean persistent)
             {
             /*
              * A _Mutable_  data structure allows mutations, including changes in its `size`.
@@ -38,7 +38,7 @@ package collections
              * A _Fixed-Size_ data structure allows mutations, but not those that would alter its
              * `size`
              */
-            FixedSize (False),
+            Fixed     (False),
             /*
              * A _Persistent_ data structure handles mutation requests by creating a new data
              * structure with the requested changes. While a Persistent data structure does not
@@ -54,9 +54,9 @@ package collections
             }
 
         /**
-         * The MutabilityConstraint of the data structure.
+         * The Mutability of the data structure.
          */
-        @RO MutabilityConstraint mutability;
+        @RO Mutability mutability;
         }
 
     /**
@@ -154,4 +154,12 @@ package collections
          */
         immutable ConstAble ensureConst(Boolean inPlace = false);
         }
+
+    /**
+     * An ConstantRequired exception is raised when an attempt is made to change mutability to
+     * Constant, and some reference that must be `immutable Const` cannot be made so or converted
+     * to be so.
+     */
+    const ConstantRequired(String? text = null, Exception? cause = null)
+            extends Exception(text, cause);
     }

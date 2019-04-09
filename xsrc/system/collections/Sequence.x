@@ -78,6 +78,14 @@ interface Sequence<ElementType>
         }
 
     /**
+     * @return a persistent array of elements from this sequence
+     */
+    ElementType[] to<ElementType[]>()
+        {
+        return new Array<ElementType>(Persistent, this);
+        }
+
+    /**
      * Look for the specified {@code value} starting at the specified index.
      *
      * @param value    the value to search for
