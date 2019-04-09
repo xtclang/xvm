@@ -370,7 +370,7 @@ class HashMap<KeyType, ValueType>
             implements Set<Entry>
         {
         @Override
-        MutabilityConstraint mutability.get()
+        Mutability mutability.get()
             {
             return Mutable;
             }

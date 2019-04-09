@@ -32,7 +32,7 @@ interface Map<KeyType, ValueType>
      *   implement the [ConstAble] interface.
      */
     @Override
-    @RO MutabilityConstraint mutability;
+    @RO Mutability mutability;
 
 
     // ----- read operations -----------------------------------------------------------------------
@@ -341,7 +341,7 @@ interface Map<KeyType, ValueType>
      *
      * @throws ReadOnly if an attempt is made to add or remove an entry in a map that is not
      *                  _mutable_, or to modify an entry in a map whose [mutability] is not
-     *                  `Mutable` or `FixedSize`
+     *                  `Mutable` or `Fixed`
      */
     <ResultType> Map<KeyType, ResultType> processAll(Collection<KeyType> keys,
             function ResultType (Entry) compute)

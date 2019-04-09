@@ -2,100 +2,15 @@
  * The List interface represents the intersection of the collection capabilities with the sequence
  * capabilities: an ordered sequence of values.
  *
- * TODO a "reverseOrder()" method could be useful
- * TODO a "randomizeOrder()" method could be useful
- * TODO a real sort implementation
- * TODO a binary search if there is a comparator
+ * TODO "class ReverseList(List list)"
+ * TODO "class RandomizedList(List list)"
+ * TODO functions for different sort implementations; default sort() to pick one based on size etc.
+ * TODO use binary search for contains/indexOf if there is a Comparator
  */
 interface List<ElementType>
         extends Sequence<ElementType>
         extends Collection<ElementType>
     {
-    // ----- List Cursor ---------------------------------------------------------------------------
-
-    /**
-     * A Cursor is a stateful, mutable navigator of a List. It can be used to walk through a list in
-     * either direction, to randomly-access the list by altering its {@link index}, can replace the
-     * the values of elements in the list, insert or append new elements into the list, or delete
-     * elements from the list.
-     */
-    interface Cursor
-        {
-        /**
-         * The containing list.
-         */
-        @RO List list;
-
-        /**
-         * The current index of the cursor within the list, which is a value between {@code 0}
-         * (inclusive) and {@code size} (inclusive). If the index is equal to {@code size}, then the
-         * cursor is "beyond the end of the list", and refers to a non-existent element.
-         *
-         * @throws OutOfBounds  if an attempt is made to set the index to a position less than
-         *                      {@code 0} or more than {@code size}
-         */
-        Int index;
-
-        /**
-         * Move the cursor so that it points to the _next_ element in the list. If there are no more
-         * elements in the list, then the index will be set to {@code size}, and the cursor will be
-         * "beyond the end of the list", and referring to a non-existent element.
-         *
-         * @return true if the cursor has advanced to another element in the list, or false if the
-         *         cursor is now beyond the end of the list
-         */
-        Boolean advance();
-
-        /**
-         * Move the cursor so that it points to the _previous_ element in the list. If there are no
-         * elements preceding the current element in the list, then the index will be set to
-         * {@code 0}, and referring to the first element in the list.
-         *
-         * @return true if the cursor has rewound to another element in the list, or false if the
-         *         cursor was already at the beginning of the list
-         */
-        Boolean rewind();
-
-        /**
-         * This is the value of the element at the current index in the list. If the index is beyond
-         * the end of the list, then the value cannot be accessed (an attempt will raise an
-         * exception), but _setting_ the value is legal, and will append the specified value to the
-         * end of the list.
-         *
-         * @throws ReadOnly     if the List is not _mutable_ or _fixed-size_
-         * @throws OutOfBounds  if an attempt is made to access the value when the cursor is
-         *                      beyond the end of the list
-         */
-        ElementType value;
-
-        /**
-         * Insert the specified element at the current index, shifting the contents of the entire
-         * remainder of the list "to the right" as a result. If the index is beyond the end of the
-         * list, this operation has the same effect as setting the {@link Cursor.value} property.
-         *
-         * After this method completes successfully, the cursor will be positioned on the newly
-         * inserted element.
-         *
-         * @throws ReadOnly  if the List is not _mutable_
-         */
-        void insert(ElementType value);
-
-        /**
-         * Delete the element at the current index, shifting the contents of the entire remainder of
-         * the list "to the left" as a result.
-         *
-         * After this method completes successfully, the cursor will be positioned on the element
-         * that immediately followed the element that was just deleted, or on the non-existent
-         * element "beyond the end of the list" if the element deleted was the last element in the
-         * list.
-         *
-         * @throws ReadOnly     if the List is not _mutable_
-         * @throws OutOfBounds  if an attempt is made to delete the value when the cursor is
-         *                      beyond the end of the list
-         */
-        void delete();
-        }
-
     /**
      * Obtain a list cursor that is located at the specified index.
      *
@@ -107,9 +22,9 @@ interface List<ElementType>
      * @throws OutOfBounds  if the specified index is outside of range {@code 0} (inclusive) to
      *                      {@code size} (inclusive)
      */
-    Cursor cursor(Int index = 0)
+    Cursor cursorAt(Int index = 0)
         {
-        return new SimpleCursor(index);
+        return new IndexCursor(this, index);
         }
 
     /**
@@ -271,138 +186,89 @@ interface List<ElementType>
         return this;
         }
 
-    // ----- Cursor implementation -----------------------------------------------------------------
+
+    // ----- List Cursor ---------------------------------------------------------------------------
 
     /**
-     * A SimpleCursor delegates all operations back to the List that created it.
+     * A Cursor is a stateful, mutable navigator of a List. It can be used to walk through a list in
+     * either direction, to randomly-access the list by altering its {@link index}, can replace the
+     * the values of elements in the list, insert or append new elements into the list, or delete
+     * elements from the list.
      */
-    class SimpleCursor
-            implements Cursor
+    interface Cursor
         {
         /**
-         * Construct a SimpleCursor for the containing List.
-         *
-         * @param index pass {@code -1} to start the cursor before the beginning of the List,
-         *        {@code List.size} to start the cursor beyond the end of the List, or any value
-         *        between {@code 0} (inclusive) and {@code List.size} (exclusive) to start the
-         *        cursor on a specific element (as if the caller had just obtained that element from
-         *        a call to {@link Cursor.next next()} or {@link Cursor.prev prev()})
+         * The containing list.
          */
-        construct(Int index)
-            {
-            if (index < 0 || index > List.this.size)
-                {
-                throw new OutOfBounds();
-                }
-            internalIndex = index;
-            }
+        @RO List list;
 
         /**
-         * This is the internal property in which the actual index is stored.
+         * The current index of the cursor within the list, which is a value between {@code 0}
+         * (inclusive) and {@code size} (inclusive). If the index is equal to {@code size}, then the
+         * cursor is "beyond the end of the list", and refers to a non-existent element.
+         *
+         * @throws OutOfBounds  if an attempt is made to set the index to a position less than
+         *                      {@code 0} or more than {@code size}
          */
-        private Int internalIndex;
+        Int index;
 
-        @Override
-        Int index
-            {
-            @Override
-            Int get()
-                {
-                return internalIndex.minOf(List.this.size);
-                }
+        /**
+         * Move the cursor so that it points to the _next_ element in the list. If there are no more
+         * elements in the list, then the index will be set to {@code size}, and the cursor will be
+         * "beyond the end of the list", and referring to a non-existent element.
+         *
+         * @return true if the cursor has advanced to another element in the list, or false if the
+         *         cursor is now beyond the end of the list
+         */
+        Boolean advance();
 
-            @Override
-            void set(Int i)
-                {
-                if (i < 0 || i > List.this.size)
-                    {
-                    throw new OutOfBounds();
-                    }
-                internalIndex = i;
-                }
-            }
+        /**
+         * Move the cursor so that it points to the _previous_ element in the list. If there are no
+         * elements preceding the current element in the list, then the index will be set to
+         * {@code 0}, and referring to the first element in the list.
+         *
+         * @return true if the cursor has rewound to another element in the list, or false if the
+         *         cursor was already at the beginning of the list
+         */
+        Boolean rewind();
 
-        @Override
-        Boolean advance()
-            {
-            Int i    = internalIndex + 1;
-            Int size = List.this.size;
-            internalIndex = i.minOf(size);
-            return i < size;
-            }
+        /**
+         * This is the value of the element at the current index in the list. If the index is beyond
+         * the end of the list, then the value cannot be accessed (an attempt will raise an
+         * exception), but _setting_ the value is legal, and will append the specified value to the
+         * end of the list.
+         *
+         * @throws ReadOnly     if the List is not _mutable_ or _fixed-size_
+         * @throws OutOfBounds  if an attempt is made to access the value when the cursor is
+         *                      beyond the end of the list
+         */
+        ElementType value;
 
-        @Override
-        Boolean rewind()
-            {
-            Int i = internalIndex;
-            if (i > 0)
-                {
-                internalIndex = i - 1;
-                return true;
-                }
-            return false;
-            }
+        /**
+         * Insert the specified element at the current index, shifting the contents of the entire
+         * remainder of the list "to the right" as a result. If the index is beyond the end of the
+         * list, this operation has the same effect as setting the {@link Cursor.value} property.
+         *
+         * After this method completes successfully, the cursor will be positioned on the newly
+         * inserted element.
+         *
+         * @throws ReadOnly  if the List is not _mutable_
+         */
+        void insert(ElementType value);
 
-        @Override
-        ElementType value
-            {
-            @Override
-            ElementType get()
-                {
-                // may throw OutOfBounds
-                return List.this[index];
-                }
-
-            @Override
-            void set(ElementType value)
-                {
-                Int i    = internalIndex;
-                Int size = List.this.size;
-                if (i < size)
-                    {
-                    // may throw ReadOnly
-                    List.this[i] = value;
-                    }
-                else
-                    {
-                    if (List newList : List.this.add(value))
-                        {
-                        assert &newList == &List.this;
-                        internalIndex = size;
-                        }
-                    }
-                }
-            }
-
-        @Override
-        void insert(ElementType value)
-            {
-            Int  i    = internalIndex;
-            Int  size = List.this.size;
-            List newList;
-            if (i < size)
-                {
-                newList = List.this.insert(i, value);
-                }
-            else
-                {
-                if (newList : List.this.add(value))
-                    {
-                    internalIndex = size;
-                    }
-                }
-            assert &newList == &List.this;
-            }
-
-        @Override
-        void delete()
-            {
-            Int i = index;
-            if (i < List.this.size)
-                {
-                List newList = List.this.delete(i);
-                assert &newList == &List.this;
-                }
-            }
+        /**
+         * Delete the element at the current index, shifting the contents of the entire remainder of
+         * the list "to the left" as a result.
+         *
+         * After this method completes successfully, the cursor will be positioned on the element
+         * that immediately followed the element that was just deleted, or on the non-existent
+         * element "beyond the end of the list" if the element deleted was the last element in the
+         * list.
+         *
+         * @throws ReadOnly     if the List is not _mutable_
+         * @throws OutOfBounds  if an attempt is made to delete the value when the cursor is
+         *                      beyond the end of the list
+         */
+        void delete();
         }
     }

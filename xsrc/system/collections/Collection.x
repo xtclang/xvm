@@ -47,7 +47,7 @@ interface Collection<ElementType>
      * Metadata: Is the collection maintained in an order that is a function of the elements in the
      * collection? And if so, what is the Comparator that represents that ordering?
      */
-    conditional Comparator sortedBy()
+    conditional Comparator<ElementType> sortedBy()
         {
         return false;
         }
@@ -105,9 +105,7 @@ interface Collection<ElementType>
     Iterator<ElementType> iterator();
 
     /**
-     * Obtain an array of elements from this collection.
-     *
-     * @return an array of elements from this collection
+     * @return a persistent array of elements from this collection
      */
     ElementType[] to<ElementType[]>()
         {
@@ -117,12 +115,10 @@ interface Collection<ElementType>
             {
             array[i++] = el;
             }
-        return array;
+        return array.ensurePersistent(True);
         }
 
     /**
-     * Obtain a Stream over the contents of this Collection.
-     *
      * @return a Stream over the contents of this Collection
      */
     Stream<ElementType> stream();
@@ -137,6 +133,7 @@ interface Collection<ElementType>
      *         nor vice versa
      */
     Collection clone();
+
 
     // ----- write operations ----------------------------------------------------------------------
 

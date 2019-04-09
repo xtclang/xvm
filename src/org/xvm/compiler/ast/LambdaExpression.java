@@ -1014,11 +1014,6 @@ public class LambdaExpression
         for (int i = 0; i < cParams; ++i)
             {
             String sName = i < cNames ? asParams[i] : null;
-            if (sName != null && sName.equals(Id.IGNORED.TEXT))
-                {
-                sName = null;
-                }
-
             aparamParams[i] = new org.xvm.asm.Parameter(pool, atypeParams[i], sName, null, false, i, false);
 
             // check if the parameter needs to be marked as being an implicit de-reference

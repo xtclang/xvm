@@ -1,78 +1,301 @@
 /**
- * An array is a container of elements of a particular type.
+ * Array is an implementation of List, an Int-indexed container of elements of a particular type.
+ *
+ * Array implements all four VariablyMutable forms: Mutable, Fixed, Persistent, and Constant.
+ * To construct an Array with a specific form of mutability, use the
+ * [construct(Mutability, ElementType...)] constructor.
  */
 class Array<ElementType>
         implements List<ElementType>
-        implements MutableAble
-        implements FixedSizeAble
-        implements PersistentAble
-        implements ConstAble
+        implements MutableAble, FixedSizeAble, PersistentAble, ConstAble
         implements Stringable
         incorporates Stringer
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     /**
      * Construct a dynamically growing array with the specified initial capacity.
+     *
+     * @param capacity  the suggested initial capacity; since the Array will grow as necessary, this
+     *                  is not required, but specifying it when the expected size of the Array is
+     *                  known allows the Array to pre-size itself, which can reduce the inefficiency
+     *                  related to resizing
      */
     construct(Int capacity = 0)
         {
         if (capacity < 0)
             {
-            throw new IllegalArgument("capacity " + capacity + " must be >= 0");
+            throw new IllegalArgument("capacity (" + capacity + ") must be >= 0");
             }
-        this.capacity   = capacity;
+
+        if (capacity > 0)
+            {
+            Element cur = new Element();
+            tail = cur;
+
+            while (--capacity > 0)
+                {
+                cur = new Element(cur);
+                }
+            head = cur;
+            }
+
         this.mutability = Mutable;
         }
 
     /**
      * Construct a fixed size array with the specified size and initial value.
+     *
+     * @param size    the size of the fixed size array
+     * @param supply  the value or the supply function for initializing the elements of the array
      */
     construct(Int size, ElementType | function ElementType (Int) supply)
         {
-        construct Array(size);
-
-        Element? head = null;
         if (size > 0)
             {
-            if (supply.is(ElementType))
-                {
-                Element tail = new Element(supply);
-                head = tail;
+            function ElementType (Int) valueFor = supply.is(ElementType) ? (_) -> supply : supply;
 
-                for (Int i : 1..size)
-                    {
-                    Element node = new Element(supply);
-                    tail.next = node;
-                    tail      = node;
-                    }
+            Element cur = new Element(valueFor(0));
+            head = cur;
+
+            for (Int i : 1..size)
+                {
+                Element next = new Element(valueFor(i));
+                cur.next = next;
+                cur      = next;
                 }
-            else
-                {
-                Element tail = new Element(supply(0));
-                head = tail;
+            tail = cur;
+            }
 
-                for (Int i : 1..size)
+        this.mutability = Fixed;
+        }
+
+    /**
+     * Construct a fixed size array with the specified size and initial value.
+     *
+     * @param mutability  the mutability setting for the array
+     * @param elements    the elements to use to initialize the contents of the array
+     */
+    construct(Mutability mutability, ElementType... elements)
+        {
+        Int size = elements.size;
+        if (size > 0)
+            {
+            function ElementType (ElementType) transform = mutability == Constant
+                    ? e -> (e.is(Const) ? e : e.is(ConstAble) ? e.ensureConst() : assert)  // TODO GG
+                    : e -> e;
+
+            Int     index = size - 1;
+            Element cur   = new Element(transform(elements[index]));
+            tail = cur;
+            while (--index >= 0)
+                {
+                cur = new Element(transform(elements[index]), cur);
+                }
+            head = cur;
+            }
+
+        this.mutability = mutability;
+        }
+    finally
+        {
+        if (mutability == Constant)
+            {
+            makeImmutable();
+            }
+        }
+
+
+    // ----- VariablyMutable methods ---------------------------------------------------------------
+
+    @Override
+    Array! ensureMutable()
+        {
+        return mutability == Mutable
+                ? this
+                : new Array(Mutable, this);
+        }
+
+    /**
+     * Return a fixed-size array (whose values are mutable) of the same type and with the same
+     * contents as this array. If this array is already a fixed-size array, then _this_ is returned.
+     */
+    @Override
+    Array! ensureFixedSize(Boolean inPlace = False)
+        {
+        if (inPlace && mutability == Mutable || mutability == Fixed)
+            {
+            mutability = Fixed;
+            return this;
+            }
+
+        return new Array(Fixed, this);
+        }
+
+    /**
+     * Return a persistent array of the same element types and values as are present in this array.
+     * If this array is already persistent or {@code const}, then _this_ is returned.
+     *
+     * A _persistent_ array does not support replacing the contents of the elements in this array
+     * using the {@link replace} method; instead, calls to {@link replace} will return a new array.
+     */
+    @Override
+    Array! ensurePersistent(Boolean inPlace = False)
+        {
+        if (inPlace && !mutability.persistent || mutability == Persistent)
+            {
+            mutability = Persistent;
+            return this;
+            }
+
+        return new Array(Persistent, this);
+        }
+
+    /**
+     * Return a {@code const} array of the same type and contents as this array.
+     *
+     * All mutating calls to a {@code const} array will result in the creation of a new
+     * {@code const} array with the requested changes incorporated.
+     *
+     * @throws Exception if any of the values in the array are not {@code const} and are not
+     *         {@link ConstAble}
+     */
+    @Override
+    immutable Array! ensureConst(Boolean inPlace = False)
+        {
+        if (mutability == Constant)
+            {
+            return this.as(immutable ElementType[]);
+            }
+
+        if (!inPlace)
+            {
+            return new Array(Constant, this).as(immutable ElementType[]);
+            }
+
+        // all elements must be Const or Constable
+        Boolean convert = False;
+        loop: for (ElementType element : this)
+            {
+            if (!element.is(Const))
+                {
+                if (element.is(ConstAble))
                     {
-                    Element node = new Element(supply(i));
-                    tail.next = node;
-                    tail      = node;
+                    convert = True;
+                    }
+                else
+                    {
+                    throw new ConstantRequired("[" + loop.count + "]");
                     }
                 }
             }
 
-        this.head       = head;
-        this.tail       = tail;
-        this.capacity   = size;
-        this.size       = size;
-        this.mutability = FixedSize;
+        if (convert)
+            {
+            loop2: for (ElementType element : this)                // TODO CP - loop not loop2
+                {
+                if (!element.is(Const))
+                    {
+                    this[loop2.count] = element.as(ConstAble).ensureConst(True); // TODO GG
+                    }
+                }
+            }
+
+        return makeImmutable();
         }
 
-    public/private Int capacity = 0;
+    @Override
+    immutable Array makeImmutable()
+        {
+        // the "mutability" property has to be set before calling super, since no changes will be
+        // allowed afterwards
+        Mutability prev = mutability;
+        if (!meta.immutable_)
+            {
+            mutability = Constant;
+            }
+
+        try
+            {
+            return super();
+            }
+        catch (Exception e)
+            {
+            if (!meta.immutable_)
+                {
+                mutability = prev;
+                }
+            throw e;
+            }
+        }
+
+
+    // ----- properties ----------------------------------------------------------------------------
+
+    /**
+     * The capacity of an array is the amount that the array can hold without resizing.
+     */
+    public Int capacity
+        {
+        @Override
+        Int get()
+            {
+            Int count = 0;
+            for (Element? cur = head; cur != null; cur = cur?.next : assert) // TODO GG "? :" should not be necessary
+                {
+                ++count;
+                }
+            return count;
+            }
+
+        @Override
+        void set(Int newCap)
+            {
+            Int oldCap = capacity; // TODO GG should be "get()" instead, but it can't find it
+            if (newCap == oldCap)
+                {
+                return;
+                }
+
+            assert newCap >= 0;
+            assert newCap >= size;
+            assert mutability == Mutable;
+
+            Element  cur     = new Element();
+            Element? oldTail = tail;
+            tail = cur;
+            while (--capacity > 0)
+                {
+                cur = new Element(cur);
+                }
+            if (head == null)
+                {
+                head = cur;
+                }
+            else
+                {
+                oldTail?.next = cur;
+                }
+            }
+        }
 
     @Override
-    public/private Int size     = 0;
+    Int size.get()
+        {
+        Int count = 0;
+        Element? cur = head;
+        while (cur?.valueRef.assigned)
+            {
+            ++count;
+            }
+        return count;
+        }
 
     @Override
-    public/private MutabilityConstraint mutability;
+    public/private Mutability mutability;
+
+
+    // ----- TODO ----------------------------------------------------------------------------
 
     @Override
     @Op ElementType getElement(Int index)
@@ -139,7 +362,7 @@ class Array<ElementType>
             case Constant:
                 throw new IllegalState("Array is constant");
 
-            case FixedSize:
+            case Fixed:
                 throw new IllegalState("Array is fixed size");
 
             case Persistent:
@@ -171,7 +394,7 @@ class Array<ElementType>
             case Constant:
                 throw new IllegalState("Array is constant");
 
-            case FixedSize:
+            case Fixed:
                 throw new IllegalState("Array is fixed size");
 
             case Persistent:
@@ -239,18 +462,18 @@ class Array<ElementType>
         Int c = a1.size;
         if (c != a2.size)
             {
-            return false;
+            return False;
             }
 
         for (Int i = 0; i < c; ++i)
             {
             if (a1[i] != a2[i])
                 {
-                return false;
+                return False;
                 }
             }
 
-        return true;
+        return True;
         }
 
     // ----- Stringable methods --------------------------------------------------------------------
@@ -327,184 +550,61 @@ class Array<ElementType>
 
     // ----- internal implementation details -------------------------------------------------------
 
+    /**
+     * Linked list head.
+     */
     private Element? head;
+
+    /**
+     * Linked list tail.
+     */
     private Element? tail;
 
-    private class Element(ElementType value, Element? next = null)
+    /**
+     * A node in the linked list.
+     */
+    private static class Element
             delegates Var<ElementType>(valueRef)
         {
+        /**
+         * Construct an empty element.
+         *
+         * @param next   the next element in the array (optional)
+         */
+        construct(Element? next = null)
+            {
+            this.next = next;
+            }
+
+        /**
+         * Construct an initialized element.
+         *
+         * @param value  the initial value for the element
+         * @param next   the next element in the array (optional)
+         */
+        construct(ElementType value, Element? next = null)
+            {
+            this.value = value;
+            this.next  = next;
+            }
+
+        /**
+         * The value stored in the element.
+         */
+        @Unassigned
+        ElementType value;
+
+        /**
+         * The next element in the linked list.
+         */
+        Element? next = null;
+
+        /**
+         * The reference to the storage for the `value` property.
+         */
         Var<ElementType> valueRef.get()
             {
             return &value;
-            }
-        }
-
-    @Override
-    Array! ensureMutable()
-        {
-        switch (mutability)
-            {
-            case Constant:
-            case Persistent:
-            case FixedSize:
-                {
-                ElementType[] that = new Array<ElementType>(size, (i) -> this[i]);
-                that.mutability = Mutable;
-                return that;
-                }
-
-            default:
-                return this;
-            }
-        }
-
-    /**
-     * Return a fixed-size array (whose values are mutable) of the same type and with the same
-     * contents as this array. If this array is already a fixed-size array, then _this_ is returned.
-     */
-    @Override
-    Array! ensureFixedSize(Boolean inPlace = false)
-        {
-        if (inPlace)
-            {
-            switch (mutability)
-                {
-                case Constant:
-                    throw new IllegalState("Array is constant");
-
-                case Persistent:
-                case Mutable:
-                    mutability = FixedSize;
-                    continue;
-
-                case FixedSize:
-                    return this;
-                }
-            }
-        else
-            {
-            switch (mutability)
-                {
-                case Constant:
-                case Persistent:
-                case Mutable:
-                    {
-                    ElementType[] that = new Array<ElementType>(size, (i) -> this[i]);
-                    that.mutability = FixedSize;
-                    return that;
-                    }
-
-                case FixedSize:
-                    return this;
-                }
-            }
-        }
-
-    /**
-     * Return a persistent array of the same element types and values as are present in this array.
-     * If this array is already persistent or {@code const}, then _this_ is returned.
-     *
-     * A _persistent_ array does not support replacing the contents of the elements in this array
-     * using the {@link replace} method; instead, calls to {@link replace} will return a new array.
-     */
-    @Override
-    Array! ensurePersistent(Boolean inPlace = false)
-        {
-        if (inPlace)
-            {
-            switch (mutability)
-                {
-                case Constant:
-                    throw new IllegalState("Array is constant");
-
-                case FixedSize:
-                case Mutable:
-                    mutability = Persistent;
-                    continue;
-
-                case Persistent:
-                    return this;
-                }
-            }
-        else
-            {
-            switch (mutability)
-                {
-                case Constant:
-                case FixedSize:
-                case Mutable:
-                    {
-                    ElementType[] that = new Array<ElementType>(size, (i) -> this[i]);
-                    that.mutability = Persistent;
-                    return that;
-                    }
-
-                case Persistent:
-                    return this;
-                }
-            }
-        }
-
-    /**
-     * Return a {@code const} array of the same type and contents as this array.
-     *
-     * All mutating calls to a {@code const} array will result in the creation of a new
-     * {@code const} array with the requested changes incorporated.
-     *
-     * @throws Exception if any of the values in the array are not {@code const} and are not
-     *         {@link ConstAble}
-     */
-    @Override
-    immutable Array! ensureConst(Boolean inPlace = false)
-        {
-        if (mutability == Constant)
-            {
-            return this.as(immutable ElementType[]);
-            }
-
-        if (inPlace)
-            {
-            return makeImmutable();
-            }
-
-        // otherwise, create a constant copy of this
-        ElementType[] that = new Array<ElementType>(size);
-        for (Int i : 0..size-1)
-            {
-            ElementType el = this[i];
-            if (el.is(ConstAble))
-                {
-                el = el.as(ConstAble) == this.as(ConstAble)
-                    ? that.as(ElementType)
-                    : el.ensureConst(false).as(ElementType);
-                }
-            that[i] = el;
-            }
-        return that.ensureConst(true);
-        }
-
-    @Override
-    immutable Array makeImmutable()
-        {
-        // the "mutability" property has to be set before calling super, since no changes will be
-        // allowed afterwards
-        MutabilityConstraint prev = mutability;
-        if (!meta.immutable_)
-            {
-            mutability = Constant;
-            }
-
-        try
-            {
-            return super();
-            }
-        catch (Exception e)
-            {
-            if (!meta.immutable_)
-                {
-                mutability = prev;
-                }
-            throw e;
             }
         }
     }
