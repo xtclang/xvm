@@ -233,11 +233,11 @@ public class CmpExpression
                 }
             else if (expr1New instanceof NameExpression && type2.equals(pool().typeNull()))
                 {
-                checkNullComparison(ctx, (NameExpression) expr1New);
+                fValid = checkNullComparison(ctx, (NameExpression) expr1New, errs);
                 }
             else if (expr2New instanceof NameExpression && type1.equals(pool().typeNull()))
                 {
-                checkNullComparison(ctx, (NameExpression) expr2New);
+                fValid = checkNullComparison(ctx, (NameExpression) expr2New, errs);
                 }
             }
 
@@ -245,7 +245,7 @@ public class CmpExpression
                 fValid ? TypeFit.Fit : TypeFit.NoFit, constVal, errs);
         }
 
-    private void checkNullComparison(Context ctx, NameExpression exprTarget)
+    private boolean checkNullComparison(Context ctx, NameExpression exprTarget, ErrorListener errs)
         {
         ConstantPool pool       = pool();
         TypeConstant typeTarget = exprTarget.getType();
@@ -253,7 +253,11 @@ public class CmpExpression
         TypeConstant typeTrue   = null;
         TypeConstant typeFalse  = null;
 
-        assert typeTarget.isNullable();
+        if (!typeTarget.isNullable())
+            {
+            log(errs, Severity.ERROR, Compiler.EXPRESSION_NOT_NULLABLE, typeTarget.getValueString());
+            return false;
+            }
 
         switch (operator.getId())
             {
@@ -270,6 +274,7 @@ public class CmpExpression
 
         ctx.narrowType(exprTarget, Branch.WhenTrue,  typeTrue);
         ctx.narrowType(exprTarget, Branch.WhenFalse, typeFalse);
+        return true;
         }
 
     @Override
