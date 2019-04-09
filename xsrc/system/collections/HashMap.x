@@ -634,7 +634,7 @@ class HashMap<KeyType, ValueType>
      * @return the suggested number of buckets to achieve the specified capacity, and the
      *         suggested grow and shrink thresholds
      */
-    protected static (Int bucketCount, Int growAt, Int shrinkAt) calcBucketCount(Int capacity)
+    static (Int bucketCount, Int growAt, Int shrinkAt) calcBucketCount(Int capacity)
         {
         assert capacity >= 0;
 
