@@ -102,7 +102,7 @@ public class TernaryExpression
         TypeFit      fit  = TypeFit.Fit;
         ConstantPool pool = pool();
 
-        ctx = ctx.enter();
+        ctx = ctx.enterIf();
 
         Expression exprNewCond = cond.validate(ctx, pool.typeBoolean(), errs);
         if (exprNewCond == null)

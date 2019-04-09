@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.Jump;
@@ -104,7 +105,7 @@ public class IfStatement
         {
         boolean fValid = true;
 
-        ctx = ctx.enter();
+        ctx = ctx.enterIf();
 
         // the condition is either a boolean expression or an assignment statement whose R-value is
         // a multi-value with the first value being a boolean

@@ -46,14 +46,29 @@ import org.xvm.util.Severity;
 public class Context
     {
     /**
-     * Construct a Context.
+     * Construct a Context that doesn't block promotion of non-complete state.
      *
-     * @param ctxOuter  the context that this Context is nested within
+     * @param ctxOuter      the context that this Context is nested within
+     * @param fDemuxOnExit  true if this context should demux the assignment information
      */
     protected Context(Context ctxOuter, boolean fDemuxOnExit)
         {
-        m_ctxOuter     = ctxOuter;
-        m_fDemuxOnExit = fDemuxOnExit;
+        this(ctxOuter, fDemuxOnExit, false);
+        }
+
+    /**
+     * Construct a Context.
+     *
+     * @param ctxOuter           the context that this Context is nested within
+     * @param ctxOuter           the context that this Context is nested within
+     * @param fDemuxOnExit       true if this context should demux the assignment information
+     * @param fBlockNonComplete  true if this context should block promotion of non-complete state
+     */
+    protected Context(Context ctxOuter, boolean fDemuxOnExit, boolean fBlockNonComplete)
+        {
+        m_ctxOuter          = ctxOuter;
+        m_fDemuxOnExit      = fDemuxOnExit;
+        m_fBlockNonComplete = fBlockNonComplete;
         }
 
     /**
@@ -161,6 +176,18 @@ public class Context
     public Context enterBlackhole()
         {
         return new BlackholeContext(this);
+        }
+
+    /**
+     * Create a nested "if" of this context.
+     * <p/>
+     * Note: This can only be used during the validate() stage.
+     *
+     * @return the new "if" context
+     */
+    public Context enterIf()
+        {
+        return new IfContext(this);
         }
 
     /**
@@ -317,15 +344,23 @@ public class Context
 
         if (fCompleting)
             {
+            for (Entry<String, Argument> entry : getNameMap().entrySet())
+                {
+                promoteNarrowedType(entry.getKey(), entry.getValue(), Branch.Always);
+                }
             for (Entry<String, Argument> entry : getNarrowingMap(true).entrySet())
                 {
-                promoteNarrowedType(entry.getKey(), entry.getValue(), true);
+                promoteNarrowedType(entry.getKey(), entry.getValue(), Branch.WhenTrue);
                 }
             for (Entry<String, Argument> entry : getNarrowingMap(false).entrySet())
                 {
-                promoteNarrowedType(entry.getKey(), entry.getValue(), false);
+                promoteNarrowedType(entry.getKey(), entry.getValue(), Branch.WhenFalse);
                 }
 
+            for (Entry<String, TypeConstant> entry : getFormalTypeMap(Branch.Always).entrySet())
+                {
+                promoteNarrowedFormalType(entry.getKey(), entry.getValue(), Branch.Always);
+                }
             for (Entry<String, TypeConstant> entry : getFormalTypeMap(Branch.WhenTrue).entrySet())
                 {
                 promoteNarrowedFormalType(entry.getKey(), entry.getValue(), Branch.WhenTrue);
@@ -334,6 +369,10 @@ public class Context
                 {
                 promoteNarrowedFormalType(entry.getKey(), entry.getValue(), Branch.WhenFalse);
                 }
+            }
+        else if (!m_fBlockNonComplete)
+            {
+            ctxOuter.promoteNonCompleting(this);
             }
 
         return ctxOuter;
@@ -430,12 +469,16 @@ public class Context
      * Promote narrowing type information for the specified argument from this context to its
      * enclosing context.
      *
-     * @param sName      the variable name
-     * @param arg        the corresponding narrowed argument
-     * @param fWhenTrue  true if the argument comes from the WhenTrue branch; false for WhenFalse
+     * @param sName   the variable name
+     * @param arg     the corresponding narrowed argument
+     * @param branch  the branch this narrowing comes from
      */
-    protected void promoteNarrowedType(String sName, Argument arg, boolean fWhenTrue)
+    protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
         {
+        if (branch == Branch.Always && !isVarDeclaredInThisScope(sName))
+            {
+            getOuterContext().narrowLocalRegister(sName, arg);
+            }
         }
 
     /**
@@ -444,10 +487,24 @@ public class Context
      *
      * @param sName       the formal type name
      * @param typeNarrow  the corresponding narrowed type
-     * @param branch      the branch this narrowing comes from (never Always)
+     * @param branch      the branch this narrowing comes from
      */
     protected void promoteNarrowedFormalType(String sName, TypeConstant typeNarrow, Branch branch)
         {
+        if (branch == Branch.Always)
+            {
+            getOuterContext().narrowFormalType(sName, branch, typeNarrow);
+            }
+        }
+
+    /**
+     * Promote the non-completing state from the specified context to this one.
+     *
+     * @param ctxInner  the inner context that is non-completing
+     */
+    protected void promoteNonCompleting(Context ctxInner)
+        {
+        markNonCompleting();
         }
 
     /**
@@ -1185,16 +1242,25 @@ public class Context
         Register regNarrow = reg.narrowType(typeNarrow);
         if (branch == Branch.Always)
             {
-            if (ensureNameMap().put(sName, regNarrow) != null)
-                {
-                // the narrowing register has replaced a local register; remember that fact
-                regNarrow.markInPlace();
-                }
+            narrowLocalRegister(sName, regNarrow);
             }
         else
             {
             ensureNarrowingMap(branch == Branch.WhenTrue).put(sName, regNarrow);
             }
+        }
+
+    /**
+     * Narrow the type of the specified variable in this context for the "always" branch.
+     */
+    protected void narrowLocalRegister(String sName, Argument argNarrow)
+        {
+        if (argNarrow instanceof Register && isVarDeclaredInThisScope(sName))
+            {
+            // the narrowing register is replacing a local register; remember that fact
+            ((Register) argNarrow).markInPlace();
+            }
+        ensureNameMap().put(sName, argNarrow);
         }
 
     /**
@@ -1515,7 +1581,7 @@ public class Context
          */
         public BlackholeContext(Context ctxOuter)
             {
-            super(ctxOuter, false);
+            super(ctxOuter, false, true);
             }
 
         @Override
@@ -1538,6 +1604,112 @@ public class Context
             }
         }
 
+    // ----- inner class: IfContext ----------------------------------------------------------------
+
+    /**
+     * A custom context implementation to provide type-narrowing as a natural side-effect of an
+     * "if" or a "ternary" block with a terminating branch.
+     */
+    static class IfContext
+            extends Context
+        {
+        public IfContext(Context outer)
+            {
+            super(outer, true);
+            }
+
+        @Override
+        public boolean isCompleting()
+            {
+            return m_ctxWhenTrue  == null || m_ctxWhenTrue .isCompleting()
+                || m_ctxWhenFalse == null || m_ctxWhenFalse.isCompleting();
+            }
+
+        @Override
+        public Context enterFork(boolean fWhenTrue)
+            {
+            Context ctx = super.enterFork(fWhenTrue);
+            if (fWhenTrue)
+                {
+                m_ctxWhenTrue = ctx;
+                }
+            else
+                {
+                m_ctxWhenFalse = ctx;
+                }
+            return ctx;
+            }
+
+        @Override
+        protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
+            {
+            super.promoteNarrowedType(sName, arg, branch);
+
+            // if both branches have an identical narrowing - promote
+            if (branch == Branch.WhenTrue)
+                {
+                if (arg.equals(getNarrowingMap(false).get(sName)))
+                    {
+                    getOuterContext().narrowLocalRegister(sName, arg); // Always
+                    }
+                }
+            }
+
+        @Override
+        protected void promoteNarrowedFormalType(String sName, TypeConstant typeNarrowed, Branch branch)
+            {
+            super.promoteNarrowedFormalType(sName, typeNarrowed, branch);
+
+            // if both branches have an identical narrowing - promote
+            if (branch == Branch.WhenTrue)
+                {
+                if (typeNarrowed.equals(getFormalTypeMap(branch.complement()).get(sName)))
+                    {
+                    getOuterContext().ensureFormalTypeMap(Branch.Always).put(sName, typeNarrowed);
+                    }
+                }
+            }
+
+        @Override
+        protected void promoteNonCompleting(Context ctxInner)
+            {
+            discardBranch(ctxInner == m_ctxWhenTrue);
+            }
+
+        private void discardBranch(boolean fWhenTrue)
+            {
+            Map mapBranch;
+
+            // clear this branch
+            mapBranch = getNarrowingMap(fWhenTrue);
+            if (!mapBranch.isEmpty())
+                {
+                mapBranch.clear();
+                }
+            mapBranch = getFormalTypeMap(Branch.of(fWhenTrue));
+            if (!mapBranch.isEmpty())
+                {
+                mapBranch.clear();
+                }
+
+            // copy the opposite branch; the context may merge it (see IfContext)
+            mapBranch = getNarrowingMap(!fWhenTrue);
+            if (!mapBranch.isEmpty())
+                {
+                ensureNarrowingMap(fWhenTrue).putAll(mapBranch);
+                }
+
+            mapBranch = getFormalTypeMap(Branch.of(!fWhenTrue));
+            if (!mapBranch.isEmpty())
+                {
+                ensureFormalTypeMap(Branch.of(fWhenTrue)).putAll(mapBranch);
+                }
+            }
+
+
+        private Context m_ctxWhenTrue;
+        private Context m_ctxWhenFalse;
+        }
 
     // ----- inner class: ForkedContext ------------------------------------------------------------
 
@@ -1593,6 +1765,26 @@ public class Context
             return asnOuter.join(asnInner, isWhenTrue());
             }
 
+        @Override
+        protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
+            {
+            // promote our "always" into the corresponding parent's branch
+            if (branch == Branch.Always && !isVarDeclaredInThisScope(sName))
+                {
+                getOuterContext().ensureNarrowingMap(m_fWhenTrue).put(sName, arg);
+                }
+            }
+
+        @Override
+        protected void promoteNarrowedFormalType(String sName, TypeConstant typeNarrowed, Branch branch)
+            {
+            // promote our "always" into the corresponding parent's branch
+            if (branch == Branch.Always)
+                {
+                getOuterContext().ensureFormalTypeMap(Branch.of(m_fWhenTrue)).put(sName, typeNarrowed);
+                }
+            }
+
         private boolean m_fWhenTrue;
         }
 
@@ -1607,7 +1799,7 @@ public class Context
         {
         public AndContext(Context ctxOuter)
             {
-            super(ctxOuter, false);
+            super(ctxOuter, false, true);
             }
 
         @Override
@@ -1647,10 +1839,12 @@ public class Context
             }
 
         @Override
-        protected void promoteNarrowedType(String sName, Argument arg, boolean fWhenTrue)
+        protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
             {
-            // we only promote our "true" into the parent's "true" branch
-            if (fWhenTrue)
+            super.promoteNarrowedType(sName, arg, branch);
+
+            // promote our "true" into the parent's "true" branch
+            if (branch == Branch.WhenTrue)
                 {
                 getOuterContext().ensureNarrowingMap(true).put(sName, arg);
                 }
@@ -1659,8 +1853,10 @@ public class Context
         @Override
         protected void promoteNarrowedFormalType(String sName, TypeConstant typeNarrowed, Branch branch)
             {
-            // we only promote our "true" into the parent's "true" branch
-            if (branch == Branch.WhenTrue)
+            super.promoteNarrowedFormalType(sName, typeNarrowed, branch);
+
+            // promote our "true" into the parent's "true" branch
+            if (branch != Branch.WhenFalse)
                 {
                 getOuterContext().ensureFormalTypeMap(branch).put(sName, typeNarrowed);
                 }
@@ -1678,7 +1874,7 @@ public class Context
         {
         public OrContext(Context ctxOuter)
             {
-            super(ctxOuter, false);
+            super(ctxOuter, false, true);
             }
 
         @Override
@@ -1718,10 +1914,12 @@ public class Context
             }
 
         @Override
-        protected void promoteNarrowedType(String sName, Argument arg, boolean fWhenTrue)
+        protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
             {
-            // we only promote our "false" into the parent's "false" branch
-            if (!fWhenTrue)
+            super.promoteNarrowedType(sName, arg, branch);
+
+            // promote our "false" into the parent's "false" branch
+            if (branch == Branch.WhenFalse)
                 {
                 getOuterContext().ensureNarrowingMap(false).put(sName, arg);
                 }
@@ -1730,7 +1928,9 @@ public class Context
         @Override
         protected void promoteNarrowedFormalType(String sName, TypeConstant typeNarrowed, Branch branch)
             {
-            // we only promote our "false" into the parent's "false" branch
+            super.promoteNarrowedFormalType(sName, typeNarrowed, branch);
+
+            // promote our "false" into the parent's "false" branch
             if (branch == Branch.WhenFalse)
                 {
                 getOuterContext().ensureFormalTypeMap(branch).put(sName, typeNarrowed);
@@ -1749,7 +1949,7 @@ public class Context
         {
         public NotContext(Context ctxOuter)
             {
-            super(ctxOuter, false);
+            super(ctxOuter, false, true);
             }
 
         @Override
@@ -1783,15 +1983,29 @@ public class Context
             }
 
         @Override
-        protected void promoteNarrowedType(String sName, Argument arg, boolean fWhenTrue)
+        protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
             {
-            getOuterContext().ensureNarrowingMap(!fWhenTrue).put(sName, arg);
+            if (branch == Branch.Always)
+                {
+                super.promoteNarrowedType(sName, arg, branch);
+                }
+            else
+                {
+                getOuterContext().ensureNarrowingMap(branch != Branch.WhenTrue).put(sName, arg);
+                }
             }
 
         @Override
         protected void promoteNarrowedFormalType(String sName, TypeConstant typeNarrowed, Branch branch)
             {
-            getOuterContext().ensureFormalTypeMap(branch.complement()).put(sName, typeNarrowed);
+            if (branch == Branch.Always)
+                {
+                super.promoteNarrowedFormalType(sName, typeNarrowed, branch);
+                }
+            else
+                {
+                getOuterContext().ensureFormalTypeMap(branch.complement()).put(sName, typeNarrowed);
+                }
             }
         }
 
@@ -1806,7 +2020,7 @@ public class Context
         {
         public LoopingContext(Context ctxOuter)
             {
-            super(ctxOuter, true);
+            super(ctxOuter, true, true);
             }
 
         @Override
@@ -1900,7 +2114,7 @@ public class Context
          */
         public CaptureContext(Context ctxOuter)
             {
-            super(ctxOuter, true);
+            super(ctxOuter, true, true);
             }
 
         @Override
@@ -2082,6 +2296,12 @@ public class Context
      * construct.
      */
     private boolean m_fNonCompleting;
+
+    /**
+     * Set to true when the context doesn't promote the "non-completing" state to the outside
+     * context upon exit.
+     */
+    private boolean m_fBlockNonComplete;
 
     /**
      * Each variable declared within this context is registered in this map, along with the
