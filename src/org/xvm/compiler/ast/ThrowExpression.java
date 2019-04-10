@@ -221,7 +221,7 @@ public class ThrowExpression
     @Override
     public String toString()
         {
-        return "throw " + expr.toString() + ';';
+        return keyword + (expr == null ? "" : expr.toString()) + ';';
         }
 
     @Override
