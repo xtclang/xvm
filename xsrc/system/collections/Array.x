@@ -196,7 +196,7 @@ class Array<ElementType>
                 {
                 if (!element.is(Const))
                     {
-                    this[loop2.count] = element.as(ConstAble).ensureConst(True); // TODO GG
+                    this[loop2.count] = element.as(ConstAble+ElementType).ensureConst(True); // TODO GG
                     }
                 }
             }
