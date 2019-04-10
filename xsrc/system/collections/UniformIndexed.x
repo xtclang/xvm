@@ -22,7 +22,7 @@ interface UniformIndexed<IndexType, ElementType>
     /**
      * Obtain a Ref for the specified element.
      */
-    @Op Ref<ElementType> elementAt(IndexType index)
+    Ref<ElementType> elementAt(IndexType index)
         {
         return new SimpleVar(index);
 

@@ -126,6 +126,15 @@ interface Stream<ElementType>
      */
     Stream skip(Int count);
 
+    /**
+     * Returns a second stream that is a copy of this stream, allowing a terminal operation on one
+     * of the two streams to be used without affecting the other.
+     *
+     * @return a clone of this stream
+     */
+    Stream clone();
+
+
     // ----- terminal operations -------------------------------------------------------------------
 
     /**
@@ -171,8 +180,6 @@ interface Stream<ElementType>
      */
     void forEach(function void (ElementType) process)
         {
-        // the default behavior delegates to the Iterator, but an implementation that parallelizes
-        // the stream will likely override this behavior
         iterator().forEach(process);
         }
 
@@ -191,8 +198,6 @@ interface Stream<ElementType>
      */
     Boolean anyMatch(function Boolean (ElementType) match)
         {
-        // the default behavior delegates to the Iterator, but an implementation that parallelizes
-        // the stream will likely override this behavior
         return iterator().untilAny(match);
         }
 
@@ -211,8 +216,6 @@ interface Stream<ElementType>
      */
     Boolean allMatch(function Boolean (ElementType) match)
         {
-        // the default behavior delegates to the Iterator, but an implementation that parallelizes
-        // the stream will likely override this behavior
         return iterator().whileEach(match);
         }
 
@@ -245,8 +248,7 @@ interface Stream<ElementType>
      */
     conditional ElementType first()
         {
-        // the default behavior delegates to the Iterator, but an implementation that parallelizes
-        // the stream will likely override this behavior, and an implementation that is aware of
+        // the default behavior delegates to the Iterator, but an implementation that is aware of
         // the underlying data structure could short-cut the processing
         return iterator().next();
         }
@@ -344,8 +346,7 @@ interface Stream<ElementType>
      */
     Int count()
         {
-        // the default behavior delegates to the Iterator, but an implementation that parallelizes
-        // the stream will likely override this behavior, and an implementation that is aware of
+        // the default behavior delegates to the Iterator, but an implementation that is aware of
         // additional metadata (like the "size" property of a Collection) could short-cut the
         // processing
         Int n = 0;
@@ -367,8 +368,7 @@ interface Stream<ElementType>
      */
     ElementType[] toArray()
         {
-        // the default behavior delegates to the Iterator, but an implementation that parallelizes
-        // the stream will likely override this behavior, and an implementation that is aware of
+        // the default behavior delegates to the Iterator, but an implementation that is aware of
         // additional metadata (like the "size" property and the contents of a Collection) could
         // short-cut the processing
         ElementType[] elements = new ElementType[];
@@ -378,6 +378,7 @@ interface Stream<ElementType>
             }
         return elements;
         }
+
 
     // ----- advanced terminal operations ----------------------------------------------------------
 
@@ -443,28 +444,33 @@ interface Stream<ElementType>
         }
 
     /**
-     * Performs a mutable reduction operation on the elements of this stream.
-     * A mutable reduction is one in which the reduced value is a mutable result container,
-     * such as a List, and elements are incorporated by updating the state of
-     * the result rather than by replacing the result.  This
-     * produces a result equivalent to:
-     * <pre>{@code
-     *     R result = supplier.get();
-     *     for (ElementType element : this stream)
-     *         accumulator.accept(result, element);
-     *     return result;
-     * }</pre>
+     * Performs a mutable reduction operation on the elements of this stream. A mutable reduction
+     * is one in which the reduced value is a mutable result container, such as a List, and elements
+     * are incorporated by updating the state of the result rather than by replacing the result.
+     *f
+     * This method produces a result equivalent to:
+     *
+     *   ResultType result = supply();
+     *   for (ElementType element : this)
+     *       {
+     *       if (!accumulate(result, element))
+     *           {
+     *           break;
+     *           }
+     *       }
+     *   return result;
      *
      * This is a terminal operation.
      *
-     * @param supply      a function that creates a new result container. For a
-     *                    parallel execution, this function may be called
-     *                    multiple times and must return a fresh value each time
-     * @param accumulate  an associative, non-interfering, stateless
-     *                    function for incorporating an additional element into a result
-     * @param combine     an associative, non-interfering, stateless
-     *                    function for combining two values, which must be
-     *                    compatible with the accumulator function
+     * @param supply      a function that creates a new result container; if called more than once,
+     *                    this function must return a fresh value each time
+     * @param accumulate  an associative, non-interfering, stateless function for incorporating an
+     *                    additional element into a result
+     * @param combine     when the collection process is performed in two or more units, such as
+     *                    when performed concurrently, this function merges any two results into
+     *                    one result; it may be called more than once such that each of the partial
+     *                    results will ultimately be combined into a single result
+     *
      * @return the result of the reduction
      */
     <ResultType> ResultType collect(
@@ -478,7 +484,7 @@ interface Stream<ElementType>
     /**
      * Performs a mutable reduction operation on the elements of this stream using a
      * {@code Collector}. The Collector encapsulates the functionality of all of the various stages
-     * of reduction, including support for parallelization.
+     * of reduction.
      *
      * This is a terminal operation.
      *
@@ -490,8 +496,6 @@ interface Stream<ElementType>
     <ResultType, AccumulationType>
     ResultType collect(Collector<ElementType, AccumulationType, ResultType> collector)
         {
-        // the default behavior delegates to the Iterator, but an implementation that parallelizes
-        // the stream will likely override this behavior
         AccumulationType container = collector.supply();
         iterator().whileEach(element -> collector.accumulate(container, element));
         return collector.finish(container);

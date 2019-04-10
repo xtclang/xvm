@@ -10,6 +10,7 @@ class Array<ElementType>
         implements MutableAble, FixedSizeAble, PersistentAble, ConstAble
         implements Stringable
         incorporates Stringer
+        // TODO conditional incorporation of something to do comparable?
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -31,8 +32,6 @@ class Array<ElementType>
         if (capacity > 0)
             {
             Element cur = new Element();
-            tail = cur;
-
             while (--capacity > 0)
                 {
                 cur = new Element(cur);
@@ -64,7 +63,6 @@ class Array<ElementType>
                 cur.next = next;
                 cur      = next;
                 }
-            tail = cur;
             }
 
         this.mutability = Fixed;
@@ -87,7 +85,6 @@ class Array<ElementType>
 
             Int     index = size - 1;
             Element cur   = new Element(transform(elements[index]));
-            tail = cur;
             while (--index >= 0)
                 {
                 cur = new Element(transform(elements[index]), cur);
@@ -109,7 +106,7 @@ class Array<ElementType>
     // ----- VariablyMutable methods ---------------------------------------------------------------
 
     @Override
-    Array! ensureMutable()
+    Array ensureMutable()
         {
         return mutability == Mutable
                 ? this
@@ -121,7 +118,7 @@ class Array<ElementType>
      * contents as this array. If this array is already a fixed-size array, then _this_ is returned.
      */
     @Override
-    Array! ensureFixedSize(Boolean inPlace = False)
+    Array ensureFixedSize(Boolean inPlace = False)
         {
         if (inPlace && mutability == Mutable || mutability == Fixed)
             {
@@ -140,7 +137,7 @@ class Array<ElementType>
      * using the {@link replace} method; instead, calls to {@link replace} will return a new array.
      */
     @Override
-    Array! ensurePersistent(Boolean inPlace = False)
+    Array ensurePersistent(Boolean inPlace = False)
         {
         if (inPlace && !mutability.persistent || mutability == Persistent)
             {
@@ -161,7 +158,7 @@ class Array<ElementType>
      *         {@link ConstAble}
      */
     @Override
-    immutable Array! ensureConst(Boolean inPlace = False)
+    immutable Array ensureConst(Boolean inPlace = False)
         {
         if (mutability == Constant)
             {
@@ -261,23 +258,66 @@ class Array<ElementType>
             assert newCap >= size;
             assert mutability == Mutable;
 
-            Element  cur     = new Element();
-            Element? oldTail = tail;
-            tail = cur;
+            Element cur = new Element();
             while (--capacity > 0)
                 {
                 cur = new Element(cur);
                 }
+
             if (head == null)
                 {
                 head = cur;
                 }
             else
                 {
-                oldTail?.next = cur;
+                tail?.next = cur;
                 }
             }
         }
+
+    @Override
+    public/private Mutability mutability;
+
+
+    // ----- UniformIndexed interface --------------------------------------------------------------
+
+    @Override
+    @Op("[]")
+    ElementType getElement(Int index)
+        {
+        return elementAt(index).get();
+        }
+
+    @Override
+    @Op("[]=")
+    void setElement(Int index, ElementType value)
+        {
+        if (mutability.persistent)
+            {
+            throw new ReadOnly();
+            }
+        elementAt(index).set(value);
+        }
+
+    @Override
+    Var<ElementType> elementAt(Int index)
+        {
+        if (index < 0 || index >= size)
+            {
+            throw new OutOfBounds("index=" + index + ", size=" + size);
+            }
+
+        Element element = head.as(Element);
+        while (index-- > 0)
+            {
+            element = element.next.as(Element);
+            }
+
+        return element;
+        }
+
+
+    // ----- Sequence interface --------------------------------------------------------------------
 
     @Override
     Int size.get()
@@ -292,146 +332,34 @@ class Array<ElementType>
         }
 
     @Override
-    public/private Mutability mutability;
-
-
-    // ----- TODO ----------------------------------------------------------------------------
-
-    @Override
-    @Op ElementType getElement(Int index)
+    @Op("[..]")
+    Array slice(Range<Int> range)
         {
-        return elementAt(index).get();
-        }
-
-    @Override
-    @Op void setElement(Int index, ElementType value)
-        {
-        switch (mutability)
-            {
-            case Constant:
-                throw new IllegalState("Array is constant");
-
-            case Persistent:
-                throw new IllegalState("Array is persistent; use the \"replace\" API instead");
-
-            default:
-                elementAt(index).set(value);
-                break;
-            }
-        }
-
-    @Override
-    Var<ElementType> elementAt(Int index)
-        {
-        if (index < 0 || index >= size)
-            {
-            throw new OutOfBounds("index=" + index + ", size=" + size);
-            }
-
-        Element element = head.as(Element);
-        while (index-- > 0)
-            {
-            element = element.next as Element;
-            }
-
-        return element;
-        }
-
-    @Override
-    @Op Array! slice(Range<Int> range)
-        {
-        Int from = range.lowerBound;
-        Int to   = range.upperBound;
-
+        // copy the desired elements to a new fixed size array
+        Int           from = range.lowerBound;
+        Int           to   = range.upperBound;
         ElementType[] that = range.reversed
             ? new Array<ElementType>(range.size, (i) -> this[to   - i])
             : new Array<ElementType>(range.size, (i) -> this[from + i]);
-        return that;
+
+        // adjust the mutability of the result to match this array
+        return switch (mutability)
+            {
+            case Mutable   : that.ensureMutable();
+            case Fixed     : that;
+            case Persistent: that.ensurePersistent(true);
+            case Constant  : that.ensureConst(true);
+            }
         }
 
     @Override
-    Array! reify()
+    Array reify()
         {
         return this;
         }
 
-    @Op("+") Array! addElement(ElementType element)
-        {
-        switch (mutability)
-            {
-            case Constant:
-                throw new IllegalState("Array is constant");
 
-            case Fixed:
-                throw new IllegalState("Array is fixed size");
-
-            case Persistent:
-                ElementType[] newArray = new Array<ElementType>(this.size + 1,
-                    (i) -> (i < this.size ? this[i] : element));
-                newArray.mutability = Persistent;
-                return newArray;
-
-            default:
-                Element el = new Element(element);
-                if (head == null)
-                    {
-                    head = el;
-                    tail = el;
-                    }
-                else
-                    {
-                    tail.as(Element).next = el;
-                    tail = el;
-                    }
-                return this;
-            }
-        }
-
-    @Op("+") Array! addElements(Array! that)
-        {
-        switch (mutability)
-            {
-            case Constant:
-                throw new IllegalState("Array is constant");
-
-            case Fixed:
-                throw new IllegalState("Array is fixed size");
-
-            case Persistent:
-                ElementType[] newArray = new Array<ElementType>(this.size + that.size,
-                    (i) -> (i < this.size ? this[i] : that[i-this.size]));
-                newArray.mutability = Persistent;
-                return newArray;
-
-            default:
-                for (Int i = 0; i < that.size; i++)
-                    {
-                    addElement(that[i]);
-                    }
-                return this;
-            }
-        }
-
-    @Op Array! replace(Int index, ElementType value)
-        {
-        switch (mutability)
-            {
-            case Constant:
-                throw new IllegalState("Array is constant");
-
-            case Persistent:
-                ElementType[] that = new Array<ElementType>(size, (i) -> this[i]);
-                that[index] = value;
-                that.mutability = Persistent;
-                return that;
-
-            default:
-                elementAt(index).set(value);
-                return this;
-            }
-        }
-
-    // ----- Collection API ------------------------------------------------------------------------
+    // ----- Collection interface ------------------------------------------------------------------
 
     @Override
     Iterator<ElementType> iterator()
@@ -457,6 +385,90 @@ class Array<ElementType>
         TODO;
         }
 
+    // ----- List interface ------------------------------------------------------------------------
+
+    // TODO
+
+
+    // ----- Array methods -------------------------------------------------------------------------
+
+    @Op("+")
+    Array addElement(ElementType element)
+        {
+        switch (mutability)
+            {
+            case Mutable:
+                Element el = new Element(element);
+                if (head == null)
+                    {
+                    head = el;
+                    }
+                else
+                    {
+                    tail?.next = el;
+                    }
+                return this;
+
+            case Fixed:
+                throw new ReadOnly();
+
+            case Persistent:
+            case Constant:
+                Array result = new Array<ElementType>(size + 1, i -> (i < size ? this[i] : element));
+                return mutability == Persistent
+                        ? result.ensurePersistent(true)
+                        : result.ensureConst(true);
+            }
+        }
+
+    @Op("+")
+    Array addElements(Array that)
+        {
+        switch (mutability)
+            {
+            Mutable:
+                for (Element element : that)
+                    {
+                    add(element);
+                    }
+                return this;
+
+            case Fixed:
+                throw new ReadOnly();
+
+            case Persistent:
+            case Constant:
+                ElementType[] newArray = new Array<ElementType>(this.size + that.size,
+                        i -> (i < this.size ? this[i] : that[i-this.size]));
+                return mutability == Persistent
+                        ? result.ensurePersistent(true)
+                        : result.ensureConst(true);
+            }
+        }
+
+    // REVIEW why did this have annotation: @Op ??
+    Array replace(Int index, ElementType value)
+        {
+        switch (mutability)
+            {
+            case Constant:
+                throw new IllegalState("Array is constant");
+
+            case Persistent:
+                ElementType[] that = new Array<ElementType>(size, (i) -> this[i]);
+                that[index] = value;
+                that.mutability = Persistent;
+                return that;
+
+            default:
+                elementAt(index).set(value);
+                return this;
+            }
+        }
+
+
+    // ----- Equality ------------------------------------------------------------------------------
+
     static <CompileType extends Array> Boolean equals(CompileType a1, CompileType a2)
         {
         Int c = a1.size;
@@ -476,77 +488,6 @@ class Array<ElementType>
         return True;
         }
 
-    // ----- Stringable methods --------------------------------------------------------------------
-
-    @Override
-    Int estimateStringLength()
-        {
-        Int capacity = 2; // allow for "[]"
-        if (ElementType.is(Type<Stringable>))
-            {
-            for (ElementType v : this)
-                {
-                capacity += v.estimateStringLength() + 2; // allow for ", "
-                }
-            }
-        else
-            {
-            for (ElementType v : this)
-                {
-                if (v.is(Stringable))
-                    {
-                    capacity += v.estimateStringLength() + 2;
-                    }
-                else
-                    {
-                    capacity += 2;
-                    }
-                }
-            }
-
-        return capacity;
-        }
-
-    @Override
-    void appendTo(Appender<Char> appender)
-        {
-        appender.add('[');
-
-        if (ElementType.is(Type<Stringable>))
-            {
-            Append:
-            for (ElementType v : this)
-                {
-                if (!Append.first)
-                    {
-                    appender.add(", ");
-                    }
-
-                v.appendTo(appender);
-                }
-            }
-        else
-            {
-            Append:
-            for (ElementType v : this)
-                {
-                if (!Append.first)
-                    {
-                    appender.add(", ");
-                    }
-
-                if (v.is(Stringable))
-                    {
-                    v.appendTo(appender);
-                    }
-                else
-                    {
-                    v.to<String>().appendTo(appender);
-                    }
-                }
-            }
-        appender.add(']');
-        }
 
     // ----- internal implementation details -------------------------------------------------------
 
@@ -558,7 +499,25 @@ class Array<ElementType>
     /**
      * Linked list tail.
      */
-    private Element? tail;
+    private Element? tail.get()
+        {
+        Element? head = this.head;
+        if (head == Null)
+            {
+            return Null;
+            }
+
+        Element cur = head;
+        while (True)
+            {
+            Element? next = cur.next;
+            if (next == Null)
+                {
+                return cur;
+                }
+            cur = next;
+            }
+        }
 
     /**
      * A node in the linked list.
@@ -606,5 +565,67 @@ class Array<ElementType>
             {
             return &value;
             }
+        }
+
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        Int capacity = 2; // allow for "[]"
+        if (ElementType.is(Type<Stringable>))
+            {
+            for (ElementType v : this)
+                {
+                capacity += v.estimateStringLength() + 2; // allow for ", "
+                }
+            }
+        else
+            {
+            capacity += 10 * size;
+            }
+
+        return capacity;
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        appender.add('[');
+
+        if (ElementType.is(Type<Stringable>))
+            {
+            loop: for (ElementType v : this)
+                {
+                if (!loop.first)
+                    {
+                    appender.add(", ");
+                    }
+
+                v.appendTo(appender);
+                }
+            }
+        else
+            {
+            loop: for (ElementType v : this)
+                {
+                if (!loop.first)
+                    {
+                    appender.add(", ");
+                    }
+
+                if (v.is(Stringable))
+                    {
+                    v.appendTo(appender);
+                    }
+                else
+                    {
+                    v.to<String>().appendTo(appender);
+                    }
+                }
+            }
+
+        appender.add(']');
         }
     }
