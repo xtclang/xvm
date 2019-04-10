@@ -12,37 +12,68 @@ interface List<ElementType>
         extends Collection<ElementType>
     {
     /**
-     * Obtain a list cursor that is located at the specified index.
+     * Obtain the first element in the list.
      *
-     * @param index  the index within the list to position the cursor; (optional, defaults to the
-     *               beginning of the list)
-     *
-     * @return a new Cursor positioned at the specified index in the List
-     *
-     * @throws OutOfBounds  if the specified index is outside of range {@code 0} (inclusive) to
-     *                      {@code size} (inclusive)
+     * @return True iff the list is not empty
+     * @return the first element in the list
      */
-    Cursor cursorAt(Int index = 0)
+    conditional ElementType first()
         {
-        return new IndexCursor(this, index);
+        if (empty)
+            {
+            return False;
+            }
+        return True, this[0];
+        }
+
+    /**
+     * Obtain the last element in the list.
+     *
+     * @return True iff the list is not empty
+     * @return the last element in the list
+     */
+    conditional ElementType last()
+        {
+        if (empty)
+            {
+            return False;
+            }
+        return True, this[size-1];
+        }
+
+    /**
+     * Replace the existing value in the List at the specified index with the specified value.
+     *
+     * @param index  the index at which to store the specified value, which must be between `0`
+     *               (inclusive) and `size` (exclusive)
+     * @param value  the value to store
+     *
+     * @return the resultant list, which is the same as `this` for a mutable list
+     *
+     * @throws OutOfBounds  if the specified index is outside of range `0` (inclusive) to
+     *                      `size` (inclusive)
+     */
+    List replace(Int index, ElementType value)
+        {
+        TODO element replacement is not supported
         }
 
     /**
      * Insert the specified value into the List at the specified index, shifting the contents of the
      * entire remainder of the list as a result. If the index is beyond the end of the list, this
-     * operation has the same effect as calling {@link add}.
+     * operation has the same effect as calling [add].
      *
      * Warning: This can be an incredibly expensive operation if the data structure is not
      * explicitly intended to support efficient insertion.
      *
-     * @param index  the index at which to insert, which must be between {@code 0} (inclusive) and
-     *               {@code size} (inclusive)
+     * @param index  the index at which to insert, which must be between `0` (inclusive) and
+     *               `size` (inclusive)
      * @param value  the value to insert
      *
-     * @return the resultant list, which is the same as {@code this} for a mutable list
+     * @return the resultant list, which is the same as `this` for a mutable list
      *
-     * @throws OutOfBounds  if the specified index is outside of range {@code 0} (inclusive) to
-     *                      {@code size} (inclusive)
+     * @throws OutOfBounds  if the specified index is outside of range `0` (inclusive) to
+     *                      `size` (inclusive)
      */
     List insert(Int index, ElementType value)
         {
@@ -52,19 +83,19 @@ interface List<ElementType>
     /**
      * Insert the specified values into the List at the specified index, shifting the contents of
      * the entire remainder of the list as a result. If the index is beyond the end of the list,
-     * this operation has the same effect as calling {@link addAll}.
+     * this operation has the same effect as calling [addAll].
      *
      * Warning: This can be an incredibly expensive operation if the data structure is not
      * explicitly intended to support efficient insertion.
      *
-     * @param index   the index at which to insert, which must be between {@code 0} (inclusive) and
-     *                {@code size} (inclusive)
+     * @param index   the index at which to insert, which must be between `0` (inclusive) and
+     *                `size` (inclusive)
      * @param values  the values to insert
      *
-     * @return the resultant list, which is the same as {@code this} for a mutable list
+     * @return the resultant list, which is the same as `this` for a mutable list
      *
-     * @throws OutOfBounds  if the specified index is outside of range {@code 0} (inclusive) to
-     *                      {@code size} (inclusive)
+     * @throws OutOfBounds  if the specified index is outside of range `0` (inclusive) to
+     *                      `size` (inclusive)
      */
     List insertAll(Int index, Sequence<ElementType> | Collection<ElementType> values)
         {
@@ -86,13 +117,13 @@ interface List<ElementType>
      * Warning: This can be an incredibly expensive operation if the data structure is not
      * explicitly intended to support efficient deletion.
      *
-     * @param index  the index of the element to delete, which must be between {@code 0} (inclusive)
-     *               and {@code size} (exclusive)
+     * @param index  the index of the element to delete, which must be between `0` (inclusive)
+     *               and `size` (exclusive)
      *
-     * @return the resultant list, which is the same as {@code this} for a mutable list
+     * @return the resultant list, which is the same as `this` for a mutable list
      *
-     * @throws OutOfBounds  if the specified index is outside of range {@code 0} (inclusive) to
-     *                      {@code size} (exclusive)
+     * @throws OutOfBounds  if the specified index is outside of range `0` (inclusive) to
+     *                      `size` (exclusive)
      */
     List delete(Int index)
         {
@@ -106,13 +137,13 @@ interface List<ElementType>
      * Warning: This can be an incredibly expensive operation if the data structure is not
      * explicitly intended to support efficient deletion.
      *
-     * @param index  the index of the element to delete, which must be between {@code 0} (inclusive)
-     *               and {@code size} (exclusive)
+     * @param index  the index of the element to delete, which must be between `0` (inclusive)
+     *               and `size` (exclusive)
      *
-     * @return the resultant list, which is the same as {@code this} for a mutable list
+     * @return the resultant list, which is the same as `this` for a mutable list
      *
-     * @throws OutOfBounds  if the specified index is outside of range {@code 0} (inclusive) to
-     *                      {@code size} (exclusive)
+     * @throws OutOfBounds  if the specified index is outside of range `0` (inclusive) to
+     *                      `size` (exclusive)
      */
     List delete(Range<Int> range)
         {
@@ -129,22 +160,80 @@ interface List<ElementType>
         }
 
     /**
-     * Sort the contents of the list by the specified Comparator.
+     * Sort the contents of this list in the order specified by the optional Comparator.
      *
      * @param comparator  the Comparator to use to sort the list; (optional, defaulting to using the
      *                    "natural" sort order of the ElementType)
      *
-     * @throws
+     * @return the resultant list, which is the same as `this` for a mutable list
      */
     List sort(Comparator<ElementType>? comparator = null)
         {
-        // this implementation must be overridden; it assumes a mutable implementation of List, and
-        // it is a bubble sort
-
-        Int extent = size;
-        if (extent < 2)
+        if (size <= 1)
             {
             return this;
+            }
+
+        // eventual to-do is to should pick a better sort impl based on some heuristics, such as
+        // size of list and how many elements are out-of-order
+        function void (List<ElementType>, Comparator) sortimpl = bubbleSort;
+
+        Mutability mutability = this.mutability;
+        if (!mutability.persistent)
+            {
+            sortimpl(this, comparator);
+            return this;
+            }
+
+        List!   temp;
+        Boolean inPlace = True;
+        if (this.is(FixedSizeAble))
+            {
+            temp = ensureFixedSize();
+            }
+        else if (this.is(MutableAble))
+            {
+            temp = ensureMutable();
+            }
+        else
+            {
+            temp    = to<ElementType[]>();
+            inPlace = False;
+            }
+
+        sortimpl(temp, comparator);
+
+        if (inPlace)
+            {
+            if (mutability == Persistent && temp.is(PersistentAble))
+                {
+                return temp.ensurePersistent(True);
+                }
+            else if (mutability == Constant && temp.is(ConstAble))
+                {
+                return temp.ensureConstant(True);
+                }
+            }
+
+        return this.clear().addAll(temp);
+        }
+
+    /**
+     * Bubble-sort the contents of the passed list using an optional Comparator. The loop is
+     * optimized for an almost-sorted list, with the most-likely-to-be-unsorted items at the end.
+     *
+     * @param list        a Mutable or Fixed list
+     * @param comparator  the Comparator to use to sort the list; (optional, defaulting to using the
+     *                    "natural" sort order of the ElementType)
+     */
+    static <ElementType> void bubbleSort(List<ElementType> list, Comparator? comparator = null)
+        {
+        assert !list.mutability.persistent;
+
+        Int last = size - 1;
+        if (last <= 0)
+            {
+            return;
             }
 
         function Ordered (ElementType, ElementType) compare;
@@ -159,39 +248,55 @@ interface List<ElementType>
             compare = comparator.compareForOrder;
             }
 
+        Int first = 0;
         do
             {
             Boolean     sorted = true;
-            ElementType bubble = this[0];
-            for (Int i = 1; i < extent; ++i)
+            ElementType bubble = list[last];
+            for (Int i = last-1; i >= first; --i)
                 {
-                ElementType next = this[i];
-                if (compare(bubble, next) == Greater)
+                ElementType prev = this[i];
+                if (compare(prev, bubble) == Greater)
                     {
-                    this[i-1] = next;
-                    this[i]   = bubble;
+                    list[i  ] = bubble;
+                    list[i+1] = prev;
                     sorted    = false;
                     }
                 else
                     {
-                    bubble = next;
+                    bubble = prev;
                     }
                 }
 
-            // greatest item in the list bubbled up to the highest index
-            --extent;
+            // the smallest item in the list has now bubbled up to the first position in the list;
+            // optimize the next iteration by only bubbling up to the second position, and so on
+            ++first;
             }
         while (!sorted);
-
-        return this;
         }
 
 
     // ----- List Cursor ---------------------------------------------------------------------------
 
     /**
+     * Obtain a list cursor that is located at the specified index.
+     *
+     * @param index  the index within the list to position the cursor; (optional, defaults to the
+     *               beginning of the list)
+     *
+     * @return a new Cursor positioned at the specified index in the List
+     *
+     * @throws OutOfBounds  if the specified index is outside of range `0` (inclusive) to
+     *                      `size` (inclusive)
+     */
+    Cursor cursorAt(Int index = 0)
+        {
+        return new IndexCursor(this, index);
+        }
+
+    /**
      * A Cursor is a stateful, mutable navigator of a List. It can be used to walk through a list in
-     * either direction, to randomly-access the list by altering its {@link index}, can replace the
+     * either direction, to randomly-access the list by altering its [index], can replace the
      * the values of elements in the list, insert or append new elements into the list, or delete
      * elements from the list.
      */
@@ -203,18 +308,18 @@ interface List<ElementType>
         @RO List list;
 
         /**
-         * The current index of the cursor within the list, which is a value between {@code 0}
-         * (inclusive) and {@code size} (inclusive). If the index is equal to {@code size}, then the
+         * The current index of the cursor within the list, which is a value between `0`
+         * (inclusive) and `size` (inclusive). If the index is equal to `size`, then the
          * cursor is "beyond the end of the list", and refers to a non-existent element.
          *
          * @throws OutOfBounds  if an attempt is made to set the index to a position less than
-         *                      {@code 0} or more than {@code size}
+         *                      `0` or more than `size`
          */
         Int index;
 
         /**
          * Move the cursor so that it points to the _next_ element in the list. If there are no more
-         * elements in the list, then the index will be set to {@code size}, and the cursor will be
+         * elements in the list, then the index will be set to `size`, and the cursor will be
          * "beyond the end of the list", and referring to a non-existent element.
          *
          * @return true if the cursor has advanced to another element in the list, or false if the
@@ -225,7 +330,7 @@ interface List<ElementType>
         /**
          * Move the cursor so that it points to the _previous_ element in the list. If there are no
          * elements preceding the current element in the list, then the index will be set to
-         * {@code 0}, and referring to the first element in the list.
+         * `0`, and referring to the first element in the list.
          *
          * @return true if the cursor has rewound to another element in the list, or false if the
          *         cursor was already at the beginning of the list
@@ -247,7 +352,7 @@ interface List<ElementType>
         /**
          * Insert the specified element at the current index, shifting the contents of the entire
          * remainder of the list "to the right" as a result. If the index is beyond the end of the
-         * list, this operation has the same effect as setting the {@link Cursor.value} property.
+         * list, this operation has the same effect as setting the [Cursor.value] property.
          *
          * After this method completes successfully, the cursor will be positioned on the newly
          * inserted element.
@@ -270,5 +375,31 @@ interface List<ElementType>
          *                      beyond the end of the list
          */
         void delete();
+        }
+
+
+    // ----- Equality ------------------------------------------------------------------------------
+
+    /**
+     * Two lists are equal iff they are of the same size, and they contain the same values, in the
+     * same order.
+     */
+    static <CompileType extends List> Boolean equals(CompileType a1, CompileType a2)
+        {
+        Int c = a1.size;
+        if (c != a2.size)
+            {
+            return False;
+            }
+
+        for (Int i = 0; i < c; ++i)
+            {
+            if (a1[i] != a2[i])
+                {
+                return False;
+                }
+            }
+
+        return True;
         }
     }

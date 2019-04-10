@@ -40,7 +40,7 @@ interface Collection<ElementType>
      */
     @RO Boolean distinct.get()
         {
-        return false;
+        return False;
         }
 
     /**
@@ -49,7 +49,7 @@ interface Collection<ElementType>
      */
     conditional Comparator<ElementType> sortedBy()
         {
-        return false;
+        return False;
         }
 
     /**
@@ -75,7 +75,7 @@ interface Collection<ElementType>
      *
      * @param value  the value to search for in this collection
      *
-     * @return {@code true} iff the specified value exists in this collection
+     * @return {@code True} iff the specified value exists in this collection
      */
     Boolean contains(ElementType value)
         {
@@ -89,7 +89,7 @@ interface Collection<ElementType>
      *
      * @param values  another collection containing values to search for in this collection
      *
-     * @return {@code true} iff the specified values all exist in this collection
+     * @return {@code True} iff the specified values all exist in this collection
      */
     Boolean containsAll(Collection! values)
         {
@@ -105,17 +105,30 @@ interface Collection<ElementType>
     Iterator<ElementType> iterator();
 
     /**
-     * @return a persistent array of elements from this collection
+     * Obtain the contents of this collection as an array.
+     *
+     * @param mutability  the requested Mutability of the resulting array
+     *
+     * @return an array of elements from this sequence
      */
-    ElementType[] to<ElementType[]>()
+    ElementType[] to<ElementType[]>(VariablyMutable.Mutability mutability = Persistent)
         {
-        ElementType[] array = new Array<ElementType>(size);
-        Int i = 0;
-        for (ElementType el : this)
+        ElementType[] result = mutability == Mutable
+                ? new Array<ElementType>(size)      // mutable
+                : new ElementType[size];            // fixed
+
+        loop: for (ElementType element : this)
             {
-            array[i++] = el;
+            array[loop.count] = element;
             }
-        return array.ensurePersistent(True);
+
+        return switch (mutability)
+            {
+            case Mutable   :
+            case Fixed     : result;
+            case Persistent: result.ensurePersistent(true);
+            case Constant  : result.ensureConst     (true);
+            }
         }
 
     /**
@@ -140,15 +153,18 @@ interface Collection<ElementType>
     /**
      * Add the specified value to this collection.
      *
-     * A _mutable_ collection will perform the operation in place; all other modes of collection
-     * will return a new collection that reflects the requested changes.
+     * A `Mutable` collection will perform the operation in place; persistent collections will
+     * return a new collection that reflects the requested changes.
      *
      * @param value  the value to store in the collection
      *
-     * @return the resultant collection, which is the same as {@code this} for a mutable collection,
-     *         and Boolean true iff the method resulted in a modification
+     * @return the resultant collection, which is the same as `this` for a mutable collection
+     *
+     * @throws ReadOnly  if the collection does not support element addition; among other reasons,
+     *                   this will occur if `mutability==Fixed`
      */
-    conditional Collection add(ElementType value)
+    @Op("+")
+    Collection add(ElementType value)
         {
         throw new ReadOnly();
         }
@@ -156,43 +172,69 @@ interface Collection<ElementType>
     /**
      * Add all of the passed values to this collection.
      *
-     * A _mutable_ collection will perform the operation in place; all other modes of collection
-     * will return a new collection that reflects the requested changes.
+     * A `Mutable` collection will perform the operation in place; persistent collections will
+     * return a new collection that reflects the requested changes.
      *
      * @param values  another collection containing values to add to this collection
      *
-     * @return the resultant collection, which is the same as {@code this} for a mutable collection,
-     *         and Boolean true iff the method resulted in a modification
+     * @return the resultant collection, which is the same as `this` for a mutable collection
+     *
+     * @throws ReadOnly  if the collection does not support element addition; among other reasons,
+     *                   this will occur if `mutability==Fixed`
      */
-    conditional Collection addAll(Collection! values)
+    @Op("+")
+    Collection addAll(Collection! values)
         {
         // this naive implementation is likely to be overridden in cases where optimizations can be
         // made with knowledge of either this collection and/or the passed in values, for example
-        // if both are ordered; it must obviously be overridden for non-mutable collections
-        Collection result   = this;
-        Boolean    modified = false;
+        // if both are ordered
+        Collection result = this;
         for (ElementType value : values)
             {
-            if (result : result.add(value))
-                {
-                modified = true;
-                }
+            result = result.add(value);
             }
-        return modified, result;
+        return result;
+        }
+
+    /**
+     * Add the specified value to this collection if it is not already present in the collection.
+     *
+     * A `Mutable` collection will perform the operation in place; persistent collections will
+     * return a new collection that reflects the requested changes.
+     *
+     * @param value  the value to store in the collection
+     *
+     * @return `True` iff the collection did not contain the specified value, and now does
+     * @return the resultant collection, which is the same as `this` for a mutable collection
+     *
+     * @throws ReadOnly  if the collection does not support element addition; among other reasons,
+     *                   this will occur if `mutability==Fixed`
+     */
+    conditional Collection addIfAbsent(ElementType value)
+        {
+        if (contains(value))
+            {
+            return False;
+            }
+
+        return True, add(value);
         }
 
     /**
      * Remove the specified value from this collection.
      *
-     * A _mutable_ collection will perform the operation in place; all other modes of collection
-     * will return a new collection that reflects the requested changes.
+     * A `Mutable` collection will perform the operation in place; persistent collections will
+     * return a new collection that reflects the requested changes.
      *
      * @param value  the value to remove from this collection
      *
-     * @return the resultant collection, which is the same as {@code this} for a mutable collection,
-     *         and Boolean true iff the method resulted in a modification
+     * @return the resultant collection, which is the same as `this` for a mutable collection
+     *
+     * @throws ReadOnly  if the collection does not support element removal; among other reasons,
+     *                   this will occur if `mutability==Fixed`
      */
-    conditional Collection remove(ElementType value)
+    @Op("-")
+    Collection remove(ElementType value)
         {
         throw new ReadOnly();
         }
@@ -200,75 +242,110 @@ interface Collection<ElementType>
     /**
      * Remove all of the specified values from this collection.
      *
-     * A _mutable_ collection will perform the operation in place; all other modes of collection
-     * will return a new collection that reflects the requested changes.
+     * A `Mutable` collection will perform the operation in place; persistent collections will
+     * return a new collection that reflects the requested changes.
      *
      * @param values  another collection containing values to remove from this collection
      *
      * @return the resultant collection, which is the same as {@code this} for a mutable collection,
-     *         and Boolean true iff the method resulted in a modification
+     *         and Boolean True iff the method resulted in a modification
+     *
+     * @throws ReadOnly  if the collection does not support element addition; among other reasons,
+     *                   this will occur if `mutability==Fixed`
      */
-    conditional Collection removeAll(Collection! values)
+    @Op("-")
+    Collection removeAll(Collection! values)
         {
         // this naive implementation is likely to be overridden in cases where optimizations can be
         // made with knowledge of either this collection and/or the passed in values, for example
         // if both are ordered; it must obviously be overridden for non-mutable collections
         Collection result   = this;
-        Boolean    modified = false;
+        Boolean    modified = False;
         for (ElementType value : values)
             {
             if (result : result.remove(value))
                 {
-                modified = true;
+                modified = True;
                 }
             }
         return modified, result;
+        }
+
+    /**
+     * Remove the specified value from this collection, reporting back to the caller whether or not
+     * the value was found and removed.
+     *
+     * A `Mutable` collection will perform the operation in place; persistent collections will
+     * return a new collection that reflects the requested changes.
+     *
+     * @param value  the value to remove from this collection
+     *
+     * @return True iff the specified value existed in the collection, and has been removed
+     * @return the resultant collection, which is the same as `this` for a mutable collection
+     *
+     * @throws ReadOnly  if the collection does not support element addition; among other reasons,
+     *                   this will occur if `mutability==Fixed`
+     */
+    conditional Collection removeIfPresent(ElementType value)
+        {
+        if (contains(value))
+            {
+            return True, remove(value);
+            }
+
+        return False;
         }
 
     /**
      * For each value in the collection, evaluate it using the specified function, removing each
-     * value for which the specified function evaluates to {@code true}.
+     * value for which the specified function evaluates to {@code True}.
      *
-     * A _mutable_ collection will perform the operation in place; all other modes of collection
-     * will return a new collection that reflects the requested changes.
+     * A `Mutable` collection will perform the operation in place; persistent collections will
+     * return a new collection that reflects the requested changes.
      *
-     * @param shouldRemove  a function used to filter this collection, returning true for each value
-     *                      of this collection that should be removed by this method
+     * @param shouldRemove  a function used to filter this collection, returning `False` for each
+     *                      value of this collection that should be removed
      *
-     * @return the resultant collection, which is the same as {@code this} for a mutable collection,
-     *         and Boolean true iff the method resulted in a modification
+     * @return the resultant collection, which is the same as `this` for a mutable collection
+     * @return the number of elements removed
+     *
+     * @throws ReadOnly  if the collection does not support element addition; among other reasons,
+     *                   this will occur if `mutability==Fixed`
      */
-    conditional Collection removeIf(function Boolean (ElementType) shouldRemove)
+     (Collection, Int) removeIf(function Boolean (ElementType) shouldRemove)
         {
-        // this naive implementation does require that the iterator be stable despite removes
-        // occurring during iteration; it must obviously be overridden for non-mutable collections
-        Collection result   = this;
-        Boolean    modified = false;
+        ElementType[]? values = Null;
         for (ElementType value : this)
             {
             if (shouldRemove(value))
                 {
-                if (result : result.remove(value))
-                    {
-                    modified = true;
-                    }
+                values = (values ?: new ElementType[]) + value;
                 }
             }
-        return modified, result;
+
+        if (values == Null)
+            {
+            return this, 0;
+            }
+
+        return removeAll(values), values.size;
         }
 
     /**
-     * Remove all of the values from this collection that do not occur in the specified collection.
+     * Remove all of the values from this collection that do **not** occur in the specified
+     * collection.
      *
-     * A _mutable_ collection will perform the operation in place; all other modes of collection
-     * will return a new collection that reflects the requested changes.
+     * A `Mutable` collection will perform the operation in place; persistent collections will
+     * return a new collection that reflects the requested changes.
      *
      * @param values  another collection containing values to retain in this collection
      *
-     * @return the resultant collection, which is the same as {@code this} for a mutable collection,
-     *         and Boolean true iff the method resulted in a modification
+     * @return the resultant collection, which is the same as `this` for a mutable collection
+     *
+     * @throws ReadOnly  if the collection does not support element addition; among other reasons,
+     *                   this will occur if `mutability==Fixed`
      */
-    conditional Collection retainAll(Collection! values)
+    Collection retainAll(Collection! values)
         {
         // this naive implementation is likely to be overridden in cases where optimizations can be
         // made with knowledge of either this collection and/or the passed in values, for example
@@ -279,17 +356,20 @@ interface Collection<ElementType>
     /**
      * Remove all values from the collection.
      *
-     * A _mutable_ collection will perform the operation in place; all other modes of collection
-     * will return a new collection that reflects the requested changes.
+     * A `Mutable` collection will perform the operation in place; persistent collections will
+     * return a new collection that reflects the requested changes.
      *
-     * @return the resultant collection, which is the same as {@code this} for a mutable collection,
-     *         and Boolean true iff the method resulted in a modification
+     * @return the resultant collection, which is the same as `this` for a mutable collection
+     *
+     * @throws ReadOnly  if the collection does not support element addition; among other reasons,
+     *                   this will occur if `mutability==Fixed`
      */
-    conditional Collection clear()
+    Collection clear()
         {
         // this naive implementation is likely to be overridden for obvious reasons
-        return removeIf(value -> true);
+        return removeIf(value -> True);
         }
+
 
     // ----- equality ------------------------------------------------------------------------------
 
@@ -302,7 +382,7 @@ interface Collection<ElementType>
         // they must be of the same arity
         if (collection1.size != collection2.size)
             {
-            return false;
+            return False;
             }
 
         if (collection1.sortedBy() || collection2.sortedBy())
@@ -317,14 +397,14 @@ interface Collection<ElementType>
                 assert val value2 : iter2.next();
                 if (value1 != value2)
                     {
-                    return false;
+                    return False;
                     }
                 }
 
             // the collections were of the same arity, so the first iterator shouldn't run out
             // before the second
             assert !iter2.next();
-            return true;
+            return True;
             }
         else
             {

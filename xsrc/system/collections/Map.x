@@ -179,11 +179,20 @@ interface Map<KeyType, ValueType>
      * @param key    the key to store in the map
      * @param value  the value to associate with the specified key
      *
-     * @return the resultant map, which is the same as `this` for a mutable map
+     * @return the resultant map, which is the same as `this` for a non-persistent map
+     *
+     * @throws ReadOnly  if the map is _fixed size_ and the key does not already exist in the map
      */
-    conditional Map put(KeyType key, ValueType value)
+     Map put(KeyType key, ValueType value)
         {
         TODO entry addition and modification is not supported
+        }
+
+    @Op("[]=")
+    void putInPlace(KeyType key, ValueType value)
+        {
+        assert !mutability.persistent;
+        put(key, value);
         }
 
     /**
@@ -196,9 +205,11 @@ interface Map<KeyType, ValueType>
      *
      * @param that  another map containing keys and associated values to put into this map
      *
-     * @return the resultant map, which is the same as `this` for a mutable map
+     * @return the resultant map, which is the same as `this` for a non-persistent map
+     *
+     * @throws ReadOnly  if the map is _fixed size_ and the keys do not already all exist in the map
      */
-    conditional Map putAll(Map! that)
+    Map putAll(Map! that)
         {
         Boolean modified = False;
         Map     result   = this;
@@ -223,8 +234,10 @@ interface Map<KeyType, ValueType>
      * @param value  the value to associate with the specified key iff the key does not already
      *               exist in the map
      *
-     * @return a conditional True and the resultant map if the key did not previously exist in the
-     *         map; otherwise a conditional False
+     * @return True iff the key did not previously exist in the map and now it does
+     * @return the resultant map, which is the same as `this` for a non-persistent map
+     *
+     * @throws ReadOnly  if the map is _fixed size_
      */
     conditional Map putIfAbsent(KeyType key, ValueType value)
         {
@@ -244,8 +257,8 @@ interface Map<KeyType, ValueType>
      * @param valueOld  the value to verify is currently associated with the specified key
      * @param valueNew  the value to associate with the specified key
      *
-     * @return a conditional True and the resultant map if the key did exist in the map and was
-     *         associated with the previous value; otherwise a conditional False
+     * @return True iff the key did exist in the map and was associated with `valueOld`
+     * @return the resultant map, which is the same as `this` for a non-persistent map
      */
     conditional Map replace(KeyType key, ValueType valueOld, ValueType valueNew)
         {
@@ -268,9 +281,11 @@ interface Map<KeyType, ValueType>
      *
      * @param key  the key to remove from this map
      *
-     * @return the resultant map, which is the same as `this` for a mutable map
+     * @return the resultant map, which is the same as `this` for a non-persistent map
+     *
+     * @throws ReadOnly  if the map is _fixed size_
      */
-    conditional Map remove(KeyType key)
+    Map remove(KeyType key)
         {
         TODO entry removal is not supported
         }
@@ -282,8 +297,10 @@ interface Map<KeyType, ValueType>
      * @param key    the key to remove from the map
      * @param value  the value to verify is currently associated with the specified key
      *
-     * @return the resultant Map if the key did exist in the Map, was associated with the specified
-     *         value, and was modified in the returned Map
+     * @return True iff the key did exist in the map and was associated with `value`
+     * @return the resultant map, which is the same as `this` for a non-persistent map
+     *
+     * @throws ReadOnly  if the map is _fixed size_
      */
     conditional Map remove(KeyType key, ValueType value)
         {
@@ -304,9 +321,11 @@ interface Map<KeyType, ValueType>
      * A _mutable_ map will perform the operation in place; all other modes of map will return a
      * new map that reflects the requested changes.
      *
-     * @return the resultant map, which will be `this` for a mutable map
+     * @return the resultant map, which is the same as `this` for a non-persistent map
+     *
+     * @throws ReadOnly  if the map is _fixed size_
      */
-    conditional Map clear();
+    Map clear();
 
 
     // ----- Entry operations -----------------------------------------------------------
@@ -429,12 +448,11 @@ interface Map<KeyType, ValueType>
      * interface is designed to allow a Map implementor to re-use a temporary Entry instance to
      * represent a _current_ Entry, for example during iteration; this allows a single Entry object
      * to represent every Entry in the Map. As a consequence of this decision, an Entry consumer
-     * *must* call [reify] on each entry that will be held beyond the scope of the current
-     * iteration.
+     * must call [reify] on each entry that will be held beyond the scope of the current iteration.
      *
-     * When used for A consumer can determine whether an entry exists (is present in a map), to cause an entry to exist (if it
-     * did not exist) by assigning a value, to change the value of an entry that does exist, and to
-     * remove the entry if it exists.
+     * A consumer can determine whether an entry exists (is present in a map), to cause an entry to
+     * be created (if it did not exist) by assigning a value, to change the value of an entry that
+     * does exist, and to remove the entry if it exists.
      */
     interface Entry
         {

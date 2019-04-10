@@ -20,17 +20,76 @@ interface Set<ElementType>
      * The "union" operator.
      */
     @Override
-    @Op("|") conditional Set addAll(Collection<ElementType> values);
+    @Op("|")
+    Set addAll(Collection<ElementType> values);
 
     /**
-     * The "symmetric difference" operator.
+     * The "relative complement" operator.
      */
     @Override
-    @Op("^") conditional Set removeAll(Collection<ElementType> values);
+    @Op("-")
+    Set removeAll(Collection<ElementType> values);
 
     /**
-     * The "union" operator.
+     * The "intersection" operator.
      */
     @Override
-    @Op("&") conditional Set retainAll(Collection<ElementType> values);
+    @Op("&")
+    Set retainAll(Collection<ElementType> values);
+
+    /**
+     * The "symmetric difference" operator determines the elements that are present in only this
+     * set or the othet set, but not both.
+     *
+     *   A ^ B = (A - B) | (B - A)
+     *
+     * A `Mutable` set will perform the operation in place; persistent sets will return a new set
+     * that reflects the requested changes.
+     *
+     * @param values  another set containing values to determine the symmetric difference with
+     *
+     * @return the resultant set, which is the same as `this` for a mutable set
+     */
+    @Op("^")
+    Set symmetricDifference(Set!<ElementType> values)
+        {
+        ElementType[]? remove = null;
+        for (ElementType value : this)
+            {
+            if (values.contains(value))
+                {
+                remove = (remove ?: new ElementType[]) + value;
+                }
+            }
+
+        ElementType[]? add = null;
+        for (ElementType value : values)
+            {
+            if (!this.contains(value))
+                {
+                add = (add ?: new ElementType[]) + value;
+                }
+            }
+
+        Set result = this;
+        result -= remove?;
+        result += add?;
+        return result;
+        }
+
+    /**
+     * The "complement" operator.
+     *
+     * @return a new set that represents the complement of this set
+     *
+     * @throws UnsupportedOperation  if this set is incapable of determining its complement, which
+     *                               may be a reflection of a limitation of the ElementType itself
+     */
+    @Op("~")
+    Set! complement()
+        {
+        // TODO default implementation should just create a Set that answers the opposite of what
+        //      this set answers for all the "contains" etc. operations
+        throw new UnsupportedOperation();
+        }
     }

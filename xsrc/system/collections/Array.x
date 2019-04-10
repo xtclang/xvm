@@ -103,7 +103,59 @@ class Array<ElementType>
         }
 
 
-    // ----- VariablyMutable methods ---------------------------------------------------------------
+    // ----- properties ----------------------------------------------------------------------------
+
+    /**
+     * The capacity of an array is the amount that the array can hold without resizing.
+     */
+    public Int capacity
+        {
+        @Override
+        Int get()
+            {
+            Int count = 0;
+            for (Element? cur = head; cur != null; cur = cur?.next : assert) // TODO GG "? :" should not be necessary
+                {
+                ++count;
+                }
+            return count;
+            }
+
+        @Override
+        void set(Int newCap)
+            {
+            Int oldCap = capacity; // TODO GG should be "get()" instead, but it can't find it
+            if (newCap == oldCap)
+                {
+                return;
+                }
+
+            assert newCap >= 0;
+            assert newCap >= size;
+            assert mutability == Mutable;
+
+            Element cur = new Element();
+            while (--capacity > 0)
+                {
+                cur = new Element(cur);
+                }
+
+            if (head == null)
+                {
+                head = cur;
+                }
+            else
+                {
+                tail?.next = cur;
+                }
+            }
+        }
+
+
+    // ----- VariablyMutable interface -------------------------------------------------------------
+
+    @Override
+    public/private Mutability mutability;
 
     @Override
     Array ensureMutable()
@@ -227,58 +279,6 @@ class Array<ElementType>
         }
 
 
-    // ----- properties ----------------------------------------------------------------------------
-
-    /**
-     * The capacity of an array is the amount that the array can hold without resizing.
-     */
-    public Int capacity
-        {
-        @Override
-        Int get()
-            {
-            Int count = 0;
-            for (Element? cur = head; cur != null; cur = cur?.next : assert) // TODO GG "? :" should not be necessary
-                {
-                ++count;
-                }
-            return count;
-            }
-
-        @Override
-        void set(Int newCap)
-            {
-            Int oldCap = capacity; // TODO GG should be "get()" instead, but it can't find it
-            if (newCap == oldCap)
-                {
-                return;
-                }
-
-            assert newCap >= 0;
-            assert newCap >= size;
-            assert mutability == Mutable;
-
-            Element cur = new Element();
-            while (--capacity > 0)
-                {
-                cur = new Element(cur);
-                }
-
-            if (head == null)
-                {
-                head = cur;
-                }
-            else
-                {
-                tail?.next = cur;
-                }
-            }
-        }
-
-    @Override
-    public/private Mutability mutability;
-
-
     // ----- UniformIndexed interface --------------------------------------------------------------
 
     @Override
@@ -335,6 +335,8 @@ class Array<ElementType>
     @Op("[..]")
     Array slice(Range<Int> range)
         {
+        // REVIEW consider delegating "class ArraySlice : Array" for large arrays
+
         // copy the desired elements to a new fixed size array
         Int           from = range.lowerBound;
         Int           to   = range.upperBound;
@@ -349,7 +351,7 @@ class Array<ElementType>
             case Fixed     : that;
             case Persistent: that.ensurePersistent(true);
             case Constant  : that.ensureConst(true);
-            }
+            };
         }
 
     @Override
@@ -362,38 +364,38 @@ class Array<ElementType>
     // ----- Collection interface ------------------------------------------------------------------
 
     @Override
-    Iterator<ElementType> iterator()
+    Boolean contains(ElementType value)
         {
-        TODO;
+        // use the default implementation from the Sequence interface
+        return indexOf(value);
         }
 
     @Override
-    Array to<Array>()
+    ElementType[] to<ElementType[]>(VariablyMutable.Mutability mutability = Persistent)
         {
-        return this;
+        return mutability == this.mutability && mutability.persistent
+                ? this                          // a persistent array is its own shallow clone
+                : new Array(mutability, this);  // create a copy of the desired mutability
         }
 
     @Override
     Stream<ElementType> stream()
         {
-        TODO;
+        TODO Array Stream implementation
         }
 
     @Override
     Array clone()
         {
-        TODO;
+        return mutability.persistent
+                ? this                          // a persistent array is its own shallow clone
+                : new Array(mutability, this);  // create a copy with this array's mutability
         }
 
-    // ----- List interface ------------------------------------------------------------------------
 
-    // TODO
-
-
-    // ----- Array methods -------------------------------------------------------------------------
-
+    @Override
     @Op("+")
-    Array addElement(ElementType element)
+    Array add(ElementType element)
         {
         switch (mutability)
             {
@@ -421,12 +423,13 @@ class Array<ElementType>
             }
         }
 
+    @Override
     @Op("+")
-    Array addElements(Array that)
+    Array add(Array that)
         {
         switch (mutability)
             {
-            Mutable:
+            case Mutable:
                 for (Element element : that)
                     {
                     add(element);
@@ -446,7 +449,53 @@ class Array<ElementType>
             }
         }
 
-    // REVIEW why did this have annotation: @Op ??
+    @Override
+    @Op("-")
+    Collection remove(ElementType value)
+        {
+        TODO
+        }
+
+    @Override
+    conditional Collection removeIfPresent(ElementType value)
+        {
+        TODO
+        }
+
+    @Override
+    (Collection, Int) removeIf(function Boolean (ElementType) shouldRemove)
+        {
+        TODO
+        }
+
+    @Override
+    Collection clear()
+        {
+        if (empty)
+            {
+            return this;
+            }
+
+        switch (mutability)
+            {
+            case Mutable:
+                head = Null;
+                return this;
+
+            case Fixed:
+                throw new ReadOnly();
+
+            case Persistent:
+            case Constant:
+                return new Array<ElementType>(mutability);
+            }
+        }
+
+
+    // ----- List interface ------------------------------------------------------------------------
+
+    // TODO
+
     Array replace(Int index, ElementType value)
         {
         switch (mutability)
@@ -464,28 +513,6 @@ class Array<ElementType>
                 elementAt(index).set(value);
                 return this;
             }
-        }
-
-
-    // ----- Equality ------------------------------------------------------------------------------
-
-    static <CompileType extends Array> Boolean equals(CompileType a1, CompileType a2)
-        {
-        Int c = a1.size;
-        if (c != a2.size)
-            {
-            return False;
-            }
-
-        for (Int i = 0; i < c; ++i)
-            {
-            if (a1[i] != a2[i])
-                {
-                return False;
-                }
-            }
-
-        return True;
         }
 
 
