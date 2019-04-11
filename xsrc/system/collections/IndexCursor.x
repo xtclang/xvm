@@ -46,6 +46,12 @@ class IndexCursor<ElementType>
         }
 
     @Override
+    Boolean exists.get()
+        {
+        return index < list.size;
+        }
+
+    @Override
     Boolean advance()
         {
         Int next = index + 1;

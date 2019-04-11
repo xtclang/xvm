@@ -128,7 +128,7 @@ interface Collection<ElementType>
             case Fixed     : result;
             case Persistent: result.ensurePersistent(true);
             case Constant  : result.ensureConst     (true);
-            }
+            };
         }
 
     /**

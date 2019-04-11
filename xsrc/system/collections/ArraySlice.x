@@ -1,106 +1,20 @@
 /**
- * Array is an implementation of List, an Int-indexed container of elements of a particular type.
- *
- * Array implements all four VariablyMutable forms: Mutable, Fixed, Persistent, and Constant.
- * To construct an Array with a specific form of mutability, use the
- * [construct(Mutability, ElementType...)] constructor.
+ * ArraySlice is an Array backed by another Array.
  */
-class Array<ElementType>
-        implements List<ElementType>
-        implements MutableAble, FixedSizeAble, PersistentAble, ConstAble
-        implements Stringable
-        incorporates Stringer
-        // TODO conditional incorporation of something to do comparable?
-        // TODO have to implement Const (at least conditionally if ElementType extends Const)
+class ArraySlice<ElementType>
+        extends Array<ElementType>
     {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a dynamically growing array with the specified initial capacity.
+     * Construct an ArraySlice.
      *
-     * @param capacity  the suggested initial capacity; since the Array will grow as necessary, this
-     *                  is not required, but specifying it when the expected size of the Array is
-     *                  known allows the Array to pre-size itself, which can reduce the inefficiency
-     *                  related to resizing
+     * @param array
+     * @param range
      */
-    construct(Int capacity = 0)
+    construct(Array<ElementType> array, Range<Int> range)
         {
-        if (capacity < 0)
-            {
-            throw new IllegalArgument("capacity (" + capacity + ") must be >= 0");
-            }
-
-        if (capacity > 0)
-            {
-            Element cur = new Element();
-            while (--capacity > 0)
-                {
-                cur = new Element(cur);
-                }
-            head = cur;
-            }
-
-        this.mutability = Mutable;
-        }
-
-    /**
-     * Construct a fixed size array with the specified size and initial value.
-     *
-     * @param size    the size of the fixed size array
-     * @param supply  the value or the supply function for initializing the elements of the array
-     */
-    construct(Int size, ElementType | function ElementType (Int) supply)
-        {
-        if (size > 0)
-            {
-            function ElementType (Int) valueFor = supply.is(ElementType) ? (_) -> supply : supply;
-
-            Element cur = new Element(valueFor(0));
-            head = cur;
-
-            for (Int i : 1..size)
-                {
-                Element next = new Element(valueFor(i));
-                cur.next = next;
-                cur      = next;
-                }
-            }
-
-        this.mutability = Fixed;
-        }
-
-    /**
-     * Construct a fixed size array with the specified size and initial value.
-     *
-     * @param mutability  the mutability setting for the array
-     * @param elements    the elements to use to initialize the contents of the array
-     */
-    construct(Mutability mutability, ElementType... elements)
-        {
-        Int size = elements.size;
-        if (size > 0)
-            {
-            function ElementType (ElementType) transform = mutability == Constant
-                    ? e -> (e.is(Const) ? e : e.is(ConstAble) ? e.ensureConst() : assert)  // TODO GG
-                    : e -> e;
-
-            Int     index = size - 1;
-            Element cur   = new Element(transform(elements[index]));
-            while (--index >= 0)
-                {
-                cur = new Element(transform(elements[index]), cur);
-                }
-            head = cur;
-            }
-
-        this.mutability = mutability;
-        }
-    finally
-        {
-        if (mutability == Constant)
-            {
-            makeImmutable();
-            }
+        // TODO
         }
 
 

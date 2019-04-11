@@ -55,7 +55,16 @@ interface List<ElementType>
      */
     List replace(Int index, ElementType value)
         {
-        TODO element replacement is not supported
+        if (mutability.persistent)
+            {
+            TODO element replacement is not supported
+            }
+        else
+            {
+            // mutable and fixed-size arrays are modified "in place"
+            this[index] = value;
+            return this;
+            }
         }
 
     /**
@@ -137,8 +146,8 @@ interface List<ElementType>
      * Warning: This can be an incredibly expensive operation if the data structure is not
      * explicitly intended to support efficient deletion.
      *
-     * @param index  the index of the element to delete, which must be between `0` (inclusive)
-     *               and `size` (exclusive)
+     * @param range  the range of indexes of the elements to delete, which must be between `0`
+     *               (inclusive) and `size` (exclusive)
      *
      * @return the resultant list, which is the same as `this` for a mutable list
      *
@@ -318,6 +327,11 @@ interface List<ElementType>
         Int index;
 
         /**
+         * True iff the index is less than the list size.
+         */
+        @RO Boolean exists;
+
+        /**
          * Move the cursor so that it points to the _next_ element in the list. If there are no more
          * elements in the list, then the index will be set to `size`, and the cursor will be
          * "beyond the end of the list", and referring to a non-existent element.
@@ -375,6 +389,57 @@ interface List<ElementType>
          *                      beyond the end of the list
          */
         void delete();
+        }
+
+
+    // ----- Collection interface ------------------------------------------------------------------
+
+    @Override
+    @Op("-")
+    Collection remove(ElementType value)
+        {
+        if (Int index : indexOf(value))
+            {
+            return delete(index);
+            }
+
+        return this;
+        }
+
+    @Override
+    conditional List removeIfPresent(ElementType value)
+        {
+        if (Int index : indexOf(value))
+            {
+            return True, delete(index);
+            }
+
+        return False;
+        }
+
+    @Override
+    (List, Int) removeIf(function Boolean (ElementType) shouldRemove)
+        {
+        List<ElementType> result = this;
+
+        Int index = 0;
+        Int size  = this.size;
+        Int count = 0;
+        while (index < size)
+            {
+            if (shouldRemove(this[index]))
+                {
+                result = result.delete(index);
+                --size;
+                ++count;
+                }
+            else
+                {
+                ++index;
+                }
+            }
+
+        return result, count;
         }
 
 
