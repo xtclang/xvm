@@ -5064,7 +5064,7 @@ public abstract class TypeConstant
         // interfaces are duck-type able except Tuple, Function and Orderable
         // (the later due to the fact that it's has no abstract methods and
         //  is well-known by the runtime only by its "compare" function)
-        if (isInterfaceType())
+        if (isInterfaceType() && !isVirtualChild())
             {
             if (isTuple())
                 {
