@@ -30,7 +30,7 @@ import types.TypeParameter;
  *
  * Unfortunately, Class cannot be declared as a {@code const} because of the potential for circular
  * references. (The property values of a {@code const} are fully known and immutable before the
- * {@code const} object even has a "{@code this}"; as a result, it is impossible to create circular
+ * {@code const} object even has a "`this`"; as a result, it is impossible to create circular
  * references using {@code const} classes.)
  */
 const Class<PublicType, ProtectedType extends PublicType, PrivateType extends ProtectedType, StructType extends Struct>

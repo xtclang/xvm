@@ -339,14 +339,12 @@ class Array<ElementType>
     @Op("[..]")
     Array slice(Range<Int> range)
         {
-        // TODO consider delegating "class ArraySlice : Array" for large arrays
-
         // copy the desired elements to a new fixed size array
         Int           from = range.lowerBound;
         Int           to   = range.upperBound;
         ElementType[] that = range.reversed
-            ? new Array<ElementType>(range.size, (i) -> this[to   - i])
-            : new Array<ElementType>(range.size, (i) -> this[from + i]);
+                ? new Array<ElementType>(range.size, (i) -> this[to   - i])
+                : new Array<ElementType>(range.size, (i) -> this[from + i]);
 
         // adjust the mutability of the result to match this array
         return switch (mutability)
@@ -429,7 +427,7 @@ class Array<ElementType>
 
     @Override
     @Op("+")
-    Array addAll(Collection<ElementType> values)
+    Array addAll(Iterable<ElementType> values)
         {
         switch (mutability)
             {
@@ -455,7 +453,7 @@ class Array<ElementType>
                     assert ElementType value : iter;
                     return value;
                     };
-                ElementType[] result = new Array<ElementType>(this.size + that.size, supply);
+                ElementType[] result = new Array<ElementType>(this.size + values.size, supply);
                 return mutability == Persistent
                         ? result.ensurePersistent(true)
                         : result.ensureConst(true);
@@ -481,13 +479,13 @@ class Array<ElementType>
 
         if (indexes.size == 1)
             {
-            return delete(indexes.first), 1;
+            return delete(indexes[0]), 1;
             }
 
         // copy everything except the "shouldRemove" elements to a new array
         Int                newSize = size - indexes.size;
         Array<ElementType> result  = new Array(newSize);
-        Int                delete  = indexes.first;
+        Int                delete  = indexes[0];
         Int                next    = 1;
         for (Int index = 0; index < size; ++index)
             {
@@ -574,12 +572,13 @@ class Array<ElementType>
 
             case Persistent:
             case Constant:
-                ElementType[] result = new Array(size, i -> switch (i <=> index)
-                                                                {
-                                                                case Lesser : this[i];
-                                                                case Equal  : value;
-                                                                case Greater: this[i-1];
-                                                                });
+                ElementType[] result = new Array(size,
+                        i -> switch (i <=> index)
+                            {
+                            case Lesser : this[i];
+                            case Equal  : value;
+                            case Greater: this[i-1];
+                            });
                 return mutability == Persistent
                         ? result.ensurePersistent(true)
                         : result.ensureConst(true);
@@ -587,7 +586,7 @@ class Array<ElementType>
         }
 
     @Override
-    Array insertAll(Int index, Sequence<ElementType> | Collection<ElementType> values)
+    Array insertAll(Int index, Iterable<ElementType> values)
         {
         if (values.size == 0)
             {
@@ -602,7 +601,7 @@ class Array<ElementType>
 
         if (index == size)
             {
-            return this + (values.is(Collection) ? values : values.to<ElementType[]>());
+            return this + values;
             }
 
         if (index < 0 || index >= size)

@@ -9,11 +9,6 @@ interface Sequence<ElementType>
         extends Stringable
     {
     /**
-     * The size of the Sequence, which is the number of elements in the Sequence.
-     */
-    @RO Int size;
-
-    /**
      * Provide an Iterator that will iterate over the contents of the Sequence.
      *
      * @return a new Iterator that will iterate over the contents of this Sequence

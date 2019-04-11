@@ -53,11 +53,6 @@ interface Collection<ElementType>
         }
 
     /**
-     * Determine the size of the Collection, which is the number of elements in the Collection.
-     */
-    @RO Int size;
-
-    /**
      * Determine if the Collection is empty.
      *
      * This is equivalent to the following code, but may be implemented more efficiently for
@@ -71,70 +66,16 @@ interface Collection<ElementType>
         }
 
     /**
-     * Determine if the collection contains the specified value.
-     *
-     * @param value  the value to search for in this collection
-     *
-     * @return {@code True} iff the specified value exists in this collection
-     */
-    Boolean contains(ElementType value)
-        {
-        // this should be overridden by any implementation that has a structure that can do better
-        // than an O(n) search, such as a sorted structure (binary search) or a hashed structure
-        return iterator().untilAny(element -> element == value);
-        }
-
-    /**
      * Determine if the collection contains all of the specified values.
      *
      * @param values  another collection containing values to search for in this collection
      *
      * @return {@code True} iff the specified values all exist in this collection
      */
-    Boolean containsAll(Collection! values)
+    Boolean containsAll(Iterable<ElementType> values)
         {
         return values.iterator().whileEach(contains(?));
         }
-
-    /**
-     * Obtain an Iterator that will iterate over the contents of this Collection.
-     *
-     * @return an Iterator that will iterate over the contents of this Collection
-     */
-    @Override
-    Iterator<ElementType> iterator();
-
-    /**
-     * Obtain the contents of this collection as an array.
-     *
-     * @param mutability  the requested Mutability of the resulting array
-     *
-     * @return an array of elements from this sequence
-     */
-    ElementType[] to<ElementType[]>(VariablyMutable.Mutability mutability = Persistent)
-        {
-        ElementType[] result = mutability == Mutable
-                ? new Array<ElementType>(size)      // mutable
-                : new ElementType[size];            // fixed
-
-        loop: for (ElementType element : this)
-            {
-            array[loop.count] = element;
-            }
-
-        return switch (mutability)
-            {
-            case Mutable   :
-            case Fixed     : result;
-            case Persistent: result.ensurePersistent(true);
-            case Constant  : result.ensureConst     (true);
-            };
-        }
-
-    /**
-     * @return a Stream over the contents of this Collection
-     */
-    Stream<ElementType> stream();
 
     /**
      * Obtain a shallow clone of the Collection. The definition of "shallow clone" is that the new
@@ -175,7 +116,7 @@ interface Collection<ElementType>
      * A `Mutable` collection will perform the operation in place; persistent collections will
      * return a new collection that reflects the requested changes.
      *
-     * @param values  another collection containing values to add to this collection
+     * @param values  an iterable source providing values to add to this collection
      *
      * @return the resultant collection, which is the same as `this` for a mutable collection
      *
@@ -183,7 +124,7 @@ interface Collection<ElementType>
      *                   this will occur if `mutability==Fixed`
      */
     @Op("+")
-    Collection addAll(Collection! values)
+    Collection addAll(Iterable<ElementType> values)
         {
         // this naive implementation is likely to be overridden in cases where optimizations can be
         // made with knowledge of either this collection and/or the passed in values, for example
@@ -245,16 +186,16 @@ interface Collection<ElementType>
      * A `Mutable` collection will perform the operation in place; persistent collections will
      * return a new collection that reflects the requested changes.
      *
-     * @param values  another collection containing values to remove from this collection
+     * @param values  an iterable source providing values to remove from this collection
      *
-     * @return the resultant collection, which is the same as {@code this} for a mutable collection,
+     * @return the resultant collection, which is the same as `this` for a mutable collection,
      *         and Boolean True iff the method resulted in a modification
      *
      * @throws ReadOnly  if the collection does not support element addition; among other reasons,
      *                   this will occur if `mutability==Fixed`
      */
     @Op("-")
-    Collection removeAll(Collection! values)
+    Collection removeAll(Iterable<ElementType> values)
         {
         // this naive implementation is likely to be overridden in cases where optimizations can be
         // made with knowledge of either this collection and/or the passed in values, for example
@@ -333,19 +274,19 @@ interface Collection<ElementType>
 
     /**
      * Remove all of the values from this collection that do **not** occur in the specified
-     * collection.
+     * iterable source.
      *
      * A `Mutable` collection will perform the operation in place; persistent collections will
      * return a new collection that reflects the requested changes.
      *
-     * @param values  another collection containing values to retain in this collection
+     * @param values  an iterable source providing values to retain in this collection
      *
      * @return the resultant collection, which is the same as `this` for a mutable collection
      *
      * @throws ReadOnly  if the collection does not support element addition; among other reasons,
      *                   this will occur if `mutability==Fixed`
      */
-    Collection retainAll(Collection! values)
+    Collection retainAll(Iterable<ElementType> values)
         {
         // this naive implementation is likely to be overridden in cases where optimizations can be
         // made with knowledge of either this collection and/or the passed in values, for example

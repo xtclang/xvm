@@ -5,7 +5,6 @@
  * Stream, all of which are deferrable until a terminal operation is requested.
  */
 interface Stream<ElementType>
-        extends Iterable<ElementType>
     {
     // ----- intermediate operations ---------------------------------------------------------------
 
@@ -149,26 +148,7 @@ interface Stream<ElementType>
      *
      * @return an Iterator over the contents of the Stream
      */
-    @Override
     Iterator<ElementType> iterator();
-
-    /**
-     * Obtain an iterator over a portion of the contents of the Stream.
-     *
-     * This is a terminal operation.
-     *
-     * (This method is overridden on Stream in order to utilize the Stream's filtering capability.)
-     *
-     * @param match  a function that determines which elements match the desired contents of the
-     *               resulting Iterator
-     *
-     * @return an Iterator over the filtered contents of the Stream
-     */
-    @Override
-    Iterator<ElementType> iterator(function Boolean (ElementType) match)
-        {
-        return filter(match).iterator();
-        }
 
     /**
      * Perform the specified action on all of the elements of this stream. There is no guarantee of

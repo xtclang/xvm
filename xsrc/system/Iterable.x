@@ -6,6 +6,12 @@
 interface Iterable<ElementType>
     {
     /**
+     * Determine the size of the Iterable object, which is the number of elements that an iterator
+     * would emit.
+     */
+    @RO Int size;
+
+    /**
      * Obtain an iterator over the contents of the Iterable object.
      *
      * @return an Iterator
@@ -38,6 +44,55 @@ interface Iterable<ElementType>
 
                 return false;
                 }
+            };
+        }
+
+    /**
+     * Determine if the iterable source would emit the specified value via an iterator.
+     *
+     * @param value  the value to search for in this iterable source
+     *
+     * @return {@code True} iff the specified value exists in this iterable source
+     */
+    Boolean contains(ElementType value)
+        {
+        // this should be overridden by any implementation that has a structure that can do better
+        // than an O(n) search, such as a sorted structure (binary search) or a hashed structure
+        return iterator().untilAny(element -> element == value);
+        }
+
+    /**
+     * @return a Stream over the contents of this iterable source
+     */
+    Stream<ElementType> stream()
+        {
+        return new SimpleStream(this);
+        }
+
+    /**
+     * Obtain the contents of this iterable source as an array.
+     *
+     * @param mutability  the requested Mutability of the resulting array
+     *
+     * @return an array of elements from this iterable source
+     */
+    ElementType[] to<ElementType[]>(VariablyMutable.Mutability mutability = Persistent)
+        {
+        ElementType[] result = mutability == Mutable
+                ? new Array<ElementType>(size)      // mutable
+                : new ElementType[size];            // fixed
+
+        loop: for (ElementType element : this)
+            {
+            array[loop.count] = element;
+            }
+
+        return switch (mutability)
+            {
+            case Mutable   :
+            case Fixed     : result;
+            case Persistent: result.ensurePersistent(true);
+            case Constant  : result.ensureConst     (true);
             };
         }
     }

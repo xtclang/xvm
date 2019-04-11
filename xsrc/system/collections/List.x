@@ -106,7 +106,7 @@ interface List<ElementType>
      * @throws OutOfBounds  if the specified index is outside of range `0` (inclusive) to
      *                      `size` (inclusive)
      */
-    List insertAll(Int index, Sequence<ElementType> | Collection<ElementType> values)
+    List insertAll(Int index, Iterable<ElementType> values)
         {
         // this implementation should be overridden by any non-mutable implementation of List, and
         // by any implementation that is able to insert multiple elements efficiently
@@ -396,7 +396,7 @@ interface List<ElementType>
 
     @Override
     @Op("-")
-    Collection remove(ElementType value)
+    List remove(ElementType value)
         {
         if (Int index : indexOf(value))
             {
