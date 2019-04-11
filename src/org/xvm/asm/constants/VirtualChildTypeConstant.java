@@ -251,6 +251,7 @@ public class VirtualChildTypeConstant
             {
             VirtualChildTypeConstant that = (VirtualChildTypeConstant) typeSuper;
             return this.m_constName.equals(that.m_constName) &&
+                   that.m_typeParent.isAutoNarrowing() &&
                    this.m_typeParent.isNarrowedFrom(that.m_typeParent, typeCtx);
             }
         return false;

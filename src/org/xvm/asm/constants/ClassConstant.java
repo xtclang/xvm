@@ -75,6 +75,14 @@ public class ClassConstant
         }
 
     /**
+     * @return true iff this class is a virtual child class
+     */
+    public boolean isVirtualChild()
+        {
+        return ((ClassStructure) getComponent()).isVirtualChild();
+        }
+
+    /**
      * @return the next outer class, or null if there is none
      */
     public ClassConstant getOuterClass()
@@ -311,6 +319,15 @@ public class ClassConstant
     public boolean isClass()
         {
         return true;
+        }
+
+    @Override
+    public TypeConstant getType()
+        {
+        return isVirtualChild()
+                ? getConstantPool().ensureVirtualChildTypeConstant(
+                        getParentConstant().getType(), getName())
+                : super.getType();
         }
 
     @Override

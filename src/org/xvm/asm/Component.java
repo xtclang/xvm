@@ -3095,21 +3095,13 @@ public abstract class Component
                 return typeContrib;
                 }
 
-            GenericTypeResolver resolver  = clzParent.new SimpleTypeResolver(listActual);
+            GenericTypeResolver resolver = clzParent.new SimpleTypeResolver(listActual);
 
-            TypeConstant[] aContribParam = typeContrib.getParamTypesArray();
-            TypeConstant[] atypeResolved = new TypeConstant[aContribParam.length];
+            typeContrib = typeContrib.resolveGenerics(pool, resolver);
 
-            int ix = 0;
-            for (TypeConstant typeContribParam : aContribParam)
-                {
-                atypeResolved[ix++] = typeContribParam.resolveGenerics(pool, resolver);
-                }
-
-            IdentityConstant idContrib = typeContrib.getSingleUnderlyingClass(true);
             return getComposition() != Composition.Incorporates ||
-                        checkConditionalIncorporate(atypeResolved)
-                    ? pool.ensureClassTypeConstant(idContrib, null, atypeResolved)
+                        checkConditionalIncorporate(typeContrib.getParamTypesArray())
+                    ? typeContrib
                     : null;
             }
 

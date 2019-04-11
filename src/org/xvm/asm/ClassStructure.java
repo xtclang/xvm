@@ -1683,8 +1683,19 @@ public class ClassStructure
 
                 if (constIdLeft.equals(idClzRight))
                     {
-                    return calculateAssignability(
+                    Relation relation = calculateAssignability(
                         typeLeft.getParamTypes(), typeLeft.getAccess(), typeRight.getParamTypes());
+                    if (relation == Relation.INCOMPATIBLE || !isVirtualChild())
+                        {
+                        return relation;
+                        }
+
+                    // for virtual child we need to repeat the check for the parent types
+                    TypeConstant typeParentLeft  = typeLeft.getParentType();
+                    TypeConstant typeParentRight = typeRight.getParentType();
+                    Relation     relationParent  = getVirtualParent().
+                            findContribution(typeParentLeft, typeParentRight, fAllowInto);
+                    return relation.worseOf(relationParent);
                     }
                 break;
 
@@ -1733,7 +1744,7 @@ public class ClassStructure
                 case Annotation:
                 case Delegates:
                 case Implements:
-                    typeContrib = typeContrib.resolveGenerics(pool, typeRight);
+                    typeContrib = typeContrib.resolveGenerics(pool, typeRight.normalizeParameters(pool));
                     if (typeContrib != null)
                         {
                         relation = relation.bestOf(typeContrib.calculateRelation(typeLeft));
