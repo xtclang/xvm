@@ -860,10 +860,9 @@ public class Context
      * @param lPos  the node's position
      * @param errs  the error list to log to (optional)
      */
-    public final void requireThis(long lPos, ErrorListener errs)
+    public void requireThis(long lPos, ErrorListener errs)
         {
-        Token tokThis = new Token(lPos, lPos, Token.Id.THIS);
-        markVarRead(tokThis, errs);
+        getOuterContext().requireThis(lPos, errs);
         }
 
     /**
@@ -2131,6 +2130,12 @@ public class Context
                 }
 
             return ctxOuter;
+            }
+
+        @Override
+        public void requireThis(long lPos, ErrorListener errs)
+            {
+            captureThis();
             }
 
         @Override

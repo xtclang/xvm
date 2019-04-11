@@ -720,6 +720,20 @@ public class StatementBlock
             }
 
         @Override
+        public void requireThis(long lPos, ErrorListener errs)
+            {
+            AstNode parent   = getParent();
+            boolean fHasThis = parent instanceof LambdaExpression
+                ? ((LambdaExpression) parent).isRequiredThis()
+                : !isFunction();
+
+            if (!fHasThis)
+                {
+                errs.log(Severity.ERROR, Compiler.NO_THIS, null, getSource(), lPos, lPos);
+                }
+            }
+
+        @Override
         public boolean isVarWritable(String sName)
             {
             Argument arg = ensureNameMap().get(sName);
