@@ -23,6 +23,22 @@ const Interval<ElementType extends immutable Orderable>
         }
 
     /**
+     * The starting bound of the interval.
+     */
+    ElementType first.get()
+        {
+        return reversed ? upperBound : lowerBound;
+        }
+
+    /**
+     * The ending bound of the interval.
+     */
+    ElementType last.get()
+        {
+        return reversed ? lowerBound : upperBound;
+        }
+
+    /**
      * The lower bound of the interval.
      */
     ElementType lowerBound;

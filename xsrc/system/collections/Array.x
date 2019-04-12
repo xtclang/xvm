@@ -103,6 +103,18 @@ class Array<ElementType>
             }
         }
 
+    /**
+     * Construct a slice of another array.
+     *
+     * @param array    the array that this slice delegates to (which could itself be a slice)
+     * @param section  the range that defines the section of the array that the slice represents
+     */
+    construct(Array<ElementType> array, Range<Int> section)
+        {
+        this.delegate = array;
+        this.section  = section;
+        }
+
 
     // ----- properties ----------------------------------------------------------------------------
 
@@ -114,17 +126,26 @@ class Array<ElementType>
         @Override
         Int get()
             {
-            Int count = 0;
-            for (Element? cur = head; cur != null; cur = cur?.next : assert) // TODO GG "? :" should not be necessary
+            if (delegate == null)
                 {
-                ++count;
+                Int count = 0;
+                for (Element? cur = head; cur != null; cur = cur?.next : assert) // TODO GG "? :" should not be necessary
+                    {
+                    ++count;
+                    }
+                return count;
                 }
-            return count;
+            else
+                {
+                return section.size;
+                }
             }
 
         @Override
         void set(Int newCap)
             {
+            assert delegate == null;
+
             Int oldCap = capacity; // TODO GG should be "get()" instead, but it can't find it
             if (newCap == oldCap)
                 {
@@ -156,7 +177,16 @@ class Array<ElementType>
     // ----- VariablyMutable interface -------------------------------------------------------------
 
     @Override
-    public/private Mutability mutability;
+    public/private Mutability mutability.get()
+        {
+        if (delegate != null)
+            {
+            Mutability mutability = delegate.mutability;
+            return mutability == Mutable ? Fixed : mutability;
+            }
+
+        return super();
+        }
 
     @Override
     Array ensureMutable()
@@ -192,7 +222,7 @@ class Array<ElementType>
     @Override
     Array ensurePersistent(Boolean inPlace = False)
         {
-        if (inPlace && !mutability.persistent || mutability == Persistent)
+        if (delegate == null && inPlace && !mutability.persistent || mutability == Persistent)
             {
             mutability = Persistent;
             return this;
@@ -218,7 +248,7 @@ class Array<ElementType>
             return this.as(immutable ElementType[]);
             }
 
-        if (!inPlace)
+        if (!inPlace || delegate != null)
             {
             return new Array(Constant, this).as(immutable ElementType[]);
             }
@@ -254,14 +284,8 @@ class Array<ElementType>
                 }
             }
 
-        return makeImmutable();
-        }
-
-    @Override
-    immutable Array makeImmutable()
-        {
-        // the "mutability" property has to be set before calling super, since no changes will be
-        // allowed afterwards
+        // the "mutability" property has to be set before calling makeImmutable(), since no changes
+        // will be possible afterwards
         Mutability prev = mutability;
         if (!meta.immutable_)
             {
@@ -270,7 +294,7 @@ class Array<ElementType>
 
         try
             {
-            return super();
+            return makeImmutable();
             }
         catch (Exception e)
             {
@@ -306,6 +330,13 @@ class Array<ElementType>
     @Override
     Var<ElementType> elementAt(Int index)
         {
+        // TODO make sure that persistent arrays do no expose a read/write element (throw ReadOnly from set())
+
+        if (delegate != null)
+            {
+            return delegate.elementAt(translateIndex(index));
+            }
+
         if (index < 0 || index >= size)
             {
             throw new OutOfBounds("index=" + index + ", size=" + size);
@@ -326,6 +357,11 @@ class Array<ElementType>
     @Override
     Int size.get()
         {
+        if (section != null)
+            {
+            return section.size;
+            }
+
         Int count = 0;
         Element? cur = head;
         while (cur?.valueRef.assigned)
@@ -339,27 +375,20 @@ class Array<ElementType>
     @Op("[..]")
     Array slice(Range<Int> range)
         {
-        // copy the desired elements to a new fixed size array
-        Int           from = range.lowerBound;
-        Int           to   = range.upperBound;
-        ElementType[] that = range.reversed
-                ? new Array<ElementType>(range.size, (i) -> this[to   - i])
-                : new Array<ElementType>(range.size, (i) -> this[from + i]);
+        Array<ElementType> result = new Array(this, range);
 
-        // adjust the mutability of the result to match this array
-        return switch (mutability)
-            {
-            case Mutable   : that.ensureMutable();
-            case Fixed     : that;
-            case Persistent: that.ensurePersistent(true);
-            case Constant  : that.ensureConst(true);
-            };
+        // a slice of an immutable array is also immutable
+        return meta.immutable_
+                ? result.makeImmutable()
+                : result;
         }
 
     @Override
     Array reify()
         {
-        return this;
+        return delegate == null
+                ? this
+                : new Array(mutability, this);
         }
 
 
@@ -373,10 +402,10 @@ class Array<ElementType>
         }
 
     @Override
-    ElementType[] to<ElementType[]>(VariablyMutable.Mutability mutability = Persistent)
+    ElementType[] to<ElementType[]>(VariablyMutable.Mutability? mutability = Null)
         {
-        return mutability == this.mutability && mutability.persistent
-                ? this                          // a persistent array is its own shallow clone
+        return mutability == null || mutability == this.mutability
+                ? this
                 : new Array(mutability, this);  // create a copy of the desired mutability
         }
 
@@ -389,7 +418,7 @@ class Array<ElementType>
     @Override
     Array clone()
         {
-        return mutability.persistent
+        return mutability.persistent && delegate == null
                 ? this                          // a persistent array is its own shallow clone
                 : new Array(mutability, this);  // create a copy with this array's mutability
         }
@@ -829,6 +858,38 @@ class Array<ElementType>
             {
             return &value;
             }
+        }
+
+    /**
+     * When an array is a slice of another array, it delegates operations to that array.
+     */
+    private Array<ElementType>? delegate;
+
+    /**
+     * When an array is a slice of another array, it knows the range of elements (including a
+     * potential for reverse ordering) from that array that it represents.
+     */
+    private Range<Int>? section;
+
+    /**
+     * Translate from an index into a slice, into an index into the underlying array.
+     *
+     * @param index  the index into the slice
+     *
+     * @return the corresponding index into the underlying array
+     */
+    private Int translateIndex(Int index)
+        {
+        assert delegate != null && section != null;
+
+        if (index < 0 || index >= section.size)
+            {
+            throw new OutOfBounds("index=" + index + ", size=" + section.size);
+            }
+
+        return section.reversed
+                ? section.upperBound - index
+                : section.lowerBound + index;
         }
 
 

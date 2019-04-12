@@ -1,3 +1,5 @@
+import collections.Stream;
+
 /**
  * The Iterable interface allows an object to expose its contents as a series of elements, either
  * for consumption by the caller or by inversion of control by passing an element-consuming
@@ -91,8 +93,8 @@ interface Iterable<ElementType>
             {
             case Mutable   :
             case Fixed     : result;
-            case Persistent: result.ensurePersistent(true);
-            case Constant  : result.ensureConst     (true);
+            case Persistent: result.ensurePersistent(True);
+            case Constant  : result.ensureConst     (True);
             };
         }
     }
