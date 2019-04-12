@@ -71,8 +71,8 @@ interface Map<KeyType, ValueType>
      *
      * @param key  the key to look up in the map
      *
-     * @return a conditional True and the value associated with the specified key if it exists in
-     *         the map; otherwise a conditional False
+     * @return a True iff the value associated with the specified key exists in the map
+     * @return the value associated with the specified key (conditional)
      */
     conditional ValueType get(KeyType key);
 
@@ -211,16 +211,12 @@ interface Map<KeyType, ValueType>
      */
     Map putAll(Map! that)
         {
-        Boolean modified = False;
-        Map     result   = this;
+        Map result = this;
         for (Entry entry : that.entries)
             {
-            if (result : result.put(entry.key, entry.value))
-                {
-                modified = True;
-                }
+            result = result.put(entry.key, entry.value);
             }
-        return modified, result;
+        return result;
         }
 
     /**

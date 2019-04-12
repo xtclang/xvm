@@ -1,4 +1,5 @@
 import collections.Stream;
+import collections.VariablyMutable;
 
 /**
  * The Iterable interface allows an object to expose its contents as a series of elements, either
@@ -68,7 +69,7 @@ interface Iterable<ElementType>
      */
     Stream<ElementType> stream()
         {
-        return new SimpleStream(this);
+        TODO return new SimpleStream(this);
         }
 
     /**

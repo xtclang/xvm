@@ -133,6 +133,7 @@ interface Sequence<ElementType>
      *
      * @return an array of elements from this sequence
      */
+    @Override
     ElementType[] to<ElementType[]>(VariablyMutable.Mutability mutability = Persistent)
         {
         return new Array<ElementType>(mutability, this);

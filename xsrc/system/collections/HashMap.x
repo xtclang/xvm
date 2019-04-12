@@ -140,7 +140,7 @@ class HashMap<KeyType, ValueType>
         }
 
     @Override
-    conditional HashMap put(KeyType key, ValueType value)
+    HashMap put(KeyType key, ValueType value)
         {
         Int        keyhash  = hasher.hashOf(key);
         Int        bucketId = keyhash % buckets.size;
@@ -149,13 +149,8 @@ class HashMap<KeyType, ValueType>
             {
             if (entry.keyhash == keyhash && hasher.areEqual(entry.key, key))
                 {
-                if (value == entry.value)
-                    {
-                    return False;
-                    }
-
                 entry.value = value;
-                return True, this;
+                return this;
                 }
 
             entry = entry.next;
@@ -165,11 +160,11 @@ class HashMap<KeyType, ValueType>
         ++addCount;
         checkCapacity();
 
-        return True, this;
+        return this;
         }
 
     @Override
-    conditional HashMap putAll(Map<KeyType, ValueType> that)
+    HashMap putAll(Map<KeyType, ValueType> that)
         {
         // check the capacity up front (to avoid multiple resizes); the worst case is that we end
         // up a bit bigger than we want
@@ -177,7 +172,6 @@ class HashMap<KeyType, ValueType>
 
         HashEntry?[] buckets     = this.buckets;
         Int          bucketCount = buckets.size;
-        Boolean      modified    = False;
         NextPut: for (Entry entry : that.entries)
             {
             KeyType    key       = entry.key;
@@ -189,11 +183,7 @@ class HashMap<KeyType, ValueType>
                 if (currEntry.keyhash == keyhash && hasher.areEqual(currEntry.key, key))
                     {
                     // an entry with the same key already exists in the HashMap
-                    if (currEntry.value != entry.value)
-                        {
-                        currEntry.value = entry.value;
-                        modified        = True;
-                        }
+                    currEntry.value = entry.value;
                     continue NextPut;
                     }
                 currEntry = currEntry.next;
@@ -203,11 +193,11 @@ class HashMap<KeyType, ValueType>
             ++addCount;
             }
 
-        return modified, this;
+        return this;
         }
 
     @Override
-    conditional HashMap remove(KeyType key)
+    HashMap remove(KeyType key)
         {
         Int        keyhash   = hasher.hashOf(key);
         Int        bucketId  = keyhash % buckets.size;
@@ -229,30 +219,33 @@ class HashMap<KeyType, ValueType>
                 entry.next = null;
 
                 ++removeCount;
-                return True, this;
+                return this;
                 }
 
             prevEntry = entry;
             entry = entry.next;
             }
 
-        return False;
+        return this;
         }
 
     @Override
-    conditional HashMap clear()
+    HashMap clear()
         {
         Int entryCount = size;
         if (entryCount == 0)
             {
-            return False;
+            return this;
             }
+
+        // TODO implement Persistent/Constant mutability
+        verifyNotPersistent();
 
         (Int bucketCount, this.growAt, this.shrinkAt) = calcBucketCount(0);
         buckets = new HashEntry?[bucketCount];
         removeCount += entryCount;
         assert size == 0;
-        return True, this;
+        return this;
         }
 
     @Override

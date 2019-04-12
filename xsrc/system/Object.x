@@ -34,30 +34,30 @@ class Object
         return meta.class_.to<String>();
         }
 
-    /**
-     * Obtain a read-only array of length 1 containing a reference to this object.
-     */
-    Object[] to<Object[]>()
-        {
-        return [this];
-        }
-
-    /**
-     * Obtain a read-only tuple of one element containing a reference to this object.
-     */
-    Tuple<Object> to<Tuple<Object>>()
-        {
-        return Tuple:(this);
-        }
-
-    /**
-     * A reference to any object can be used to provide a function that returns a
-     * reference to that same object.
-     */
-    @Auto function Object() to<function Object()>()
-        {
-        return () -> this;
-        }
+//    /**
+//     * Obtain a read-only array of length 1 containing a reference to this object.
+//     */
+//    Object[] to<Object[]>()
+//        {
+//        return [this];
+//        }
+//
+//    /**
+//     * Obtain a read-only tuple of one element containing a reference to this object.
+//     */
+//    Tuple<Object> to<Tuple<Object>>()
+//        {
+//        return Tuple:(this);
+//        }
+//
+//    /**
+//     * A reference to any object can be used to provide a function that returns a
+//     * reference to that same object.
+//     */
+//    @Auto function Object() to<function Object()>()
+//        {
+//        return () -> this;
+//        }
 
     /**
      * Make this object immutable.

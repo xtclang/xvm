@@ -34,21 +34,25 @@ const Bit
         return literal.to<UInt>();
         }
 
-    @Op Bit and(Bit that)
+    @Op("&")
+    Bit and(Bit that)
         {
         return this.literal == 1 && that.literal == 1 ? 1 : 0;
         }
 
-    @Op Bit or(Bit that)
+    @Op("|")
+    Bit or(Bit that)
         {
         return this.literal == 1 || that.literal == 1 ? 1 : 0;
         }
 
-    @Op Bit xor(Bit that)
+    @Op("^")
+    Bit xor(Bit that)
         {
         return this.literal == 1 ^ that.literal == 1 ? 1 : 0;
         }
 
+    @Op("~")
     @Op Bit not()
         {
         return literal == 1 ? 0 : 1;

@@ -21,21 +21,21 @@ interface Set<ElementType>
      */
     @Override
     @Op("|")
-    Set addAll(Collection<ElementType> values);
+    Set addAll(Iterable<ElementType> values);
 
     /**
      * The "relative complement" operator.
      */
     @Override
     @Op("-")
-    Set removeAll(Collection<ElementType> values);
+    Set removeAll(Iterable<ElementType> values);
 
     /**
      * The "intersection" operator.
      */
     @Override
     @Op("&")
-    Set retainAll(Collection<ElementType> values);
+    Set retainAll(Iterable<ElementType> values);
 
     /**
      * The "symmetric difference" operator determines the elements that are present in only this
