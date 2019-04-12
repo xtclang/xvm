@@ -391,6 +391,149 @@ interface List<ElementType>
         void delete();
         }
 
+    /**
+     * An IndexCursor is a simple [List.Cursor] implementation that delegates all operations back to
+     * a List using the index-based operations on the List itself.
+     */
+    class IndexCursor
+            implements Cursor
+        {
+        /**
+         * Construct an IndexCursor for the specified List.
+         *
+         * @param index  the location of the cursor in the list, between `0` (inclusive) and [List.size]
+         *               (exclusive)
+         */
+        construct(Int index = 0)
+            {
+            if (index < 0 || index > size)
+                {
+                throw new OutOfBounds();
+                }
+
+            this.index = index;
+            }
+
+        @Override
+        List<ElementType> list.get()
+            {
+            return List.this;   // TODO this.List
+            }
+
+        @Override
+        Int index
+            {
+            @Override
+            Int get()
+                {
+                return super().minOf(size);
+                }
+
+            @Override
+            void set(Int i)
+                {
+                if (i < 0 || i > size)
+                    {
+                    throw new OutOfBounds();
+                    }
+                super(i);
+                }
+            }
+
+        @Override
+        Boolean exists.get()
+            {
+            return index < size;
+            }
+
+        @Override
+        Boolean advance()
+            {
+            Int next = index + 1;
+            Int size = size;
+            index = next.minOf(size);
+            return next < size;
+            }
+
+        @Override
+        Boolean rewind()
+            {
+            Int prev = index;
+            if (prev > 0)
+                {
+                index = prev - 1;
+                return true;
+                }
+            return false;
+            }
+
+        @Override
+        ElementType value
+            {
+            @Override
+            ElementType get()
+                {
+                // may throw OutOfBounds
+                return list[index];
+                }
+
+            @Override
+            void set(ElementType value)
+                {
+                Int index = this.index;
+                Int size  = size;
+                if (index < size)
+                    {
+                    // may throw ReadOnly
+                    list[index] = value;
+                    }
+                else if (mutability == Mutable)
+                    {
+                    add(value);
+                    index = size;
+                    }
+                else
+                    {
+                    throw new ReadOnly();
+                    }
+                }
+            }
+
+        @Override
+        void insert(ElementType value)
+            {
+            if (mutability != Mutable)
+                {
+                throw new ReadOnly();
+                }
+
+            Int index = this.index;
+            if (index < size)
+                {
+                list.insert(index, value);
+                }
+            else
+                {
+                add(value);
+                }
+            }
+
+        @Override
+        void delete()
+            {
+            if (mutability != Mutable)
+                {
+                throw new ReadOnly();
+                }
+
+            Int index = this.index;
+            if (index < size)
+                {
+                list.delete(index);
+                }
+            }
+        }
+
 
     // ----- Collection interface ------------------------------------------------------------------
 

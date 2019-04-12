@@ -58,11 +58,14 @@ class Array<ElementType>
             Element cur = new Element(valueFor(0));
             head = cur;
 
-            for (Int i : 1..size)
+            if (size > 1)
                 {
-                Element next = new Element(valueFor(i));
-                cur.next = next;
-                cur      = next;
+                for (Int i : 1..size-1)
+                    {
+                    Element next = new Element(valueFor(i));
+                    cur.next = next;
+                    cur      = next;
+                    }
                 }
             }
 
@@ -121,7 +124,7 @@ class Array<ElementType>
     /**
      * The capacity of an array is the amount that the array can hold without resizing.
      */
-    public Int capacity
+    Int capacity
         {
         @Override
         Int get()
@@ -602,7 +605,7 @@ class Array<ElementType>
 
             case Persistent:
             case Constant:
-                ElementType[] result = new Array(size,
+                ElementType[] result = new Array(size + 1,
                         i -> switch (i <=> index)
                             {
                             case Lesser : this[i];

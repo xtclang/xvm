@@ -28,7 +28,7 @@ package collections
      */
     interface VariablyMutable
         {
-        enum Mutability(Boolean persistent)
+        enum Mutability(Boolean persistent)   // TODO CP - flip this to "inPlace"
             {
             /*
              * A _Mutable_  data structure allows mutations, including changes in its `size`.

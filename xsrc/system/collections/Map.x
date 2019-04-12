@@ -358,7 +358,7 @@ interface Map<KeyType, ValueType>
      *                  _mutable_, or to modify an entry in a map whose [mutability] is not
      *                  `Mutable` or `Fixed`
      */
-    <ResultType> Map<KeyType, ResultType> processAll(Collection<KeyType> keys,
+    <ResultType> Map!<KeyType, ResultType> project(Iterable<KeyType> keys,
             function ResultType (Entry) compute)
         {
         ListMap<KeyType, ResultType> result = new ListMap(keys.size);

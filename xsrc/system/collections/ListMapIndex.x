@@ -32,7 +32,8 @@ mixin ListMapIndex<KeyType extends Hashable, ValueType>
     protected typedef (HashTree | OneOrN)? Bucket;
 
     /**
-     * TODO
+     * ListMaps smaller than this number of entries are not indexed; the assumption is that it is
+     * faster just to linearly scan the map up to a certain size.
      */
     protected static Int MINSIZE = 10;
 
@@ -126,7 +127,7 @@ mixin ListMapIndex<KeyType extends Hashable, ValueType>
             {
             if (size < MINSIZE)
                 {
-                buckets = null;
+                this.buckets = null;
                 }
             else
                 {
@@ -166,6 +167,13 @@ mixin ListMapIndex<KeyType extends Hashable, ValueType>
                 buildIndex();
                 }
             }
+        }
+
+    @Override
+    ListMapIndex clear()
+        {
+        buckets = null;
+        return super();
         }
 
     /**
@@ -344,17 +352,12 @@ mixin ListMapIndex<KeyType extends Hashable, ValueType>
                     assert;
 
                 case 2:
-                    if (indexes[0] == index)
-                        {
-                        return indexes[1];
-                        }
-
-                    assert indexes[1] == index;
-                    return indexes[0];
+                    return indexes[0] == index
+                            ? indexes[1]
+                            : indexes[0];
 
                 default:
-                    assert indexes : indexes.remove(index);
-                    return indexes;
+                    return indexes.remove(index);
                 }
             }
 

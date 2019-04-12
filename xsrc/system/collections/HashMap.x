@@ -409,11 +409,10 @@ class HashMap<KeyType, ValueType>
             }
 
         @Override
-        conditional EntrySet remove(Entry entry)
+        EntrySet remove(Entry entry)
             {
             verifyMutable();
 
-            Boolean removed = False;
             if (entry.is(CursorEntry))
                 {
                 HashEntry    hashEntry = entry.hashEntry;
@@ -423,8 +422,7 @@ class HashMap<KeyType, ValueType>
                 HashEntry?   currEntry = buckets[bucketId];
                 HashEntry?   prevEntry = null;
 
-                loop:
-                while (currEntry != null)
+                loop: while (currEntry != null)
                     {
                     // check if we found the entry that we're looking for
                     if (currEntry.keyhash == keyhash && hasher.areEqual(currEntry.key, hashEntry.key))
@@ -443,12 +441,11 @@ class HashMap<KeyType, ValueType>
                                 }
 
                             ++HashMap.this.removeCount;
-                            removed = True;
                             }
 
                         // whether or not the entry matched and was removed, it was the one that we
                         // were looking for (i.e. there will be no other entry with that same key)
-                        return removed, this;
+                        return this;
                         }
 
                     prevEntry = currEntry;
@@ -457,16 +454,16 @@ class HashMap<KeyType, ValueType>
                 }
             else
                 {
-                removed = HashMap.this.remove(entry.key, entry.value);
+                HashMap.this.remove(entry.key, entry.value);
                 }
 
-            return removed, this;
+            return this;
             }
 
         @Override
-        conditional EntrySet removeIf(function Boolean (Entry) shouldRemove)
+        (Collection, Int) removeIf(function Boolean (ElementType) shouldRemove)
             {
-            Boolean      modified    = False;
+            Boolean      removed     = 0;
             HashEntry?[] buckets     = HashMap.this.buckets;
             Int          bucketCount = buckets.size;
             CursorEntry  entry       = new CursorEntry();
@@ -491,6 +488,7 @@ class HashMap<KeyType, ValueType>
                             buckets[i] = currEntry;
                             }
                         modified = True;
+                        ++removed;
                         ++HashMap.this.removeCount;
                         }
                     else
@@ -501,7 +499,7 @@ class HashMap<KeyType, ValueType>
                     }
                 }
 
-            return modified, this;
+            return this, removed;
             }
 
         @Override

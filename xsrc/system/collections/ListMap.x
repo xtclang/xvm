@@ -63,12 +63,11 @@ class ListMap<KeyType, ValueType>
      */
     protected conditional Int indexOf(KeyType key)
         {
-        AllKeys:
-        for (KeyType eachKey : listKeys)
+        loop: for (KeyType eachKey : listKeys)
             {
             if (eachKey == key)
                 {
-                return True, AllKeys.count;
+                return True, loop.count;
                 }
             }
         return False;
@@ -205,33 +204,32 @@ class ListMap<KeyType, ValueType>
         }
 
     @Override
-    conditional ListMap remove(KeyType key, ValueType value)
+    ListMap remove(KeyType key, ValueType value)
         {
         if (Int index : indexOf(key))
             {
             if (listVals[index] == value)
                 {
                 deleteEntryAt(index);
-                return True, this;
+                return this;
                 }
             }
 
-        return False;
+        return this;
         }
 
     @Override
-    conditional ListMap clear()
+    ListMap clear()
         {
         Int count = size;
-        if (count == 0)
+        if (count > 0)
             {
-            return False;
+            listKeys.clear();
+            listVals.clear();
+            deletes += count;
             }
 
-        listKeys.clear();
-        listVals.clear();
-        deletes += count;
-        return True, this;
+        return this;
         }
 
     @Override
@@ -331,21 +329,20 @@ class ListMap<KeyType, ValueType>
             }
 
         @Override
-        conditional Keys remove(KeyType key)
+        Keys remove(KeyType key)
             {
             verifyMutable();
 
-            if (Int index : listKeys.indexOf(key))
+            if (Int index : indexOf(key))
                 {
                 deleteEntryAt(index);
-                return True, this;
                 }
 
-            return False;
+            return this;
             }
 
         @Override
-        conditional Keys removeIf(function Boolean (KeyType) shouldRemove)
+        (List, Int) removeIf(function Boolean (ElementType) shouldRemove)
             {
             verifyMutable();
 
@@ -359,13 +356,15 @@ class ListMap<KeyType, ValueType>
                     }
                 }
 
-            return removed > 0, this;
+            return this, removed;
             }
 
         @Override
-        conditional Keys clear()
+        Keys clear()
             {
-            return verifyMutable() && ListMap.this.clear(), this;
+            verifyMutable();
+            ListMap.this.clear();
+            return this;
             }
 
         @Override
@@ -447,6 +446,7 @@ class ListMap<KeyType, ValueType>
         /**
          * The index of the key in the ListMap, assuming that the key [exists].
          */
+        @Unassigned
         protected/private Int index;
 
         /**
@@ -596,7 +596,7 @@ class ListMap<KeyType, ValueType>
             }
 
         @Override
-        conditional Entries remove(Entry entry)
+        Entries remove(Entry entry)
             {
             verifyMutable();
 
@@ -629,7 +629,7 @@ class ListMap<KeyType, ValueType>
             }
 
         @Override
-        conditional Entries clear()
+        Entries clear()
             {
             return verifyMutable() && ListMap.this.clear(), this;
             }
@@ -667,7 +667,7 @@ class ListMap<KeyType, ValueType>
             // otherwise, search for the entry by key
             if (!found)
                 {
-                if (index : listKeys.indexOf(entry.key))
+                if (index : indexOf(entry.key))
                     {
                     found = True;
                     }
