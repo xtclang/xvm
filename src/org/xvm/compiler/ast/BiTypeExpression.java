@@ -63,8 +63,8 @@ public class BiTypeExpression
     @Override
     protected TypeConstant instantiateTypeConstant(Context ctx)
         {
-        TypeConstant constType1 = type1.ensureTypeConstant();
-        TypeConstant constType2 = type2.ensureTypeConstant();
+        TypeConstant constType1 = type1.ensureTypeConstant(ctx);
+        TypeConstant constType2 = type2.ensureTypeConstant(ctx);
 
         final ConstantPool pool = pool();
         switch (operator.getId())

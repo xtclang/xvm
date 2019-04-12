@@ -766,6 +766,11 @@ public class NamedTypeExpression
                             clzTarget.getFormalType().getParamTypesArray());
                         }
                     }
+
+                if (ctx != null && typeTarget != null)
+                    {
+                    typeTarget = typeTarget.resolveGenerics(pool, ctx.getGenericTypeResolver());
+                    }
                 }
             else if (clzTarget.isVirtualChild())
                 {

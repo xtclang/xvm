@@ -64,7 +64,7 @@ public class SequenceTypeExpression
         {
         // build an Array type
         ConstantPool pool = pool();
-        return pool.ensureClassTypeConstant(pool.clzSequence(), null, type.ensureTypeConstant());
+        return pool.ensureClassTypeConstant(pool.clzSequence(), null, type.ensureTypeConstant(ctx));
         }
 
     @Override

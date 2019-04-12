@@ -99,7 +99,7 @@ public class NonBindingExpression
             else
                 {
                 this.type = exprNewType;
-                typeArg   = exprNewType.ensureTypeConstant().resolveAutoNarrowingBase(pool());
+                typeArg   = exprNewType.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool());
                 }
             }
 

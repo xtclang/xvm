@@ -231,7 +231,7 @@ public class VariableDeclarationStatement
         type = typeNew;
 
         // create the register
-        TypeConstant typeVar = type.ensureTypeConstant().resolveAutoNarrowingBase(pool);
+        TypeConstant typeVar = type.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool);
         m_reg = new Register(typeVar);
         ctx.registerVar(name, m_reg, errs);
         if (m_fInjected)

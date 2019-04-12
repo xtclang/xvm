@@ -78,7 +78,7 @@ public class IsExpression
                 {
                 NameExpression exprName   = (NameExpression) exprTarget;
                 TypeConstant   typeTarget = exprTarget.getType();
-                TypeConstant   typeTest   = exprType.ensureTypeConstant().resolveAutoNarrowingBase(pool);
+                TypeConstant   typeTest   = exprType.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool);
 
                 // there is a case for formal type narrowing, e.g.
                 //     ElementType.is(Type<Hashable>)
@@ -111,7 +111,7 @@ public class IsExpression
         if (LVal.isLocalArgument())
             {
             Argument argTarget = expr1.generateArgument(ctx, code, true, true, errs);
-            Argument argType   = ((TypeExpression) expr2).ensureTypeConstant().resolveAutoNarrowingBase(pool());
+            Argument argType   = ((TypeExpression) expr2).ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool());
             code.add(new IsType(argTarget, argType, LVal.getLocalArgument()));
             }
         else
@@ -125,7 +125,7 @@ public class IsExpression
             Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs)
         {
         Argument argTarget = expr1.generateArgument(ctx, code, true, true, errs);
-        Argument argType   = ((TypeExpression) expr2).ensureTypeConstant().resolveAutoNarrowingBase(pool());
+        Argument argType   = ((TypeExpression) expr2).ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool());
         code.add(fWhenTrue
                 ? new JumpType(argTarget, argType, label)
                 : new JumpNType(argTarget, argType, label));

@@ -34,7 +34,7 @@ public class AsExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        return ((TypeExpression) expr2).ensureTypeConstant();
+        return ((TypeExpression) expr2).ensureTypeConstant(ctx);
         }
 
     @Override
@@ -64,7 +64,7 @@ public class AsExpression
         else
             {
             expr2 = exprType;
-            type  = exprType.ensureTypeConstant().resolveAutoNarrowingBase(pool);
+            type  = exprType.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool);
 
             // it would be nice if the expression could provide us the type without any additional
             // work!

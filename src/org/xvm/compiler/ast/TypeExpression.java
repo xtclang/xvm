@@ -56,6 +56,16 @@ public abstract class TypeExpression
     public TypeConstant ensureTypeConstant(Context ctx)
         {
         TypeConstant constType = m_constType;
+        if (constType != null)
+            {
+            // if the context has changed we may need to re-instantiate the type
+            if (ctx != null && ctx != m_ctxPrev)
+                {
+                constType = null;
+                m_ctxPrev = ctx;
+                }
+            }
+
         if (constType == null)
             {
             if (isValidated())
@@ -195,7 +205,7 @@ public abstract class TypeExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        TypeConstant type = ensureTypeConstant();
+        TypeConstant type = ensureTypeConstant(ctx);
         if (type == null)
             {
             throw new IllegalStateException("type has not yet been determined for this: " + this);
@@ -217,7 +227,7 @@ public abstract class TypeExpression
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         ConstantPool pool          = pool();
-        TypeConstant typeReferent  = ensureTypeConstant();
+        TypeConstant typeReferent  = ensureTypeConstant(ctx);
         TypeConstant typeReference = pool.ensureParameterizedTypeConstant(pool.typeType(), typeReferent);
         return finishValidation(typeRequired, typeReference, TypeFit.Fit, typeReferent, errs);
         }
@@ -266,4 +276,9 @@ public abstract class TypeExpression
      * The TypeConstant currently associated with this TypeExpression.
      */
     private TypeConstant m_constType;
+
+    /**
+     * The context for which the type constant was generated.
+     */
+    private Context m_ctxPrev;
     }

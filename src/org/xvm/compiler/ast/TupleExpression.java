@@ -157,7 +157,7 @@ public class TupleExpression
     public TypeConstant getImplicitType(Context ctx)
         {
         ConstantPool pool      = pool();
-        TypeConstant typeTuple = type == null ? pool.typeTuple() : type.ensureTypeConstant();
+        TypeConstant typeTuple = type == null ? pool.typeTuple() : type.ensureTypeConstant(ctx);
         if (typeTuple.containsUnresolved() || !typeTuple.isTuple())
             {
             // let someone else log an error later, e.g. during validation, if the specified type
@@ -236,7 +236,7 @@ public class TupleExpression
 
                 // the specified type must be a tuple, since a tuple does not have any @Auto conversions
                 // REVIEW many more checks, e.g. generally should not be relational, immutable actually means something, what annotations are allowed, etc.
-                TypeConstant typeSpecified = exprNew.ensureTypeConstant().resolveAutoNarrowingBase(pool);
+                TypeConstant typeSpecified = exprNew.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool);
                 if (typeSpecified.isTuple())
                     {
                     // the specified tuple type may have any of the field types specified as well
