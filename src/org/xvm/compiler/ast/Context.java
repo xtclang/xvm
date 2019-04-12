@@ -151,6 +151,18 @@ public class Context
         }
 
     /**
+     * @return the generic type resolver based on the data in this context
+     */
+    public GenericTypeResolver getGenericTypeResolver()
+        {
+        return sFormalName ->
+            {
+            Argument arg = getVar(sFormalName);
+            return arg == null ? null : arg.getType();
+            };
+        }
+
+    /**
      * @return the ConstantPool
      */
     public ConstantPool pool()

@@ -172,7 +172,7 @@ class HashMap<KeyType, ValueType>
 
         HashEntry?[] buckets     = this.buckets;
         Int          bucketCount = buckets.size;
-        NextPut: for (Entry entry : that.entries)
+        NextPut: for (Map<KeyType, ValueType>.Entry entry : that.entries)
             {
             KeyType    key       = entry.key;
             Int        keyhash   = hasher.hashOf(key);
@@ -268,9 +268,9 @@ class HashMap<KeyType, ValueType>
 
     @Override
     <ResultType> ResultType process(KeyType key,
-            function ResultType (Entry) compute)
+            function ResultType (Map<KeyType, ValueType>.Entry) compute)
         {
-        return compute(new ReifiedEntry(this, key));
+        return compute(new ReifiedEntry<KeyType, ValueType>(this, key));
         }
 
 
@@ -347,9 +347,9 @@ class HashMap<KeyType, ValueType>
             }
 
         @Override
-        Entry reify()
+        Map<KeyType, ValueType>.Entry reify()
             {
-            return new ReifiedEntry(HashMap.this, key);
+            return new ReifiedEntry<KeyType, ValueType>(HashMap.this, key);
             }
         }
 

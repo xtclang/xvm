@@ -300,7 +300,7 @@ interface List<ElementType>
      */
     Cursor cursorAt(Int index = 0)
         {
-        return new IndexCursor(this, index);
+        return new IndexCursor<ElementType>(this, index); // TODO GG: should be able to infer <ElementType>
         }
 
     /**

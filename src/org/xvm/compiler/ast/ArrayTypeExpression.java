@@ -94,7 +94,7 @@ public class ArrayTypeExpression
             }
 
         // array[capacity] is a fixed size array and is allowed only for types with default values
-        TypeConstant typeArray   = exprNew.ensureTypeConstant();
+        TypeConstant typeArray   = exprNew.ensureTypeConstant(ctx);
         TypeConstant typeElement = typeArray.getParamsCount() > 0
                 ? typeArray.getParamTypesArray()[0]
                 : pool().typeObject();
@@ -125,7 +125,7 @@ public class ArrayTypeExpression
     protected TypeConstant instantiateTypeConstant(Context ctx)
         {
         final ConstantPool pool = pool();
-        return pool.ensureClassTypeConstant(pool.clzArray(), null, type.ensureTypeConstant());
+        return pool.ensureClassTypeConstant(pool.clzArray(), null, type.ensureTypeConstant(ctx));
         }
 
     @Override

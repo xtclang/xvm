@@ -37,7 +37,7 @@ class KeyEntries<KeyType, ValueType>(Map<KeyType, ValueType> map)
                 {
                 if (KeyType key : keyIterator.next())
                     {
-                    private CursorEntry entry = new CursorEntry(map);
+                    private CursorEntry<KeyType, ValueType> entry = new CursorEntry(map);
                     return true, entry.advance(key);
                     }
 

@@ -29,7 +29,7 @@ class CursorEntry<KeyType, ValueType>
         }
 
     @Override
-    Entry reify()
+    Map<KeyType, ValueType>.Entry reify()
         {
         return new ReifiedEntry(map, key);
         }

@@ -74,7 +74,7 @@ public class ListExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        TypeConstant typeExplicit = type == null ? null : type.ensureTypeConstant();
+        TypeConstant typeExplicit = type == null ? null : type.ensureTypeConstant(ctx);
         if (typeExplicit != null)
             {
             if (typeExplicit.containsUnresolved())
@@ -161,7 +161,7 @@ public class ListExpression
                     {
                     type = exprNewType;
                     }
-                typeActual = exprNewType.ensureTypeConstant().resolveAutoNarrowingBase(pool);
+                typeActual = exprNewType.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool);
 
                 TypeConstant typeElementTemp = typeActual.resolveGenericType("ElementType");
                 if (typeElementTemp == null)

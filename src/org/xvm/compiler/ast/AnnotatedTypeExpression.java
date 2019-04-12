@@ -119,7 +119,7 @@ public class AnnotatedTypeExpression
         // 3) a "dis-associated" annotation is one that does not apply to the underlying type, so
         //    the underlying type is unchanged by this AnnotatedTypeExpression
         ConstantPool pool           = pool();
-        TypeConstant typeUnderlying = type.ensureTypeConstant();
+        TypeConstant typeUnderlying = type.ensureTypeConstant(ctx);
         return isDisassociated()
                 ? typeUnderlying    // our annotation is not added to the underlying type constant
                 : pool.ensureAnnotatedTypeConstant(typeUnderlying, annotation.ensureAnnotation(pool));
@@ -151,7 +151,7 @@ public class AnnotatedTypeExpression
             type = typeNew;
             }
 
-        TypeConstant typeReferent  = ensureTypeConstant();
+        TypeConstant typeReferent  = ensureTypeConstant(ctx);
         TypeConstant typeReference = pool.ensureParameterizedTypeConstant(pool.typeType(), typeReferent);
 
         if (fValid)
@@ -165,7 +165,7 @@ public class AnnotatedTypeExpression
                 || !isDisassociated() && typeReferent.isA(typeAnno.ensureTypeInfo(errs).getInto())))
                 {
                 annoAst.log(errs, Severity.ERROR, Constants.VE_ANNOTATION_INCOMPATIBLE,
-                        type.ensureTypeConstant().getValueString(),
+                        type.ensureTypeConstant(ctx).getValueString(),
                         annoAsm.getAnnotationClass().getValueString(),
                         typeAnno.ensureTypeInfo(errs).getInto().getValueString());
                 fValid = false;

@@ -23,7 +23,7 @@ class IndexCursor<ElementType>
         }
 
     @Override
-    public/private List list;
+    public/private List<ElementType> list;
 
     @Override
     Int index

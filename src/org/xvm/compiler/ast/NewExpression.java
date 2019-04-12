@@ -214,7 +214,7 @@ public class NewExpression
             if (anon == null)
                 {
                 ensureInnerClass(ctx, AnonPurpose.RoughDraft, ErrorListener.BLACKHOLE);
-                return type.ensureTypeConstant();
+                return type.ensureTypeConstant(ctx);
                 }
 
             // there must be an anonymous inner class skeleton by this point

@@ -235,7 +235,7 @@ class ListMap<KeyType, ValueType>
         }
 
     @Override
-    <ResultType> ResultType process(KeyType key, function ResultType (Map<KeyType, ValueType>.Entry) compute)
+    <ResultType> ResultType process(KeyType key, function ResultType (Entry) compute)
         {
         return compute(new CursorEntry(key));
         }
@@ -513,9 +513,9 @@ class ListMap<KeyType, ValueType>
             }
 
         @Override
-        Entry reify()
+        Map<KeyType, ValueType>.Entry reify()
             {
-            return new ReifiedEntry(ListMap.this, key);
+            return new ReifiedEntry<KeyType, ValueType>(ListMap.this, key); // TODO GG: inference
             }
 
         /**
@@ -542,7 +542,7 @@ class ListMap<KeyType, ValueType>
     // ----- Entries Set ---------------------------------------------------------------------------
 
     class Entries
-            implements Set<Map<KeyType, ValueType>.Entry>
+            implements Set<Entry>
         {
         @Override
         Mutability mutability.get()
@@ -557,7 +557,7 @@ class ListMap<KeyType, ValueType>
             }
 
         @Override
-        Iterator<Map<KeyType, ValueType>.Entry> iterator()      // REVIEW GG I should just be able to say "Entry"
+        Iterator<Entry> iterator()
             {
             return new Iterator()
                 {
@@ -567,7 +567,7 @@ class ListMap<KeyType, ValueType>
                 CursorEntry entry       = new CursorEntry();
 
                 @Override
-                conditional Map<KeyType, ValueType>.Entry next()
+                conditional Entry next()
                     {
                     // the immediately previously iterated key is allowed to be deleted
                     if (deletes != prevDeletes)
@@ -635,13 +635,13 @@ class ListMap<KeyType, ValueType>
             }
 
         @Override
-        Stream<Map<KeyType, ValueType>.Entry> stream()
+        Stream<Entry> stream()
             {
             TODO
             }
 
         @Override
-        Set<Map<KeyType, ValueType>.Entry> clone()
+        Set<Entry> clone()
             {
             TODO
             }
