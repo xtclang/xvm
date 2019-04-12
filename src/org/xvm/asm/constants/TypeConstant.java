@@ -3297,7 +3297,20 @@ public abstract class TypeConstant
                 {
                 if (!(param.getNestedIdentity() instanceof NestedIdentity))
                     {
-                    mapTypeParams.put(param.getName(), param);
+                    String sParam = param.getName();
+
+                    mapTypeParams.put(sParam, param);
+
+                    PropertyInfo infoProp = infoParent.findProperty(sParam);
+                    if (infoProp == null)
+                        {
+                        log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_MISSING,
+                                getParentType().getValueString(), sParam);
+                        }
+                    else
+                        {
+                        mapProps.put(infoProp.getIdentity(), infoProp);
+                        }
                     }
                 }
             }
@@ -3896,9 +3909,9 @@ public abstract class TypeConstant
      * @param errs           the error list to log any errors to
      */
     private void checkTypeParameterProperties(
-            Map<Object, ParamInfo>    mapTypeParams,
+            Map<Object,           ParamInfo>    mapTypeParams,
             Map<Object, PropertyInfo> mapProps,
-            ErrorListener             errs)
+            ErrorListener                       errs)
         {
         for (ParamInfo param : mapTypeParams.values())
             {
@@ -3908,19 +3921,14 @@ public abstract class TypeConstant
                 }
 
             String       sParam = param.getName();
-            PropertyInfo prop   = mapProps.get(sParam);
-            if (prop == null && (isVirtualChild() || isAnonymousClass()))
-                {
-                // virtual child is allowed to see the parent's type parameters
-                prop = getParentType().ensureTypeInfo(errs).findProperty(sParam);
-                }
-
-            if (prop == null)
+            PropertyInfo info   = mapProps.get(sParam);
+            if (info == null)
                 {
                 log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_MISSING,
                         this.getValueString(), sParam);
                 }
-            else if (!prop.isTypeParam() || !prop.getType().getParamTypesArray()[0].isA(param.getConstraintType()))
+            else if (!info.isTypeParam() ||
+                     !info.getType().getParamTypesArray()[0].isA(param.getConstraintType()))
                 {
                 log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_INCOMPATIBLE,
                         this.getValueString(), sParam);
