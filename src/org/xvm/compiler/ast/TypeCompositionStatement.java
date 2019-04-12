@@ -774,7 +774,7 @@ public class TypeCompositionStatement
                             // add the type parameter information to the component
                             TypeExpression exprType  = param.getType();
                             TypeConstant   constType = exprType == null
-                                    ? OBJECT_CLASS.getType()
+                                    ? pool.typeObject()
                                     : exprType.ensureTypeConstant();
                             component.addTypeParam(sParam, constType);
                             }

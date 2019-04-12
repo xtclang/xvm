@@ -736,7 +736,7 @@ public class NamedTypeExpression
                 break;
             }
 
-        TypeConstant typeTarget = pool.ensureTerminalTypeConstant(constTarget);
+        TypeConstant typeTarget = null;
         if (idTarget != null)
             {
             ClassStructure   clzClass  = getComponent().getContainingClass();
@@ -762,7 +762,7 @@ public class NamedTypeExpression
                     // REVIEW: are there scenarios when isAutoNarrowingAllowed() yields undesired result?
                     if (clzTarget.isParameterized() && paramTypes == null && isAutoNarrowingAllowed())
                         {
-                        typeTarget = pool.ensureParameterizedTypeConstant(typeTarget,
+                        typeTarget = pool.ensureClassTypeConstant(constTarget, null,
                             clzTarget.getFormalType().getParamTypesArray());
                         }
                     }
@@ -775,7 +775,10 @@ public class NamedTypeExpression
                 typeTarget = createVirtualTypeConstant(clzBase, clzTarget, false);
                 }
             }
-        return typeTarget;
+
+        return typeTarget == null
+                ? pool.ensureTerminalTypeConstant(constTarget)
+                : typeTarget;
         }
 
     private TypeConstant createVirtualTypeConstant(ClassStructure clzBase, ClassStructure clzTarget, boolean fFormal)

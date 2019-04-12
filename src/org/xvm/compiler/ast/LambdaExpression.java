@@ -1035,6 +1035,15 @@ public class LambdaExpression
         lambda.getIdentityConstant().setSignature(sig);
         }
 
+    /**
+     * @return true iff lambda requires "this"
+     */
+    protected boolean isRequiredThis()
+        {
+        assert isValidated();
+        return m_fLambdaIsMethod;
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -1140,27 +1149,44 @@ public class LambdaExpression
             }
 
         @Override
+        public void requireThis(long lPos, ErrorListener errs)
+            {
+            if (getOuterContext().isFunction())
+                {
+                errs.log(Severity.ERROR, Compiler.NO_THIS, null, getSource(), lPos, lPos);
+                }
+            else
+                {
+                captureThis();
+                }
+            }
+
+        @Override
         protected void markVarRead(boolean fNested, String sName, Token tokName, ErrorListener errs)
             {
             // variable capture will create a parameter (a variable in this scope) for the lambda,
             // so if the variable isn't already declared in this scope but it exists in the outer
             // scope, then capture it
-            final Context ctxOuter = getOuterContext();
+            Context ctxOuter = getOuterContext();
             if (!isVarDeclaredInThisScope(sName) && ctxOuter.isVarReadable(sName))
                 {
                 if (isReservedName(sName))
                     {
+                    boolean fAllowConstructor = false;
                     switch (sName)
                         {
                         case "this":
+                        case "this:struct":
+                            fAllowConstructor = true;
+                            // fall through
                         case "this:target":
                         case "this:public":
                         case "this:protected":
                         case "this:private":
-                        case "this:struct":
                             // the only names that we capture _without_ a capture parameter are the
                             // various "this" references that refer to "this" object
-                            if (ctxOuter.isMethod())
+                            if (ctxOuter.isMethod() ||
+                                    fAllowConstructor && ctxOuter.isConstructor())
                                 {
                                 captureThis();
                                 return;
