@@ -1698,23 +1698,62 @@ public abstract class TypeConstant
             }
         assert typeClass != null;
 
-        // process the annotations at the front of the contribution list
         List<Contribution> listContribs = struct.getContributionsAsList();
         int                cContribs    = listContribs.size();
-        int                iContrib     = 0;
-        for ( ; iContrib < cContribs; ++iContrib)
+        TypeConstant[]     aContribType = new TypeConstant[cContribs];
+
+        // resolve auto-narrowing and collect contribution types (null for conditional incorporates)
+        for (int iContrib = 0 ; iContrib < cContribs; ++iContrib)
             {
-            // only process annotations
-            Contribution contrib = listContribs.get(iContrib);
-            if (contrib.getComposition() != Composition.Annotation)
+            Contribution contrib     = listContribs.get(iContrib);
+            TypeConstant typeContrib = contrib.resolveGenerics(pool, this);
+
+            if (typeContrib != null && typeContrib.isAutoNarrowing(false))
                 {
-                // ... all done processing annotations; move to the next stage
-                break;
+                log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
+                        typeContrib.getValueString(), this.getValueString());
+                typeContrib = typeContrib.resolveAutoNarrowing(pool, false, null);
+                }
+            aContribType[iContrib] = typeContrib;
+            }
+
+        // process the annotations and conditional incorporates at the front of the contribution list
+        int iLastAnnotation = -1;
+        for (int iContrib = 0; iContrib < cContribs; ++iContrib)
+            {
+            // only process annotations and conditional incorporates
+            Contribution contrib   = listContribs.get(iContrib);
+            TypeConstant typeMixin = aContribType[iContrib];
+            Composition  compose;
+            switch (compose = contrib.getComposition())
+                {
+                case Annotation:
+                    iLastAnnotation = iContrib;
+                    // process now
+                    break;
+
+                case Incorporates:
+                    if (contrib.getTypeParams() == null)
+                        {
+                        // a regular "incorporates"; process later
+                        assert typeMixin != null;
+                        continue;
+                        }
+                    else if (typeMixin == null)
+                        {
+                        // the conditional incorporates does not apply to "this" type
+                        continue;
+                        }
+                    // process now
+                    break;
+
+                default:
+                    // not now
+                    continue;
                 }
 
             // has to be an explicit class identity
-            TypeConstant typeMixin = contrib.resolveGenerics(pool, this);
-            if (!typeMixin.isExplicitClassIdentity(false))
+            if (!typeMixin.isExplicitClassIdentity(compose == Composition.Incorporates))
                 {
                 log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
                         constId.getPathString(), typeMixin.getValueString());
@@ -1729,57 +1768,17 @@ public abstract class TypeConstant
                 continue;
                 }
 
-            // the annotation could be a mixin "into Class", which means that it's a
-            // non-virtual, compile-time mixin (like @Abstract)
-            Annotation   annotation = contrib.getAnnotation();
-            TypeConstant typeInto   = typeMixin.getExplicitClassInto();
-            if (typeInto.isIntoClassType())
+            if (compose == Composition.Annotation)
                 {
-                // check for duplicate class annotation
-                if (listAnnos.stream().anyMatch(annoPrev ->
-                        annoPrev.getAnnotationClass().equals(annotation.getAnnotationClass())))
-                    {
-                    log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
-                            constId.getPathString(), annotation.getAnnotationClass().getValueString());
-                    }
-                else
-                    {
-                    listAnnos.add(annotation);
-                    }
-                continue;
-                }
-
-            // the mixin has to apply to this type
-            if (!typeClass.isA(typeInto)) // note: not 100% correct because the presence of this mixin may affect the answer
-                {
-                log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
-                        typeClass.getValueString(),
-                        typeMixin.getValueString(),
-                        typeInto.getValueString());
-                continue;
-                }
-
-            // check for duplicate type annotation
-            if (listProcess.stream().anyMatch(contribPrev ->
-                    contribPrev.getAnnotation().getAnnotationClass().equals(annotation.getAnnotationClass())))
-                {
-                log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
-                        constId.getPathString(), annotation.getAnnotationClass().getValueString());
+                processAnnotation(constId, contrib, typeMixin, typeClass, listAnnos, listProcess, errs);
                 }
             else
                 {
-                TypeConstant typeAnno = annotation.getAnnotationType();
-                if (typeAnno.isAutoNarrowing(false))
-                    {
-                    log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
-                            typeAnno.getValueString(), this.getValueString());
-                    typeAnno = typeAnno.resolveAutoNarrowing(pool, false, null);
-                    }
-                // apply annotation
-                listProcess.add(new Contribution(annotation,
-                        pool.ensureAccessTypeConstant(typeAnno, Access.PROTECTED)));
+                processIncorporates(constId, typeMixin, struct, listProcess, errs);
                 }
             }
+
+        int iContrib = iLastAnnotation + 1;
 
         // add a marker into the list of contributions at this point to indicate that this class
         // structure's contents need to be processed next
@@ -1805,6 +1804,7 @@ public abstract class TypeConstant
                 boolean fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
                 if (fExtends)
                     {
+                    typeExtends = aContribType[iContrib];
                     ++iContrib;
                     }
 
@@ -1829,7 +1829,6 @@ public abstract class TypeConstant
                     }
 
                 // the "extends" clause must specify a class identity
-                typeExtends = contrib.resolveGenerics(pool, this);
                 if (!typeExtends.isExplicitClassIdentity(true))
                     {
                     log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS,
@@ -1879,10 +1878,10 @@ public abstract class TypeConstant
                 boolean fInto = contrib != null && contrib.getComposition() == Composition.Into;
                 if (fInto)
                     {
-                    ++iContrib;
-                    typeInto = contrib.resolveGenerics(pool, this);
+                    typeInto = aContribType[iContrib];
 
                     // load the next contribution
+                    ++iContrib;
                     contrib = iContrib < cContribs ? listContribs.get(iContrib) : null;
                     }
 
@@ -1890,9 +1889,9 @@ public abstract class TypeConstant
                 boolean fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
                 if (fExtends)
                     {
+                    typeExtends = aContribType[iContrib];
                     ++iContrib;
 
-                    typeExtends = contrib.resolveGenerics(pool, this);
                     if (!typeExtends.isExplicitClassIdentity(true))
                         {
                         log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS,
@@ -1955,177 +1954,48 @@ public abstract class TypeConstant
 
         // go through the rest of the contributions, and add the ones that need to be processed to
         // the list to do
-        NextContrib: for ( ; iContrib < cContribs; ++iContrib)
+        for ( ; iContrib < cContribs; ++iContrib)
             {
-            // only process annotations
-            Contribution contrib         = listContribs.get(iContrib);
-            TypeConstant typeContribOrig = contrib.resolveGenerics(pool, this);
-            TypeConstant typeContrib;      // needs to be effectively final
-
-            if (typeContribOrig != null && typeContribOrig.isAutoNarrowing(false))
-                {
-                log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
-                        typeContribOrig.getValueString(), this.getValueString());
-                typeContrib = typeContribOrig.resolveAutoNarrowing(pool, false, null);
-                }
-            else
-                {
-                typeContrib = typeContribOrig;
-                }
+            Contribution contrib     = listContribs.get(iContrib);
+            TypeConstant typeContrib = aContribType[iContrib];
 
             switch (contrib.getComposition())
                 {
                 case Annotation:
                     log(errs, Severity.ERROR, VE_ANNOTATION_ILLEGAL,
-                            typeContrib.getValueString(),
-                            constId.getPathString());
+                            typeContrib.getValueString(), constId.getPathString());
                     break;
 
                 case Into:
                     // only applicable on a mixin, only one allowed, and it should have been earlier
                     // in the list of contributions
                     log(errs, Severity.ERROR, VE_INTO_UNEXPECTED,
-                            typeContrib.getValueString(),
-                            constId.getPathString());
+                            typeContrib.getValueString(), constId.getPathString());
                     break;
 
                 case Extends:
                     // not applicable on an interface, only one allowed, and it should have been
                     // earlier in the list of contributions
                     log(errs, Severity.ERROR, VE_EXTENDS_UNEXPECTED,
-                            typeContrib.getValueString(),
-                            constId.getPathString());
+                            typeContrib.getValueString(), constId.getPathString());
                     break;
 
                 case Incorporates:
-                    {
-                    if (typeContrib == null)
+                    if (contrib.getTypeParams() != null)
                         {
-                        // the type contribution does not apply conditionally to "this" type
-                        continue NextContrib;
-                        }
-
-                    if (struct.getFormat() == Component.Format.INTERFACE)
-                        {
-                        log(errs, Severity.ERROR, VE_INCORPORATES_UNEXPECTED,
-                                typeContrib.getValueString(),
-                                constId.getPathString());
+                        // conditional incorporates have already been processed
                         break;
                         }
 
-                    if (!typeContrib.isExplicitClassIdentity(true))
-                        {
-                        log(errs, Severity.ERROR, VE_INCORPORATES_NOT_CLASS,
-                                typeContrib.getValueString(),
-                                constId.getPathString());
-                        break;
-                        }
-
-                    // validate that the class is a mixin
-                    if (typeContrib.getExplicitClassFormat() != Component.Format.MIXIN)
-                        {
-                        log(errs, Severity.ERROR, VE_INCORPORATES_NOT_MIXIN,
-                                typeContrib.getValueString(),
-                                constId.getPathString());
-                        break;
-                        }
-
-                    TypeConstant typeRequire = typeContrib.getExplicitClassInto();
-                    // mixins into Class are "synthetic" (e.g. Abstract, Override); the only
-                    // exception is Enumeration, which needs to be processed naturally
-                    if (!typeRequire.isIntoClassType() || typeRequire.isA(pool.typeEnumeration()))
-                        {
-                        // the mixin must be compatible with this type, as specified by its "into"
-                        // clause; note: not 100% correct because the presence of this mixin may affect
-                        // the answer, so this requires an eventual fix
-                        if (typeRequire != null && !this.isA(typeRequire))
-                            {
-                            log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE,
-                                    constId.getPathString(),
-                                    typeContrib.getValueString(),
-                                    this.getValueString(),
-                                    typeRequire.getValueString());
-                            break;
-                            }
-
-                        // check for duplicate mixin (not exact match!!!)
-                        if (listProcess.stream().anyMatch(contribPrev ->
-                                contribPrev.getComposition() == Composition.Incorporates &&
-                                contribPrev.getTypeConstant().equals(typeContrib)))
-                            {
-                            log(errs, Severity.ERROR, VE_DUP_INCORPORATES,
-                                    constId.getPathString(), typeContrib.getValueString());
-                            break;
-                            }
-
-                        listProcess.add(new Contribution(Composition.Incorporates,
-                                pool.ensureAccessTypeConstant(typeContrib, Access.PROTECTED)));
-                        }
-                    }
+                    processIncorporates(constId, typeContrib, struct, listProcess, errs);
                     break;
 
                 case Delegates:
-                    {
-                    // not applicable on an interface
-                    if (struct.getFormat() == Component.Format.INTERFACE)
-                        {
-                        log(errs, Severity.ERROR, VE_DELEGATES_UNEXPECTED,
-                                typeContrib.getValueString(),
-                                constId.getPathString());
-                        break;
-                        }
-
-                    // must be an "interface type" (not a class type)
-                    if (typeContrib.isExplicitClassIdentity(true)
-                            && typeContrib.getExplicitClassFormat() != Component.Format.INTERFACE)
-                        {
-                        log(errs, Severity.ERROR, VE_DELEGATES_NOT_INTERFACE,
-                                typeContrib.getValueString(),
-                                constId.getPathString());
-                        break;
-                        }
-
-                    // check for duplicate delegates
-                    if (listProcess.stream().anyMatch(contribPrev ->
-                            contribPrev.getComposition() == Composition.Delegates &&
-                            contribPrev.getTypeConstant().equals(typeContrib)))
-                        {
-                        log(errs, Severity.ERROR, VE_DUP_DELEGATES,
-                                constId.getPathString(), typeContrib.getValueString());
-                        }
-                    else
-                        {
-                        listProcess.add(new Contribution(typeContrib,
-                                contrib.getDelegatePropertyConstant()));
-                        }
-                    }
+                    processDelegates(constId, typeContrib, contrib, struct, listProcess, errs);
                     break;
 
                 case Implements:
-                    {
-                    // must be an "interface type" (not a class type)
-                    if (typeContrib.isExplicitClassIdentity(true)
-                            && typeContrib.getExplicitClassFormat() != Component.Format.INTERFACE)
-                        {
-                        log(errs, Severity.ERROR, VE_IMPLEMENTS_NOT_INTERFACE,
-                                typeContrib.getValueString(),
-                                constId.getPathString());
-                        break;
-                        }
-
-                    // check for duplicate implements
-                    if (listProcess.stream().anyMatch(contribPrev ->
-                            contribPrev.getComposition() == Composition.Implements &&
-                            contribPrev.getTypeConstant().equals(typeContrib)))
-                        {
-                        log(errs, Severity.ERROR, VE_DUP_IMPLEMENTS,
-                                constId.getPathString(), typeContrib.getValueString());
-                        }
-                    else
-                        {
-                        listProcess.add(new Contribution(Composition.Implements, typeContrib));
-                        }
-                    }
+                    processImplements(constId, typeContrib, listProcess, errs);
                     break;
 
                 default:
@@ -2144,23 +2014,11 @@ public abstract class TypeConstant
             }
         if (typeExtends != null)
             {
-            if (typeExtends.isAutoNarrowing(false))
-                {
-                log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
-                        typeExtends.getValueString(), this.getValueString());
-                typeExtends = typeExtends.resolveAutoNarrowing(pool, false, null);
-                }
             listProcess.add(new Contribution(Composition.Extends,
                     pool.ensureAccessTypeConstant(typeExtends, Access.PROTECTED)));
             }
         if (typeInto != null)
             {
-            if (typeInto.isAutoNarrowing(false))
-                {
-                log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
-                        typeInto.getValueString(), this.getValueString());
-                typeInto = typeInto.resolveAutoNarrowing(pool, false, null);
-                }
             if (!typeInto.isAccessSpecified() && typeInto.isSingleDefiningConstant())
                 {
                 typeInto = pool.ensureAccessTypeConstant(typeInto, Access.PROTECTED);
@@ -2169,6 +2027,206 @@ public abstract class TypeConstant
             }
 
         return new TypeConstant[] {typeInto, typeExtends, typeRebase};
+        }
+
+    /**
+     * Process the "annotation" contribution.
+     */
+    private void processAnnotation(IdentityConstant constId, Contribution contrib,
+                                   TypeConstant typeMixin, TypeConstant typeClass,
+                                   List<Annotation> listAnnos,
+                                   List<Contribution> listProcess, ErrorListener errs)
+        {
+        ConstantPool pool = getConstantPool();
+
+        // the annotation could be a mixin "into Class", which means that it's a
+        // non-virtual, compile-time mixin (like @Abstract)
+        Annotation   annotation = contrib.getAnnotation();
+        TypeConstant typeInto   = typeMixin.getExplicitClassInto();
+        if (typeInto.isIntoClassType())
+            {
+            // check for duplicate class annotation
+            if (listAnnos.stream().anyMatch(annoPrev ->
+                    annoPrev.getAnnotationClass().equals(annotation.getAnnotationClass())))
+                {
+                log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
+                        constId.getPathString(), annotation.getAnnotationClass().getValueString());
+                }
+            else
+                {
+                listAnnos.add(annotation);
+                }
+            return;
+            }
+
+        // the mixin has to apply to this type
+        if (!typeClass.isA(typeInto)) // note: not 100% correct because the presence of this mixin may affect the answer
+            {
+            log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
+                    typeClass.getValueString(),
+                    typeMixin.getValueString(),
+                    typeInto.getValueString());
+            return;
+            }
+
+        // check for duplicate type annotation
+        if (listProcess.stream().anyMatch(contribPrev ->
+                contribPrev.getAnnotation().getAnnotationClass().equals(annotation.getAnnotationClass())))
+            {
+            log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
+                    constId.getPathString(), annotation.getAnnotationClass().getValueString());
+            }
+        else
+            {
+            TypeConstant typeAnno = annotation.getAnnotationType();
+            if (typeAnno.isAutoNarrowing(false))
+                {
+                log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
+                        typeAnno.getValueString(), this.getValueString());
+                typeAnno = typeAnno.resolveAutoNarrowing(pool, false, null);
+                }
+            // apply annotation
+            listProcess.add(new Contribution(annotation,
+                    pool.ensureAccessTypeConstant(typeAnno, Access.PROTECTED)));
+            }
+        }
+
+    /**
+     * Process the "incorporates" contribution.
+     */
+    private void processIncorporates(IdentityConstant constId, TypeConstant typeContrib,
+                                     ClassStructure struct,
+                                     List<Contribution> listProcess, ErrorListener errs)
+        {
+        ConstantPool pool = getConstantPool();
+
+        if (struct.getFormat() == Component.Format.INTERFACE)
+            {
+            log(errs, Severity.ERROR, VE_INCORPORATES_UNEXPECTED,
+                typeContrib.getValueString(),
+                constId.getPathString());
+            return;
+            }
+
+        if (!typeContrib.isExplicitClassIdentity(true))
+            {
+            log(errs, Severity.ERROR, VE_INCORPORATES_NOT_CLASS,
+                typeContrib.getValueString(),
+                constId.getPathString());
+            return;
+            }
+
+        // validate that the class is a mixin
+        if (typeContrib.getExplicitClassFormat() != Component.Format.MIXIN)
+            {
+            log(errs, Severity.ERROR, VE_INCORPORATES_NOT_MIXIN,
+                typeContrib.getValueString(),
+                constId.getPathString());
+            return;
+            }
+
+        TypeConstant typeRequire = typeContrib.getExplicitClassInto();
+        // mixins into Class are "synthetic" (e.g. Abstract, Override); the only
+        // exception is Enumeration, which needs to be processed naturally
+        if (!typeRequire.isIntoClassType() || typeRequire.isA(pool.typeEnumeration()))
+            {
+            // the mixin must be compatible with this type, as specified by its "into"
+            // clause; note: not 100% correct because the presence of this mixin may affect
+            // the answer, so this requires an eventual fix
+            if (typeRequire != null && !this.isA(typeRequire))
+                {
+                log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE,
+                    constId.getPathString(),
+                    typeContrib.getValueString(),
+                    this.getValueString(),
+                    typeRequire.getValueString());
+                return;
+                }
+
+            // check for duplicate mixin (not exact match!!!)
+            if (listProcess.stream().anyMatch(contribPrev ->
+                contribPrev.getComposition() == Composition.Incorporates &&
+                    contribPrev.getTypeConstant().equals(typeContrib)))
+                {
+                log(errs, Severity.ERROR, VE_DUP_INCORPORATES,
+                    constId.getPathString(), typeContrib.getValueString());
+                return;
+                }
+
+            listProcess.add(new Contribution(Composition.Incorporates,
+                pool.ensureAccessTypeConstant(typeContrib, Access.PROTECTED)));
+            }
+        }
+
+    /**
+     * Process the "delegates" contribution.
+     */
+    private void processDelegates(IdentityConstant constId, TypeConstant typeContrib,
+                                  Contribution contrib, ClassStructure struct,
+                                  List<Contribution> listProcess, ErrorListener errs)
+        {
+        // not applicable on an interface
+        if (struct.getFormat() == Component.Format.INTERFACE)
+            {
+            log(errs, Severity.ERROR, VE_DELEGATES_UNEXPECTED,
+                typeContrib.getValueString(),
+                constId.getPathString());
+            return;
+            }
+
+        // must be an "interface type" (not a class type)
+        if (typeContrib.isExplicitClassIdentity(true)
+            && typeContrib.getExplicitClassFormat() != Component.Format.INTERFACE)
+            {
+            log(errs, Severity.ERROR, VE_DELEGATES_NOT_INTERFACE,
+                typeContrib.getValueString(),
+                constId.getPathString());
+            return;
+            }
+
+        // check for duplicate delegates
+        if (listProcess.stream().anyMatch(contribPrev ->
+            contribPrev.getComposition() == Composition.Delegates &&
+                contribPrev.getTypeConstant().equals(typeContrib)))
+            {
+            log(errs, Severity.ERROR, VE_DUP_DELEGATES,
+                constId.getPathString(), typeContrib.getValueString());
+            }
+        else
+            {
+            listProcess.add(new Contribution(typeContrib,
+                contrib.getDelegatePropertyConstant()));
+            }
+        }
+
+    /**
+     * Process the "implements" contribution.
+     */
+    private void processImplements(IdentityConstant constId, TypeConstant typeContrib,
+                                   List<Contribution> listProcess, ErrorListener errs)
+        {
+        // must be an "interface type" (not a class type)
+        if (typeContrib.isExplicitClassIdentity(true)
+                && typeContrib.getExplicitClassFormat() != Component.Format.INTERFACE)
+            {
+            log(errs, Severity.ERROR, VE_IMPLEMENTS_NOT_INTERFACE,
+                    typeContrib.getValueString(),
+                    constId.getPathString());
+            return;
+            }
+
+        // check for duplicate implements
+        if (listProcess.stream().anyMatch(contribPrev ->
+                contribPrev.getComposition() == Composition.Implements &&
+                contribPrev.getTypeConstant().equals(typeContrib)))
+            {
+            log(errs, Severity.ERROR, VE_DUP_IMPLEMENTS,
+                    constId.getPathString(), typeContrib.getValueString());
+            }
+        else
+            {
+            listProcess.add(new Contribution(Composition.Implements, typeContrib));
+            }
         }
 
     /**
@@ -2235,6 +2293,7 @@ public abstract class TypeConstant
                         // infinite cycle if we consider it to be incomplete; only consider it
                         // deferred (requiring a retry) iff the resolution is moving left to right
                         fIncomplete = compContrib != Composition.Into;
+                        errs        = ErrorListener.BLACKHOLE;
                         break;
                         }
 
@@ -2377,6 +2436,7 @@ public abstract class TypeConstant
                         struct, mapTypeParams, mapContribProps, mapContribMethods, listExplode, errs))
                     {
                     fIncomplete = true;
+                    errs        = ErrorListener.BLACKHOLE;
                     }
 
                 // the order in which the properties are layered on and exploded is extremely
@@ -2408,6 +2468,7 @@ public abstract class TypeConstant
                                 mapProps, mapVirtProps, mapMethods, mapVirtMethods, errs))
                             {
                             fIncomplete = true;
+                            errs        = ErrorListener.BLACKHOLE;
                             }
                         }
                     }
@@ -2418,6 +2479,7 @@ public abstract class TypeConstant
                 if (infoContrib == null)
                     {
                     fIncomplete = true;
+                    errs        = ErrorListener.BLACKHOLE;
                     continue;
                     }
 
@@ -2790,9 +2852,12 @@ public abstract class TypeConstant
         PropertyInfo propBase = fVirtual
                 ? mapVirtProps.get(nidContrib)
                 : null;
+
         PropertyInfo propResult = propBase == null
                 ? propContrib
-                : propBase.layerOn(propContrib, fSelf, false, errs);
+                : propContrib.getIdentity().equals(propBase.getIdentity())
+                        ? propBase
+                        : propBase.layerOn(propContrib, fSelf, false, errs);
 
         // formal properties don't delegate
         if (idDelegate != null && !propResult.isTypeParam())
