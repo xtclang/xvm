@@ -200,16 +200,12 @@ interface Collection<ElementType>
         // this naive implementation is likely to be overridden in cases where optimizations can be
         // made with knowledge of either this collection and/or the passed in values, for example
         // if both are ordered; it must obviously be overridden for non-mutable collections
-        Collection result   = this;
-        Boolean    modified = False;
+        Collection result = this;
         for (ElementType value : values)
             {
-            if (result : result.remove(value))
-                {
-                modified = True;
-                }
+            result = result.remove(value);
             }
-        return modified, result;
+        return result;
         }
 
     /**

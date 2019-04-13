@@ -422,7 +422,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
                 }
             else
                 {
-                map.put(method.name, new MultiMethod(method.to<Method[]>()));
+                map.put(method.name, new MultiMethod([method]));
                 }
             }
 
@@ -446,7 +446,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
                 }
             else
                 {
-                map.put(function_.name, new MultiFunction(function_.to<Function[]>()));
+                map.put(function_.name, new MultiFunction([function_]));
                 }
             }
 
@@ -473,8 +473,8 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
             if (paramNew != paramOld)
                 {
                 assert paramOld.type.isA(paramNew.type);
-                mapParams := mapParams.put(paramNew.name, paramNew);
-                different  = true;
+                mapParams = mapParams.put(paramNew.name, paramNew);
+                different = true;
                 }
             }
         if (!different)

@@ -140,7 +140,7 @@ class Array<ElementType>
                 }
             else
                 {
-                return section.size;
+                return section.as(Range<Int>).size;
                 }
             }
 
@@ -182,6 +182,7 @@ class Array<ElementType>
     @Override
     public/private Mutability mutability.get()
         {
+        Array<ElementType>? delegate = this.delegate;
         if (delegate != null)
             {
             Mutability mutability = delegate.mutability;
@@ -335,7 +336,7 @@ class Array<ElementType>
     Var<ElementType> elementAt(Int index)
         {
         // TODO make sure that persistent arrays do no expose a read/write element (throw ReadOnly from set())
-
+        Array<ElementType>? delegate = this.delegate;
         if (delegate != null)
             {
             return delegate.elementAt(translateIndex(index));
@@ -361,6 +362,7 @@ class Array<ElementType>
     @Override
     Int size.get()
         {
+        Range<Int>? section = this.section;
         if (section != null)
             {
             return section.size;
@@ -483,7 +485,7 @@ class Array<ElementType>
                         {
                         return this[i];
                         }
-                    assert ElementType value : iter;
+                    assert ElementType value : iter.next();
                     return value;
                     };
                 ElementType[] result = new Array<ElementType>(this.size + values.size, supply);
@@ -542,7 +544,7 @@ class Array<ElementType>
         }
 
     @Override
-    Collection clear()
+    Array clear()
         {
         if (empty)
             {
@@ -560,7 +562,7 @@ class Array<ElementType>
 
             case Persistent:
             case Constant:
-                return new Array<ElementType>(mutability);
+                return new Array<ElementType>(mutability, []);
             }
         }
 
@@ -647,8 +649,9 @@ class Array<ElementType>
             case Mutable:
                 Iterator<ElementType> iter = values.iterator();
                 assert ElementType value : iter.next();
-                Element first = new Element(iter.next());
-                Element last  = first;
+                Element  first = new Element(value);
+                Element  last  = first;
+                Element? head  = this.head;
                 while (value : iter.next())
                     {
                     last.next = new Element(value);
@@ -671,6 +674,7 @@ class Array<ElementType>
                     last.next = node.next;
                     node.next = first;
                     }
+                this.head = head;
                 return this;
 
             case Fixed:
@@ -688,7 +692,7 @@ class Array<ElementType>
                         }
                     else if (i < index + wedge)
                         {
-                        assert ElementType value : iter;
+                        assert ElementType value : iter.next();
                         return value;
                         }
                     else
@@ -696,7 +700,7 @@ class Array<ElementType>
                         return this[i-wedge];
                         }
                     };
-                ElementType[] result = new Array<ElementType>(this.size + that.size, supply);
+                ElementType[] result = new Array<ElementType>(this.size + values.size, supply);
                 return mutability == Persistent
                         ? result.ensurePersistent(true)
                         : result.ensureConst(true);
@@ -716,12 +720,12 @@ class Array<ElementType>
             case Mutable:
                 if (index == 0)
                     {
-                    head = head.next;
+                    head = head.as(Element).next;
                     }
                 else
                     {
                     Element node = elementAt(index-1).as(Element);
-                    node.next = node.next.next;
+                    node.next = node.next.as(Element).next;
                     }
                 return this;
 
@@ -884,6 +888,7 @@ class Array<ElementType>
      */
     private Int translateIndex(Int index)
         {
+        Range<Int>? section = this.section;
         assert delegate != null && section != null;
 
         if (index < 0 || index >= section.size)

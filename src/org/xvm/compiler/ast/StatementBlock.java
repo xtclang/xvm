@@ -864,7 +864,7 @@ public class StatementBlock
                         }
                     else
                         {
-                        TypeConstant typeClz = typeThis == null
+                        TypeConstant typeClz = typeThis == null || typeThis.isRelationalType()
                                 ? ((ClassStructure) idClz.getComponent()).getFormalType()
                                 : typeThis;
                         typeClz  = pool.ensureAccessTypeConstant(typeClz, access);
