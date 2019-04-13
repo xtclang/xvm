@@ -185,7 +185,7 @@ interface List<ElementType>
 
         // eventual to-do is to should pick a better sort impl based on some heuristics, such as
         // size of list and how many elements are out-of-order
-        function void (List<ElementType>, Comparator) sortimpl = bubbleSort;
+        function void (List<ElementType>, Comparator?) sortimpl = bubbleSort;
 
         Mutability mutability = this.mutability;
         if (!mutability.persistent)
@@ -239,7 +239,7 @@ interface List<ElementType>
         {
         assert !list.mutability.persistent;
 
-        Int last = size - 1;
+        Int last = list.size - 1;
         if (last <= 0)
             {
             return;
@@ -264,7 +264,7 @@ interface List<ElementType>
             ElementType bubble = list[last];
             for (Int i = last-1; i >= first; --i)
                 {
-                ElementType prev = this[i];
+                ElementType prev = list[i];
                 if (compare(prev, bubble) == Greater)
                     {
                     list[i  ] = bubble;
@@ -450,7 +450,6 @@ interface List<ElementType>
         Boolean advance()
             {
             Int next = index + 1;
-            Int size = size;
             index = next.minOf(size);
             return next < size;
             }
@@ -481,7 +480,6 @@ interface List<ElementType>
             void set(ElementType value)
                 {
                 Int index = this.index;
-                Int size  = size;
                 if (index < size)
                     {
                     // may throw ReadOnly
