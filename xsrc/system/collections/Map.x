@@ -242,7 +242,7 @@ interface Map<KeyType, ValueType>
             return False;
             }
 
-        return put(key, value);
+        return True, put(key, value);
         }
 
     /**
@@ -264,7 +264,7 @@ interface Map<KeyType, ValueType>
                 {
                 if (valueOld == valueCur)
                     {
-                    return put(key, valueNew);
+                    return True, put(key, valueNew);
                     }
                 }
             }
@@ -304,7 +304,7 @@ interface Map<KeyType, ValueType>
             {
             if (value == valueOld)
                 {
-                return remove(key);
+                return True, remove(key);
                 }
             }
 

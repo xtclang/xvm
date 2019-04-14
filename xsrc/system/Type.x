@@ -72,7 +72,7 @@ const Type<DataType>
                 }
             else
                 {
-                map.put(method.name, new MultiMethod(method.to<Method[]>()));
+                map.put(method.name, new MultiMethod([method]));
                 }
             }
 
@@ -140,7 +140,7 @@ const Type<DataType>
                 }
             else
                 {
-                map.put(method.name, new MultiMethod(method.to<Method[]>()));
+                map.put(method.name, new MultiMethod([method]));
                 }
             }
 

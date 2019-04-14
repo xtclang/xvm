@@ -230,7 +230,7 @@ const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
                     {
                     Set<String> setThat = new HashSet(namesThat);
 
-                    setThat := setThat.retainAll(setThis);
+                    setThat = setThat.retainAll(setThis);
                     for (String name : setThat)
                         {
                         if (that.TargetType.producesFormalType(name))

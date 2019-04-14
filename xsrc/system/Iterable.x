@@ -81,19 +81,17 @@ interface Iterable<ElementType>
      */
     ElementType[] to<ElementType[]>(VariablyMutable.Mutability mutability = Persistent)
         {
-        ElementType[] result = mutability == Mutable
-                ? new Array<ElementType>(size)      // mutable
-                : new ElementType[size];            // fixed
+        ElementType[] result = new Array<ElementType>(size); // mutable
 
         loop: for (ElementType element : this)
             {
-            array[loop.count] = element;
+            result[loop.count] = element;
             }
 
         return switch (mutability)
             {
-            case Mutable   :
-            case Fixed     : result;
+            case Mutable   : result;
+            case Fixed     : result.ensureFixedSize (True);
             case Persistent: result.ensurePersistent(True);
             case Constant  : result.ensureConst     (True);
             };
