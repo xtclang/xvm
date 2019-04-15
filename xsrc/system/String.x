@@ -164,7 +164,6 @@ const String
     /**
      * @return the characters of this String as an array
      */
-    @Override
     Char[] to<Char[]>()
         {
         return chars;
