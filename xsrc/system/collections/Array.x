@@ -257,9 +257,6 @@ class Array<ElementType>
             return new Array(Constant, this).as(immutable ElementType[]);
             }
 
-        // to be a Const array, the elements must also be Const
-        assert ElementType instanceof Const;
-
         // all elements must be Const or Constable
         Boolean convert = False;
         loop: for (ElementType element : this)
