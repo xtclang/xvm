@@ -566,6 +566,8 @@ public abstract class Expression
             checkShortCircuit(errs);
             }
 
+        ConstantPool pool = pool();
+
         // a null actual type indicates a fairly dramatic (i.e. halt required) validation failure
         if (typeActual == null)
             {
@@ -573,7 +575,7 @@ public abstract class Expression
             assert constVal == null;
 
             m_fit    = TypeFit.NoFit;
-            m_oType  = typeRequired == null ? pool().typeObject() : typeRequired;
+            m_oType  = typeRequired == null ? pool.typeObject() : typeRequired;
             m_oConst = null;
 
             return null;
@@ -581,9 +583,9 @@ public abstract class Expression
 
         // if there is a constant value, then the type itself indicates the immutable nature of the
         // expression
-        if (constVal != null)
+        if (constVal != null && !constVal.equals(pool.ensureMatchAnyConstant(typeActual)))
             {
-            typeActual = typeActual.ensureImmutable(pool());
+            typeActual = typeActual.ensureImmutable(pool);
             }
 
         // if a required type is specified and the expression type isn't of the required type, then
@@ -616,7 +618,7 @@ public abstract class Expression
                     }
                 else
                     {
-                    typeActual = constConv.getType().ensureImmutable(pool());
+                    typeActual = constConv.getType().ensureImmutable(pool);
                     idConv     = null;
                     }
                 constVal = constConv;
