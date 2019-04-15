@@ -461,7 +461,7 @@ class HashMap<KeyType, ValueType>
             }
 
         @Override
-        (Collection, Int) removeIf(function Boolean (Entry) shouldRemove)
+        (EntrySet, Int) removeIf(function Boolean (Entry) shouldRemove)
             {
             Int          removed     = 0;
             HashEntry?[] buckets     = HashMap.this.buckets;

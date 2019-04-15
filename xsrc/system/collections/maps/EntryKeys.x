@@ -58,9 +58,7 @@ class EntryKeys<KeyType, ValueType>(Map<KeyType, ValueType> map)
         {
         verifyMutable();
 
-        Int removed = 0;
-        (_, removed) = map.entries.removeIf(
-                entry -> shouldRemove(entry.key));
+        (_, Int removed) = map.entries.removeIf(entry -> shouldRemove(entry.key));
         return this, removed;
         }
 

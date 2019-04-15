@@ -61,10 +61,7 @@ class KeyEntries<KeyType, ValueType>(Map<KeyType, ValueType> map)
         verifyMutable();
 
         CursorEntry<KeyType, ValueType> entry = new CursorEntry(map);
-        (_, Int removed) = map.keys.removeIf(key ->
-                {
-                return shouldRemove(entry.advance(key));
-                });
+        (_, Int removed) = map.keys.removeIf(key -> shouldRemove(entry.advance(key)));
 
         return this, removed;
         }
