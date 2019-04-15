@@ -71,9 +71,9 @@ interface Set<ElementType>
                 }
             }
 
-        Set result = this;
+        Set<ElementType> result = this;
         result -= remove?;
-        result += add?;
+        result |= add?;
         return result;
         }
 

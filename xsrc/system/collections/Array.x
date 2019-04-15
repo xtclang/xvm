@@ -800,7 +800,7 @@ class Array<ElementType>
     /**
      * Linked list tail.
      */
-    private Element? tail.get()
+    protected Element? tail.get()
         {
         Element? head = this.head;
         if (head == Null)

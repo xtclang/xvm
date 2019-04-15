@@ -46,33 +46,30 @@ class EntryKeys<KeyType, ValueType>(Map<KeyType, ValueType> map)
         }
 
     @Override
-    // TODO GG this @Override signature (and others like it) didn't cause the compiler to complain
-    // conditional EntryKeys remove(Map<KeyType, ValueType>.Entry entry)
-    conditional EntryKeys remove(KeyType key)
+    EntryKeys remove(KeyType key)
         {
-        return verifyMutable() && map.remove(key), this;
+        verifyMutable();
+        map.remove(key);
+        return this;
         }
 
     @Override
-    conditional EntryKeys removeIf(function Boolean (KeyType) shouldRemove)
+    (EntryKeys, Int) removeIf(function Boolean (KeyType) shouldRemove)
         {
         verifyMutable();
 
-        if (map.entries.removeIf(entry ->
-                {
-                return shouldRemove(entry.key);
-                }))
-            {
-            return True, this;
-            }
-
-        return False;
+        Int removed = 0;
+        (_, removed) = map.entries.removeIf(
+                entry -> shouldRemove(entry.key));
+        return this, removed;
         }
 
     @Override
-    conditional EntryKeys clear()
+    EntryKeys clear()
         {
-        return verifyMutable() && map.clear(), this;
+        verifyMutable();
+        map.clear();
+        return this;
         }
 
     @Override

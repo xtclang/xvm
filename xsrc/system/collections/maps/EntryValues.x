@@ -46,33 +46,39 @@ class EntryValues<KeyType, ValueType>(Map<KeyType, ValueType> map)
         }
 
     @Override
-    conditional EntryValues remove(ValueType value)
+    EntryValues remove(ValueType value)
         {
         verifyMutable();
 
-        Boolean modified = map.entries.iterator().untilAny(entry ->
+        map.entries.iterator().untilAny(entry ->
             {
             if (entry.value == value)
                 {
-                assert map.entries.remove(entry);
+                map.entries.remove(entry);
                 return True;
                 }
             return False;
             });
 
-        return modified, this;
+        return this;
         }
 
     @Override
-    conditional EntryValues removeIf(function Boolean (ValueType) shouldRemove)
+    (EntryValues, Int) removeIf(function Boolean (ValueType) shouldRemove)
         {
-        return verifyMutable() && map.entries.removeIf(entry -> shouldRemove(entry.value)), this;
+        verifyMutable();
+
+        (_, Int removed) = map.entries.removeIf(entry -> shouldRemove(entry.value));
+
+        return this, removed;
         }
 
     @Override
-    conditional EntryValues clear()
+    EntryValues clear()
         {
-        return verifyMutable() && map.clear(), this;
+        verifyMutable();
+        map.clear();
+        return this;
         }
 
     @Override

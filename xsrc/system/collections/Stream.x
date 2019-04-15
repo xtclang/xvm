@@ -330,7 +330,7 @@ interface Stream<ElementType>
         // additional metadata (like the "size" property of a Collection) could short-cut the
         // processing
         Int n = 0;
-        for (ElementType el : this)
+        for (ElementType el : iterator())
             {
             ++n;
             }
@@ -352,7 +352,7 @@ interface Stream<ElementType>
         // additional metadata (like the "size" property and the contents of a Collection) could
         // short-cut the processing
         ElementType[] elements = new ElementType[];
-        for (ElementType el : this)
+        for (ElementType el : iterator())
             {
             elements += el;
             }
@@ -384,7 +384,7 @@ interface Stream<ElementType>
     ElementType reduce(ElementType identity, function ElementType accumulate(ElementType, ElementType))
         {
         ElementType result = identity;
-        for (ElementType element : this)
+        for (ElementType element : iterator())
             {
             result = accumulate(result, element);
             }
@@ -431,7 +431,7 @@ interface Stream<ElementType>
      * This method produces a result equivalent to:
      *
      *   ResultType result = supply();
-     *   for (ElementType element : this)
+     *   for (ElementType element : iterator())
      *       {
      *       if (!accumulate(result, element))
      *           {

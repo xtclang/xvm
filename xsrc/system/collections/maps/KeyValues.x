@@ -34,58 +34,51 @@ class KeyValues<KeyType, ValueType>(Map<KeyType, ValueType> map)
                     return map.get(key);
                     }
 
-                return false;
+                return False;
                 }
             };
         }
 
     @Override
-    conditional KeyValues remove(ValueType value)
+    KeyValues remove(ValueType value)
         {
         verifyMutable();
 
-        Boolean modified = map.keys.iterator().untilAny(key ->
+        map.keys.iterator().untilAny(key ->
             {
             if (ValueType test : map.get(key))
                 {
                 if (test == value)
                     {
-                    assert map.remove(key);
-                    return true;
+                    map.remove(key);
+                    return True;
                     }
                 }
-            return false;
+            return False;
             });
 
-        return modified, this;
+        return this;
         }
 
     @Override
-    conditional KeyValues removeIf(function Boolean (ValueType) shouldRemove)
+    (KeyValues, Int) removeIf(function Boolean (ValueType) shouldRemove)
         {
         verifyMutable();
 
-//  TODO: unreported compilation error
-//        return map.keys.removeIf(key ->
-//                {
-//                assert ValueType value : map.get(key);
-//                return shouldRemove(value);
-//                }), this;
-        if (map.keys.removeIf(key ->
+        (_, Int removed) = map.keys.removeIf(key ->
                 {
                 assert ValueType value : map.get(key);
                 return shouldRemove(value);
-                }))
-            {
-            return true, this;
-            }
-        return false;
+                });
+        return this, removed;
         }
 
     @Override
-    conditional KeyValues clear()
+    KeyValues clear()
         {
-        return verifyMutable() && map.clear(), this;
+        verifyMutable();
+        map.clear();
+        return this;
         }
 
     /**

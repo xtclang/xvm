@@ -341,7 +341,7 @@ class HashMap<KeyType, ValueType>
             {
             if (verifyNotPersistent() & exists)
                 {
-                assert HashMap.this.keys.remove(key);
+                assert HashMap.this.keys.removeIfPresent(key);
                 exists = false;
                 }
             }
@@ -461,9 +461,9 @@ class HashMap<KeyType, ValueType>
             }
 
         @Override
-        (Collection, Int) removeIf(function Boolean (ElementType) shouldRemove)
+        (Collection, Int) removeIf(function Boolean (Entry) shouldRemove)
             {
-            Boolean      removed     = 0;
+            Int          removed     = 0;
             HashEntry?[] buckets     = HashMap.this.buckets;
             Int          bucketCount = buckets.size;
             CursorEntry  entry       = new CursorEntry();
@@ -487,7 +487,6 @@ class HashMap<KeyType, ValueType>
                             {
                             buckets[i] = currEntry;
                             }
-                        modified = True;
                         ++removed;
                         ++HashMap.this.removeCount;
                         }

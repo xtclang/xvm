@@ -47,33 +47,34 @@ class KeyEntries<KeyType, ValueType>(Map<KeyType, ValueType> map)
         }
 
     @Override
-    conditional KeyEntries remove(Map<KeyType, ValueType>.Entry entry)
+    KeyEntries remove(Map<KeyType, ValueType>.Entry entry)
         {
-        return verifyMutable() && map.remove(entry.key, entry.value), this;
+        verifyMutable();
+        map.remove(entry.key, entry.value);
+        return this;
         }
 
     @Override
-    conditional KeyEntries removeIf(
+    (KeyEntries, Int) removeIf(
             function Boolean (Map<KeyType, ValueType>.Entry) shouldRemove)
         {
         verifyMutable();
 
         CursorEntry<KeyType, ValueType> entry = new CursorEntry(map);
-        if (map.keys.removeIf(key ->
+        (_, Int removed) = map.keys.removeIf(key ->
                 {
                 return shouldRemove(entry.advance(key));
-                }))
-            {
-            return true, this;
-            }
+                });
 
-        return false;
+        return this, removed;
         }
 
     @Override
-    conditional KeyEntries clear()
+    KeyEntries clear()
         {
-        return verifyMutable() && map.clear(), this;
+        verifyMutable();
+        map.clear();
+        return this;
         }
 
     @Override
