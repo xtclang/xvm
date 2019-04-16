@@ -220,7 +220,7 @@ interface List<ElementType>
                 }
             else if (mutability == Constant && temp.is(ConstAble))
                 {
-                return temp.ensureConstant(True);
+                return temp.ensureConst(True);
                 }
             }
 

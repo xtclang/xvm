@@ -229,10 +229,34 @@ public class UnionTypeConstant
         }
 
     @Override
+    public boolean supportsCompare(ConstantPool pool, TypeConstant that, boolean fThatIsConstant)
+        {
+        if (that instanceof UnionTypeConstant)
+            {
+            TypeConstant type1This = m_constType1;
+            TypeConstant type2This = m_constType2;
+            TypeConstant type1That = ((UnionTypeConstant) that).m_constType1;
+            TypeConstant type2That = ((UnionTypeConstant) that).m_constType2;
+
+            if (type1This.equals(type1That) && type2This.equals(type2That))
+                {
+                return type1This.supportsCompare(pool, type1That, false)
+                    || type2This.supportsCompare(pool, type2That, false);
+                }
+            if (type1This.equals(type2That) && type2This.equals(type1That))
+                {
+                return type1This.supportsCompare(pool, type2That, false)
+                    || type2This.supportsCompare(pool, type1That, false);
+                }
+            }
+        return false;
+        }
+
+    @Override
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
-        TypeConstant type1   = getUnderlyingType();
-        TypeConstant type2   = getUnderlyingType2();
+        TypeConstant type1   = m_constType1;
+        TypeConstant type2   = m_constType2;
         int          cInvals = getConstantPool().getInvalidationCount();
         TypeInfo     info1   = type1.ensureTypeInfo(errs);
         TypeInfo     info2   = type2.ensureTypeInfo(errs);

@@ -862,7 +862,7 @@ public class InvocationExpression
         Argument[] aargTypeParams = m_aargTypeParams;
         int        cTypeParams    = aargTypeParams == null ? 0 : aargTypeParams.length;
         int        cDefaults      = m_cDefaults;
-        boolean    fTargetOnStack = cArgs == 0 || args.stream().allMatch(e -> e.isConstant());
+        boolean    fTargetOnStack = cArgs == 0 || args.stream().allMatch(Expression::isConstant);
 
         if (expr instanceof NameExpression)
             {
@@ -1418,7 +1418,30 @@ public class InvocationExpression
         Expression     exprLeft = exprName.left;
         if (exprLeft == null)
             {
-            Argument arg = ctx.resolveName(tokName, errs);
+            Argument arg = ctx.resolveName(tokName, ErrorListener.BLACKHOLE);
+
+            // try to use the type info (e.g. when the target is of a relational type)
+            if (arg == null && ctx.isMethod())
+                {
+                typeLeft = ctx.getVar("this").getType();
+
+                TypeInfo infoLeft = typeLeft.ensureTypeInfo(errs);
+
+                arg = findCallable(ctx, infoLeft, sName, MethodType.Either,
+                        atypeReturn, ErrorListener.BLACKHOLE);
+                if (arg != null)
+                    {
+                    MethodStructure method = getMethod(infoLeft, arg);
+                    assert method != null;
+
+                    m_argMethod   = arg;
+                    m_method      = method;
+                    m_fBindTarget = !method.isFunction();
+                    m_targetinfo  = new TargetInfo(sName, method, typeLeft, 0);
+                    return arg;
+                    }
+                }
+
             if (arg instanceof Register)
                 {
                 if (testFunction(ctx, arg.getType(), atypeReturn, errs) == null)
@@ -1905,24 +1928,6 @@ public class InvocationExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    /**
-     * Method type first parameter is the target type that the method binds to:
-     * <p/>
-     * {@code const Method<TargetType, Tuple<ParamTypes...>, Tuple<ReturnTypes...>>}
-     */
-    public static final int M_TARG = 0;
-    /**
-     * Method type second parameter is method param types tuple:
-     * <p/>
-     * {@code const Method<TargetType, Tuple<ParamTypes...>, Tuple<ReturnTypes...>>}
-     */
-    public static final int M_ARGS = 1;
-    /**
-     * Method type third parameter is return types tuple:
-     * <p/>
-     * {@code const Method<TargetType, Tuple<ParamTypes...>, Tuple<ReturnTypes...>>}
-     */
-    public static final int M_RETS = 2;
     /**
      * Function type first parameter is function param types tuple:
      * <p/>

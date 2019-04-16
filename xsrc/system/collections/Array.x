@@ -84,7 +84,7 @@ class Array<ElementType>
         if (size > 0)
             {
             function ElementType (ElementType) transform = mutability == Constant
-                    ? e -> (e.is(Const) ? e : e.is(ConstAble) ? e.ensureConst().as(ElementType) : assert)
+                    ? e -> (e.is(Const) ? e : e.is(ConstAble) ? e.ensureConst() : assert)
                     : e -> e;
 
             Int     index = size - 1;
@@ -280,8 +280,8 @@ class Array<ElementType>
                 {
                 if (!element.is(Const))
                     {
-                    // TODO GG - consider compiler automatically adding the last "as"
-                    this[loop2.count] = element.as(ConstAble).ensureConst(True).as(ElementType);
+                    assert element.is(ConstAble);
+                    this[loop2.count] = element.ensureConst(True);
                     }
                 }
             }

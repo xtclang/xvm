@@ -1440,6 +1440,28 @@ public class StatementBlock
             this.type       = id instanceof PropertyConstant ? id.getType() : null;
             }
 
+        /**
+         * Create a new TargetInfo for a method.
+         *
+         * @param name        the name being resolved
+         * @param method      the method
+         * @param typeTarget  the target container type
+         * @param stepsOut    the number of "outer" steps needed to get from the current context
+         *                    to the target container
+         */
+        public TargetInfo(
+                String           name,
+                MethodStructure  method,
+                TypeConstant     typeTarget,
+                int              stepsOut)
+            {
+            this.name       = name;
+            this.id         = method.getIdentityConstant();
+            this.hasThis    = !method.isFunction();
+            this.typeTarget = typeTarget;
+            this.stepsOut   = stepsOut;
+            this.type       = null;
+            }
 
         /**
          * Create a new TargetInfo for an "outer this".
