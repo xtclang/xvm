@@ -2252,7 +2252,7 @@ public class TypeInfo
     private final boolean m_fImplicitAbstract;
 
     /**
-     * The type parameters for this TypeInfo.
+     * The type parameters for this TypeInfo key'ed by a String or Nid.
      */
     private final Map<Object, ParamInfo> f_mapTypeParams;
 

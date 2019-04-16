@@ -4,9 +4,14 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.ConstantPool;
@@ -15,6 +20,9 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
+
+import org.xvm.util.ListMap;
+import org.xvm.util.Severity;
 
 
 /**
@@ -223,24 +231,197 @@ public class UnionTypeConstant
     @Override
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
-        TypeConstant type1 = getUnderlyingType();
-        TypeConstant type2 = getUnderlyingType2();
+        TypeConstant type1   = getUnderlyingType();
+        TypeConstant type2   = getUnderlyingType2();
+        int          cInvals = getConstantPool().getInvalidationCount();
+        TypeInfo     info1   = type1.ensureTypeInfo(errs);
+        TypeInfo     info2   = type2.ensureTypeInfo(errs);
 
-        TypeInfo info1 = type1.ensureTypeInfo(errs);
-        TypeInfo info2 = type2.ensureTypeInfo(errs);
+        return new TypeInfo(this,
+                            cInvals,
+                            null,                   // struct
+                            0,                      // depth
+                            false,                  // synthetic
+                            mergeTypeParams(info1, info2, errs),
+                            mergeAnnotations(info1, info2, errs),
+                            null,                   // typeExtends
+                            null,                   // typeRebase
+                            null,                   // typeInto
+                            Collections.EMPTY_LIST, // listProcess,
+                            ListMap.EMPTY,          // listmapClassChain
+                            ListMap.EMPTY,          // listmapDefaultChain
+                            mergeProperties(info1, info2, errs),
+                            mergeMethods(info1, info2, errs),
+                            Collections.EMPTY_MAP,  // mapVirtProps
+                            Collections.EMPTY_MAP,  // mapVirtMethods
+                            info1.getProgress().worstOf(info2.getProgress())
+                            );
+        }
 
-        // +++ hack begin (this code is correct only if the formal type's constraint is Object)
-        if (type1.isFormalType())
+    protected Map<Object, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs)
+        {
+        Map<Object, ParamInfo> map1 = info1.getTypeParams();
+        Map<Object, ParamInfo> map2 = info2.getTypeParams();
+        Map<Object, ParamInfo> map  = new HashMap<>(map1);
+
+        for (Iterator<Map.Entry<Object, ParamInfo>> iter = map.entrySet().iterator(); iter.hasNext();)
             {
-            return info2;
+            Map.Entry<Object, ParamInfo> entry = iter.next();
+
+            Object nid = entry.getKey();
+
+            ParamInfo param2 = map2.get(nid);
+            if (param2 == null)
+                {
+                // the type param is missing in the second map; keep it "as is"
+                continue;
+                }
+
+            // the type param exists in both maps; ensure the types are compatible
+            // and choose the wider one
+            ParamInfo    param1 = entry.getValue();
+            TypeConstant type1  = param1.getActualType();
+            TypeConstant type2  = param2.getActualType();
+
+            if (type2.isAssignableTo(type1))
+                {
+                // param1 is good
+                // REVIEW should we compare the constraint types as well?
+                continue;
+                }
+
+            if (type1.isAssignableTo(type2))
+                {
+                // param2 is good; replace
+                entry.setValue(param2);
+                continue;
+                }
+
+            log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_CONTRIB,
+                info1.getType().getValueString(), nid, type1.getValueString(),
+                info2.getType().getValueString(), type2.getValueString());
             }
-        if (type2.isFormalType())
+
+        for (Iterator<Map.Entry<Object, ParamInfo>> iter = map2.entrySet().iterator(); iter.hasNext();)
             {
-            return info1;
+            Map.Entry<Object, ParamInfo> entry = iter.next();
+
+            Object nid = entry.getKey();
+
+            ParamInfo param1 = map1.get(nid);
+            if (param1 == null)
+                {
+                // the type param is missing in the first map; add it "as is"
+                map.put(nid, entry.getValue());
+                }
             }
-        // --- hack end
-        // TODO CP remove the hack above
-        return info1;
+
+        return map;
+        }
+
+    protected Annotation[] mergeAnnotations(TypeInfo info1, TypeInfo info2, ErrorListener errs)
+        {
+        // TODO
+        return null;
+        }
+
+    protected Map<PropertyConstant, PropertyInfo> mergeProperties(TypeInfo info1, TypeInfo info2, ErrorListener errs)
+        {
+        Map<PropertyConstant, PropertyInfo> map = new HashMap<>();
+
+        // take only non-nested properties
+        for (Map.Entry<String, PropertyInfo> entry : info1.ensurePropertiesByName().entrySet())
+            {
+            String sName = entry.getKey();
+
+            PropertyInfo prop1 = info1.findProperty(sName);
+            assert prop1 != null;
+
+            PropertyInfo prop2 = info2.findProperty(sName);
+            if (prop2 == null)
+                {
+                // the property is only in the first map
+                map.put(prop1.getIdentity(), prop1);
+                }
+            else
+                {
+                // the property exists in both maps;
+                // TODO: check for the type compatibility and maybe a "common" structure
+                //       and then choose/build the best PropertyInfo
+
+                map.put(prop1.getIdentity(), prop1);
+                }
+            }
+
+        for (Map.Entry<String, PropertyInfo> entry : info2.ensurePropertiesByName().entrySet())
+            {
+            String sName = entry.getKey();
+
+            PropertyInfo prop2 = info2.findProperty(sName);
+            assert prop2 != null;
+
+            PropertyInfo prop1 = info2.findProperty(sName);
+            if (prop1 == null)
+                {
+                // the property is only in the second map
+                map.put(prop2.getIdentity(), prop2);
+                }
+            }
+        return map;
+        }
+
+    protected Map<MethodConstant, MethodInfo> mergeMethods(TypeInfo info1, TypeInfo info2, ErrorListener errs)
+        {
+        Map<MethodConstant, MethodInfo> map = new HashMap<>();
+
+        // take only non-nested methods
+        for (Map.Entry<SignatureConstant, MethodInfo> entry : info1.ensureMethodsBySignature().entrySet())
+            {
+            SignatureConstant sig = entry.getKey();
+
+            MethodInfo method1 = info1.getMethodBySignature(sig);
+            assert method1 != null;
+
+            if (method1.isConstructor())
+                {
+                continue;
+                }
+
+            MethodInfo method2 = info2.getMethodBySignature(sig);
+            if (method2 == null)
+                {
+                // the method is only in the first map
+                map.put(method1.getIdentity(), method1);
+                }
+            else
+                {
+                // the method exists in both maps;
+                // TODO: check for the compatibility and choose the best MethodInfo
+
+                map.put(method1.getIdentity(), method1);
+                }
+            }
+
+        for (Map.Entry<SignatureConstant, MethodInfo> entry : info2.ensureMethodsBySignature().entrySet())
+            {
+            SignatureConstant sig = entry.getKey();
+
+            MethodInfo method2 = info2.getMethodBySignature(sig);
+            assert method2 != null;
+
+            if (method2.isConstructor())
+                {
+                continue;
+                }
+
+            MethodInfo method1 = info1.getMethodBySignature(sig);
+            if (method1 == null)
+                {
+                // the method is only in the first map
+                map.put(method2.getIdentity(), method2);
+                }
+            }
+        return map;
         }
 
 

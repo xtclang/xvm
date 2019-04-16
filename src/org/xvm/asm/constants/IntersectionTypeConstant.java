@@ -312,7 +312,9 @@ public class IntersectionTypeConstant
             {
             Map.Entry<Object, ParamInfo> entry = iter.next();
 
-            ParamInfo param2 = map2.get(entry.getKey());
+            Object nid = entry.getKey();
+
+            ParamInfo param2 = map2.get(nid);
             if (param2 != null)
                 {
                 // the type param exists in both maps; ensure the types are compatible
@@ -336,10 +338,8 @@ public class IntersectionTypeConstant
                     }
 
                 log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_CONTRIB,
-                    info1.getType().getValueString(), entry.getKey(),
-                    type1.getValueString(),
-                    info1.getType().getValueString(),
-                    type2.getValueString());
+                    info1.getType().getValueString(), nid, type1.getValueString(),
+                    info2.getType().getValueString(), type2.getValueString());
                 }
 
             // the type param is missing in the second map or incompatible; remove it
@@ -385,7 +385,7 @@ public class IntersectionTypeConstant
             SignatureConstant sig = entry.getKey();
 
             MethodInfo method2 = info2.getMethodBySignature(sig);
-            if (method2 != null)
+            if (method2 != null && !method2.isConstructor())
                 {
                 // the method exists in both maps;
                 // TODO: check for the compatibility and choose the best MethodInfo
