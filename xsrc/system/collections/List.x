@@ -185,7 +185,7 @@ interface List<ElementType>
 
         // eventual to-do is to should pick a better sort impl based on some heuristics, such as
         // size of list and how many elements are out-of-order
-        function void (List<ElementType>, Comparator?) sortimpl = bubbleSort;
+        function void (List<ElementType>, Comparator<ElementType>?) sortimpl = bubbleSort;
 
         Mutability mutability = this.mutability;
         if (!mutability.persistent)
@@ -235,7 +235,7 @@ interface List<ElementType>
      * @param comparator  the Comparator to use to sort the list; (optional, defaulting to using the
      *                    "natural" sort order of the ElementType)
      */
-    static <ElementType extends Orderable> void bubbleSort(List<ElementType> list, Comparator? comparator = null)
+    static <ElementType> void bubbleSort(List<ElementType> list, Comparator<ElementType>? comparator = null)
         {
         assert !list.mutability.persistent;
 
