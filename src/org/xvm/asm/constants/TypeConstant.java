@@ -4002,6 +4002,14 @@ public abstract class TypeConstant
                 return relation;
                 }
 
+            if (typeRight.isImmutabilitySpecified())
+                {
+                relation = typeRight.removeImmutable(pool).calculateRelation(typeLeft);
+
+                mapRelations.put(typeLeft, relation);
+                return relation;
+                }
+
             // then check various "reserved" scenarios
             relation = checkReservedCompatibility(typeLeft, typeRight);
             if (relation != null)

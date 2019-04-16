@@ -563,9 +563,7 @@ public class TerminalTypeConstant
                 {
                 IdentityConstant idClass  = ((ThisClassConstant) constant).getDeclarationLevelClass();
                 TypeConstant     typeDecl = idClass.getType();
-                if (typeTarget == null
-                        || !typeTarget.isSingleUnderlyingClass(true)
-                        || !typeTarget.isA(typeDecl))
+                if (typeTarget == null || !typeTarget.isA(typeDecl))
                     {
                     return typeDecl;
                     }
