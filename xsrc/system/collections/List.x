@@ -235,7 +235,7 @@ interface List<ElementType>
      * @param comparator  the Comparator to use to sort the list; (optional, defaulting to using the
      *                    "natural" sort order of the ElementType)
      */
-    static <ElementType> void bubbleSort(List<ElementType> list, Comparator? comparator = null)
+    static <ElementType extends Orderable> void bubbleSort(List<ElementType> list, Comparator? comparator = null)
         {
         assert !list.mutability.persistent;
 
