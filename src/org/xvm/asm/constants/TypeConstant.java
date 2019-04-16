@@ -2977,7 +2977,14 @@ public abstract class TypeConstant
                     mapMethods.put((MethodConstant)
                             constId.appendNestedIdentity(pool, nidContrib), methodContrib);
                     }
-                continue;
+
+                // don't skip the rest of the processing for property accessors
+                if (!methodContrib.isPotentialPropertyOverlay())
+                    {
+                    // TODO CP - what if the method is virtual, but “locally” so, like a method
+                    //           inside a class inside a method
+                    continue;
+                    }
                 }
 
             // look for a method of the same signature (using its nested identity); only

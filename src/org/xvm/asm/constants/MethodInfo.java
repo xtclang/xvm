@@ -497,6 +497,15 @@ public class MethodInfo
         }
 
     /**
+     * @return true iff this non-virtual method may be a part of non-trivial call chain
+     */
+    public boolean isPotentialPropertyOverlay()
+        {
+        assert !isVirtual();
+        return getIdentity().getNamespace() instanceof PropertyConstant;
+        }
+
+    /**
      * @return true iff the method chain is capped
      */
     public boolean isCapped()

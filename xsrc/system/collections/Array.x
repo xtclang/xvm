@@ -797,7 +797,7 @@ class Array<ElementType>
     /**
      * Linked list tail.
      */
-    protected Element? tail.get()
+    private Element? tail.get()
         {
         Element? head = this.head;
         if (head == Null)
