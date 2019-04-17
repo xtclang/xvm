@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
@@ -64,15 +65,16 @@ public class NonBindingExpression
         {
         return type == null
                 ? null
-                : type.getImplicitType(ctx);
+                : type.ensureTypeConstant(ctx);
         }
 
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired)
         {
-        return type == null
+        return type == null || typeRequired == null
                 ? TypeFit.Fit
-                : type.testFit(ctx, typeRequired);
+                : type.testFit(ctx, pool().ensureParameterizedTypeConstant(
+                    pool().typeType(), typeRequired));
         }
 
     @Override
@@ -90,7 +92,9 @@ public class NonBindingExpression
             }
         else
             {
-            TypeExpression exprNewType = (TypeExpression) exprOldType.validate(ctx, typeRequired, errs);
+            ConstantPool   pool        = pool();
+            TypeConstant   typeReqType = pool.ensureParameterizedTypeConstant(pool.typeType(), typeRequired);
+            TypeExpression exprNewType = (TypeExpression) exprOldType.validate(ctx, typeReqType, errs);
             if (exprNewType == null)
                 {
                 fit     = TypeFit.NoFit;
