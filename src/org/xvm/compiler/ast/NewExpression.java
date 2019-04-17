@@ -449,14 +449,14 @@ public class NewExpression
                                     }
                                 });
 
-                    infoTarget.getMethods().values().stream()
-                            .filter(MethodInfo::isAbstract)
-                            .forEach(info ->
+                    infoTarget.getMethods().entrySet().stream()
+                            .filter(entry -> entry.getValue().isAbstract())
+                            .forEach(entry ->
                                 {
                                 if (--aiCount[0] >= 0)
                                     {
                                     log(errs, Severity.ERROR, Constants.VE_NEW_ABSTRACT_METHOD,
-                                            sType, info.getSignature());
+                                            sType, entry.getKey().getNestedIdentity());
                                     }
                                 });
                     }
