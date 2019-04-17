@@ -3220,7 +3220,7 @@ public abstract class TypeConstant
                             int cParamsSub = sigSub.getParamCount();
                             if (cParamsSub - cDefault == cParamsReq)
                                 {
-                                SignatureConstant sigSubReq = sigSub.truncateParams(cParamsReq);
+                                SignatureConstant sigSubReq = sigSub.truncateParams(0, cParamsReq);
                                 if (sigSubReq.isSubstitutableFor(sigCandidate, this))
                                     {
                                     listMatch.add(nidCandidate);

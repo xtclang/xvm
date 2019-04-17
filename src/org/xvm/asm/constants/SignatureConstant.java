@@ -427,15 +427,21 @@ public class SignatureConstant
         }
 
     /**
+     * Truncate some of the signature's parameters.
+     *
+     * @param ofStart  the first index to retain a parameter at
+     * @param cParams  the number of parameters to retain
+     *
      * @return a new SignatureConstant that has the specified (lesser than original) number of
      *         parameters
      */
-    public SignatureConstant truncateParams(int cParams)
+    public SignatureConstant truncateParams(int ofStart, int cParams)
         {
         assert cParams < m_aconstParams.length;
+        assert ofStart + cParams <= m_aconstParams.length;
 
         return getConstantPool().ensureSignatureConstant(getName(),
-                Arrays.copyOf(m_aconstParams, cParams), m_aconstReturns);
+                Arrays.copyOfRange(m_aconstParams, ofStart, ofStart + cParams), m_aconstReturns);
         }
 
     // ----- Constant methods ----------------------------------------------------------------------
