@@ -305,28 +305,6 @@ public class SignatureConstant
         }
 
     /**
-     * Obtain the TypeConstant that represents the runtime type of a Ref/Var for a function or a
-     * method represented by this signature.
-     *
-     * @param typeTarget  the type of a target (null for a function)
-     *
-     * @return a TypeConstant (Function or Method)
-     */
-    public TypeConstant getRefType(TypeConstant typeTarget)
-        {
-        ConstantPool pool    = getConstantPool();
-        TypeConstant params  = pool.ensureParameterizedTypeConstant(pool.typeTuple(), getRawParams());
-        TypeConstant returns = pool.ensureParameterizedTypeConstant(pool.typeTuple(), getRawReturns());
-
-        return typeTarget == null
-                // Function<Tuple<ParamTypes...>, Tuple<ReturnTypes...>>
-                ? pool.ensureParameterizedTypeConstant(pool.typeFunction(), params, returns)
-                // Method<TargetType, Tuple<ParamTypes...>, Tuple<ReturnTypes...>>
-                : pool.ensureParameterizedTypeConstant(pool.typeMethod(),
-                        typeTarget, params, returns);
-        }
-
-    /**
      * Check if a method with this signature could be called via the specified signature
      * (it also means that a method with this signature could "super" to the specified method).
      *
@@ -427,15 +405,35 @@ public class SignatureConstant
         }
 
     /**
+     * @return the type of the method that corresponds to this SignatureConstant for the specified
+     *         target type
+     */
+    public TypeConstant asMethodType(TypeConstant typeTarget)
+        {
+        ConstantPool pool    = getConstantPool();
+        TypeConstant params  = pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_aconstParams);
+        TypeConstant returns = pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_aconstReturns);
+
+        // Method<TargetType, Tuple<ParamTypes...>, Tuple<ReturnTypes...>>
+        return pool.ensureParameterizedTypeConstant(pool.typeMethod(), typeTarget, params, returns);
+        }
+
+    /**
+     * Truncate some of the signature's parameters.
+     *
+     * @param ofStart  the first index to retain a parameter at
+     * @param cParams  the number of parameters to retain
+     *
      * @return a new SignatureConstant that has the specified (lesser than original) number of
      *         parameters
      */
-    public SignatureConstant truncateParams(int cParams)
+    public SignatureConstant truncateParams(int ofStart, int cParams)
         {
         assert cParams < m_aconstParams.length;
+        assert ofStart + cParams <= m_aconstParams.length;
 
         return getConstantPool().ensureSignatureConstant(getName(),
-                Arrays.copyOf(m_aconstParams, cParams), m_aconstReturns);
+                Arrays.copyOfRange(m_aconstParams, ofStart, ofStart + cParams), m_aconstReturns);
         }
 
     // ----- Constant methods ----------------------------------------------------------------------
