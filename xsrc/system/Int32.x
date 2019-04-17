@@ -161,6 +161,18 @@ const Int32
         }
 
     @Override
+    Int32 leftmostBit.get()
+        {
+        TODO
+        }
+
+    @Override
+    Int32 rightmostBit.get()
+        {
+        TODO
+        }
+
+    @Override
     Int32 reverseBits()
         {
         return new Int32(bitReverse(bits));

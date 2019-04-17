@@ -185,6 +185,18 @@ const Int128
         }
 
     @Override
+    Int128 leftmostBit.get()
+        {
+        TODO
+        }
+
+    @Override
+    Int128 rightmostBit.get()
+        {
+        TODO
+        }
+
+    @Override
     Int128 reverseBits()
         {
         return new Int128(bitReverse(bits));

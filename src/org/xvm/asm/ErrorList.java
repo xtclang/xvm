@@ -337,7 +337,7 @@ public class ErrorList
                     .append(':')
                     .append(m_sCode);
 
-            if (m_xs != null)
+            if (m_xs != null && m_xs.getIdentityConstant() != null)
                 {
                 sb.append(':')
                   .append(m_xs.getIdentityConstant().getPathString());

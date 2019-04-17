@@ -172,6 +172,18 @@ const UInt8
         }
 
     @Override
+    UInt8 leftmostBit.get()
+        {
+        TODO
+        }
+
+    @Override
+    UInt8 rightmostBit.get()
+        {
+        TODO
+        }
+
+    @Override
     UInt8 reverseBits()
         {
         return new UInt8(bitReverse(bits));

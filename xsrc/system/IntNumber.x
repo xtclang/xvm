@@ -73,19 +73,13 @@ const IntNumber
      * If any bits are set in this integer, then return an integer with only the most significant
      * (left-most) of those bits set, otherwise return zero.
      */
-    IntNumber leftmostBit.get()
-        {
-        TODO
-        }
+    @Abstract IntNumber leftmostBit;
 
     /**
      * If any bits are set in this integer, then return an integer with only the least significant
      * (right-most) of those bits set, otherwise return zero.
      */
-    IntNumber rightmostBit.get()
-        {
-        TODO
-        }
+    @Abstract IntNumber rightmostBit;
 
     /**
      * Determine, from left-to-right (most significant to least) the number of bits that are zero

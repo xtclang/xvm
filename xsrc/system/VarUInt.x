@@ -116,13 +116,13 @@ const VarUInt
         }
 
     @Override
-    @RO Int leftmostBit.get()
+    @RO VarUInt leftmostBit.get()
         {
         TODO
         }
 
     @Override
-    @RO Int rightmostBit.get()
+    @RO VarUInt rightmostBit.get()
         {
         TODO
         }

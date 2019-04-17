@@ -172,6 +172,18 @@ const UInt32
         }
 
     @Override
+    UInt32 leftmostBit.get()
+        {
+        TODO
+        }
+
+    @Override
+    UInt32 rightmostBit.get()
+        {
+        TODO
+        }
+
+    @Override
     UInt32 reverseBits()
         {
         return new UInt32(bitReverse(bits));

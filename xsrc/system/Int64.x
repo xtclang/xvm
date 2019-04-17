@@ -180,6 +180,18 @@ const Int64
         }
 
     @Override
+    Int64 leftmostBit.get()
+        {
+        TODO
+        }
+
+    @Override
+    Int64 rightmostBit.get()
+        {
+        TODO
+        }
+
+    @Override
     Int64 reverseBits()
         {
         return new Int64(bitReverse(bits));

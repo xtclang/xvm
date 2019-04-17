@@ -183,6 +183,18 @@ const Int8
         }
 
     @Override
+    Int8 leftmostBit.get()
+        {
+        TODO
+        }
+
+    @Override
+    Int8 rightmostBit.get()
+        {
+        TODO
+        }
+
+    @Override
     Int8 reverseBits()
         {
         return new Int8(bitReverse(bits));

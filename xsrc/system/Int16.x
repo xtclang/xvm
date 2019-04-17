@@ -161,6 +161,18 @@ const Int16
         }
 
     @Override
+    Int16 leftmostBit.get()
+        {
+        TODO
+        }
+
+    @Override
+    Int16 rightmostBit.get()
+        {
+        TODO
+        }
+
+    @Override
     Int16 reverseBits()
         {
         return new Int16(bitReverse(bits));

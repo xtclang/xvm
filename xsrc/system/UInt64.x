@@ -184,6 +184,18 @@ const UInt64
         }
 
     @Override
+    UInt64 leftmostBit.get()
+        {
+        TODO
+        }
+
+    @Override
+    UInt64 rightmostBit.get()
+        {
+        TODO
+        }
+
+    @Override
     UInt64 reverseBits()
         {
         return new UInt64(bitReverse(bits));
