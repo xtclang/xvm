@@ -750,6 +750,16 @@ public class MethodDeclarationStatement
 
     // ----- debugging assistance ------------------------------------------------------------------
 
+    /**
+     * Used only for setting up conditional break points.
+     */
+    private String path()
+        {
+        MethodConstant  idMethod  = ((MethodStructure) getComponent()).getIdentityConstant();
+        ModuleStructure module    = (ModuleStructure) idMethod.getModuleConstant().getComponent();
+        return module.getName() + "/" + idMethod.getPathString();
+        }
+
     public String toSignatureString()
         {
         if (name == null)
