@@ -16,7 +16,7 @@ import maps.ReifiedEntry;
  */
 class ListMap<KeyType, ValueType>
         implements Map<KeyType, ValueType>
-        implements MutableAble // TODO FixedSizeAble, PersistentAble, ConstAble
+        implements MutableAble, FixedSizeAble, PersistentAble, ConstAble
         incorporates conditional ListMapIndex<KeyType extends immutable Hashable, ValueType>
         incorporates Stringer
     {
@@ -204,18 +204,18 @@ class ListMap<KeyType, ValueType>
         }
 
     @Override
-    ListMap remove(KeyType key, ValueType value)
+    conditional ListMap remove(KeyType key, ValueType value)
         {
         if (Int index : indexOf(key))
             {
             if (listVals[index] == value)
                 {
                 deleteEntryAt(index);
-                return this;
+                return True, this;
                 }
             }
 
-        return this;
+        return False;
         }
 
     @Override

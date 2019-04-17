@@ -56,13 +56,6 @@ interface Function<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tup
     FutureVar<ReturnTypes> invokeService(ParamTypes args);
 
     /**
-     * Override the automatic conversion-to-function method from Object, removing the "@Auto"
-     * annotation, so that functions do not try to automatically convert themselves to functions.
-     */
-    @Override
-    function Function() to<function Function()>();
-
-    /**
      * TODO move to own file?
      */
     interface Parameter<ParamType>
