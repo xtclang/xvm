@@ -4,6 +4,7 @@ package org.xvm.asm;
 import java.text.MessageFormat;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ResourceBundle;
 
@@ -132,21 +133,25 @@ public class ErrorList
 
     protected boolean log(ErrorInfo err)
         {
-        // remember the highest severity encountered
-        Severity severity = err.getSeverity();
-        if (severity.ordinal() > m_severity.ordinal())
+        Object uid = err.genUID();
+        if (m_setUID.add(uid))
             {
-            m_severity = severity;
-            }
+            // remember the highest severity encountered
+            Severity severity = err.getSeverity();
+            if (severity.ordinal() > m_severity.ordinal())
+                {
+                m_severity = severity;
+                }
 
-        // accumulate all the errors in a list
-        m_list.add(err);
+            // accumulate all the errors in a list
+            m_list.add(err);
 
-        // keep track of the number of serious errors; quit the process once
-        // that number grows too large
-        if (severity.compareTo(Severity.ERROR) >= 0)
-            {
-            ++m_cErrors;
+            // keep track of the number of serious errors; quit the process once
+            // that number grows too large
+            if (severity.compareTo(Severity.ERROR) >= 0)
+                {
+                ++m_cErrors;
+                }
             }
 
         return isAbortDesired();
@@ -322,6 +327,35 @@ public class ErrorList
                 }
             }
 
+        /**
+         * @return an ID that allows redundant errors to be filtered out
+         */
+        public Object genUID()
+            {
+            StringBuilder sb = new StringBuilder();
+            sb.append(m_severity.ordinal())
+                    .append(':')
+                    .append(m_sCode);
+
+            if (m_xs != null)
+                {
+                sb.append(':')
+                  .append(m_xs.getIdentityConstant().getPathString());
+                }
+
+            if (m_source != null)
+                {
+                sb.append(':')
+                  .append(m_source.getFileName())
+                  .append(':')
+                  .append(m_lPosStart)
+                  .append(':')
+                  .append(m_lPosStart);
+                }
+
+            return sb.toString();
+            }
+
         @Override
         public String toString()
             {
@@ -427,4 +461,9 @@ public class ErrorList
      * The accumulated list of errors.
      */
     private ArrayList<ErrorInfo> m_list = new ArrayList<>();
+
+    /**
+     * The UIDs of previously logged errors.
+     */
+    private HashSet m_setUID = new HashSet();
     }

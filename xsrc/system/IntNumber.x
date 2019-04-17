@@ -73,7 +73,7 @@ const IntNumber
      * If any bits are set in this integer, then return an integer with only the most significant
      * (left-most) of those bits set, otherwise return zero.
      */
-    Int leftmostBit.get()
+    IntNumber leftmostBit.get()
         {
         TODO
         }
@@ -82,7 +82,7 @@ const IntNumber
      * If any bits are set in this integer, then return an integer with only the least significant
      * (right-most) of those bits set, otherwise return zero.
      */
-    Int rightmostBit.get()
+    IntNumber rightmostBit.get()
         {
         TODO
         }

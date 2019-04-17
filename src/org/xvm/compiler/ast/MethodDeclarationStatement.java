@@ -427,15 +427,19 @@ public class MethodDeclarationStatement
                     MethodStructure methodSuper = findRefMethod(property, annotations, sName, params, errs);
                     if (methodSuper == null)
                         {
-                        for (Annotation anno : annotations)
+                        if (annotations != null)
                             {
-                            TypeConstant type = anno.getType().getTypeConstant();
-                            if (type != null && type.containsUnresolved())
+                            for (Annotation anno : annotations)
                                 {
-                                mgr.requestRevisit();
-                                return;
+                                TypeConstant type = anno.getType().getTypeConstant();
+                                if (type != null && type.containsUnresolved())
+                                    {
+                                    mgr.requestRevisit();
+                                    return;
+                                    }
                                 }
                             }
+                        
                         for (Parameter param : params)
                             {
                             TypeConstant type = param.getType().getTypeConstant();
