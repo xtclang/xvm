@@ -508,6 +508,36 @@ public class ParameterizedTypeConstant
     public Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams)
         {
         assert listParams.isEmpty();
+
+        ConstantPool pool = getConstantPool();
+        if (m_constType.equals(pool.typeFunction()))
+            {
+            // function is special; we can disregard the Tuple holder
+            TypeConstant[] atypeParams = pool.extractFunctionParams(this);
+            if (atypeParams != null)
+                {
+                for (TypeConstant typeParam : atypeParams)
+                    {
+                    if (typeParam.producesFormalType(sTypeName, access))
+                        {
+                        return Usage.YES;
+                        }
+                    }
+                }
+
+            TypeConstant[] atypeReturns = pool.extractFunctionReturns(this);
+            if (atypeReturns != null)
+                {
+                for (TypeConstant typeReturn : atypeReturns)
+                    {
+                    if (typeReturn.consumesFormalType(sTypeName, access))
+                        {
+                        return Usage.YES;
+                        }
+                    }
+                }
+            return Usage.NO;
+            }
         return super.checkConsumption(sTypeName, access, getParamTypes());
         }
 
@@ -515,6 +545,36 @@ public class ParameterizedTypeConstant
     public Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
         {
         assert listParams.isEmpty();
+
+        ConstantPool pool = getConstantPool();
+        if (m_constType.equals(pool.typeFunction()))
+            {
+            // function is special; we can disregard the Tuple holder
+            TypeConstant[] atypeParams = pool.extractFunctionParams(this);
+            if (atypeParams != null)
+                {
+                for (TypeConstant typeParam : atypeParams)
+                    {
+                    if (typeParam.consumesFormalType(sTypeName, access))
+                        {
+                        return Usage.YES;
+                        }
+                    }
+                }
+
+            TypeConstant[] atypeReturns = pool.extractFunctionReturns(this);
+            if (atypeReturns != null)
+                {
+                for (TypeConstant typeReturn : atypeReturns)
+                    {
+                    if (typeReturn.producesFormalType(sTypeName, access))
+                        {
+                        return Usage.YES;
+                        }
+                    }
+                return Usage.NO;
+                }
+            }
         return super.checkProduction(sTypeName, access, getParamTypes());
         }
 
