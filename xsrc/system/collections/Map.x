@@ -562,7 +562,7 @@ interface Map<KeyType, ValueType>
         Int capacity = 0;
         if (coll.is(Collection<Stringable>))
             {
-            for (coll.ElementType element : coll)
+            for (Stringable element : coll)
                 {
                 capacity += element.estimateStringLength();
                 }
