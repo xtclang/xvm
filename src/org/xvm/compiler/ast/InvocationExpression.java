@@ -382,7 +382,8 @@ public class InvocationExpression
                 if (method.getTypeParamCount() > 0)
                     {
                     // resolve the type parameters against all the arg types we know by now
-                    resolver = makeTypeParameterResolver(ctx, method, atypeReturn);
+                    resolver = makeTypeParameterResolver(ctx, method,
+                            m_fCall ? atypeReturn : TypeConstant.NO_TYPES);
                     }
 
                 if (m_fCall)
@@ -403,12 +404,22 @@ public class InvocationExpression
 
                 if (m_fBindTarget)
                     {
-                    return resolveTypes(resolver, new TypeConstant[]{idMethod.getType()});
+                    TypeConstant typeFn = idMethod.getType();
+                    if (resolver != null)
+                        {
+                        typeFn = typeFn.resolveGenerics(pool, resolver);
+                        }
+                    return new TypeConstant[]{typeFn};
                     }
 
                 // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
 
-                return resolveTypes(resolver, new TypeConstant[]{idMethod.getRefType(typeLeft)});
+                TypeConstant typeFn = idMethod.getRefType(typeLeft);
+                if (resolver != null)
+                    {
+                    typeFn = typeFn.resolveGenerics(pool, resolver);
+                    }
+                return new TypeConstant[]{typeFn};
                 }
 
             // must be a property or a variable of type function (@Auto conversion possibility
@@ -622,8 +633,9 @@ public class InvocationExpression
 
                             System.arraycopy(atypeArgs, cTypeParams, atype, 0, cParams);
 
-                            atypeArgs = resolveTypes(
-                                    makeTypeParameterResolver(ctx, method, atypeReturn), atype);
+                            GenericTypeResolver resolver = makeTypeParameterResolver(ctx, method,
+                                    m_fCall ? atypeReturn : TypeConstant.NO_TYPES);
+                            atypeArgs = resolveTypes(resolver, atype);
                             }
 
                         // test the "regular fit" first and Tuple afterwards
@@ -667,7 +679,8 @@ public class InvocationExpression
                             if (cTypeParams > 0)
                                 {
                                 // re-resolve against the validated types
-                                mapTypeParams = method.resolveTypeParameters(atypeArgs, atypeReturn);
+                                mapTypeParams = method.resolveTypeParameters(atypeArgs,
+                                        m_fCall ? atypeReturn : TypeConstant.NO_TYPES);
                                 if (mapTypeParams.size() < cTypeParams)
                                     {
                                     // TODO: need a better error
@@ -700,11 +713,21 @@ public class InvocationExpression
                                 }
                             else if (m_fBindTarget)
                                 {
-                                atypeResult = new TypeConstant[] {idMethod.getType()};
+                                TypeConstant typeFn = idMethod.getType();
+                                if (!mapTypeParams.isEmpty())
+                                    {
+                                    typeFn = typeFn.resolveGenerics(pool, mapTypeParams::get);
+                                    }
+                                atypeResult = new TypeConstant[] {typeFn};
                                 }
                             else
                                 {
-                                atypeResult = new TypeConstant[] {idMethod.getRefType(typeLeft)};
+                                TypeConstant typeFn = idMethod.getRefType(typeLeft);
+                                if (!mapTypeParams.isEmpty())
+                                    {
+                                    typeFn = typeFn.resolveGenerics(pool, mapTypeParams::get);
+                                    }
+                                atypeResult = new TypeConstant[] {typeFn};
                                 }
 
                             return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);

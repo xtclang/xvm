@@ -418,13 +418,26 @@ public class MethodConstant
     @Override
     public TypeConstant getRefType(TypeConstant typeTarget)
         {
+        SignatureConstant sig = getSignature();
         if (isFunction() || isConstructor())
             {
             assert typeTarget == null;
-            return getSignature().getRefType(null);
+            }
+        else
+            {
+            sig = sig.resolveAutoNarrowing(getConstantPool(), typeTarget);
             }
 
-        return resolveAutoNarrowing(getConstantPool(), typeTarget).getRefType(typeTarget);
+        MethodStructure method = (MethodStructure) getComponent();
+        if (method != null)
+            {
+            int cTypeParams = method.getTypeParamCount();
+            if (cTypeParams > 0)
+                {
+                sig = sig.truncateParams(cTypeParams, sig.getParamCount() - cTypeParams);
+                }
+            }
+        return sig.asFunctionType();
         }
 
     @Override
