@@ -370,8 +370,8 @@ public class MethodConstant
     @Override
     public Object resolveNestedIdentity(ConstantPool pool, GenericTypeResolver resolver)
         {
-        // REVIEW: should we resolveAutoNarrowing()
-        if (getComponent() == null)
+        MethodStructure method = (MethodStructure) getComponent();
+        if (method == null || method.isFunction())
             {
             // absence of the Component means that this constant is synthetic (e.g. a "capped" method)
             // and as such, already resolved

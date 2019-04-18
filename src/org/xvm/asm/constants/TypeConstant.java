@@ -3372,7 +3372,8 @@ public abstract class TypeConstant
             boolean           fNative      = method.isNative();
             boolean           fHasAbstract = method.findAnnotation(pool.clzAbstract()) != null;
             MethodConstant    id           = method.getIdentityConstant();
-            SignatureConstant sig          = id.getSignature().resolveGenericTypes(pool, this);
+            SignatureConstant sig          = id.getSignature().resolveGenericTypes(pool,
+                                                    method.isFunction() ? null : this);
             MethodBody        body         = new MethodBody(id, sig,
                     fInterface && fHasNoCode       ? Implementation.Declared :
                     fInterface                     ? Implementation.Default  :

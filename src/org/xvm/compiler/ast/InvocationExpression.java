@@ -1693,8 +1693,8 @@ public class InvocationExpression
 
         // if a match is found, then that is the function to use, and it is an error if the
         // type of that variable is not a function or a reference that has an @Auto
-        // conversion to a function. (Done.)
-        typeFn = typeFn.resolveTypedefs().resolveGenerics(pool, ctx.getThisType());
+        // conversion to a function
+        typeFn = typeFn.resolveTypedefs();
 
         boolean        fFunction = typeFn.isA(pool.typeFunction());
         MethodConstant idConvert = null;
