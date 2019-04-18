@@ -5,9 +5,12 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constants.Access;
+
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -169,11 +172,12 @@ public abstract class OpInvocable extends Op
             TypeConstant typeRet = m_typeRetReg;
             if (typeRet == null)
                 {
-                ConstantPool   pool        = frame.poolContext();
-                MethodConstant constMethod = (MethodConstant) frame.getConstant(m_nMethodId);
+                ConstantPool      pool        = frame.poolContext();
+                MethodConstant    constMethod = (MethodConstant) frame.getConstant(m_nMethodId);
+                SignatureConstant sigTarget   = getTargetSignature(pool, hTarget, constMethod);
 
-                typeRet = m_typeRetReg = constMethod.getSignature().getRawReturns()[0].
-                        resolveGenerics(pool, frame.getLocalType(m_nTarget, hTarget));
+                typeRet = m_typeRetReg = constMethod.getRawReturns()[0].
+                        resolveGenerics(pool, sigTarget.getRawReturns()[0]);
                 }
 
             frame.introduceResolvedVar(m_nRetValue, typeRet);
@@ -190,12 +194,13 @@ public abstract class OpInvocable extends Op
             TypeConstant typeRet = m_typeRetReg;
             if (typeRet == null)
                 {
-                ConstantPool   pool        = frame.poolContext();
-                MethodConstant constMethod = (MethodConstant) frame.getConstant(m_nMethodId);
+                ConstantPool      pool        = frame.poolContext();
+                MethodConstant    constMethod = (MethodConstant) frame.getConstant(m_nMethodId);
+                SignatureConstant sigTarget   = getTargetSignature(pool, hTarget, constMethod);
 
                 typeRet = m_typeRetReg = pool.ensureParameterizedTypeConstant(
                     pool.typeTuple(), constMethod.getSignature().getRawReturns()).
-                        resolveGenerics(pool, frame.getLocalType(m_nTarget, hTarget));
+                        resolveGenerics(pool, sigTarget.getRawReturns()[0]);
                 }
 
             frame.introduceResolvedVar(m_nRetValue, typeRet);
@@ -215,20 +220,31 @@ public abstract class OpInvocable extends Op
                 TypeConstant[] atypeRet = m_atypeRetReg;
                 if (atypeRet == null)
                     {
-                    ConstantPool   pool        = frame.poolContext();
-                    MethodConstant constMethod = (MethodConstant) frame.getConstant(m_nMethodId);
+                    ConstantPool      pool        = frame.poolContext();
+                    MethodConstant    constMethod = (MethodConstant) frame.getConstant(m_nMethodId);
+                    SignatureConstant sigTarget   = getTargetSignature(pool, hTarget, constMethod);
 
-                    atypeRet = m_atypeRetReg = constMethod.getSignature().getRawReturns().clone();
+                    atypeRet = m_atypeRetReg = constMethod.getRawReturns().clone();
                     for (int j = 0, cRet = atypeRet.length; j < cRet; j++)
                         {
-                        atypeRet[j] = atypeRet[j].resolveGenerics(pool,
-                            frame.getLocalType(m_nTarget, hTarget));
+                        atypeRet[j] = atypeRet[j].resolveGenerics(pool, sigTarget.getRawReturns()[j]);
                         }
                     }
 
                 frame.introduceResolvedVar(anRet[i], atypeRet[i]);
                 }
             }
+        }
+
+    /**
+     * Use the target's type info to resolve the method's signature.
+     * REVIEW GG - this seems very heavy handed; is there a better way?
+     */
+    private SignatureConstant getTargetSignature(ConstantPool pool, ObjectHandle hTarget, MethodConstant idMethod)
+        {
+        TypeConstant typeTarget = pool.ensureAccessTypeConstant(hTarget.getType(), Access.PRIVATE);
+        TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
+        return infoTarget.getMethodBySignature(idMethod.getSignature()).getSignature();
         }
 
     @Override
