@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
@@ -15,6 +16,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Argument;
@@ -24,6 +26,7 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.PackageConstant;
@@ -36,9 +39,11 @@ import org.xvm.asm.constants.ThisClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodType;
+import org.xvm.asm.constants.TypeParameterConstant;
 import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
+import org.xvm.asm.op.FBind;
 import org.xvm.asm.op.L_Get;
 import org.xvm.asm.op.MBind;
 import org.xvm.asm.op.MoveRef;
@@ -56,6 +61,7 @@ import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.LabeledStatement.LabelVar;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
+import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 
@@ -942,10 +948,21 @@ public class NameExpression
                     return;
                     }
 
-                case Bind:
+                case BindTarget:
                     {
-                    MethodConstant idMethod = (MethodConstant) argRaw;
-                    code.add(new MBind(new Register(ctx.getThisType(), Op.A_TARGET), idMethod, argLVal));
+                    MethodConstant idMethod  = (MethodConstant) argRaw;
+                    Register       regTarget = new Register(ctx.getThisType(), Op.A_TARGET);
+
+                    if (m_mapTypeParams == null)
+                        {
+                        code.add(new MBind(regTarget, idMethod, argLVal));
+                        }
+                    else
+                        {
+                        Register regFn = createRegister(pool().typeFunction(), true);
+                        code.add(new MBind(regTarget, idMethod, regFn));
+                        bindTypeParameters(ctx, code, regFn, argLVal);
+                        }
                     return;
                     }
                 }
@@ -968,6 +985,13 @@ public class NameExpression
             {
             case None:
                 assert getMeaning() != Meaning.Label;
+
+                if (m_mapTypeParams != null)
+                    {
+                    Register regFn = createRegister(argRaw.getType(), fUsedOnce);
+                    bindTypeParameters(ctx, code, argRaw, regFn);
+                    return regFn;
+                    }
                 return argRaw;
 
             case OuterThis:
@@ -1106,21 +1130,71 @@ public class NameExpression
                 assert isConstant();
                 return super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
 
-            case Bind:
+            case BindTarget:
                 {
                 MethodConstant idMethod  = (MethodConstant) argRaw;
                 Argument       argTarget = left == null
                         ? new Register(ctx.getThisType(), Op.A_TARGET)
                         : left.generateArgument(ctx, code, true, true, errs);
 
-                Register regFunction = createRegister(idMethod.getType(), fUsedOnce);
-                code.add(new MBind(argTarget, idMethod, regFunction));
-                return regFunction;
+                Register regFn = createRegister(idMethod.getType(), fUsedOnce);
+                if (m_mapTypeParams == null)
+                    {
+                    code.add(new MBind(argTarget, idMethod, regFn));
+                    return regFn;
+                    }
+                else
+                    {
+                    Register regFn0 = createRegister(pool().typeFunction(), false);
+                    code.add(new MBind(argTarget, idMethod, regFn0));
+                    bindTypeParameters(ctx, code, regFn0, regFn);
+                    return regFn;
+                    }
                 }
 
             default:
                 throw new IllegalStateException("arg=" + argRaw);
             }
+        }
+
+    private void bindTypeParameters(Context ctx, Code code, Argument argFnOrig, Argument argFnResult)
+        {
+        List<Map.Entry<String, TypeConstant>> list = m_mapTypeParams.asList();
+
+        int        cParams  = list.size();
+        int[]      anBindIx = new int[cParams];
+        Argument[] aArgBind = new Argument[cParams];
+
+        for (int i = 0; i < cParams; i++)
+            {
+            Map.Entry<String, TypeConstant> entry = list.get(i);
+
+            String       sName = entry.getKey();
+            TypeConstant type  = entry.getValue();
+
+            anBindIx[i] = i;
+            if (type.isGenericType())
+                {
+                TypeInfo infoThis = ctx.getThisType().ensureTypeInfo();
+
+                // first type goes on stack
+                Register regType = createRegister(pool().typeType(), i == 0);
+                code.add(new L_Get(infoThis.findProperty(sName).getIdentity(), regType));
+
+                aArgBind[i] = regType;
+                }
+            else if (type.isTypeParameter())
+                {
+                int iReg = ((TypeParameterConstant) type.getDefiningConstant()).getRegister();
+                aArgBind[i] = new Register(type, iReg);
+                }
+            else
+                {
+                // the type itself is the value
+                aArgBind[i] = type;
+                }
+            }
+        code.add(new FBind(argFnOrig, anBindIx, aArgBind, argFnResult));
         }
 
     @Override
@@ -1842,11 +1916,51 @@ public class NameExpression
                 }
 
             case Method:
+                {
                 // the constant refers to a method or function
-                m_plan = ((MethodConstant) argRaw).isFunction()
+                MethodConstant idMethod = (MethodConstant) argRaw;
+                m_plan = idMethod.isFunction()
                         ? Plan.None
-                        : Plan.Bind;
-                return constant.getType();
+                        : Plan.BindTarget;
+
+                TypeConstant typeFn = idMethod.getRefType(null);
+                if (typeDesired != null)
+                    {
+                    MethodStructure method = (MethodStructure) idMethod.getComponent();
+                    if (method == null)
+                        {
+                        TypeConstant typeLeft = left == null
+                                ? ctx.getThisType()
+                                : left.getImplicitType(ctx);
+                        // we know the method is accessible; use the private view just in case
+                        TypeInfo infoLeft = pool.ensureAccessTypeConstant(typeLeft, Access.PRIVATE).
+                                ensureTypeInfo(errs);
+                        MethodInfo infoMethod = infoLeft.getMethodBySignature(idMethod.getSignature());
+                        method   = infoMethod.getTopmostMethodStructure(infoLeft);
+                        assert method != null;
+                        }
+
+                    int cTypeParams = method.getTypeParamCount();
+                    if (cTypeParams > 0)
+                        {
+                        TypeConstant[]  atypeArgs = pool.extractFunctionParams(typeDesired);
+                        ListMap<String, TypeConstant> mapTypeParams =
+                            method.resolveTypeParameters(atypeArgs, TypeConstant.NO_TYPES);
+
+                        if (mapTypeParams.size() < cTypeParams)
+                            {
+                            // TODO: need a better error
+                            log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+                            return null;
+                            }
+
+                        // resolve the function signature against all the types we know by now
+                        typeFn          = typeFn.resolveGenerics(pool, mapTypeParams::get);
+                        m_mapTypeParams = mapTypeParams;
+                        }
+                    }
+                return typeFn;
+                }
 
             case MultiMethod:
                 // the constant refers to a method or function
@@ -2152,7 +2266,13 @@ public class NameExpression
      * assignment.
      */
     enum Plan {None, OuterThis, OuterRef, RegisterRef, PropertyDeref, PropertyRef, TypeOfClass,
-               TypeOfTypedef, Singleton, Bind}
+               TypeOfTypedef, Singleton, BindTarget}
+
+    /**
+     * If the plan is None or BindTarget, and this expression represents a method or function,
+     * we may need to bind type parameters.
+     */
+    private ListMap<String, TypeConstant> m_mapTypeParams;
 
     /**
      * Cached validation info: The optional TargetInfo that provides context for the initial name,
