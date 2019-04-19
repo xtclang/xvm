@@ -1303,7 +1303,9 @@ public abstract class TypeConstant
                 {
                 return ((AnnotatedTypeConstant) typeAnno).buildPrivateInfo(constId, errs);
                 }
-            throw new IllegalStateException("Unsupported type: " + getValueString());
+            log(errs, Severity.ERROR, VE_ANNOTATION_UNEXPECTED,
+                    typeAnno.getValueString(), constId.getPathString());
+            return null;
             }
 
         // get a snapshot of the current invalidation count BEFORE building the TypeInfo
@@ -1348,9 +1350,8 @@ public abstract class TypeConstant
         // validate the type parameters against the properties
         checkTypeParameterProperties(mapTypeParams, mapVirtProps, errs);
 
-        Annotation[] aannoClass = listAnnos.toArray(Annotation.NO_ANNOTATIONS);
-
-        return new TypeInfo(this, cInvalidations, struct, 0, false, mapTypeParams, aannoClass,
+        return new TypeInfo(this, cInvalidations, struct, 0, false, mapTypeParams,
+                Annotation.NO_ANNOTATIONS,
                 typeExtends, typeRebase, typeInto,
                 listProcess, listmapClassChain, listmapDefaultChain,
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods,
@@ -1602,102 +1603,7 @@ public abstract class TypeConstant
             List<Annotation>    listAnnos,
             ErrorListener       errs)
         {
-        // glue any annotations from the type constant onto the front of the contribution list
-        // (and remember the type of the annotated class)
-        ConstantPool pool      = getConstantPool();
-        TypeConstant typeClass = this;
-        NextTypeInChain: while (true)
-            {
-            switch (typeClass.getFormat())
-                {
-                case ParameterizedType:
-                case TerminalType:
-                case VirtualChildType:
-                case AnonymousClassType:
-                    // we found the class specification (with optional parameters) at the end of the
-                    // type constant chain
-                    break NextTypeInChain;
-
-                case AnnotatedType:
-                    // has to be an explicit class identity
-                    AnnotatedTypeConstant typeAnno   = (AnnotatedTypeConstant) typeClass;
-                    Annotation            annotation = typeAnno.getAnnotation();
-                    TypeConstant          typeMixin  = typeAnno.getAnnotationType();
-
-                    if (!typeMixin.isExplicitClassIdentity(true))
-                        {
-                        log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
-                                constId.getPathString(), typeMixin.getValueString());
-                        break;
-                        }
-
-                    // has to be a mixin
-                    if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
-                        {
-                        log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
-                                typeMixin.getValueString());
-                        break;
-                        }
-                    if (typeMixin.isAutoNarrowing(false))
-                        {
-                        log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
-                                typeMixin.getValueString(), this.getValueString());
-                        typeMixin = typeMixin.resolveAutoNarrowing(pool, false, null);
-                        }
-
-                    // the annotation could be a mixin "into Class", which means that it's a
-                    // non-virtual, compile-time mixin (like @Abstract)
-                    TypeConstant typeInto = typeMixin.getExplicitClassInto();
-                    if (typeInto.isIntoClassType())
-                        {
-                        // check for duplicate class annotation
-                        if (listAnnos.stream().anyMatch(annoPrev ->
-                                annoPrev.getAnnotationClass().equals(annotation.getAnnotationClass())))
-                            {
-                            log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
-                                    constId.getPathString(), annotation.getAnnotationClass().getValueString());
-                            }
-                        else
-                            {
-                            listAnnos.add(annotation);
-                            }
-                        break;
-                        }
-
-                    // the mixin has to be able to apply to the remainder of the type constant chain
-                    if (!typeClass.getUnderlyingType().isA(typeInto))
-                        {
-                        log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
-                                typeClass.getUnderlyingType().getValueString(),
-                                typeMixin.getValueString(),
-                                typeInto.getValueString());
-                        break;
-                        }
-
-                    // check for duplicate type annotation
-                    if (listProcess.stream().anyMatch(contribPrev ->
-                            contribPrev.getAnnotation().getAnnotationClass().equals(annotation.getAnnotationClass())))
-                        {
-                        log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
-                                constId.getPathString(), annotation.getAnnotationClass().getValueString());
-                        }
-                    else
-                        {
-                        // apply annotation
-                        listProcess.add(new Contribution(annotation, pool.ensureAccessTypeConstant(
-                                typeMixin, Access.PROTECTED)));
-                        }
-                    break;
-
-                default:
-                    break;
-                }
-
-            // advance to the next type in the chain
-            typeClass = typeClass.getUnderlyingType();
-            }
-        assert typeClass != null;
-
+        ConstantPool       pool         = getConstantPool();
         List<Contribution> listContribs = struct.getContributionsAsList();
         int                cContribs    = listContribs.size();
         TypeConstant[]     aContribType = new TypeConstant[cContribs];
@@ -1718,19 +1624,16 @@ public abstract class TypeConstant
             }
 
         // process the annotations and conditional incorporates at the front of the contribution list
-        int iLastAnnotation = -1;
         for (int iContrib = 0; iContrib < cContribs; ++iContrib)
             {
-            // only process annotations and conditional incorporates
+            // only process conditional incorporates
             Contribution contrib   = listContribs.get(iContrib);
             TypeConstant typeMixin = aContribType[iContrib];
             Composition  compose;
             switch (compose = contrib.getComposition())
                 {
                 case Annotation:
-                    iLastAnnotation = iContrib;
-                    // process now
-                    break;
+                    throw new IllegalStateException();
 
                 case Incorporates:
                     if (contrib.getTypeParams() == null)
@@ -1768,21 +1671,14 @@ public abstract class TypeConstant
                 continue;
                 }
 
-            if (compose == Composition.Annotation)
-                {
-                processAnnotation(constId, contrib, typeMixin, typeClass, listAnnos, listProcess, errs);
-                }
-            else
-                {
-                processIncorporates(constId, typeMixin, struct, listProcess, errs);
-                }
+            processIncorporates(constId, typeMixin, struct, listProcess, errs);
             }
 
-        int iContrib = iLastAnnotation + 1;
+        int iContrib = 0;
 
         // add a marker into the list of contributions at this point to indicate that this class
         // structure's contents need to be processed next
-        listProcess.add(new Contribution(Composition.Equal, typeClass));  // place-holder for "this"
+        listProcess.add(new Contribution(Composition.Equal, this));  // place-holder for "this"
 
         // error check the "into" and "extends" clauses, plus rebasing (they'll get processed later)
         TypeConstant typeInto    = null;
@@ -2027,68 +1923,6 @@ public abstract class TypeConstant
             }
 
         return new TypeConstant[] {typeInto, typeExtends, typeRebase};
-        }
-
-    /**
-     * Process the "annotation" contribution.
-     */
-    private void processAnnotation(IdentityConstant constId, Contribution contrib,
-                                   TypeConstant typeMixin, TypeConstant typeClass,
-                                   List<Annotation> listAnnos,
-                                   List<Contribution> listProcess, ErrorListener errs)
-        {
-        ConstantPool pool = getConstantPool();
-
-        // the annotation could be a mixin "into Class", which means that it's a
-        // non-virtual, compile-time mixin (like @Abstract)
-        Annotation   annotation = contrib.getAnnotation();
-        TypeConstant typeInto   = typeMixin.getExplicitClassInto();
-        if (typeInto.isIntoClassType())
-            {
-            // check for duplicate class annotation
-            if (listAnnos.stream().anyMatch(annoPrev ->
-                    annoPrev.getAnnotationClass().equals(annotation.getAnnotationClass())))
-                {
-                log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
-                        constId.getPathString(), annotation.getAnnotationClass().getValueString());
-                }
-            else
-                {
-                listAnnos.add(annotation);
-                }
-            return;
-            }
-
-        // the mixin has to apply to this type
-        if (!typeClass.isA(typeInto)) // note: not 100% correct because the presence of this mixin may affect the answer
-            {
-            log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
-                    typeClass.getValueString(),
-                    typeMixin.getValueString(),
-                    typeInto.getValueString());
-            return;
-            }
-
-        // check for duplicate type annotation
-        if (listProcess.stream().anyMatch(contribPrev ->
-                contribPrev.getAnnotation().getAnnotationClass().equals(annotation.getAnnotationClass())))
-            {
-            log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
-                    constId.getPathString(), annotation.getAnnotationClass().getValueString());
-            }
-        else
-            {
-            TypeConstant typeAnno = annotation.getAnnotationType();
-            if (typeAnno.isAutoNarrowing(false))
-                {
-                log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
-                        typeAnno.getValueString(), this.getValueString());
-                typeAnno = typeAnno.resolveAutoNarrowing(pool, false, null);
-                }
-            // apply annotation
-            listProcess.add(new Contribution(annotation,
-                    pool.ensureAccessTypeConstant(typeAnno, Access.PROTECTED)));
-            }
         }
 
     /**
@@ -3514,7 +3348,7 @@ public abstract class TypeConstant
             if (typeIntoCat == null || typeIntoCat.equals(pool.typeProperty()))
                 {
                 log(errs, Severity.ERROR, VE_PROPERTY_ANNOTATION_INCOMPATIBLE,
-                        sName, constId.getValueString(), typeMixin.getValueString());
+                        sName, constId.getPathString(), typeMixin.getValueString());
                 continue;
                 }
 

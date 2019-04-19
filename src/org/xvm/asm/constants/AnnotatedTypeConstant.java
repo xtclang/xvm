@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +14,7 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -245,57 +247,166 @@ public class AnnotatedTypeConstant
         ConstantPool pool        = getConstantPool();
         int          cInvals     = pool.getInvalidationCount();
         TypeConstant typeThis    = pool.ensureAccessTypeConstant(this, Access.PRIVATE);
-        TypeConstant typeAnno    = getAnnotationType();
-        TypeConstant typePrivate = pool.ensureAccessTypeConstant(typeAnno, Access.PRIVATE);
-        TypeInfo     infoAnno    = typePrivate.ensureTypeInfoInternal(errs);
-        if (infoAnno == null)
+        TypeConstant typeMixin   = getAnnotationType();
+        TypeConstant typePrivate = pool.ensureAccessTypeConstant(typeMixin, Access.PRIVATE);
+        TypeInfo     infoMixin   = typePrivate.ensureTypeInfoInternal(errs);
+        if (infoMixin == null)
             {
             return null;
             }
 
-        TypeInfo infoBase = m_constType.ensureTypeInfoInternal(errs);
-        if (infoBase == null)
-            {
-            return null;
-            }
-
-        IdentityConstant idAnno;
-        ClassStructure   structAnno;
+        IdentityConstant idMixin;
+        ClassStructure   structMixin;
         try
             {
-            idAnno     = (IdentityConstant) typeAnno.getDefiningConstant();
-            structAnno = (ClassStructure)   idAnno.getComponent();
+            idMixin     = (IdentityConstant) typeMixin.getDefiningConstant();
+            structMixin = (ClassStructure)   idMixin.getComponent();
             }
         catch (RuntimeException e)
             {
             throw new IllegalStateException("Unable to determine class for " + getValueString(), e);
             }
 
+        List<Annotation> listAnnos = new ArrayList<>();
+        TypeConstant     typeBase  = extractClassAnnotation(pool, idMixin, listAnnos, errs);
+
+        TypeInfo infoBase = typeBase.ensureTypeInfoInternal(errs);
+        if (infoBase == null)
+            {
+            return null;
+            }
+
         // merge the private view of the annotation on top if the specified view of the underlying type
-        Map<PropertyConstant, PropertyInfo> mapAnnoProps   = infoAnno.getProperties();
-        Map<MethodConstant  , MethodInfo  > mapAnnoMethods = infoAnno.getMethods();
-        Map<Object          , ParamInfo   > mapAnnoParams  = infoAnno.getTypeParams();
+        Map<PropertyConstant, PropertyInfo> mapMixinProps   = infoMixin.getProperties();
+        Map<MethodConstant  , MethodInfo  > mapMixinMethods = infoMixin.getMethods();
+        Map<Object          , ParamInfo   > mapMixinParams  = infoMixin.getTypeParams();
 
         Map<PropertyConstant, PropertyInfo> mapProps       = new HashMap<>(infoBase.getProperties());
         Map<MethodConstant  , MethodInfo  > mapMethods     = new HashMap<>(infoBase.getMethods());
         Map<Object          , PropertyInfo> mapVirtProps   = new HashMap<>(infoBase.getVirtProperties());
         Map<Object          , MethodInfo  > mapVirtMethods = new HashMap<>(infoBase.getVirtMethods());
 
-        for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapAnnoProps.entrySet())
+        for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapMixinProps.entrySet())
             {
             layerOnProp(pool, idBase, mapProps, mapVirtProps, entry.getKey(), entry.getValue(), errs);
             }
 
-        for (Map.Entry<MethodConstant, MethodInfo> entry : mapAnnoMethods.entrySet())
+        for (Map.Entry<MethodConstant, MethodInfo> entry : mapMixinMethods.entrySet())
             {
             layerOnMethod(pool, idBase, mapMethods, mapVirtMethods, entry.getKey(), entry.getValue(), errs);
             }
 
-        return new TypeInfo(typeThis, cInvals, structAnno, 0, false, mapAnnoParams, Annotation.NO_ANNOTATIONS,
-                infoAnno.getExtends(), infoAnno.getRebases(), infoAnno.getInto(),
-                infoAnno.getContributionList(), infoAnno.getClassChain(), infoAnno.getDefaultChain(),
+        return new TypeInfo(typeThis, cInvals, structMixin, 0, false, mapMixinParams,
+                listAnnos.toArray(Annotation.NO_ANNOTATIONS),
+                infoMixin.getExtends(), infoMixin.getRebases(), infoMixin.getInto(),
+                infoMixin.getContributionList(), infoMixin.getClassChain(), infoMixin.getDefaultChain(),
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods,
                 TypeInfo.Progress.Complete);
+        }
+
+    /**
+     * Extract the type annotations in front of this type that have an "into" clause of "Class".
+     *
+     * For example, if this type is @A->@B->@C->X and "@A" and "@B" are into class, then collect
+     * @A and @B into the listClassAnnos and return @C->X.
+     *
+     * If "@A" is not into class then collect nothing and return @B->@C->X
+     *
+     * @return the first underlying type that follows extracted "Class" annotations
+     */
+    private TypeConstant extractClassAnnotation(ConstantPool pool, IdentityConstant idMixin,
+                                                List<Annotation> listClassAnnos, ErrorListener errs)
+        {
+        List<Annotation> listAnnos = new ArrayList<>();
+        TypeConstant     typeCurr  = this;
+        TypeConstant     typeBase  = null;
+
+        while (true)
+            {
+            TypeConstant typeNext;
+
+            switch (typeCurr.getFormat())
+                {
+                case ParameterizedType:
+                case TerminalType:
+                case VirtualChildType:
+                case AnonymousClassType:
+                    return typeBase == null ? typeCurr : typeBase;
+
+                case AnnotatedType:
+                    {
+                    AnnotatedTypeConstant typeAnno   = (AnnotatedTypeConstant) typeCurr;
+                    Annotation            annotation = typeAnno.getAnnotation();
+                    TypeConstant          typeMixin  = typeAnno.getAnnotationType();
+
+                    typeNext = typeCurr.getUnderlyingType();
+
+                    // has to be an explicit class identity
+                    if (!typeMixin.isExplicitClassIdentity(true))
+                        {
+                        log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
+                                idMixin.getPathString(), typeMixin.getValueString());
+                        break;
+                        }
+
+                    // has to be a mixin
+                    if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
+                        {
+                        log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
+                                typeMixin.getValueString());
+                        break;
+                        }
+
+                    if (typeMixin.isAutoNarrowing(false))
+                        {
+                        log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
+                                typeMixin.getValueString(), this.getValueString());
+                        typeMixin = typeMixin.resolveAutoNarrowing(pool, false, null);
+                        }
+
+                    // check for duplicate annotation
+                    if (listAnnos.stream().anyMatch(annoPrev ->
+                            annoPrev.getAnnotationClass().equals(annotation.getAnnotationClass())))
+                        {
+                        log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
+                                idMixin.getPathString(), annotation.getAnnotationClass().getValueString());
+                        break;
+                        }
+
+                    // the annotation could be a mixin "into Class", which means that it's a
+                    // non-virtual, compile-time mixin (like @Abstract)
+                    TypeConstant typeInto = typeMixin.getExplicitClassInto();
+                    if (typeInto.isIntoClassType() && typeBase == null)
+                        {
+                        listClassAnnos.add(annotation);
+                        break;
+                        }
+
+                    if (typeBase == null)
+                        {
+                        typeBase = typeNext;
+                        }
+
+                    // the mixin has to be able to apply to the remainder of the type constant chain
+                    if (!getUnderlyingType().isA(typeInto))
+                        {
+                        log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
+                                typeCurr.getUnderlyingType().getValueString(),
+                                typeMixin.getValueString(),
+                                typeInto.getValueString());
+                        break;
+                        }
+
+                    listAnnos.add(typeAnno.getAnnotation());
+                    break;
+                    }
+
+                default:
+                    typeNext = typeCurr.getUnderlyingType();
+                    break;
+                }
+            typeCurr = typeNext;
+            }
         }
 
     /**
@@ -305,25 +416,25 @@ public class AnnotatedTypeConstant
      * @param idBaseClass   the identity of the class (etc) that is being annotated
      * @param mapProps      properties already collected from the base
      * @param mapVirtProps  virtual properties already collected from the base
-     * @param idAnno        the identity of the property at the annotation (mixin)
-     * @param propAnno      the property info from the annotation (mixin)
+     * @param idMixin       the identity of the property at the mixin
+     * @param propMixin     the property info from the mixin
      * @param errs          the error listener
      */
     protected void layerOnProp(ConstantPool pool, IdentityConstant idBaseClass,
                                Map<PropertyConstant, PropertyInfo> mapProps,
                                Map<Object, PropertyInfo> mapVirtProps,
-                               PropertyConstant idAnno, PropertyInfo propAnno, ErrorListener errs)
+                               PropertyConstant idMixin, PropertyInfo propMixin, ErrorListener errs)
         {
-        if (!propAnno.isVirtual())
+        if (!propMixin.isVirtual())
             {
-            mapProps.put(idAnno, propAnno);
+            mapProps.put(idMixin, propMixin);
             return;
             }
 
-        Object           nidContrib = idAnno.resolveNestedIdentity(pool, this);
+        Object           nidContrib = idMixin.resolveNestedIdentity(pool, this);
         PropertyConstant idResult   = (PropertyConstant) idBaseClass.appendNestedIdentity(pool, nidContrib);
         PropertyInfo     propBase   = mapVirtProps.get(nidContrib);
-        if (propBase != null && propAnno.getIdentity().equals(propBase.getIdentity()))
+        if (propBase != null && propMixin.getIdentity().equals(propBase.getIdentity()))
             {
             // keep whatever the base has got
             return;
@@ -332,11 +443,11 @@ public class AnnotatedTypeConstant
         PropertyInfo propResult;
         if (propBase == null)
             {
-            propResult = propAnno;
+            propResult = propMixin;
             }
         else
             {
-            propResult = propBase.layerOn(propAnno, false, true, errs);
+            propResult = propBase.layerOn(propMixin, false, true, errs);
             }
 
         mapProps.put(idResult, propResult);
@@ -350,52 +461,52 @@ public class AnnotatedTypeConstant
      * @param idBaseClass     the identity of the class (etc) that the annotation is being applied to
      * @param mapMethods      methods already collected from the base
      * @param mapVirtMethods  virtual methods already collected from the base
-     * @param idAnno          the identity of the method at the annotation (mixin)
-     * @param methodAnno      the method info from the annotation (mixin)
+     * @param idMixin         the identity of the method at the mixin
+     * @param methodMixin     the method info from the mixin
      * @param errs            the error listener
      */
     private void layerOnMethod(ConstantPool pool, IdentityConstant idBaseClass,
                                Map<MethodConstant, MethodInfo> mapMethods,
-                               Map<Object, MethodInfo> mapVirtMethods, MethodConstant idAnno,
-                               MethodInfo methodAnno, ErrorListener errs)
+                               Map<Object, MethodInfo> mapVirtMethods, MethodConstant idMixin,
+                               MethodInfo methodMixin, ErrorListener errs)
         {
-        if (!methodAnno.isVirtual())
+        if (!methodMixin.isVirtual())
             {
-            mapMethods.put(idAnno, methodAnno);
+            mapMethods.put(idMixin, methodMixin);
             return;
             }
 
-        GenericTypeResolver resolver   = methodAnno.isFunction() || methodAnno.isConstructor() ? null : this;
-        Object              nidContrib = idAnno.resolveNestedIdentity(pool, resolver);
+        GenericTypeResolver resolver   = methodMixin.isFunction() || methodMixin.isConstructor() ? null : this;
+        Object              nidContrib = idMixin.resolveNestedIdentity(pool, resolver);
         MethodConstant      idResult   = (MethodConstant) idBaseClass.appendNestedIdentity(pool, nidContrib);
 
         MethodInfo methodBase = mapVirtMethods.get(nidContrib);
-        if (methodBase != null && methodBase.getIdentity().equals(methodAnno.getIdentity()))
+        if (methodBase != null && methodBase.getIdentity().equals(methodMixin.getIdentity()))
             {
             // keep whatever the base has got
             return;
             }
 
-        SignatureConstant sigContrib = methodAnno.getSignature();
+        SignatureConstant sigContrib = methodMixin.getSignature();
 
         MethodInfo methodResult;
         if (methodBase == null)
             {
-            methodResult = methodAnno;
+            methodResult = methodMixin;
             }
         else
             {
             // it's possible that the base has a narrower method signature then the mixin,
             // in which case, the mixin's info should be ignored/replaced
-            SignatureConstant sigBase = methodBase.getSignature();
-            SignatureConstant sigAnno = methodAnno.getSignature();
-            if (!sigBase.equals(sigAnno) && sigBase.isSubstitutableFor(sigAnno, this))
+            SignatureConstant sigBase  = methodBase.getSignature();
+            SignatureConstant sigMixin = methodMixin.getSignature();
+            if (!sigBase.equals(sigMixin) && sigBase.isSubstitutableFor(sigMixin, this))
                 {
                 methodResult = methodBase;
                 }
             else
                 {
-                methodResult = methodBase.layerOn(methodAnno, false, errs);
+                methodResult = methodBase.layerOn(methodMixin, false, errs);
                 }
             }
 
