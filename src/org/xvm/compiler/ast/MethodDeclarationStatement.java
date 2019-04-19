@@ -680,37 +680,50 @@ public class MethodDeclarationStatement
             // no class for "Ref" yet; come back later
             return null;
             }
-
         MethodStructure method = findMethod(pool, clzRef, sMethName, params);
-        if (method == null)
+        if (method != null)
             {
-            if (annotations != null)
+            return method;
+            }
+
+        ClassStructure clzVar = (ClassStructure) pool.clzVar().getComponent();
+        if (clzVar == null)
+            {
+            // no class for "Var" yet; come back later
+            return null;
+            }
+        method = findMethod(pool, clzVar, sMethName, params);
+        if (method != null)
+            {
+            return method;
+            }
+
+        if (annotations != null)
+            {
+            for (Iterator<Annotation> iter = annotations.iterator(); iter.hasNext();)
                 {
-                for (Iterator<Annotation> iter = annotations.iterator(); iter.hasNext();)
+                Annotation annotation = iter.next();
+
+                String        sAnnotation = annotation.getType().getName();
+                ClassConstant constClass  = (ClassConstant) pool.getImplicitlyImportedIdentity(sAnnotation);
+                if (constClass == null)
                     {
-                    Annotation annotation = iter.next();
+                    log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, '@' + sAnnotation);
+                    iter.remove();
+                    continue;
+                    }
 
-                    String        sAnnotation = annotation.getType().getName();
-                    ClassConstant constClass  = (ClassConstant) pool.getImplicitlyImportedIdentity(sAnnotation);
-                    if (constClass == null)
-                        {
-                        log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, '@' + sAnnotation);
-                        iter.remove();
-                        continue;
-                        }
+                ClassStructure clzMixin = (ClassStructure) constClass.getComponent();
+                if (clzMixin == null)
+                    {
+                    // no class for the annotation yet; come back later
+                    continue;
+                    }
 
-                    ClassStructure clzMixin = (ClassStructure) constClass.getComponent();
-                    if (clzMixin == null)
-                        {
-                        // no class for the annotation yet; come back later
-                        continue;
-                        }
-
-                    method = findMethod(pool, clzMixin, sMethName, params);
-                    if (method != null)
-                        {
-                        break;
-                        }
+                method = findMethod(pool, clzMixin, sMethName, params);
+                if (method != null)
+                    {
+                    break;
                     }
                 }
             }

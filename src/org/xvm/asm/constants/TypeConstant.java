@@ -3814,7 +3814,7 @@ public abstract class TypeConstant
             boolean fGetSupers      = methodGet != null && methodGet.usesSuper();
             boolean fSetSupers      = methodSet != null && methodSet.usesSuper();
             boolean fGetBlocksSuper = methodGet != null && !methodGet.isAbstract() && !fGetSupers;
-            boolean fSetBlocksSuper = methodSet != null && !methodGet.isAbstract() && !fSetSupers;
+            boolean fSetBlocksSuper = methodSet != null && !methodSet.isAbstract() && !fSetSupers;
 
             if (fNative)
                 {
