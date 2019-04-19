@@ -5,6 +5,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpCondJump;
@@ -179,27 +180,20 @@ public class CmpExpression
                 ConstantPool pool = pool();
 
                 // make sure that we can compare the left value to the right value
-                TypeConstant typeCommon = m_typeCommon = Op.selectCommonType(type1, type2, errs);
+                TypeConstant typeCommon = chooseCommonType(type1, type2);
                 if (typeCommon == null)
                     {
-                    // equality check for any Ref objects is allowed
-                    fValid = usesEquals()
-                            && type1 != null && type1.isA(pool.typeRef())
-                            && type2 != null && type2.isA(pool.typeRef());
-                    }
-                else
-                    {
-                    boolean fConstant1 = expr1New.isConstant();
-                    boolean fConstant2 = expr2New.isConstant();
-                    fValid = usesEquals()
-                            ? typeCommon.supportsEquals(pool,  type1, fConstant1) &&
-                              typeCommon.supportsEquals(pool,  type2, fConstant2)
-                            : typeCommon.supportsCompare(pool, type1, fConstant1) &&
-                              typeCommon.supportsCompare(pool, type2, fConstant2);
+                    // try to resolve the types using the current context
+                    GenericTypeResolver resolver = ctx.getGenericTypeResolver();
+                    TypeConstant        type1R   = type1.resolveGenerics(pool, resolver);
+                    TypeConstant        type2R   = type2.resolveGenerics(pool, resolver);
+
+                    typeCommon = chooseCommonType(type1R, type2R);
                     }
 
-                if (!fValid)
+                if (typeCommon == null)
                     {
+                    fValid = false;
                     if (type1.equals(pool.typeNull()))
                         {
                         log(errs, Severity.ERROR, Compiler.EXPRESSION_NOT_NULLABLE,
@@ -215,6 +209,10 @@ public class CmpExpression
                         log(errs, Severity.ERROR, Compiler.TYPES_NOT_COMPARABLE,
                                 type1.getValueString(), type2.getValueString());
                         }
+                    }
+                else
+                    {
+                    m_typeCommon = typeCommon;
                     }
                 }
             }
@@ -243,6 +241,37 @@ public class CmpExpression
 
         return finishValidation(typeRequired, typeResult,
                 fValid ? TypeFit.Fit : TypeFit.NoFit, constVal, errs);
+        }
+
+    private TypeConstant chooseCommonType(TypeConstant type1, TypeConstant type2)
+        {
+        ConstantPool pool = pool();
+
+        TypeConstant typeCommon = Op.selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
+        if (typeCommon == null)
+            {
+            // equality check for any Ref objects is allowed
+            if (usesEquals()
+                    && type1 != null && type1.isA(pool.typeRef())
+                    && type2 != null && type2.isA(pool.typeRef()))
+                {
+                return pool.typeRef();
+                }
+            }
+        else
+            {
+            boolean fConstant1 = expr1.isConstant();
+            boolean fConstant2 = expr2.isConstant();
+            if (usesEquals()
+                    ? typeCommon.supportsEquals(pool,  type1, fConstant1) &&
+                      typeCommon.supportsEquals(pool,  type2, fConstant2)
+                    : typeCommon.supportsCompare(pool, type1, fConstant1) &&
+                      typeCommon.supportsCompare(pool, type2, fConstant2))
+                {
+                return typeCommon;
+                }
+            }
+        return null;
         }
 
     private boolean checkNullComparison(Context ctx, NameExpression exprTarget, ErrorListener errs)

@@ -158,7 +158,27 @@ public class Context
         return sFormalName ->
             {
             Argument arg = getVar(sFormalName);
-            return arg == null ? null : arg.getType();
+            if (arg == null)
+                {
+                return null;
+                }
+
+            // During the LambdaExpression validation, a LambdaContext/CaptureContext collects the
+            // used variables by intercepting markVarRead() and creates all the necessary captures
+            // based on that information.
+            // However, a formal type resolution based on method's type parameters may use them only
+            // implicitly, thus preventing the context to register/collect a corresponding type
+            // parameter (see the lambda in List.bubbleSort() function as an example);
+            // hence the compensation below
+            if (arg instanceof Register && !((Register) arg).isUnknown())
+                {
+                int iReg = ((Register) arg).getIndex();
+                if (iReg >= 0 && iReg < getMethod().getTypeParamCount())
+                    {
+                    markVarRead(sFormalName);
+                    }
+                }
+            return arg.getType();
             };
         }
 
@@ -1214,7 +1234,9 @@ public class Context
 
                     if (idProp.isTypeParameter())
                         {
-                        narrowFormalType(sName, branch, new Register(typeNarrow));
+                        Register regFormal = new Register(typeNarrow);
+                        regFormal.markEffectivelyFinal();
+                        narrowFormalType(sName, branch, regFormal);
                         }
                     else // allow narrowing for immutable properties
                         {
