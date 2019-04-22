@@ -77,7 +77,7 @@ class StringBuffer
         }
 
     @Override
-    StringBuffer add(Char[] array)
+    StringBuffer add(Iterable<Char> array)
         {
         chars += array;
         return this;

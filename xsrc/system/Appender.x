@@ -20,40 +20,6 @@ interface Appender<ElementType>
     Appender add(ElementType v);
 
     /**
-     * Append the specified array.
-     *
-     * @param array  the values to append
-     *
-     * @return this
-     */
-    Appender add(ElementType[] array)
-        {
-        ensureCapacity(array.size);
-        for (ElementType v : array)
-            {
-            add(v);
-            }
-        return this;
-        }
-
-    /**
-     * Add the items from the passed Sequence to this structure.
-     *
-     * @param seq  the Sequence of values to add
-     *
-     * @return this
-     */
-    Appender add(Sequence<ElementType> seq)
-        {
-        ensureCapacity(seq.size);
-        for (ElementType v : seq)
-            {
-            add(v);
-            }
-        return this;
-        }
-
-    /**
      * Add the items from the passed Iterable container to this structure.
      *
      * @param iterable  the Iterable container of values to add
@@ -62,6 +28,7 @@ interface Appender<ElementType>
      */
     Appender add(Iterable<ElementType> iterable)
         {
+        ensureCapacity(iterable.size);
         add(iterable.iterator());
         return this;
         }
