@@ -317,9 +317,9 @@ public class AnnotatedTypeConstant
     private TypeConstant extractClassAnnotation(ConstantPool pool, IdentityConstant idMixin,
                                                 List<Annotation> listClassAnnos, ErrorListener errs)
         {
-        List<Annotation> listAnnos = new ArrayList<>();
-        TypeConstant     typeCurr  = this;
-        TypeConstant     typeBase  = null;
+        List<Constant> listAnnoClz = new ArrayList<>();
+        TypeConstant   typeCurr    = this;
+        TypeConstant   typeBase    = null;
 
         while (true)
             {
@@ -365,8 +365,7 @@ public class AnnotatedTypeConstant
                         }
 
                     // check for duplicate annotation
-                    if (listAnnos.stream().anyMatch(annoPrev ->
-                            annoPrev.getAnnotationClass().equals(annotation.getAnnotationClass())))
+                    if (listAnnoClz.contains(annotation.getAnnotationClass()))
                         {
                         log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
                                 idMixin.getPathString(), annotation.getAnnotationClass().getValueString());
@@ -397,7 +396,7 @@ public class AnnotatedTypeConstant
                         break;
                         }
 
-                    listAnnos.add(typeAnno.getAnnotation());
+                    listAnnoClz.add(typeAnno.getAnnotation().getAnnotationClass());
                     break;
                     }
 
