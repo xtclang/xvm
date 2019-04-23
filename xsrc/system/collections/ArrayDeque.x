@@ -152,8 +152,6 @@ class ArrayDeque<ElementType>
      */
     public/private Int maxCapacity;
 
-interface Queue{} // TODO
-
     /**
      * The Queue that takes from the beginning of the list.
      */
@@ -197,13 +195,15 @@ interface Queue{} // TODO
             @Override
             Prepender add(ElementType v)
                 {
-                return ArrayDeque.this.insert(0, v);
+                ArrayDeque.this.insert(0, v);
+                return this;
                 }
 
             @Override
             Prepender ensureCapacity(Int count)
                 {
-                return ArrayDeque.this.ensureCapacity(count);
+                ArrayDeque.this.ensureCapacity(count);
+                return this;
                 }
             }
 
