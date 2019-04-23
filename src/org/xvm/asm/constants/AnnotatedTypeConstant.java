@@ -297,7 +297,7 @@ public class AnnotatedTypeConstant
      * For example, if this type is @A->@B->@C->X and "@A" and "@B" are into class, then collect
      * @A and @B into the listClassAnnos and return @C->X.
      *
-     * If "@A" is not into class then collect nothing and return @B->@C->X
+     * If "@A" is not into class then collect nothing and return itself.
      *
      * @return the first underlying type that follows extracted "Class" annotations
      */
@@ -313,12 +313,6 @@ public class AnnotatedTypeConstant
 
             switch (typeCurr.getFormat())
                 {
-                case ParameterizedType:
-                case TerminalType:
-                case VirtualChildType:
-                case AnonymousClassType:
-                    return typeBase == null ? typeCurr : typeBase;
-
                 case AnnotatedType:
                     {
                     AnnotatedTypeConstant typeAnno   = (AnnotatedTypeConstant) typeCurr;
@@ -363,13 +357,9 @@ public class AnnotatedTypeConstant
                     TypeConstant typeInto = typeMixin.getExplicitClassInto();
                     if (typeInto.isIntoClassType() && typeBase == null)
                         {
+                        typeBase = typeNext;
                         listClassAnnos.add(annotation);
                         break;
-                        }
-
-                    if (typeBase == null)
-                        {
-                        typeBase = typeNext;
                         }
 
                     // the mixin has to be able to apply to the remainder of the type constant chain
@@ -385,6 +375,12 @@ public class AnnotatedTypeConstant
                     listAnnoClz.add(typeAnno.getAnnotation().getAnnotationClass());
                     break;
                     }
+
+                case ParameterizedType:
+                case TerminalType:
+                case VirtualChildType:
+                case AnonymousClassType:
+                    return typeBase == null ? this : typeBase;
 
                 default:
                     typeNext = typeCurr.getUnderlyingType();
