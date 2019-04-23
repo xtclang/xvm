@@ -23,6 +23,7 @@ import org.xvm.runtime.template.xChar;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xInt64;
 import org.xvm.runtime.template.xString;
+import org.xvm.runtime.template.xString.StringHandle;
 
 
 /**
@@ -222,9 +223,25 @@ public class xCharArray
                 return frame.raiseException(xException.unsupportedOperation());
             }
 
-        CharArrayHandle hThat = (CharArrayHandle) hValue;
+        int    cThat;
+        char[] achThat;
+        if (hValue instanceof StringHandle)
+            {
+            achThat = ((StringHandle) hValue).getValue();
+            cThat   = achThat.length;
+            }
+        else if (hValue instanceof CharArrayHandle)
+            {
+            CharArrayHandle hThat = (CharArrayHandle) hValue;
+            cThat   = hThat.m_cSize;
+            achThat = hThat.m_achValue;
+            }
+        else
+            {
+            // TODO GG
+            throw new UnsupportedOperationException("need to implement add(Iterable<Char>) support for type: " + hValue.getType());
+            }
 
-        int cThat = hThat.m_cSize;
         if (cThat > 0)
             {
             char[] achThis = hThis.m_achValue;
@@ -235,8 +252,9 @@ public class xCharArray
                 achThis = hThis.m_achValue = grow(achThis, cThis + cThat);
                 }
             hThis.m_cSize += cThat;
-            System.arraycopy(hThat.m_achValue, 0, achThis, cThis, cThat);
+            System.arraycopy(achThat, 0, achThis, cThis, cThat);
             }
+
         return frame.assignValue(iReturn, hThis);
         }
 

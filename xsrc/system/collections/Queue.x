@@ -1,10 +1,11 @@
 interface Queue<ElementType>
     {
-    conditional ElementType peek()
+    conditional ElementType peek();
     
-    conditional ElementType take();
+    ElementType take();
 
+    typedef function void (ElementType) Consumer;
     typedef function void () Cancellable;
 
-    Cancellable route(Appender<ElementType>);
+    Cancellable route(Consumer consumer);
     }

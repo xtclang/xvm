@@ -20,7 +20,6 @@ import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHandle.MutabilityConstraint;
-import org.xvm.runtime.ObjectHeap;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.TemplateRegistry;
@@ -243,11 +242,10 @@ public class xArray
     @Override
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        if (hArg.getTemplate() instanceof xArray)
-            {
-            return addElements(frame, hTarget, hArg, iReturn);
-            }
-        return addElement(frame, hTarget, hArg, iReturn);
+        // hArg is either Iterable<ElementType> or ElementType
+        return hArg.getType().isA(hTarget.getType().getParamTypesArray()[0])    // REVIEW GG
+                ? addElement(frame, hTarget, hArg, iReturn)
+                : addElements(frame, hTarget, hArg, iReturn);
         }
 
     @Override
