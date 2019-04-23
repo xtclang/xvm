@@ -363,7 +363,9 @@ public class Context
                     ((Register) getVar(sName)).markEffectivelyFinal();
                     }
                 }
-            else if (fCompleting)
+            else
+                // REVIEW CP this prevents "return" statement in lambda to promote the assignments
+                // if (fCompleting)
                 {
                 Assignment asnOuter = promote(sName, asnInner, ctxOuter.getVarAssignment(sName));
                 if (fDemuxing)
