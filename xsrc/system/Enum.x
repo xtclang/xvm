@@ -57,4 +57,18 @@ interface Enum
         {
         return value1.ordinal <=> value2.ordinal;
         }
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        return name.size;
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        return appender.add(name);
+        }
     }

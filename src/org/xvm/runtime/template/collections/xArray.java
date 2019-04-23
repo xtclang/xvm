@@ -146,14 +146,12 @@ public class xArray
         xArray template = (xArray) clzArray.getTemplate();
         ArrayHandle hArray = template.createArrayHandle(clzArray, ahValue);
 
-        hArray.makeImmutable();
-
         frame.pushStack(hArray);
         return Op.R_NEXT;
         }
 
     /**
-     * Create a one dimensional array for a specified class and content.
+     * Create a one dimensional immutable array for a specified class and content.
      *
      * @param clzArray  the class of the array
      * @param ahArg     the array elements
@@ -162,7 +160,9 @@ public class xArray
      */
     public ArrayHandle createArrayHandle(ClassComposition clzArray, ObjectHandle[] ahArg)
         {
-        return new GenericArrayHandle(clzArray, ahArg);
+        GenericArrayHandle hArray = new GenericArrayHandle(clzArray, ahArg);
+        hArray.makeImmutable();
+        return hArray;
         }
 
     /**

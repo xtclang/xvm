@@ -131,7 +131,6 @@ public class Var_SN
 
             xArray template = (xArray) clzArray.getTemplate();
             ArrayHandle hArray = template.createArrayHandle(clzArray, ahArg);
-            hArray.makeImmutable();
 
             frame.introduceResolvedVar(m_nVar, typeSequence, frame.getString(m_nNameId),
                 Frame.VAR_STANDARD, hArray);

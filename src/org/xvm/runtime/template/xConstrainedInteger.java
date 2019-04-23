@@ -479,6 +479,7 @@ public abstract class xConstrainedInteger
 
     public JavaLong makeJavaLong(long lValue)
         {
+        // TODO: cache frequently used values
         return new JavaLong(getCanonicalClass(), lValue);
         }
 

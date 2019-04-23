@@ -267,16 +267,22 @@ public class xConst
 
         StringHandle[] ahNames  = clz.getFieldNameArray();
         ObjectHandle[] ahFields = clz.getFieldValueArray(hConst);
+        if (ahNames.length > 0)
+            {
+            ArrayHandle hNames  = xArray.INSTANCE.createArrayHandle(CLZ_STRINGS, ahNames);
+            ArrayHandle hValues = xArray.INSTANCE.createArrayHandle(CLZ_OBJECTS, ahFields);
 
-        ArrayHandle hNames  = xArray.INSTANCE.createArrayHandle(CLZ_STRINGS, ahNames);
-        ArrayHandle hValues = xArray.INSTANCE.createArrayHandle(CLZ_OBJECTS, ahFields);
+            // estimateStringLength(String[] names, Object[] fields)
+            ObjectHandle[] ahVars = new ObjectHandle[FN_ESTIMATE_LENGTH.getMaxVars()];
+            ahVars[0] = hNames;
+            ahVars[1] = hValues;
 
-        // estimateStringLength(String[] names, Object[] fields)
-        ObjectHandle[] ahVars = new ObjectHandle[FN_ESTIMATE_LENGTH.getMaxVars()];
-        ahVars[0] = hNames;
-        ahVars[1] = hValues;
-
-        return frame.call1(FN_ESTIMATE_LENGTH, null, ahVars, iReturn);
+            return frame.call1(FN_ESTIMATE_LENGTH, null, ahVars, iReturn);
+            }
+        else
+            {
+            return frame.assignValue(iReturn, xInt64.makeHandle(0));
+            }
         }
 
     /**
@@ -297,16 +303,23 @@ public class xConst
         StringHandle[] ahNames  = clz.getFieldNameArray();
         ObjectHandle[] ahFields = clz.getFieldValueArray(hConst);
 
-        ArrayHandle hNames  = xArray.INSTANCE.createArrayHandle(CLZ_STRINGS, ahNames);
-        ArrayHandle hValues = xArray.INSTANCE.createArrayHandle(CLZ_OBJECTS, ahFields);
+        if (ahNames.length > 0)
+            {
+            ArrayHandle hNames  = xArray.INSTANCE.createArrayHandle(CLZ_STRINGS, ahNames);
+            ArrayHandle hValues = xArray.INSTANCE.createArrayHandle(CLZ_OBJECTS, ahFields);
 
-        // appendTo(Appender<Char> appender, String[] names, Object[] fields)
-        ObjectHandle[] ahVars = new ObjectHandle[FN_APPEND_TO.getMaxVars()];
-        ahVars[0] = hAppender; // appender
-        ahVars[1] = hNames;
-        ahVars[2] = hValues;
+            // appendTo(Appender<Char> appender, String[] names, Object[] fields)
+            ObjectHandle[] ahVars = new ObjectHandle[FN_APPEND_TO.getMaxVars()];
+            ahVars[0] = hAppender; // appender
+            ahVars[1] = hNames;
+            ahVars[2] = hValues;
 
-        return frame.call1(FN_APPEND_TO, null, ahVars, iReturn);
+            return frame.call1(FN_APPEND_TO, null, ahVars, iReturn);
+            }
+        else
+            {
+            return Op.R_NEXT;
+            }
         }
 
 
