@@ -1210,11 +1210,14 @@ public class TypeCompositionStatement
                         NamedTypeExpression typeDefault = new NamedTypeExpression(null,
                                 Collections.singletonList(name), null, null, null, name.getEndPosition());
                         Expression exprValue = ((Default) composition).getValueExpression();
+
+                        long lStartPos = composition.getStartPosition();
+                        long lEndPos   = composition.getEndPosition();
                         PropertyDeclarationStatement propDefault = new PropertyDeclarationStatement(
-                                composition.getStartPosition(),
-                                composition.getEndPosition(),
+                                lStartPos, lEndPos,
                                 composition.getCondition(),
-                                null, null,
+                                Collections.singletonList(new Token(lStartPos, lStartPos, Id.STATIC)),
+                                null,
                                 typeDefault,
                                 composition.keyword,
                                 null, exprValue,
