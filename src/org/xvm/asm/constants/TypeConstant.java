@@ -1303,27 +1303,33 @@ public abstract class TypeConstant
                 {
                 return ((AnnotatedTypeConstant) typeAnno).buildPrivateInfo(constId, errs);
                 }
-            throw new IllegalStateException("Unsupported type: " + getValueString());
+            log(errs, Severity.ERROR, VE_ANNOTATION_UNEXPECTED,
+                    typeAnno.getValueString(), constId.getPathString());
+            return null;
             }
 
         // get a snapshot of the current invalidation count BEFORE building the TypeInfo
         int cInvalidations = getConstantPool().getInvalidationCount();
 
-        // we're going to build a map from name to param info, including whatever parameters are
-        // specified by this class/interface, but also each of the contributing classes/interfaces
-        Map<Object, ParamInfo> mapTypeParams = collectTypeParameters(constId, struct, errs);
+        List<Contribution> listContribs = struct.getContributionsAsList();
+        TypeConstant[]     aContribType = resolveContributionTypes(listContribs, errs);
+        TypeConstant[]     atypeCondInc = extractConditionalContributes(
+                                            constId, struct, listContribs, aContribType, errs);
 
         // walk through each of the contributions, starting from the implied contributions that are
         // represented by annotations in this type constant itself, followed by the annotations in
         // the class structure, followed by the class structure (as its own pseudo-contribution),
         // followed by the remaining contributions
         List<Contribution> listProcess  = new ArrayList<>();
-        List<Annotation>   listAnnos    = new ArrayList<>();
         TypeConstant[]     atypeSpecial = createContributionList(
-                constId, struct, listProcess, listAnnos, errs);
+                                            constId, struct, aContribType, listProcess, errs);
         TypeConstant typeInto    = atypeSpecial[0];
         TypeConstant typeExtends = atypeSpecial[1];
         TypeConstant typeRebase  = atypeSpecial[2];
+
+        // we're going to build a map from name to param info, including whatever parameters are
+        // specified by this class/interface, but also each of the contributing classes/interfaces
+        Map<Object, ParamInfo> mapTypeParams = collectTypeParameters(constId, struct, errs);
 
         // 1) build the "potential call chains" (basically, the order in which we would search for
         //    methods to call in a virtual manner)
@@ -1348,13 +1354,16 @@ public abstract class TypeConstant
         // validate the type parameters against the properties
         checkTypeParameterProperties(mapTypeParams, mapVirtProps, errs);
 
-        Annotation[] aannoClass = listAnnos.toArray(Annotation.NO_ANNOTATIONS);
-
-        return new TypeInfo(this, cInvalidations, struct, 0, false, mapTypeParams, aannoClass,
+        TypeInfo info = new TypeInfo(this, cInvalidations, struct, 0, false, mapTypeParams,
+                Annotation.NO_ANNOTATIONS,
                 typeExtends, typeRebase, typeInto,
                 listProcess, listmapClassChain, listmapDefaultChain,
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods,
                 fComplete ? Progress.Complete : Progress.Incomplete);
+
+        return atypeCondInc == null || !fComplete
+                ? info
+                : mergeConditionalIncorporates(cInvalidations, constId, info, atypeCondInc, errs);
         }
 
     /**
@@ -1590,199 +1599,26 @@ public abstract class TypeConstant
      * @param struct       the structure of the class that the type is based on
      * @param listProcess  a list of contributions, which will be filled by this method in the
      *                     order that they should be processed
-     * @param listAnnos    a list of annotations, which will be filled by this method
      * @param errs         the error list to log to
      *
-     * @return an array containing the "into", "extends" and "rebase" types
+     * @return an array containing the "into", "extends", "rebase" and the first conditional
+     *         incorporate type
      */
     private TypeConstant[] createContributionList(
             IdentityConstant    constId,
             ClassStructure      struct,
+            TypeConstant[]      aContribType,
             List<Contribution>  listProcess,
-            List<Annotation>    listAnnos,
             ErrorListener       errs)
         {
-        // glue any annotations from the type constant onto the front of the contribution list
-        // (and remember the type of the annotated class)
-        ConstantPool pool      = getConstantPool();
-        TypeConstant typeClass = this;
-        NextTypeInChain: while (true)
-            {
-            switch (typeClass.getFormat())
-                {
-                case ParameterizedType:
-                case TerminalType:
-                case VirtualChildType:
-                case AnonymousClassType:
-                    // we found the class specification (with optional parameters) at the end of the
-                    // type constant chain
-                    break NextTypeInChain;
-
-                case AnnotatedType:
-                    // has to be an explicit class identity
-                    AnnotatedTypeConstant typeAnno   = (AnnotatedTypeConstant) typeClass;
-                    Annotation            annotation = typeAnno.getAnnotation();
-                    TypeConstant          typeMixin  = typeAnno.getAnnotationType();
-
-                    if (!typeMixin.isExplicitClassIdentity(true))
-                        {
-                        log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
-                                constId.getPathString(), typeMixin.getValueString());
-                        break;
-                        }
-
-                    // has to be a mixin
-                    if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
-                        {
-                        log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
-                                typeMixin.getValueString());
-                        break;
-                        }
-                    if (typeMixin.isAutoNarrowing(false))
-                        {
-                        log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
-                                typeMixin.getValueString(), this.getValueString());
-                        typeMixin = typeMixin.resolveAutoNarrowing(pool, false, null);
-                        }
-
-                    // the annotation could be a mixin "into Class", which means that it's a
-                    // non-virtual, compile-time mixin (like @Abstract)
-                    TypeConstant typeInto = typeMixin.getExplicitClassInto();
-                    if (typeInto.isIntoClassType())
-                        {
-                        // check for duplicate class annotation
-                        if (listAnnos.stream().anyMatch(annoPrev ->
-                                annoPrev.getAnnotationClass().equals(annotation.getAnnotationClass())))
-                            {
-                            log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
-                                    constId.getPathString(), annotation.getAnnotationClass().getValueString());
-                            }
-                        else
-                            {
-                            listAnnos.add(annotation);
-                            }
-                        break;
-                        }
-
-                    // the mixin has to be able to apply to the remainder of the type constant chain
-                    if (!typeClass.getUnderlyingType().isA(typeInto))
-                        {
-                        log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
-                                typeClass.getUnderlyingType().getValueString(),
-                                typeMixin.getValueString(),
-                                typeInto.getValueString());
-                        break;
-                        }
-
-                    // check for duplicate type annotation
-                    if (listProcess.stream().anyMatch(contribPrev ->
-                            contribPrev.getAnnotation().getAnnotationClass().equals(annotation.getAnnotationClass())))
-                        {
-                        log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
-                                constId.getPathString(), annotation.getAnnotationClass().getValueString());
-                        }
-                    else
-                        {
-                        // apply annotation
-                        listProcess.add(new Contribution(annotation, pool.ensureAccessTypeConstant(
-                                typeMixin, Access.PROTECTED)));
-                        }
-                    break;
-
-                default:
-                    break;
-                }
-
-            // advance to the next type in the chain
-            typeClass = typeClass.getUnderlyingType();
-            }
-        assert typeClass != null;
-
+        ConstantPool       pool         = getConstantPool();
         List<Contribution> listContribs = struct.getContributionsAsList();
         int                cContribs    = listContribs.size();
-        TypeConstant[]     aContribType = new TypeConstant[cContribs];
-
-        // resolve auto-narrowing and collect contribution types (null for conditional incorporates)
-        for (int iContrib = 0 ; iContrib < cContribs; ++iContrib)
-            {
-            Contribution contrib     = listContribs.get(iContrib);
-            TypeConstant typeContrib = contrib.resolveGenerics(pool, this);
-
-            if (typeContrib != null && typeContrib.isAutoNarrowing(false))
-                {
-                log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
-                        typeContrib.getValueString(), this.getValueString());
-                typeContrib = typeContrib.resolveAutoNarrowing(pool, false, null);
-                }
-            aContribType[iContrib] = typeContrib;
-            }
-
-        // process the annotations and conditional incorporates at the front of the contribution list
-        int iLastAnnotation = -1;
-        for (int iContrib = 0; iContrib < cContribs; ++iContrib)
-            {
-            // only process annotations and conditional incorporates
-            Contribution contrib   = listContribs.get(iContrib);
-            TypeConstant typeMixin = aContribType[iContrib];
-            Composition  compose;
-            switch (compose = contrib.getComposition())
-                {
-                case Annotation:
-                    iLastAnnotation = iContrib;
-                    // process now
-                    break;
-
-                case Incorporates:
-                    if (contrib.getTypeParams() == null)
-                        {
-                        // a regular "incorporates"; process later
-                        assert typeMixin != null;
-                        continue;
-                        }
-                    else if (typeMixin == null)
-                        {
-                        // the conditional incorporates does not apply to "this" type
-                        continue;
-                        }
-                    // process now
-                    break;
-
-                default:
-                    // not now
-                    continue;
-                }
-
-            // has to be an explicit class identity
-            if (!typeMixin.isExplicitClassIdentity(compose == Composition.Incorporates))
-                {
-                log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
-                        constId.getPathString(), typeMixin.getValueString());
-                continue;
-                }
-
-            // has to be a mixin
-            if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
-                {
-                log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
-                        typeMixin.getValueString());
-                continue;
-                }
-
-            if (compose == Composition.Annotation)
-                {
-                processAnnotation(constId, contrib, typeMixin, typeClass, listAnnos, listProcess, errs);
-                }
-            else
-                {
-                processIncorporates(constId, typeMixin, struct, listProcess, errs);
-                }
-            }
-
-        int iContrib = iLastAnnotation + 1;
+        int                iContrib     = 0;
 
         // add a marker into the list of contributions at this point to indicate that this class
         // structure's contents need to be processed next
-        listProcess.add(new Contribution(Composition.Equal, typeClass));  // place-holder for "this"
+        listProcess.add(new Contribution(Composition.Equal, this));  // place-holder for "this"
 
         // error check the "into" and "extends" clauses, plus rebasing (they'll get processed later)
         TypeConstant typeInto    = null;
@@ -2030,65 +1866,114 @@ public abstract class TypeConstant
         }
 
     /**
-     * Process the "annotation" contribution.
+     * TODO
+     *
+     * @param constId
+     * @param struct
+     * @param listContribs
+     * @param aContribType
+     * @param errs
+     * @return
      */
-    private void processAnnotation(IdentityConstant constId, Contribution contrib,
-                                   TypeConstant typeMixin, TypeConstant typeClass,
-                                   List<Annotation> listAnnos,
-                                   List<Contribution> listProcess, ErrorListener errs)
+    private TypeConstant[] extractConditionalContributes(
+            IdentityConstant   constId,
+            ClassStructure     struct,
+            List<Contribution> listContribs,
+            TypeConstant[]     aContribType,
+            ErrorListener      errs)
         {
-        ConstantPool pool = getConstantPool();
+        List<TypeConstant> listCondContribs = null;
 
-        // the annotation could be a mixin "into Class", which means that it's a
-        // non-virtual, compile-time mixin (like @Abstract)
-        Annotation   annotation = contrib.getAnnotation();
-        TypeConstant typeInto   = typeMixin.getExplicitClassInto();
-        if (typeInto.isIntoClassType())
+        // process the annotations and conditional incorporates at the front of the contribution list
+        for (int iContrib = 0, cContribs = listContribs.size(); iContrib < cContribs; ++iContrib)
             {
-            // check for duplicate class annotation
-            if (listAnnos.stream().anyMatch(annoPrev ->
-                    annoPrev.getAnnotationClass().equals(annotation.getAnnotationClass())))
+            // only process conditional incorporates
+            Contribution contrib   = listContribs.get(iContrib);
+            TypeConstant typeMixin = aContribType[iContrib];
+            Composition compose;
+            switch (compose = contrib.getComposition())
                 {
-                log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
-                        constId.getPathString(), annotation.getAnnotationClass().getValueString());
+                case Annotation:
+                    throw new IllegalStateException();
+
+                case Incorporates:
+                    if (contrib.getTypeParams() == null)
+                        {
+                        // a regular "incorporates"; process later
+                        assert typeMixin != null;
+                        continue;
+                        }
+                    else if (typeMixin == null)
+                        {
+                        // the conditional incorporates does not apply to "this" type
+                        continue;
+                        }
+                    // process now
+                    break;
+
+                default:
+                    // not now
+                    continue;
                 }
-            else
+
+            // has to be an explicit class identity
+            if (!typeMixin.isExplicitClassIdentity(compose == Composition.Incorporates))
                 {
-                listAnnos.add(annotation);
+                log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
+                        constId.getPathString(), typeMixin.getValueString());
+                continue;
                 }
-            return;
+
+            // has to be a mixin
+            if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
+                {
+                log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
+                        typeMixin.getValueString());
+                continue;
+                }
+
+            if (listCondContribs == null)
+                {
+                listCondContribs = new ArrayList<>();
+                }
+            listCondContribs.add(typeMixin);
+
+            // call processIncorporates() for validation only
+            processIncorporates(constId, typeMixin, struct, new ArrayList<>(), errs);
+            return listCondContribs.toArray(TypeConstant.NO_TYPES);
             }
 
-        // the mixin has to apply to this type
-        if (!typeClass.isA(typeInto)) // note: not 100% correct because the presence of this mixin may affect the answer
-            {
-            log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
-                    typeClass.getValueString(),
-                    typeMixin.getValueString(),
-                    typeInto.getValueString());
-            return;
-            }
+        return null;
+        }
 
-        // check for duplicate type annotation
-        if (listProcess.stream().anyMatch(contribPrev ->
-                contribPrev.getAnnotation().getAnnotationClass().equals(annotation.getAnnotationClass())))
+    /**
+     * TODO
+     *
+     * @param listContribs
+     * @param errs
+     * @return
+     */
+    private TypeConstant[] resolveContributionTypes(List<Contribution> listContribs, ErrorListener errs)
+        {
+        ConstantPool   pool         = getConstantPool();
+        int            cContribs    = listContribs.size();
+        TypeConstant[] aContribType = new TypeConstant[cContribs];
+
+        // resolve auto-narrowing and collect contribution types (null for conditional incorporates)
+        for (int iContrib = 0 ; iContrib < cContribs; ++iContrib)
             {
-            log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
-                    constId.getPathString(), annotation.getAnnotationClass().getValueString());
-            }
-        else
-            {
-            TypeConstant typeAnno = annotation.getAnnotationType();
-            if (typeAnno.isAutoNarrowing(false))
+            Contribution contrib     = listContribs.get(iContrib);
+            TypeConstant typeContrib = contrib.resolveGenerics(pool, this);
+
+            if (typeContrib != null && typeContrib.isAutoNarrowing(false))
                 {
                 log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
-                        typeAnno.getValueString(), this.getValueString());
-                typeAnno = typeAnno.resolveAutoNarrowing(pool, false, null);
+                        typeContrib.getValueString(), this.getValueString());
+                typeContrib = typeContrib.resolveAutoNarrowing(pool, false, null);
                 }
-            // apply annotation
-            listProcess.add(new Contribution(annotation,
-                    pool.ensureAccessTypeConstant(typeAnno, Access.PROTECTED)));
+            aContribType[iContrib] = typeContrib;
             }
+        return aContribType;
         }
 
     /**
@@ -3514,7 +3399,7 @@ public abstract class TypeConstant
             if (typeIntoCat == null || typeIntoCat.equals(pool.typeProperty()))
                 {
                 log(errs, Severity.ERROR, VE_PROPERTY_ANNOTATION_INCOMPATIBLE,
-                        sName, constId.getValueString(), typeMixin.getValueString());
+                        sName, constId.getPathString(), typeMixin.getValueString());
                 continue;
                 }
 
@@ -3917,9 +3802,9 @@ public abstract class TypeConstant
      * @param errs           the error list to log any errors to
      */
     private void checkTypeParameterProperties(
-            Map<Object,           ParamInfo>    mapTypeParams,
+            Map<Object, ParamInfo>    mapTypeParams,
             Map<Object, PropertyInfo> mapProps,
-            ErrorListener                       errs)
+            ErrorListener             errs)
         {
         for (ParamInfo param : mapTypeParams.values())
             {
@@ -3942,6 +3827,221 @@ public abstract class TypeConstant
                         this.getValueString(), sParam);
                 }
             }
+        }
+
+
+    // ----- type info for mixins ---------------------------------------------------------------
+
+    /**
+     * For this type representing a base for conditional incorporates, merge the TypeInfo
+     * built without those incorporates with the corresponding mixins.
+     *
+     * @param cInvalidations  the count of TypeInfo invalidations before staring building the info
+     * @param idBase          the identity constant of the class that this type is based on
+     * @param infoBase        the TypeInfo for this type without the conditional incorporates
+     * @param atypeCondInc    the conditional incorporates to merge into the TypeInfo
+     * @param errs            the error list to log into
+     *
+     * @return a resulting TypeInfo
+     */
+    private TypeInfo mergeConditionalIncorporates(
+            int              cInvalidations,
+            IdentityConstant idBase,
+            TypeInfo         infoBase,
+            TypeConstant[]   atypeCondInc,
+            ErrorListener    errs)
+        {
+        ConstantPool pool = getConstantPool();
+        TypeInfo     info = infoBase;
+        for (int c = atypeCondInc.length, i = c-1; i >= 0; --i)
+            {
+            TypeConstant typeMixin   = atypeCondInc[i];
+            TypeConstant typePrivate = pool.ensureAccessTypeConstant(typeMixin, Access.PRIVATE);
+            TypeInfo     infoMixin   = typePrivate.ensureTypeInfoInternal(errs);
+            if (infoMixin == null)
+                {
+                // return the incomplete info of for we've got so far
+                return new TypeInfo(this, cInvalidations, infoBase.getClassStructure(), 0, false,
+                    info.getTypeParams(), null,
+                    info.getExtends(), info.getRebases(), info.getInto(),
+                    info.getContributionList(), info.getClassChain(), info.getDefaultChain(),
+                    info.getProperties(), info.getMethods(),
+                    info.getVirtProperties(), info.getVirtMethods(),
+                    Progress.Incomplete);
+                }
+
+            info = mergeMixinTypeInfo(cInvalidations, idBase, infoBase.getClassStructure(),
+                    info, infoMixin, null, errs);
+            }
+        return info;
+        }
+
+    /**
+     * For this type representing a base for conditional incorporates, merge the "source" TypeInfo
+     * with the TypeInfo of a mixin.
+     *
+     * @param cInvalidations  the count of TypeInfo invalidations before staring building the info
+     * @param idBase          the identity constant of the class that this type is based on
+     * @param structBase      the ClassStructure for the base type
+     * @param infoSource      the TypeInfo containing all previous incorporates
+     * @param infoMixin       the TypeInfo for the mixin to be merged with the source TypeInfo
+     * @param listClassAnnos  the list of annotations for the type that mix into "Class"
+     * @param errs            the error listener to log into
+     *
+     * @return the resulting TypeInfo
+     */
+    protected TypeInfo mergeMixinTypeInfo(
+            int              cInvalidations,
+            IdentityConstant idBase,
+            ClassStructure   structBase,
+            TypeInfo         infoSource,
+            TypeInfo         infoMixin,
+            List<Annotation> listClassAnnos,
+            ErrorListener    errs)
+        {
+        ConstantPool pool = getConstantPool();
+
+        // merge the private view of the annotation on top if the specified view of the underlying type
+        Map<PropertyConstant, PropertyInfo> mapMixinProps   = infoMixin.getProperties();
+        Map<MethodConstant  , MethodInfo>   mapMixinMethods = infoMixin.getMethods();
+        Map<Object          , ParamInfo>    mapMixinParams  = infoMixin.getTypeParams();
+
+        Map<PropertyConstant, PropertyInfo> mapProps       = new HashMap<>(infoSource.getProperties());
+        Map<MethodConstant  , MethodInfo  > mapMethods     = new HashMap<>(infoSource.getMethods());
+        Map<Object          , PropertyInfo> mapVirtProps   = new HashMap<>(infoSource.getVirtProperties());
+        Map<Object          , MethodInfo  > mapVirtMethods = new HashMap<>(infoSource.getVirtMethods());
+
+        for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapMixinProps.entrySet())
+            {
+            layerOnMixinProp(pool, idBase, mapProps, mapVirtProps, entry.getKey(), entry.getValue(), errs);
+            }
+
+        for (Map.Entry<MethodConstant, MethodInfo> entry : mapMixinMethods.entrySet())
+            {
+            layerOnMixinMethod(pool, idBase, mapMethods, mapVirtMethods, entry.getKey(), entry.getValue(), errs);
+            }
+
+        return new TypeInfo(this, cInvalidations, structBase, 0, false, mapMixinParams,
+                listClassAnnos == null ? null : listClassAnnos.toArray(Annotation.NO_ANNOTATIONS),
+                infoMixin.getExtends(), infoMixin.getRebases(), infoMixin.getInto(),
+                infoMixin.getContributionList(), infoMixin.getClassChain(), infoMixin.getDefaultChain(),
+                mapProps, mapMethods, mapVirtProps, mapVirtMethods,
+                TypeInfo.Progress.Complete);
+        }
+
+    /**
+     * Layer on the passed mixin's property contributions onto the base properties.
+     *
+     * @param pool          the constant pool to use
+     * @param idBaseClass   the identity of the class (etc) that is being mixed into
+     * @param mapProps      properties already collected from the base
+     * @param mapVirtProps  virtual properties already collected from the base
+     * @param idMixinProp   the identity of the property at the mixin
+     * @param infoProp      the property info from the mixin
+     * @param errs          the error listener
+     */
+    protected void layerOnMixinProp(
+            ConstantPool                        pool,
+            IdentityConstant                    idBaseClass,
+            Map<PropertyConstant, PropertyInfo> mapProps,
+            Map<Object, PropertyInfo>           mapVirtProps,
+            PropertyConstant                    idMixinProp,
+            PropertyInfo                        infoProp,
+            ErrorListener                       errs)
+        {
+        if (!infoProp.isVirtual())
+            {
+            mapProps.put(idMixinProp, infoProp);
+            return;
+            }
+
+        Object           nidContrib = idMixinProp.resolveNestedIdentity(pool, this);
+        PropertyConstant idResult   = (PropertyConstant) idBaseClass.appendNestedIdentity(pool, nidContrib);
+        PropertyInfo     propBase   = mapVirtProps.get(nidContrib);
+        if (propBase != null && infoProp.getIdentity().equals(propBase.getIdentity()))
+            {
+            // keep whatever the base has got
+            return;
+            }
+
+        PropertyInfo propResult;
+        if (propBase == null)
+            {
+            propResult = infoProp;
+            }
+        else
+            {
+            propResult = propBase.layerOn(infoProp, false, true, errs);
+            }
+
+        mapProps.put(idResult, propResult);
+        mapVirtProps.put(nidContrib, propResult);
+        }
+
+    /**
+     * Layer on the passed mixin method contributions onto the base methods.
+     *
+     * @param pool            the constant pool to use
+     * @param idBaseClass     the identity of the class (etc) that is being mixed into
+     * @param mapMethods      methods already collected from the base
+     * @param mapVirtMethods  virtual methods already collected from the base
+     * @param idMixinMethod   the identity of the method at the mixin
+     * @param infoMethod      the method info from the mixin
+     * @param errs            the error listener
+     */
+    private void layerOnMixinMethod(
+            ConstantPool                    pool,
+            IdentityConstant                idBaseClass,
+            Map<MethodConstant, MethodInfo> mapMethods,
+            Map<Object, MethodInfo>         mapVirtMethods,
+            MethodConstant                  idMixinMethod,
+            MethodInfo                      infoMethod,
+            ErrorListener                   errs)
+        {
+        if (!infoMethod.isVirtual())
+            {
+            // skip the mixin's constructors
+            if (!infoMethod.isConstructor())
+                {
+                mapMethods.put(idMixinMethod, infoMethod);
+                }
+            return;
+            }
+
+        Object     nidContrib = idMixinMethod.resolveNestedIdentity(pool, this);
+        MethodInfo methodBase = mapVirtMethods.get(nidContrib);
+        if (methodBase != null && methodBase.getIdentity().equals(infoMethod.getIdentity()))
+            {
+            // keep whatever the base has got
+            return;
+            }
+
+        MethodInfo methodResult;
+        if (methodBase == null)
+            {
+            methodResult = infoMethod;
+            }
+        else
+            {
+            // it's possible that the base has a narrower method signature then the mixin,
+            // in which case, the mixin's info should be ignored/replaced
+            SignatureConstant sigBase  = methodBase.getSignature();
+            SignatureConstant sigMixin = infoMethod.getSignature();
+            if (!sigBase.equals(sigMixin) && sigBase.isSubstitutableFor(sigMixin, this))
+                {
+                methodResult = methodBase;
+                }
+            else
+                {
+                methodResult = methodBase.layerOn(infoMethod, false, errs);
+                }
+            }
+
+        MethodConstant    idResult   = (MethodConstant) idBaseClass.appendNestedIdentity(pool, nidContrib);
+        SignatureConstant sigContrib = infoMethod.getSignature();
+
+        mapMethods.put(idResult, methodResult);
+        mapVirtMethods.put(sigContrib, methodResult);
         }
 
 

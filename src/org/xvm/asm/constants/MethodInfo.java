@@ -463,7 +463,7 @@ public class MethodInfo
         }
 
     /**
-     * @return true iff this is a function (not a method)
+     * @return true iff this is a constructor (not a method or function)
      */
     public boolean isConstructor()
         {
