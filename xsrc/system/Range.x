@@ -23,6 +23,7 @@ mixin Range<ElementType extends immutable Sequential>
      * * The size of ['a'..'z'] is 26
      * * The size of ['z'..'a'] is 26
      */
+    @Override
     Int size.get()
         {
         return lowerBound.stepsTo(upperBound) + 1;
