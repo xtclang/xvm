@@ -195,7 +195,7 @@ public class PropertyInfo
                     && !bodyAdd.getStructure().isSynthetic())   // synthetic might not be marked
                 {
                 constId.log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_REQUIRED,
-                        constId.getValueString(),
+                        bodyAdd.getIdentity().getValueString(),
                         aBase[0].getIdentity().getValueString());
                 }
             }
@@ -222,7 +222,7 @@ public class PropertyInfo
                         && !fAnno)
                     {
                     constId.log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_REQUIRED,
-                            constId.getValueString(),
+                            bodyAdd.getIdentity().getValueString(),
                             typeAdd.getValueString(),
                             typeResult.getValueString());
                     }
