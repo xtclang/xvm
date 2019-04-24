@@ -422,7 +422,7 @@ public class ArrayAccessExpression
 
                 SignatureConstant sigGet = infoGet.getSignature();
                 aIndexTypes = sigGet.getRawParams();
-                typeElement = sigGet.getRawReturns()[0];
+                typeElement = sigGet.getRawReturns()[0].resolveAutoNarrowing(pool, true, null);
                 m_idGet     = infoGet.getIdentity();
                 }
             }

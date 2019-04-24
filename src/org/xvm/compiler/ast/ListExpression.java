@@ -218,7 +218,7 @@ public class ListExpression
             {
             TypeConstant typeImpl = pool.ensureParameterizedTypeConstant(pool.typeArray(),
                     typeElement == null ? pool.typeObject() : typeElement);
-            assert typeImpl.isA(typeRequired); // typeActual is either Array<ElType> or List<ElType>
+            assert typeRequired == null || typeImpl.isA(typeRequired); // Array<ElType> or List<ElType>
 
             Constant[] aconstVal = new Constant[cExprs];
             for (int i = 0; i < cExprs; ++i)

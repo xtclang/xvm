@@ -1,6 +1,7 @@
 package org.xvm.runtime;
 
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -271,7 +272,7 @@ public abstract class ClassTemplate
 
                     for (int i = 0; i < cParams; i++)
                         {
-                        if (!compareTypes(atParamTest[i], atParam[i]))
+                        if (!atParam[i].isA(atParam[i]))
                             {
                             continue nextMethod;
                             }
@@ -288,7 +289,7 @@ public abstract class ClassTemplate
 
                     for (int i = 0; i < cReturns; i++)
                         {
-                        if (!compareTypes(atReturnTest[i], atReturn[i]))
+                        if (!atReturn[i].isA(atReturnTest[i]))
                             {
                             continue nextMethod;
                             }
@@ -299,24 +300,6 @@ public abstract class ClassTemplate
             }
 
         return null;
-        }
-
-    // compare the specified types
-    private static boolean compareTypes(TypeConstant tTest, TypeConstant tParam)
-        {
-        if (tTest.isSingleDefiningConstant() && tParam.isSingleDefiningConstant())
-            {
-            // compensate for "function"; TODO: how to do it cleanly?
-            ClassConstant constFunction = tParam.getConstantPool().clzFunction();
-
-            if (tTest.getDefiningConstant().equals(constFunction) &&
-                tParam.getDefiningConstant().equals(constFunction))
-                {
-                return true;
-                }
-            }
-
-        return tTest.equals(tParam);
         }
 
     @Override
@@ -1679,7 +1662,12 @@ public abstract class ClassTemplate
     public void markNativeMethod(String sName, String[] asParamType, String[] asRetType)
         {
         MethodStructure method = getMethodStructure(sName, asParamType, asRetType);
-        if (method != null)
+        if (method == null)
+            {
+            System.err.println("Missing method " + f_sName + "." + sName +
+                Arrays.toString(asParamType) + "->" + Arrays.toString(asRetType));
+            }
+        else
             {
             method.setNative(true);
             }

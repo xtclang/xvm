@@ -72,6 +72,14 @@ module TestArray.xqiz.it
         list[2] = "three";
 
         console.println("list=" + list);
+
+        list = new Array<String>(Mutability.Mutable, list);
+        String one = list.getElement(0);
+        list.setElement(0, "uno");
+        console.println("list=" + list);
+
+        list = new Array<String>(list, 1..2);
+        console.println("list=" + list);
         }
 
     void testArrayListAdd()

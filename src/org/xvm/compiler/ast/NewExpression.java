@@ -24,7 +24,6 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -747,7 +746,7 @@ public class NewExpression
                                 Argument[] aArg2 = new Argument[2];
                                 aArg2[0] = aArgs[0];
                                 aArg2[1] = Register.DEFAULT;
-                                idConstruct = ((ArrayTypeExpression) type).getArrayConstructor2();
+                                idConstruct = ((ArrayTypeExpression) type).getSupplyConstructor();
                                 code.add(new NewG_N(idConstruct, typeTarget, aArg2, argResult));
                                 }
                             else

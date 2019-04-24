@@ -72,15 +72,15 @@ public class xConst
             // Stringable support
             ClassStructure clzHelper = f_templates.getClassStructure("_native.ConstHelper");
 
-            for (MethodStructure idMethod :
+            for (MethodStructure method :
                     ((MultiMethodStructure) clzHelper.getChild("estimateStringLength")).methods())
                 {
-                FN_ESTIMATE_LENGTH = idMethod;
+                FN_ESTIMATE_LENGTH = method;
                 }
-            for (MethodStructure idMethod :
+            for (MethodStructure method :
                     ((MultiMethodStructure) clzHelper.getChild("appendTo")).methods())
                 {
-                FN_APPEND_TO = idMethod;
+                FN_APPEND_TO = method;
                 }
 
             CLZ_STRINGS = f_templates.resolveClass(f_templates.f_adapter.getClassType("collections.Array<String>", null));

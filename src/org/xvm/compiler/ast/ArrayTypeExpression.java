@@ -108,14 +108,15 @@ public class ArrayTypeExpression
         }
 
     /**
-     * @return the id of the two-argument array constructor
+     * @return the id of the two-argument array constructor with the following signature:
+     *         "construct(Int size, ElementType | function ElementType (Int) supply)"
      */
-    public MethodConstant getArrayConstructor2()
+    public MethodConstant getSupplyConstructor()
         {
         ClassConstant  idArray  = pool().clzArray();
         ClassStructure clzArray = (ClassStructure) idArray.getComponent();
 
-        return clzArray.findMethod("construct", 2).getIdentityConstant();
+        return clzArray.findMethod("construct", 2, pool().typeInt()).getIdentityConstant();
         }
 
 

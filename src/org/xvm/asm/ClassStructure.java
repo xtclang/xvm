@@ -1587,22 +1587,40 @@ public class ClassStructure
      *
      * @param sName  the method name to find
      * @param cArgs  the number of arguments
+     * @param aType  (optional or partial) an array of parameter types to match
      *
      * @return the specified MethodStructure; never null
      *
      * @throws IllegalStateException if the method cannot be found
      */
-    public MethodStructure findMethod(String sName, int cArgs)
+    public MethodStructure findMethod(String sName, int cArgs, TypeConstant... aType)
         {
         MultiMethodStructure structMM = (MultiMethodStructure) getChild(sName);
         if (structMM != null)
             {
-            for (MethodStructure structMethod : structMM.methods())
+            NextMethod:
+            for (MethodStructure method : structMM.methods())
                 {
-                if (structMethod.getParamCount() == cArgs)
+                if (method.getParamCount() != cArgs)
                     {
-                    return structMethod;
+                    continue;
                     }
+
+                if (aType == null)
+                    {
+                    return method;
+                    }
+
+                for (int i = 0, c = Math.min(method.getParamCount(), aType.length); i < c; i++)
+                    {
+                    TypeConstant typeParam = method.getParam(i).getType();
+                    TypeConstant typeTest  = aType[i];
+                    if (typeTest != null && !typeParam.equals(typeTest))
+                        {
+                        continue NextMethod;
+                        }
+                    }
+                return method;
                 }
             }
 

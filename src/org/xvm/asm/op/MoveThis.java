@@ -12,6 +12,7 @@ import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
 
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
 import org.xvm.runtime.template.xException;
@@ -98,10 +99,10 @@ public class MoveThis
         {
         try
             {
-            GenericHandle hOuter = (GenericHandle) frame.getThis();
+            ObjectHandle hOuter = frame.getThis();
             for (int c = m_cSteps; c > 0; c--)
                 {
-                hOuter = (GenericHandle) hOuter.getField(GenericHandle.OUTER);
+                hOuter = ((GenericHandle) hOuter).getField(GenericHandle.OUTER);
                 }
 
             int nToValue = m_nToValue;
