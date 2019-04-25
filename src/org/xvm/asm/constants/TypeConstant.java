@@ -5372,6 +5372,14 @@ public abstract class TypeConstant
     private static final AtomicReferenceFieldUpdater<TypeConstant, TypeInfo> s_typeinfo =
             AtomicReferenceFieldUpdater.newUpdater(TypeConstant.class, TypeInfo.class, "m_typeinfo");
     private transient volatile int m_cRecursiveDepth;
+
+    /**
+     * The last time that we checked the invalidations from the ConstantPool, we cached the number
+     * of invalidations that had been done up to that point in time. This is that number. This gives
+     * us a very quick way of verifying that no new invalidations have occurred.
+     * This value could be higher than the value in the TypeInfo, which represents the number of
+     * invalidations that had been done before we started to create the TypeInfo.
+     */
     private transient volatile int m_cInvalidations;
     private static final AtomicIntegerFieldUpdater<TypeConstant> s_cInvalidations =
             AtomicIntegerFieldUpdater.newUpdater(TypeConstant.class, "m_cInvalidations");

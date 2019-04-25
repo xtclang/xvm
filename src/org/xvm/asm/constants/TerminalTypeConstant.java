@@ -751,7 +751,8 @@ public class TerminalTypeConstant
             case FormalTypeChild:
                 {
                 TypeConstant typeConstraint = ((FormalConstant) constant).getConstraintType();
-                return new TypeInfo(this, typeConstraint.ensureTypeInfoInternal(errs));
+                int          cInvalidations = getConstantPool().getInvalidationCount();
+                return new TypeInfo(this, typeConstraint.ensureTypeInfoInternal(errs), cInvalidations);
                 }
 
             case ThisClass:

@@ -127,6 +127,9 @@ public class TypeInfo
 
         m_fExplicitAbstract = fExplicitAbstract;
         m_fImplicitAbstract = fImplicitAbstract;
+
+        assert cInvalidations == 0 // necessary for TYPEINFO_PLACEHOLDER construction
+            || cInvalidations <= type.getConstantPool().getInvalidationCount();
         }
 
     /**
@@ -134,15 +137,16 @@ public class TypeInfo
      *
      * @param typeFormal      the TypeConstant of the formal type
      * @param infoConstraint  the TypeInfo for the constraining type
+     * @param cInvalidations  the count of TypeInfo invalidations when this TypeInfo was built
      */
-    public TypeInfo(TypeConstant typeFormal, TypeInfo infoConstraint)
+    public TypeInfo(TypeConstant typeFormal, TypeInfo infoConstraint, int cInvalidations)
         {
         assert infoConstraint != null;
         assert infoConstraint.f_progress == Progress.Complete;
         assert typeFormal != null && typeFormal.isFormalType();
 
         f_type                = typeFormal;
-        f_cInvalidations      = infoConstraint.f_cInvalidations;
+        f_cInvalidations      = cInvalidations;
         f_struct              = infoConstraint.f_struct;
         f_cDepth              = infoConstraint.f_cDepth;
         f_mapTypeParams       = Collections.EMPTY_MAP;
@@ -164,6 +168,8 @@ public class TypeInfo
 
         m_fExplicitAbstract = true;
         m_fImplicitAbstract = infoConstraint.m_fImplicitAbstract;
+
+        assert cInvalidations <= typeFormal.getConstantPool().getInvalidationCount();
         }
 
     /**
