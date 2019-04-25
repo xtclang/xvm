@@ -172,7 +172,7 @@ public class PresentCondition
     @Override
     public String getValueString()
         {
-        return "isPresent(" + m_constStruct + ')';
+        return "isPresent(" + m_constStruct.getValueString() + ')';
         }
 
 

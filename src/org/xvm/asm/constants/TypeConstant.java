@@ -2604,7 +2604,7 @@ public abstract class TypeConstant
         if (struct.getFormat() != Component.Format.INTERFACE)
             {
             PropertyStructure prop = (PropertyStructure) idProp.getComponent();
-            if (prop != null && prop.isNativeGetter())
+            if (prop != null && prop.isNative())
                 {
                 MethodConstant idGet   = info.getGetterId();
                 MethodBody     bodyGet = new MethodBody(idGet, idGet.getSignature(), Implementation.Native);
@@ -3692,7 +3692,7 @@ public abstract class TypeConstant
             }
         else
             {
-            fNative |= prop.isNativeGetter();
+            fNative |= prop.isNative();
             impl     = fNative ? Implementation.Native : Implementation.Explicit;
 
             // determine if the get explicitly calls super, or explicitly blocks super
@@ -3704,7 +3704,7 @@ public abstract class TypeConstant
             if (fNative)
                 {
                 // native property;
-                // for now we don't have native setters, and if there is a natural getter, it never
+                // if there is a natural getter, it never
                 // calls super;
                 // also, the natural code may pretend there is a field, in which case there is no
                 // natural getter;

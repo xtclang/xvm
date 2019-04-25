@@ -20,6 +20,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xCharArray;
 import org.xvm.runtime.template.collections.xCharArray.CharArrayHandle;
 
@@ -47,8 +48,8 @@ public class xString
     @Override
     public void initDeclared()
         {
-        markNativeGetter("size");
-        markNativeGetter("chars");
+        markNativeProperty("size");
+        markNativeProperty("chars");
         markNativeMethod("construct", new String[]{"collections.Array<Char>"}, VOID);
         markNativeMethod("indexOf", new String[]{"Char", "Int64"}, new String[]{"Boolean", "Int64"});
         markNativeMethod("substring", INT, STRING);
@@ -117,7 +118,8 @@ public class xString
                 return frame.assignValue(iReturn, xInt64.makeHandle(hThis.m_achValue.length));
 
             case "chars":
-                return frame.assignValue(iReturn, xCharArray.makeHandle(hThis.m_achValue));
+                return frame.assignValue(iReturn,
+                        xCharArray.makeHandle(hThis.m_achValue, xArray.Mutability.Constant));
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);

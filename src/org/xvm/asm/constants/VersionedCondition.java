@@ -182,12 +182,7 @@ public class VersionedCondition
     @Override
     public String getValueString()
         {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append("isVersion(")
-          .append(m_constVer.getValueString());
-
-        return sb.append(')').toString();
+        return "isVersion(" + m_constVer.getValueString() + ')';
         }
 
 

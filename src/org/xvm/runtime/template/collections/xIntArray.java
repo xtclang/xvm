@@ -14,7 +14,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.ObjectHandle.MutabilityConstraint;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
@@ -63,7 +62,7 @@ public class xIntArray
             {
             al[i] = ((JavaLong) ahArg[i]).getValue();
             }
-        return new IntArrayHandle(clzArray, al);
+        return new IntArrayHandle(clzArray, al, Mutability.Constant);
         }
 
     @Override
@@ -76,9 +75,9 @@ public class xIntArray
         }
 
     @Override
-    public ArrayHandle createArrayHandle(ClassComposition clzArray, long cCapacity)
+    public ArrayHandle createArrayHandle(ClassComposition clzArray, long cCapacity, Mutability mutability)
         {
-        return new IntArrayHandle(clzArray, cCapacity);
+        return new IntArrayHandle(clzArray, cCapacity, mutability);
         }
 
     @Override
@@ -117,7 +116,7 @@ public class xIntArray
         long[] alValue = hArray.m_alValue;
         if (lIndex == cSize)
             {
-            if (hArray.m_mutability == MutabilityConstraint.FixedSize)
+            if (hArray.m_mutability == Mutability.FixedSize)
                 {
                 return frame.raiseException(xException.illegalOperation());
                 }
@@ -206,9 +205,9 @@ public class xIntArray
     @Override
     protected int addElements(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
         {
-        IntArrayHandle hThis = (IntArrayHandle) hTarget;
+        IntArrayHandle hArray = (IntArrayHandle) hTarget;
 
-        switch (hThis.m_mutability)
+        switch (hArray.m_mutability)
             {
             case Constant:
                 return frame.raiseException(xException.immutableObject());
@@ -221,22 +220,22 @@ public class xIntArray
                 return frame.raiseException(xException.unsupportedOperation());
             }
 
-        IntArrayHandle hThat = (IntArrayHandle) hValue;
+        IntArrayHandle hArrayNew = (IntArrayHandle) hValue;
 
-        int cThat = hThat.m_cSize;
-        if (cThat > 0)
+        int cNew = hArrayNew.m_cSize;
+        if (cNew > 0)
             {
-            long[] alThis = hThis.m_alValue;
-            int    cThis  = hThis.m_cSize;
+            long[] alThis = hArray.m_alValue;
+            int    cThis  = hArray.m_cSize;
 
-            if (cThis + cThat > alThis.length)
+            if (cThis + cNew > alThis.length)
                 {
-                alThis = hThis.m_alValue = grow(alThis, cThis + cThat);
+                alThis = hArray.m_alValue = grow(alThis, cThis + cNew);
                 }
-            hThis.m_cSize += cThat;
-            System.arraycopy(hThat.m_alValue, 0, alThis, cThis, cThat);
+            hArray.m_cSize += cNew;
+            System.arraycopy(hArrayNew.m_alValue, 0, alThis, cThis, cNew);
             }
-        return frame.assignValue(iReturn, hThis);
+        return frame.assignValue(iReturn, hArray);
         }
 
     @Override
@@ -248,8 +247,7 @@ public class xIntArray
         try
             {
             long[]          alNew     = Arrays.copyOfRange(alValue, (int) ixFrom, (int) ixTo + 1);
-            IntArrayHandle  hArrayNew = new IntArrayHandle(hTarget.getComposition(), alNew);
-            hArrayNew.m_mutability = MutabilityConstraint.Mutable;
+            IntArrayHandle  hArrayNew = new IntArrayHandle(hTarget.getComposition(), alNew, Mutability.Mutable);
 
             return frame.assignValue(iReturn, hArrayNew);
             }
@@ -304,17 +302,17 @@ public class xIntArray
         {
         public long[] m_alValue;
 
-        protected IntArrayHandle(TypeComposition clzArray, long[] alValue)
+        protected IntArrayHandle(TypeComposition clzArray, long[] alValue, Mutability mutability)
             {
-            super(clzArray);
+            super(clzArray, mutability);
 
             m_alValue = alValue;
             m_cSize = alValue.length;
             }
 
-        protected IntArrayHandle(TypeComposition clzArray, long cCapacity)
+        protected IntArrayHandle(TypeComposition clzArray, long cCapacity, Mutability mutability)
             {
-            super(clzArray);
+            super(clzArray, mutability);
 
             m_alValue = new long[(int) cCapacity];
             }

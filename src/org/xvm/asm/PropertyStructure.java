@@ -354,19 +354,19 @@ public class PropertyStructure
         }
 
     /**
-     * @return true iff the getter for the property is native
+     * @return true iff the accessors for the property are native
      */
-    public boolean isNativeGetter()
+    public boolean isNative()
         {
-        return m_fNativeGetter;
+        return m_fNative;
         }
 
     /**
-     * Mark the getter for the property as native.
+     * Mark the accessors for the property as native.
      */
-    public void markNativeGetter()
+    public void markNative()
         {
-        m_fNativeGetter = true;
+        m_fNative = true;
         }
 
     /**
@@ -688,9 +688,9 @@ public class PropertyStructure
     private Constant m_constVal;
 
     /**
-     * Indicates that the property has a native getter.
+     * Indicates that the property has native accessors.
      */
-    private transient boolean m_fNativeGetter;
+    private transient boolean m_fNative;
 
     /**
      * Indicates that the property has a value, even if it hasn't been determined yet.

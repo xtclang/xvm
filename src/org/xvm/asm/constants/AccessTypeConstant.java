@@ -220,11 +220,7 @@ public class AccessTypeConstant
     @Override
     public String getValueString()
         {
-        return new StringBuilder()
-                .append(m_constType.getValueString())
-                .append(':')
-                .append(m_access.KEYWORD)
-                .toString();
+        return m_constType.getValueString() + ':' + m_access.KEYWORD;
         }
 
 

@@ -30,6 +30,12 @@ const UInt64
         }
 
     @Override
+    @RO UInt64 magnitude.get()
+        {
+        return this;
+        }
+
+    @Override
     @Auto Int8 to<Int8>()
         {
         return this;
@@ -272,6 +278,12 @@ const UInt64
     @Op UInt64 mod(UInt64 n)
         {
         return this % n;
+        }
+
+    @Override
+    UInt64 abs()
+        {
+        return this;
         }
 
     @Override
