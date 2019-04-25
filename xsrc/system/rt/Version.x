@@ -218,14 +218,13 @@ const Version
         {
         switch (name)
             {
-            // TODO GG inference didn't work here?
-            // TODO (also, switch expression didn't work)
-            case "CI"   : return true, Form.CI;
-            case "Dev"  : return true, Form.Dev;
-            case "QC"   : return true, Form.QC;
-            case "alpha": return true, Form.Alpha;
-            case "beta" : return true, Form.Beta;
-            case "rc"   : return true, Form.RC;
+            // TODO CP (switch expression didn't work)
+            case "CI"   : return true, CI;
+            case "Dev"  : return true, Dev;
+            case "QC"   : return true, QC;
+            case "alpha": return true, Alpha;
+            case "beta" : return true, Beta;
+            case "rc"   : return true, RC;
             default     : return false;
             }
         }

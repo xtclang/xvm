@@ -515,7 +515,7 @@ class ListMap<KeyType, ValueType>
         @Override
         Map<KeyType, ValueType>.Entry reify()
             {
-            return new ReifiedEntry<KeyType, ValueType>(ListMap.this, key); // TODO GG: inference
+            return new ReifiedEntry(ListMap.this, key);
             }
 
         /**

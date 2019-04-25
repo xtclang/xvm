@@ -270,6 +270,16 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff type parameters for the type are specified at this level or any virtual
+     *         parent
+     */
+    public boolean isParameterizedDeep()
+        {
+        return isParamsSpecified() ||
+                isVirtualChild() && getParentType().isParameterizedDeep();
+        }
+
+    /**
      * @return the number of parameters specified
      */
     public int getParamsCount()
@@ -635,7 +645,42 @@ public abstract class TypeConstant
      */
     public TypeConstant adoptParameters(ConstantPool pool, TypeConstant typeFrom)
         {
-        return adoptParameters(pool, typeFrom.getParamTypesArray());
+        assert !this.isParamsSpecified();
+
+        TypeConstant typeSansParams = typeFrom;
+        if (typeFrom.isParamsSpecified())
+            {
+            do
+                {
+                typeSansParams = typeSansParams.getUnderlyingType();
+                }
+            while (typeSansParams.isParamsSpecified());
+            }
+
+        if (this.isA(typeSansParams))
+            {
+            return adoptParameters(pool, typeFrom.getParamTypesArray());
+            }
+
+        if (!this.isVirtualChild() && typeSansParams.isVirtualChild())
+            {
+            // adopt from the first parameterized parent
+            TypeConstant typeParent = typeSansParams.getParentType();
+            while (true)
+                {
+                if (typeParent.isParamsSpecified())
+                    {
+                    return adoptParameters(pool, typeParent.getParamTypesArray());
+                    }
+                if (!typeParent.isVirtualChild())
+                    {
+                    break;
+                    }
+                typeParent = typeParent.getParentType();
+                }
+            }
+        throw new IllegalArgumentException("types are not compatible: " +
+                typeFrom.getValueString() + " -> " + this.getValueString());
         }
 
     /**
