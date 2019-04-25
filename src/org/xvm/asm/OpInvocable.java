@@ -130,6 +130,12 @@ public abstract class OpInvocable extends Op
             return m_chain;
             }
 
+        // invalidate any previously calculated return register types;
+        // NOTE: we are relying on the fact that any calls to checkReturn* method below
+        //       *always* follow a call to this method
+        m_typeRetReg  = null;
+        m_atypeRetReg = null;
+
         TypeComposition clazz    = m_clazz = hTarget.getComposition();
         MethodConstant  idMethod = (MethodConstant) frame.getConstant(m_nMethodId);
         if (idMethod.isLambda())
@@ -156,19 +162,6 @@ public abstract class OpInvocable extends Op
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            // TODO: there are a number of things that are not quite right with this approach:
-            // 1) The type of the target may not be the same as the target we used to cache the
-            //    "auto" register type and may need to be re-calculated
-            // 2) The calculation of the type uses the compile-time method return type;
-            //    while it's more correct than the run-time return type (that we used to use).
-            //    it may still be narrower than the compiler assumed. Unfortunately, the correct
-            //    compile-time type knowledge that existed in the corresponding Register, has been
-            //    dropped when the {@link #simulate()} and later {@link #write} are called.
-            //    We need to consider retaining/persisting that information on the Op itself.
-            //
-            // That same issue is clearly applicable to other "checkReturn" methods here.
-            // All that said, at the moment of this writing (12/27/18), none of the generated code
-            // is using the "auto" return registers, hence the fix for this issue is deferred.
             TypeConstant typeRet = m_typeRetReg;
             if (typeRet == null)
                 {
