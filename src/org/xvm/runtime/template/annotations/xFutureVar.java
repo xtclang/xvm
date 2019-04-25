@@ -61,6 +61,8 @@ public class xFutureVar
         markNativeMethod("get", VOID, new String[] {"RefType"});
         markNativeMethod("set", new String[] {"RefType"}, VOID);
 
+        markNativeMethod("completeExceptionally", new String[] {"Exception"}, VOID);
+
         xEnum enumCompletion = (xEnum) getChildTemplate("Completion");
         Pending = enumCompletion.getEnumByName("Pending");
         Result = enumCompletion.getEnumByName("Result");
@@ -132,6 +134,15 @@ public class xFutureVar
 
         switch (method.getName())
             {
+            case "completeExceptionally":
+                {
+                ExceptionHandle hException = (ExceptionHandle) hArg;
+
+                hThis.m_future.completeExceptionally(hException.getException());
+
+                return Op.R_NEXT;
+                }
+
             case "thenDo":
                 {
                 FunctionHandle hRun = (FunctionHandle) hArg;
