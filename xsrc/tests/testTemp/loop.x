@@ -112,7 +112,7 @@ module TestLoops.xqiz.it
 
         Boolean f = false;
         Int j = 0;
-        Int i;
+        Int i = 0;
         do
             {
             if (j == 4)                 // i is not def asn at this point ...
@@ -133,14 +133,4 @@ module TestLoops.xqiz.it
 
         console.println("(after loop) i=" + i + ", j=" + j);
         }
-
-//    void testForEachRange()
-//        {
-//        console.println("\n** testForEachRange()");
-//
-//        for (Int i : 1..3)
-//            {
-//            console.println("i=" + i);
-//            }
-//        }
     }

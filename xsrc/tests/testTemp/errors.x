@@ -67,4 +67,27 @@ module TestCompilerErrors.xqiz.it
         assert false;
         String s = "testAssertFalse";
         }
+
+    // loops
+    void testDo()
+        {
+        Int j = 0;
+        Int i;
+        do
+            {
+            if (j == 4)   // i is not def asn at this point ...
+                {
+                continue; // ... so i is still not def asn at this point
+                }
+
+            i = ++j;
+
+            if (i == 4)
+                {
+                continue;
+                }
+            }
+        while (i < 10);   // should be an error here (i is not def asn)
+        }
+
     }
