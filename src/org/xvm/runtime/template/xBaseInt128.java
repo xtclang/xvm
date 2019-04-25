@@ -36,7 +36,7 @@ public abstract class xBaseInt128
     @Override
     public void initDeclared()
         {
-        markNativeGetter("magnitude");
+        markNativeProperty("magnitude");
 
         markNativeMethod("to", VOID, new String[]{"Int128"});
         markNativeMethod("to", VOID, new String[]{"Int64"});

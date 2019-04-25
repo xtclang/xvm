@@ -47,8 +47,8 @@ public class xType
     @Override
     public void initDeclared()
         {
-        markNativeGetter("allMethods");
-        markNativeGetter("explicitlyImmutable");
+        markNativeProperty("allMethods");
+        markNativeProperty("explicitlyImmutable");
         }
 
     @Override

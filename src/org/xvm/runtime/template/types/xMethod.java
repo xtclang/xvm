@@ -48,10 +48,10 @@ public class xMethod
     @Override
     public void initDeclared()
         {
-        markNativeGetter("name");
-        markNativeGetter("conditionalReturn");
-        markNativeGetter("access");
-        markNativeGetter("property");
+        markNativeProperty("name");
+        markNativeProperty("conditionalReturn");
+        markNativeProperty("access");
+        markNativeProperty("property");
 
         ACCESS = (xEnum) getChildTemplate("Access");
         }

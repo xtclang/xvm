@@ -4,8 +4,6 @@ module TestArray.xqiz.it
 
     void run()
         {
-        console.println("hello world! (Array tests)");
-
         testSimple();
         // testStrBuf();
         testConstElement();
@@ -79,6 +77,11 @@ module TestArray.xqiz.it
         console.println("list=" + list);
 
         list = new Array<String>(list, 1..2);
+        console.println("list=" + list);
+
+        list = new Array<String>(Mutability.Fixed, list[0..1]);
+        list.setElement(0, "один");
+        list.setElement(1, "два");
         console.println("list=" + list);
         }
 

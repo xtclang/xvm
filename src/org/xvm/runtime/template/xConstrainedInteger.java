@@ -47,7 +47,7 @@ public abstract class xConstrainedInteger
         {
         String sName = f_struct.getName();
 
-        markNativeGetter("magnitude");
+        markNativeProperty("magnitude");
 
         markNativeMethod("to", VOID, sName.equals("Int64")  ? THIS : new String[]{"Int64"});
         markNativeMethod("to", VOID, sName.equals("Int32")  ? THIS : new String[]{"Int32"});

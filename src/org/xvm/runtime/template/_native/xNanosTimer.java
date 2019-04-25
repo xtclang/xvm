@@ -47,7 +47,7 @@ public class xNanosTimer
     @Override
     public void initDeclared()
         {
-        markNativeGetter("elapsed");
+        markNativeProperty("elapsed");
         markNativeMethod("start"   , new String[0], null);
         markNativeMethod("stop"    , new String[0], null);
         markNativeMethod("reset"   , new String[0], null);

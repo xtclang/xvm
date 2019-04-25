@@ -14,7 +14,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.ObjectHandle.MutabilityConstraint;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
@@ -65,7 +64,7 @@ public class xCharArray
             {
             al[i] = (char) ((JavaLong) ahArg[i]).getValue();
             }
-        return new CharArrayHandle(clzArray, al);
+        return new CharArrayHandle(clzArray, al, Mutability.Constant);
         }
 
     @Override
@@ -78,9 +77,9 @@ public class xCharArray
         }
 
     @Override
-    public ArrayHandle createArrayHandle(ClassComposition clzArray, long cCapacity)
+    public ArrayHandle createArrayHandle(ClassComposition clzArray, long cCapacity, Mutability mutability)
         {
-        return new CharArrayHandle(clzArray, cCapacity);
+        return new CharArrayHandle(clzArray, cCapacity, mutability);
         }
 
     @Override
@@ -119,7 +118,7 @@ public class xCharArray
         char[] achValue = hArray.m_achValue;
         if (lIndex == cSize)
             {
-            if (hArray.m_mutability == MutabilityConstraint.FixedSize)
+            if (hArray.m_mutability == Mutability.FixedSize)
                 {
                 return frame.raiseException(xException.illegalOperation());
                 }
@@ -208,9 +207,9 @@ public class xCharArray
     @Override
     protected int addElements(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
         {
-        CharArrayHandle hThis = (CharArrayHandle) hTarget;
+        CharArrayHandle hArray = (CharArrayHandle) hTarget;
 
-        switch (hThis.m_mutability)
+        switch (hArray.m_mutability)
             {
             case Constant:
                 return frame.raiseException(xException.immutableObject());
@@ -223,18 +222,18 @@ public class xCharArray
                 return frame.raiseException(xException.unsupportedOperation());
             }
 
-        int    cThat;
-        char[] achThat;
+        int    cNew;
+        char[] achNew;
         if (hValue instanceof StringHandle)
             {
-            achThat = ((StringHandle) hValue).getValue();
-            cThat   = achThat.length;
+            achNew = ((StringHandle) hValue).getValue();
+            cNew   = achNew.length;
             }
         else if (hValue instanceof CharArrayHandle)
             {
-            CharArrayHandle hThat = (CharArrayHandle) hValue;
-            cThat   = hThat.m_cSize;
-            achThat = hThat.m_achValue;
+            CharArrayHandle hArrayAdd = (CharArrayHandle) hValue;
+            cNew   = hArrayAdd.m_cSize;
+            achNew = hArrayAdd.m_achValue;
             }
         else
             {
@@ -242,20 +241,20 @@ public class xCharArray
             throw new UnsupportedOperationException("need to implement add(Iterable<Char>) support for type: " + hValue.getType());
             }
 
-        if (cThat > 0)
+        if (cNew > 0)
             {
-            char[] achThis = hThis.m_achValue;
-            int    cThis   = hThis.m_cSize;
+            char[] achArray = hArray.m_achValue;
+            int    cArray   = hArray.m_cSize;
 
-            if (cThis + cThat > achThis.length)
+            if (cArray + cNew > achArray.length)
                 {
-                achThis = hThis.m_achValue = grow(achThis, cThis + cThat);
+                achArray = hArray.m_achValue = grow(achArray, cArray + cNew);
                 }
-            hThis.m_cSize += cThat;
-            System.arraycopy(achThat, 0, achThis, cThis, cThat);
+            hArray.m_cSize += cNew;
+            System.arraycopy(achNew, 0, achArray, cArray, cNew);
             }
 
-        return frame.assignValue(iReturn, hThis);
+        return frame.assignValue(iReturn, hArray);
         }
 
     @Override
@@ -267,8 +266,7 @@ public class xCharArray
         try
             {
             char[]           achNew    = Arrays.copyOfRange(achValue, (int) ixFrom, (int) ixTo + 1);
-            CharArrayHandle  hArrayNew = new CharArrayHandle(hTarget.getComposition(), achNew);
-            hArrayNew.m_mutability = MutabilityConstraint.Mutable;
+            CharArrayHandle  hArrayNew = new CharArrayHandle(hTarget.getComposition(), achNew, Mutability.Mutable);
 
             return frame.assignValue(iReturn, hArrayNew);
             }
@@ -324,17 +322,17 @@ public class xCharArray
         {
         public char[] m_achValue;
 
-        protected CharArrayHandle(TypeComposition clzArray, char[] achValue)
+        protected CharArrayHandle(TypeComposition clzArray, char[] achValue, Mutability mutability)
             {
-            super(clzArray);
+            super(clzArray, mutability);
 
             m_achValue = achValue;
             m_cSize = achValue.length;
             }
 
-        protected CharArrayHandle(TypeComposition clzArray, long cCapacity)
+        protected CharArrayHandle(TypeComposition clzArray, long cCapacity, Mutability mutability)
             {
-            super(clzArray);
+            super(clzArray, mutability);
 
             m_achValue = new char[(int) cCapacity];
             }
@@ -401,8 +399,8 @@ public class xCharArray
             }
         }
 
-    public static CharArrayHandle makeHandle(char[] ach)
+    public static CharArrayHandle makeHandle(char[] ach, Mutability mutability)
         {
-        return new CharArrayHandle(INSTANCE.getCanonicalClass(), ach);
+        return new CharArrayHandle(INSTANCE.getCanonicalClass(), ach, mutability);
         }
     }

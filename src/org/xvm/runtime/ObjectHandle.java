@@ -12,6 +12,7 @@ import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.xRef.RefHandle;
 
 import org.xvm.util.ListMap;
@@ -498,14 +499,15 @@ public abstract class ObjectHandle
     public abstract static class ArrayHandle
             extends ObjectHandle
         {
-        public MutabilityConstraint m_mutability;
+        public Mutability m_mutability;
         public int m_cSize;
 
-        protected ArrayHandle(TypeComposition clzArray)
+        protected ArrayHandle(TypeComposition clzArray, Mutability mutability)
             {
             super(clzArray);
 
-            m_fMutable = true;
+            m_fMutable   = true;
+            m_mutability = mutability;
             }
 
         @Override
@@ -513,7 +515,7 @@ public abstract class ObjectHandle
             {
             super.makeImmutable();
 
-            m_mutability = MutabilityConstraint.Constant;
+            m_mutability = Mutability.Constant;
             }
 
         @Override
@@ -564,9 +566,6 @@ public abstract class ObjectHandle
                 : "Deferred exception: " + f_frameNext.m_hException;
             }
         }
-
-    public enum MutabilityConstraint
-        {Mutable, FixedSize, Persistent, Constant}
 
     // ----- DEFERRED ----
 

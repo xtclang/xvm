@@ -20,6 +20,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.LongLong;
+import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
 import org.xvm.runtime.template.xBaseInt128.LongLongHandle;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
@@ -45,8 +46,8 @@ public class xLocalClock
     @Override
     public void initDeclared()
         {
-        markNativeGetter("now");
-        markNativeGetter("timezone");
+        markNativeProperty("now");
+        markNativeProperty("timezone");
         markNativeMethod("schedule", new String[]{"DateTime", "Clock.Alarm"}, null);
         }
 
@@ -130,7 +131,7 @@ public class xLocalClock
             long lOffset = 0; // TODO
             hTimeZone.setField("picos", xInt64.makeHandle(lOffset));
             hTimeZone.setField("name", xNullable.NULL);
-            hTimeZone.setField("rules", new GenericArrayHandle(clzRuleArray, Utils.OBJECTS_NONE));
+            hTimeZone.setField("rules", new GenericArrayHandle(clzRuleArray, Utils.OBJECTS_NONE, xArray.Mutability.Mutable));
             }
 
         return hTimeZone;

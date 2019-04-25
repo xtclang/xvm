@@ -801,7 +801,7 @@ public abstract class ClassTemplate
 
         if (chain.isNative())
             {
-            return invokeNativeSet(frame, hTarget, chain.getProperty(), hValue);
+            return invokeNativeSet(frame, hTarget, idProp.getName(), hValue);
             }
 
         if (chain.isField())
@@ -860,7 +860,7 @@ public abstract class ClassTemplate
      * Invoke a native property "get" operation.
      *
      * @param frame     the current frame
-     * @param sPropName the PropertyStructure representing the property
+     * @param sPropName the property name
      * @param hTarget   the target handle
      * @param iReturn   the register id to place the result of invocation into
      *
@@ -883,16 +883,16 @@ public abstract class ClassTemplate
      * Invoke a native property "set" operation.
      *
      * @param frame     the current frame
-     * @param property  the PropertyStructure representing the property
+     * @param sPropName the property name
      * @param hTarget   the target handle
      * @param hValue    the new property value
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    protected int invokeNativeSet(Frame frame, ObjectHandle hTarget, PropertyStructure property, ObjectHandle hValue)
+    protected int invokeNativeSet(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
         {
-        throw new IllegalStateException("Unknown property: " + property.getName() + " on " + this);
+        throw new IllegalStateException("Unknown property: " + sPropName + " on " + this);
         }
 
     /**
@@ -1678,19 +1678,28 @@ public abstract class ClassTemplate
         return f_templates.f_adapter.getMethod(this, sName, asParam, asRet);
         }
 
-    // mark the property getter as native
+    // mark the property as native
     // Note: this also makes the property "calculated" (no storage)
-    public void markNativeGetter(String sPropName)
+    public void markNativeProperty(String sPropName)
         {
         PropertyStructure prop = getProperty(sPropName);
-        if (prop != null)
+        if (prop == null)
             {
-            prop.markNativeGetter();
+            System.err.println("Missing property " + f_sName + "." + sPropName);
+            }
+        else
+            {
+            prop.markNative();
 
             MethodStructure methGetter = prop.getGetter();
             if (methGetter != null)
                 {
                 methGetter.setNative(true);
+                }
+            MethodStructure methSetter = prop.getGetter();
+            if (methSetter != null)
+                {
+                methSetter.setNative(true);
                 }
             }
         }
