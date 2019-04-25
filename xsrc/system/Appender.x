@@ -54,7 +54,7 @@ interface Appender<ElementType>
      * appended.
      *
      * This allows an Appender to size buffers appropriately, for example. An invocation of this
-     * method should ever result in the Appender _reducing_ its capacity.
+     * method should never result in the Appender _reducing_ its capacity.
      *
      * @param count  an indicator of an expected required capacity beyond the amount *utilized* thus
      *               far

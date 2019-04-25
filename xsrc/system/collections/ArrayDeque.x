@@ -1,22 +1,18 @@
 /**
  * A Deque is a "double ended queue" (a "deque" or "dequeue"), which is a queue-like data structure
  * that is optimized for both insertion and deletion, and from both the "head" and the "tail" of the
- * queue.
+ * queue. This allows the implementation to support both prepending and appending, and both FIFO and
+ * LIFO ordering.
  *
- * This implementation is a circular list on top of an array. An array is selected as an underlying
- * data structure for both its space efficiency and its random access and update efficiency, O(1).
- * Assuming that the dequeue is used in a manner similar to a queue, initially the "head" of the
- * structure is at index `0` in the array, and the "tail" of the structure advances with each
- * append to the queue. As items are removed in FIFO order, the tail advances towards the head. When
- * the head reaches the end of the array, and if the tail is no longer at the start of the array,
- * then the head "wraps around" to the front of the array, seemingly chasing the tail. Similarly,
- * when the tail reaches the end of the array, it too "wraps around" to the front of the array, once
- * again appearing to chase the head. At the point when the head catches up to the tail, the array
- * size must be increased.
+ * This implementation uses a CircularArray for its storage, and adds an optional size limit.
+ *
+ * The Appender interface provided by the ArrayDeque appends to the end of the array, and the Queue
+ * interface provided by the ArrayDeque is the corresponding FIFO queue. To prepend to the queue,
+ * obtain the [prepender]. To use LIFO instead of FIFO, obtain the [lifoQueue].
  */
 class ArrayDeque<ElementType>
-        implements List<ElementType>
         implements Appender<ElementType>
+        implements Queue<ElementType>
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -28,8 +24,7 @@ class ArrayDeque<ElementType>
      */
     construct(Int initialCapacity = 0, Int maxCapacity = Int.maxvalue)
         {
-        // calculate the smallest power of 2 greater than the specified initial capacity
-        contents = new ElementType?[minCapacityFor(initialCapacity)];
+        array = new CircularArray<ElementType>(initialCapacity);
 
         assert maxCapacity > 0;
         this.maxCapacity = maxCapacity;
@@ -39,93 +34,94 @@ class ArrayDeque<ElementType>
     // ----- internal ------------------------------------------------------------------------------
 
     /**
-     * An array that holds the elements of the ArrayDeque
+     * A circular array that holds the elements of the ArrayDeque
      */
-    protected/private ElementType?[] contents.set(ElementType?[] array)
+    protected/private CircularArray<ElementType | Consumer> array;
+
+    /**
+     * True iff the ArrayDeque is in piping mode, which means that it has pending requests for
+     * piping incoming elements.
+     */
+    protected/private Boolean piping;
+
+    /**
+     * The piping destination for all incoming elements, if the ArrayDeque has been instructed to
+     * `pipeAll()`. Note that there may still be pending piping requests from previous `pipeNext()`
+     * calls; those pending requests must be filled first.
+     */
+    protected/private Consumer? drain;
+
+    /**
+     * Verify that there is no Consumer previously registered by a call to `pipeAll()`.
+     *
+     * @throws IllegalState  if the Queue has a drain (a consumer previously registered by
+     *                       `pipeAll()`)
+     *
+     * @return True
+     */
+    protected Boolean verifyNoDrain()
         {
-        assert array.size.bitCount == 1;
-        super(array);
-        }
-
-    /**
-     * The index of the next element to add at the `head`. The index starts at zero, and is never
-     * reset, so the index into the `contents` array is the modulo of the `head` and the size of
-     * the `contents` array. The size of the ArrayDeque is `head-tail`.
-     *
-     * In theory, the head can be negative, because it is possible to insert before the start of
-     * the array, and then to delete from the end (the head) of the array.
-     */
-    protected/private Int head;
-
-    /**
-     * The index of the next element to remove from the `tail`. The index starts at zero, and is
-     * never reset, so the index into the `contents` array is the modulo of the `tail` and the size
-     * of the `contents` array. For any value of `head`, `tail<=head`. When `tail==head`, the
-     * ArrayDeque is empty.
-     *
-     * In theory, the tail can be negative, because it is possible to insert before the start of
-     * the array.
-     */
-    protected/private Int tail;
-
-    /**
-     * Reallocate the internal storage of the ArrayDeque.
-     *
-     * @param newSize  the number of desired elements (a power of 2)
-     */
-    private void adjustCapacity(Int newSize)
-        {
-        assert newSize.bitCount == 1;
-
-        ElementType?[] newContents = new ElementType?[newSize];
-        ElementType?[] oldContents = contents;
-        Int oldSize = contents.size;
-        assert newSize != oldSize;
-
-        Int oldMask = oldSize - 1;
-        Int newMask = newSize - 1;
-        for (Int i : tail..head)
+        if (drain != Null)
             {
-            newContents[i & newMask] = oldContents[i & oldMask];
+            throw new IllegalState("Queue has a pipeAll() operation active");
             }
 
-        this.contents = newContents;
+        return True;
         }
 
     /**
-     * Calculate a minimum capacity to allocate to hold the specified number of elements.
+     * Determine if the next element to be added to the queue needs to be piped, and if so, what the
+     * consumer is for that element.
      *
-     * @param elements  the number of elements to hold
-     *
-     * @return the number of elements to allocate
+     * @return True iff the next element added to the queue will need to be piped
+     * @return the Consumer to pipe to (conditional)
      */
-    protected static Int minCapacityFor(Int elements)
+    protected conditional Consumer pendingPipe()
         {
-        return (elements * 2 - 1).leftmostBit.maxOf(16);
-        }
+        if (piping)
+            {
+            // check for "pipeAll"
+            if (array.empty)
+                {
+                return True, drain.as(Consumer);
+                }
 
-    /**
-     * Given
-     *
-     * @param counter
-     *
-     * @return
-     */
-    protected Int indexFor(Int index)
-        {
-        // contents must be of a power-of-two size
-        return index & contents.size-1;
+            // it's a "pipeNext"; see if this is the last pending piping operation
+            if (array.size <= 1 && drain == Null)
+                {
+                piping = False;
+                }
+            return True, array.delete(0).as(Consumer);
+            }
+
+        return false;
         }
 
 
     // ----- double-ended queue interface ----------------------------------------------------------
 
     /**
+     * The number of items currently in the ArrayDeque.
+     */
+    Int size.get()
+        {
+        return piping ? 0 : array.size;
+        }
+        
+    /**
+     * True iff the ArrayDeque is empty.
+     */
+    Boolean empty.get()
+        {
+        return piping | array.empty;
+        }
+        
+    /**
      * The allocated storage capacity of the ArrayDeque.
      */
     Int capacity.get()
         {
-        return contents.size;
+        return array.capacity;
         }
 
     /**
@@ -136,13 +132,7 @@ class ArrayDeque<ElementType>
      */
     ArrayDeque trimCapacity()
         {
-        Int oldCap = capacity;
-        Int newCap = minCapacityFor(size);
-        if (newCap < oldCap)
-            {
-            adjustCapacity(newCap);
-            }
-
+        array.trimCapacity();
         return this;
         }
 
@@ -150,154 +140,57 @@ class ArrayDeque<ElementType>
      * The potential maximum storage capacity of the ArrayDeque. Attempt to grow beyond this size
      * will result in an exception.
      */
-    public/private Int maxCapacity;
-
-    /**
-     * The Queue that takes from the beginning of the list.
-     */
-    @Lazy Queue<ElementType> fifoQueue.calc()
+    Int maxCapacity.set(Int max)
         {
-        TODO
-        }
-
-    /**
-     * The Queue that takes from the end of the list.
-     */
-    @Lazy Queue<ElementType> lifoQueue.calc()
-        {
-        TODO
-        }
-
-    /**
-     * An appender that appends in reverse order to the **start** of the list, instead of the end.
-     */
-    @Lazy Appender<ElementType> prepender.calc()
-        {
-        // TODO GG
-//        return new Appender()
-//            {
-//            @Override
-//            Appender add(ElementType v)
-//                {
-//                return ArrayDeque.this.insert(0, v);
-//                }
-//
-//            @Override
-//            Appender ensureCapacity(Int count)
-//                {
-//                return ArrayDeque.this.ensureCapacity(count);
-//                }
-//            };
-
-        class Prepender
-                implements Appender<ElementType>
+        assert max >= 0;
+        if (max < size)
             {
-            @Override
-            Prepender add(ElementType v)
-                {
-                ArrayDeque.this.insert(0, v);
-                return this;
-                }
-
-            @Override
-            Prepender ensureCapacity(Int count)
-                {
-                ArrayDeque.this.ensureCapacity(count);
-                return this;
-                }
+            throw new SizeLimited("size=" + size + ", requested-max=" + max+ ", old-max=" + maxCapacity);
             }
-
-        return new Prepender();
+        super(max);
         }
 
-
-    // ----- List interface ------------------------------------------------------------------------
-
-    @Override
-    ArrayDeque insert(Int index, ElementType value)
+    /**
+     * The Queue that takes from the end of the deque and prepends to the beginning of it.
+     */
+    @Lazy LifoQueue lifoQueue.calc()
         {
-        TODO
-        }
-
-    @Override
-    ArrayDeque insertAll(Int index, Iterable<ElementType> values)
-        {
-        TODO
-        }
-
-    @Override
-    ArrayDeque delete(Int index)
-        {
-        TODO
-        }
-
-    @Override
-    ArrayDeque delete(Range<Int> range)
-        {
-        TODO
-        }
-
-
-    // ----- Collection interface ------------------------------------------------------------------
-
-    @Override
-    @RO Int size.get()
-        {
-        return head - tail;
-        }
-
-    @Override
-    @RO Boolean empty.get()
-        {
-        return head == tail;
-        }
-
-    @Override
-    Iterator<ElementType> iterator()
-        {
-        TODO
-        }
-
-    @Override
-    @Op("+")
-    ArrayDeque add(ElementType value)
-        {
-        TODO
-        }
-
-    @Override
-    @Op("+")
-    ArrayDeque addAll(Iterable<ElementType> values)
-        {
-        TODO
-        }
-
-    @Override
-    @Op("-")
-    ArrayDeque remove(ElementType value)
-        {
-        TODO
-        }
-
-    @Override
-    ArrayDeque clear()
-        {
-        TODO
-        }
-
-    @Override
-    ArrayDeque clone()
-        {
-        TODO
+        return new LifoQueue();
         }
 
 
     // ----- Appender interface ------------------------------------------------------------------
 
     @Override
+    ArrayDeque add(ElementType v)
+        {
+        if (Consumer consume : pendingPipe())
+            {
+            consume(v);
+            }
+        else
+            {
+            ensureCapacity(1);
+            array.add(v);
+            }
+
+        return this;
+        }
+
+    @Override
     ArrayDeque add(Iterable<ElementType> iterable)
         {
-        return addAll(iterable);
+        if (piping)
+            {
+            super(iterable);
+            }
+        else
+            {
+            ensureCapacity(iterable.size);
+            array.addAll(iterable);
+            }
+
+        return this;
         }
 
     @Override
@@ -311,10 +204,206 @@ class ArrayDeque<ElementType>
                 throw new SizeLimited("max=" + maxCapacity + ", requested=" + newSize);
                 }
 
-            // grow the capacity
-            adjustCapacity(minCapacityFor(newSize));
+            array.ensureCapacity(count);
             }
 
         return this;
+        }
+
+
+    // ----- Queue interface -----------------------------------------------------------------------
+
+    @Override
+    conditional ElementType next()
+        {
+        if (empty)
+            {
+            verifyNoDrain();
+            return False;
+            }
+
+        return True, array.delete(0).as(ElementType);
+        }
+
+    @Override
+    ElementType take()
+        {
+        if (empty)
+            {
+            // since the queue is empty, we need to create a future result that will get fulfilled
+            // when an element gets added to the queue; we use a similar mechanism to what happens
+            // with a call to pipeNext() when the queue is empty, which is to add a Consumer to the
+            // array that we will pipe the next element to, but in this case, the Consumer is our
+            // own, and its purpose is to complete the future
+            verifyNoDrain();
+            piping = True;
+
+            @Future ElementType taken;
+            Consumer fulfill = (element) ->
+                {
+                taken = element;
+                };
+            array.add(fulfill);
+            return taken;
+            }
+
+        return array.delete(0).as(ElementType);
+        }
+
+    @Override
+    Cancellable pipeNext(Consumer pipe)
+        {
+        if (empty)
+            {
+            verifyNoDrain();
+            array.add(pipe);
+            piping = True;
+            return () ->
+                {
+                if (piping)
+                    {
+                    // TODO close the future
+                    array.remove(pipe);
+                    if (array.empty && drain == Null)
+                        {
+                        piping = False;
+                        }
+                    }
+                };
+            }
+
+        pipe(array.delete(0).as(ElementType));
+        return () -> {};
+        }
+
+    @Override
+    Cancellable pipeAll(Consumer pipe)
+        {
+        verifyNoDrain();
+        drain = pipe;
+
+        // drain the queue
+        while (!empty)
+            {
+            pipe(array.delete(0).as(ElementType));
+            }
+        trimCapacity();
+
+        piping = True;
+        return () ->
+            {
+            drain  = Null;
+            piping = !array.empty;
+            };
+        }
+        
+
+    // ----- LIFO Queue inner class ----------------------------------------------------------------
+
+    /**
+     * The LifoQueue inner class provides bother LIFO functionality and prepender functionality.
+     *
+     * A LIFO queue is one that takes from the end of the underlying array.
+     *
+     * A prepender is an Appender that appends to the front of the underlying array, in reverse
+     * order, as if it were appending to the LIFO queue.
+     */
+    protected class LifoQueue
+            implements Appender<ElementType>
+            implements Queue<ElementType>
+        {
+        @Override
+        LifoQueue add(ElementType v)
+            {
+            if (Consumer consume : pendingPipe())
+                {
+                consume(v);
+                }
+            else
+                {
+                ensureCapacity(1);
+                array.insert(0, v);
+                }
+
+            return this;
+            }
+
+        @Override
+        LifoQueue ensureCapacity(Int count)
+            {
+            ArrayDeque.this.ensureCapacity(count);
+            return this;
+            }
+
+        @Override
+        conditional ElementType next()
+            {
+            if (empty)
+                {
+                verifyNoDrain();
+                return False;
+                }
+
+            return True, array.delete(size-1).as(ElementType);
+            }
+
+        @Override
+        ElementType take()
+            {
+            if (empty)
+                {
+                // the take() implementation on the FIFO queue will create a future result
+                return ArrayDeque.this.take();
+                }
+
+            return array.delete(size-1).as(ElementType);
+            }
+
+        @Override
+        Cancellable pipeNext(Consumer pipe)
+            {
+            if (empty)
+                {
+                verifyNoDrain();
+                array.add(pipe);
+                piping = True;
+                return () ->
+                    {
+                    if (piping)
+                        {
+                        // TODO close the future
+                        array.remove(pipe);
+                        if (array.empty && drain == Null)
+                            {
+                            piping = False;
+                            }
+                        }
+                    };
+                }
+
+            pipe(array.delete(size-1).as(ElementType));
+            return () -> {};
+            }
+
+        @Override
+        Cancellable pipeAll(Consumer pipe)
+            {
+            verifyNoDrain();
+            drain = pipe;
+
+            // drain the queue
+            while (!empty)
+                {
+                pipe(array.delete(size-1).as(ElementType));
+                }
+            trimCapacity();
+
+            piping = True;
+            return () ->
+                {
+                drain  = Null;
+                piping = !array.empty;
+                };
+            }
         }
     }
