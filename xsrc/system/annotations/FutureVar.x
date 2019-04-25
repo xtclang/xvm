@@ -47,6 +47,7 @@
  */
 mixin FutureVar<RefType>
         into Var<RefType>
+        implements Closeable
     {
     /**
      * Future completion status:
@@ -81,6 +82,7 @@ mixin FutureVar<RefType>
      * The future that is chained to this future, that this future sends its completion result to.
      */
     protected NotifyDependent? notify = null;
+
 
     // ----- Ref interface -------------------------------------------------------------------------
 
@@ -127,6 +129,16 @@ mixin FutureVar<RefType>
             complete(value);
             }
         }
+
+
+    // ----- Closeable interface -------------------------------------------------------------------
+
+    @Override
+    void close()
+        {
+        completeExceptionally(new Closed());
+        }
+
 
     // ----- composing future behavior -------------------------------------------------------------
 
@@ -337,6 +349,7 @@ mixin FutureVar<RefType>
 //        return chain(new FutureVar<NewType>.ContinuationStep<RefType>(async));
 //        }
 
+
     // ----- completion handling -------------------------------------------------------------------
 
     /**
@@ -461,6 +474,7 @@ mixin FutureVar<RefType>
                 break;
             }
         }
+
 
     // ----- inner classes -------------------------------------------------------------------------
 

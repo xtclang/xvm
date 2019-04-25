@@ -93,6 +93,13 @@ module Ecstasy.xtclang.org
             extends Exception(text, cause);
 
     /**
+     * A Closed exception is raised when an attempt is made to use an object that has transitioned
+     * to a closed state, including when a future is awaited and it is closed.
+     */
+    const Closed(String? text = null, Exception? cause = null)
+            extends Exception(text, cause);
+
+    /**
      * The interface associated with objects that are automatically closed by the {@code using} and
      * {@code try}-with-resources blocks.
      */
