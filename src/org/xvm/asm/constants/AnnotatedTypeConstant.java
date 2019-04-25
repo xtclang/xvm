@@ -498,13 +498,7 @@ public class AnnotatedTypeConstant
     @Override
     public String getValueString()
         {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(m_annotation.toString())
-          .append(' ')
-          .append(m_constType.getValueString());
-
-        return sb.toString();
+        return m_annotation.getValueString() + ' ' + m_constType.getValueString();
         }
 
 
