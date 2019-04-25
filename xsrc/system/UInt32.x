@@ -30,6 +30,12 @@ const UInt32
         }
 
     @Override
+    @RO UInt32 magnitude.get()
+        {
+        return this;
+        }
+
+    @Override
     @Auto Int8 to<Int8>()
         {
         return this;
@@ -54,6 +60,12 @@ const UInt32
         }
 
     @Override
+    @Auto Int128 to<Int128>()
+        {
+        return this;
+        }
+
+    @Override
     @Auto UInt8 to<UInt8>()
         {
         return this;
@@ -73,6 +85,12 @@ const UInt32
 
     @Override
     @Auto UInt64 to<UInt64>()
+        {
+        return this;
+        }
+
+    @Override
+    @Auto UInt128 to<UInt128>()
         {
         return this;
         }
@@ -260,6 +278,12 @@ const UInt32
     @Op UInt32 mod(UInt32 n)
         {
         return this % n;
+        }
+
+    @Override
+    UInt32 abs()
+        {
+        return this;
         }
 
     @Override

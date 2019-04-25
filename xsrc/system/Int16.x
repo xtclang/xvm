@@ -89,6 +89,18 @@ const Int16
         }
 
     @Override
+    @Auto Int128 to<Int128>()
+        {
+        return this;
+        }
+
+    @Override
+    @Auto UInt128 to<UInt128>()
+        {
+        return this;
+        }
+
+    @Override
     @Auto VarUInt to<VarUInt>()
         {
         return this;
