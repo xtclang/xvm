@@ -133,7 +133,7 @@ class Array<ElementType>
             if (delegate == null)
                 {
                 Int count = 0;
-                for (Element? cur = head; cur != null; cur = cur?.next : assert) // TODO GG "? :" should not be necessary
+                for (Element? cur = head; cur != null; cur = cur.next)
                     {
                     ++count;
                     }

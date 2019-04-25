@@ -201,6 +201,10 @@ public class ForStatement
                 }
             }
 
+        // the test expression plays a role of an "if", since the block cannot be entered if this
+        // expression evaluates to "false"
+        ctx = ctx.enterIf();
+
         // TODO at some point, this will be changed to a list of AstNodes instead of a single expression
         Expression exprOld = expr;
         Expression exprNew = exprOld == null ? null : exprOld.validate(ctx, pool().typeBoolean(), errs);
@@ -215,6 +219,9 @@ public class ForStatement
                 expr = exprNew;
                 }
             }
+
+        // the statement block is equivalent to "if ... then"
+        ctx = ctx.enterFork(true);
 
         // the statement block does not need its own scope (because the for() statement is a scope)
         StatementBlock blockOld = block;
@@ -256,6 +263,12 @@ public class ForStatement
                 listUpdate.set(i, stmtNew);
                 }
             }
+
+        // leaving the ForkContext
+        ctx = ctx.exit();
+
+        // leaving the IfContext
+        ctx = ctx.exit();
 
         // leaving the scope of the for() statement
         ctx = ctx.exit();
