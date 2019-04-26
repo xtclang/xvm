@@ -160,7 +160,9 @@ public class Context
             Argument arg = getVar(sFormalName);
             if (arg == null)
                 {
-                return null;
+                return isFunction()
+                        ? null
+                        : getThisType().resolveGenericType(sFormalName);
                 }
 
             // During the LambdaExpression validation, a LambdaContext/CaptureContext collects the
