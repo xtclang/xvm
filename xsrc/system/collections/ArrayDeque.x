@@ -94,7 +94,7 @@ class ArrayDeque<ElementType>
             return True, array.delete(0).as(Consumer);
             }
 
-        return false;
+        return False;
         }
 
 
@@ -107,7 +107,7 @@ class ArrayDeque<ElementType>
         {
         return piping ? 0 : array.size;
         }
-        
+
     /**
      * True iff the ArrayDeque is empty.
      */
@@ -115,7 +115,7 @@ class ArrayDeque<ElementType>
         {
         return piping | array.empty;
         }
-        
+
     /**
      * The allocated storage capacity of the ArrayDeque.
      */
@@ -151,11 +151,19 @@ class ArrayDeque<ElementType>
         }
 
     /**
-     * The Queue that takes from the end of the deque and prepends to the beginning of it.
+     * A LIFO view of the dequeue; it takes from the tail.
      */
-    @Lazy LifoQueue lifoQueue.calc()
+    @Lazy Queue<ElementType> lifoQueue.calc()
         {
         return new LifoQueue();
+        }
+
+    /**
+     * An "appender" that prepends to the dequeue; it adds to the head.
+     */
+    @Lazy Appender<ElementType> prepender.calc()
+        {
+        return new Prepender();
         }
 
 
@@ -239,11 +247,7 @@ class ArrayDeque<ElementType>
             piping = True;
 
             @Future ElementType taken;
-            Consumer fulfill = (element) ->
-                {
-                taken = element;
-                };
-            array.add(fulfill);
+            array.add(element -> {taken = element;});
             return taken;
             }
 
@@ -292,25 +296,23 @@ class ArrayDeque<ElementType>
         piping = True;
         return () ->
             {
-            drain  = Null;
-            piping = !array.empty;
+            if (drain == pipe)
+                {
+                drain  = Null;
+                piping = !array.empty;
+                }
             };
         }
-        
+
 
     // ----- LIFO Queue inner class ----------------------------------------------------------------
 
     /**
-     * The LifoQueue inner class provides bother LIFO functionality and prepender functionality.
-     *
-     * A LIFO queue is one that takes from the end of the underlying array.
-     *
      * A prepender is an Appender that appends to the front of the underlying array, in reverse
-     * order, as if it were appending to the LIFO queue.
+     * order.
      */
-    protected class LifoQueue
+    protected class Prepender
             implements Appender<ElementType>
-            implements Queue<ElementType>
         {
         @Override
         LifoQueue add(ElementType v)
@@ -334,7 +336,17 @@ class ArrayDeque<ElementType>
             ArrayDeque.this.ensureCapacity(count);
             return this;
             }
+        }
 
+
+    // ----- LIFO Queue inner class ----------------------------------------------------------------
+
+    /**
+     * A LIFO queue is one that takes from the end of the underlying array.
+     */
+    protected class LifoQueue
+            implements Queue<ElementType>
+        {
         @Override
         conditional ElementType next()
             {
@@ -401,8 +413,11 @@ class ArrayDeque<ElementType>
             piping = True;
             return () ->
                 {
-                drain  = Null;
-                piping = !array.empty;
+                if (drain == pipe)
+                    {
+                    drain  = Null;
+                    piping = !array.empty;
+                    }
                 };
             }
         }

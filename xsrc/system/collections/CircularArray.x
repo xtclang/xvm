@@ -5,13 +5,13 @@
  *
  * This implementation is a circular list on top of an array. An array is selected as an underlying
  * data structure for both its space efficiency and its random access and update efficiency, O(1).
- * Initially the "head" and the "tail" of the structure are at index `0` in the array, and the
- * "head" of the structure advances with each `add`. As items are removed in FIFO order, the tail
- * advances towards the head. When the head reaches the end of the array, and if the tail is no
- * longer at the start of the array, then the head "wraps around" to the front of the array,
- * seemingly chasing the tail. Similarly, when the tail reaches the end of the array, it too "wraps
- * around" to the front of the array, once again appearing to chase the head. At the point when the
- * head catches up to the tail, the underlying array size must be increased.
+ * Initially the "tail" and the "head" of the structure are at index `0` in the array, and the
+ * "tail" of the structure advances with each `add`. As items are removed in FIFO order, the head
+ * advances towards the tail. When the tail reaches the end of the array, and if the head is no
+ * longer at the start of the array, then the tail "wraps around" to the front of the array,
+ * seemingly chasing the head. Similarly, when the head reaches the end of the array, it too "wraps
+ * around" to the front of the array, once again appearing to chase the tail. At the point when the
+ * tail catches up to the head, the underlying array size must be increased.
  */
 class CircularArray<ElementType>
         implements List<ElementType>
@@ -42,25 +42,25 @@ class CircularArray<ElementType>
         }
 
     /**
-     * The index of the next element to add at the `head`. The index starts at zero, and is never
-     * reset, so the index into the `contents` array is the modulo of the `head` and the size of
-     * the `contents` array. The size of the CircularArray is `head-tail`.
-     *
-     * In theory, the head can be negative, because it is possible to insert before the start of
-     * the array, and then to delete from the end (the head) of the array.
-     */
-    protected/private Int head;
-
-    /**
-     * The index of the next element to remove from the `tail`. The index starts at zero, and is
-     * never reset, so the index into the `contents` array is the modulo of the `tail` and the size
-     * of the `contents` array. For any value of `head`, `tail<=head`. When `tail==head`, the
-     * CircularArray is empty.
+     * The index of the next element to add at the `tail`. The index starts at zero, and is never
+     * reset, so the index into the `contents` array is the modulo of the `tail` and the size of
+     * the `contents` array. The size of the CircularArray is `tail-head`.
      *
      * In theory, the tail can be negative, because it is possible to insert before the start of
-     * the array.
+     * the array, and then to delete from the end (the tail) of the array.
      */
     protected/private Int tail;
+
+    /**
+     * The index of the next element to remove from the `head`. The index starts at zero, and is
+     * never reset, so the index into the `contents` array is the modulo of the `head` and the size
+     * of the `contents` array. For any value of `tail`, `head<=tail`. When `head==tail`, the
+     * CircularArray is empty.
+     *
+     * In theory, the head can be negative, because it is possible to insert before the start of
+     * the array.
+     */
+    protected/private Int head;
 
     /**
      * Reallocate the internal storage of the CircularArray.
@@ -78,7 +78,7 @@ class CircularArray<ElementType>
 
         Int oldMask = oldSize - 1;
         Int newMask = newSize - 1;
-        for (Int i = tail; i < head; ++i)
+        for (Int i = head; i < tail; ++i)
             {
             newContents[i & newMask] = oldContents[i & oldMask];
             }
@@ -96,15 +96,14 @@ class CircularArray<ElementType>
     protected static Int minCapacityFor(Int elements)
         {
         assert elements >= 0;
-DEBUG; // TODO
         return (elements * 2 - 1).maxOf(0).leftmostBit.maxOf(16);
         }
 
     /**
-     * Given an absolute index such as the tail and head indexes, determine the corresponding index
+     * Given an absolute index such as the head and tail indexes, determine the corresponding index
      * in the contents array.
      *
-     * @param index an index such as `tail` or `head`
+     * @param index an index such as `head` or `tail`
      *
      * @return a corresponding index into the contents array
      */
@@ -146,14 +145,14 @@ DEBUG; // TODO
      * Indicate to the CircularArray that a certain number of additional elements are likely to be
      * added or inserted.
      *
-     * @param count  an indicator of an expected required capacity beyond the amount *utilized* thus
-     *               far
+     * @param additional  an indicator of an expected required capacity beyond the amount
+     *                    **utilized** thus far
      *
      * @return this
      */
-    CircularArray ensureCapacity(Int count)
+    CircularArray ensureCapacity(Int additional)
         {
-        Int newSize = size + count;
+        Int newSize = size + additional;
         if (newSize > capacity)
             {
             adjustCapacity(minCapacityFor(newSize));
@@ -196,6 +195,7 @@ DEBUG; // TODO
     @Op("[]")
     ElementType getElement(Int index)
         {
+        validateIndex(index);
         return contents[indexFor(index)].as(ElementType);
         }
 
@@ -203,6 +203,7 @@ DEBUG; // TODO
     @Op("[]=")
     void setElement(Int index, ElementType value)
         {
+        validateIndex(index);
         contents[indexFor(index)] = value;
         }
 
@@ -242,7 +243,7 @@ DEBUG; // TODO
         ensureCapacity(1);
         if (index == 0)
             {
-            contents[indexFor(--tail)] = value;
+            contents[indexFor(--head)] = value;
             }
         else
             {
@@ -250,23 +251,23 @@ DEBUG; // TODO
             Int mask = contents.size - 1;
             if (index < (size >>> 1))
                 {
-                // move the tail
-                for (Int iCopy = tail, Int iLast = tail + index - 1; iCopy <= iLast; ++iCopy)
+                // move the head
+                for (Int iCopy = head, Int iLast = head + index - 1; iCopy <= iLast; ++iCopy)
                     {
                     contents[iCopy-1 & mask] = contents[iCopy & mask];
                     }
-                --tail;
+                --head;
                 }
             else
                 {
-                // move the head
-                for (Int iCopy = head - 1, Int iLast = tail + index; iCopy >= iLast; --iCopy)
+                // move the tail
+                for (Int iCopy = tail - 1, Int iLast = head + index; iCopy >= iLast; --iCopy)
                     {
                     contents[iCopy+1 & mask] = contents[iCopy & mask];
                     }
-                ++head;
+                ++tail;
                 }
-            contents[tail+index & mask] = value;
+            contents[head+index & mask] = value;
             }
 
         return this;
@@ -295,42 +296,42 @@ DEBUG; // TODO
         Int mask = contents.size - 1;
         if (index == 0)
             {
-            Int insertAt = tail - additional;
+            Int insertAt = head - additional;
             for (ElementType value : values)
                 {
                 contents[insertAt++ & mask] = value;
                 }
-            assert insertAt == tail;
-            tail -= additional;
+            assert insertAt == head;
+            head -= additional;
             }
         else
             {
             validateIndex(index);
             if (index < (size >>> 1))
                 {
-                // move the tail
-                for (Int iCopy = tail, Int iLast = tail + index - 1; iCopy <= iLast; ++iCopy)
+                // move the head
+                for (Int iCopy = head, Int iLast = head + index - 1; iCopy <= iLast; ++iCopy)
                     {
                     contents[iCopy-additional & mask] = contents[iCopy & mask];
                     }
-                tail -= additional;
+                head -= additional;
                 }
             else
                 {
-                // move the head
-                for (Int iCopy = head - 1, Int iLast = tail + index; iCopy >= iLast; --iCopy)
+                // move the tail
+                for (Int iCopy = tail - 1, Int iLast = head + index; iCopy >= iLast; --iCopy)
                     {
                     contents[iCopy+additional & mask] = contents[iCopy & mask];
                     }
-                head += additional;
+                tail += additional;
                 }
 
-            Int insertAt = tail + index;
+            Int insertAt = head + index;
             for (ElementType value : values)
                 {
                 contents[insertAt++ & mask] = value;
                 }
-            assert insertAt == tail + index + additional;
+            assert insertAt == head + index + additional;
             }
 
         return this;
@@ -342,32 +343,32 @@ DEBUG; // TODO
         validateIndex(index);
         if (index == 0)
             {
-            contents[indexFor(tail++)] = null;
+            contents[indexFor(head++)] = Null;
             }
         else if (index == size - 1)
             {
-            contents[indexFor(--head)] = null;
+            contents[indexFor(--tail)] = Null;
             }
         else
             {
             Int mask = contents.size - 1;
             if (index < (size >>> 1))
                 {
-                // move the tail forward
-                for (Int iCopy = tail + index - 1; iCopy >= tail; --iCopy)
+                // move the head forward
+                for (Int iCopy = head + index - 1; iCopy >= head; --iCopy)
                     {
                     contents[iCopy+1 & mask] = contents[iCopy & mask];
                     }
-                contents[tail++ & mask] = Null;
+                contents[head++ & mask] = Null;
                 }
             else
                 {
-                // move the head backwards
-                for (Int iCopy = tail + index + 1, Int iLast = head - 1; iCopy <= iLast; ++iCopy)
+                // move the tail backwards
+                for (Int iCopy = head + index + 1, Int iLast = tail - 1; iCopy <= iLast; ++iCopy)
                     {
                     contents[iCopy-1 & mask] = contents[iCopy & mask];
                     }
-                contents[--head & mask] = Null;
+                contents[--tail & mask] = Null;
                 }
             }
 
@@ -406,16 +407,16 @@ DEBUG; // TODO
             fromTail = range.lowerBound < (size - removing >>> 1);
             if (fromTail)
                 {
-                // move the tail forward
-                for (Int iCopy = tail + range.lowerBound - 1; iCopy >= tail; --iCopy)
+                // move the head forward
+                for (Int iCopy = head + range.lowerBound - 1; iCopy >= head; --iCopy)
                     {
                     contents[iCopy+removing & mask] = contents[iCopy & mask];
                     }
                 }
             else
                 {
-                // move the head backwards
-                for (Int iCopy = tail + range.upperBound + 1, Int iLast = head - 1; iCopy <= iLast; ++iCopy)
+                // move the tail backwards
+                for (Int iCopy = head + range.upperBound + 1, Int iLast = tail - 1; iCopy <= iLast; ++iCopy)
                     {
                     contents[iCopy-1 & mask] = contents[iCopy & mask];
                     }
@@ -426,14 +427,14 @@ DEBUG; // TODO
             {
             while (removing-- > 0)
                 {
-                contents[tail++ & mask] == Null;
+                contents[head++ & mask] == Null;
                 }
             }
         else
             {
             while (removing-- > 0)
                 {
-                contents[--head & mask] == Null;
+                contents[--tail & mask] == Null;
                 }
             }
 
@@ -446,13 +447,13 @@ DEBUG; // TODO
     @Override
     @RO Int size.get()
         {
-        return head - tail;
+        return tail - head;
         }
 
     @Override
     @RO Boolean empty.get()
         {
-        return head == tail;
+        return tail == head;
         }
 
     @Override
@@ -460,24 +461,24 @@ DEBUG; // TODO
         {
         return new Iterator()
             {
-            Int prevTail = tail;
             Int prevHead = head;
-            Int index    = tail;
+            Int prevTail = tail;
+            Int index    = head;
 
             @Override
             conditional ElementType next()
                 {
                 // adjust for a single deletion
-                if (prevTail != tail || prevHead != head)
+                if (prevHead != head || prevTail != tail)
                     {
-                    if (prevTail == tail && prevHead-1 == head)
-                        {
-                        prevHead = head;
-                        --index;
-                        }
-                    else if (prevTail+1 == tail && prevHead == head)
+                    if (prevHead == head && prevTail-1 == tail)
                         {
                         prevTail = tail;
+                        --index;
+                        }
+                    else if (prevHead+1 == head && prevTail == tail)
+                        {
+                        prevHead = head;
                         }
                     else
                         {
@@ -485,7 +486,7 @@ DEBUG; // TODO
                         }
                     }
 
-                if (index < head)
+                if (index < tail)
                     {
                     return True, CircularArray.this[index++];
                     }
@@ -499,7 +500,7 @@ DEBUG; // TODO
     CircularArray add(ElementType value)
         {
         ensureCapacity(1);
-        contents[indexFor(head++)] = value;
+        contents[indexFor(tail++)] = value;
         return this;
         }
 
@@ -510,7 +511,7 @@ DEBUG; // TODO
         ensureCapacity(values.size);
         for (ElementType value : values)
             {
-            contents[indexFor(head++)] = value;
+            contents[indexFor(tail++)] = value;
             }
         return this;
         }
@@ -533,8 +534,8 @@ DEBUG; // TODO
             contents = new ElementType?[minCapacityFor(0)];
             }
 
-        tail = 0;
         head = 0;
+        tail = 0;
 
         return this;
         }

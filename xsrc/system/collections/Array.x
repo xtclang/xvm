@@ -12,7 +12,7 @@ class Array<ElementType>
         incorporates Stringer
         // TODO conditional incorporation of something to do comparable?
         // TODO have to implement Const (at least conditionally if ElementType extends Const)
-        // TODO fill()
+        // TODO fill() reverse() copy()
     {
     // ----- constructors --------------------------------------------------------------------------
 

@@ -5,7 +5,7 @@
  * Queue supports both demand-based and inversion-of-control (event-based) programming models:
  *
  * * The [next] method allows a caller to test for the presence of an element in the queue, and
- *   to obtain the first element if the queue contains any elements.
+ *   to take the first element if the queue contains any elements.
  * * The [take] method allows a caller to take the first element in the queue, or to wait for that
  *   first element to arrive (if there are currently no elements in the queue).
  * * The [pipeNext] method allows a caller to direct the first element in the queue (or the next
