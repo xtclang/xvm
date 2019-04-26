@@ -34,9 +34,9 @@ public abstract class xConstrainedInteger
 
         f_cMinValue = cMinValue;
         f_cMaxValue = cMaxValue;
-        f_cNumBits = cNumBits;
-        f_fChecked = fChecked;
-        f_fSigned = !fUnsigned;
+        f_cNumBits  = cNumBits;
+        f_fChecked  = fChecked;
+        f_fSigned   = !fUnsigned;
 
         f_cAddCheckShift = 64 - cNumBits;
         f_cMulCheckShift = fUnsigned ? (cNumBits / 2) : (cNumBits / 2 - 1);
@@ -48,6 +48,12 @@ public abstract class xConstrainedInteger
         String sName = f_struct.getName();
 
         markNativeProperty("magnitude");
+        markNativeProperty("digitCount");
+        markNativeProperty("bitCount");
+        markNativeProperty("leftmostBit");
+        markNativeProperty("rightmostBit");
+        markNativeProperty("leadingZeroCount");
+        markNativeProperty("trailingZeroCount");
 
         markNativeMethod("to", VOID, sName.equals("Int64")  ? THIS : new String[]{"Int64"});
         markNativeMethod("to", VOID, sName.equals("Int32")  ? THIS : new String[]{"Int32"});
@@ -64,15 +70,31 @@ public abstract class xConstrainedInteger
         markNativeMethod("to", VOID, new String[]{"VarUInt"});
         markNativeMethod("to", VOID, new String[]{"VarFloat"});
         markNativeMethod("to", VOID, new String[]{"VarDec"});
+        markNativeMethod("to", VOID, new String[]{"Char"});
+        markNativeMethod("to", VOID, new String[]{"Boolean"});
+
+        markNativeMethod("rotateLeft"   , INT , THIS);
+        markNativeMethod("rotateRight"  , INT , THIS);
+        markNativeMethod("truncate"     , INT , THIS);
+        markNativeMethod("reverseBits"  , VOID, THIS);
+        markNativeMethod("reverseBytes" , VOID, THIS);
+        markNativeMethod("stepsTo"      , THIS, INT );
 
         // @Op methods
-        markNativeMethod("abs", VOID, THIS);
-        markNativeMethod("add", THIS, THIS);
-        markNativeMethod("sub", THIS, THIS);
-        markNativeMethod("mul", THIS, THIS);
-        markNativeMethod("div", THIS, THIS);
-        markNativeMethod("mod", THIS, THIS);
-        markNativeMethod("neg", VOID, THIS);
+        markNativeMethod("abs"          , VOID, THIS);
+        markNativeMethod("add"          , THIS, THIS);
+        markNativeMethod("sub"          , THIS, THIS);
+        markNativeMethod("mul"          , THIS, THIS);
+        markNativeMethod("div"          , THIS, THIS);
+        markNativeMethod("mod"          , THIS, THIS);
+        markNativeMethod("neg"          , VOID, THIS);
+        markNativeMethod("and"          , THIS, THIS);
+        markNativeMethod("or"           , THIS, THIS);
+        markNativeMethod("xor"          , THIS, THIS);
+        markNativeMethod("not"          , VOID, THIS);
+        markNativeMethod("shiftLeft"    , INT, THIS);
+        markNativeMethod("shiftRight"   , INT, THIS);
+        markNativeMethod("shiftAllRight", INT, THIS);
         }
 
     /**
@@ -116,6 +138,62 @@ public abstract class xConstrainedInteger
                     }
                 return frame.assignValue(iReturn, hTarget);
                 }
+
+            case "digitCount":
+                {
+                long l = ((JavaLong) hTarget).getValue();
+
+                if (l < 0)
+                    {
+                    l = -l;
+                    }
+
+                int cDigits = 19;
+                if (l >= 0)
+                    {
+                    long n = 10;
+                    for (cDigits = 1; cDigits < 19; ++cDigits)
+                        {
+                        if (l < n)
+                            {
+                            break;
+                            }
+                        n *= 10;
+                        }
+                    }
+
+                return frame.assignValue(iReturn, makeInt(cDigits));
+                }
+
+            case "bitCount":
+                {
+                long l = ((JavaLong) hTarget).getValue();
+                return frame.assignValue(iReturn, makeInt(Long.bitCount(l)));
+                }
+
+            case "leftmostBit":
+                {
+                long l = ((JavaLong) hTarget).getValue();
+                return frame.assignValue(iReturn, makeJavaLong(Long.highestOneBit(l)));
+                }
+
+            case "rightmostBit":
+                {
+                long l = ((JavaLong) hTarget).getValue();
+                return frame.assignValue(iReturn, makeJavaLong(Long.lowestOneBit(l)));
+                }
+
+            case "leadingZeroCount":
+                {
+                long l = ((JavaLong) hTarget).getValue();
+                return frame.assignValue(iReturn, makeJavaLong(Long.numberOfLeadingZeros(l)));
+                }
+
+            case "trailingZeroCount":
+                {
+                long l = ((JavaLong) hTarget).getValue();
+                return frame.assignValue(iReturn, makeJavaLong(Long.numberOfTrailingZeros(l)));
+                }
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -141,6 +219,28 @@ public abstract class xConstrainedInteger
 
             case "mod":
                 return invokeMod(frame, hTarget, hArg, iReturn);
+
+            case "and":
+                return invokeAnd(frame, hTarget, hArg, iReturn);
+
+            case "or":
+                return invokeOr(frame, hTarget, hArg, iReturn);
+
+            case "xor":
+                return invokeXor(frame, hTarget, hArg, iReturn);
+
+            case "not":
+                return invokeCompl(frame, hTarget, iReturn);
+
+            case "shiftLeft":
+                return invokeShl(frame, hTarget, hArg, iReturn);
+
+            case "shiftRight":
+                return invokeShr(frame, hTarget, hArg, iReturn);
+
+            case "shiftAllRight":
+                return invokeShrAll(frame, hTarget, hArg, iReturn);
+
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -199,11 +299,62 @@ public abstract class xConstrainedInteger
 
                     return templateTo.convertLong(frame, lValue, iReturn);
                     }
+
+                if (template instanceof xChar)
+                    {
+                    long l = ((JavaLong) hTarget).getValue();
+                    if (l > 0x10_FFFF)
+                        {
+                        l &= 0x0F_FFFF;
+                        }
+                    return frame.assignValue(iReturn, xChar.makeHandle(l));
+                    }
+
+                if (template instanceof xBoolean)
+                    {
+                    long l = ((JavaLong) hTarget).getValue();
+                    return frame.assignValue(iReturn, l == 0 ? xBoolean.FALSE : xBoolean.TRUE);
+                    }
+
                 break;
                 }
 
             case "neg":
                 return invokeNeg(frame, hTarget, iReturn);
+
+            case "rotateLeft":
+            case "rotateRight":
+            case "reverseBits":
+            case "reverseBytes":
+                throw new UnsupportedOperationException("subclass implementation required for " + method.getName());
+
+            case "truncate":
+                {
+                long lValue = ((JavaLong) hTarget ).getValue();
+                long cBits  = ((JavaLong) ahArg[0]).getValue();
+                if (cBits < 0 || cBits > f_cNumBits)
+                    {
+                    return frame.raiseException(xException.outOfRange(cBits, f_cNumBits));
+                    }
+
+                if (cBits == 0)
+                    {
+                    lValue = 0;
+                    }
+                else if (cBits != f_cNumBits)
+                    {
+                    lValue = lValue & (0xFFFFFFFFFFFFFFFFL >>> (64-cBits));
+                    }
+
+                return frame.assignValue(iReturn, makeJavaLong(lValue));
+                }
+
+            case "stepsTo":
+                {
+                long lFrom = ((JavaLong) hTarget ).getValue();
+                long lTo   = ((JavaLong) ahArg[0]).getValue();
+                return frame.assignValue(iReturn, makeJavaLong(lTo - lFrom));
+                }
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -477,6 +628,11 @@ public abstract class xConstrainedInteger
         return frame.raiseException(xException.makeHandle(f_struct.getName() + " overflow"));
         }
 
+    public JavaLong makeInt(long lValue)
+        {
+        return xInt64.makeHandle(lValue);
+        }
+
     public JavaLong makeJavaLong(long lValue)
         {
         // TODO: cache frequently used values
@@ -532,9 +688,9 @@ public abstract class xConstrainedInteger
 
     protected final long f_cMinValue;
     protected final long f_cMaxValue;
-    protected final int f_cNumBits;
-    protected final int f_cAddCheckShift;
-    protected final int f_cMulCheckShift;
+    protected final int  f_cNumBits;
+    protected final int  f_cAddCheckShift;
+    protected final int  f_cMulCheckShift;
 
     protected final boolean f_fChecked;
     protected final boolean f_fSigned;

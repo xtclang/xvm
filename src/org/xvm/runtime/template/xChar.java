@@ -30,6 +30,15 @@ public class xChar
         if (fInstance)
             {
             INSTANCE = this;
+
+            if (cache[0] == null) // REVIEW GG
+                {
+                ClassComposition clz = getCanonicalClass();
+                for (int i = 0; i < cache.length; ++i)
+                    {
+                    cache[i] = new JavaLong(clz, i);
+                    }
+                }
             }
         }
 
@@ -124,7 +133,13 @@ public class xChar
 
     public static JavaLong makeHandle(long chValue)
         {
-        // TODO: cache Latin1 chars
+        assert chValue >= 0 & chValue <= 0x10FFFF;
+        if (chValue < 128)
+            {
+            return cache[(int)chValue];
+            }
         return new JavaLong(INSTANCE.getCanonicalClass(), chValue);
         }
+
+    private static final JavaLong[] cache = new JavaLong[128];
     }

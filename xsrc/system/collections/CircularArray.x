@@ -96,7 +96,8 @@ class CircularArray<ElementType>
     protected static Int minCapacityFor(Int elements)
         {
         assert elements >= 0;
-        return (elements * 2 - 1).leftmostBit.maxOf(16);
+DEBUG; // TODO
+        return (elements * 2 - 1).maxOf(0).leftmostBit.maxOf(16);
         }
 
     /**
