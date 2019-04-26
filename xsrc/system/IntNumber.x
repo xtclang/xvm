@@ -10,6 +10,21 @@ const IntNumber
         construct Number(bits);
         }
 
+    // ----- Number --------------------------------------------------------------------------------
+
+    @Override
+    @RO IntNumber! magnitude;
+
+
+    // ----- Sequential interface ------------------------------------------------------------------
+
+    @Override
+    Int stepsTo(IntNumber that)
+        {
+        return (that - this).to<Int>();
+        }
+
+
     // ----- additional IntNumber capabilities -----------------------------------------------------
 
     /**
@@ -87,7 +102,14 @@ const IntNumber
      */
     Int leadingZeroCount.get()
         {
-        TODO
+        for (Int count : 0..bitLength-1)
+            {
+            if (bits[bitLength - count - 1] == 1)
+                {
+                return count;
+                }
+            }
+        return bitLength;
         }
 
     /**
@@ -96,7 +118,14 @@ const IntNumber
      */
     Int trailingZeroCount.get()
         {
-        TODO
+        loop: for (Bit bit : bits)
+            {
+            if (bit == 1)
+                {
+                return loop.count;
+                }
+            }
+        return bitLength;
         }
 
     /**
@@ -104,7 +133,15 @@ const IntNumber
      */
     Int bitCount.get()
         {
-        TODO
+        Int count = 0;
+        for (Bit bit : bits)
+            {
+            if (bit == 1)
+                {
+                return ++count;
+                }
+            }
+        return count;
         }
 
     /**
@@ -121,23 +158,14 @@ const IntNumber
     IntNumber reverseBytes();
 
 
-    // ----- Sequential ----------------------------------------------------------------------------
-
-    @Override
-    Int stepsTo(IntNumber that)
-        {
-        return (that - this).to<Int>();
-        }
-
-
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
-     * Convert the number to a Char. Any additional magnitude is discarded.
+     * Convert the integer number to a character.
      */
     Char to<Char>()
         {
-        TODO
+        return new Char(to<UInt32>());
         }
 
     /**
@@ -162,6 +190,11 @@ const IntNumber
      */
     Int digitCount.get()
         {
+        if (sign == Negative)
+            {
+            return magnitude.digitCount;
+            }
+            
         TODO
         }
 
@@ -374,6 +407,7 @@ const IntNumber
             }
         return bools;
         }
+        
 
     // ----- Stringable support --------------------------------------------------------------------
 
