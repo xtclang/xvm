@@ -24,7 +24,7 @@ class ArrayDeque<ElementType>
      */
     construct(Int initialCapacity = 0, Int maxCapacity = Int.maxvalue)
         {
-        array = new CircularArray<ElementType>(initialCapacity);
+        array = new CircularArray(initialCapacity);
 
         assert maxCapacity > 0;
         this.maxCapacity = maxCapacity;
