@@ -107,7 +107,7 @@ class ArrayDeque<ElementType>
         {
         return piping ? 0 : array.size;
         }
-        
+
     /**
      * True iff the ArrayDeque is empty.
      */
@@ -115,7 +115,7 @@ class ArrayDeque<ElementType>
         {
         return piping | array.empty;
         }
-        
+
     /**
      * The allocated storage capacity of the ArrayDeque.
      */
@@ -238,13 +238,29 @@ class ArrayDeque<ElementType>
             verifyNoDrain();
             piping = True;
 
-            @Future ElementType taken;
+            // when something shows up in the queue, we will fulfill the take()
+            @Future ElementType promisedElement;
             Consumer fulfill = (element) ->
                 {
-                taken = element;
+                promisedElement = element;
                 };
+
+            // we make a note of this by storing the fulfillment function into the queue itself
             array.add(fulfill);
-            return taken;
+
+            // if (for whatever reason) the future doesn't survive (for example, as the result of
+            // the future being closed, or for whatever other exceptional reason), then we'll erase
+            // the note reminding us to fulfill the promise, because at that point it will no longer
+            // be possible to fulfill the promise
+            &promisedElement.whenComplete((v, e) ->
+                {
+                if (e != null)
+                    {
+                    array.remove(fulfill)
+                    }
+                });
+
+            return promisedElement;
             }
 
         return array.delete(0).as(ElementType);
@@ -262,7 +278,6 @@ class ArrayDeque<ElementType>
                 {
                 if (piping)
                     {
-                    // TODO close the future
                     array.remove(pipe);
                     if (array.empty && drain == Null)
                         {
@@ -296,7 +311,7 @@ class ArrayDeque<ElementType>
             piping = !array.empty;
             };
         }
-        
+
 
     // ----- LIFO Queue inner class ----------------------------------------------------------------
 
@@ -371,7 +386,6 @@ class ArrayDeque<ElementType>
                     {
                     if (piping)
                         {
-                        // TODO close the future
                         array.remove(pipe);
                         if (array.empty && drain == Null)
                             {
