@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +12,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
@@ -599,6 +601,10 @@ public class InvocationExpression
                                 }
                             }
                         }
+                    else if (m_fBjarne)
+                        {
+                        args.add(0, exprLeft);
+                        }
 
                     // handle conversion to function
                     if (m_idConvert != null)
@@ -898,7 +904,7 @@ public class InvocationExpression
                 if (m_method.isFunction() || m_method.isConstructor())
                     {
                     // use the function identity as the argument & drop through to the function handling
-                    assert !m_fBindTarget && (exprLeft == null || !exprLeft.hasSideEffects());
+                    assert !m_fBindTarget && (exprLeft == null || !exprLeft.hasSideEffects() || m_fBjarne);
                     argFn      = idMethod;
                     fConstruct = m_method.isConstructor();
                     }
@@ -1606,15 +1612,41 @@ public class InvocationExpression
             // method/function to call
             // - methods are included because there is a left and it is NOT identity-mode
             // - functions are NOT included because the left is NOT identity-mode
-            TypeInfo infoLeft = typeLeft.ensureTypeInfo(errs);
-            Argument arg      = findCallable(ctx, infoLeft, sName, MethodType.Method, atypeReturn, errs);
+            TypeInfo  infoLeft = typeLeft.ensureTypeInfo(errs);
+            ErrorList errsTemp = new ErrorList(10);
+
+            Argument arg = findCallable(ctx, infoLeft, sName, MethodType.Method, atypeReturn, errsTemp);
             if (arg != null)
                 {
                 m_argMethod   = arg;
                 m_method      = getMethod(infoLeft, arg);
                 m_fBindTarget = m_method != null;
+                errsTemp.logTo(errs);
                 return arg;
                 }
+
+            // allow for a function on the "left type" to be called (Bjarne'd):
+            //    x.f(y, z) -> X.f(x, y, z), where X is the class of x
+            if (typeLeft.isSingleUnderlyingClass(true) && !isSuppressCall() && !isAnyArgUnbound())
+                {
+                List<Expression> listArgs = new ArrayList<>(args);
+                listArgs.add(0, exprLeft);
+
+                ErrorList errsTempB = new ErrorList(10);
+                arg = findMethod(ctx, infoLeft, sName, listArgs, MethodType.Function,
+                        atypeReturn, errsTempB);
+                if (arg != null)
+                    {
+                    m_argMethod   = arg;
+                    m_method      = getMethod(infoLeft, arg);
+                    m_fBindTarget = false;
+                    m_fBjarne     = true;
+                    errsTempB.logTo(errs);
+                    return arg;
+                    }
+                }
+
+            errsTemp.logTo(errs);
             }
 
         return null;
@@ -1976,6 +2008,8 @@ public class InvocationExpression
     private transient Argument        m_argMethod;
     private transient MethodStructure m_method;          // if m_argMethod is a MethodConstant,
                                                          // this holds the corresponding structure
+    private transient boolean         m_fBjarne;         // indicates that the invocation expression
+                                                         // was Bjarne-transformed from x.f() to X.f(x)
     private transient Argument[]      m_aargTypeParams;  // "hidden" type parameters
     private transient int             m_cDefaults;       // number of default arguments
     private transient MethodConstant  m_idConvert;       // conversion method

@@ -804,13 +804,19 @@ public abstract class AstNode
         boolean        fValid = true;
         for (int i = 0; i < cExprs; ++i)
             {
+            Expression exprOld = listExpr.get(i);
+            if (exprOld.isValidated())
+                {
+                atype[i] = exprOld.getType();
+                continue;
+                }
+
             TypeConstant typeRequired = i < cReq ? atypeRequired[i] : null;
             if (typeRequired != null)
                 {
                 ctx = ctx.enterInferring(typeRequired);
                 }
 
-            Expression exprOld = listExpr.get(i);
             Expression exprNew = exprOld.validate(ctx, typeRequired, errs);
 
             if (typeRequired != null)

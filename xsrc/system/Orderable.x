@@ -15,19 +15,19 @@ interface Orderable
         }
 
     /**
-     * Return the minimum value of this and that.
+     * Return the minimum value of the two.
      */
-    Orderable minOf(Orderable that)
+    static <CompileType extends Orderable> CompileType minOf(CompileType value1, CompileType value2)
         {
-        return this < that ? this : that;
+        return value1 < value2 ? value1 : value2;
         }
 
     /**
-     * Return the maximum value of this and that.
+     * Return the maximum value of the two.
      */
-    Orderable maxOf(Orderable that)
+    static <CompileType extends Orderable> CompileType maxOf(CompileType value1, CompileType value2)
         {
-        return this >= that ? this : that;
+        return value1 < value2 ? value2 : value1;
         }
 
     /**
