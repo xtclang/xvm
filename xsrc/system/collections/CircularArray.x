@@ -196,7 +196,7 @@ class CircularArray<ElementType>
     ElementType getElement(Int index)
         {
         validateIndex(index);
-        return contents[indexFor(index)].as(ElementType);
+        return contents[indexFor(head+index)].as(ElementType);
         }
 
     @Override
@@ -204,7 +204,7 @@ class CircularArray<ElementType>
     void setElement(Int index, ElementType value)
         {
         validateIndex(index);
-        contents[indexFor(index)] = value;
+        contents[indexFor(head+index)] = value;
         }
 
     @Override

@@ -91,10 +91,26 @@ class ArrayDeque<ElementType>
                 {
                 piping = False;
                 }
-            return True, array.delete(0).as(Consumer);
+            Consumer pipe = array[0].as(Consumer);
+            array.delete(0);
+            return True, pipe;
             }
 
         return False;
+        }
+
+    protected ElementType takeFirst()
+        {
+        ElementType value = array[0].as(ElementType);
+        array.delete(0);
+        return value;
+        }
+
+    protected ElementType takeLast()
+        {
+        ElementType value = array[size-1].as(ElementType);
+        array.delete(size-1);
+        return value;
         }
 
 
@@ -229,8 +245,7 @@ class ArrayDeque<ElementType>
             verifyNoDrain();
             return False;
             }
-
-        return True, array.delete(0).as(ElementType);
+        return True, takeFirst();
         }
 
     @Override
@@ -266,7 +281,7 @@ class ArrayDeque<ElementType>
             return promisedElement;
             }
 
-        return array.delete(0).as(ElementType);
+        return takeFirst();
         }
 
     @Override
@@ -290,7 +305,7 @@ class ArrayDeque<ElementType>
                 };
             }
 
-        pipe(array.delete(0).as(ElementType));
+        pipe(takeFirst());
         return () -> {};
         }
 
@@ -303,7 +318,7 @@ class ArrayDeque<ElementType>
         // drain the queue
         while (!empty)
             {
-            pipe(array.delete(0).as(ElementType));
+            pipe(takeFirst());
             }
         trimCapacity();
 
@@ -370,7 +385,7 @@ class ArrayDeque<ElementType>
                 return False;
                 }
 
-            return True, array.delete(size-1).as(ElementType);
+            return True, takeLast();
             }
 
         @Override
@@ -382,7 +397,7 @@ class ArrayDeque<ElementType>
                 return ArrayDeque.this.take();
                 }
 
-            return array.delete(size-1).as(ElementType);
+            return takeLast();
             }
 
         @Override
@@ -406,7 +421,7 @@ class ArrayDeque<ElementType>
                     };
                 }
 
-            pipe(array.delete(size-1).as(ElementType));
+            pipe(takeLast());
             return () -> {};
             }
 
@@ -419,7 +434,7 @@ class ArrayDeque<ElementType>
             // drain the queue
             while (!empty)
                 {
-                pipe(array.delete(size-1).as(ElementType));
+                pipe(takeLast());
                 }
             trimCapacity();
 
