@@ -246,9 +246,24 @@ class ArrayDeque<ElementType>
             verifyNoDrain();
             piping = True;
 
-            @Future ElementType taken;
-            array.add(element -> {taken = element;});
-            return taken;
+            // when something shows up in the queue, we will fulfill the take()
+            // we make a note of this by storing the fulfillment function into the queue itself
+            @Future ElementType promisedElement;
+            array.add(element -> {promisedElement = element;});
+
+            // if (for whatever reason) the future doesn't survive (for example, as the result of
+            // the future being closed, or for whatever other exceptional reason), then we'll erase
+            // the note reminding us to fulfill the promise, because at that point it will no longer
+            // be possible to fulfill the promise
+            &promisedElement.whenComplete((v, e) ->
+                {
+                if (e != null)
+                    {
+                    array.remove(promisedElement);
+                    }
+                });
+
+            return promisedElement;
             }
 
         return array.delete(0).as(ElementType);
@@ -266,7 +281,6 @@ class ArrayDeque<ElementType>
                 {
                 if (piping)
                     {
-                    // TODO close the future
                     array.remove(pipe);
                     if (array.empty && drain == Null)
                         {
@@ -305,7 +319,7 @@ class ArrayDeque<ElementType>
         }
 
 
-    // ----- LIFO Queue inner class ----------------------------------------------------------------
+    // ----- Prepender inner class -----------------------------------------------------------------
 
     /**
      * A prepender is an Appender that appends to the front of the underlying array, in reverse
@@ -315,7 +329,7 @@ class ArrayDeque<ElementType>
             implements Appender<ElementType>
         {
         @Override
-        LifoQueue add(ElementType v)
+        Prepender add(ElementType v)
             {
             if (Consumer consume : pendingPipe())
                 {
@@ -331,7 +345,7 @@ class ArrayDeque<ElementType>
             }
 
         @Override
-        LifoQueue ensureCapacity(Int count)
+        Prepender ensureCapacity(Int count)
             {
             ArrayDeque.this.ensureCapacity(count);
             return this;
@@ -383,7 +397,6 @@ class ArrayDeque<ElementType>
                     {
                     if (piping)
                         {
-                        // TODO close the future
                         array.remove(pipe);
                         if (array.empty && drain == Null)
                             {
