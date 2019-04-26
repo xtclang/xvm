@@ -1707,11 +1707,12 @@ public abstract class ClassTemplate
 
     // ----- constants and fields ------------------------------------------------------------------
 
-    public static String[] VOID   = new String[0];
-    public static String[] THIS   = new String[] {"this"};
-    public static String[] OBJECT = new String[] {"Object"};
-    public static String[] INT    = new String[] {"Int64"};
-    public static String[] STRING = new String[] {"String"};
+    public static String[] VOID    = new String[0];
+    public static String[] THIS    = new String[] {"this"};
+    public static String[] OBJECT  = new String[] {"Object"};
+    public static String[] INT     = new String[] {"Int64"};
+    public static String[] STRING  = new String[] {"String"};
+    public static String[] BOOLEAN = new String[] {"Boolean"};
 
     /**
      * The TemplateRegistry.

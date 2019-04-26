@@ -2,6 +2,7 @@ package org.xvm.runtime.template._native;
 
 
 import java.io.BufferedReader;
+import java.io.Console;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -16,18 +17,30 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xString.StringHandle;
 
 
 /**
- * TODO:
+ * The injectable "Console" that prints to the screen / terminal.
  */
 public class xTerminalConsole
         extends ClassTemplate
     {
-    private static BufferedReader CONSOLE_IN = new BufferedReader(new InputStreamReader(System.in));
-    private static PrintWriter CONSOLE_OUT = new PrintWriter(System.out, true);
+    private static final Console        CONSOLE     = System.console();
+    private static final BufferedReader CONSOLE_IN;
+    private static final PrintWriter    CONSOLE_OUT;
+    static
+        {
+        CONSOLE_IN  = CONSOLE == null || CONSOLE.reader() == null
+                ? new BufferedReader(new InputStreamReader(System.in))
+                : new BufferedReader(CONSOLE.reader());
+        CONSOLE_OUT = CONSOLE == null || CONSOLE.writer() == null
+                ? new PrintWriter(System.out, true)
+                : CONSOLE.writer();
+        }
 
     public xTerminalConsole(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -37,9 +50,10 @@ public class xTerminalConsole
     @Override
     public void initDeclared()
         {
-        markNativeMethod("print", OBJECT, VOID);
-        markNativeMethod("println", OBJECT, VOID);
-        markNativeMethod("readLine", VOID, STRING);
+        markNativeMethod("print"   , OBJECT , VOID   );
+        markNativeMethod("println" , OBJECT , VOID   );
+        markNativeMethod("readLine", VOID   , STRING );
+        markNativeMethod("echo"    , BOOLEAN, BOOLEAN);
         }
 
     @Override
@@ -79,6 +93,13 @@ public class xTerminalConsole
                         return iResult;
                     }
                 }
+
+            case "echo":
+                {
+                boolean fOld = m_fEcho;
+                m_fEcho = ((BooleanHandle) hArg).get();
+                return frame.assignValue(iReturn, xBoolean.makeHandle(fOld));
+                }
             }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
@@ -91,13 +112,19 @@ public class xTerminalConsole
             {
             case "readLine": // String format, Sequence<Object> args
                 {
+                StringHandle hLine;
                 try
                     {
-                    String sLine = CONSOLE_IN.readLine();
-
-                    return frame.assignValue(iReturn, xString.makeHandle(sLine));
+                    hLine = m_fEcho || CONSOLE == null
+                            ? xString.makeHandle(CONSOLE_IN.readLine())
+                            : xString.makeHandle(CONSOLE.readPassword());
                     }
-                catch (IOException e) {}
+                catch (IOException e)
+                    {
+                    hLine = xString.makeHandle(e.getMessage());
+                    }
+
+                return frame.assignValue(iReturn, hLine);
                 }
             }
 
@@ -116,4 +143,6 @@ public class xTerminalConsole
         CONSOLE_OUT.println(((StringHandle) frameCaller.popStack()).getValue());
         return Op.R_NEXT;
         };
+
+    private boolean m_fEcho;
     }
