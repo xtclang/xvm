@@ -212,6 +212,14 @@ public class MethodBody
         }
 
     /**
+     * @return true iff this method is native
+     */
+    public boolean isNative()
+        {
+        return m_impl == Implementation.Native;
+        }
+
+    /**
      * @return true iff the body represents functionality that would show up in an optimized chain
      */
     public boolean isOptimized()

@@ -71,7 +71,7 @@ public abstract class xConstrainedInteger
         markNativeMethod("to", VOID, new String[]{"VarFloat"});
         markNativeMethod("to", VOID, new String[]{"VarDec"});
         markNativeMethod("to", VOID, new String[]{"Char"});
-        markNativeMethod("to", VOID, new String[]{"Boolean"});
+        markNativeMethod("to", VOID, new String[]{"collections.Array<Boolean>"});
 
         markNativeMethod("rotateLeft"   , INT , THIS);
         markNativeMethod("rotateRight"  , INT , THIS);

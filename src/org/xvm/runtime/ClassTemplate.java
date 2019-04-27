@@ -243,61 +243,89 @@ public abstract class ClassTemplate
         return f_templates.getTemplate(f_sName + '.' + sName);
         }
 
-    public PropertyStructure getProperty(String sPropName)
+    /**
+     * Find the specified property in this template or direct inheritance chain.
+     *
+     * @return the specified property of null
+     */
+    protected PropertyStructure findProperty(String sPropName)
         {
-        return (PropertyStructure) f_struct.getChild(sPropName);
+        // we cannot use the TypeInfo here, since the TypeInfo will be build based on the information
+        // provided by this method's caller; however, we can assume a simple class hierarchy
+        ClassStructure struct = f_struct;
+        do
+            {
+            PropertyStructure prop = (PropertyStructure) struct.getChild(sPropName);
+            if (prop != null)
+                {
+                return prop;
+                }
+            struct = struct.getSuper();
+            }
+        while (struct != null);
+
+        return null;
         }
 
-    // get a method declared at this template level
-    public MethodStructure getDeclaredMethod(String sName, TypeConstant[] atParam, TypeConstant[] atReturn)
+    /**
+     * Find the specified method in this component or direct inheritance chain.
+     *
+     * @return the specified method of null
+     */
+    protected MethodStructure findMethod(String sName, TypeConstant[] atParam, TypeConstant[] atReturn)
         {
-        MultiMethodStructure mms = (MultiMethodStructure) f_struct.getChild(sName);
-        if (mms != null)
+        ClassStructure struct = f_struct;
+        do
             {
-            nextMethod:
-            for (MethodStructure method : mms.methods())
+            MultiMethodStructure mms = (MultiMethodStructure) struct.getChild(sName);
+            if (mms != null)
                 {
-                MethodConstant constMethod = method.getIdentityConstant();
-
-                TypeConstant[] atParamTest = constMethod.getRawParams();
-                TypeConstant[] atReturnTest = constMethod.getRawReturns();
-
-                if (atParam != null) // temporary work around; TODO: remove
+                nextMethod:
+                for (MethodStructure method : mms.methods())
                     {
-                    int cParams = atParamTest.length;
-                    if (cParams != atParam.length)
-                        {
-                        continue;
-                        }
+                    MethodConstant constMethod = method.getIdentityConstant();
 
-                    for (int i = 0; i < cParams; i++)
+                    TypeConstant[] atParamTest = constMethod.getRawParams();
+                    TypeConstant[] atReturnTest = constMethod.getRawReturns();
+
+                    if (atParam != null)
                         {
-                        if (!atParam[i].isA(atParam[i]))
+                        int cParams = atParamTest.length;
+                        if (cParams != atParam.length)
                             {
-                            continue nextMethod;
+                            continue;
+                            }
+
+                        for (int i = 0; i < cParams; i++)
+                            {
+                            if (!atParam[i].isA(atParam[i]))
+                                {
+                                continue nextMethod;
+                                }
                             }
                         }
-                    }
-
-                if (atReturn != null) // temporary work around; TODO: remove
-                    {
-                    int cReturns = atReturnTest.length;
-                    if (cReturns != atReturn.length)
+                    if (atReturn != null)
                         {
-                        continue;
-                        }
-
-                    for (int i = 0; i < cReturns; i++)
-                        {
-                        if (!atReturn[i].isA(atReturnTest[i]))
+                        int cReturns = atReturnTest.length;
+                        if (cReturns != atReturn.length)
                             {
-                            continue nextMethod;
+                            continue;
+                            }
+
+                        for (int i = 0; i < cReturns; i++)
+                            {
+                            if (!atReturn[i].isA(atReturnTest[i]))
+                                {
+                                continue nextMethod;
+                                }
                             }
                         }
+                    return method;
                     }
-                return method;
                 }
+            struct = struct.getSuper();
             }
+        while (struct != null);
 
         return null;
         }
@@ -1654,14 +1682,15 @@ public abstract class ClassTemplate
 
     // =========== TEMPORARY ========
 
-    public void markNativeMethod(String sName, String[] asParamType)
+    /**
+     * Mark the specified method as native.
+     */
+    protected void markNativeMethod(String sName, String[] asParamType, String[] asRetType)
         {
-        markNativeMethod(sName, asParamType, VOID);
-        }
+        TypeConstant[] atypeArg = f_templates.f_adapter.getTypeConstants(this, asParamType);
+        TypeConstant[] atypeRet = f_templates.f_adapter.getTypeConstants(this, asRetType);
 
-    public void markNativeMethod(String sName, String[] asParamType, String[] asRetType)
-        {
-        MethodStructure method = getMethodStructure(sName, asParamType, asRetType);
+        MethodStructure method = findMethod(sName, atypeArg, atypeRet);
         if (method == null)
             {
             System.err.println("Missing method " + f_sName + "." + sName +
@@ -1673,16 +1702,14 @@ public abstract class ClassTemplate
             }
         }
 
-    public MethodStructure getMethodStructure(String sName, String[] asParam, String[] asRet)
+    /**
+     * Mark the specified property as native.
+     *
+     * Note: this also makes the property "calculated" (no storage)
+     */
+    protected void markNativeProperty(String sPropName)
         {
-        return f_templates.f_adapter.getMethod(this, sName, asParam, asRet);
-        }
-
-    // mark the property as native
-    // Note: this also makes the property "calculated" (no storage)
-    public void markNativeProperty(String sPropName)
-        {
-        PropertyStructure prop = getProperty(sPropName);
+        PropertyStructure prop = findProperty(sPropName);
         if (prop == null)
             {
             System.err.println("Missing property " + f_sName + "." + sPropName);

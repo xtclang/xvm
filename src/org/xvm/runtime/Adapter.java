@@ -139,7 +139,7 @@ public class Adapter
             if (template != null && template.f_struct.indexOfGenericParameter(sName) >= 0)
                 {
                 // generic type property
-                PropertyStructure prop = template.getProperty(sName);
+                PropertyStructure prop = (PropertyStructure) template.f_struct.getChild(sName);
                 return pool.ensureTerminalTypeConstant(prop.getIdentityConstant());
                 }
 
@@ -168,14 +168,6 @@ public class Adapter
             }
 
         return fNullable ? pool.ensureNullableTypeConstant(constType) : constType;
-        }
-
-    public MethodStructure getMethod(ClassTemplate template, String sMethName, String[] asArgType, String[] asRetType)
-        {
-        TypeConstant[] atArg = getTypeConstants(template, asArgType);
-        TypeConstant[] atRet = getTypeConstants(template, asRetType);
-
-        return template.getDeclaredMethod(sMethName, atArg, atRet);
         }
 
     public TypeConstant[] getTypeConstants(ClassTemplate template, String[] asType)

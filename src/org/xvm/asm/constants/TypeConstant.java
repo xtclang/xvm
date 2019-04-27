@@ -2921,7 +2921,12 @@ public abstract class TypeConstant
             // virtual methods are registered using their nested identities
             MethodInfo methodResult = methodContrib;
 
-            if (methodContrib.getTail().isOverride())
+            if (methodContrib.getTail().isNative())
+                {
+                // take it as is
+                mapVirtMods.put(nidContrib, methodResult);
+                }
+            else if (methodContrib.getTail().isOverride())
                 {
                 // the @Override tag gives us permission to look for a method with a
                 // different signature that can be narrowed to the signature of the
@@ -2934,7 +2939,7 @@ public abstract class TypeConstant
                 if (listMatches.isEmpty())
                     {
                     log(errs, Severity.ERROR, VE_SUPER_MISSING,
-                            sigContrib.getValueString(), getValueString());
+                            methodContrib.getIdentity().getPathString(), getValueString());
                     }
                 else
                     {
@@ -2966,7 +2971,8 @@ public abstract class TypeConstant
                         SignatureConstant sigBest = selectBest(aSig);
                         if (sigBest == null)
                             {
-                            log(errs, Severity.ERROR, VE_SUPER_AMBIGUOUS, sigContrib.getValueString());
+                            log(errs, Severity.ERROR, VE_SUPER_AMBIGUOUS,
+                                    methodContrib.getIdentity().getPathString());
                             }
                         else
                             {
@@ -3042,7 +3048,7 @@ public abstract class TypeConstant
                         log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
                             getValueString(),
                             methodBase.getIdentity(),
-                            methodContrib.getIdentity().getNamespace().getValueString()
+                            methodContrib.getIdentity().getPathString()
                             );
                         }
                     methodResult = methodBase.layerOn(methodContrib, fSelf, errs);

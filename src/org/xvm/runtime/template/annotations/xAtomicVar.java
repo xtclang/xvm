@@ -42,7 +42,7 @@ public class xAtomicVar
     public void initDeclared()
         {
         markNativeMethod("replace", new String[]{"RefType", "RefType"}, new String[] {"Boolean"});
-        markNativeMethod("replaceFailed", new String[]{"RefType", "RefType"}, null);
+        markNativeMethod("replaceFailed", new String[]{"RefType", "RefType"}, new String[] {"Boolean", "RefType"});
         }
 
     @Override

@@ -371,7 +371,7 @@ public class xConst
                             xException.makeHandle("Unassigned property \"" + sProp +'"'));
                     }
 
-                TypeConstant typeProp = getProperty(sProp).getType().
+                TypeConstant typeProp = findProperty(sProp).getType().
                     resolveGenerics(frameCaller.poolContext(), frameCaller.getGenericsResolver());
 
                 switch (typeProp.callEquals(frameCaller, h1, h2, Op.A_STACK))
@@ -445,7 +445,7 @@ public class xConst
                             xException.makeHandle("Unassigned property \"" + sProp +'"'));
                     }
 
-                TypeConstant typeProp = getProperty(sProp).getType().
+                TypeConstant typeProp = findProperty(sProp).getType().
                     resolveGenerics(frameCaller.poolContext(), frameCaller.getGenericsResolver());
 
                 switch (typeProp.callCompare(frameCaller, h1, h2, Op.A_STACK))
