@@ -67,6 +67,11 @@ public class xException
         return makeHandle("IllegalOperation");
         }
 
+    public static ExceptionHandle illegalCast(String sType)
+        {
+        return makeHandle("IllegalCast: " + sType);
+        }
+
     public static ExceptionHandle unsupportedOperation()
         {
         return makeHandle("UnsupportedOperation");

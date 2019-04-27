@@ -146,6 +146,15 @@ module TestMisc.xqiz.it
 
         Object o2 = 4.to<Int>();
         console.println("o2=" + o2);
+
+        try
+            {
+            console.println("i.as(String) should throw " + i.as(String));
+            }
+        catch (Exception e)
+            {
+            console.println("i.as(String) failed correctly: \"" + e.text + '"');
+            }
         }
 
     void testTernary()

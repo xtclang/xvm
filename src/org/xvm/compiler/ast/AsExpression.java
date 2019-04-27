@@ -97,9 +97,10 @@ public class AsExpression
     public Argument generateArgument(
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        Argument argBefore = expr1.generateArgument(ctx, code, true, true, errs);
-        Register regAfter  = createRegister(getType(), fUsedOnce);
-        code.add(new MoveCast(argBefore, regAfter));
+        Argument     argBefore = expr1.generateArgument(ctx, code, true, true, errs);
+        TypeConstant type      = getType();
+        Register     regAfter  = createRegister(type, fUsedOnce);
+        code.add(new MoveCast(argBefore, regAfter, type));
         return regAfter;
         }
 
@@ -109,7 +110,7 @@ public class AsExpression
         if (LVal.isLocalArgument())
             {
             Argument argTarget = expr1.generateArgument(ctx, code, true, true, errs);
-            code.add(new MoveCast(argTarget, LVal.getLocalArgument()));
+            code.add(new MoveCast(argTarget, LVal.getLocalArgument(), getType()));
             }
         else
             {

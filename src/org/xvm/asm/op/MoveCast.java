@@ -2,6 +2,7 @@ package org.xvm.asm.op;
 
 
 import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Argument;
@@ -17,9 +18,11 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xException;
 
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
- * CAST rvalue-src, lvalue-dest
+ * CAST rvalue-src, lvalue-dest, TYPE
  */
 public class MoveCast
         extends OpMove
@@ -29,10 +32,13 @@ public class MoveCast
      *
      * @param argFrom  the Register to move from
      * @param argTo    the Argument to move to
+     * @param typeTo   the type to cast to
      */
-    public MoveCast(Argument argFrom, Argument argTo)
+    public MoveCast(Argument argFrom, Argument argTo, TypeConstant typeTo)
         {
         super(argFrom, argTo);
+
+        m_typeTo = typeTo;
         }
 
     /**
@@ -45,6 +51,18 @@ public class MoveCast
             throws IOException
         {
         super(in, aconst);
+        }
+
+    @Override
+    public void write(DataOutput out, ConstantRegistry registry)
+            throws IOException
+        {
+        super.write(out, registry);
+
+        if (m_typeTo != null)
+            {
+            m_nToType = encodeArgument(m_typeTo, registry);
+            }
         }
 
     @Override
@@ -83,21 +101,36 @@ public class MoveCast
     protected int complete(Frame frame, ObjectHandle hValue)
         {
         TypeConstant typeFrom = hValue.getType();
-        TypeConstant typeTo;
+        TypeConstant typeTo   = frame.resolveType(m_nToType);
 
-        if (frame.isNextRegister(m_nToValue))
+        if (typeFrom.isA(typeTo))
             {
-            frame.introduceResolvedVar(m_nToValue, typeFrom);
-            typeTo = null; // same as typeFrom
-            }
-        else
-            {
-            // typeTo could be null if the "to" argument is on the stack
-            typeTo = frame.getArgumentType(m_nToValue);
+            if (frame.isNextRegister(m_nToValue))
+                {
+                frame.introduceResolvedVar(m_nToValue, typeTo);
+                }
+
+            return frame.assignValue(m_nToValue, hValue);
             }
 
-        return typeTo == null || typeFrom.isA(typeTo)
-            ? frame.assignValue(m_nToValue, hValue)
-            : frame.raiseException(xException.makeHandle(typeFrom.getValueString())); // TODO: use a stock exception
+        return frame.raiseException(xException.illegalCast(typeFrom.getValueString()));
         }
+
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        m_typeTo = (TypeConstant) registerArgument(m_typeTo, registry);
+        }
+
+    @Override
+    public String toString()
+        {
+        return super.toString() + ", " + Argument.toIdString(m_typeTo, m_nToType);
+        }
+
+    protected int m_nToType;
+
+    private TypeConstant m_typeTo;
     }
