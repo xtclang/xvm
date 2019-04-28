@@ -194,7 +194,7 @@ const IntNumber
             {
             return magnitude.digitCount;
             }
-            
+
         TODO
         }
 
@@ -398,16 +398,9 @@ const IntNumber
      */
     static Boolean[] bitBooleans(Bit[] bits)
         {
-        Int bitLength = bits.size;
-
-        Boolean[] bools = new Boolean[bitLength];
-        for (Int i = 0; i < bitLength; ++i)
-            {
-            bools[i] = bits[i] == 1;
-            }
-        return bools;
+        return new Array<Boolean>(bits.size, i -> bits[i] == 1);
         }
-        
+
 
     // ----- Stringable support --------------------------------------------------------------------
 
