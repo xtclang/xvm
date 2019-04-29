@@ -17,7 +17,6 @@ import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleStructure;
 
-import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -199,8 +198,11 @@ public class TemplateRegistry
             {
             if (typeActual.isSingleDefiningConstant())
                 {
-                ClassConstant constClz = (ClassConstant) typeActual.getDefiningConstant();
-                template = getTemplate(constClz);
+                TypeConstant typeResolved = typeActual.isAutoNarrowing(false)
+                        ? typeActual.resolveAutoNarrowing(typeActual.getConstantPool(), true, null)
+                        : typeActual;
+                IdentityConstant idClass = (IdentityConstant) typeResolved.getDefiningConstant();
+                template = getTemplate(idClass);
                 template = template.getTemplate(typeActual);
                 f_mapTemplatesByType.put(typeActual, template);
                 }
