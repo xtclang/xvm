@@ -34,13 +34,20 @@ public class xOSFileStore
         markNativeMethod("watchRecursively", PATHWATCHER, FUNCTION );
         }
 
-    public static String[] FUNCTION    = new String[] {"Function"};
-    public static String[] PATH        = new String[] {"fs.Path"};
-    public static String[] FILEWATCHER = new String[] {"fs.FileWatcher"};
-    public static String[] FILENODE    = new String[] {"fs.FileNode"};
-    public static String[] FILE        = new String[] {"fs.File"};
-    public static String[] DIRECTORY   = new String[] {"fs.Directory"};
 
-    public static String[] PATHPATH    = new String[] {"fs.Path", "fs.Path"};
-    public static String[] PATHWATCHER = new String[] {"fs.Path", "fs.FileWatcher"};
+    // ----- constants -----------------------------------------------------------------------------
+
+    public static final String[] FUNCTION    = new String[] {"Function"};
+    public static final String[] PATH        = new String[] {"fs.Path"};
+    public static final String[] FILEWATCHER = new String[] {"fs.FileWatcher"};
+    public static final String[] FILENODE    = new String[] {"fs.FileNode"};
+    public static final String[] FILE        = new String[] {"fs.File"};
+    public static final String[] DIRECTORY   = new String[] {"fs.Directory"};
+
+    public static final String[] PATHPATH    = new String[] {"fs.Path", "fs.Path"};
+    public static final String[] PATHWATCHER = new String[] {"fs.Path", "fs.FileWatcher"};
+
+
+    // ----- data members --------------------------------------------------------------------------
+    System
     }

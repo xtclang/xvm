@@ -39,14 +39,14 @@ public class ServiceContext
     ServiceContext(Container container, ModuleStructure module, String sName, int nId)
         {
         f_container = container;
-        f_module = module;
-        f_sName = sName;
-        f_nId = nId;
+        f_module    = module;
+        f_sName     = sName;
+        f_nId       = nId;
 
-        f_heapGlobal = container.f_heapGlobal;
-        f_templates = container.f_templates;
-        f_pool = module.getConstantPool();
-        f_queueMsg = new ConcurrentLinkedQueue<>();
+        f_heapGlobal    = container.f_heapGlobal;
+        f_templates     = container.f_templates;
+        f_pool          = module.getConstantPool();
+        f_queueMsg      = new ConcurrentLinkedQueue<>();
         f_queueResponse = new ConcurrentLinkedQueue<>();
         }
 

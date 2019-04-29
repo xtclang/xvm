@@ -41,7 +41,7 @@ module TestFiles.xqiz.it
     void testInject()
         {
         console.println("\n** testInject()");
-        @Inject FileStore root;
+        @Inject FileStore storage;
         console.println("readOnly=" + root.readOnly)
         }
     }

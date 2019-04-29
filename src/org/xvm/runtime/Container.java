@@ -1,6 +1,8 @@
 package org.xvm.runtime;
 
 
+import java.io.File;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -191,20 +193,18 @@ public class Container
 
         // +++ OSFileStore
         ClassTemplate templateFileStore = f_templates.getTemplate("fs.FileStore");
-        if (templateFileStore != null)
+        ClassTemplate templateDirectory = f_templates.getTemplate("fs.FileStore");
+        if (templateFileStore != null && templateDirectory != null)
             {
             TypeConstant typeFileStore = templateFileStore.getCanonicalType();
+            TypeConstant typeDirectory = templateDirectory.getCanonicalType();
 
-            ClassTemplate templateRTFileStore = f_templates.getTemplate("_native.fs.OSFileStore");
-
-            Supplier<ObjectHandle> supplierFileStore = () ->
-                xService.makeHandle(createServiceContext("FileStore", f_moduleRoot),
-                        templateRTFileStore.getCanonicalClass(), typeFileStore);
-
-            f_mapResources.put(new InjectionKey("root", typeFileStore), supplierFileStore);
+            f_mapResources.put(new InjectionKey("storage", typeFileStore), (Supplier<ObjectHandle>) this::ensureFileStore);
+            f_mapResources.put(new InjectionKey("rootDir", typeDirectory), (Supplier<ObjectHandle>) this::ensureRootDir);
+            f_mapResources.put(new InjectionKey("homeDir", typeDirectory), (Supplier<ObjectHandle>) this::ensureHomeDir);
+            f_mapResources.put(new InjectionKey("curDir" , typeDirectory), (Supplier<ObjectHandle>) this::ensureCurDir);
+            f_mapResources.put(new InjectionKey("tmpDir" , typeDirectory), (Supplier<ObjectHandle>) this::ensureTmpDir);
             }
-
-        // TODO fs.Directory tempDir
         }
 
     protected ObjectHandle ensureDefaultClock()
@@ -236,6 +236,81 @@ public class Container
         {
         // TODO
         return ensureDefaultClock();
+        }
+
+    protected ObjectHandle ensureFileStore()
+        {
+        ObjectHandle hStore = m_hFileStore;
+        if (hStore == null)
+            {
+            ClassTemplate templateFileStore   = f_templates.getTemplate("fs.FileStore");
+            ClassTemplate templateRTFileStore = f_templates.getTemplate("_native.fs.OSFileStore");
+            TypeConstant  typeFileStore       = templateFileStore.getCanonicalType();
+            m_hFileStore = hStore = xService.makeHandle(createServiceContext("Storage",
+                    f_moduleRoot), templateRTFileStore.getCanonicalClass(), typeFileStore);
+            }
+
+        return hStore;
+        }
+
+    Path ensurePath(String sPath)
+        {
+        if (sPath == null)
+            {
+            sPath = "/";
+            }
+
+        }
+    protected ObjectHandle ensureRootDir()
+        {
+        ObjectHandle hDir = m_hRootDir;
+        if (hDir == null)
+            {
+            ClassTemplate templateDirectory   = f_templates.getTemplate("fs.FileStore");
+            ClassTemplate templateRTDirectory = f_templates.getTemplate("_native.fs.OSFileStore");
+            TypeConstant  typeDirectory       = templateDirectory.getCanonicalType();
+            Path          path = ensurePath(null);
+            // TODO
+            throw new UnsupportedOperationException();
+            }
+
+        return hDir;
+        }
+
+    protected ObjectHandle ensureHomeDir()
+        {
+        ObjectHandle hDir = m_hHomeDir;
+        if (hDir == null)
+            {
+            // TODO
+            throw new UnsupportedOperationException();
+            }
+
+        return hDir;
+        }
+
+    protected ObjectHandle ensureCurDir()
+        {
+        ObjectHandle hDir = m_hCurDir;
+        if (hDir == null)
+            {
+            // TODO
+            throw new UnsupportedOperationException();
+            }
+
+        return hDir;
+        }
+
+    protected ObjectHandle ensureTmpDir()
+        {
+        ObjectHandle hDir = m_hTmpDir;
+        if (hDir == null)
+            {
+            // TODO
+            throw new UnsupportedOperationException();
+            }
+
+        return hDir;
         }
 
     public ServiceContext createServiceContext(String sName, ModuleStructure module)
@@ -345,14 +420,14 @@ public class Container
             }
         }
 
-    public final Runtime f_runtime;
+    public final Runtime          f_runtime;
     public final ModuleRepository f_repository;
     public final TemplateRegistry f_templates;
-    public final Adapter f_adapter;
-    public final ObjectHeap f_heapGlobal;
+    public final Adapter          f_adapter;
+    public final ObjectHeap       f_heapGlobal;
 
     final protected ModuleStructure f_moduleRoot;
-    final protected ModuleConstant f_idModule;
+    final protected ModuleConstant  f_idModule;
 
     // service context map (concurrent set)
     final Map<ServiceContext, ServiceContext> f_mapServices = new ConcurrentHashMap<>();
@@ -365,6 +440,11 @@ public class Container
     private ClassTemplate m_templateModule;
 
     private ObjectHandle m_hLocalClock;
+    private ObjectHandle m_hFileStore;
+    private ObjectHandle m_hRootDir;
+    private ObjectHandle m_hHomeDir;
+    private ObjectHandle m_hCurDir;
+    private ObjectHandle m_hTmpDir;
 
     // the values are: ObjectHandle | Supplier<ObjectHandle>
     final Map<InjectionKey, Object> f_mapResources = new HashMap<>();

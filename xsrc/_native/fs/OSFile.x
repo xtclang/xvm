@@ -13,13 +13,13 @@ class OSFile
     @Override
     conditional File link()
         {
-        TODO
+        return False; // TODO
         }
 
     @Override
     conditional FileStore archive()
         {
-        TODO
+        return False; // TODO
         }
 
     @Override
