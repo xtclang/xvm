@@ -2921,12 +2921,7 @@ public abstract class TypeConstant
             // virtual methods are registered using their nested identities
             MethodInfo methodResult = methodContrib;
 
-            if (methodContrib.getTail().isNative())
-                {
-                // take it as is
-                mapVirtMods.put(nidContrib, methodResult);
-                }
-            else if (methodContrib.getTail().isOverride())
+            if (methodContrib.getTail().isOverride())
                 {
                 // the @Override tag gives us permission to look for a method with a
                 // different signature that can be narrowed to the signature of the
@@ -2938,8 +2933,16 @@ public abstract class TypeConstant
 
                 if (listMatches.isEmpty())
                     {
-                    log(errs, Severity.ERROR, VE_SUPER_MISSING,
-                            methodContrib.getIdentity().getPathString(), getValueString());
+                    if (methodContrib.getTail().isNative())
+                        {
+                        // take it as is
+                        mapVirtMods.put(nidContrib, methodResult);
+                        }
+                    else
+                        {
+                        log(errs, Severity.ERROR, VE_SUPER_MISSING,
+                                methodContrib.getIdentity().getPathString(), getValueString());
+                        }
                     }
                 else
                     {
