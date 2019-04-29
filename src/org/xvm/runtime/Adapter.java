@@ -15,7 +15,6 @@ import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
 
-import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -118,13 +117,13 @@ public class Adapter
                 sSimpleName = sSimpleName.substring(0, sSimpleName.length() - 1);
                 }
 
-            ClassConstant constClass = f_templates.getClassConstant(sSimpleName);
-            if (constClass != null)
+            IdentityConstant idClass = f_templates.getIdentityConstant(sSimpleName);
+            if (idClass != null)
                 {
                 String[] asType = Handy.parseDelimitedString(sParam, ',');
                 TypeConstant[] acType = getTypeConstants(template, asType);
 
-                constType = pool.ensureClassTypeConstant(constClass, null, acType);
+                constType = pool.ensureClassTypeConstant(idClass, null, acType);
                 }
             }
         else

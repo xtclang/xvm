@@ -6,9 +6,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IntConstant;
-import org.xvm.asm.constants.ThisClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
@@ -17,6 +15,10 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
+
+import org.xvm.runtime.template.collections.BitBasedArray;
+import org.xvm.runtime.template.collections.BitBasedArray.BitArrayHandle;
+import org.xvm.runtime.template.collections.xArray.Mutability;
 
 
 /**
@@ -72,6 +74,7 @@ public abstract class xConstrainedInteger
         markNativeMethod("to", VOID, new String[]{"VarDec"});
         markNativeMethod("to", VOID, new String[]{"Char"});
         markNativeMethod("to", VOID, new String[]{"collections.Array<Boolean>"});
+        markNativeMethod("to", VOID, new String[]{"collections.Array<Bit>"});
 
         markNativeMethod("rotateLeft"   , INT , THIS);
         markNativeMethod("rotateRight"  , INT , THIS);
@@ -240,7 +243,6 @@ public abstract class xConstrainedInteger
 
             case "shiftAllRight":
                 return invokeShrAll(frame, hTarget, hArg, iReturn);
-
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -265,7 +267,7 @@ public abstract class xConstrainedInteger
             case "to":
                 {
                 TypeConstant  typeRet  = method.getReturn(0).getType();
-                ClassTemplate template = getTemplateByType(typeRet);
+                ClassTemplate template = f_templates.getTemplate(typeRet);
 
                 if (template == this)
                     {
@@ -310,10 +312,11 @@ public abstract class xConstrainedInteger
                     return frame.assignValue(iReturn, xChar.makeHandle(l));
                     }
 
-                if (template instanceof xBoolean)
+                if (template instanceof BitBasedArray)
                     {
                     long l = ((JavaLong) hTarget).getValue();
-                    return frame.assignValue(iReturn, l == 0 ? xBoolean.FALSE : xBoolean.TRUE);
+                    return frame.assignValue(iReturn, new BitArrayHandle(template.getCanonicalClass(),
+                            f_cNumBits, toByteArray(l), Mutability.Constant));
                     }
 
                 break;
@@ -568,7 +571,9 @@ public abstract class xConstrainedInteger
     @Override
     public int buildHashCode(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return frame.assignValue(iReturn, hTarget);
+        long l = ((JavaLong) hTarget).getValue();
+
+        return frame.assignValue(iReturn, makeInt(l));
         }
 
     // ----- comparison support -----
@@ -642,47 +647,46 @@ public abstract class xConstrainedInteger
 
     // ----- helpers -----
 
-    /**
-     * @param type  a type to get a template for
-     *
-     * @return a class template instance corresponding to the specified name
-     */
-    public static ClassTemplate getTemplateByType(TypeConstant type)
+    protected byte[] toByteArray(long l)
         {
-        Constant constant = type.getDefiningConstant();
-        if (constant instanceof ThisClassConstant)
+        switch (f_cNumBits)
             {
-            constant = ((ThisClassConstant) constant).getDeclarationLevelClass();
-            }
-        String sName = ((ClassConstant) constant).getPathElementString();
+            case 64:
+                return new byte[]
+                    {
+                    (byte) l,
+                    (byte) (l >> 8),
+                    (byte) (l >> 16),
+                    (byte) (l >> 24),
+                    (byte) (l >> 32),
+                    (byte) (l >> 40),
+                    (byte) (l >> 48),
+                    (byte) (l >> 56)
+                    };
 
-        switch (sName)
-            {
-            case "Int8":
-                return xInt8.INSTANCE;
-            case "Int16":
-                return xInt16.INSTANCE;
-            case "Int32":
-                return xInt32.INSTANCE;
-            case "Int64":
-                return xInt64.INSTANCE;
-            case "Int128":
-                return xInt128.INSTANCE;
-            case "UInt8":
-                return xUInt8.INSTANCE;
-            case "UInt16":
-                return xUInt16.INSTANCE;
-            case "UInt32":
-                return xUInt32.INSTANCE;
-            case "UInt64":
-                return xUInt64.INSTANCE;
-            case "UInt128":
-                return xUInt128.INSTANCE;
+            case 32:
+                return new byte[] {
+                    (byte) l,
+                    (byte) (l >> 8),
+                    (byte) (l >> 16),
+                    (byte) (l >> 24),
+                    };
+
+            case 16:
+                return new byte[] {
+                    (byte) l,
+                    (byte) (l >> 8),
+                    };
+
+            case 8:
+                return new byte[] {
+                    (byte) l,
+                    };
+
             default:
-                return null;
+                throw new IllegalStateException();
             }
         }
-
 
     // ----- fields -----
 

@@ -24,7 +24,7 @@ import org.xvm.runtime.template.xString;
 
 
 /**
- * Native Array implementation for elements that fit into Java long.
+ * Native Array<Int> implementation.
  */
 public class xIntArray
         extends xArray
@@ -75,7 +75,7 @@ public class xIntArray
         }
 
     @Override
-    public ArrayHandle createArrayHandle(ClassComposition clzArray, long cCapacity, Mutability mutability)
+    public ArrayHandle createArrayHandle(ClassComposition clzArray, int cCapacity, Mutability mutability)
         {
         return new IntArrayHandle(clzArray, cCapacity, mutability);
         }
@@ -220,20 +220,20 @@ public class xIntArray
                 return frame.raiseException(xException.unsupportedOperation());
             }
 
-        IntArrayHandle hArrayNew = (IntArrayHandle) hValue;
+        IntArrayHandle hArrayAdd = (IntArrayHandle) hValue;
 
-        int cNew = hArrayNew.m_cSize;
-        if (cNew > 0)
+        int cAdd = hArrayAdd.m_cSize;
+        if (cAdd > 0)
             {
             long[] alThis = hArray.m_alValue;
             int    cThis  = hArray.m_cSize;
-
-            if (cThis + cNew > alThis.length)
+            int    cNew   = cThis + cAdd;
+            if (cNew > alThis.length)
                 {
-                alThis = hArray.m_alValue = grow(alThis, cThis + cNew);
+                alThis = hArray.m_alValue = grow(alThis, cNew);
                 }
-            hArray.m_cSize += cNew;
-            System.arraycopy(hArrayNew.m_alValue, 0, alThis, cThis, cNew);
+            hArray.m_cSize = cNew;
+            System.arraycopy(hArrayAdd.m_alValue, 0, alThis, cThis, cAdd);
             }
         return frame.assignValue(iReturn, hArray);
         }
@@ -310,11 +310,11 @@ public class xIntArray
             m_cSize = alValue.length;
             }
 
-        protected IntArrayHandle(TypeComposition clzArray, long cCapacity, Mutability mutability)
+        protected IntArrayHandle(TypeComposition clzArray, int cCapacity, Mutability mutability)
             {
             super(clzArray, mutability);
 
-            m_alValue = new long[(int) cCapacity];
+            m_alValue = new long[cCapacity];
             }
 
         @Override

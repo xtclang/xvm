@@ -57,4 +57,18 @@ const Bit
         {
         return literal == 1 ? 0 : 1;
         }
+
+    // ----- Stringable ----------------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        return 1;
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        appender.add(to<Boolean>() ? '1' : '0');
+        }
     }

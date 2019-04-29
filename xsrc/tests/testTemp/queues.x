@@ -8,14 +8,6 @@ module TestQueues.xqiz.it
 
     void run()
         {
-//        Int n = 1;
-//        Bit[] bits = n.to<Bit[]>();
-//        for (Bit bit : bits)
-//            {
-//            console.print(""+bit);
-//            }
-//        console.println("");
-
         testSimple();
         }
 

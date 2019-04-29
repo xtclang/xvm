@@ -11,7 +11,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
 /**
- * TODO:
+ * Native Boolean implementation.
  */
 public class xBoolean
         extends xEnum
