@@ -188,6 +188,23 @@ public class Container
 
             f_mapResources.put(new InjectionKey("console", typeConsole), supplierConsole);
             }
+
+        // +++ OSFileStore
+        ClassTemplate templateFileStore = f_templates.getTemplate("fs.FileStore");
+        if (templateFileStore != null)
+            {
+            TypeConstant typeFileStore = templateFileStore.getCanonicalType();
+
+            ClassTemplate templateRTFileStore = f_templates.getTemplate("_native.fs.OSFileStore");
+
+            Supplier<ObjectHandle> supplierFileStore = () ->
+                xService.makeHandle(createServiceContext("FileStore", f_moduleRoot),
+                        templateRTFileStore.getCanonicalClass(), typeFileStore);
+
+            f_mapResources.put(new InjectionKey("root", typeFileStore), supplierFileStore);
+            }
+
+        // TODO fs.Directory tempDir
         }
 
     protected ObjectHandle ensureDefaultClock()
