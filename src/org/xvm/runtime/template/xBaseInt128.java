@@ -145,7 +145,7 @@ public abstract class xBaseInt128
             case "to":
                 {
                 TypeConstant  typeRet  = method.getReturn(0).getType();
-                ClassTemplate template = xConstrainedInteger.getTemplateByType(typeRet);
+                ClassTemplate template = f_templates.getTemplate(typeRet);
 
                 if (template == this)
                     {

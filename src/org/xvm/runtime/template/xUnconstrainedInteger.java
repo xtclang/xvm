@@ -261,7 +261,9 @@ public abstract class xUnconstrainedInteger
     @Override
     public int buildHashCode(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return frame.assignValue(iReturn, hTarget);
+        long l = ((ObjectHandle.JavaLong) hTarget).getValue();
+
+        return frame.assignValue(iReturn, xInt64.makeHandle(l));
         }
 
     // ----- comparison support -----

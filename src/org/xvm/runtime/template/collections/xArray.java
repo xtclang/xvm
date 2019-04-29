@@ -61,6 +61,8 @@ public class xArray
         {
         registerNative(new xIntArray(f_templates, f_struct, true));
         registerNative(new xCharArray(f_templates, f_struct, true));
+        registerNative(new xBooleanArray(f_templates, f_struct, true));
+        registerNative(new xBitArray(f_templates, f_struct, true));
 
         markNativeProperty("size");
         markNativeProperty("mutability");
@@ -166,6 +168,14 @@ public class xArray
                 {
                 return xCharArray.INSTANCE;
                 }
+            if (typeParam.equals(pool.typeBoolean()))
+                {
+                return xBooleanArray.INSTANCE;
+                }
+            if (typeParam.equals(pool.ensureEcstasyTypeConstant("Bit")))
+                {
+                return xBitArray.INSTANCE;
+                }
             }
         return this;
         }
@@ -227,7 +237,7 @@ public class xArray
      *
      * @return the array handle
      */
-    public ArrayHandle createArrayHandle(ClassComposition clzArray, long cCapacity, Mutability mutability)
+    public ArrayHandle createArrayHandle(ClassComposition clzArray, int cCapacity, Mutability mutability)
         {
         return new GenericArrayHandle(clzArray, cCapacity, mutability);
         }
@@ -261,7 +271,7 @@ public class xArray
                     }
 
                 xArray      template = (xArray) clzArray.getTemplate();
-                ArrayHandle hArray   = template.createArrayHandle(clzArray, cCapacity, Mutability.Mutable);
+                ArrayHandle hArray   = template.createArrayHandle(clzArray, (int) cCapacity, Mutability.Mutable);
                 return frame.assignValue(iReturn, hArray);
                 }
 
@@ -277,7 +287,7 @@ public class xArray
                     }
 
                 xArray      template = (xArray) clzArray.getTemplate();
-                ArrayHandle hArray   = template.createArrayHandle(clzArray, cCapacity, Mutability.FixedSize);
+                ArrayHandle hArray   = template.createArrayHandle(clzArray, (int) cCapacity, Mutability.FixedSize);
 
                 int cSize = (int) cCapacity;
                 if (cSize > 0)

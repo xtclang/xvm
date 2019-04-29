@@ -168,7 +168,7 @@ public class xIntLiteral
             {
             case "to":
                 TypeConstant  typeRet  = method.getReturn(0).getType();
-                ClassTemplate template = xConstrainedInteger.getTemplateByType(typeRet);
+                ClassTemplate template = f_templates.getTemplate(typeRet);
                 PackedInteger piValue  = hLiteral.getValue();
 
                 if (template instanceof xConstrainedInteger)

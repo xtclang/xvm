@@ -25,7 +25,7 @@ import org.xvm.runtime.template.collections.xCharArray;
 import org.xvm.runtime.template.collections.xCharArray.CharArrayHandle;
 
 /**
- * TODO:
+ * Native String implementation.
  */
 public class xString
         extends xConst
@@ -41,7 +41,9 @@ public class xString
             {
             INSTANCE = this;
             EMPTY_STRING = new StringHandle(INSTANCE.getCanonicalClass(), new char[0]);
-            EMPTY_ARRAY = makeHandle(new char[] {'[', ']'});
+            EMPTY_ARRAY  = makeHandle(new char[] {'[', ']'});
+            ZERO         = makeHandle(new char[] {'0'});
+            ONE          = makeHandle(new char[] {'1'});
             }
         }
 
@@ -486,4 +488,6 @@ public class xString
 
     public static StringHandle EMPTY_STRING;
     public static StringHandle EMPTY_ARRAY;
+    public static StringHandle ZERO;
+    public static StringHandle ONE;
     }

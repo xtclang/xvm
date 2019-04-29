@@ -26,7 +26,7 @@ import org.xvm.runtime.template.xString.StringHandle;
 
 
 /**
- * Native Array implementation for chars.
+ * Native Array<Char> implementation.
  */
 public class xCharArray
         extends xArray
@@ -77,7 +77,7 @@ public class xCharArray
         }
 
     @Override
-    public ArrayHandle createArrayHandle(ClassComposition clzArray, long cCapacity, Mutability mutability)
+    public ArrayHandle createArrayHandle(ClassComposition clzArray, int cCapacity, Mutability mutability)
         {
         return new CharArrayHandle(clzArray, cCapacity, mutability);
         }
@@ -330,11 +330,11 @@ public class xCharArray
             m_cSize = achValue.length;
             }
 
-        protected CharArrayHandle(TypeComposition clzArray, long cCapacity, Mutability mutability)
+        protected CharArrayHandle(TypeComposition clzArray, int cCapacity, Mutability mutability)
             {
             super(clzArray, mutability);
 
-            m_achValue = new char[(int) cCapacity];
+            m_achValue = new char[cCapacity];
             }
 
         @Override

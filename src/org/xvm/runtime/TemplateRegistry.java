@@ -17,7 +17,6 @@ import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleStructure;
 
-import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -37,8 +36,8 @@ public class TemplateRegistry
     public final ModuleStructure f_moduleRoot;
     public final Adapter f_adapter;
 
-    // cache - TypeConstant by name (only for core classes)
-    private final Map<String, TypeConstant> f_mapTypesByName = new ConcurrentHashMap<>();
+    // cache - IdentityConstant by name (only for core classes)
+    private final Map<String, IdentityConstant> f_mapIdByName = new ConcurrentHashMap<>();
 
     // cache - ClassTemplates by type
     private final Map<TypeConstant, ClassTemplate> f_mapTemplatesByType = new ConcurrentHashMap<>();
@@ -171,13 +170,13 @@ public class TemplateRegistry
         throw new IllegalArgumentException("Class not found: " + sName);
         }
 
-    // this call (template by name) can only come from the root module
-    public TypeConstant getTypeConstant(String sName)
+    // this call (id by name) can only come from the root module
+    public IdentityConstant getIdentityConstant(String sName)
         {
         try
             {
-            return f_mapTypesByName.computeIfAbsent(sName, s ->
-                getClassStructure(s).getIdentityConstant().getType());
+            return f_mapIdByName.computeIfAbsent(sName, s ->
+                getClassStructure(s).getIdentityConstant());
             }
         catch (NullPointerException e)
             {
@@ -186,22 +185,9 @@ public class TemplateRegistry
         }
 
     // this call (template by name) can only come from the root module
-    public ClassConstant getClassConstant(String sName)
-        {
-        try
-            {
-            return (ClassConstant) getClassStructure(sName).getIdentityConstant();
-            }
-        catch (ClassCastException e)
-            {
-            throw new IllegalArgumentException("Not a class: " + sName);
-            }
-        }
-
-    // this call (template by name) can only come from the root module
     public ClassTemplate getTemplate(String sName)
         {
-        return getTemplate(getTypeConstant(sName));
+        return getTemplate(getIdentityConstant(sName));
         }
 
     // obtain a ClassTemplate for the specified type
@@ -212,8 +198,12 @@ public class TemplateRegistry
             {
             if (typeActual.isSingleDefiningConstant())
                 {
-                ClassConstant constClz = (ClassConstant) typeActual.getDefiningConstant();
-                template = getTemplate(constClz);
+                TypeConstant typeResolved = typeActual.isAutoNarrowing(false)
+                        ? typeActual.resolveAutoNarrowing(typeActual.getConstantPool(), true, null)
+                        : typeActual;
+                IdentityConstant idClass = (IdentityConstant) typeResolved.getDefiningConstant();
+                template = getTemplate(idClass);
+                template = template.getTemplate(typeActual);
                 f_mapTemplatesByType.put(typeActual, template);
                 }
             else
@@ -274,7 +264,7 @@ public class TemplateRegistry
     // produce a ClassComposition based on the specified TypeConstant
     public ClassComposition resolveClass(TypeConstant typeActual)
         {
-        return typeActual.getOpSupport(this).getTemplate(typeActual).
+        return getTemplate(typeActual).
             ensureClass(typeActual.normalizeParameters(typeActual.getConstantPool()));
         }
     }

@@ -15,6 +15,7 @@ module TestArray.xqiz.it
 
         testAssignSideEffects();
         testNew();
+        testBits();
         }
 
     void testSimple()
@@ -135,5 +136,18 @@ module TestArray.xqiz.it
             array += "#" + i;
             }
         console.println("array=" + array + ", size=" + array.size);
+        }
+
+    void testBits()
+        {
+        console.println("\n** testBits()");
+
+        Int n = 17;
+        Bit[] bits = n.to<Bit[]>();
+        for (Bit bit : bits)
+            {
+            console.print(bit);
+            }
+        console.println("");
         }
     }
