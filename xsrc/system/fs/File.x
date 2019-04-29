@@ -31,6 +31,29 @@ interface File
      */
     File truncate(Int newSize = 0);
 
+    /**
+     * Determine if this file is a _link_ to another file, and if it is, obtain a reference to the
+     * link itself, instead of the file that is linked-to. This allows the link to be deleted, for
+     * example, instead of deleting the file that is linked-to.
+     *
+     * Normally, applications can ignore the detail of whether or not a file is a link (such as a
+     * _symbolic link_), because the `File` interface represents the file that is _linked to_. For
+     * example, opening the file will open the file that is _linked to_, so the application can
+     * read and write data directly from that linked-to file without any knowledge that it is doing
+     * so via a link.
+     */
+    conditional File link();
+
+    /**
+     * Determine if this file is an _archive_, which is a directory structure encoded into a file,
+     * and which may contain any number of directories and files nested within it. If the file is
+     * an archive **and** the archive format is known and supported, then this method allows a
+     * caller to obtain a [FileStore] reference representing the contents of the archive.
+     *
+     * Common archive formats include: .zip, .tar, .gz, .dmg.
+     */
+    conditional FileStore archive();
+
     enum ReadOption
         {
         /**

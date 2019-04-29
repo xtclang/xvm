@@ -1,6 +1,7 @@
 module TestFiles.xqiz.it
     {
     import X.fs.Path;
+    import X.fs.FileStore;
 
     @Inject Console console;
 
@@ -9,10 +10,12 @@ module TestFiles.xqiz.it
         console.println("*** file tests ***\n");
 
         testPaths();
+        testInject();
         }
 
     void testPaths()
         {
+        console.println("\n** testPaths()");
         Path path = new Path(null, "test");
         console.println("path=" + path);
 
@@ -33,5 +36,12 @@ module TestFiles.xqiz.it
 
         path = ROOT + path;
         console.println("path=" + path);
+        }
+
+    void testInject()
+        {
+        console.println("\n** testInject()");
+        @Inject FileStore root;
+        console.println("readOnly=" + root.readOnly)
         }
     }
