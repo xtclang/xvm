@@ -13,9 +13,10 @@ service OSStorage
 
     FileStore fileStore;
 
-    Directory directoryFor(String )
+    Directory directoryFor(String sName)
         {
         // natural code here to create Path from String
         // get FileStore and look up the path and return it
+        TODO
         }
     }

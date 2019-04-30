@@ -8,19 +8,19 @@ import Ecstasy.fs.Path;
 class OSFileNode
         implements FileNode
     {
-    construct OSFileNode(Path path)
+    construct(Path path)
         {
         assert path.absolute;
         this.path = path.normalize();
         }
 
     @Override
-    @RO Path path;
+    Path path;
 
     @Override
     @RO String name.get()
         {
-        return path.form == Root ? "" : path.
+        return path.form == Root ? "" : path.name;
         }
 
     @Override

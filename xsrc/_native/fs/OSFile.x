@@ -1,6 +1,7 @@
 import Ecstasy.fs.File;
 import Ecstasy.fs.FileChannel;
 import Ecstasy.fs.FileStore;
+import Ecstasy.fs.Path;
 
 /**
  * Native OS File implementation.
@@ -9,6 +10,11 @@ class OSFile
         extends OSFileNode
         implements File
     {
+    construct(Path path)
+        {
+        construct OSFileNode(path);
+        }
+
     @Override
     immutable Byte[] contents;
 
