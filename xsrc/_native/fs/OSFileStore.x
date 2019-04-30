@@ -1,5 +1,6 @@
 import Ecstasy.fs.Directory;
 import Ecstasy.fs.File;
+import Ecstasy.fs.FileNode;
 import Ecstasy.fs.FileStore;
 import Ecstasy.fs.FileWatcher;
 import Ecstasy.fs.Path;
@@ -12,18 +13,20 @@ class OSFileStore
     {
     construct()
         {
-        this.root     = ???;
         this.readOnly = False;
         }
 
-    construct(Directory root, Boolean readOnly)
+    construct(Boolean readOnly)
         {
-        this.root     = root;
         this.readOnly = readOnly;
         }
 
     @Override
-    public/private Directory root;
+    @Lazy Directory root.calc()
+        {
+        assert Directory|File dir : find(Path.ROOT);
+        return dir.as(Directory);
+        }
 
     @Override
     conditional Directory|File find(Path path)
@@ -78,7 +81,7 @@ class OSFileStore
             return this;
             }
 
-        return new OSFileStore(root, True);
+        return new OSFileStore(True);
         }
 
     @Override

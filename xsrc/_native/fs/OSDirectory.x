@@ -1,6 +1,8 @@
 import Ecstasy.fs.Directory;
 import Ecstasy.fs.File;
+import Ecstasy.fs.FileStore;
 import Ecstasy.fs.FileWatcher;
+import Ecstasy.fs.Path;
 
 /**
  * Native OS Directory implementation.
@@ -9,8 +11,9 @@ class OSDirectory
         extends OSFileNode
         implements Directory
     {
-    construct(FileStore , Path path)
+    construct(FileStore fileStore, Path path)
         {
+        construct OSFileNode(fileStore, path);
         }
 
     @Override

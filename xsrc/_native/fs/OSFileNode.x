@@ -1,4 +1,5 @@
 import Ecstasy.fs.FileNode;
+import Ecstasy.fs.FileStore;
 import Ecstasy.fs.FileWatcher;
 import Ecstasy.fs.Path;
 
@@ -8,19 +9,23 @@ import Ecstasy.fs.Path;
 class OSFileNode
         implements FileNode
     {
-    construct OSFileNode(Path path)
+    construct(FileStore fileStore, Path path)
         {
         assert path.absolute;
-        this.path = path.normalize();
+
+        this.fileStore = fileStore;
+        this.path      = path.normalize();
         }
 
+    private FileStore fileStore;
+
     @Override
-    @RO Path path;
+    public/private Path path;
 
     @Override
     @RO String name.get()
         {
-        return path.form == Root ? "" : path.
+        return path.form == Root ? "" : path.name;
         }
 
     @Override

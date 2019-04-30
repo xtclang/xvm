@@ -10,7 +10,6 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
@@ -23,7 +22,6 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
-import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
@@ -162,9 +160,9 @@ public class Container
             {
             TypeConstant typeClock = templateClock.getCanonicalType();
 
-            f_mapResources.put(new InjectionKey("clock"     , typeClock), this::ensureDefaultClock);
-            f_mapResources.put(new InjectionKey("localClock", typeClock), this::ensureLocalClock);
-            f_mapResources.put(new InjectionKey("utcClock"  , typeClock), this::ensureUTCClock);
+            f_mapSuppliers.put(new InjectionKey("clock"     , typeClock), this::ensureDefaultClock);
+            f_mapSuppliers.put(new InjectionKey("localClock", typeClock), this::ensureLocalClock);
+            f_mapSuppliers.put(new InjectionKey("utcClock"  , typeClock), this::ensureUTCClock);
             }
 
         // +++ NanosTimer
@@ -177,7 +175,7 @@ public class Container
             Function<Frame, ObjectHandle> supplierTimer = (frame) ->
                 xService.makeHandle(createServiceContext("Timer", f_moduleRoot),
                         templateRealTimeTimer.getCanonicalClass(), typeTimer);
-            f_mapResources.put(new InjectionKey("timer", typeTimer), supplierTimer);
+            f_mapSuppliers.put(new InjectionKey("timer", typeTimer), supplierTimer);
             }
 
         // +++ Console
@@ -192,7 +190,7 @@ public class Container
                 xService.makeHandle(createServiceContext("Console", f_moduleRoot),
                     templateRTConsole.getCanonicalClass(), typeConsole);
 
-            f_mapResources.put(new InjectionKey("console", typeConsole), supplierConsole);
+            f_mapSuppliers.put(new InjectionKey("console", typeConsole), supplierConsole);
             }
 
         // +++ OSFileStore
@@ -203,11 +201,11 @@ public class Container
             TypeConstant typeFileStore = templateFileStore.getCanonicalType();
             TypeConstant typeDirectory = templateDirectory.getCanonicalType();
 
-            f_mapResources.put(new InjectionKey("storage", typeFileStore), this::ensureFileStore);
-            f_mapResources.put(new InjectionKey("rootDir", typeDirectory), this::ensureRootDir);
-            f_mapResources.put(new InjectionKey("homeDir", typeDirectory), this::ensureHomeDir);
-            f_mapResources.put(new InjectionKey("curDir" , typeDirectory), this::ensureCurDir);
-            f_mapResources.put(new InjectionKey("tmpDir" , typeDirectory), this::ensureTmpDir);
+            f_mapSuppliers.put(new InjectionKey("storage", typeFileStore), this::ensureFileStore);
+            f_mapSuppliers.put(new InjectionKey("rootDir", typeDirectory), this::ensureRootDir);
+            f_mapSuppliers.put(new InjectionKey("homeDir", typeDirectory), this::ensureHomeDir);
+            f_mapSuppliers.put(new InjectionKey("curDir" , typeDirectory), this::ensureCurDir);
+            f_mapSuppliers.put(new InjectionKey("tmpDir" , typeDirectory), this::ensureTmpDir);
             }
         }
 
@@ -356,23 +354,26 @@ public class Container
     // TODO: need an "override" name or better yet "injectionAttributes"
     public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type)
         {
-        InjectionKey key = new InjectionKey(sName, type);
-        Object oResource = f_mapResources.get(key);
-
-        if (oResource instanceof ObjectHandle)
+        InjectionKey key  = new InjectionKey(sName, type);
+        ObjectHandle hVal = f_mapResources.get(key);
+        if (hVal != null)
             {
-            return (ObjectHandle) oResource;
+            return hVal;
             }
 
-        if (oResource == null)
+        Function<Frame, ObjectHandle> fn = f_mapSuppliers.get(key);
+        if (fn == null)
             {
             return null;
             }
 
         // TODO: concurrently
-        ObjectHandle hResource = ((Supplier<ObjectHandle>) oResource).get();
-        f_mapResources.put(key, hResource);
-        return hResource;
+        hVal = fn.apply(frame);
+        if (hVal != null)
+            {
+            f_mapResources.put(key, hVal);
+            }
+        return hVal;
         }
 
     public ServiceContext getMainContext()
@@ -469,5 +470,6 @@ public class Container
     private ObjectHandle m_hCurDir;
     private ObjectHandle m_hTmpDir;
 
-    final Map<InjectionKey, Function<Frame, ObjectHandle>> f_mapResources = new HashMap<>();
+    final Map<InjectionKey, Function<Frame, ObjectHandle>> f_mapSuppliers = new HashMap<>();
+    final Map<InjectionKey, ObjectHandle>                  f_mapResources = new HashMap<>();
     }
