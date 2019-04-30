@@ -56,7 +56,7 @@ public class xInjectedRef
             {
             TypeConstant typeEl = hInjected.getType().resolveGenericType("RefType");
 
-            hValue = frame.f_context.f_container.getInjectable(hInjected.getName(), typeEl);
+            hValue = frame.f_context.f_container.getInjectable(frame, hInjected.getName(), typeEl);
             if (hValue == null)
                 {
                 return frame.raiseException(

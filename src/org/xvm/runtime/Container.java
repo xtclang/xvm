@@ -9,6 +9,7 @@ import java.util.Objects;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.xvm.asm.ConstantPool;
@@ -22,10 +23,13 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xFunction.NativeFunctionHandle;
+
+import static org.xvm.asm.Op.A_STACK;
 
 
 /**
@@ -158,9 +162,9 @@ public class Container
             {
             TypeConstant typeClock = templateClock.getCanonicalType();
 
-            f_mapResources.put(new InjectionKey("clock"     , typeClock), (Supplier<ObjectHandle>) this::ensureDefaultClock);
-            f_mapResources.put(new InjectionKey("localClock", typeClock), (Supplier<ObjectHandle>) this::ensureLocalClock);
-            f_mapResources.put(new InjectionKey("utcClock"  , typeClock), (Supplier<ObjectHandle>) this::ensureUTCClock);
+            f_mapResources.put(new InjectionKey("clock"     , typeClock), this::ensureDefaultClock);
+            f_mapResources.put(new InjectionKey("localClock", typeClock), this::ensureLocalClock);
+            f_mapResources.put(new InjectionKey("utcClock"  , typeClock), this::ensureUTCClock);
             }
 
         // +++ NanosTimer
@@ -170,7 +174,7 @@ public class Container
             TypeConstant typeTimer = templateTimer.getCanonicalType();
 
             ClassTemplate templateRealTimeTimer = f_templates.getTemplate("_native.NanosTimer");
-            Supplier<ObjectHandle> supplierTimer = () ->
+            Function<Frame, ObjectHandle> supplierTimer = (frame) ->
                 xService.makeHandle(createServiceContext("Timer", f_moduleRoot),
                         templateRealTimeTimer.getCanonicalClass(), typeTimer);
             f_mapResources.put(new InjectionKey("timer", typeTimer), supplierTimer);
@@ -184,7 +188,7 @@ public class Container
 
             ClassTemplate templateRTConsole = f_templates.getTemplate("_native.TerminalConsole");
 
-            Supplier<ObjectHandle> supplierConsole = () ->
+            Function<Frame, ObjectHandle> supplierConsole = (frame) ->
                 xService.makeHandle(createServiceContext("Console", f_moduleRoot),
                     templateRTConsole.getCanonicalClass(), typeConsole);
 
@@ -193,27 +197,27 @@ public class Container
 
         // +++ OSFileStore
         ClassTemplate templateFileStore = f_templates.getTemplate("fs.FileStore");
-        ClassTemplate templateDirectory = f_templates.getTemplate("fs.FileStore");
+        ClassTemplate templateDirectory = f_templates.getTemplate("fs.Directory");
         if (templateFileStore != null && templateDirectory != null)
             {
             TypeConstant typeFileStore = templateFileStore.getCanonicalType();
             TypeConstant typeDirectory = templateDirectory.getCanonicalType();
 
-            f_mapResources.put(new InjectionKey("storage", typeFileStore), (Supplier<ObjectHandle>) this::ensureFileStore);
-            f_mapResources.put(new InjectionKey("rootDir", typeDirectory), (Supplier<ObjectHandle>) this::ensureRootDir);
-            f_mapResources.put(new InjectionKey("homeDir", typeDirectory), (Supplier<ObjectHandle>) this::ensureHomeDir);
-            f_mapResources.put(new InjectionKey("curDir" , typeDirectory), (Supplier<ObjectHandle>) this::ensureCurDir);
-            f_mapResources.put(new InjectionKey("tmpDir" , typeDirectory), (Supplier<ObjectHandle>) this::ensureTmpDir);
+            f_mapResources.put(new InjectionKey("storage", typeFileStore), this::ensureFileStore);
+            f_mapResources.put(new InjectionKey("rootDir", typeDirectory), this::ensureRootDir);
+            f_mapResources.put(new InjectionKey("homeDir", typeDirectory), this::ensureHomeDir);
+            f_mapResources.put(new InjectionKey("curDir" , typeDirectory), this::ensureCurDir);
+            f_mapResources.put(new InjectionKey("tmpDir" , typeDirectory), this::ensureTmpDir);
             }
         }
 
-    protected ObjectHandle ensureDefaultClock()
+    protected ObjectHandle ensureDefaultClock(Frame frame)
         {
         // TODO
-        return ensureLocalClock();
+        return ensureLocalClock(frame);
         }
 
-    protected ObjectHandle ensureLocalClock()
+    protected ObjectHandle ensureLocalClock(Frame frame)
         {
         ObjectHandle hClock = m_hLocalClock;
         if (hClock == null)
@@ -232,23 +236,36 @@ public class Container
         return hClock;
         }
 
-    protected ObjectHandle ensureUTCClock()
+    protected ObjectHandle ensureUTCClock(Frame frame)
         {
         // TODO
-        return ensureDefaultClock();
+        return ensureDefaultClock(frame);
         }
 
-    protected ObjectHandle ensureFileStore()
+    protected ObjectHandle ensureOSStorage(Frame frame)
+        {
+        ObjectHandle hStore = m_hOSStorage;
+        if (hStore == null)
+            {
+            ClassTemplate    templateStorage = f_templates.getTemplate("_native.fs.OSStorage");
+            TypeConstant     typeStorage     = templateStorage.getCanonicalType();
+            ClassComposition clzStorage      = templateStorage.getCanonicalClass();
+            ServiceContext   ctxService       = createServiceContext("OSStorage", f_moduleRoot);
+            m_hOSStorage = hStore = xService.makeHandle(ctxService, clzStorage, typeStorage);
+            }
+
+        return hStore;
+        }
+
+    protected ObjectHandle ensureFileStore(Frame frame)
         {
         ObjectHandle hStore = m_hFileStore;
         if (hStore == null)
             {
-            ClassTemplate templateFileStore   = f_templates.getTemplate("fs.FileStore");
-            ClassTemplate templateRTFileStore = f_templates.getTemplate("_native.fs.OSFileStore");
-            TypeConstant  typeFileStore       = templateFileStore.getCanonicalType();
-            m_hFileStore = hStore = xService.makeHandle(createServiceContext("Storage",
-                    f_moduleRoot), templateRTFileStore.getCanonicalClass(), typeFileStore);
-            // TODO GG how do I call the FileStore constructor?
+            ObjectHandle  hOSStorage      = ensureOSStorage(frame);
+            ClassTemplate templateStorage = f_templates.getTemplate("_native.fs.OSStorage");
+            templateStorage.getPropertyValue(frame, hOSStorage, templateStorage.findProperty("fileStore").getIdentityConstant(), A_STACK);
+            m_hFileStore = hStore = frame.popStack();
             }
 
         return hStore;
@@ -264,7 +281,7 @@ public class Container
         return file;
         }
 
-    protected ObjectHandle ensureRootDir()
+    protected ObjectHandle ensureRootDir(Frame frame)
         {
         ObjectHandle hDir = m_hRootDir;
         if (hDir == null)
@@ -273,15 +290,16 @@ public class Container
             ClassTemplate templateRTDirectory = f_templates.getTemplate("_native.fs.OSFileStore");
             TypeConstant  typeDirectory       = templateDirectory.getCanonicalType();
             File          fileDir             = ensureFile(null);
-            ObjectHandle  hStore              = ensureFileStore();
-            // TODO GG how do I concstructor the OSDirectory object in the same service as the FileStore?
+            ObjectHandle  hStore              = ensureFileStore(frame);
+            // TODO GG how do I constructor the OSDirectory object in the same service as the FileStore?
+            // templateStorage.construct(frame, templateStorage.f_struct.findConstructor(), clzStorage, null, Utils.OBJECTS_NONE, A_STACK);
             throw new UnsupportedOperationException();
             }
 
         return hDir;
         }
 
-    protected ObjectHandle ensureHomeDir()
+    protected ObjectHandle ensureHomeDir(Frame frame)
         {
         ObjectHandle hDir = m_hHomeDir;
         if (hDir == null)
@@ -293,7 +311,7 @@ public class Container
         return hDir;
         }
 
-    protected ObjectHandle ensureCurDir()
+    protected ObjectHandle ensureCurDir(Frame frame)
         {
         ObjectHandle hDir = m_hCurDir;
         if (hDir == null)
@@ -305,7 +323,7 @@ public class Container
         return hDir;
         }
 
-    protected ObjectHandle ensureTmpDir()
+    protected ObjectHandle ensureTmpDir(Frame frame)
         {
         ObjectHandle hDir = m_hTmpDir;
         if (hDir == null)
@@ -336,7 +354,7 @@ public class Container
 
     // return the injectable handle or null, if not resolvable
     // TODO: need an "override" name or better yet "injectionAttributes"
-    public ObjectHandle getInjectable(String sName, TypeConstant type)
+    public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type)
         {
         InjectionKey key = new InjectionKey(sName, type);
         Object oResource = f_mapResources.get(key);
@@ -444,12 +462,12 @@ public class Container
     private ClassTemplate m_templateModule;
 
     private ObjectHandle m_hLocalClock;
+    private ObjectHandle m_hOSStorage;
     private ObjectHandle m_hFileStore;
     private ObjectHandle m_hRootDir;
     private ObjectHandle m_hHomeDir;
     private ObjectHandle m_hCurDir;
     private ObjectHandle m_hTmpDir;
 
-    // the values are: ObjectHandle | Supplier<ObjectHandle>
-    final Map<InjectionKey, Object> f_mapResources = new HashMap<>();
+    final Map<InjectionKey, Function<Frame, ObjectHandle>> f_mapResources = new HashMap<>();
     }

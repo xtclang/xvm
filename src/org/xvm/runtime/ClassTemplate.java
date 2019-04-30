@@ -770,7 +770,7 @@ public abstract class ClassTemplate
                 {
                 TypeInfo     info = hThis.getType().ensureTypeInfo();
                 PropertyInfo prop = info.findProperty(idProp);
-                hValue = frame.f_context.f_container.getInjectable(idProp.getName(), prop.getType());
+                hValue = frame.f_context.f_container.getInjectable(frame, idProp.getName(), prop.getType());
                 if (hValue != null)
                     {
                     hThis.setField(idProp, hValue);

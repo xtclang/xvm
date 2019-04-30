@@ -10,12 +10,18 @@ import Ecstasy.fs.Path;
 class OSFileStore
         implements FileStore
     {
+    construct()
+        {
+        this.root     = ???;
+        this.readOnly = False;
+        }
+
     construct(Directory root, Boolean readOnly)
         {
         this.root     = root;
         this.readOnly = readOnly;
         }
-        
+
     @Override
     public/private Directory root;
 
