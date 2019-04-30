@@ -542,6 +542,11 @@ public class NameExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
+        if (isValidated())
+            {
+            return getType();
+            }
+
         Argument arg = resolveRawArgument(ctx, true, ErrorListener.BLACKHOLE);
         if (arg == null)
             {
@@ -1878,7 +1883,7 @@ public class NameExpression
                     PropertyInfo infoProp = typeLeft.ensureTypeInfo(errs).findProperty(id);
                     if (infoProp != null)
                         {
-                        type = infoProp.getType();
+                        type = infoProp.getType().resolveAutoNarrowing(pool, true, typeLeft);
                         }
                     }
 
