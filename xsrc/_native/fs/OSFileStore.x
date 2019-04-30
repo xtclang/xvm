@@ -1,8 +1,21 @@
+import Ecstasy.fs.Directory;
+import Ecstasy.fs.File;
+import Ecstasy.fs.FileStore;
+import Ecstasy.fs.FileWatcher;
+import Ecstasy.fs.Path;
+
 /**
  * Native OS FileStore implementation.
  */
-class OSFileStore(Directory root, Boolean readOnly)
+class OSFileStore
+        implements FileStore
     {
+    construct(Directory root, Boolean readOnly)
+        {
+        this.root     = root;
+        this.readOnly = readOnly;
+        }
+        
     @Override
     public/private Directory root;
 

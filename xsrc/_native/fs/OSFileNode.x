@@ -1,61 +1,45 @@
+import Ecstasy.fs.FileNode;
+import Ecstasy.fs.FileWatcher;
+import Ecstasy.fs.Path;
+
 /**
  * Native OS File implementation.
  */
-class OSFile
-        implements fs.File
+class OSFileNode
+        implements FileNode
     {
-    @Override
-    @RO Path path
+    construct OSFileNode(Path path)
         {
-        TODO
+        assert path.absolute;
+        this.path = path.normalize();
         }
 
     @Override
+    @RO Path path;
+
+    @Override
+    @RO String name.get()
         {
-        TODO
+        return path.form == Root ? "" : path.
         }
 
     @Override
-    @RO String name
-        {
-        TODO
-        }
+    @RO Boolean exists;
 
     @Override
-    @RO Boolean exists
-        {
-        TODO
-        }
+    @RO DateTime created;
 
     @Override
-    @RO DateTime created
-        {
-        TODO
-        }
+    DateTime modified;
 
     @Override
-    DateTime modified
-        {
-        TODO
-        }
+    @RO DateTime accessed;
 
     @Override
-    @RO DateTime accessed
-        {
-        TODO
-        }
+    @RO Boolean readable;
 
     @Override
-    @RO Boolean readable
-        {
-        TODO
-        }
-
-    @Override
-    @RO Boolean writable
-        {
-        TODO
-        }
+    @RO Boolean writable;
 
     @Override
     conditional FileNode create();

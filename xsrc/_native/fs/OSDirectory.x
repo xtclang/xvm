@@ -1,16 +1,42 @@
+import Ecstasy.fs.Directory;
+import Ecstasy.fs.File;
+import Ecstasy.fs.FileWatcher;
+
 /**
  * Native OS Directory implementation.
  */
 class OSDirectory
-        implements fs.Directory
+        extends OSFileNode
+        implements Directory
     {
-    Iterator<String> names()
-    Iterator<Directory> dirs()
-    Iterator<File> files()
-    Iterator<File> filesRecursively()
-    conditional Directory|File find(String name)
-    Directory dirFor(String name)
-    File fileFor(String name)
-    conditional Directory deleteRecursively()
-    Cancellable watchRecursively(FileWatcher watch)
+    construct(FileStore , Path path)
+        {
+        }
+
+    @Override
+    Iterator<String> names();
+
+    @Override
+    Iterator<Directory> dirs();
+
+    @Override
+    Iterator<File> files();
+
+    @Override
+    Iterator<File> filesRecursively();
+
+    @Override
+    conditional Directory|File find(String name);
+
+    @Override
+    Directory dirFor(String name);
+
+    @Override
+    File fileFor(String name);
+
+    @Override
+    conditional Directory deleteRecursively();
+
+    @Override
+    Cancellable watchRecursively(FileWatcher watch);
     }

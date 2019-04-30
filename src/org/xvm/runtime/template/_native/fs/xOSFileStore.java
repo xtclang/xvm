@@ -25,6 +25,14 @@ public class xOSFileStore
         markNativeProperty("bytesUsed");
         markNativeProperty("bytesFree");
 
+        final String[] FUNCTION    = new String[] {"Function"};
+        final String[] PATH        = new String[] {"fs.Path"};
+        final String[] FILENODE    = new String[] {"fs.FileNode"};
+        final String[] FILE        = new String[] {"fs.File"};
+        final String[] DIRECTORY   = new String[] {"fs.Directory"};
+        final String[] PATHPATH    = new String[] {"fs.Path", "fs.Path"};
+        final String[] PATHWATCHER = new String[] {"fs.Path", "fs.FileWatcher"};
+
         markNativeMethod("find"            , PATH       , FILENODE );
         markNativeMethod("dirFor"          , PATH       , DIRECTORY);
         markNativeMethod("fileFor"         , PATH       , FILE     );
@@ -37,17 +45,8 @@ public class xOSFileStore
 
     // ----- constants -----------------------------------------------------------------------------
 
-    public static final String[] FUNCTION    = new String[] {"Function"};
-    public static final String[] PATH        = new String[] {"fs.Path"};
-    public static final String[] FILEWATCHER = new String[] {"fs.FileWatcher"};
-    public static final String[] FILENODE    = new String[] {"fs.FileNode"};
-    public static final String[] FILE        = new String[] {"fs.File"};
-    public static final String[] DIRECTORY   = new String[] {"fs.Directory"};
-
-    public static final String[] PATHPATH    = new String[] {"fs.Path", "fs.Path"};
-    public static final String[] PATHWATCHER = new String[] {"fs.Path", "fs.FileWatcher"};
 
 
     // ----- data members --------------------------------------------------------------------------
-    System
+    
     }

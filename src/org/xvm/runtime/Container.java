@@ -2,7 +2,7 @@ package org.xvm.runtime;
 
 
 import java.io.File;
-import java.nio.file.Path;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -248,19 +248,22 @@ public class Container
             TypeConstant  typeFileStore       = templateFileStore.getCanonicalType();
             m_hFileStore = hStore = xService.makeHandle(createServiceContext("Storage",
                     f_moduleRoot), templateRTFileStore.getCanonicalClass(), typeFileStore);
+            // TODO GG how do I call the FileStore constructor?
             }
 
         return hStore;
         }
 
-    Path ensurePath(String sPath)
+    File ensureFile(String sPath)
         {
-        if (sPath == null)
+        File file = new File(sPath == null ? "/" : sPath);
+        if (!file.exists())
             {
-            sPath = "/";
+            file = new File("/");
             }
-
+        return file;
         }
+
     protected ObjectHandle ensureRootDir()
         {
         ObjectHandle hDir = m_hRootDir;
@@ -269,8 +272,9 @@ public class Container
             ClassTemplate templateDirectory   = f_templates.getTemplate("fs.FileStore");
             ClassTemplate templateRTDirectory = f_templates.getTemplate("_native.fs.OSFileStore");
             TypeConstant  typeDirectory       = templateDirectory.getCanonicalType();
-            Path          path = ensurePath(null);
-            // TODO
+            File          fileDir             = ensureFile(null);
+            ObjectHandle  hStore              = ensureFileStore();
+            // TODO GG how do I concstructor the OSDirectory object in the same service as the FileStore?
             throw new UnsupportedOperationException();
             }
 
