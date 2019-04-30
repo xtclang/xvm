@@ -465,9 +465,13 @@ public class Lexer
             case '^':
                 if (source.hasNext())
                     {
-                    if (nextChar() == '=')
+                    switch (nextChar())
                         {
-                        return new Token(lInitPos, source.getPosition(), Id.BIT_XOR_ASN);
+                        case '^':
+                            return new Token(lInitPos, source.getPosition(), Id.COND_XOR);
+
+                        case '=':
+                            return new Token(lInitPos, source.getPosition(), Id.BIT_XOR_ASN);
                         }
                     source.rewind();
                     }

@@ -379,6 +379,7 @@ public class Token
         BIT_NOT      ("~"              ),
         NOT          ("!"              ),
         COND_AND     ("&&"             ),
+        COND_XOR     ("^^"             ),
         COND_OR      ("||"             ),
         COND_ELSE    ("?:"             ),
         ASN          ("="              ),

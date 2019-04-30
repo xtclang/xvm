@@ -2476,7 +2476,7 @@ public class Parser
         }
 
     /**
-     * Parse a "else" expression (the "grounding" expression for any short-circuit expressions).
+     * Parse an "else" expression (the "grounding" expression for any short-circuit expressions).
      *
      * <p/><code><pre>
      * Expression
@@ -2501,43 +2501,22 @@ public class Parser
      *
      * <p/><code><pre>
      * TernaryExpression
-     *     ElvisExpression
-     *     ElvisExpression Whitespace "?" ElvisExpression ":" TernaryExpression
+     *     OrExpression
+     *     OrExpression Whitespace "?" OrExpression ":" TernaryExpression
      * </pre></code>
      *
      * @return an expression
      */
     Expression parseTernaryExpression()
         {
-        Expression expr = parseElvisExpression();
-        if (peek().getId() == Id.COND && peek().hasLeadingWhitespace())
+        Expression expr = parseOrExpression();
+        if (peek().getId() == Id.COND)
             {
             expect(Id.COND);
-            Expression exprThen = parseElvisExpression();
+            Expression exprThen = parseOrExpression();
             expect(Id.COLON);
             Expression exprElse = parseTernaryExpression();
             expr = new TernaryExpression(expr, exprThen, exprElse);
-            }
-        return expr;
-        }
-
-    /**
-     * Parse an "elvis" expression, which is of the form "a ?: b".
-     *
-     * <p/><code><pre>
-     * ElvisExpression
-     *     OrExpression
-     *     OrExpression ?: ElvisExpression
-     * </pre></code>
-     *
-     * @return an expression
-     */
-    Expression parseElvisExpression()
-        {
-        Expression expr = parseOrExpression();
-        if (peek().getId() == Id.COND_ELSE)
-            {
-            expr = new ElvisExpression(expr, current(), parseElvisExpression());
             }
         return expr;
         }
@@ -2547,16 +2526,37 @@ public class Parser
      *
      * <p/><code><pre>
      * OrExpression
-     *     AndExpression
-     *     OrExpression || AndExpression
+     *     XorExpression
+     *     OrExpression || XorExpression
      * </pre></code>
      *
      * @return an expression
      */
     Expression parseOrExpression()
         {
-        Expression expr = parseAndExpression();
+        Expression expr = parseXorExpression();
         while (peek().getId() == Id.COND_OR)
+            {
+            expr = new CondOpExpression(expr, current(), parseXorExpression());
+            }
+        return expr;
+        }
+
+    /**
+     * Parse a logical "xor" expression.
+     *
+     * <p/><code><pre>
+     * XorExpression
+     *     AndExpression
+     *     XorExpression ^^ AndExpression
+     * </pre></code>
+     *
+     * @return an expression
+     */
+    Expression parseXorExpression()
+        {
+        Expression expr = parseAndExpression();
+        while (peek().getId() == Id.COND_XOR)
             {
             expr = new CondOpExpression(expr, current(), parseAndExpression());
             }
@@ -2568,33 +2568,23 @@ public class Parser
      *
      * <p/><code><pre>
      * AndExpression
-     *     BitOrExpression
-     *     AndExpression && BitOrExpression
+     *     EqualityExpression
+     *     AndExpression && EqualityExpression
      * </pre></code>
      *
      * @return an expression
      */
     Expression parseAndExpression()
         {
-        Expression expr = parseBitOrExpression();
+        Expression expr = parseEqualityExpression();
         while (peek().getId() == Id.COND_AND)
             {
-            expr = new CondOpExpression(expr, current(), parseBitOrExpression());
+            expr = new CondOpExpression(expr, current(), parseEqualityExpression());
             }
         return expr;
         }
 
-    /**
-     * Parse a bitwise "or" expression.
-     *
-     * <p/><code><pre>
-     * BitOrExpression
-     *     BitXorExpression
-     *     BitOrExpression | BitXorExpression
-     * </pre></code>
-     *
-     * @return an expression
-     */
+    // TODO
     Expression parseBitOrExpression()
         {
         Expression expr = parseBitXorExpression();
@@ -2604,18 +2594,6 @@ public class Parser
             }
         return expr;
         }
-
-    /**
-     * Parse a bitwise "xor" expression.
-     *
-     * <p/><code><pre>
-     * BitXorExpression
-     *     BitAndExpression
-     *     BitXorExpression ^ BitAndExpression
-     * </pre></code>
-     *
-     * @return an expression
-     */
     Expression parseBitXorExpression()
         {
         Expression expr = parseBitAndExpression();
@@ -2625,18 +2603,6 @@ public class Parser
             }
         return expr;
         }
-
-    /**
-     * Parse a bitwise "and" expression.
-     *
-     * <p/><code><pre>
-     * BitAndExpression
-     *     EqualityExpression
-     *     BitAndExpression & EqualityExpression
-     * </pre></code>
-     *
-     * @return an expression
-     */
     Expression parseBitAndExpression()
         {
         Expression expr = parseEqualityExpression();
@@ -2823,6 +2789,27 @@ public class Parser
                     return expr;
                 }
             }
+        }
+
+    /**
+     * Parse an "elvis" expression, which is of the form "a ?: b".
+     *
+     * <p/><code><pre>
+     * ElvisExpression
+     *     OrExpression
+     *     OrExpression ?: ElvisExpression
+     * </pre></code>
+     *
+     * @return an expression
+     */
+    Expression parseElvisExpression()
+        {
+        Expression expr = parseOrExpression();
+        if (peek().getId() == Id.COND_ELSE)
+            {
+            expr = new ElvisExpression(expr, current(), parseElvisExpression());
+            }
+        return expr;
         }
 
     /**

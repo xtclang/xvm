@@ -564,9 +564,9 @@ TypeDefStatement
 #   !               logical NOT
 #   ~               bitwise NOT
 #   &               reference-of
-#   new             object creation
+#   new             object creation                                     # TODO review precedence vis-a-vis Java (this is split out into its own group one level down)
 #
-#   ?:              conditional elvis         3     left to right
+#   ?:              conditional elvis         3     right to left       # TODO review precedence
 #
 #   *               multiplicative            4     left to right
 #   /
@@ -587,49 +587,41 @@ TypeDefStatement
 #   <  <=           relational                8     left to right
 #   >  >=
 #   <=>             order ("star-trek")
-#   as              type assertion
-#   is              type comparison
+#   as              type assertion                                       # TODO drop?
+#   is              type comparison                                      # TODO drop?
 #
 #   ==              equality                  9     left to right
 #   !=
 #
 #   &&              conditional AND          10     left to right
+#
 #   ^^              conditional XOR          11     left to right
-#   ||              conditional OR           12     left to right
-#   ? :             conditional ternary      13     right to left
-#   :               conditional ELSE         14     right to left
+#   ||              conditional OR
+#
+#   ? :             conditional ternary      12     right to left
+#
+#   :               conditional ELSE         13     right to left
 
 Expression
     TernaryExpression
     TernaryExpression ":" Expression
 
+# whitespace is documented here to differentiate from the conditional expression of the form "e?"
 TernaryExpression
-    ElvisExpression
-    ElvisExpression Whitespace "?" ElvisExpression ":" TernaryExpression
-
-ElvisExpression
     OrExpression
-    OrExpression ?: ElvisExpression
+    OrExpression Whitespace "?" OrExpression ":" TernaryExpression
 
 OrExpression
+    XorExpression
+    OrExpression || XorExpression
+
+XorExpression
     AndExpression
-    OrExpression || AndExpression
+    XorExpression ^^ AndExpression
 
 AndExpression
-    BitOrExpression
-    AndExpression && BitOrExpression
-
-BitOrExpression
-    BitXorExpression
-    BitOrExpression | BitXorExpression
-
-BitXorExpression
-    BitAndExpression
-    BitXorExpression ^ BitAndExpression
-
-BitAndExpression
     EqualityExpression
-    BitAndExpression & EqualityExpression
+    AndExpression && EqualityExpression
 
 EqualityExpression
     RelationalExpression
@@ -638,23 +630,26 @@ EqualityExpression
 
 RelationalExpression
     RangeExpression
-    RelationalExpression "<" RangeExpression
-    RelationalExpression ">" RangeExpression
-    RelationalExpression "<=" RangeExpression
-    RelationalExpression ">=" RangeExpression
+    RelationalExpression "<"   RangeExpression
+    RelationalExpression ">"   RangeExpression
+    RelationalExpression "<="  RangeExpression
+    RelationalExpression ">="  RangeExpression
     RelationalExpression "<=>" RangeExpression
-    RelationalExpression "as" TypeExpression
-    RelationalExpression "is" TypeExpression
+    RelationalExpression "as"  TypeExpression
+    RelationalExpression "is"  TypeExpression
 
 RangeExpression
-    ShiftExpression
-    RangeExpression ".." ShiftExpression
+    BitwiseExpression
+    RangeExpression ".." BitwiseExpression
 
-ShiftExpression
+BitwiseExpression
     AdditiveExpression
-    ShiftExpression "<<" AdditiveExpression
-    ShiftExpression ">>" AdditiveExpression
-    ShiftExpression ">>>" AdditiveExpression
+    BitwiseExpression "<<"  AdditiveExpression
+    BitwiseExpression ">>"  AdditiveExpression
+    BitwiseExpression ">>>" AdditiveExpression
+    BitwiseExpression "&"   AdditiveExpression
+    BitwiseExpression "^"   AdditiveExpression
+    BitwiseExpression "|"   AdditiveExpression
 
 AdditiveExpression
     MultiplicativeExpression
@@ -662,11 +657,15 @@ AdditiveExpression
     AdditiveExpression "-" MultiplicativeExpression
 
 MultiplicativeExpression
+    ElvisExpression
+    MultiplicativeExpression "*"  ElvisExpression
+    MultiplicativeExpression "/"  ElvisExpression
+    MultiplicativeExpression "%"  ElvisExpression
+    MultiplicativeExpression "/%" ElvisExpression
+
+ElvisExpression
     PrefixExpression
-    MultiplicativeExpression "*" PrefixExpression
-    MultiplicativeExpression "/" PrefixExpression
-    MultiplicativeExpression "%" PrefixExpression
-    MultiplicativeExpression "/%" PrefixExpression
+    PrefixExpression ?: ElvisExpression
 
 PrefixExpression
     PostfixExpression
