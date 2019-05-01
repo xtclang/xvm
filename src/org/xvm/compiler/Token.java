@@ -444,7 +444,6 @@ public class Token
         IMPORT_WANT  ("import:desired" ),
         IMPORT_OPT   ("import:optional"),
         INCORPORATES ("incorporates"   , true),
-        INSTANCEOF   ("instanceof"     ),
         INTERFACE    ("interface"      ),
         INTO         ("into"           , true),
         IS           ("is"             ),

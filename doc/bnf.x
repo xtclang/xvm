@@ -564,9 +564,8 @@ TypeDefStatement
 #   !               logical NOT
 #   ~               bitwise NOT
 #   &               reference-of
-#   new             object creation                                     # TODO review precedence vis-a-vis Java (this is split out into its own group one level down)
 #
-#   ?:              conditional elvis         3     right to left       # TODO review precedence
+#   ?:              conditional elvis         3     right to left
 #
 #   *               multiplicative            4     left to right
 #   /
@@ -587,8 +586,6 @@ TypeDefStatement
 #   <  <=           relational                8     left to right
 #   >  >=
 #   <=>             order ("star-trek")
-#   as              type assertion                                       # TODO drop?
-#   is              type comparison                                      # TODO drop?
 #
 #   ==              equality                  9     left to right
 #   !=
@@ -635,8 +632,6 @@ RelationalExpression
     RelationalExpression "<="  RangeExpression
     RelationalExpression ">="  RangeExpression
     RelationalExpression "<=>" RangeExpression
-    RelationalExpression "as"  TypeExpression
-    RelationalExpression "is"  TypeExpression
 
 RangeExpression
     BitwiseExpression

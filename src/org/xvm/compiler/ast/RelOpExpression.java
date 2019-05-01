@@ -46,6 +46,7 @@ import org.xvm.util.Severity;
  * "expression operator expression".
  * <p/>
  * <ul>
+ * <li><tt>COND_XOR:   "^^"</tt> - </li>
  * <li><tt>BIT_OR:     "|"</tt> - </li>
  * <li><tt>BIT_XOR:    "^"</tt> - </li>
  * <li><tt>BIT_AND:    "&"</tt> - </li>
@@ -72,6 +73,7 @@ public class RelOpExpression
 
         switch (operator.getId())
             {
+            case COND_XOR:
             case BIT_OR:
             case BIT_XOR:
             case BIT_AND:
@@ -740,6 +742,7 @@ public class RelOpExpression
                 return;
 
             case BIT_XOR:
+            case COND_XOR:
                 code.add(new GP_Xor(arg1, arg2, argLVal));
                 return;
 
@@ -845,6 +848,7 @@ public class RelOpExpression
                 return "or";
 
             case BIT_XOR:
+            case COND_XOR:
                 return "xor";
 
             case DOTDOT:

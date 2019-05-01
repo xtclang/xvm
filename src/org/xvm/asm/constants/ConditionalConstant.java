@@ -182,6 +182,7 @@ public abstract class ConditionalConstant
      * Add the specified version to this conditional.
      *
      * @param ver the version to add
+     *
      * @return a new conditional
      */
     public ConditionalConstant addVersion(Version ver)
@@ -199,6 +200,7 @@ public abstract class ConditionalConstant
      * Remove the specified version from this conditional.
      *
      * @param ver the version to remove
+     *
      * @return a new conditional
      */
     public ConditionalConstant removeVersion(Version ver)
@@ -211,6 +213,7 @@ public abstract class ConditionalConstant
      * condition.
      *
      * @param that another condition
+     *
      * @return a condition representing the "and" of the {@code this} and {@code that} conditions
      */
     public ConditionalConstant addAnd(ConditionalConstant that)
@@ -264,6 +267,7 @@ public abstract class ConditionalConstant
      * condition.
      *
      * @param that another condition
+     *
      * @return a condition representing the "or" of the {@code this} and {@code that} conditions
      */
     public ConditionalConstant addOr(ConditionalConstant that)

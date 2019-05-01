@@ -2558,7 +2558,7 @@ public class Parser
         Expression expr = parseAndExpression();
         while (peek().getId() == Id.COND_XOR)
             {
-            expr = new CondOpExpression(expr, current(), parseAndExpression());
+            expr = new RelOpExpression(expr, current(), parseAndExpression());
             }
         return expr;
         }
@@ -2580,35 +2580,6 @@ public class Parser
         while (peek().getId() == Id.COND_AND)
             {
             expr = new CondOpExpression(expr, current(), parseEqualityExpression());
-            }
-        return expr;
-        }
-
-    // TODO
-    Expression parseBitOrExpression()
-        {
-        Expression expr = parseBitXorExpression();
-        while (peek().getId() == Id.BIT_OR)
-            {
-            expr = new RelOpExpression(expr, current(), parseBitXorExpression());
-            }
-        return expr;
-        }
-    Expression parseBitXorExpression()
-        {
-        Expression expr = parseBitAndExpression();
-        while (peek().getId() == Id.BIT_XOR)
-            {
-            expr = new RelOpExpression(expr, current(), parseBitAndExpression());
-            }
-        return expr;
-        }
-    Expression parseBitAndExpression()
-        {
-        Expression expr = parseEqualityExpression();
-        while (peek().getId() == Id.BIT_AND)
-            {
-            expr = new RelOpExpression(expr, current(), parseEqualityExpression());
             }
         return expr;
         }
@@ -2641,13 +2612,11 @@ public class Parser
      * <p/><code><pre>
      * RelationalExpression
      *     RangeExpression
-     *     RelationalExpression "<" RangeExpression
-     *     RelationalExpression ">" RangeExpression
-     *     RelationalExpression "<=" RangeExpression
-     *     RelationalExpression ">=" RangeExpression
+     *     RelationalExpression "<"   RangeExpression
+     *     RelationalExpression ">"   RangeExpression
+     *     RelationalExpression "<="  RangeExpression
+     *     RelationalExpression ">="  RangeExpression
      *     RelationalExpression "<=>" RangeExpression
-     *     RelationalExpression "instanceof" TypeExpression
-     *     RelationalExpression "as" TypeExpression
      * </pre></code>
      *
      * @return an expression
@@ -2667,15 +2636,6 @@ public class Parser
                     expr = new CmpExpression(expr, current(), parseRangeExpression());
                     break;
 
-                case AS:
-                    expr = new AsExpression(expr, current(), parseTypeExpression());
-                    break;
-
-                case IS:
-                case INSTANCEOF:
-                    expr = new IsExpression(expr, current(), parseTypeExpression());
-                    break;
-
                 default:
                     return expr;
                 }
@@ -2687,18 +2647,18 @@ public class Parser
      *
      * <p/><code><pre>
      * RangeExpression
-     *     ShiftExpression
-     *     RangeExpression ".." ShiftExpression
+     *     BitwiseExpression
+     *     RangeExpression ".." BitwiseExpression
      * </pre></code>
      *
      * @return an expression
      */
     Expression parseRangeExpression()
         {
-        Expression expr = parseShiftExpression();
+        Expression expr = parseBitwiseExpression();
         while (peek().getId() == Id.DOTDOT)
             {
-            expr = new RelOpExpression(expr, current(), parseShiftExpression());
+            expr = new RelOpExpression(expr, current(), parseBitwiseExpression());
             }
         return expr;
         }
@@ -2709,14 +2669,17 @@ public class Parser
      * <p/><code><pre>
      * ShiftExpression
      *     AdditiveExpression
-     *     ShiftExpression "<<" AdditiveExpression
-     *     ShiftExpression ">>" AdditiveExpression
+     *     ShiftExpression "<<"  AdditiveExpression
+     *     ShiftExpression ">>"  AdditiveExpression
      *     ShiftExpression ">>>" AdditiveExpression
+     *     ShiftExpression "&"   AdditiveExpression
+     *     ShiftExpression "^"   AdditiveExpression
+     *     ShiftExpression "|"   AdditiveExpression
      * </pre></code>
      *
      * @return an expression
      */
-    Expression parseShiftExpression()
+    Expression parseBitwiseExpression()
         {
         Expression expr = parseAdditiveExpression();
         while (true)
@@ -2726,7 +2689,10 @@ public class Parser
                 case SHL:
                 case SHR:
                 case USHR:
-                    expr = new RelOpExpression(expr, current(), parseRangeExpression());
+                case BIT_AND:
+                case BIT_XOR:
+                case BIT_OR:
+                    expr = new RelOpExpression(expr, current(), parseAdditiveExpression());
                     break;
 
                 default:
@@ -2762,18 +2728,18 @@ public class Parser
      *
      * <p/><code><pre>
      * MultiplicativeExpression
-     *     PrefixExpression
-     *     MultiplicativeExpression "*" PrefixExpression
-     *     MultiplicativeExpression "/" PrefixExpression
-     *     MultiplicativeExpression "%" PrefixExpression
-     *     MultiplicativeExpression "/%" PrefixExpression
+     *     ElvisExpression
+     *     MultiplicativeExpression "*"  ElvisExpression
+     *     MultiplicativeExpression "/"  ElvisExpression
+     *     MultiplicativeExpression "%"  ElvisExpression
+     *     MultiplicativeExpression "/%" ElvisExpression
      * </pre></code>
      *
      * @return an expression
      */
     Expression parseMultiplicativeExpression()
         {
-        Expression expr = parsePrefixExpression();
+        Expression expr = parseElvisExpression();
         while (true)
             {
             switch (peek().getId())
@@ -2782,7 +2748,7 @@ public class Parser
                 case DIV:
                 case MOD:
                 case DIVMOD:
-                    expr = new RelOpExpression(expr, current(), parsePrefixExpression());
+                    expr = new RelOpExpression(expr, current(), parseElvisExpression());
                     break;
 
                 default:
@@ -2796,15 +2762,15 @@ public class Parser
      *
      * <p/><code><pre>
      * ElvisExpression
-     *     OrExpression
-     *     OrExpression ?: ElvisExpression
+     *     PrefixExpression
+     *     PrefixExpression ?: ElvisExpression
      * </pre></code>
      *
      * @return an expression
      */
     Expression parseElvisExpression()
         {
-        Expression expr = parseOrExpression();
+        Expression expr = parsePrefixExpression();
         if (peek().getId() == Id.COND_ELSE)
             {
             expr = new ElvisExpression(expr, current(), parseElvisExpression());
@@ -2865,7 +2831,6 @@ public class Parser
      *     PostfixExpression NoWhitespace "?"
      *     PostfixExpression "." Name
      *     PostfixExpression ".new" TypeExpression ArgumentList
-     *     PostfixExpression ".instanceof" "(" TypeExpression ")"
      *     PostfixExpression ".as" "(" TypeExpression ")"
      *
      * ArrayDims
@@ -2937,7 +2902,6 @@ public class Parser
 
                         case AS:
                         case IS:
-                        case INSTANCEOF:
                             {
                             Token keyword = current();
                             expect(Id.L_PAREN);

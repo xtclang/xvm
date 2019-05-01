@@ -49,7 +49,7 @@ const Bit
     @Op("^")
     Bit xor(Bit that)
         {
-        return this.literal == 1 ^ that.literal == 1 ? 1 : 0;
+        return this.literal == 1 ^^ that.literal == 1 ? 1 : 0;
         }
 
     @Op("~")
