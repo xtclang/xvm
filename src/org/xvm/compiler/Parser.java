@@ -3361,7 +3361,7 @@ public class Parser
             }
 
         Token fakeReturn = new Token(firstToken.getStartPosition(), firstToken.getStartPosition(), Id.RETURN);
-        ReturnStatement stmt = new ReturnStatement(fakeReturn, parseElvisExpression());
+        ReturnStatement stmt = new ReturnStatement(fakeReturn, parseOrExpression());
         return new StatementBlock(Collections.singletonList(stmt), stmt.getStartPosition(), stmt.getEndPosition());
         }
 
