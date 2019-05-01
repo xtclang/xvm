@@ -169,6 +169,16 @@ public class Token
         }
 
     /**
+     * If the token is a context sensitive keyword that was an identifier, obtain the identifier.
+     *
+     * @return a token that is not a context sensitive keyword
+     */
+    public Token desensitize()
+        {
+        return m_id.ContextSensitive ? new Token(m_lStartPos, m_lEndPos, Id.IDENTIFIER) : this;
+        }
+
+    /**
      * Allow a token to be "peeled off" the front of this token, if possible.
      *
      * @param id  the token to peel off of this token
@@ -475,8 +485,8 @@ public class Token
         TRY          ("try"            ),
         TYPEDEF      ("typedef"        ),
         USING        ("using"          ),
-        VAL          ("val"            ),
-        VAR          ("var"            ),
+        VAL          ("val"            , true),
+        VAR          ("var"            , true),
         VOID         ("void"           ),
         WHILE        ("while"          ),
         IDENTIFIER   (null             ),

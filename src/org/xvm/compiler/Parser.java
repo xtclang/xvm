@@ -823,23 +823,6 @@ public class Parser
                         modifiers, annotations, null, null, null, keyword);
                 }
 
-            case VAL:
-            case VAR:
-                if (fInMethod)
-                    {
-                    VariableTypeExpression       typeDecl = new VariableTypeExpression(current());
-                    VariableDeclarationStatement stmtDecl = new VariableDeclarationStatement(typeDecl, expect(Id.IDENTIFIER), false);
-                    AssignmentStatement          stmtAsn  = new AssignmentStatement(stmtDecl, match(Id.ASN), parseExpression());
-                    expect(Id.SEMICOLON);
-                    return stmtAsn;
-                    }
-                else
-                    {
-                    // attempting to parse a type expression should log an error and throw
-                    parseTypeExpression();
-                    throw new CompilerException("var or val keyword outside of method");
-                    }
-
             case L_PAREN:
                 {
                 // it's a property or a method, but the property type is parenthesized (odd!) or
@@ -862,8 +845,27 @@ public class Parser
                 Token start = expect(Id.L_PAREN);
                 do
                     {
-                    listExpr.add(fInMethod && peek().getId() == Id.VAR || peek().getId() == Id.VAL
-                            ? new VariableTypeExpression(current()) : parseExpression());
+                    Expression exprType = null;
+                    Token      tokType  = matchVarOrVal();
+                    if (tokType != null)
+                        {
+                        if (peek().getId() == Id.IDENTIFIER)
+                            {
+                            exprType = new VariableTypeExpression(tokType);
+                            }
+                        else
+                            {
+                            // var and val are not reserved keywords; they are context sensitive types
+                            putBack(tokType);
+                            }
+                        }
+
+                    if (exprType == null)
+                        {
+                        exprType = parseExpression();
+                        }
+                    listExpr.add(exprType);
+
                     Token tokName = match(Id.IDENTIFIER);
                     fAnyNames |= tokName != null;
                     listName.add(tokName);
@@ -941,9 +943,39 @@ public class Parser
                 restore(mark);
                 }
             // fall through
-
             default:
+
+            // the following two case options are listed here solely for doc purposes; while they
+            // can be "matched", they cannot be "peeked" (because they're context sensitive)
+            case VAL:
+            case VAR:
                 {
+                Token tokType = matchVarOrVal();
+                if (tokType != null)
+                    {
+                    if (!fInMethod)
+                        {
+                        Token tok = current();
+                        log(Severity.ERROR, NO_TYPE_FOUND, tok.getStartPosition(), tok.getEndPosition());
+                        throw new CompilerException("var or val keyword outside of method");
+                        }
+
+                    Token tokName = match(Id.IDENTIFIER);
+                    if (tokName == null)
+                        {
+                        // var and val are not reserved keywords; they are context sensitive types
+                        putBack(tokType);
+                        }
+                    else
+                        {
+                        VariableTypeExpression       typeDecl = new VariableTypeExpression(tokType);
+                        VariableDeclarationStatement stmtDecl = new VariableDeclarationStatement(typeDecl, tokName, false);
+                        AssignmentStatement          stmtAsn  = new AssignmentStatement(stmtDecl, match(Id.ASN), parseExpression());
+                        expect(Id.SEMICOLON);
+                        return stmtAsn;
+                        }
+                    }
+
                 TypeExpression type;
                 if (fInMethod && modifiers == null && annotations == null)
                     {
@@ -1497,11 +1529,22 @@ public class Parser
                 AstNode LVal = fMaybeCStyle ? peekMultiVariableInitializer() : null;
                 if (LVal == null)
                     {
-                    if (peek().getId() == Id.VAR || peek().getId() == Id.VAL)
+                    Token tokType = matchVarOrVal();
+                    if (tokType != null)
                         {
-                        LVal = new VariableDeclarationStatement(new VariableTypeExpression(current()), expect(Id.IDENTIFIER), false);
+                        Token tokName = match(Id.IDENTIFIER);
+                        if (tokName == null)
+                            {
+                            // var and val are not reserved keywords; they are context sensitive types
+                            putBack(tokType);
+                            }
+                        else
+                            {
+                            LVal = new VariableDeclarationStatement(new VariableTypeExpression(tokType), tokName, false);
+                            }
                         }
-                    else
+
+                    if (LVal == null)
                         {
                         Expression expr = parseExpression();
                         if (peek().getId() == Id.IDENTIFIER)
@@ -1680,12 +1723,23 @@ public class Parser
             typeDecl = null;
             exprLVal = null;
             tokName  = null;
-            if (peek().getId() == Id.VAR || peek().getId() == Id.VAL)
+
+            Token tokType = matchVarOrVal();
+            if (tokType != null)
                 {
-                typeDecl = new VariableTypeExpression(current());
-                tokName  = expect(Id.IDENTIFIER);
+                tokName = match(Id.IDENTIFIER);
+                if (tokName == null)
+                    {
+                    // var and val are not reserved keywords; they are context sensitive types
+                    putBack(tokType);
+                    }
+                else
+                    {
+                    typeDecl = new VariableTypeExpression(tokType);
+                    }
                 }
-            else
+
+            if (typeDecl == null)
                 {
                 // assuming that we haven't already built a list of declarations, then encountering
                 // an expression followed by a semicolon or right parenthesis means the entire
@@ -2034,12 +2088,22 @@ public class Parser
         // is a single expression that is the entire switch condition
         if (LVal == null)
             {
-            if (peek().getId() == Id.VAR || peek().getId() == Id.VAL)
+            Token tokType = matchVarOrVal();
+            if (tokType != null)
                 {
-                // this has to be a multi VariableInitializer
-                LVal = new VariableDeclarationStatement(new VariableTypeExpression(current()), expect(Id.IDENTIFIER), false);
+                Token tokName = match(Id.IDENTIFIER);
+                if (tokName == null)
+                    {
+                    // var and val are not reserved keywords; they are context sensitive types
+                    putBack(tokType);
+                    }
+                else
+                    {
+                    LVal = new VariableDeclarationStatement(new VariableTypeExpression(tokType), tokName, false);
+                    }
                 }
-            else
+
+            if (LVal == null)
                 {
                 Expression expr = parseExpression();
                 if (peek().getId() == Id.IDENTIFIER)
@@ -2165,13 +2229,24 @@ public class Parser
         List<AstNode> listLVals = new ArrayList<>();
         while (true)
             {
-            boolean fFirst = listLVals.isEmpty();
-            if (peek().getId() == Id.VAR || peek().getId() == Id.VAL)
+            AstNode LVal    = null;
+            boolean fFirst  = listLVals.isEmpty();
+            Token   tokType = matchVarOrVal();
+            if (tokType != null)
                 {
-                // this has to be a multi VariableInitializer
-                listLVals.add(new VariableDeclarationStatement(new VariableTypeExpression(current()), expect(Id.IDENTIFIER), false));
+                Token tokName = match(Id.IDENTIFIER);
+                if (tokName == null)
+                    {
+                    // var and val are not reserved keywords; they are context sensitive types
+                    putBack(tokType);
+                    }
+                else
+                    {
+                    LVal = new VariableDeclarationStatement(new VariableTypeExpression(tokType), tokName, false);
+                    }
                 }
-            else
+
+            if (LVal == null)
                 {
                 // assuming that we haven't already started building a list of declarations,
                 // encountering an expression followed by anything other than an identifier (for
@@ -2190,23 +2265,28 @@ public class Parser
                 if (peek().getId() == Id.IDENTIFIER)
                     {
                     // there is a variable declaration to use as an L-Value
-                    listLVals.add(new VariableDeclarationStatement(expr.toTypeExpression(), expect(Id.IDENTIFIER), false));
-                    }
-                else if (fFirst && peek().getId() != Id.COMMA)
-                    {
-                    restore(mark);
-                    return null;
+                    LVal = new VariableDeclarationStatement(expr.toTypeExpression(), expect(Id.IDENTIFIER), false);
                     }
                 else
                     {
-                    // the expression has to be the L-Value
-                    if (!expr.isLValueSyntax())
-                        {
-                        log(Severity.ERROR, NOT_ASSIGNABLE, expr.getStartPosition(), expr.getEndPosition());
-                        }
-                    listLVals.add(expr);
+                    LVal = expr;
                     }
                 }
+
+            // bail out if this is not a multiple value construct
+            if (fFirst && peek().getId() != Id.COMMA)
+                {
+                restore(mark);
+                return null;
+                }
+
+            // the expression has to be the L-Value
+            if (LVal instanceof Expression && !LVal.isLValueSyntax())
+                {
+                log(Severity.ERROR, NOT_ASSIGNABLE, LVal.getStartPosition(), LVal.getEndPosition());
+                }
+
+            listLVals.add(LVal);
 
             if (!fFirst && match(Id.R_PAREN) != null)
                 {
@@ -2401,12 +2481,23 @@ public class Parser
      */
     AssignmentStatement parseVariableInitializer()
         {
-        TypeExpression type;
-        if (peek().getId() == Id.VAR || peek().getId() == Id.VAL)
+        TypeExpression type = null;
+
+        Token tokType = matchVarOrVal();
+        if (tokType != null)
             {
-            type = new VariableTypeExpression(current());
+            if (peek().getId() == Id.IDENTIFIER)
+                {
+                type = new VariableTypeExpression(tokType);
+                }
+            else
+                {
+                // var and val are not reserved keywords; they are context sensitive types
+                putBack(tokType);
+                }
             }
-        else
+
+        if (type == null)
             {
             Expression expr = parseExpression();
             if (peek().getId() == Id.ASN)
@@ -4937,13 +5028,18 @@ public class Parser
 
     // ----- token stream handling ---------------------------------------------
 
+    /**
+     * Obtain the current token, but without advancing the token stream.
+     *
+     * @return the current token
+     */
     protected Token peek()
         {
         return m_tokenPutBack == null ? m_token : m_tokenPutBack;
         }
 
     /**
-     * Obtain the current token.
+     * Obtain the current token, and then advance to the next token.
      *
      * @return the current token
      */
@@ -5001,10 +5097,16 @@ public class Parser
         throw new CompilerException("unexpected EOF");
         }
 
+    /**
+     * Rewind one token. This cannot be used to rewind more than one token; if more than one step
+     * of look-ahead is required, use mark() and restore().
+     *
+     * @param token  the token to "put back", which should be the most recently obtained token
+     */
     protected void putBack(Token token)
         {
         assert m_tokenPutBack == null;
-        m_tokenPutBack = token;
+        m_tokenPutBack = token.desensitize();
         }
 
     private class Mark
@@ -5062,12 +5164,12 @@ public class Parser
      */
     protected Token match(Token.Id id)
         {
-        if (peek().getId() == id)
+        Token token = peek();
+        if (token.getId() == id)
             {
             return m_tokenLastMatch = current();
             }
 
-        Token token = m_token;
         if (token.getId() == Id.IDENTIFIER && id.ContextSensitive && token.getValue().equals(id.TEXT))
             {
             // advance to the next token
@@ -5083,6 +5185,21 @@ public class Parser
             m_tokenLastMatch = token;
             }
         return token;
+        }
+
+    /**
+     * Helper to match either a VAR or VAL context-sensitive token.
+     *
+     * @return a token that is either VAR or VAL, or null if neither is the next token
+     */
+    protected Token matchVarOrVal()
+        {
+        Token token = match(Id.VAR);
+        if (token != null)
+            {
+            return token;
+            }
+        return match(Id.VAL);
         }
 
     /**
