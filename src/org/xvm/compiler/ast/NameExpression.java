@@ -922,6 +922,7 @@ public class NameExpression
 
                         case Left:
                             {
+                            assert !idProp.getComponent().isStatic();
                             Argument argLeft = left.generateArgument(ctx, code, false, true, errs);
                             code.add(new P_Get(idProp, argLeft, argLVal));
                             break;
@@ -1088,7 +1089,7 @@ public class NameExpression
                         }
 
                     case This:
-                        if (fLocalPropOk)
+                        if (fLocalPropOk || idProp.getComponent().isStatic())
                             {
                             return idProp;
                             }
@@ -1097,6 +1098,10 @@ public class NameExpression
 
                     case Left:
                         {
+                        if (idProp.getComponent().isStatic())
+                            {
+                            return idProp;
+                            }
                         Argument argLeft = left.generateArgument(ctx, code, false, true, errs);
                         code.add(new P_Get(idProp, argLeft, regTemp));
                         break;

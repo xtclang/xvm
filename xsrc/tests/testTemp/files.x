@@ -17,6 +17,10 @@ module TestFiles.xqiz.it
     void testPaths()
         {
         console.println("\n** testPaths()");
+        console.println("root=" + Path.ROOT);
+        console.println("parent=" + Path.PARENT);
+        console.println("current=" + Path.CURRENT);
+
         Path path = new Path(null, "test");
         console.println("path=" + path);
 
@@ -47,6 +51,6 @@ module TestFiles.xqiz.it
         console.println("capacity=" + storage.capacity);
 
 //        @Inject Directory rootDir;
-//        console.println("capacity=" + rootDir);
+//        console.println("rootDir=" + rootDir);
         }
     }
