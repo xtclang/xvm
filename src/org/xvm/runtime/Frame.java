@@ -587,7 +587,17 @@ public class Frame
      */
     public int assignValue(int nVar, ObjectHandle hValue, boolean fDynamic)
         {
-        assert hValue != null;
+        if (hValue == null)
+            {
+            // this is only possible for a conditional return pass through; for example:
+            //     conditional Int foo()
+            //        {
+            //        return bar();
+            //        }
+            assert nVar >= 0;
+            f_ahVar[nVar] = hValue;
+            return Op.R_NEXT;
+            }
 
         if (nVar >= 0)
             {

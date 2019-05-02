@@ -1888,7 +1888,7 @@ public class NameExpression
                     PropertyInfo infoProp = typeLeft.ensureTypeInfo(errs).findProperty(id);
                     if (infoProp != null)
                         {
-                        type = infoProp.getType().resolveAutoNarrowing(pool, true, typeLeft);
+                        type = infoProp.getType().resolveAutoNarrowing(pool, false, typeLeft);
                         }
                     }
 

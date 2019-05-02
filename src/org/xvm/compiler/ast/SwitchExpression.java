@@ -95,8 +95,7 @@ public class SwitchExpression
     @Override
     public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired)
         {
-        boolean fAny = false;
-        TypeFit fit  = TypeFit.Fit;
+        TypeFit fit = TypeFit.Fit;
         for (AstNode node : contents)
             {
             if (node instanceof Expression)

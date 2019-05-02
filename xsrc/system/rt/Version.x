@@ -213,20 +213,19 @@ const Version
             }
         }
 
-    // TODO remove temporary hack
+    // TODO GG remove temporary hack
     static conditional Form Form_byName_get(String name)
         {
-        switch (name)
+        return switch (name)
             {
-            // TODO CP (switch expression didn't work)
-            case "CI"   : return true, CI;
-            case "Dev"  : return true, Dev;
-            case "QC"   : return true, QC;
-            case "alpha": return true, Alpha;
-            case "beta" : return true, Beta;
-            case "rc"   : return true, RC;
-            default     : return false;
-            }
+            case "CI"   : (true, CI);
+            case "Dev"  : (true, Dev);
+            case "QC"   : (true, QC);
+            case "alpha": (true, Alpha);
+            case "beta" : (true, Beta);
+            case "rc"   : (true, RC);
+            default     : false;
+            };
         }
 
     /**
@@ -309,14 +308,13 @@ const Version
         {
         return switch (number)
             {
-            // TODO figure out why "Form." is required for these
-            case -6: Form.CI;
-            case -5: Form.Dev;
-            case -4: Form.QC;
-            case -3: Form.Alpha;
-            case -2: Form.Beta;
-            case -1: Form.RC;
-            default: Form.Num;
+            case -6: CI;
+            case -5: Dev;
+            case -4: QC;
+            case -3: Alpha;
+            case -2: Beta;
+            case -1: RC;
+            default: Num;
             };
         }
 

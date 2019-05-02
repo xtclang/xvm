@@ -269,6 +269,8 @@ public class ReturnStatement
 
         // first determine what the method declaration indicates the return value is (none, one,
         // or multi)
+        TypeConstant[]   atypeRets = container.getReturnTypes();
+        int              cRets     = atypeRets == null ? 0 : atypeRets.length;
         List<Expression> listExprs = this.exprs;
         int              cExprs    = listExprs == null ? 0 : listExprs.size();
 
@@ -294,14 +296,30 @@ public class ReturnStatement
                 case 1:
                     {
                     Expression expr = listExprs.get(0);
-                    if (expr.isVoid())
+                    if (expr.isVoid() || cRets == 0)
                         {
                         code.add(new Return_0());
                         }
-                    else
+                    else if (cRets == 1)
                         {
                         Argument arg = expr.generateArgument(ctx, code, true, true, errs);
                         code.add(new Return_1(arg));
+                        }
+                    else
+                        {
+                        Argument[] args = expr.generateArguments(ctx, code, true, true, errs);
+                        if (args.length > 1)
+                            {
+                            code.add(new Return_N(args));
+                            }
+                        else
+                            {
+                            if (!container.isReturnConditional())
+                                {
+                                throw new AssertionError();
+                                }
+                            code.add(new Return_1(args[0]));
+                            }
                         }
                     break;
                     }
