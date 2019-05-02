@@ -1544,7 +1544,7 @@ public class NameExpression
                                         // ThisClassConstant; from this (context) point, walk up looking
                                         // for the specified class, counting the number of "parent
                                         // class" steps to get there
-                                        PseudoConstant idRelative = getRelativeIdentity(ctx, typeLeft, (IdentityConstant) constTarget);
+                                        PseudoConstant idRelative = getRelativeIdentity(typeLeft, (IdentityConstant) constTarget);
                                         if (idRelative != null)
                                             {
                                             m_arg = idRelative;
@@ -2078,7 +2078,7 @@ public class NameExpression
      *          expression refers to vis-a-vis the class containing the method for which the passed
      *          context exists
      */
-    protected PseudoConstant getRelativeIdentity(Context ctx, TypeConstant typeFrom, IdentityConstant idTarget)
+    protected PseudoConstant getRelativeIdentity(TypeConstant typeFrom, IdentityConstant idTarget)
         {
         // verify that we can "walk up the line" starting from the specified type
         if (!typeFrom.isSingleUnderlyingClass(true))
