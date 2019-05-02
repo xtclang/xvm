@@ -42,13 +42,13 @@ interface UniformIndexed<IndexType, ElementType>
             @Override
             ElementType get()
                 {
-                return UniformIndexed.this.getElement(index);
+                return this.UniformIndexed.getElement(index);
                 }
 
             @Override
             void set(ElementType value)
                 {
-                UniformIndexed.this.setElement(index, value);
+                this.UniformIndexed.setElement(index, value);
                 }
 
             private Var<ElementType> ref.get()

@@ -519,12 +519,15 @@ public abstract class Expression
         int cTypesRequired = atypeRequired == null ? 0 : atypeRequired.length;
         if (cTypesRequired > 1)
             {
-            // log the error, but allow validation to continue (with no particular
-            // expected type) so that we get as many errors exposed as possible in the
-            // validate phase
-            log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, atypeRequired.length, 1);
-            finishValidations(atypeRequired, atypeRequired, TypeFit.Fit, null, errs);
-            return null;
+            if (cTypesRequired > 2 || !getCodeContainer().isReturnConditional())
+                {
+                // log the error, but allow validation to continue (with no particular
+                // expected type) so that we get as many errors exposed as possible in the
+                // validate phase
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, atypeRequired.length, 1);
+                finishValidations(atypeRequired, atypeRequired, TypeFit.Fit, null, errs);
+                return null;
+                }
             }
 
         if (hasSingleValueImpl())
@@ -1381,9 +1384,12 @@ public abstract class Expression
         {
         checkDepth();
 
-        int cLVals = aLVal.length;
-        int cRVals = getValueCount();
-        assert cLVals <= cRVals;
+        int     cLVals = aLVal.length;
+        int     cRVals = getValueCount();
+        boolean fCond  = getCodeContainer().isReturnConditional();
+
+        assert cLVals <= cRVals || fCond && cLVals == cRVals + 1;
+
         if (cLVals < cRVals)
             {
             // blackhole the missing LVals
@@ -1398,12 +1404,12 @@ public abstract class Expression
             {
             switch (cLVals)
                 {
-                case 0:
-                    markInAssignment();
-                    generateVoid(ctx, code, errs);
-                    clearInAssignment();
-                    return;
-
+                case 2:
+                    if (!fCond || cRVals != 1)
+                        {
+                        break;
+                        }
+                    // must be a conditional "false" - fall through
                 case 1:
                     if (hasSingleValueImpl())
                         {
@@ -1412,6 +1418,13 @@ public abstract class Expression
                         clearInAssignment();
                         return;
                         }
+                    break;
+
+                case 0:
+                    markInAssignment();
+                    generateVoid(ctx, code, errs);
+                    clearInAssignment();
+                    return;
                 }
             }
 

@@ -9,6 +9,7 @@ module TestTuples.xqiz.it
         testSimple();
         testConstElement();
         testConstSlice();
+        testMultiAssign();
         }
 
     void testSimple()
@@ -50,4 +51,10 @@ module TestTuples.xqiz.it
         console.println("tuple[1..0]=" + blind2);
         }
 
+    void testMultiAssign()
+        {
+        console.println("\n** testMultiAssign()");
+        (String s, Int i) = ("hello", 3);
+        console.println("s=" + s + ", i=" + i);
+        }
     }

@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Component.SimpleCollector;
 import org.xvm.asm.Constant;
@@ -921,6 +922,7 @@ public class NameExpression
 
                         case Left:
                             {
+                            assert !idProp.getComponent().isStatic();
                             Argument argLeft = left.generateArgument(ctx, code, false, true, errs);
                             code.add(new P_Get(idProp, argLeft, argLVal));
                             break;
@@ -1093,7 +1095,7 @@ public class NameExpression
                             }
                         else
                             {
-                            if (fLocalPropOk)
+                            if (fLocalPropOk || idProp.getComponent().isStatic())
                                 {
                                 return idProp;
                                 }
@@ -1103,6 +1105,10 @@ public class NameExpression
 
                     case Left:
                         {
+                        if (idProp.getComponent().isStatic())
+                            {
+                            return idProp;
+                            }
                         Argument argLeft = left.generateArgument(ctx, code, false, true, errs);
                         code.add(new P_Get(idProp, argLeft, regTemp));
                         break;
@@ -1459,10 +1465,11 @@ public class NameExpression
                 }
 
             // attempt to use identity mode (e.g. "packageName.ClassName.PropName")
-            boolean fValid = true;
-            if (left instanceof NameExpression
+            boolean fValid  = true;
+            boolean fIdMode = left instanceof NameExpression
                     && ((NameExpression) left).resolveRawArgument(ctx, false, errs) != null
-                    && ((NameExpression) left).isIdentityMode(ctx, true))
+                    && ((NameExpression) left).isIdentityMode(ctx, true);
+            if (fIdMode)
                 {
                 // it must be a child of the component
                 NameExpression   exprLeft  = (NameExpression) left;
@@ -1526,7 +1533,7 @@ public class NameExpression
                                 // TODO check if the name refers to a typedef
 
                                 // process the "this.OuterName" construct
-                                if (typeLeft.isVirtualChild())
+                                if (!fIdMode)
                                     {
                                     Constant constTarget = new NameResolver(this, sName)
                                             .forceResolve(ErrorListener.BLACKHOLE);
@@ -1537,7 +1544,7 @@ public class NameExpression
                                         // ThisClassConstant; from this (context) point, walk up looking
                                         // for the specified class, counting the number of "parent
                                         // class" steps to get there
-                                        PseudoConstant idRelative = getRelativeIdentity(ctx, (IdentityConstant) constTarget);
+                                        PseudoConstant idRelative = getRelativeIdentity(ctx, typeLeft, (IdentityConstant) constTarget);
                                         if (idRelative != null)
                                             {
                                             m_arg = idRelative;
@@ -1816,7 +1823,7 @@ public class NameExpression
                     PropertyInfo infoProp = typeLeft.ensureTypeInfo(errs).findProperty(id);
                     if (infoProp != null)
                         {
-                        type = infoProp.getType().resolveAutoNarrowing(pool, true, typeLeft);
+                        type = infoProp.getType().resolveAutoNarrowing(pool, false, typeLeft);
                         }
                     }
 
@@ -2071,10 +2078,21 @@ public class NameExpression
      *          expression refers to vis-a-vis the class containing the method for which the passed
      *          context exists
      */
-    protected PseudoConstant getRelativeIdentity(Context ctx, IdentityConstant idTarget)
+    protected PseudoConstant getRelativeIdentity(Context ctx, TypeConstant typeFrom, IdentityConstant idTarget)
         {
+        // verify that we can "walk up the line" starting from the specified type
+        if (!typeFrom.isSingleUnderlyingClass(true))
+            {
+            return null;
+            }
+        Component component  = typeFrom.getSingleUnderlyingClass(true).getComponent();
+        if (!(component instanceof ClassStructure))
+            {
+            return null;
+            }
+
         ConstantPool     pool       = pool();
-        ClassStructure   clzParent  = ctx.getMethod().getContainingClass();      // TODO doesn't take typeLeft into account
+        ClassStructure   clzParent  = (ClassStructure) component;
         PseudoConstant   idVirtPath = null;
         while (clzParent != null)
             {

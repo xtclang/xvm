@@ -488,7 +488,7 @@ class CircularArray<ElementType>
 
                 if (index < tail)
                     {
-                    return True, CircularArray.this[index++];
+                    return True, this.CircularArray[index++];
                     }
                 return False;
                 }

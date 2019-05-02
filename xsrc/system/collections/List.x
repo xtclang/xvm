@@ -417,7 +417,7 @@ interface List<ElementType>
         @Override
         List<ElementType> list.get()
             {
-            return List.this;   // TODO this.List
+            return this.List;
             }
 
         @Override

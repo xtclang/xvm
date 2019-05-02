@@ -363,7 +363,7 @@ class ListMap<KeyType, ValueType>
         Keys clear()
             {
             verifyMutable();
-            ListMap.this.clear();
+            this.ListMap.clear();
             return this;
             }
 
@@ -515,7 +515,7 @@ class ListMap<KeyType, ValueType>
         @Override
         Map<KeyType, ValueType>.Entry reify()
             {
-            return new ReifiedEntry(ListMap.this, key);
+            return new ReifiedEntry(this.ListMap, key);
             }
 
         /**
@@ -631,7 +631,7 @@ class ListMap<KeyType, ValueType>
         Entries clear()
             {
             verifyMutable();
-            ListMap.this.clear();
+            this.ListMap.clear();
             return this;
             }
 
@@ -668,7 +668,7 @@ class ListMap<KeyType, ValueType>
             // otherwise, search for the entry by key
             if (!found)
                 {
-                if (index : ListMap.this.indexOf(entry.key))
+                if (index : this.ListMap.indexOf(entry.key))
                     {
                     found = True;
                     }
@@ -773,7 +773,7 @@ class ListMap<KeyType, ValueType>
         Values clear()
             {
             verifyMutable();
-            ListMap.this.clear();
+            this.ListMap.clear();
             return this;
             }
 

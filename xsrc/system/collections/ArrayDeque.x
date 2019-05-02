@@ -362,7 +362,7 @@ class ArrayDeque<ElementType>
         @Override
         Prepender ensureCapacity(Int count)
             {
-            ArrayDeque.this.ensureCapacity(count);
+            this.ArrayDeque.ensureCapacity(count);
             return this;
             }
         }
@@ -394,7 +394,7 @@ class ArrayDeque<ElementType>
             if (empty)
                 {
                 // the take() implementation on the FIFO queue will create a future result
-                return ArrayDeque.this.take();
+                return this.ArrayDeque.take();
                 }
 
             return takeLast();

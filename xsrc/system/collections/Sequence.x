@@ -23,9 +23,9 @@ interface Sequence<ElementType>
             @Override
             conditional ElementType next()
                 {
-                if (i < Sequence.this.size)
+                if (i < this.Sequence.size)
                     {
-                    return True, Sequence.this[i++];
+                    return True, this.Sequence[i++];
                     }
                 return False;
                 }

@@ -329,8 +329,8 @@ class HashMap<KeyType, ValueType>
                     }
                 else
                     {
-                    HashMap.this.put(key, value);
-                    assert hashEntry : HashMap.this.find(key);
+                    this.HashMap.put(key, value);
+                    assert hashEntry : this.HashMap.find(key);
                     exists = true;
                     }
                 }
@@ -341,7 +341,7 @@ class HashMap<KeyType, ValueType>
             {
             if (verifyNotPersistent() & exists)
                 {
-                assert HashMap.this.keys.removeIfPresent(key);
+                assert this.HashMap.keys.removeIfPresent(key);
                 exists = false;
                 }
             }
@@ -349,7 +349,7 @@ class HashMap<KeyType, ValueType>
         @Override
         Map<KeyType, ValueType>.Entry reify()
             {
-            return new ReifiedEntry<KeyType, ValueType>(HashMap.this, key);
+            return new ReifiedEntry<KeyType, ValueType>(this.HashMap, key);
             }
         }
 
@@ -373,16 +373,16 @@ class HashMap<KeyType, ValueType>
             {
             return new Iterator()
                 {
-                HashEntry?[] buckets     = HashMap.this.buckets;
+                HashEntry?[] buckets     = this.HashMap.buckets;
                 Int          nextBucket  = 0;
                 HashEntry?   nextEntry   = null;
-                Int          addSnapshot = HashMap.this.addCount;
+                Int          addSnapshot = this.HashMap.addCount;
                 CursorEntry  entry       = new CursorEntry();
 
                 @Override
                 conditional Entry next()
                     {
-                    if (addSnapshot != HashMap.this.addCount)
+                    if (addSnapshot != this.HashMap.addCount)
                         {
                         throw new ConcurrentModification();
                         }
@@ -416,7 +416,7 @@ class HashMap<KeyType, ValueType>
             if (entry.is(CursorEntry))
                 {
                 HashEntry    hashEntry = entry.hashEntry;
-                HashEntry?[] buckets   = HashMap.this.buckets;
+                HashEntry?[] buckets   = this.HashMap.buckets;
                 Int          keyhash   = hashEntry.keyhash;
                 Int          bucketId  = keyhash % buckets.size;
                 HashEntry?   currEntry = buckets[bucketId];
@@ -440,7 +440,7 @@ class HashMap<KeyType, ValueType>
                                 buckets[loop.count] = currEntry.next;
                                 }
 
-                            ++HashMap.this.removeCount;
+                            ++this.HashMap.removeCount;
                             }
 
                         // whether or not the entry matched and was removed, it was the one that we
@@ -454,7 +454,7 @@ class HashMap<KeyType, ValueType>
                 }
             else
                 {
-                HashMap.this.remove(entry.key, entry.value);
+                this.HashMap.remove(entry.key, entry.value);
                 }
 
             return this;
@@ -464,7 +464,7 @@ class HashMap<KeyType, ValueType>
         (EntrySet, Int) removeIf(function Boolean (Entry) shouldRemove)
             {
             Int          removed     = 0;
-            HashEntry?[] buckets     = HashMap.this.buckets;
+            HashEntry?[] buckets     = this.HashMap.buckets;
             Int          bucketCount = buckets.size;
             CursorEntry  entry       = new CursorEntry();
             for (Int i = 0; i < bucketCount; ++i)
@@ -488,7 +488,7 @@ class HashMap<KeyType, ValueType>
                             buckets[i] = currEntry;
                             }
                         ++removed;
-                        ++HashMap.this.removeCount;
+                        ++this.HashMap.removeCount;
                         }
                     else
                         {
