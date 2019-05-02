@@ -2,13 +2,19 @@ package org.xvm.runtime.template._native.fs;
 
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.MethodStructure;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
+
+import org.xvm.runtime.template.xInt64;
 
 
 /**
- * TODO
+ * Native OSFileStore implementation.
  */
 public class xOSFileStore
         extends ClassTemplate
@@ -42,11 +48,40 @@ public class xOSFileStore
         markNativeMethod("watchRecursively", PATHWATCHER, FUNCTION );
         }
 
+    @Override
+    protected int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
+        {
+        switch (sPropName)
+            {
+            case "capacity":
+                return frame.assignValue(iReturn, xInt64.makeHandle(128*1024*1024));
+            }
+
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
+        }
+
+    @Override
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle hArg, int iReturn)
+        {
+        GenericHandle hStore = (GenericHandle) hTarget;
+
+        switch (method.getName())
+            {
+            case "find":
+                {
+                return frame.assignValue(iReturn, hArg);
+                }
+            }
+
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
 
     // ----- constants -----------------------------------------------------------------------------
 
 
 
     // ----- data members --------------------------------------------------------------------------
-    
+
     }

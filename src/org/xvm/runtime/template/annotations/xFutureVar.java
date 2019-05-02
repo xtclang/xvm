@@ -8,6 +8,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
@@ -292,6 +293,125 @@ public class xFutureVar
         public boolean isAssigned()
             {
             return m_future != null && m_future.isDone();
+            }
+
+        @Override
+        public ObjectHandle getValue()
+            {
+            // it's a responsibility of the caller to only use this when the future is known to have
+            // completed normally
+            try
+                {
+                return m_future.get();
+                }
+            catch (Throwable e)
+                {
+                return null;
+                }
+            }
+
+        public boolean isCompletedNormally()
+            {
+            return m_future != null && m_future.isDone() && !m_future.isCompletedExceptionally();
+            }
+
+        /**
+         * @return a DeferredCallHandle for the future represented by this handle
+         */
+        public DeferredCallHandle makeDeferredHandle(Frame frame)
+            {
+            assert m_future != null;
+            return new DeferredCallHandle(Utils.createWaitFrame(frame, m_future, Op.A_STACK));
+            }
+
+        /**
+         * @return a DeferredCallHandle for getting a field from the future object represented by
+         *         this handle
+         */
+        public DeferredCallHandle makeDeferredGetField(Frame frame, String sName)
+            {
+            assert m_future != null;
+
+            Op[] aopGetProperty = new Op[]
+                {
+                new Op()
+                    {
+                    public int process(Frame frame, int iPC)
+                        {
+                        return frame.call(Utils.createWaitFrame(frame, m_future, A_STACK));
+                        }
+                    public String toString()
+                        {
+                        return "waitFutureHandle -> this:stack";
+                        }
+                    },
+                new Op()
+                    {
+                    public int process(Frame frame, int iPC)
+                        {
+                        GenericHandle hTarget = (GenericHandle) frame.popStack();
+                        return frame.returnValue(hTarget.getField(sName), false);
+                        }
+                    public String toString()
+                        {
+                        return "return getField " + sName;
+                        }
+                    },
+                };
+
+            Frame frameGetProperty = frame.createNativeFrame(
+                aopGetProperty, Utils.OBJECTS_NONE, Op.A_STACK, null);
+            return new DeferredCallHandle(frameGetProperty);
+            }
+
+        /**
+         * @return a DeferredCallHandle for getting a property the future represented by this handle
+         */
+        public DeferredCallHandle makeDeferredGetProperty(Frame frame, PropertyConstant idProp)
+            {
+            assert m_future != null;
+
+            Op[] aopGetProperty = new Op[]
+                {
+                new Op()
+                    {
+                    public int process(Frame frame, int iPC)
+                        {
+                        return frame.call(Utils.createWaitFrame(frame, m_future, A_STACK));
+                        }
+                    public String toString()
+                        {
+                        return "waitFutureHandle -> this:stack";
+                        }
+                    },
+                new Op()
+                    {
+                    public int process(Frame frame, int iPC)
+                        {
+                        ObjectHandle hTarget = frame.popStack();
+                        return hTarget.getTemplate().getPropertyValue(frame, hTarget, idProp, A_STACK);
+                        }
+                    public String toString()
+                        {
+                        return "getProperty -> this:stack";
+                        }
+                    },
+                new Op()
+                    {
+                    public int process(Frame frame, int iPC)
+                        {
+                        return frame.returnValue(frame.popStack(), false);
+                        }
+                    public String toString()
+                        {
+                        return "return this:stack";
+                        }
+                    },
+                };
+
+            Frame frameGetProperty = frame.createNativeFrame(
+                aopGetProperty, Utils.OBJECTS_NONE, Op.A_STACK, null);
+            return new DeferredCallHandle(frameGetProperty);
             }
 
         @Override

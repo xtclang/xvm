@@ -17,8 +17,9 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.VarSupport;
 
+import org.xvm.runtime.template.annotations.xInjectedRef.InjectedHandle;
+
 import org.xvm.runtime.template.xRef.RefHandle;
-import org.xvm.runtime.template.annotations.xInjectedRef;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -111,7 +112,7 @@ public class Var_DN
 
             hRef = ((VarSupport) clz.getSupport()).createRefHandle(clz, sName);
 
-            if (hRef instanceof xInjectedRef.InjectedHandle)
+            if (hRef instanceof InjectedHandle)
                 {
                 // InjectedRef is exclusively native; no need for initialization
                 m_ref = hRef;

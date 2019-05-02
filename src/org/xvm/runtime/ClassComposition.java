@@ -299,6 +299,7 @@ public class ClassComposition
                 TypeInfo     info = f_typeInception.ensureTypeInfo();
                 PropertyInfo prop = info.findPropertyByNid(nid);
 
+                assert prop != null;
                 return new CallChain(info.getOptimizedGetChain(prop.getIdentity()));
                 });
         }
@@ -312,6 +313,7 @@ public class ClassComposition
                 TypeInfo     info = f_typeInception.ensureTypeInfo();
                 PropertyInfo prop = info.findPropertyByNid(nid);
 
+                assert prop != null;
                 return new CallChain(info.getOptimizedSetChain(prop.getIdentity()));
                 });
         }

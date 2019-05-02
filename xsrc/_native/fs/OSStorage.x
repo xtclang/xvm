@@ -3,15 +3,21 @@ import Ecstasy.fs.FileStore;
 import Ecstasy.fs.Path;
 
 /**
- * Native OS FileStore implementation.
+ * Native OSStorage service.
  */
 service OSStorage
     {
     construct()
         {
+        fileStore = new OSFileStore(false);
         }
 
     FileStore fileStore;
+
+    Directory rootDir.get()
+        {
+        return fileStore.root;
+        }
 
     Directory directoryFor(String pathString)
         {

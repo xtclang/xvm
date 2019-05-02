@@ -1,26 +1,32 @@
 package org.xvm.runtime;
 
 
-import java.io.File;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
+
+import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xFunction;
@@ -160,9 +166,9 @@ public class Container
             {
             TypeConstant typeClock = templateClock.getCanonicalType();
 
-            f_mapSuppliers.put(new InjectionKey("clock"     , typeClock), this::ensureDefaultClock);
-            f_mapSuppliers.put(new InjectionKey("localClock", typeClock), this::ensureLocalClock);
-            f_mapSuppliers.put(new InjectionKey("utcClock"  , typeClock), this::ensureUTCClock);
+            f_mapResources.put(new InjectionKey("clock"     , typeClock), this::ensureDefaultClock);
+            f_mapResources.put(new InjectionKey("localClock", typeClock), this::ensureLocalClock);
+            f_mapResources.put(new InjectionKey("utcClock"  , typeClock), this::ensureUTCClock);
             }
 
         // +++ NanosTimer
@@ -175,7 +181,7 @@ public class Container
             Function<Frame, ObjectHandle> supplierTimer = (frame) ->
                 xService.makeHandle(createServiceContext("Timer", f_moduleRoot),
                         templateRealTimeTimer.getCanonicalClass(), typeTimer);
-            f_mapSuppliers.put(new InjectionKey("timer", typeTimer), supplierTimer);
+            f_mapResources.put(new InjectionKey("timer", typeTimer), supplierTimer);
             }
 
         // +++ Console
@@ -190,7 +196,7 @@ public class Container
                 xService.makeHandle(createServiceContext("Console", f_moduleRoot),
                     templateRTConsole.getCanonicalClass(), typeConsole);
 
-            f_mapSuppliers.put(new InjectionKey("console", typeConsole), supplierConsole);
+            f_mapResources.put(new InjectionKey("console", typeConsole), supplierConsole);
             }
 
         // +++ OSFileStore
@@ -201,11 +207,11 @@ public class Container
             TypeConstant typeFileStore = templateFileStore.getCanonicalType();
             TypeConstant typeDirectory = templateDirectory.getCanonicalType();
 
-            f_mapSuppliers.put(new InjectionKey("storage", typeFileStore), this::ensureFileStore);
-            f_mapSuppliers.put(new InjectionKey("rootDir", typeDirectory), this::ensureRootDir);
-            f_mapSuppliers.put(new InjectionKey("homeDir", typeDirectory), this::ensureHomeDir);
-            f_mapSuppliers.put(new InjectionKey("curDir" , typeDirectory), this::ensureCurDir);
-            f_mapSuppliers.put(new InjectionKey("tmpDir" , typeDirectory), this::ensureTmpDir);
+            f_mapResources.put(new InjectionKey("storage", typeFileStore), this::ensureFileStore);
+            f_mapResources.put(new InjectionKey("rootDir", typeDirectory), this::ensureRootDir);
+            f_mapResources.put(new InjectionKey("homeDir", typeDirectory), this::ensureHomeDir);
+            f_mapResources.put(new InjectionKey("curDir" , typeDirectory), this::ensureCurDir);
+            f_mapResources.put(new InjectionKey("tmpDir" , typeDirectory), this::ensureTmpDir);
             }
         }
 
@@ -242,17 +248,35 @@ public class Container
 
     protected ObjectHandle ensureOSStorage(Frame frame)
         {
-        ObjectHandle hStore = m_hOSStorage;
-        if (hStore == null)
+        ObjectHandle hStorage = m_hOSStorage;
+        if (hStorage == null)
             {
             ClassTemplate    templateStorage = f_templates.getTemplate("_native.fs.OSStorage");
-            TypeConstant     typeStorage     = templateStorage.getCanonicalType();
             ClassComposition clzStorage      = templateStorage.getCanonicalClass();
-            ServiceContext   ctxService       = createServiceContext("OSStorage", f_moduleRoot);
-            m_hOSStorage = hStore = xService.makeHandle(ctxService, clzStorage, typeStorage);
+            MethodStructure  constructor     = templateStorage.f_struct.findConstructor();
+
+            switch (templateStorage.construct(frame, constructor, clzStorage,
+                                              null, Utils.OBJECTS_NONE, A_STACK))
+                {
+                case Op.R_NEXT:
+                    hStorage = frame.popStack();
+                    break;
+
+                case Op.R_EXCEPTION:
+                    break;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            m_hOSStorage = hStorage;
+            }
+        else if (hStorage instanceof FutureHandle &&
+                ((FutureHandle) hStorage).isCompletedNormally())
+            {
+            m_hOSStorage = hStorage = ((FutureHandle) hStorage).getValue();
             }
 
-        return hStore;
+        return hStorage;
         }
 
     protected ObjectHandle ensureFileStore(Frame frame)
@@ -260,23 +284,25 @@ public class Container
         ObjectHandle hStore = m_hFileStore;
         if (hStore == null)
             {
-            ObjectHandle  hOSStorage      = ensureOSStorage(frame);
-            ClassTemplate templateStorage = f_templates.getTemplate("_native.fs.OSStorage");
-            templateStorage.getPropertyValue(frame, hOSStorage, templateStorage.findProperty("fileStore").getIdentityConstant(), A_STACK);
-            m_hFileStore = hStore = frame.popStack();
+            ObjectHandle hOSStorage = ensureOSStorage(frame);
+            if (hOSStorage instanceof FutureHandle)
+                {
+                DeferredCallHandle hDeferred = ((FutureHandle) hOSStorage).
+                    makeDeferredGetField(frame, "fileStore");
+                hDeferred.addContinuation(frameCaller ->
+                    {
+                    m_hFileStore = frameCaller.peekStack();
+                    return Op.R_NEXT;
+                    });
+                hStore = hDeferred;
+                }
+            else if (hOSStorage != null)
+                {
+                m_hFileStore = hStore = ((GenericHandle) hOSStorage).getField("fileStore");
+                }
             }
 
         return hStore;
-        }
-
-    File ensureFile(String sPath)
-        {
-        File file = new File(sPath == null ? "/" : sPath);
-        if (!file.exists())
-            {
-            file = new File("/");
-            }
-        return file;
         }
 
     protected ObjectHandle ensureRootDir(Frame frame)
@@ -284,14 +310,12 @@ public class Container
         ObjectHandle hDir = m_hRootDir;
         if (hDir == null)
             {
-            ClassTemplate templateDirectory   = f_templates.getTemplate("fs.FileStore");
-            ClassTemplate templateRTDirectory = f_templates.getTemplate("_native.fs.OSFileStore");
-            TypeConstant  typeDirectory       = templateDirectory.getCanonicalType();
-            File          fileDir             = ensureFile(null);
-            ObjectHandle  hStore              = ensureFileStore(frame);
-            // TODO GG how do I constructor the OSDirectory object in the same service as the FileStore?
-            // templateStorage.construct(frame, templateStorage.f_struct.findConstructor(), clzStorage, null, Utils.OBJECTS_NONE, A_STACK);
-            throw new UnsupportedOperationException();
+            ObjectHandle hOSStorage = ensureOSStorage(frame);
+            if (hOSStorage != null)
+                {
+                m_hRootDir = hDir =
+                    getNativeServiceProperty(frame, hOSStorage, "rootDir", h -> m_hRootDir = h);
+                }
             }
 
         return hDir;
@@ -302,8 +326,12 @@ public class Container
         ObjectHandle hDir = m_hHomeDir;
         if (hDir == null)
             {
-            // TODO
-            throw new UnsupportedOperationException();
+            ObjectHandle hOSStorage = ensureOSStorage(frame);
+            if (hOSStorage != null)
+                {
+                m_hHomeDir = hDir =
+                    getNativeServiceProperty(frame, hOSStorage, "homeDir", h -> m_hHomeDir = h);
+                }
             }
 
         return hDir;
@@ -333,6 +361,51 @@ public class Container
         return hDir;
         }
 
+    /**
+     * Helper method to call into a native service.
+     */
+    private ObjectHandle getNativeServiceProperty(Frame frame, ObjectHandle hService, String sProp,
+                                                  Consumer<ObjectHandle> consumer)
+        {
+        ClassTemplate    templateSvc = hService.getTemplate();
+        PropertyConstant idProp      = templateSvc.getCanonicalType().
+                ensureTypeInfo().findProperty(sProp).getIdentity();
+
+        if (hService instanceof FutureHandle)
+            {
+            DeferredCallHandle hDeferred = ((FutureHandle) hService).
+                makeDeferredGetProperty(frame, idProp);
+            hDeferred.addContinuation(frameCaller ->
+                {
+                consumer.accept(frameCaller.peekStack());
+                return Op.R_NEXT;
+                });
+            return hDeferred;
+            }
+
+        switch (templateSvc.getPropertyValue(frame, hService, idProp, A_STACK))
+            {
+            case Op.R_NEXT:
+                return frame.popStack();
+
+            case Op.R_CALL:
+                Frame frameNext = frame.m_frameNext;
+                frameNext.setContinuation(frameCaller ->
+                    {
+                    consumer.accept(frameCaller.peekStack());
+                    return Op.R_NEXT;
+                    });
+                return new DeferredCallHandle(frameNext);
+
+            case Op.R_EXCEPTION:
+                // deferred exception
+                return new DeferredCallHandle(frame);
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
     public ServiceContext createServiceContext(String sName, ModuleStructure module)
         {
         ServiceContext context = new ServiceContext(this, module, sName,
@@ -350,30 +423,27 @@ public class Container
         f_mapServices.remove(context);
         }
 
-    // return the injectable handle or null, if not resolvable
-    // TODO: need an "override" name or better yet "injectionAttributes"
+    /**
+     * Obtain an injected handle for the specified name and type.
+     *
+     * TODO: need to be able to provide "injectionAttributes"
+     *
+     * @param frame  the current frame
+     * @param sName  the name of the injected object
+     * @param type   the type of the injected object
+     *
+     * @return the injectable handle or null, if the name not resolvable
+     *
+     */
     public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type)
         {
-        InjectionKey key  = new InjectionKey(sName, type);
-        ObjectHandle hVal = f_mapResources.get(key);
-        if (hVal != null)
-            {
-            return hVal;
-            }
+        InjectionKey key = new InjectionKey(sName, type);
+        Function<Frame, ObjectHandle> fnResource = f_mapResources.get(key);
 
-        Function<Frame, ObjectHandle> fn = f_mapSuppliers.get(key);
-        if (fn == null)
-            {
-            return null;
-            }
-
-        // TODO: concurrently
-        hVal = fn.apply(frame);
-        if (hVal != null)
-            {
-            f_mapResources.put(key, hVal);
-            }
-        return hVal;
+        ObjectHandle hValue = fnResource == null ? null : fnResource.apply(frame);
+        return hValue instanceof FutureHandle
+            ? ((FutureHandle) hValue).makeDeferredHandle(frame)
+            : hValue;
         }
 
     public ServiceContext getMainContext()
@@ -470,6 +540,5 @@ public class Container
     private ObjectHandle m_hCurDir;
     private ObjectHandle m_hTmpDir;
 
-    final Map<InjectionKey, Function<Frame, ObjectHandle>> f_mapSuppliers = new HashMap<>();
-    final Map<InjectionKey, ObjectHandle>                  f_mapResources = new HashMap<>();
+    final Map<InjectionKey, Function<Frame, ObjectHandle>> f_mapResources = new HashMap<>();
     }

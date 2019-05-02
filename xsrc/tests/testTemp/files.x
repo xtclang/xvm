@@ -1,5 +1,6 @@
 module TestFiles.xqiz.it
     {
+    import X.fs.Directory;
     import X.fs.Path;
     import X.fs.FileStore;
 
@@ -43,5 +44,9 @@ module TestFiles.xqiz.it
         console.println("\n** testInject()");
         @Inject FileStore storage;
         console.println("readOnly=" + storage.readOnly);
+        console.println("capacity=" + storage.capacity);
+
+//        @Inject Directory rootDir;
+//        console.println("capacity=" + rootDir);
         }
     }

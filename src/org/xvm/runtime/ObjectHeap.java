@@ -77,8 +77,7 @@ public class ObjectHeap
                 Frame frameNext = frame.m_frameNext;
                 frameNext.setContinuation(frameCaller ->
                     {
-                    frame.pushStack(
-                        saveConstHandle(constValue, frameCaller.popStack()));
+                    saveConstHandle(constValue, frameCaller.peekStack());
                     return Op.R_NEXT;
                     });
                 return new DeferredCallHandle(frameNext);

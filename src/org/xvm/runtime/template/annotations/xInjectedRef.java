@@ -3,10 +3,13 @@ package org.xvm.runtime.template.annotations;
 
 import org.xvm.asm.ClassStructure;
 
+import org.xvm.asm.Op;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
@@ -15,7 +18,7 @@ import org.xvm.runtime.template.xRef;
 
 
 /**
- * TODO:
+ * Native InjectedRef implementation.
  */
 public class xInjectedRef
         extends xRef
@@ -51,7 +54,7 @@ public class xInjectedRef
     protected int getInternal(Frame frame, RefHandle hTarget, int iReturn)
         {
         InjectedHandle hInjected = (InjectedHandle) hTarget;
-        ObjectHandle hValue = hInjected.getValue();
+        ObjectHandle   hValue    = hInjected.getValue();
         if (hValue == null)
             {
             TypeConstant typeEl = hInjected.getType().resolveGenericType("RefType");
@@ -62,7 +65,19 @@ public class xInjectedRef
                 return frame.raiseException(
                     xException.makeHandle("Unknown injectable property " + hInjected.getName()));
                 }
-            hInjected.setValue(hValue);
+
+            if (hValue instanceof DeferredCallHandle)
+                {
+                ((DeferredCallHandle) hValue).addContinuation(frameCaller ->
+                    {
+                    hInjected.setValue(frameCaller.peekStack());
+                    return Op.R_NEXT;
+                    });
+                }
+            else
+                {
+                hInjected.setValue(hValue);
+                }
             }
 
         return frame.assignValue(iReturn, hValue);

@@ -525,8 +525,12 @@ public abstract class ObjectHandle
             }
         }
 
-    // a handle representing a deferred action, such as a property access or a method call;
-    // this handle cannot be allocated naturally and must be processed in a special way
+    /**
+     * DeferredCallHandle represents a deferred action, such as a property access or a method call,
+     * which would place the result of that action on the corresponding frame's stack.
+     *
+     * Note: this handle cannot be allocated naturally and must be processed in a special way.
+     */
     public static class DeferredCallHandle
             extends ObjectHandle
         {
@@ -551,6 +555,11 @@ public abstract class ObjectHandle
 
             frameCaller.m_hException = frameNext.m_hException;
             return Op.R_EXCEPTION;
+            }
+
+        public void addContinuation(Frame.Continuation continuation)
+            {
+            f_frameNext.setContinuation(continuation);
             }
 
         public ExceptionHandle.WrapperException getDeferredException()

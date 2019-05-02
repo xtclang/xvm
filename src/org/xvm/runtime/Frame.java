@@ -539,6 +539,16 @@ public class Frame
         }
 
     /**
+     * Peek at the value at the top of the local stack.
+     *
+     * @return a value at the top of the stack
+     */
+    public ObjectHandle peekStack()
+        {
+        return m_hStackTop;
+        }
+
+    /**
      * Push a value on the local stack if it was popped from the stack.
      *
      * @param iArg    the argument id

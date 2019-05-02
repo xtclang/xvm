@@ -32,7 +32,9 @@ import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
+
 import org.xvm.runtime.Utils.BinaryAction;
 import org.xvm.runtime.Utils.InPlacePropertyBinary;
 import org.xvm.runtime.Utils.InPlacePropertyUnary;
@@ -760,8 +762,8 @@ public abstract class ClassTemplate
             throw new IllegalStateException(f_sName);
             }
 
-        GenericHandle hThis = (GenericHandle) hTarget;
-        ObjectHandle hValue = hThis.getField(idProp);
+        GenericHandle hThis  = (GenericHandle) hTarget;
+        ObjectHandle  hValue = hThis.getField(idProp);
 
         if (hValue == null)
             {
@@ -770,10 +772,23 @@ public abstract class ClassTemplate
                 {
                 TypeInfo     info = hThis.getType().ensureTypeInfo();
                 PropertyInfo prop = info.findProperty(idProp);
-                hValue = frame.f_context.f_container.getInjectable(frame, idProp.getName(), prop.getType());
+
+                hValue = frame.f_context.f_container.getInjectable(
+                        frame, idProp.getName(), prop.getType());
                 if (hValue != null)
                     {
-                    hThis.setField(idProp, hValue);
+                    if (hValue instanceof DeferredCallHandle)
+                        {
+                        ((DeferredCallHandle) hValue).addContinuation(frameCaller ->
+                            {
+                            hThis.setField(idProp, frameCaller.peekStack());
+                            return Op.R_NEXT;
+                            });
+                        }
+                    else
+                        {
+                        hThis.setField(idProp, hValue);
+                        }
                     return frame.assignValue(iReturn, hValue);
                     }
                 sErr = "Unknown injectable property ";
