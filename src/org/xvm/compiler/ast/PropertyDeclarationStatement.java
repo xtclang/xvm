@@ -249,6 +249,17 @@ public class PropertyDeclarationStatement
             return;
             }
 
+        if (name.isSpecial())
+            {
+            if (!(sName.equals("outer")
+                    && container.getIdentityConstant().getModuleConstant().isEcstasyModule()
+                    && container.getIdentityConstant().getPathString().equals("Outer.Inner")))
+                {
+                log(errs, Severity.ERROR, Compiler.NAME_RESERVED, sName);
+                return;
+                }
+            }
+
         // another property by the same name should not already exist (other than in the case of
         // conditionals, which are not yet implemented)
         if (container.getChild(sName) != null)

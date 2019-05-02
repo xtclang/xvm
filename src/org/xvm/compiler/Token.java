@@ -148,6 +148,14 @@ public class Token
         }
 
     /**
+     * @return true iff this is an identifier is a context-sensitive name
+     */
+    public boolean isContextSensitive()
+        {
+        return m_id == Id.IDENTIFIER && Id.valueByContextSensitiveText((String) getValue()) != null;
+        }
+
+    /**
      * If the token is an identifier that is also a context sensitive keyword, obtain that keyword.
      *
      * @return a keyword token that represents the same text as this identifier token

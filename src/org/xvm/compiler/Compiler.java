@@ -1126,6 +1126,10 @@ public class Compiler
      */
     public static final String NO_DEFAULT_VALUE                   = "COMPILER-123";
     /**
+     * Name is reserved: {0}.
+     */
+    public static final String NAME_RESERVED                      = "COMPILER-124";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

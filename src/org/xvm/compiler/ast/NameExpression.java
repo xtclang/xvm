@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Component.SimpleCollector;
 import org.xvm.asm.Constant;
@@ -1088,11 +1087,18 @@ public class NameExpression
                         }
 
                     case This:
-                        if (fLocalPropOk)
+                        if (idProp.getName().equals("outer"))
                             {
-                            return idProp;
+                            code.add(new MoveThis(1, regTemp));
                             }
-                        code.add(new L_Get(idProp, regTemp));
+                        else
+                            {
+                            if (fLocalPropOk)
+                                {
+                                return idProp;
+                                }
+                            code.add(new L_Get(idProp, regTemp));
+                            }
                         break;
 
                     case Left:
@@ -1443,113 +1449,15 @@ public class NameExpression
                     }
                 }
             }
-        else if (sName.equals("this")) // TODO
+        else // left is NOT null
             {
-            if (ctx.isFunction())
+            // the "Type.this" construct is not supported; use "this.Type" instead
+            if (sName.equals("this"))
                 {
-                name.log(errs, getSource(), Severity.ERROR, Compiler.NO_THIS);
+                this.log(errs, Severity.ERROR, Compiler.INVALID_OUTER_THIS, left);
+                return null;
                 }
-            else if (left instanceof NameExpression
-                    && ((NameExpression) left).resolveRawArgument(ctx, false, errs) != null)
-                {
-                NameExpression   exprLeft = (NameExpression) left;
-                IdentityConstant idLeft   = exprLeft.getIdentity(ctx);
-                switch (idLeft.getFormat())
-                    {
-                    case Module:
-                    case Package:
-                    case Class:
-                        // the left has to be an identity mode
-                        if (exprLeft.isIdentityMode(ctx, true))
-                            {
-                            // if the left is a class, then the result is a sequence of at
-                            // least one (recursive) ParentClassConstant around a
-                            // ThisClassConstant; from this (context) point, walk up looking
-                            // for the specified class, counting the number of "parent
-                            // class" steps to get there
-                            PseudoConstant idRelative = exprLeft.getRelativeIdentity(ctx);
-                            if (idRelative == null)
-                                {
-                                log(errs, Severity.ERROR, Compiler.MISSING_RELATIVE, sName);
-                                }
-                            else
-                                {
-                                m_arg = idRelative;
-                                }
-                            }
-                        else
-                            {
-                            name.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OUTER_THIS);
-                            }
-                        break;
 
-                    case Property:
-                        // the left has to be in identity mode OR the property name does not have a
-                        // left
-                        if (exprLeft.isIdentityMode(ctx, true) || exprLeft.left == null)
-                            {
-                            // the property needs to be a parent (or grandparent, etc.) of the
-                            // current method, and not a constant value, and its class parent needs
-                            // to be a "relative" like getRelativeIdentity()
-                            Component parent = ctx.getMethod();
-                            NextParent: while (true)
-                                {
-                                IdentityConstant idParent = parent.getIdentityConstant();
-                                switch (idParent.getFormat())
-                                    {
-                                    case Property:
-                                        PropertyStructure prop = (PropertyStructure) parent;
-                                        if (prop.isConstant() || prop.isGenericTypeParameter())
-                                            {
-                                            name.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OUTER_THIS);
-                                            break NextParent;
-                                            }
-
-                                        if (idParent.equals(idLeft))
-                                            {
-                                            // if the left is a property, then the result is the
-                                            // same as if we had said "&propname", i.e. the result
-                                            // is a Ref/Var for the property in question (i.e. the
-                                            // property's "this")
-                                            m_arg = idLeft;
-                                            break NextParent;
-                                            }
-                                        break;
-
-                                    case Class:
-                                        if (!((ClassStructure) parent).isTopLevel() && !parent.isStatic())
-                                            {
-                                            break;
-                                            }
-                                        // fall through
-                                    case Module:
-                                    case Package:
-                                        // these are top level; it's an error that we haven't
-                                        // already found the property
-                                        name.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OUTER_THIS);
-                                        break NextParent;
-                                    }
-
-                                parent = parent.getParent();
-                                }
-                            }
-                        else
-                            {
-                            name.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OUTER_THIS);
-                            }
-                        break;
-
-                    default:
-                        throw new IllegalStateException("left=" + idLeft);
-                    }
-                }
-            else
-                {
-                name.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OUTER_THIS);
-                }
-            }
-        else // left is NOT null, and it is not a ".this"
-            {
             // attempt to use identity mode (e.g. "packageName.ClassName.PropName")
             boolean fValid = true;
             if (left instanceof NameExpression
@@ -1615,7 +1523,29 @@ public class NameExpression
                         switch (setMethods.size())
                             {
                             case 0:
-                                // TODO typedefs
+                                // TODO check if the name refers to a typedef
+
+                                // process the "this.OuterName" construct
+                                if (typeLeft.isVirtualChild())
+                                    {
+                                    Constant constTarget = new NameResolver(this, sName)
+                                            .forceResolve(ErrorListener.BLACKHOLE);
+                                    if (constTarget instanceof IdentityConstant && constTarget.isClass())
+                                        {
+                                        // if the left is a class, then the result is a sequence of at
+                                        // least one (recursive) ParentClassConstant around a
+                                        // ThisClassConstant; from this (context) point, walk up looking
+                                        // for the specified class, counting the number of "parent
+                                        // class" steps to get there
+                                        PseudoConstant idRelative = getRelativeIdentity(ctx, (IdentityConstant) constTarget);
+                                        if (idRelative != null)
+                                            {
+                                            m_arg = idRelative;
+                                            return idRelative;
+                                            }
+                                        }
+                                    }
+
                                 name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_MISSING,
                                     sName, typeLeft.getValueString());
                                 break;
@@ -1747,26 +1677,25 @@ public class NameExpression
                 }
 
             case ParentClass:
-                if (name.getValueText().equals("this"))
-                    {
-                    // TODO GG: that needs to be calculated; it can be a VirtualChildTypeConstant
-                    TypeConstant typeParent = pool.ensureAccessTypeConstant(
-                        ((ParentClassConstant) constant).getDeclarationLevelClass().getFormalType(),
-                        Access.PRIVATE);
+                {
+                // TODO GG: that needs to be calculated; it can be a VirtualChildTypeConstant
+                TypeConstant typeParent = pool.ensureAccessTypeConstant(
+                    ((ParentClassConstant) constant).getDeclarationLevelClass().getFormalType(),
+                    Access.PRIVATE);
 
-                    NameExpression exprLeft = (NameExpression) left;
-                    if (exprLeft.isSuppressDeref())
-                        {
-                        m_plan = Plan.OuterRef;
-                        return pool.ensureParameterizedTypeConstant(pool.typeRef(), typeParent);
-                        }
-                    else
-                        {
-                        m_plan = Plan.OuterThis;
-                        return typeParent;
-                        }
+                NameExpression exprLeft = (NameExpression) left;
+                if (exprLeft.isSuppressDeref())
+                    {
+                    m_plan = Plan.OuterRef;
+                    return pool.ensureParameterizedTypeConstant(pool.typeRef(), typeParent);
                     }
-                // fall through
+                else
+                    {
+                    m_plan = Plan.OuterThis;
+                    return typeParent;
+                    }
+                }
+
             // class ID
             case Module:
             case Package:
@@ -1871,6 +1800,10 @@ public class NameExpression
                     if (argNarrowed instanceof TargetInfo)
                         {
                         type = argNarrowed.getType();
+                        }
+                    else
+                        {
+                        type = type.resolveAutoNarrowing(pool, false, typeLeft);
                         }
                     }
                 else
@@ -2138,26 +2071,22 @@ public class NameExpression
      *          expression refers to vis-a-vis the class containing the method for which the passed
      *          context exists
      */
-    protected PseudoConstant getRelativeIdentity(Context ctx)
+    protected PseudoConstant getRelativeIdentity(Context ctx, IdentityConstant idTarget)
         {
-        assert (!ctx.isFunction());
-        assert isIdentityMode(ctx, false);
-
-        ConstantPool     pool      = pool();
-        IdentityConstant idTarget  = getIdentity(ctx);
-        ClassStructure   clzParent = ctx.getMethod().getContainingClass();
-        PseudoConstant   idDotThis = null;
+        ConstantPool     pool       = pool();
+        ClassStructure   clzParent  = ctx.getMethod().getContainingClass();      // TODO doesn't take typeLeft into account
+        PseudoConstant   idVirtPath = null;
         while (clzParent != null)
             {
             IdentityConstant idParent = clzParent.getIdentityConstant();
-            idDotThis = idDotThis == null
+            idVirtPath = idVirtPath == null
                     ? pool.ensureThisClassConstant(idParent)
-                    : pool.ensureParentClassConstant(idDotThis);
+                    : pool.ensureParentClassConstant(idVirtPath);
 
-            if (idParent.equals(idTarget))
+            if (idParent.equals(idTarget) || clzParent.hasContribution(idTarget, true))
                 {
                 // found it!
-                return idDotThis;
+                return idVirtPath;
                 }
 
             if (clzParent.isTopLevel() || clzParent.isStatic())
@@ -2195,6 +2124,7 @@ public class NameExpression
             }
         return PropertyAccess.Left;
         }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 

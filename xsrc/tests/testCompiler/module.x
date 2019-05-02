@@ -1,3 +1,0 @@
-module TestCompiler.xqiz.it
-    {
-    }
