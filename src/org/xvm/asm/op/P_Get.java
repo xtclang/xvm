@@ -101,7 +101,7 @@ public class P_Get
                 {
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
                 Frame.Continuation stepNext = frameCaller ->
-                    hTarget.getTemplate().getPropertyValue(
+                    ahTarget[0].getTemplate().getPropertyValue(
                         frame, ahTarget[0], constProperty, m_nRetValue);
 
                 return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
