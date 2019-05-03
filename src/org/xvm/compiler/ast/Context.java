@@ -1479,15 +1479,15 @@ public class Context
 
     /**
      * Calculate the number of steps ("this.outer") it takes to get from this context to the
-     * specified virtual parent.
+     * specified parent.
      *
-     * @param clzVirtualParent  the parent class
+     * @param clzParent  the parent class
      *
      * @return the number of steps or -1 if the parent is not in the path
      */
-    public int getStepsToOuterClass(ClassStructure clzVirtualParent)
+    public int getStepsToOuterClass(ClassStructure clzParent)
         {
-        IdentityConstant idParent  = clzVirtualParent.getIdentityConstant();
+        IdentityConstant idParent  = clzParent.getIdentityConstant();
         Component        component = getMethod().getParent().getParent(); // namespace
         int              cSteps    = 0;
 
