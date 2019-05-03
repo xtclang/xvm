@@ -1885,6 +1885,17 @@ public abstract class TypeConstant
                 }
             }
 
+        // virtual children implement an implicit "Inner" interface, and are contained inside a
+        // container class that implements an implicit "Outer" interface
+        if (struct.containsVirtualChild() && !constId.equals(pool.clzOuter()))
+            {
+            listProcess.add(new Contribution(Composition.Implements, pool.typeOuter()));
+            }
+        if (isVirtualChild() && !constId.equals(pool.clzInner()))
+            {
+            listProcess.add(new Contribution(Composition.Implements, pool.typeInner()));
+            }
+
         // the last three contributions to get processed are the "re-basing", the "extends" and the
         // "into" (which we also use for filling out the implied methods under interfaces, i.e.
         // "into Object")
@@ -2933,7 +2944,8 @@ public abstract class TypeConstant
 
                 if (listMatches.isEmpty())
                     {
-                    if (methodContrib.getTail().isNative())
+                    if (methodContrib.getTail().isNative()
+                            || methodContrib.getIdentity().getNamespace().getName().equals("outer")) // TODO GG I think that there's a bug with collectPotentialSuperMethods() (not resolving something?)
                         {
                         // take it as is
                         mapVirtMods.put(nidContrib, methodResult);

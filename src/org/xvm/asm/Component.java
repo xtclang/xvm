@@ -1104,6 +1104,34 @@ public abstract class Component
         }
 
     /**
+     * @return true iff this component contains a virtual child class; note that this method does
+     *         not search contributions to see if any contribution contains a virtual child (which
+     *         implies that this component would then also have a virtual child)
+     */
+    public boolean containsVirtualChild()
+        {
+        for (Component child : ensureChildByNameMap().values())
+            {
+            switch (child.getIdentityConstant().getFormat())
+                {
+                case Class:
+                    if (((ClassStructure) child).isVirtualChild())
+                        {
+                        return true;
+                        }
+                    break;
+                case Property:
+                    if (child.containsVirtualChild())
+                        {
+                        return true;
+                        }
+                    break;
+                }
+            }
+        return false;
+        }
+
+    /**
      * Create and register a PropertyStructure with the specified name.
      *
      * @param fStatic    true if the property is marked as static

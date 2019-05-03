@@ -972,6 +972,7 @@ public class ConstantPool
             case "Ordered":
             case "Object":
             case "Orderable":
+            case "Outer":
             case "OutOfBounds":
             case "Package":
             case "Range":
@@ -991,6 +992,11 @@ public class ConstantPool
             case "UnsupportedOperation":
             case "Var":
                 sClz = sName;
+                break;
+
+            case "Inner":
+                sClz = "Outer";
+                sSub = "Inner";
                 break;
 
             case "Byte":
@@ -1871,6 +1877,8 @@ public class ConstantPool
     public ModuleConstant    modEcstasy()       {ModuleConstant    c = m_valEcstasy;      if (c == null) {m_valEcstasy      = c = ensureModuleConstant(ECSTASY_MODULE)                        ;} return c;}
 
     public ClassConstant     clzObject()        {ClassConstant     c = m_clzObject;       if (c == null) {m_clzObject       = c = (ClassConstant) getImplicitlyImportedIdentity("Object"     );} return c;}
+    public ClassConstant     clzInner()         {ClassConstant     c = m_clzInner;        if (c == null) {m_clzInner        = c = (ClassConstant) getImplicitlyImportedIdentity("Inner"      );} return c;}
+    public ClassConstant     clzOuter()         {ClassConstant     c = m_clzOuter;        if (c == null) {m_clzOuter        = c = (ClassConstant) getImplicitlyImportedIdentity("Outer"      );} return c;}
     public ClassConstant     clzRef()           {ClassConstant     c = m_clzRef;          if (c == null) {m_clzRef          = c = (ClassConstant) getImplicitlyImportedIdentity("Ref"        );} return c;}
     public ClassConstant     clzVar()           {ClassConstant     c = m_clzVar;          if (c == null) {m_clzVar          = c = (ClassConstant) getImplicitlyImportedIdentity("Var"        );} return c;}
     public ClassConstant     clzStruct()        {ClassConstant     c = m_clzStruct;       if (c == null) {m_clzStruct       = c = (ClassConstant) getImplicitlyImportedIdentity("Struct"     );} return c;}
@@ -1932,6 +1940,8 @@ public class ConstantPool
     public ClassConstant     clzUnassigned()    {ClassConstant     c = m_clzUnassigned;   if (c == null) {m_clzUnassigned   = c = (ClassConstant) getImplicitlyImportedIdentity("Unassigned" );} return c;}
 
     public TypeConstant      typeObject()       {TypeConstant      c = m_typeObject;      if (c == null) {m_typeObject      = c = ensureTerminalTypeConstant(clzObject()                     );} return c;}
+    public TypeConstant      typeInner()        {TypeConstant      c = m_typeInner;       if (c == null) {m_typeInner       = c = ensureTerminalTypeConstant(clzInner()                      );} return c;}
+    public TypeConstant      typeOuter()        {TypeConstant      c = m_typeOuter;       if (c == null) {m_typeOuter       = c = ensureTerminalTypeConstant(clzOuter()                      );} return c;}
     public TypeConstant      typeRef()          {TypeConstant      c = m_typeRef;         if (c == null) {m_typeRef         = c = ensureTerminalTypeConstant(clzRef()                        );} return c;}
     public TypeConstant      typeRefRB()        {TypeConstant      c = m_typeRefRB;       if (c == null) {m_typeRefRB       = c = makeNativeRebase(clzRef()                                  );} return c;}
     public TypeConstant      typeRefNaked()     {TypeConstant      c = m_typeRefNaked;    if (c == null) {m_typeRefNaked    = c = ensureTerminalTypeConstant(getImplicitlyImportedIdentity("#Ref"));} return c;}
@@ -2597,6 +2607,8 @@ public class ConstantPool
 
         m_valEcstasy      = null;
         m_clzObject       = null;
+        m_clzInner        = null;
+        m_clzOuter        = null;
         m_clzRef          = null;
         m_clzVar          = null;
         m_clzStruct       = null;
@@ -2657,6 +2669,8 @@ public class ConstantPool
         m_clzObscure      = null;
         m_clzUnassigned   = null;
         m_typeObject      = null;
+        m_typeInner       = null;
+        m_typeOuter       = null;
         m_typeRef         = null;
         m_typeRefRB       = null;
         m_typeRefNaked    = null;
@@ -3057,6 +3071,8 @@ public class ConstantPool
 
     private transient ModuleConstant    m_valEcstasy;
     private transient ClassConstant     m_clzObject;
+    private transient ClassConstant     m_clzInner;
+    private transient ClassConstant     m_clzOuter;
     private transient ClassConstant     m_clzRef;
     private transient ClassConstant     m_clzVar;
     private transient ClassConstant     m_clzType;
@@ -3117,6 +3133,8 @@ public class ConstantPool
     private transient ClassConstant     m_clzObscure;
     private transient ClassConstant     m_clzUnassigned;
     private transient TypeConstant      m_typeObject;
+    private transient TypeConstant      m_typeInner;
+    private transient TypeConstant      m_typeOuter;
     private transient TypeConstant      m_typeRef;
     private transient TypeConstant      m_typeRefRB;
     private transient TypeConstant      m_typeRefNaked;

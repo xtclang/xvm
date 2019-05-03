@@ -9,10 +9,8 @@ module TestInnerOuter.xqiz.it
         }
 
     class Base(String text)
-            implements Ecstasy.Outer       // TODO this is not here
         {
         class Child_V()
-                implements Ecstasy.Outer.Inner      // TODO this is not here
             {
             String textByName.get()
                 {
