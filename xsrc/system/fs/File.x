@@ -172,6 +172,5 @@ interface File
      * @throws FileAlreadyExists  if the file exists, but the WriteOption of Create is specified or
      *                            implied
      */
-    // TODO GG why "WriteOption" needs to be specified?
-    FileChannel open(ReadOption read=Read, WriteOption... write=[WriteOption.Write]);
+    FileChannel open(ReadOption read=Read, WriteOption... write=[Write]);
     }

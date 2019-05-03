@@ -193,6 +193,7 @@ public class ListExpression
                 }
             }
 
+        ctx = ctx.enterList();
         for (int i = 0; i < cExprs; ++i)
             {
             Expression exprOld = listExprs.get(i);
@@ -211,6 +212,7 @@ public class ListExpression
                 fConstant &= exprNew.isConstant();
                 }
             }
+        ctx = ctx.exit();
 
         // build a constant if it's a known container type and all of the elements are constants
         Constant constVal = null;

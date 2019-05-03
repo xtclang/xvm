@@ -292,7 +292,7 @@ public class Context
     /**
      * Create a delegating context that allows an expression to resolve names based on the
      * specified type's contributions.
-     *
+     * <p/>
      * As a result, it allows us to write:
      * <pre><code>
      *    Color color = Red;
@@ -317,6 +317,25 @@ public class Context
     public InferringContext enterInferring(TypeConstant typeLeft)
         {
         return new InferringContext(this, typeLeft);
+        }
+
+    /**
+     * Create a delegating context that allows this context to resolve names for elements in a list.
+     * <p/>
+     * As a result, it allows us to write:
+     * <pre><code>
+     *    FileChannel open(ReadOption read=Read, WriteOption... write=[Write]);
+     * </code></pre>
+     *  instead of
+     * <pre><code>
+     *    FileChannel open(ReadOption read=Read, WriteOption... write=[WriteOption.Write]);
+     * </code></pre>
+     *
+     * @return a new context
+     */
+    public Context enterList()
+        {
+        return new Context(this, true);
         }
 
     /**
@@ -2107,6 +2126,18 @@ public class Context
             super(ctxOuter, true);
 
             m_typeLeft = typeLeft;
+            }
+
+        @Override
+        public Context enterList()
+            {
+            TypeConstant typeCtx = m_typeLeft;
+            TypeConstant typeEl  = typeCtx.isA(pool().typeSequence())
+                    ? typeCtx.resolveGenericType("ElementType")
+                    : null;
+            return typeEl == null
+                    ? new Context(this, true)
+                    : new InferringContext(this, typeEl);
             }
 
         @Override

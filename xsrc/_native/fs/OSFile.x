@@ -34,5 +34,5 @@ class OSFile
         }
 
     @Override
-    FileChannel open(ReadOption read=Read, WriteOption... write=[WriteOption.Write]);
+    FileChannel open(ReadOption read=Read, WriteOption... write=[Write]);
     }
