@@ -33,31 +33,44 @@ public class TestConnector
             return;
             }
 
-        String sModule = asArg[0];
-        String sFile   = asArg[1];
+        int cModules = asArg.length / 2;
+        String[] asModule = new String[cModules];
+        String[] asFile   = new String[1 + cModules];
 
-        CommandLine cmd = new CommandLine(
-            new String[] {"system", sFile});
+        asFile[0] = "system";
+
+        for (int i = 0; i < cModules; i++)
+            {
+            asModule[i] = asArg[2*i];
+            asFile[i+1] = asArg[2*i + 1];
+            }
+
+        CommandLine cmd = new CommandLine(asFile);
 
         ModuleRepository repository = cmd.build();
 
         if (System.getProperty("CP") != null)
             {
             out("Code dump:");
-            dump(repository.loadModule(sModule));
+            dump(repository.loadModule(asModule[0]));
             }
 
-        // +++ that is the actual use +++
-        Connector connector = new Connector(repository);
-        connector.loadModule(sModule);
+        for (int i = 0; i < cModules; i++)
+            {
+            System.out.println("+++ Loading module: " + asModule[i]);
 
-        // configuration of the container happens here
+            // +++ that is the actual use +++
+            Connector connector = new Connector(repository);
+            connector.loadModule(asModule[i]);
 
-        connector.start();
+            // configuration of the container happens here
 
-        connector.invoke0("run", Utils.OBJECTS_NONE);
+            connector.start();
 
-        connector.join();
+            connector.invoke0("run", Utils.OBJECTS_NONE);
+
+            connector.join();
+            }
         }
 
     public static void dump(Component component)
