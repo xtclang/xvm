@@ -561,8 +561,7 @@ module TestMisc.xqiz.it
             @Override
             String to<String>()
                 {
-                return Order.this.to<String>() +
-                    ": " + descr;
+                return this.Order.to<String>() + ": " + descr;
                 }
             }
         }
@@ -576,7 +575,7 @@ module TestMisc.xqiz.it
             @Override
             String to<String>()
                 {
-                return EnhancedOrder.this.to<String>() +
+                return this.EnhancedOrder.to<String>() +
                     ": " + lineNumber + ") " + descr + " @ " + date;
                 }
             }

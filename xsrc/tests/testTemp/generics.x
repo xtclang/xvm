@@ -49,7 +49,7 @@ module TestGenerics.xqiz.it
             @Override
             String to<String>()
                 {
-                return super() + " outer = " + Base.this;
+                return super() + " outer = " + this.Base;
                 }
             }
 
@@ -58,7 +58,7 @@ module TestGenerics.xqiz.it
             @Override
             String to<String>()
                 {
-                return super() + " outer = " + Base.this + " type=" + ChildType;
+                return super() + " outer = " + this.Base + " type=" + ChildType;
                 }
             }
 
