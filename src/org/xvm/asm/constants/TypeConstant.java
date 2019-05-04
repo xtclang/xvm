@@ -2944,8 +2944,7 @@ public abstract class TypeConstant
 
                 if (listMatches.isEmpty())
                     {
-                    if (methodContrib.getTail().isNative()
-                            || methodContrib.getIdentity().getNamespace().getName().equals("outer")) // TODO GG I think that there's a bug with collectPotentialSuperMethods() (not resolving something?)
+                    if (methodContrib.getTail().isNative())
                         {
                         // take it as is
                         mapVirtMods.put(nidContrib, methodResult);

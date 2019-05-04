@@ -1110,7 +1110,7 @@ public abstract class Component
      */
     public boolean containsVirtualChild()
         {
-        for (Component child : ensureChildByNameMap().values())
+        for (Component child : getChildByNameMap().values())
             {
             switch (child.getIdentityConstant().getFormat())
                 {

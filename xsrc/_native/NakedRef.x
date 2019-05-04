@@ -1,4 +1,4 @@
-const Ref<RefType>
+class NakedRef<RefType>
     {
     RefType get();
     }

@@ -1151,7 +1151,7 @@ public class ConstantPool
 
             case "#Ref":
                 sPkg = "_native";
-                sClz = "Ref";
+                sClz = "NakedRef";
                 break;
 
             default:
@@ -1940,7 +1940,7 @@ public class ConstantPool
     public ClassConstant     clzUnassigned()    {ClassConstant     c = m_clzUnassigned;   if (c == null) {m_clzUnassigned   = c = (ClassConstant) getImplicitlyImportedIdentity("Unassigned" );} return c;}
 
     public TypeConstant      typeObject()       {TypeConstant      c = m_typeObject;      if (c == null) {m_typeObject      = c = ensureTerminalTypeConstant(clzObject()                     );} return c;}
-    public TypeConstant      typeInner()        {TypeConstant      c = m_typeInner;       if (c == null) {m_typeInner       = c = ensureTerminalTypeConstant(clzInner()                      );} return c;}
+    public TypeConstant      typeInner()        {TypeConstant      c = m_typeInner;       if (c == null) {m_typeInner       = c = ensureVirtualChildTypeConstant(typeOuter(), "Inner"        );} return c;}
     public TypeConstant      typeOuter()        {TypeConstant      c = m_typeOuter;       if (c == null) {m_typeOuter       = c = ensureTerminalTypeConstant(clzOuter()                      );} return c;}
     public TypeConstant      typeRef()          {TypeConstant      c = m_typeRef;         if (c == null) {m_typeRef         = c = ensureTerminalTypeConstant(clzRef()                        );} return c;}
     public TypeConstant      typeRefRB()        {TypeConstant      c = m_typeRefRB;       if (c == null) {m_typeRefRB       = c = makeNativeRebase(clzRef()                                  );} return c;}
