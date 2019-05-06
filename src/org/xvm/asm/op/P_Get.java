@@ -94,7 +94,14 @@ public class P_Get
 
             if (frame.isNextRegister(m_nRetValue))
                 {
-                frame.introducePropertyVar(m_nRetValue, m_nTarget, constProperty);
+                if (m_nTarget == A_STACK)
+                    {
+                    frame.introduceVar(m_nRetValue, hTarget.getType());
+                    }
+                else
+                    {
+                    frame.introducePropertyVar(m_nRetValue, m_nTarget, constProperty);
+                    }
                 }
 
             if (isDeferred(hTarget))
