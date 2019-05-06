@@ -1451,7 +1451,7 @@ public abstract class TypeConstant
                 // REVIEW if we do, then we need to explicitly retain the PropertyInfo.getFieldIdentity()
                 if (prop.isVirtual())
                     {
-                    mapVirtProps.put(id.resolveNestedIdentity(pool, this), prop);
+                    mapVirtProps.put(id.resolveNestedIdentity(pool, null), prop);
                     }
                 mapProps.put(id, prop);
                 }

@@ -216,7 +216,7 @@ public class TypeInfo
 
                     if (fVirtual)
                         {
-                        mapVirtProps.put(id.resolveNestedIdentity(pool, f_type), prop);
+                        mapVirtProps.put(id.resolveNestedIdentity(pool, null), prop);
                         }
                     }
                 }
@@ -235,7 +235,7 @@ public class TypeInfo
 
                 if (method.isVirtual())
                     {
-                    mapVirtMethods.put(id.resolveNestedIdentity(pool, f_type), method);
+                    mapVirtMethods.put(id.resolveNestedIdentity(pool, null), method);
                     }
                 }
             }
@@ -269,7 +269,7 @@ public class TypeInfo
                 mapProps.put(id, prop);
                 if (prop.isVirtual())
                     {
-                    mapVirtProps.put(id.resolveNestedIdentity(pool, f_type), prop);
+                    mapVirtProps.put(id.resolveNestedIdentity(pool, null), prop);
                     }
                 }
 
@@ -286,7 +286,7 @@ public class TypeInfo
                 mapMethods.put(id, method);
                 if (method.isVirtual())
                     {
-                    mapVirtMethods.put(id.resolveNestedIdentity(pool, f_type), method);
+                    mapVirtMethods.put(id.resolveNestedIdentity(pool, null), method);
                     }
                 }
 
@@ -2052,7 +2052,7 @@ public class TypeInfo
                 sb.append("\n  [")
                   .append(i++)
                   .append("] ");
-                if (f_mapVirtProps.containsKey(entry.getKey().resolveNestedIdentity(pool(), f_type)))
+                if (f_mapVirtProps.containsKey(entry.getKey().resolveNestedIdentity(pool(), null)))
                     {
                     sb.append("(v) ");
                     }
@@ -2073,8 +2073,7 @@ public class TypeInfo
                 sb.append("\n  [")
                   .append(i++)
                   .append("] ");
-                if (f_mapVirtMethods.containsKey(entry.getKey().resolveNestedIdentity(pool(),
-                        f_type)))
+                if (f_mapVirtMethods.containsKey(entry.getKey().resolveNestedIdentity(pool(), null)))
                     {
                     sb.append("(v) ");
                     }
