@@ -7,6 +7,7 @@ module TestProps.xqiz.it
         console.println("hello world! (property tests)");
 
         testMethodProperty();
+        testLazyProperty();
         }
 
     void testMethodProperty()
@@ -27,5 +28,18 @@ module TestProps.xqiz.it
         // x = 0;               // THIS CODE gets compiled as part of the method (but within an "if (!(&x.assigned))" check
 
         console.println(" - in showMethodProperty(), ++x=" + ++x);
+        }
+
+    void testLazyProperty()
+        {
+        console.println("\n** testLazyProperty()");
+
+        console.println(" lazy=" + lazy);
+        }
+
+    @Lazy Int lazy.calc()
+        {
+        console.println(" - in lazy.calc() " + to<String>());
+        return 42;
         }
     }

@@ -1414,11 +1414,10 @@ public class NameExpression
                             throw new IllegalStateException("missing property: " + id + " on " + target.getTargetType());
                             }
 
-                        if (info.isTopLevel() && info.isStatic())
+                        if (info.isTopLevel() && info.isStatic() &&
+                                !info.getClassStructure().equals(ctx.getThisClass()))
                             {
-                            m_propAccessPlan = info.getClassStructure().equals(ctx.getThisClass())
-                                ? PropertyAccess.This
-                                : PropertyAccess.Singleton;
+                            m_propAccessPlan = PropertyAccess.Singleton;
                             }
                         else if (target.getStepsOut() == 0)
                             {
@@ -1759,47 +1758,49 @@ public class NameExpression
                     return ((PropertyConstant) constant).getRefType(left.getType());
                     }
 
-                PropertyConstant  id       = (PropertyConstant) argRaw;
-                PropertyStructure prop     = (PropertyStructure) id.getComponent();
-                TypeConstant      typeLeft = null;
-                TypeConstant      type     = m_targetInfo == null
-                        ? prop.getType()
-                        : m_targetInfo.getTargetType().ensureTypeInfo(errs).findProperty(id).getType();
+                PropertyConstant  id   = (PropertyConstant) argRaw;
+                PropertyStructure prop = (PropertyStructure) id.getComponent();
+                TypeConstant      type = prop.getType();
 
-                // resolve the property type
                 if (id.isTypeSequenceTypeParameter())
                     {
-                    type = id.getConstraintType();
                     assert !m_fAssignable;
+                    m_plan = Plan.PropertyDeref;
+                    return id.getConstraintType();
                     }
-                else if (prop.isConstant())
+
+                if (prop.isConstant())
                     {
+                    assert !m_fAssignable;
                     m_plan = Plan.PropertyDeref;
                     return type;
                     }
-                else if (left == null)
-                    {
-                    // REVIEW we should NOT just assume "this", because the property could be on a different type
-                    typeLeft = pool.ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE);
 
-                    ClassStructure clz = ctx.getThisClass();
-                    if (m_propAccessPlan == PropertyAccess.Outer)
+                TypeConstant typeLeft;
+                if (left == null)
+                    {
+                    if (m_targetInfo == null)
                         {
-                        for (int nDepth = m_targetInfo.getStepsOut(); --nDepth >= 0;)
+                        typeLeft = pool.ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE);
+
+                        // resolve the property type
+                        ClassStructure clz = ctx.getThisClass();
+                        if (clz != prop.getParent())
                             {
-                            clz = clz.getContainingClass();
+                            // the property may originate in a contribution
+                            // (e.g. Range.x refers to Interval.upperBound)
+                            PropertyInfo infoProp = clz.getFormalType().
+                                    ensureTypeInfo(errs).findProperty(id);
+                            if (infoProp != null)
+                                {
+                                type = infoProp.getType();
+                                }
                             }
                         }
-                    if (clz != prop.getParent())
+                    else
                         {
-                        // the property may originate in a contribution
-                        // (e.g. Range.x refers to Interval.upperBound)
-                        PropertyInfo infoProp = clz.getFormalType().
-                                ensureTypeInfo(errs).findProperty(id);
-                        if (infoProp != null)
-                            {
-                            type = infoProp.getType();
-                            }
+                        typeLeft = m_targetInfo.getTargetType();
+                        type     = typeLeft.ensureTypeInfo(errs).findProperty(id).getType();
                         }
 
                     // check for a narrowed property type
@@ -1827,7 +1828,7 @@ public class NameExpression
                         }
                     }
 
-                if (!prop.isConstant() && isIdentityMode(ctx, false))
+                if (isIdentityMode(ctx, false))
                     {
                     m_plan = Plan.None;
                     // TODO parameterized type of Property<TargetType, PropertyType>
