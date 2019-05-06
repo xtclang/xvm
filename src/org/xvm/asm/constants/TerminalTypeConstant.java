@@ -465,7 +465,7 @@ public class TerminalTypeConstant
             else
                 {
                 TypeConstant typeResolved = resolver.resolveGenericType(idProp.getName());
-                if (typeResolved != null)
+                if (typeResolved != null && !typeResolved.equals(this))
                     {
                     return typeResolved;
                     }
@@ -480,7 +480,7 @@ public class TerminalTypeConstant
                 {
                 Parameter    param        = method.getParam(constTypeParam.getRegister());
                 TypeConstant typeResolved = resolver.resolveGenericType(param.getName());
-                if (typeResolved != null)
+                if (typeResolved != null && !typeResolved.equals(this))
                     {
                     return typeResolved;
                     }
