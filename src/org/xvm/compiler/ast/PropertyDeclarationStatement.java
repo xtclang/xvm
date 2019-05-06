@@ -384,7 +384,7 @@ public class PropertyDeclarationStatement
                     MethodStructure methodInit = prop.createMethod(isStatic(), Access.PRIVATE,
                             org.xvm.asm.Annotation.NO_ANNOTATIONS,
                             new Parameter[] {new Parameter(pool(), type, null, null, true, 0, false)},
-                            prop.getName() + "=", Parameter.NO_PARAMS, true, false);
+                            "=", Parameter.NO_PARAMS, true, false);
 
                     // wrap it with a pretend function in the AST tree
                     MethodDeclarationStatement stmtInit = adopt(

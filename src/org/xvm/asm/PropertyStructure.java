@@ -281,7 +281,7 @@ public class PropertyStructure
      */
     public MethodStructure getInitializer()
         {
-        MultiMethodStructure mmInit = (MultiMethodStructure) getChild(getName() + "=");
+        MultiMethodStructure mmInit = (MultiMethodStructure) getChild("=");
         if (mmInit != null)
             {
             Collection<MethodStructure> methods = mmInit.methods();

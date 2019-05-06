@@ -9,7 +9,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.PropertyConstant;
-import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -119,9 +118,11 @@ public interface TypeComposition
     boolean isAtomic(PropertyConstant idProp);
 
     /**
-     * @return a call chain for the specified signature
+     * @return a call chain for the method.
+     *
+     * @param nidMethod  the method identity (SignatureConstant or NestedIdentity)
      */
-    CallChain getMethodCallChain(SignatureConstant sig);
+    CallChain getMethodCallChain(Object nidMethod);
 
     /**
      * @return a call chain for the specified property's getter

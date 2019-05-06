@@ -18,7 +18,6 @@ import org.xvm.asm.constants.AccessTypeConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
-import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -276,16 +275,16 @@ public class ClassComposition
         }
 
     @Override
-    public CallChain getMethodCallChain(SignatureConstant signature)
+    public CallChain getMethodCallChain(Object nidMethod)
         {
         // we only cache the PUBLIC access chains; all others are cached at the op-code level
-        return f_mapMethods.computeIfAbsent(signature,
-            sig ->
+        return f_mapMethods.computeIfAbsent(nidMethod,
+            nid ->
                 {
                 TypeInfo info = isStruct()
                         ? f_typeStructure.ensureTypeInfo()
                         : f_typeInception.ensureTypeInfo();
-                return new CallChain(info.getOptimizedMethodChain(sig));
+                return new CallChain(info.getOptimizedMethodChain(nid));
                 }
             );
         }
@@ -553,8 +552,8 @@ public class ClassComposition
      */
     private final Map<TypeConstant, ClassComposition> f_mapCompositions;
 
-    // cached method call chain (the top-most method first)
-    private final Map<SignatureConstant, CallChain> f_mapMethods;
+    // cached method call chain by nid (the top-most method first)
+    private final Map<Object, CallChain> f_mapMethods;
 
     // cached property getter call chain by nid (the top-most method first)
     private final Map<Object, CallChain> f_mapGetters;

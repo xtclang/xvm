@@ -1187,8 +1187,8 @@ public class TypeInfo
     /**
      * Find the MethodInfo for the specified nested identity.
      *
-     * @param nid  a nested identity, as obtained from {@link MethodConstant#getNestedIdentity()}
-     *             or {@link IdentityConstant#resolveNestedIdentity(ConstantPool, GenericTypeResolver)}
+     * @param nid  a nested identity, as obtained from {@link MethodConstant#getNestedIdentity}
+     *             or {@link IdentityConstant#resolveNestedIdentity}
      *
      * @return the specified MethodInfo, or null if no MethodInfo could be found by the provided
      *         nested identity
@@ -1196,11 +1196,35 @@ public class TypeInfo
     public MethodInfo getMethodByNestedId(Object nid)
         {
         MethodInfo info = f_cacheByNid.get(nid);
-        if (info == null)
+        if (info != null)
             {
-            throw new IllegalStateException("TODO: couldn't find " + nid + " at " + f_type);
+            return info;
             }
-        return info;
+
+        if (nid instanceof SignatureConstant)
+            {
+            info = getMethodBySignature((SignatureConstant) nid);
+            if (info != null)
+                {
+                f_cacheByNid.put(nid, info);
+                return info;
+                }
+            }
+        else
+            {
+            IdentityConstant id = ((NestedIdentity) nid).getIdentityConstant();
+            for (MethodInfo infoTest : f_mapMethods.values())
+                {
+                if (infoTest.getIdentity().equals(id))
+                    {
+                    f_cacheByNid.put(nid, infoTest);
+                    return infoTest;
+                    }
+                }
+            }
+
+        // TODO: temporary; return null instead
+        throw new IllegalStateException("TODO: couldn't find " + nid + " at " + f_type);
         }
 
     /**
@@ -1213,21 +1237,6 @@ public class TypeInfo
     public MethodBody[] getOptimizedMethodChain(MethodConstant id)
         {
         MethodInfo info = getMethodById(id);
-        return info == null
-                ? null
-                : info.ensureOptimizedMethodChain(this);
-        }
-
-    /**
-     * Obtain the method chain for the specified method signature.
-     *
-     * @param sig  the SignatureConstant for the method
-     *
-     * @return the method chain iff the method exists; otherwise null
-     */
-    public MethodBody[] getOptimizedMethodChain(SignatureConstant sig)
-        {
-        MethodInfo info = getMethodBySignature(sig);
         return info == null
                 ? null
                 : info.ensureOptimizedMethodChain(this);

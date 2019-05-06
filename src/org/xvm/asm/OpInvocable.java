@@ -143,13 +143,14 @@ public abstract class OpInvocable extends Op
             return m_chain = new CallChain(idMethod);
             }
 
-        SignatureConstant sig = idMethod.getSignature().resolveGenericTypes(
+        Object nid = idMethod.resolveNestedIdentity(
             frame.poolContext(), frame.getGenericsResolver());
-        CallChain chain = clazz.getMethodCallChain(sig);
+
+        CallChain chain = clazz.getMethodCallChain(nid);
         if (chain.getDepth() == 0)
             {
             // TODO: create an exception throwing chain
-            throw new IllegalStateException("No call chain for method \"" + sig.getValueString() +
+            throw new IllegalStateException("No call chain for method \"" + idMethod.getValueString() +
                 "\" on " + hTarget.getType().getValueString());
             }
         return m_chain = chain;
