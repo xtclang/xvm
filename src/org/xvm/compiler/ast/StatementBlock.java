@@ -400,7 +400,8 @@ public class StatementBlock
                     // this statement is the first statement that cannot be reached;
                     // the only thing that is allowed is an inner class definition
                     fReachable = false;
-                    if (!(stmt instanceof TypeCompositionStatement))
+                    if (!(stmt instanceof TypeCompositionStatement ||
+                          stmt instanceof MethodDeclarationStatement))
                         {
                         stmt.log(errs, Severity.ERROR, Compiler.NOT_REACHABLE);
                         }
