@@ -337,7 +337,7 @@ public abstract class BitBasedArray
      */
     public static boolean getBit(byte[] abValue, int iIndex)
         {
-        return (abValue[index(iIndex)] & ~bitMask(iIndex)) != 0;
+        return (abValue[index(iIndex)] & bitMask(iIndex)) != 0;
         }
 
     /**
@@ -351,11 +351,11 @@ public abstract class BitBasedArray
         {
         if (fSet)
             {
-            abValue[index(iIndex)] &= ~bitMask(iIndex);
+            abValue[index(iIndex)] |= bitMask(iIndex);
             }
         else
             {
-            abValue[index(iIndex)] |= bitMask(iIndex);
+            abValue[index(iIndex)] &= ~bitMask(iIndex);
             }
         }
 
