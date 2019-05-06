@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Op;
 import org.xvm.asm.OpProperty;
 import org.xvm.asm.Scope;
 
@@ -96,7 +97,9 @@ public class P_Get
                 {
                 if (m_nTarget == A_STACK)
                     {
-                    frame.introduceVar(m_nRetValue, hTarget.getType());
+                    // TODO: the actual type needs to be injected by the compiler/verifier
+                    frame.introducePropertyVar(m_nRetValue,
+                        Op.CONSTANT_OFFSET - hTarget.getType().getPosition(), constProperty);
                     }
                 else
                     {
