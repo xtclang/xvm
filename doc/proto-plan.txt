@@ -148,7 +148,7 @@
 
 - consider a FormalTypeConstant instead of TerminalType(PropertyConstant)
 
-- make TypeConstant.resolveGeneric() idempotent
+++ make TypeConstant.resolveGeneric() idempotent (resolved to some extent)
 
 -- tuple support
    - InvocationExpression - needs to generate _xT ops (i.e. it must be able to testFit & validate for a tuple type)

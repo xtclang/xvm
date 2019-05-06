@@ -2900,8 +2900,7 @@ public abstract class TypeConstant
             MethodConstant    idContrib     = entry.getKey();
             MethodInfo        methodContrib = entry.getValue();
             SignatureConstant sigContrib    = methodContrib.getSignature();
-            Object            nidContrib    = idContrib.resolveNestedIdentity(
-                    pool, methodContrib.isFunction() || methodContrib.isConstructor() ? null : this);
+            Object            nidContrib    = idContrib.resolveNestedIdentity(pool, this);
 
             // the method is not virtual if it is a function, if it is private, or if it is
             // contained inside a method or some other structure (such as a property) that is

@@ -371,10 +371,9 @@ public class MethodConstant
     public Object resolveNestedIdentity(ConstantPool pool, GenericTypeResolver resolver)
         {
         MethodStructure method = (MethodStructure) getComponent();
-        if (method == null || method.isFunction())
+        if (resolver != null && method != null && method.isFunction())
             {
-            // absence of the Component means that this constant is synthetic (e.g. a "capped" method)
-            // and as such, already resolved
+            // avoid calling "resolveGenericTypes" for functions
             resolver = null;
             }
         return getNamespace().isNested()
