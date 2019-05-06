@@ -216,6 +216,7 @@ public class MethodInfo
             switch (body.getImplementation())
                 {
                 case Implicit:
+                case SansCode:
                 case Declared:      // this allows duplicates to survive (ignore retain set)
                 case Default:       // this allows duplicates to survive (ignore retain set)
                 case Native:

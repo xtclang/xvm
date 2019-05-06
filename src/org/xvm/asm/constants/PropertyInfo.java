@@ -775,7 +775,7 @@ public class PropertyInfo
      */
     public boolean requiresNativeRef()
         {
-        return isVar() || isTypeParam() || isInjected() || isRefAnnotated() || isCustomLogic();
+        return isVar() || isTypeParam() || isInjected() || isRefAnnotated();
         }
 
     /**
