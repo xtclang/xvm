@@ -552,37 +552,36 @@ interface Map<KeyType, ValueType>
     Int estimateStringLength()
         {
         return (3 * size)   // allow for "[]", for "=" on each entry, and ", " between each entry
-                + estimateStringLength(keys)
-                + estimateStringLength(values);
-        }
+                + estimateLength(keys)
+                + estimateLength(values);
 
-    // TODO GG move this method to be inside of the above method
-    private static Int estimateStringLength(Collection coll)
-        {
-        Int capacity = 0;
-        if (coll.is(Collection<Stringable>))
+        static Int estimateLength(Collection coll)
             {
-            for (Stringable element : coll)
+            Int capacity = 0;
+            if (coll.is(Collection<Stringable>))
                 {
-                capacity += element.estimateStringLength();
-                }
-            }
-        else
-            {
-            for (coll.ElementType element : coll)
-                {
-                if (element.is(Stringable))
+                for (Stringable element : coll)
                     {
                     capacity += element.estimateStringLength();
                     }
-                else
+                }
+            else
+                {
+                for (coll.ElementType element : coll)
                     {
-                    // completely arbitrary estimate
-                    capacity += 8;
+                    if (element.is(Stringable))
+                        {
+                        capacity += element.estimateStringLength();
+                        }
+                    else
+                        {
+                        // completely arbitrary estimate
+                        capacity += 8;
+                        }
                     }
                 }
+            return capacity;
             }
-        return capacity;
         }
 
     @Override

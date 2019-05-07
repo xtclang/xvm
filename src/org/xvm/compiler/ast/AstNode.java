@@ -962,6 +962,27 @@ public abstract class AstNode
 
         TypeConstant        typeTarget = infoTarget.getType();
         Set<MethodConstant> setMethods = infoTarget.findMethods(sMethodName, cArgs, methodType);
+
+        // since a method inside of the method cannot be virtual, start with a quick check
+        MethodStructure methodCtx = ctx.getMethod();
+        if (methodCtx.getChild(sMethodName) != null)
+            {
+            MethodConstant      idCtx     = methodCtx.getIdentityConstant();
+            Set<MethodConstant> setNested = infoTarget.findNestedMethods(idCtx, sMethodName, cArgs);
+            if (!setNested.isEmpty())
+                {
+                if (setMethods.isEmpty())
+                    {
+                    setMethods = setNested;
+                    }
+                else
+                    {
+                    setMethods = new HashSet<>(setMethods);
+                    setMethods.addAll(setNested);
+                    }
+                }
+            }
+
         if (setMethods.isEmpty())
             {
             if (methodType == MethodType.Constructor)

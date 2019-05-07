@@ -1615,20 +1615,20 @@ public class TypeInfo
         }
 
     /**
-     * See if any method has the specified name.
+     * Check if there is any method with the specified name inside of the property.
      *
      * @param idProp  the property to look inside of
-     * @param sName   a method name
+     * @param sName   a method name to look for
      *
      * @return true if the property contains at least one method (or function) by the specified name
      */
-    public boolean propertyContainsMultiMethod(PropertyConstant idProp, String sName)
+    public boolean propertyContainsMultiMethod(IdentityConstant idProp, String sName)
         {
         int cReqDepth = idProp.getNestedDepth() + 2;
-        for (MethodConstant method : f_mapMethods.keySet())
+        for (MethodConstant idTest : f_mapMethods.keySet())
             {
-            if (method.getNestedDepth() == cReqDepth && method.getName().equals(sName)
-                    && method.getNamespace().getNestedIdentity().equals(idProp.getNestedIdentity()))
+            if (idTest.getNestedDepth() == cReqDepth && idTest.getName().equals(sName)
+                    && idTest.getNamespace().getNestedIdentity().equals(idProp.getNestedIdentity()))
                 {
                 return true;
                 }
@@ -1637,21 +1637,31 @@ public class TypeInfo
         }
 
     /**
-     * See if any method has the specified name.
-     * REVIEW this really doesn't need to be its own method; we could combine it with the above method
+     * Check if there is any method with the specified name inside of the property.
+     * <p/>
+     * Note: while the logic below is similar to the method above, there is a difference that
+     *       method inside of the method cannot be virtual, while methods inside of the property can
      *
      * @param idMethod  the method to look inside of
-     * @param sName     a method name
+     * @param sName     a method name to look for
      *
      * @return true if the method contains at least one method (or function) by the specified name
      */
     public boolean methodContainsMultiMethod(MethodConstant idMethod, String sName)
         {
-        int cReqDepth = idMethod.getNestedDepth() + 2;
-        for (MethodConstant method : f_mapMethods.keySet())
+        // since a method inside of the method cannot be virtual, we can do
+        // a quick check to eliminate the full scan below for 99.9% of scenarios
+        MethodStructure method = (MethodStructure) idMethod.getComponent();
+        if (method != null && method.getChild(sName) == null)
             {
-            if (method.getNestedDepth() == cReqDepth && method.getName().equals(sName)
-                    && method.getNamespace().getNestedIdentity().equals(idMethod.getNestedIdentity()))
+            return false;
+            }
+
+        int cReqDepth = idMethod.getNestedDepth() + 2;
+        for (MethodConstant idTest : f_mapMethods.keySet())
+            {
+            if (idTest.getNestedDepth() == cReqDepth && idTest.getName().equals(sName)
+                    && idTest.getNamespace().getNestedIdentity().equals(idMethod.getNestedIdentity()))
                 {
                 return true;
                 }
@@ -1706,7 +1716,7 @@ public class TypeInfo
             m_mapOps = mapOps = new HashMap<>();
             }
 
-        String sKey = String.valueOf(sName) + sOp + cParams;
+        String sKey = sName + sOp + cParams;
         Set<MethodConstant> setOps = mapOps.get(sKey);
         if (setOps == null)
             {
@@ -1808,6 +1818,78 @@ public class TypeInfo
                         // ignore "capped" methods
                         continue;
                         }
+
+                    int cAllParams  = sig.getParamCount();
+                    int cTypeParams = method.getTypeParamCount();
+                    int cDefaults   = method.getDefaultParamCount();
+                    int cRequired   = cAllParams - cTypeParams - cDefaults;
+
+                    if (cParams >= cRequired)
+                        {
+                        if (setMethods == null)
+                            {
+                            setMethods = new HashSet<>(7);
+                            }
+                        setMethods.add(resolveMethodConstant(info));
+                        }
+                    }
+                }
+
+            // cache the result
+            if (setMethods == null)
+                {
+                setMethods = Collections.EMPTY_SET;
+                }
+            mapMethods.put(sKey, setMethods);
+            }
+        return setMethods;
+        }
+
+    /**
+     * Obtain all methods with specified name and the number of parameters inside of the container
+     * method.
+     *
+     * @param idMethod  the container method id
+     * @param sName     the method name to look for
+     * @param cParams   the number of parameters (-1 for any)
+     *
+     * @return a set of zero or more method constants
+     */
+    public Set<MethodConstant> findNestedMethods(MethodConstant idMethod, String sName, int cParams)
+        {
+        Map<String, Set<MethodConstant>> mapMethods = m_mapMethodsByName;
+        if (mapMethods == null)
+            {
+            m_mapMethodsByName = mapMethods = new HashMap<>();
+            }
+
+        Object nid   = idMethod.getNestedIdentity();
+        String sPath = (nid instanceof SignatureConstant
+                ? ((SignatureConstant) nid).getValueString()
+                : nid.toString()) + '#' + sName;
+        String sKey  = cParams == 0 ? sPath : sPath + ';' + cParams;
+
+        Set<MethodConstant> setMethods = mapMethods.get(sKey);
+        if (setMethods == null)
+            {
+            if (cParams == -1)
+                {
+                // any number of parameters goes
+                cParams = Integer.MAX_VALUE;
+                }
+            int cReqDepth = idMethod.getNestedDepth() + 2;
+            for (Map.Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet())
+                {
+                MethodConstant idTest = entry.getKey();
+
+                if (idTest.getNestedDepth() == cReqDepth && idTest.getName().equals(sName)
+                        && idTest.getNamespace().getNestedIdentity().equals(idMethod.getNestedIdentity()))
+                    {
+                    SignatureConstant sig    = idTest.getSignature();
+                    MethodInfo        info   = entry.getValue();
+                    MethodStructure   method = info.getTopmostMethodStructure(this);
+
+                    assert !info.isCapped();
 
                     int cAllParams  = sig.getParamCount();
                     int cTypeParams = method.getTypeParamCount();
