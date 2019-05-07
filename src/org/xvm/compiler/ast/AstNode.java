@@ -26,6 +26,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.SignatureConstant;
@@ -892,6 +893,7 @@ public abstract class AstNode
      * @param sMethodName   the method name
      * @param listExprArgs  the expressions for arguments (which may not yet be validated)
      * @param methodType    the MethodType to search for
+     * @param fAllowNested  if true, nested methods can be used at the target
      * @param atypeReturn   (optional) the array of return types from the method
      * @param errs          listener to log any errors to
      *
@@ -904,6 +906,7 @@ public abstract class AstNode
             String           sMethodName,
             List<Expression> listExprArgs,
             MethodType       methodType,
+            boolean          fAllowNested,
             TypeConstant[]   atypeReturn,
             ErrorListener    errs)
         {
@@ -963,24 +966,31 @@ public abstract class AstNode
         TypeConstant        typeTarget = infoTarget.getType();
         Set<MethodConstant> setMethods = infoTarget.findMethods(sMethodName, cArgs, methodType);
 
-        // since a method inside of the method cannot be virtual, start with a quick check
-        MethodStructure methodCtx = ctx.getMethod();
-        if (methodCtx.getChild(sMethodName) != null)
+        if (fAllowNested)
             {
-            MethodConstant      idCtx     = methodCtx.getIdentityConstant();
-            Set<MethodConstant> setNested = infoTarget.findNestedMethods(idCtx, sMethodName, cArgs);
-            if (!setNested.isEmpty())
+            IdentityConstant idScope = ctx.getMethod().getIdentityConstant();
+            do
                 {
-                if (setMethods.isEmpty())
+                if (infoTarget.containsNestedMultiMethod(idScope, sMethodName))
                     {
-                    setMethods = setNested;
+                    Set<MethodConstant> setNested = infoTarget.findNestedMethods(
+                                                        idScope, sMethodName, cArgs);
+                    if (!setNested.isEmpty())
+                        {
+                        if (setMethods.isEmpty())
+                            {
+                            setMethods = setNested;
+                            }
+                        else
+                            {
+                            setMethods = new HashSet<>(setMethods);
+                            setMethods.addAll(setNested);
+                            }
+                        }
                     }
-                else
-                    {
-                    setMethods = new HashSet<>(setMethods);
-                    setMethods.addAll(setNested);
-                    }
+                idScope = idScope.getNamespace();
                 }
+            while (idScope.isNested());
             }
 
         if (setMethods.isEmpty())

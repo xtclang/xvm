@@ -479,7 +479,8 @@ public class NewExpression
                 // any required dependency that it has one a super class constructor will be handled
                 // as if this were any other normal class)
                 ErrorList errsTarget = new ErrorList(10);
-                idMethod = findMethod(ctx, infoTarget, "construct", listArgs, MethodType.Constructor, null, errsTarget);
+                idMethod = findMethod(ctx, infoTarget, "construct", listArgs, MethodType.Constructor,
+                                false, null, errsTarget);
                 if (idMethod == null && !listArgs.isEmpty())
                     {
                     // the constructor that we're looking for is not on the anonymous inner class,
@@ -490,7 +491,7 @@ public class NewExpression
                     // (note: the automatic creation of the synthetic no-arg constructor in the
                     // absence of any explicit constructor must do this same check)
                     MethodConstant idSuper = findMethod(ctx, typeSuper.ensureTypeInfo(errs),
-                            "construct", listArgs, MethodType.Constructor, null, errs);
+                            "construct", listArgs, MethodType.Constructor, false, null, errs);
                     if (idSuper == null)
                         {
                         fValid = false;
@@ -519,7 +520,8 @@ public class NewExpression
                 }
             else
                 {
-                idMethod = findMethod(ctx, infoTarget, "construct", listArgs, MethodType.Constructor, null, errs);
+                idMethod = findMethod(ctx, infoTarget, "construct", listArgs, MethodType.Constructor,
+                                false, null, errs);
                 }
 
             if (idMethod == null)

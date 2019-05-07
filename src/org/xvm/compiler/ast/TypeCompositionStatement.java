@@ -1956,7 +1956,8 @@ public class TypeCompositionStatement
             }
         else
             {
-            idSuper = findMethod(ctxValidate, infoSuper, "construct", listArgs, MethodType.Constructor, null, errs);
+            idSuper = findMethod(ctxValidate, infoSuper, "construct", listArgs, MethodType.Constructor,
+                            false, null, errs);
             if (idSuper == null)
                 {
                 // if an error have already been logged, this is additional information

@@ -1444,7 +1444,7 @@ public class InvocationExpression
         Token          tokName    = exprName.getNameToken();
         String         sName      = exprName.getName();
         boolean        fConstruct = sName.equals("construct");
-        Expression     exprLeft = exprName.left;
+        Expression     exprLeft   = exprName.left;
         if (exprLeft == null)
             {
             Argument arg = ctx.resolveName(tokName, ErrorListener.BLACKHOLE);
@@ -1456,7 +1456,7 @@ public class InvocationExpression
 
                 TypeInfo infoLeft = typeLeft.ensureTypeInfo(errs);
 
-                arg = findCallable(ctx, infoLeft, sName, MethodType.Either,
+                arg = findCallable(ctx, infoLeft, sName, MethodType.Either, true,
                         atypeReturn, ErrorListener.BLACKHOLE);
                 if (arg != null)
                     {
@@ -1493,15 +1493,19 @@ public class InvocationExpression
                     {
                     // find the method based on the signature
                     // TODO this only finds methods immediately contained within the class; does not find nested methods!!!
-                    MethodType methodType = fConstruct ? MethodType.Constructor :
-                            (fNoCall && fNoFBind) || target.hasThis() ? MethodType.Either : MethodType.Function;
-                    IdentityConstant idCallable = findCallable(ctx, info, sName, methodType, atypeReturn, errs);
+                    MethodType methodType = fConstruct
+                            ? MethodType.Constructor
+                            : (fNoCall && fNoFBind) || target.hasThis()
+                                    ? MethodType.Either
+                                    : MethodType.Function;
+                    IdentityConstant idCallable = findCallable(ctx, info, sName, methodType,
+                                                    id.isNested(), atypeReturn, errs);
                     if (idCallable == null)
                         {
                         // check to see if we would have found something had we included methods in
                         // the search
                         if (methodType == MethodType.Function && findCallable(ctx, info, sName,
-                                MethodType.Method, atypeReturn, ErrorListener.BLACKHOLE) != null)
+                                MethodType.Method, id.isNested(), atypeReturn, ErrorListener.BLACKHOLE) != null)
                             {
                             exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_METHOD, sName, target.getTargetType());
                             }
@@ -1598,7 +1602,8 @@ public class InvocationExpression
                     TypeInfo   infoLeft   = idLeft.ensureTypeInfo(access, errs);
                     MethodType methodType = fConstruct ? MethodType.Constructor
                             : fNoFBind && fNoCall ? MethodType.Either : MethodType.Function;
-                    Argument   arg        = findCallable(ctx, infoLeft, sName, methodType, atypeReturn, errs);
+                    Argument   arg        = findCallable(ctx, infoLeft, sName, methodType,
+                                                false, atypeReturn, errs);
                     if (arg != null)
                         {
                         m_argMethod = arg;
@@ -1615,7 +1620,8 @@ public class InvocationExpression
             TypeInfo  infoLeft = typeLeft.ensureTypeInfo(errs);
             ErrorList errsTemp = new ErrorList(10);
 
-            Argument arg = findCallable(ctx, infoLeft, sName, MethodType.Method, atypeReturn, errsTemp);
+            Argument arg = findCallable(ctx, infoLeft, sName, MethodType.Method, false,
+                                atypeReturn, errsTemp);
             if (arg != null)
                 {
                 m_argMethod   = arg;
@@ -1633,8 +1639,8 @@ public class InvocationExpression
                 listArgs.add(0, exprLeft);
 
                 ErrorList errsTempB = new ErrorList(10);
-                arg = findMethod(ctx, infoLeft, sName, listArgs, MethodType.Function,
-                        atypeReturn, errsTempB);
+                arg = findMethod(ctx, infoLeft, sName, listArgs, MethodType.Function, false,
+                            atypeReturn, errsTempB);
                 if (arg != null)
                     {
                     m_argMethod   = arg;
@@ -1671,13 +1677,14 @@ public class InvocationExpression
      * Find a named method or function that best matches the specified requirements.
      *
      *
-     * @param ctx         the context
-     * @param infoParent  the TypeInfo to search for the method or function on
-     * @param sName       the name of the method or function
-     * @param methodType  the categories of methods to include in the search
-     * @param aRedundant  the redundant return type information (helps to clarify which method or
-     *                    function to select)
-     * @param errs        the error listener to log errors to
+     * @param ctx           the context
+     * @param infoParent    the TypeInfo to search for the method or function on
+     * @param sName         the name of the method or function
+     * @param methodType    the categories of methods to include in the search
+     * @param fAllowNested  if true, nested methods can be used at the target
+     * @param aRedundant    the redundant return type information (helps to clarify which method or
+     *                      function to select)
+     * @param errs          the error listener to log errors to
      *
      * @return the matching method, function, or (rarely) property
      */
@@ -1686,6 +1693,7 @@ public class InvocationExpression
             TypeInfo       infoParent,
             String         sName,
             MethodType     methodType,
+            boolean        fAllowNested,
             TypeConstant[] aRedundant,
             ErrorListener  errs)
         {
@@ -1697,7 +1705,7 @@ public class InvocationExpression
             return prop.getIdentity();
             }
 
-        return findMethod(ctx, infoParent, sName, args, methodType, aRedundant, errs);
+        return findMethod(ctx, infoParent, sName, args, methodType, fAllowNested, aRedundant, errs);
         }
 
     /**

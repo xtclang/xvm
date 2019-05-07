@@ -1652,40 +1652,28 @@ public class TypeInfo
         }
 
     /**
-     * Check if there is any method with the specified name inside of the property.
+     * Check if there is any method with the specified name inside of the container
+     * property or method.
      *
-     * @param idProp  the property to look inside of
-     * @param sName   a method name to look for
+     * @param idContainer  the id of the property or method to look inside of
+     * @param sName        a method name to look for
      *
      * @return true if the property contains at least one method (or function) by the specified name
      */
-    public boolean containsNestedMultiMethod(PropertyConstant idProp, String sName)
+    public boolean containsNestedMultiMethod(IdentityConstant idContainer, String sName)
         {
-        return !findNestedMethods(idProp, sName, -1).isEmpty();
-        }
-
-    /**
-     * Check if there is any method with the specified name inside of the property.
-     * <p/>
-     * Note: while the logic below is similar to the method above, there is a difference that
-     *       method inside of the method cannot be virtual, while methods inside of the property can
-     *
-     * @param idMethod  the method to look inside of
-     * @param sName     a method name to look for
-     *
-     * @return true if the method contains at least one method (or function) by the specified name
-     */
-    public boolean containsNestedMultiMethod(MethodConstant idMethod, String sName)
-        {
-        // since a method inside of the method cannot be virtual, we can do
-        // a quick check to eliminate the full scan below for 99.9% of scenarios
-        MethodStructure method = (MethodStructure) idMethod.getComponent();
-        if (method != null && method.getChild(sName) == null)
+        if (idContainer instanceof MethodConstant)
             {
-            return false;
+            // since a method inside of the method cannot be virtual, we can do
+            // a quick check to eliminate the full scan below for 99.9% of scenarios
+            MethodStructure method = (MethodStructure) idContainer.getComponent();
+            if (method != null && method.getChild(sName) == null)
+                {
+                return false;
+                }
             }
 
-        return !findNestedMethods(idMethod, sName, -1).isEmpty();
+        return !findNestedMethods(idContainer, sName, -1).isEmpty();
         }
 
     /**

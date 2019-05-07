@@ -150,7 +150,7 @@ class Array<ElementType>
             {
             assert delegate == null;
 
-            Int oldCap = capacity; // TODO GG should be "get()" instead, but it can't find it
+            Int oldCap = get();
             if (newCap == oldCap)
                 {
                 return;
