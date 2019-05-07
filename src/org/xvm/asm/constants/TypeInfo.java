@@ -886,60 +886,91 @@ public class TypeInfo
     /**
      * Obtain all of the properties declared within the specified method.
      *
-     * @param constMethod  the MethodConstant identifying the method that may contain properties
+     * @param idMethod  the identity of the method that may contain properties
      *
      * @return a map from property name to PropertyInfo
      */
-    public Map<String, PropertyInfo> ensureNestedPropertiesByName(MethodConstant constMethod)
+    public Map<String, PropertyInfo> ensureNestedPropertiesByName(MethodConstant idMethod)
         {
-        Map<String, PropertyInfo> map = null;
-        for (PropertyInfo prop : f_mapProps.values())
+        // since a property inside of the method cannot be virtual, we can do
+        // a quick check to eliminate the full scan below for 99.9% of scenarios
+        MethodStructure method = (MethodStructure) idMethod.getComponent();
+        if (method != null && !method.hasChildren())
             {
-            // only include the properties nested under the specified method
-            if (prop.getParent().equals(constMethod))
-                {
-                if (map == null)
-                    {
-                    map = new HashMap<>();
-                    }
-                map.put(prop.getName(), prop);
-                }
+            return Collections.EMPTY_MAP;
             }
 
-        return map == null
-                ? Collections.EMPTY_MAP
-                : map;
+        Map<IdentityConstant, Map<String, PropertyInfo>> mapProps = m_mapNestedProperties;
+        if (mapProps == null)
+            {
+            m_mapNestedProperties = mapProps = new HashMap<>();
+            }
+
+        Map<String, PropertyInfo> map = mapProps.get(idMethod);
+        if (map == null)
+            {
+            for (PropertyInfo prop : f_mapProps.values())
+                {
+                // only include the properties nested under the specified method
+                if (prop.getParent().equals(idMethod))
+                    {
+                    if (map == null)
+                        {
+                        map = new HashMap<>();
+                        }
+                    map.put(prop.getName(), prop);
+                    }
+                }
+            if (map == null)
+                {
+                map = Collections.EMPTY_MAP;
+                }
+            mapProps.put(idMethod, map);
+            }
+
+        return map;
         }
 
     /**
      * Obtain all of the properties declared within the specified property.
      * REVIEW this implementation is probably insufficient, considering possible visibility rules
      *
-     * @param constProp  the PropertyConstant identifying the property that may contain properties
+     * @param idProp  the identity of the property that may contain properties
      *
      * @return a map from property name to PropertyInfo
      */
-    public Map<String, PropertyInfo> ensureNestedPropertiesByName(PropertyConstant constProp)
+    public Map<String, PropertyInfo> ensureNestedPropertiesByName(PropertyConstant idProp)
         {
-        Map<String, PropertyInfo> map = null;
-        int cDepth = constProp.getNestedDepth();
-        for (PropertyInfo prop : f_mapProps.values())
+        Map<IdentityConstant, Map<String, PropertyInfo>> mapProps = m_mapNestedProperties;
+        if (mapProps == null)
             {
-            IdentityConstant constParent = prop.getParent();
-            // only include the properties nested under the specified property
-            if (constParent == constProp || constParent.trailingPathEquals(constProp, cDepth))
-                {
-                if (map == null)
-                    {
-                    map = new HashMap<>();
-                    }
-                map.put(prop.getName(), prop);
-                }
+            m_mapNestedProperties = mapProps = new HashMap<>();
             }
 
-        return map == null
-                ? Collections.EMPTY_MAP
-                : map;
+        Map<String, PropertyInfo> map = mapProps.get(idProp);
+        if (map == null)
+            {
+            int cDepth = idProp.getNestedDepth();
+            for (PropertyInfo prop : f_mapProps.values())
+                {
+                IdentityConstant constParent = prop.getParent();
+                // only include the properties nested under the specified property
+                if (constParent == idProp || constParent.trailingPathEquals(idProp, cDepth))
+                    {
+                    if (map == null)
+                        {
+                        map = new HashMap<>();
+                        }
+                    map.put(prop.getName(), prop);
+                    }
+                }
+            if (map == null)
+                {
+                map = Collections.EMPTY_MAP;
+                }
+            mapProps.put(idProp, map);
+            }
+        return map;
         }
 
     public PropertyInfo findProperty(String sName)
@@ -1092,6 +1123,12 @@ public class TypeInfo
         for (MethodInfo methodTest : f_mapMethods.values())
             {
             if (!methodTest.getSignature().getName().equals(sig.getName()))
+                {
+                continue;
+                }
+
+            // only include non-nested methods
+            if (methodTest.getIdentity().getNestedDepth() != f_cDepth + 2)
                 {
                 continue;
                 }
@@ -1622,18 +1659,9 @@ public class TypeInfo
      *
      * @return true if the property contains at least one method (or function) by the specified name
      */
-    public boolean propertyContainsMultiMethod(IdentityConstant idProp, String sName)
+    public boolean containsNestedMultiMethod(PropertyConstant idProp, String sName)
         {
-        int cReqDepth = idProp.getNestedDepth() + 2;
-        for (MethodConstant idTest : f_mapMethods.keySet())
-            {
-            if (idTest.getNestedDepth() == cReqDepth && idTest.getName().equals(sName)
-                    && idTest.getNamespace().getNestedIdentity().equals(idProp.getNestedIdentity()))
-                {
-                return true;
-                }
-            }
-        return false;
+        return !findNestedMethods(idProp, sName, -1).isEmpty();
         }
 
     /**
@@ -1647,7 +1675,7 @@ public class TypeInfo
      *
      * @return true if the method contains at least one method (or function) by the specified name
      */
-    public boolean methodContainsMultiMethod(MethodConstant idMethod, String sName)
+    public boolean containsNestedMultiMethod(MethodConstant idMethod, String sName)
         {
         // since a method inside of the method cannot be virtual, we can do
         // a quick check to eliminate the full scan below for 99.9% of scenarios
@@ -1657,16 +1685,7 @@ public class TypeInfo
             return false;
             }
 
-        int cReqDepth = idMethod.getNestedDepth() + 2;
-        for (MethodConstant idTest : f_mapMethods.keySet())
-            {
-            if (idTest.getNestedDepth() == cReqDepth && idTest.getName().equals(sName)
-                    && idTest.getNamespace().getNestedIdentity().equals(idMethod.getNestedIdentity()))
-                {
-                return true;
-                }
-            }
-        return false;
+        return !findNestedMethods(idMethod, sName, -1).isEmpty();
         }
 
     /**
@@ -1847,15 +1866,15 @@ public class TypeInfo
 
     /**
      * Obtain all methods with specified name and the number of parameters inside of the container
-     * method.
+     * property or method.
      *
-     * @param idMethod  the container method id
-     * @param sName     the method name to look for
-     * @param cParams   the number of parameters (-1 for any)
+     * @param idContainer  the id of the container property ir method
+     * @param sName        the method name to look for
+     * @param cParams      the number of parameters (-1 for any)
      *
      * @return a set of zero or more method constants
      */
-    public Set<MethodConstant> findNestedMethods(MethodConstant idMethod, String sName, int cParams)
+    public Set<MethodConstant> findNestedMethods(IdentityConstant idContainer, String sName, int cParams)
         {
         Map<String, Set<MethodConstant>> mapMethods = m_mapMethodsByName;
         if (mapMethods == null)
@@ -1863,7 +1882,7 @@ public class TypeInfo
             m_mapMethodsByName = mapMethods = new HashMap<>();
             }
 
-        Object nid   = idMethod.getNestedIdentity();
+        Object nid   = idContainer.getNestedIdentity();
         String sPath = (nid instanceof SignatureConstant
                 ? ((SignatureConstant) nid).getValueString()
                 : nid.toString()) + '#' + sName;
@@ -1877,13 +1896,13 @@ public class TypeInfo
                 // any number of parameters goes
                 cParams = Integer.MAX_VALUE;
                 }
-            int cReqDepth = idMethod.getNestedDepth() + 2;
+            int cReqDepth = idContainer.getNestedDepth() + 2;
             for (Map.Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet())
                 {
                 MethodConstant idTest = entry.getKey();
 
                 if (idTest.getNestedDepth() == cReqDepth && idTest.getName().equals(sName)
-                        && idTest.getNamespace().getNestedIdentity().equals(idMethod.getNestedIdentity()))
+                        && idTest.getNamespace().getNestedIdentity().equals(idContainer.getNestedIdentity()))
                     {
                     SignatureConstant sig    = idTest.getSignature();
                     MethodInfo        info   = entry.getValue();
@@ -2458,4 +2477,7 @@ public class TypeInfo
     private transient MethodConstant                   m_methodAuto;
     private transient Map<String, Set<MethodConstant>> m_mapOps;
     private transient Map<String, Set<MethodConstant>> m_mapMethodsByName;
+    private transient Map<IdentityConstant, Map<String, PropertyInfo>> m_mapNestedProperties;
+    private transient Map<IdentityConstant, Map<String, MethodInfo>> m_mapNestedMethods;
+
     }

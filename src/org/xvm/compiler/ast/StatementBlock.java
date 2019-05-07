@@ -910,7 +910,7 @@ public class StatementBlock
                             {
                             // second, look for any methods of the given name inside the
                             // current property
-                            if (info.propertyContainsMultiMethod(idProp, sName))
+                            if (info.containsNestedMultiMethod(idProp, sName))
                                 {
                                 // the multi-method structure does not actually exist on the
                                 // class, but its methods exist in the TypeInfo
@@ -943,7 +943,7 @@ public class StatementBlock
                         if (prop == null)
                             {
                             // second, look for any methods of the given name inside this method
-                            if (info.methodContainsMultiMethod(idMethod, sName))
+                            if (info.containsNestedMultiMethod(idMethod, sName))
                                 {
                                 // the multi-method structure does not actually exist on the
                                 // class, but its methods exist in the TypeInfo
