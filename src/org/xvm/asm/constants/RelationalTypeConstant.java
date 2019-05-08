@@ -124,7 +124,7 @@ public abstract class RelationalTypeConstant
         type1 = type1.resolveTypedefs();
         type2 = type2.resolveTypedefs();
 
-        if (type1 instanceof RelationalTypeConstant)
+        if (type1 instanceof IntersectionTypeConstant)
             {
             TypeConstant type1_1 = type1.getUnderlyingType();
             TypeConstant type1_2 = type1.getUnderlyingType2();
@@ -138,6 +138,19 @@ public abstract class RelationalTypeConstant
                 {
                 // (A | B) - B => B
                 return type1_1;
+                }
+
+            // recurse to cover cases like this:
+            // ((A | B) | C) - B => A | C
+            if (type1_1 instanceof IntersectionTypeConstant ||
+                type1_2 instanceof IntersectionTypeConstant)
+                {
+                TypeConstant type1_1R = combineWithout(pool, type1_1, type2);
+                TypeConstant type1_2R = combineWithout(pool, type1_2, type2);
+                if (type1_1R != type1_1 || type1_2R != type1_2)
+                    {
+                    return pool.ensureIntersectionTypeConstant(type1_1R, type1_2R);
+                    }
                 }
             }
         return type1;
