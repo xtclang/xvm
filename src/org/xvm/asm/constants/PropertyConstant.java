@@ -102,6 +102,32 @@ public class PropertyConstant
         return typeConstraint;
         }
 
+    @Override
+    public TypeConstant resolve(GenericTypeResolver resolver)
+        {
+        if (isTypeSequenceTypeParameter())
+            {
+            // the following block is for nothing else, but compilation of Tuple and
+            // ConditionalTuple natural classes
+            if (resolver instanceof TypeConstant)
+                {
+                TypeConstant typeResolver = (TypeConstant) resolver;
+                if (typeResolver.isTuple() && !typeResolver.isParamsSpecified())
+                    {
+                    return null;
+                    }
+                }
+
+            TypeConstant typeResolved = resolver.resolveGenericType(getName());
+
+            // prevent a recursive resolution into "Tuple<...>"
+            return typeResolved == null || typeResolved.isFormalTypeSequence()
+                    ? null
+                    : typeResolved;
+            }
+
+        return resolver.resolveGenericType(getName());
+        }
 
     // ----- type-specific functionality -----------------------------------------------------------
 

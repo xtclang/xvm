@@ -440,52 +440,16 @@ public class TerminalTypeConstant
             }
 
         Constant constId = getDefiningConstant();
-        if (constId instanceof PropertyConstant)
+        if (constId instanceof FormalConstant)
             {
-            PropertyConstant idProp = (PropertyConstant) constId;
-            if (idProp.isTypeSequenceTypeParameter())
+            FormalConstant constFormal  = (FormalConstant) constId;
+            TypeConstant   typeResolved = constFormal.resolve(resolver);
+            if (typeResolved != null && !typeResolved.equals(this))
                 {
-                // the following block is for nothing else, but compilation of Tuple and
-                // ConditionalTuple natural classes
-                if (resolver instanceof TypeConstant)
-                    {
-                    TypeConstant typeResolver = (TypeConstant) resolver;
-                    if (typeResolver.isTuple() && !typeResolver.isParamsSpecified())
-                        {
-                        return this;
-                        }
-                    }
-                TypeConstant typeResolved = resolver.resolveGenericType(idProp.getName());
-                if (typeResolved != null && !typeResolved.isFormalTypeSequence())
-                    {
-                    // prevent a recursive resolution into "Tuple<...>"
-                    return typeResolved;
-                    }
-                }
-            else
-                {
-                TypeConstant typeResolved = resolver.resolveGenericType(idProp.getName());
-                if (typeResolved != null && !typeResolved.equals(this))
-                    {
-                    return typeResolved;
-                    }
+                return typeResolved;
                 }
             }
-        else if (constId instanceof TypeParameterConstant)
-            {
-            TypeParameterConstant constTypeParam = (TypeParameterConstant) constId;
-            MethodConstant        idMethod       = constTypeParam.getMethod();
-            MethodStructure       method         = (MethodStructure) idMethod.getComponent();
-            if (method != null)
-                {
-                Parameter    param        = method.getParam(constTypeParam.getRegister());
-                TypeConstant typeResolved = resolver.resolveGenericType(param.getName());
-                if (typeResolved != null && !typeResolved.equals(this))
-                    {
-                    return typeResolved;
-                    }
-                }
-            }
+
         return this;
         }
 

@@ -12,7 +12,9 @@ import java.util.function.Consumer;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Parameter;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -133,6 +135,18 @@ public class TypeParameterConstant
                 }
             }
         return typeConstraint;
+        }
+
+    @Override
+    public TypeConstant resolve(GenericTypeResolver resolver)
+        {
+        MethodStructure method = (MethodStructure) getMethod().getComponent();
+        if (method != null)
+            {
+            Parameter param = method.getParam(getRegister());
+            return resolver.resolveGenericType(param.getName());
+            }
+        return null;
         }
 
 

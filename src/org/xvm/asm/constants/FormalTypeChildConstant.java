@@ -9,6 +9,7 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.GenericTypeResolver;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -70,7 +71,8 @@ public class FormalTypeChildConstant
                     }
                 // fall through
             default:
-                throw new IllegalArgumentException("parent does not represent a formal constant: " + constParent);
+                throw new IllegalArgumentException(
+                    "parent does not represent a formal constant: " + constParent);
             }
 
         if (sName == null)
@@ -94,30 +96,28 @@ public class FormalTypeChildConstant
     @Override
     public TypeConstant getConstraintType()
         {
-        Constant     constParent = m_constParent;
-        TypeConstant typeParent;
+        FormalConstant constParent    = (FormalConstant) m_constParent;
+        TypeConstant   typeConstraint = constParent.getConstraintType();
 
-        switch (constParent.getFormat())
-            {
-            case FormalTypeChild: // recurse
-            case TypeParameter:
-            case Property:
-                typeParent = ((FormalConstant) constParent).getConstraintType();
-                break;
+        assert typeConstraint.containsGenericParam(getName());
 
-            default:
-                throw new IllegalStateException();
-            }
-
-        String sName = m_constName.getValue();
-
-        assert typeParent.containsGenericParam(sName);
-
-        TypeConstant type = typeParent.getSingleUnderlyingClass(true).getFormalType().resolveGenericType(sName);
-
+        TypeConstant type = typeConstraint.getSingleUnderlyingClass(true).getFormalType().
+                                resolveGenericType(getName());
         assert type.isGenericType();
+
         PropertyConstant idProp = (PropertyConstant) type.getDefiningConstant();
         return idProp.getConstraintType();
+        }
+
+    @Override
+    public TypeConstant resolve(GenericTypeResolver resolver)
+        {
+        FormalConstant constParent  = (FormalConstant) m_constParent;
+        TypeConstant   typeResolved = constParent.resolve(resolver);
+
+        return typeResolved == null
+                ? null
+                : typeResolved.resolveGenericType(getName());
         }
 
 
@@ -151,7 +151,6 @@ public class FormalTypeChildConstant
             }
         return constParent;
         }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 

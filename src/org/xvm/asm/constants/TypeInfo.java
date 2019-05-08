@@ -1493,46 +1493,7 @@ public class TypeInfo
         MethodStructure functionEquals = m_functionEquals;
         if (functionEquals == null)
             {
-            ConstantPool pool = pool();
-            for (Contribution contrib : f_listProcess)
-                {
-                TypeConstant typeThis = contrib.getTypeConstant();
-                ClassConstant clzThis = (ClassConstant) typeThis.getDefiningConstant();
-                if (clzThis instanceof NativeRebaseConstant)
-                    {
-                    clzThis = ((NativeRebaseConstant) clzThis).getClassConstant();
-                    }
-
-                for (Map.Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet())
-                    {
-                    MethodConstant constMethod = entry.getKey();
-
-                    // the signature we are looking for is:
-                    //  static <CompileType extends [this type]> Boolean equals(CompileType v1, CompileType v2)
-                    if (constMethod.getNestedDepth() != 2 ||
-                        !constMethod.getName().equals("equals"))
-                        {
-                        continue;
-                        }
-
-                    TypeConstant[] atypeReturn = constMethod.getRawReturns();
-                    if (atypeReturn.length != 1 && !atypeReturn[0].equals(pool.typeBoolean()))
-                        {
-                        continue;
-                        }
-
-                    if (isComparePattern(pool, constMethod.getRawParams(), clzThis))
-                        {
-                        functionEquals = entry.getValue().getHead().getMethodStructure();
-
-                        if (functionEquals.isFunction())
-                            {
-                            return m_functionEquals = functionEquals;
-                            }
-                        // else TODO: should there be a warning here?
-                        }
-                    }
-                }
+            m_functionEquals = functionEquals = findCompareMethod("equals", pool().typeBoolean());
             }
         return functionEquals;
         }
@@ -1545,48 +1506,81 @@ public class TypeInfo
         MethodStructure functionCompare = m_functionCompare;
         if (functionCompare == null)
             {
-            ConstantPool pool = pool();
-            for (Contribution contrib : f_listProcess)
+            m_functionCompare = functionCompare = findCompareMethod("compare", pool().typeOrdered());
+            }
+        return functionCompare;
+        }
+
+    /**
+     * Choose the method from the map of methods keyed by the narrowest contribution.
+     */
+    private MethodStructure findCompareMethod(String sName, TypeConstant typeReturn)
+        {
+        ConstantPool                           pool          = pool();
+        Map<IdentityConstant, MethodStructure> mapCandidates = new HashMap<>();
+        for (Map.Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet())
+            {
+            MethodConstant constMethod = entry.getKey();
+
+            // the signature we are looking for is:
+            //  static <CompileType extends [this type]> [return type] [name](CompileType v1, CompileType v2)
+            if (constMethod.getNestedDepth() != 2 || !constMethod.getName().equals(sName))
                 {
-                TypeConstant typeThis = contrib.getTypeConstant();
-                ClassConstant clzThis = (ClassConstant) typeThis.getDefiningConstant();
-                if (clzThis instanceof NativeRebaseConstant)
+                continue;
+                }
+
+            TypeConstant[] atypeReturn = constMethod.getRawReturns();
+            if (atypeReturn.length != 1 && !atypeReturn[0].equals(typeReturn))
+                {
+                continue;
+                }
+
+            if (isComparePattern(pool, constMethod.getRawParams(), f_type))
+                {
+                MethodStructure function = entry.getValue().getHead().getMethodStructure();
+
+                if (function.isFunction())
                     {
-                    clzThis = ((NativeRebaseConstant) clzThis).getClassConstant();
+                    IdentityConstant idClass = function.getIdentityConstant().getNamespace();
+                    mapCandidates.put(idClass, function);
                     }
+                // else TODO: should there be a warning here?
+                }
+            }
 
-                for (Map.Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet())
+        int cCandidates = mapCandidates.size();
+        if (cCandidates > 0)
+            {
+            if (cCandidates == 1)
+                {
+                return mapCandidates.values().iterator().next();
+                }
+
+            // choose the narrowest type
+            for (IdentityConstant idClass : f_listmapClassChain.keySet())
+                {
+                if (idClass instanceof NativeRebaseConstant)
                     {
-                    MethodConstant constMethod = entry.getKey();
+                    idClass = ((NativeRebaseConstant) idClass).getClassConstant();
+                    }
+                MethodStructure function = mapCandidates.get(idClass);
+                if (function != null)
+                    {
+                    return function;
+                    }
+                }
 
-                    // the signature we are looking for is:
-                    //  static <CompileType extends [this type]> Ordered compare(CompileType v1, CompileType v2)
-                    if (constMethod.getNestedDepth() != 2 ||
-                        !constMethod.getName().equals("compare"))
-                        {
-                        continue;
-                        }
-
-                    TypeConstant[] atypeReturn = constMethod.getRawReturns();
-                    if (atypeReturn.length != 1 && !atypeReturn[0].equals(pool.typeOrdered()))
-                        {
-                        continue;
-                        }
-
-                    if (isComparePattern(pool, constMethod.getRawParams(), clzThis))
-                        {
-                        functionCompare = entry.getValue().getHead().getMethodStructure();
-
-                        if (functionCompare.isFunction())
-                            {
-                            return m_functionCompare = functionCompare;
-                            }
-                        // else TODO: should there be a warning here?
-                        }
+            // REVIEW: consider skipping the interface scan
+            for (IdentityConstant idIface : f_listmapDefaultChain.keySet())
+                {
+                MethodStructure function = mapCandidates.get(idIface);
+                if (function != null)
+                    {
+                    return function;
                     }
                 }
             }
-        return functionCompare;
+        return null;
         }
 
     /**
@@ -1596,7 +1590,7 @@ public class TypeInfo
      *  <CompileType extends [this type]> [return type] equals(CompileType v1, CompileType v2)
      */
     private static boolean isComparePattern(
-            ConstantPool pool, TypeConstant[] atypeParam, ClassConstant clzThis)
+            ConstantPool pool, TypeConstant[] atypeParam, TypeConstant typeThis)
         {
         if (atypeParam.length != 3)
             {
@@ -1610,6 +1604,12 @@ public class TypeInfo
             return false;
             }
 
+        TypeConstant typeConstraint = typeType.getParamTypesArray()[0];
+        if (!typeConstraint.isSingleUnderlyingClass(true) || !typeThis.isA(typeConstraint))
+            {
+            return false;
+            }
+
         TypeConstant typeParam = atypeParam[1];
         if (!typeParam.equals(atypeParam[2]))
             {
@@ -1619,11 +1619,8 @@ public class TypeInfo
         if (typeParam instanceof TerminalTypeConstant)
             {
             Constant constParam = typeParam.getDefiningConstant();
-            if (constParam.getFormat() == Constant.Format.TypeParameter &&
-                ((TypeParameterConstant) constParam).getRegister() == 0)
-                {
-                return true;
-                }
+            return constParam.getFormat() == Constant.Format.TypeParameter &&
+                    ((TypeParameterConstant) constParam).getRegister() == 0;
             }
 
         return false;

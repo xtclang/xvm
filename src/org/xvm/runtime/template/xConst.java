@@ -174,20 +174,9 @@ public class xConst
         }
 
     @Override
-    public int callEquals(Frame frame, ClassComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+    protected int callEqualsImpl(Frame frame,  ClassComposition clazz,
+                                 ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        // if there is an "equals" function that is not native (on the Const itself),
-        // we need to call it
-        MethodStructure functionEquals = clazz.getType().ensureTypeInfo().findEqualsFunction();
-        if (functionEquals != null && !functionEquals.isNative())
-            {
-            return frame.call1(functionEquals, null,
-                    new ObjectHandle[]{hValue1, hValue2}, iReturn);
-            }
-
-        assert (f_struct.getFormat() == Component.Format.CONST);
-
         // default "equals" implementation takes the actual type into the account
         if (!hValue1.getType().equals(hValue2.getType()))
             {
@@ -199,19 +188,9 @@ public class xConst
         }
 
     @Override
-    public int callCompare(Frame frame, ClassComposition clazz,
+    protected int callCompareImpl(Frame frame, ClassComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        // if there is an "compare" function, we need to call it
-        MethodStructure functionCompare = clazz.getType().ensureTypeInfo().findCompareFunction();
-        if (functionCompare != null && !functionCompare.isNative())
-            {
-            return frame.call1(functionCompare, null,
-                    new ObjectHandle[]{hValue1, hValue2}, iReturn);
-            }
-
-        assert (f_struct.getFormat() == Component.Format.CONST);
-
         // default "equals" implementation takes the actual type into the account
         if (!hValue1.getType().equals(hValue2.getType()))
             {

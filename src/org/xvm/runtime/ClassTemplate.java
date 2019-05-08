@@ -1363,12 +1363,22 @@ public abstract class ClassTemplate
         MethodStructure functionEquals = type.ensureTypeInfo().findEqualsFunction();
         if (functionEquals != null && !functionEquals.isNative())
             {
-            return frame.call1(functionEquals, null,
-                    new ObjectHandle[]{type.getTypeHandle(), hValue1, hValue2}, iReturn);
+            ObjectHandle[] ahVars = new ObjectHandle[functionEquals.getMaxVars()];
+            ahVars[0] = type.getTypeHandle();
+            ahVars[1] = hValue1;
+            ahVars[2] = hValue2;
+            return frame.call1(functionEquals, null, ahVars, iReturn);
             }
 
-        // only Const classes have an automatic implementation;
-        // for everyone else it's either a natural method or a ref equality
+        return callEqualsImpl(frame, clazz, hValue1, hValue2, iReturn);
+        }
+
+    /**
+     * Default implementation for "equals"; overridden only by xConst.
+     */
+    protected int callEqualsImpl(Frame frame,  ClassComposition clazz,
+                                 ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
         return frame.assignValue(iReturn, xBoolean.FALSE);
         }
 
@@ -1392,12 +1402,24 @@ public abstract class ClassTemplate
         MethodStructure functionCompare = type.ensureTypeInfo().findCompareFunction();
         if (functionCompare != null && !functionCompare.isNative())
             {
-            return frame.call1(functionCompare, null,
-                new ObjectHandle[]{type.getTypeHandle(), hValue1, hValue2}, iReturn);
+            ObjectHandle[] ahVars = new ObjectHandle[functionCompare.getMaxVars()];
+            ahVars[0] = type.getTypeHandle();
+            ahVars[1] = hValue1;
+            ahVars[2] = hValue2;
+            return frame.call1(functionCompare, null, ahVars, iReturn);
             }
 
-        throw new IllegalStateException(
-                "No implementation for \"compare()\" function at " + f_sName);
+        return callCompareImpl(frame, clazz, hValue1, hValue2, iReturn);
+        }
+
+    /**
+     * Default implementation for "compare"; overridden only by xConst.
+     */
+    protected int callCompareImpl(Frame frame,  ClassComposition clazz,
+                                 ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        return frame.raiseException(xException.makeHandle(
+            "No implementation for \"compare()\" function at " + f_sName));
         }
 
     /**

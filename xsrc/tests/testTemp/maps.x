@@ -11,7 +11,10 @@ module TestMaps.xqiz.it
     void run()
         {
         testBasic();
-        testProfile();
+        testEquals();
+
+        function void () run = &testFill100();
+        profile(run, 10);
 
         testListMap();
         }
@@ -31,11 +34,15 @@ module TestMaps.xqiz.it
         console.println(map);
         }
 
-    void testProfile()
+    void testEquals()
         {
-        console.println("\n** testProfile()");
-        function void () run = &testFill100();
-        profile(run, 10);
+        Map<Int, String> map1 = new HashMap();
+        map1.put(1, "v1");
+
+        Map<Int, String> map2 = new HashMap();
+        map2.put(1, "v1");
+
+        assert map1 == map2;
         }
 
     static void testFill100()

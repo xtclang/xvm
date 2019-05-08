@@ -5,12 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.Constants.Access;
-
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -130,12 +126,6 @@ public abstract class OpInvocable extends Op
             return m_chain;
             }
 
-        // invalidate any previously calculated return register types;
-        // NOTE: we are relying on the fact that any calls to checkReturn* method below
-        //       *always* follow a call to this method
-        m_typeRetReg  = null;
-        m_atypeRetReg = null;
-
         TypeComposition clazz    = m_clazz = hTarget.getComposition();
         MethodConstant  idMethod = (MethodConstant) frame.getConstant(m_nMethodId);
         if (idMethod.isLambda())
@@ -156,52 +146,52 @@ public abstract class OpInvocable extends Op
         return m_chain = chain;
         }
 
-    // check if a register for the return value needs to be allocated
+    /**
+     * Ensure that register for the return value is allocated.
+     *
+     * TODO: the register type should be injected by the compiler/verifier
+     */
     protected void checkReturnRegister(Frame frame, ObjectHandle hTarget)
         {
         assert !isMultiReturn();
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            TypeConstant typeRet = m_typeRetReg;
-            if (typeRet == null)
-                {
-                ConstantPool      pool        = frame.poolContext();
-                MethodConstant    constMethod = (MethodConstant) frame.getConstant(m_nMethodId);
-                SignatureConstant sigTarget   = getTargetSignature(pool, hTarget, constMethod);
-
-                typeRet = m_typeRetReg = constMethod.getRawReturns()[0].
-                        resolveGenerics(pool, sigTarget.getRawReturns()[0]);
-                }
+            ConstantPool   pool     = frame.poolContext();
+            MethodConstant idMethod = (MethodConstant) frame.getConstant(m_nMethodId);
+            TypeConstant   typeRet  = idMethod.getRawReturns()[0].
+                    resolveGenerics(pool, frame.getGenericsResolver());
 
             frame.introduceResolvedVar(m_nRetValue, typeRet);
             }
         }
 
-    // check if a register for the return Tuple value needs to be allocated
+    /**
+     * Ensure that register for the return Tuple value is allocated.
+     *
+     * TODO: the register type should be injected by the compiler/verifier
+     */
     protected void checkReturnTupleRegister(Frame frame, ObjectHandle hTarget)
         {
         assert !isMultiReturn();
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            TypeConstant typeRet = m_typeRetReg;
-            if (typeRet == null)
-                {
-                ConstantPool      pool        = frame.poolContext();
-                MethodConstant    constMethod = (MethodConstant) frame.getConstant(m_nMethodId);
-                SignatureConstant sigTarget   = getTargetSignature(pool, hTarget, constMethod);
-
-                typeRet = m_typeRetReg = pool.ensureParameterizedTypeConstant(
-                    pool.typeTuple(), constMethod.getSignature().getRawReturns()).
-                        resolveGenerics(pool, sigTarget.getRawReturns()[0]);
-                }
+            ConstantPool   pool     = frame.poolContext();
+            MethodConstant idMethod = (MethodConstant) frame.getConstant(m_nMethodId);
+            TypeConstant   typeRet  = pool.ensureParameterizedTypeConstant(
+                pool.typeTuple(), idMethod.getSignature().getRawReturns()).
+                    resolveGenerics(pool, frame.getGenericsResolver());
 
             frame.introduceResolvedVar(m_nRetValue, typeRet);
             }
         }
 
-    // check if any registers for the return values need to be allocated
+    /**
+     * Ensure that registers for the return values are allocated.
+     *
+     * TODO: the register types should be injected by the compiler/verifier
+     */
     protected void checkReturnRegisters(Frame frame, ObjectHandle hTarget)
         {
         assert isMultiReturn();
@@ -211,34 +201,14 @@ public abstract class OpInvocable extends Op
             {
             if (frame.isNextRegister(anRet[i]))
                 {
-                TypeConstant[] atypeRet = m_atypeRetReg;
-                if (atypeRet == null)
-                    {
-                    ConstantPool      pool        = frame.poolContext();
-                    MethodConstant    constMethod = (MethodConstant) frame.getConstant(m_nMethodId);
-                    SignatureConstant sigTarget   = getTargetSignature(pool, hTarget, constMethod);
+                ConstantPool   pool     = frame.poolContext();
+                MethodConstant idMethod = (MethodConstant) frame.getConstant(m_nMethodId);
+                TypeConstant   typeRet  = idMethod.getRawReturns()[i].
+                    resolveGenerics(pool, frame.getGenericsResolver());
 
-                    atypeRet = m_atypeRetReg = constMethod.getRawReturns().clone();
-                    for (int j = 0, cRet = atypeRet.length; j < cRet; j++)
-                        {
-                        atypeRet[j] = atypeRet[j].resolveGenerics(pool, sigTarget.getRawReturns()[j]);
-                        }
-                    }
-
-                frame.introduceResolvedVar(anRet[i], atypeRet[i]);
+                frame.introduceResolvedVar(anRet[i], typeRet);
                 }
             }
-        }
-
-    /**
-     * Use the target's type info to resolve the method's signature.
-     * REVIEW GG - this seems very heavy handed; is there a better way?
-     */
-    private SignatureConstant getTargetSignature(ConstantPool pool, ObjectHandle hTarget, MethodConstant idMethod)
-        {
-        TypeConstant typeTarget = pool.ensureAccessTypeConstant(hTarget.getType(), Access.PRIVATE);
-        TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
-        return infoTarget.getMethodBySignature(idMethod.getSignature()).getSignature();
         }
 
     @Override
@@ -312,7 +282,4 @@ public abstract class OpInvocable extends Op
 
     private TypeComposition m_clazz;       // cached class
     private CallChain       m_chain;       // cached call chain
-
-    private TypeConstant    m_typeRetReg;   // cached return register type
-    private TypeConstant[]  m_atypeRetReg;  // cached return registers types
     }
