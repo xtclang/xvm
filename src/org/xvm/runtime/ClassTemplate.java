@@ -1587,7 +1587,7 @@ public abstract class ClassTemplate
                 }
 
             default:
-                // sof assert
+                // soft assert
                 System.err.println("Ambiguous \"" + sOp + "\" operation on " +
                         hTarget.getType().getValueString());
                 return null;
@@ -1630,7 +1630,7 @@ public abstract class ClassTemplate
                         }
                     }
 
-                // sof assert
+                // soft assert
                 System.err.println("Ambiguous \"" + sOp + "\" operation on " +
                         hTarget.getType().getValueString());
                 return null;
@@ -1680,7 +1680,7 @@ public abstract class ClassTemplate
                     return clz.getMethodCallChain(sig);
                     }
 
-                // sof assert
+                // soft assert
                 System.err.println("Ambiguous \"" + sOp + "\" operation on " +
                         hTarget.getType().getValueString());
                 return null;

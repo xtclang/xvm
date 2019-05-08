@@ -157,12 +157,7 @@ public abstract class OpInvocable extends Op
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            ConstantPool   pool     = frame.poolContext();
-            MethodConstant idMethod = (MethodConstant) frame.getConstant(m_nMethodId);
-            TypeConstant   typeRet  = idMethod.getRawReturns()[0].
-                    resolveGenerics(pool, frame.getGenericsResolver());
-
-            frame.introduceResolvedVar(m_nRetValue, typeRet);
+            frame.introduceMethodReturnVar(m_nRetValue, convertId(m_nMethodId), 0);
             }
         }
 
@@ -177,13 +172,7 @@ public abstract class OpInvocable extends Op
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            ConstantPool   pool     = frame.poolContext();
-            MethodConstant idMethod = (MethodConstant) frame.getConstant(m_nMethodId);
-            TypeConstant   typeRet  = pool.ensureParameterizedTypeConstant(
-                pool.typeTuple(), idMethod.getSignature().getRawReturns()).
-                    resolveGenerics(pool, frame.getGenericsResolver());
-
-            frame.introduceResolvedVar(m_nRetValue, typeRet);
+            frame.introduceMethodReturnVar(m_nRetValue, convertId(m_nMethodId), -1);
             }
         }
 
@@ -201,12 +190,7 @@ public abstract class OpInvocable extends Op
             {
             if (frame.isNextRegister(anRet[i]))
                 {
-                ConstantPool   pool     = frame.poolContext();
-                MethodConstant idMethod = (MethodConstant) frame.getConstant(m_nMethodId);
-                TypeConstant   typeRet  = idMethod.getRawReturns()[i].
-                    resolveGenerics(pool, frame.getGenericsResolver());
-
-                frame.introduceResolvedVar(anRet[i], typeRet);
+                frame.introduceMethodReturnVar(anRet[i], convertId(m_nMethodId), i);
                 }
             }
         }

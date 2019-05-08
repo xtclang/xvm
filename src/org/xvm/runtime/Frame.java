@@ -14,6 +14,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -647,13 +648,13 @@ public class Frame
                         //      lo = ls;
                         // "add(Object o)" method needs to be wrapped on "lo" reference, to ensure the
                         // run-time type of "String"
-                        System.err.println("Wrapping required from: " + typeFrom.getValueString()
+                        System.err.println("WARNING: wrapping required from: " + typeFrom.getValueString()
                             + " to: " + typeTo.getValueString());
                         break;
 
                     default:
                         // why did the compiler/verifier allow this?
-                        System.err.println("Suspicious assignment from: " + typeFrom.getValueString()
+                        System.err.println("WARNING: suspicious assignment from: " + typeFrom.getValueString()
                             + " to: " + typeTo.getValueString());
                     }
                 }
@@ -1404,6 +1405,22 @@ public class Frame
         }
 
     /**
+     * Introduce a new standard variable that has a type of the method return value.
+     *
+     * Note: this method increments the "nextVar" index.
+     *
+     * @param nVar       the variable to introduce
+     * @param nMethodId  the method id (absolute)
+     * @param index      the return value index (-1 for a Tuple)
+     */
+    public void introduceMethodReturnVar(int nVar, int nMethodId, int index)
+        {
+        f_anNextVar[m_iScope] = Math.max(f_anNextVar[m_iScope], nVar + 1);
+
+        f_aInfo[nVar] = new VarInfo(nMethodId, index, METHOD_RESOLVER);
+        }
+
+    /**
      * Introduce a new standard variable of the "ElementType" for the specified array variable.
      *
      * Note: this method increments the "nextVar" index.
@@ -1974,6 +1991,10 @@ public class Frame
 
     protected static final VarTypeResolver ARRAY_ELEMENT_RESOLVER = new VarTypeResolver()
         {
+        /**
+         * @param nTargetReg  the register or property holding an array
+         * @param iAuxId      the array element index
+         */
         @Override
         public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
             {
@@ -2001,6 +2022,10 @@ public class Frame
 
     protected static final VarTypeResolver ARRAY_ELEMENT_REF_RESOLVER = new VarTypeResolver()
         {
+        /**
+         * @param nTargetReg  the register or property holding an array
+         * @param iAuxId      the array element index
+         */
         @Override
         public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
             {
@@ -2012,8 +2037,10 @@ public class Frame
 
     protected static final VarTypeResolver PROPERTY_RESOLVER = new VarTypeResolver()
         {
-        // nTargetReg - the target register (or property)
-        // nAuxId  - the PropertyConstant id
+        /**
+         * @param nTargetReg  the register or property to retrieve the property of
+         * @param iAuxId      the PropertyConstant id (absolute)
+         */
         @Override
         public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
             {
@@ -2030,8 +2057,34 @@ public class Frame
             }
         };
 
+    protected static final VarTypeResolver METHOD_RESOLVER = new VarTypeResolver()
+        {
+        /**
+         * @param nTargetReg  the method constant id (absolute) to use the return signature of
+         * @param iAuxId      the return value index (-1 for a Tuple)
+         */
+        @Override
+        public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
+            {
+            ConstantPool poolCode = frame.poolCode();
+            ConstantPool poolCtx  = frame.poolContext();
+
+            MethodConstant idMethod = (MethodConstant) poolCode.getConstant(nTargetReg);
+            return iAuxId >= 0
+                ? idMethod.getRawReturns()[iAuxId].
+                    resolveGenerics(poolCtx, frame.getGenericsResolver())
+                : poolCtx.ensureParameterizedTypeConstant(
+                    poolCtx.typeTuple(), idMethod.getSignature().getRawReturns()).
+                        resolveGenerics(poolCtx, frame.getGenericsResolver());
+            }
+        };
+
     protected static final VarTypeResolver REF_RESOLVER = new VarTypeResolver()
         {
+        /**
+         * @param nTargetReg  the referent register
+         * @param iAuxId      unused
+         */
         @Override
         public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
             {
