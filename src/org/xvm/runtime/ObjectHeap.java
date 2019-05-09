@@ -83,8 +83,7 @@ public class ObjectHeap
                 return new DeferredCallHandle(frameNext);
 
             case Op.R_EXCEPTION:
-                // deferred exception
-                return new DeferredCallHandle(frame);
+                return new DeferredCallHandle(frame.m_hException);
 
             default:
                 throw new IllegalStateException();

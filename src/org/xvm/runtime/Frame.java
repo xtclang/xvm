@@ -340,76 +340,67 @@ public class Frame
      *
      * @return a corresponding handle
      */
-    public ObjectHandle getPredefinedArgument(int iArgId)
+    protected ObjectHandle getPredefinedArgument(int iArgId)
         {
         switch (iArgId)
             {
             case Op.A_STACK:
-                return popStack();
+                ObjectHandle hValue = popStack();
+                return hValue == null
+                    ? makeDeferredException("Run-time error: empty stack")
+                    : hValue;
 
-            case Op.A_DEFAULT:
+                case Op.A_DEFAULT:
                 return ObjectHandle.DEFAULT;
 
             case Op.A_SUPER:
-                ObjectHandle hThis = f_hThis;
-                if (hThis == null)
-                    {
-                    throw new IllegalStateException();
-                    }
-                return xFunction.makeHandle(m_chain, m_nDepth).bind(0, hThis);
+                return f_hThis == null
+                    ? makeDeferredException("Run-time error: no target")
+                    : xFunction.makeHandle(m_chain, m_nDepth).bind(0, f_hThis);
 
             case Op.A_TARGET:
-                if (f_hTarget == null)
-                    {
-                    throw new IllegalStateException();
-                    }
-                return f_hTarget;
+                return f_hTarget == null
+                    ? makeDeferredException("Run-time error: no target")
+                    : f_hTarget;
 
             case Op.A_PUBLIC:
-                if (f_hThis == null)
-                    {
-                    throw new IllegalStateException();
-                    }
-                return f_hThis.ensureAccess(Access.PUBLIC);
+                return f_hThis == null
+                    ? makeDeferredException("Run-time error: no target")
+                    : f_hThis.ensureAccess(Access.PUBLIC);
 
             case Op.A_PROTECTED:
-                if (f_hThis == null)
-                    {
-                    throw new IllegalStateException();
-                    }
-                return f_hThis.ensureAccess(Access.PROTECTED);
+                return f_hThis == null
+                    ? makeDeferredException("Run-time error: no target")
+                    : f_hThis.ensureAccess(Access.PROTECTED);
 
             case Op.A_PRIVATE:
-                if (f_hThis == null)
-                    {
-                    throw new IllegalStateException();
-                    }
-                return f_hThis;
+                return f_hThis == null
+                    ? makeDeferredException("Run-time error: no target")
+                    : f_hThis.ensureAccess(Access.PRIVATE);
 
             case Op.A_STRUCT:
-                if (f_hThis == null)
-                    {
-                    throw new IllegalStateException();
-                    }
-                return f_hThis.ensureAccess(Access.STRUCT);
+                return f_hThis == null
+                    ? makeDeferredException("Run-time error: no target")
+                    : f_hThis.ensureAccess(Access.STRUCT);
 
             case Op.A_SERVICE:
-                return f_context.m_hService;
+                {
+                ObjectHandle hService = f_context.m_hService;
+                return hService == null
+                    ? makeDeferredException("No service")
+                    : hService;
+                }
 
             // TODO remove the rest of these?
             case Op.A_THIS:
-                if (f_hThis == null)
-                    {
-                    throw new IllegalStateException();
-                    }
-                return f_hThis;
+                return f_hThis == null
+                    ? makeDeferredException("Run-time error: no target")
+                    : f_hThis;
 
             case Op.A_TYPE:
-                if (f_hThis == null)
-                    {
-                    throw new IllegalStateException();
-                    }
-                return f_hThis.getType().getTypeHandle();
+                return f_hThis == null
+                    ? makeDeferredException("Run-time error: no target")
+                    : f_hThis.getType().getTypeHandle();
 
             case Op.A_MODULE:
                 return getConstHandle(f_context.f_module.getIdentityConstant());
@@ -417,6 +408,11 @@ public class Frame
             default:
                 throw new IllegalStateException("Invalid argument " + iArgId);
             }
+        }
+
+    private DeferredCallHandle makeDeferredException(String s)
+        {
+        return new DeferredCallHandle(xException.makeHandle(s));
         }
 
     /**

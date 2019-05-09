@@ -534,45 +534,53 @@ public abstract class ObjectHandle
     public static class DeferredCallHandle
             extends ObjectHandle
         {
-        protected Frame f_frameNext;
+        protected final Frame           f_frameNext;
+        protected final ExceptionHandle f_hException;
 
         public DeferredCallHandle(Frame frameNext)
             {
             super(null);
 
-            f_frameNext = frameNext;
+            f_frameNext  = frameNext;
+            f_hException = frameNext.m_hException;
+            }
+
+        public DeferredCallHandle(ExceptionHandle hException)
+            {
+            super(null);
+
+            f_frameNext  = null;
+            f_hException = hException;
             }
 
         // continue with the processing
         public int proceed(Frame frameCaller, Frame.Continuation continuation)
             {
-            Frame frameNext = f_frameNext;
-            if (frameNext.m_hException == null)
+            if (f_hException == null)
                 {
+                Frame frameNext = f_frameNext;
                 frameNext.setContinuation(continuation);
                 return frameCaller.call(frameNext);
                 }
 
-            frameCaller.m_hException = frameNext.m_hException;
+            frameCaller.m_hException = f_hException;
             return Op.R_EXCEPTION;
             }
 
         public void addContinuation(Frame.Continuation continuation)
             {
-            f_frameNext.setContinuation(continuation);
-            }
-
-        public ExceptionHandle.WrapperException getDeferredException()
-            {
-            return f_frameNext.m_hException.getException();
+            if (f_hException == null)
+                {
+                f_frameNext.setContinuation(continuation);
+                }
             }
 
         @Override
         public String toString()
             {
-            return f_frameNext.m_hException == null
+            return f_hException == null
                 ? "Deferred call: " + f_frameNext
-                : "Deferred exception: " + f_frameNext.m_hException;
+                : "Deferred exception: " + f_hException;
             }
         }
 

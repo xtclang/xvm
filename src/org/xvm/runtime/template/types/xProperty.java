@@ -82,7 +82,7 @@ public class xProperty
 
         protected DeferredPropertyHandle(PropertyConstant prop)
             {
-            super(null);
+            super((ExceptionHandle) null);
 
             f_property = prop;
             }
