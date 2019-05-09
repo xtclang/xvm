@@ -1,6 +1,8 @@
 package org.xvm.runtime.template._native.fs;
 
 
+import java.io.File;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 
@@ -28,8 +30,8 @@ public class xOSFileStore
     public void initDeclared()
         {
         markNativeProperty("capacity");
-        markNativeProperty("bytesUsed");
         markNativeProperty("bytesFree");
+        markNativeProperty("bytesUsed");
 
         final String[] FUNCTION    = new String[] {"Function"};
         final String[] PATH        = new String[] {"fs.Path"};
@@ -39,13 +41,13 @@ public class xOSFileStore
         final String[] PATHPATH    = new String[] {"fs.Path", "fs.Path"};
         final String[] PATHWATCHER = new String[] {"fs.Path", "fs.FileWatcher"};
 
-        markNativeMethod("find"            , PATH       , FILENODE );
+        markNativeMethod("find"            , PATH       , null     );
         markNativeMethod("dirFor"          , PATH       , DIRECTORY);
         markNativeMethod("fileFor"         , PATH       , FILE     );
-        markNativeMethod("copy"            , PATHPATH   , FILENODE );
-        markNativeMethod("move"            , PATHPATH   , FILENODE );
-        markNativeMethod("watch"           , PATHWATCHER, FUNCTION );
-        markNativeMethod("watchRecursively", PATHWATCHER, FUNCTION );
+        markNativeMethod("copy"            , PATHPATH   , null     );
+        markNativeMethod("move"            , PATHPATH   , null     );
+        markNativeMethod("watch"           , PATHWATCHER, null     );
+        markNativeMethod("watchRecursively", PATHWATCHER, null     );
         }
 
     @Override
@@ -54,7 +56,13 @@ public class xOSFileStore
         switch (sPropName)
             {
             case "capacity":
-                return frame.assignValue(iReturn, xInt64.makeHandle(128*1024*1024));
+                return frame.assignValue(iReturn, xInt64.makeHandle(ROOT.getTotalSpace()));
+
+            case "bytesFree":
+                return frame.assignValue(iReturn, xInt64.makeHandle(ROOT.getFreeSpace()));
+
+            case "bytesUsed":
+                return frame.assignValue(iReturn, xInt64.makeHandle(ROOT.getTotalSpace() - ROOT.getFreeSpace()));
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -80,6 +88,7 @@ public class xOSFileStore
 
     // ----- constants -----------------------------------------------------------------------------
 
+    private static final File ROOT = new File("/");
 
 
     // ----- data members --------------------------------------------------------------------------
