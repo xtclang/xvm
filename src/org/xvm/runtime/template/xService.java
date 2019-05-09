@@ -91,7 +91,7 @@ public class xService
         {
         return frame.f_context == ((ServiceHandle) hTarget).m_context ?
             super.invoke1(frame, chain, hTarget, ahVar, iReturn) :
-            xFunction.makeAsyncHandle(chain, 0).call1(frame, hTarget, ahVar, iReturn);
+            xFunction.makeAsyncHandle(chain).call1(frame, hTarget, ahVar, iReturn);
         }
 
     @Override
@@ -99,7 +99,7 @@ public class xService
         {
         return frame.f_context == ((ServiceHandle) hTarget).m_context ?
             super.invokeN(frame, chain, hTarget, ahVar, aiReturn) :
-            xFunction.makeAsyncHandle(chain, 0).callN(frame, hTarget, ahVar, aiReturn);
+            xFunction.makeAsyncHandle(chain).callN(frame, hTarget, ahVar, aiReturn);
         }
 
     @Override

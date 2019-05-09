@@ -62,6 +62,11 @@ public class xException
         return makeHandle("Immutable object");
         }
 
+    public static ExceptionHandle mutableObject()
+        {
+        return makeHandle("mutable object cannot be used for a service call");
+        }
+
     public static ExceptionHandle illegalOperation()
         {
         return makeHandle("IllegalOperation");

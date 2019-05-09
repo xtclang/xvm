@@ -14,6 +14,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -545,9 +546,47 @@ public class xFunction
     public static class AsyncHandle
             extends FunctionHandle
         {
-        protected AsyncHandle(TypeComposition clazz, CallChain chain, int nDepth)
+        /**
+         * Create an asynchronous function handle.
+         *
+         * @param clazz         the class composition for this handle
+         * @param chain         the call chain
+         * @param fForceNative  if true, the native chain should be invoked asynchronously
+         */
+        protected AsyncHandle(ClassComposition clazz, CallChain chain, boolean fForceNative)
             {
-            super(clazz, chain, nDepth);
+            super(clazz, chain, fForceNative ? 1 : 0);
+            }
+
+        /**
+         * @return true iff the call for this handle needs to be synchronous
+         */
+        protected boolean isSynchronous()
+            {
+            // native method on the service are synchronous unless the "depth" is not zero
+            return f_chain.isNative() && f_nDepth == 0;
+            }
+
+        /**
+         * @return true iff all the arguments are immutable
+         */
+        protected boolean validateImmutable(ObjectHandle[] ahArg)
+            {
+            for (ObjectHandle hArg : ahArg)
+                {
+                if (hArg == null)
+                    {
+                    // arguments tail is always empty
+                    break;
+                    }
+
+                if (hArg.isMutable())
+                    {
+                    // TODO: replace functions with proxies
+                    return false;
+                    }
+                }
+            return true;
             }
 
         // ----- FunctionHandle interface -----
@@ -558,13 +597,16 @@ public class xFunction
             ServiceHandle hService = (ServiceHandle) hTarget;
 
             // native method on the service means "execute on the caller's thread"
-            if (f_chain.isNative() || frame.f_context == hService.m_context)
+            if (isSynchronous() || frame.f_context == hService.m_context)
                 {
                 return super.call1Impl(frame, hTarget, ahVar, iReturn);
                 }
 
-            // TODO: validate that all the arguments are immutable or ImmutableAble;
-            //       replace functions with proxies
+            if (!validateImmutable(ahVar))
+                {
+                return frame.raiseException(xException.mutableObject());
+                }
+
             int cReturns = iReturn == Op.A_IGNORE ? 0 : 1;
 
             CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendInvoke1Request(
@@ -580,13 +622,16 @@ public class xFunction
             ServiceHandle hService = (ServiceHandle) hTarget;
 
             // native method on the service means "execute on the caller's thread"
-            if (f_chain.isNative() || frame.f_context == hService.m_context)
+            if (isSynchronous() || frame.f_context == hService.m_context)
                 {
                 return super.callTImpl(frame, hTarget, ahVar, iReturn);
                 }
 
-            // TODO: validate that all the arguments are immutable or ImmutableAble;
-            //       replace functions with proxies
+            if (!validateImmutable(ahVar))
+                {
+                return frame.raiseException(xException.mutableObject());
+                }
+
             if (true)
                 {
                 // TODO: add a "return a Tuple back" flag
@@ -617,13 +662,15 @@ public class xFunction
             {
             ServiceHandle hService = (ServiceHandle) hTarget;
 
-            // native method on the service means "execute on the caller's thread"
-            if (f_chain.isNative() || frame.f_context == hService.m_context)
+            if (isSynchronous() || frame.f_context == hService.m_context)
                 {
                 return super.callNImpl(frame, hTarget, ahVar, aiReturn);
                 }
 
-            // TODO: validate that all the arguments are immutable or ImmutableAble
+            if (!validateImmutable(ahVar))
+                {
+                return frame.raiseException(xException.mutableObject());
+                }
 
             int cReturns = aiReturn.length;
 
@@ -647,11 +694,34 @@ public class xFunction
             }
         }
 
-    public static AsyncHandle makeAsyncHandle(CallChain chain, int nDepth)
+    /**
+     * Create a function handle representing an asynchronous (service) call.
+     *
+     * @param chain the method chain
+     *
+     * @return the corresponding function handle
+     */
+    public static AsyncHandle makeAsyncHandle(CallChain chain)
         {
-        TypeConstant typeFunction = chain.getMethod(nDepth).getIdentityConstant().getType();
+        TypeConstant typeFunction = chain.getMethod(0).getIdentityConstant().getType();
 
-        return new AsyncHandle(INSTANCE.ensureClass(typeFunction), chain, nDepth);
+        return new AsyncHandle(INSTANCE.ensureClass(typeFunction), chain, false);
+        }
+
+    /**
+     * Create a function handle representing an asynchronous (service) native call.
+     *
+     * @param chain the method chain
+     *
+     * @return the corresponding function handle
+     */
+    public static AsyncHandle makeAsyncNativeHandle(CallChain chain)
+        {
+        assert chain.isNative();
+
+        TypeConstant typeFunction = chain.getMethod(0).getIdentityConstant().getType();
+
+        return new AsyncHandle(INSTANCE.ensureClass(typeFunction), chain, true);
         }
 
     public static FunctionHandle makeHandle(CallChain chain, int nDepth)

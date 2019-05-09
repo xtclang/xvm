@@ -109,7 +109,7 @@ public class MBind
         CallChain chain = getCallChain(frame, hTarget);
 
         return frame.assignValue(m_nRetValue, hTarget.getComposition().isService() ?
-                xFunction.makeAsyncHandle(chain, 0).bindTarget(hTarget) :
+                xFunction.makeAsyncHandle(chain).bindTarget(hTarget) :
                 xFunction.makeHandle(chain, 0).bindTarget(hTarget));
         }
     }
