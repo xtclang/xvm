@@ -97,6 +97,12 @@ public class xConst
         }
 
     @Override
+    protected boolean isConstructImmutable()
+        {
+        return true;
+        }
+
+    @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof IntervalConstant)

@@ -41,12 +41,12 @@ import org.xvm.runtime.Utils.InPlacePropertyUnary;
 import org.xvm.runtime.Utils.UnaryAction;
 
 import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction.FullyBoundHandle;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xRef;
 import org.xvm.runtime.template.xRef.RefHandle;
+import org.xvm.runtime.template.xService.ServiceHandle;
 import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xVar;
 
@@ -235,9 +235,12 @@ public abstract class ClassTemplate
             });
         }
 
+    /**
+     * @return true iff a newly constructed object should be marked as "immutable"
+     */
     protected boolean isConstructImmutable()
         {
-        return this instanceof xConst;
+        return false;
         }
 
     protected ClassTemplate getChildTemplate(String sName)
@@ -433,7 +436,14 @@ public abstract class ClassTemplate
         // the very last frame should also assign the resulting new object
 
         Frame.Continuation contAssign = frameCaller ->
-            frameCaller.assignValue(iReturn, hStruct.ensureAccess(Access.PUBLIC));
+            {
+            ObjectHandle hValue = hStruct.ensureAccess(Access.PUBLIC);
+            if (hValue instanceof ServiceHandle)
+                {
+                frameCaller.f_context.setService((ServiceHandle) hValue);
+                }
+            return frameCaller.assignValue(iReturn, hValue);
+            };
 
         Frame frameCD = frame.createFrame1(constructor, hStruct, ahVar, Op.A_IGNORE);
 

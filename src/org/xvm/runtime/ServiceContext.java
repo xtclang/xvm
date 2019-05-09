@@ -684,15 +684,7 @@ public class ServiceContext
             Frame frame0 = context.createServiceEntryFrame(this, 1,
                     new Op[]{opConstruct, Return_0.INSTANCE});
 
-            frame0.setContinuation(_null ->
-                {
-                // an exception will dealt with by the caller (see sendConstructRequest)
-                if (frame0.m_hException == null)
-                    {
-                    context.setService((ServiceHandle) frame0.f_ahVar[0]);
-                    }
-                return sendResponse(f_fiberCaller, frame0, f_future, 1);
-                });
+            frame0.setContinuation(_null -> sendResponse(f_fiberCaller, frame0, f_future, 1));
             return frame0;
             }
         }
