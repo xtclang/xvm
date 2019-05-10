@@ -108,6 +108,16 @@ public interface TypeComposition
     boolean isInflated(Object nid);
 
     /**
+     * Check whether or not the property referred by the specified nid is allowed to stay
+     * unassigned after the construction.
+     *
+     * @param nid  the property nid
+     *
+     * @return true if the specified property is allowed to stay unassigned
+     */
+    boolean isAllowedUnassigned(Object nid);
+
+    /**
      * @return true if the specified property is injected
      */
     boolean isInjected(PropertyConstant idProp);

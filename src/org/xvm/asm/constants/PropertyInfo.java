@@ -1065,6 +1065,15 @@ public class PropertyInfo
         }
 
     /**
+     * @return return true iff this property is marked as "Unassigned" and has no other annotations
+     */
+    public boolean isSimpleUnassigned()
+        {
+        return m_annotations != null && m_annotations.length == 1
+            && (m_annotations[0].getAnnotationClass()).equals(pool().clzUnassigned());
+        }
+
+    /**
      * @return the MethodConstant that will identify the getter (but not necessarily a
      *         MethodConstant that actually exists, because there may not be a getter, but also
      *         because the fully resolved type is used in the MethodConstant)

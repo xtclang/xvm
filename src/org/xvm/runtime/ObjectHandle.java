@@ -326,16 +326,15 @@ public abstract class ObjectHandle
                     if (hValue == null)
                         {
                         Object idProp = entry.getKey();
-                        if (idProp instanceof NestedIdentity)
+
+                        if (!getComposition().isAllowedUnassigned(idProp))
                             {
-                            // must be a private property, which is always implicitly "@Unassigned"
-                            continue;
+                            if (listUnassigned == null)
+                                {
+                                listUnassigned = new ArrayList<>();
+                                }
+                            listUnassigned.add(idProp.toString());
                             }
-                        if (listUnassigned == null)
-                            {
-                            listUnassigned = new ArrayList<>();
-                            }
-                        listUnassigned.add((String) idProp);
                         }
                     // no need to recurse to a field; it would throw during its own construction
                     }

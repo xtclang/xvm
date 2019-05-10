@@ -149,6 +149,12 @@ public class PropertyComposition
         }
 
     @Override
+    public boolean isAllowedUnassigned(Object nid)
+        {
+        return f_clzRef.isAllowedUnassigned(nid);
+        }
+
+    @Override
     public boolean isInjected(PropertyConstant idProp)
         {
         return false;

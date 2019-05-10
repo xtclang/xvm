@@ -15,6 +15,7 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.AccessTypeConstant;
+import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
@@ -263,6 +264,18 @@ public class ClassComposition
         }
 
     @Override
+    public boolean isAllowedUnassigned(Object nid)
+        {
+        if (nid instanceof NestedIdentity)
+            {
+            // must indicate a private property (defined inside of a method), which is always
+            // implicitly "@Unassigned"
+            return false;
+            }
+        return f_typeInception.ensureTypeInfo().findProperty((String) nid).isSimpleUnassigned();
+        }
+
+    @Override
     public boolean isInjected(PropertyConstant idProp)
         {
         return f_typeInception.ensureTypeInfo().findProperty(idProp).isInjected();
@@ -396,7 +409,7 @@ public class ClassComposition
             }
 
         Map<Object, ObjectHandle> mapFields = new ListMap<>();
-        for (Map.Entry<Object, TypeComposition> entry : f_mapFields.entrySet())
+        for (Map.Entry<Object, TypeComposition> entry : mapCached.entrySet())
             {
             Object          nidProp = entry.getKey();
             TypeComposition clzRef  = entry.getValue();
@@ -470,7 +483,7 @@ public class ClassComposition
                         {
                         clzRef = new PropertyComposition(this, infoProp);
                         }
-                    else
+                    else if (!infoProp.isSimpleUnassigned())
                         {
                         clzRef = f_template.f_templates.resolveClass(infoProp.getBaseRefType());
                         }
