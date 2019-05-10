@@ -300,6 +300,18 @@ public abstract class RelationalTypeConstant
     @Override
     public boolean isNarrowedFrom(TypeConstant typeSuper, TypeConstant typeCtx)
         {
+        if (typeSuper.getClass() == this.getClass())
+            {
+            RelationalTypeConstant that = (RelationalTypeConstant) typeSuper;
+
+            TypeConstant constThis1  = this.m_constType1;
+            TypeConstant constThis2  = this.m_constType2;
+            TypeConstant constSuper1 = that.m_constType1;
+            TypeConstant constSuper2 = that.m_constType2;
+
+            return constSuper1.isAutoNarrowing() && constThis1.isNarrowedFrom(constSuper1, typeCtx)
+                || constSuper2.isAutoNarrowing() && constThis2.isNarrowedFrom(constSuper2, typeCtx);
+            }
         return false;
         }
 
