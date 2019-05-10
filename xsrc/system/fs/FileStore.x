@@ -185,7 +185,7 @@ interface FileStore
      * be expensive to calculate, because it may have to sum up the space used in each directory by
      * each file.
      *
-     * It is possible that capacitiy, bytesUsed, and bytesFree all provide information, yet the
+     * It is possible that capacity, bytesUsed, and bytesFree all provide information, yet the
      * capacity value does not match the sum of the bytesUsed and bytesFree values. This value is
      * considered to be _advisory_, and not definitive.
      */
@@ -198,7 +198,7 @@ interface FileStore
      * available capacity measurement; for those that do not, this property is likely to yield 0, or
      * the property may be expensive to calculate.
      *
-     * It is possible that capacitiy, bytesUsed, and bytesFree all provide information, yet the
+     * It is possible that capacity, bytesUsed, and bytesFree all provide information, yet the
      * capacity value does not match the sum of the bytesUsed and bytesFree values. This value is
      * considered to be _advisory_, and not definitive.
      */

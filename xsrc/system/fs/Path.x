@@ -16,6 +16,12 @@ const Path
         Name   ("name",  1)
         }
 
+    construct(String pathString)
+        {
+        // TODO: parse
+        construct Path(ROOT, pathString);
+        }
+
     construct(Path? parent, String name)
         {
         construct Path(parent, Name, name);

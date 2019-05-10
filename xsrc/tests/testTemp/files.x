@@ -8,8 +8,6 @@ module TestFiles.xqiz.it
 
     void run()
         {
-        console.println("*** file tests ***\n");
-
         testPaths();
         testInject();
         }
@@ -46,11 +44,15 @@ module TestFiles.xqiz.it
     void testInject()
         {
         console.println("\n** testInject()");
-        @Inject FileStore storage;
-        console.println("readOnly=" + storage.readOnly);
-        console.println("capacity=" + storage.capacity);
 
-//        @Inject Directory rootDir;
-//        console.println("rootDir=" + rootDir);
+        @Inject FileStore storage;
+
+        console.println("readOnly="  + storage.readOnly);
+        console.println("capacity="  + storage.capacity);
+        console.println("bytesFree=" + storage.bytesFree);
+        console.println("bytesUsed=" + storage.bytesUsed);
+
+        @Inject Directory rootDir;
+        console.println("rootDir=" + rootDir);
         }
     }

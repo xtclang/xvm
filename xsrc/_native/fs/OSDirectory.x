@@ -11,11 +11,6 @@ class OSDirectory
         extends OSFileNode
         implements Directory
     {
-    construct(FileStore fileStore, Path path)
-        {
-        construct OSFileNode(fileStore, path);
-        }
-
     @Override
     Iterator<String> names();
 

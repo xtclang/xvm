@@ -10,14 +10,6 @@ class OSFile
         extends OSFileNode
         implements File
     {
-    construct(FileStore fileStore, Path path)
-        {
-        construct OSFileNode(fileStore, path);
-        }
-
-    @Override
-    immutable Byte[] contents;
-
     @Override
     File truncate(Int newSize = 0);
 
@@ -35,4 +27,9 @@ class OSFile
 
     @Override
     FileChannel open(ReadOption read=Read, WriteOption... write=[Write]);
+
+    // ----- native --------------------------------------------------------------------------------
+
+    @Override
+    immutable Byte[] contents;
     }

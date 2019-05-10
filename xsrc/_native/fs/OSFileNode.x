@@ -9,18 +9,11 @@ import Ecstasy.fs.Path;
 class OSFileNode
         implements FileNode
     {
-    construct(FileStore fileStore, Path path)
-        {
-        assert path.absolute;
-
-        this.fileStore = fileStore;
-        this.path      = path.normalize();
-        }
-
-    private FileStore fileStore;
-
     @Override
-    public/private Path path;
+    @Lazy Path path.calc()
+        {
+        return new Path(pathString);
+        }
 
     @Override
     @RO String name.get()
@@ -32,10 +25,16 @@ class OSFileNode
     @RO Boolean exists;
 
     @Override
-    @RO DateTime created;
+    @Lazy DateTime created.calc()
+        {
+        return new DateTime(createdMillis*Time.PICOS_PER_MILLI, TimeZone.UTC);
+        }
 
     @Override
-    DateTime modified;
+    DateTime modified.get()
+        {
+        return new DateTime(modifiedMillis*Time.PICOS_PER_MILLI, TimeZone.UTC);
+        }
 
     @Override
     @RO DateTime accessed;
@@ -66,4 +65,18 @@ class OSFileNode
         {
         TODO
         }
+
+    @Override
+    String to<String>()
+        {
+        return pathString;
+        }
+
+    // ----- native --------------------------------------------------------------------------------
+
+    @Abstract protected OSStorage   storage;
+    @Abstract protected String      pathString;
+
+    @Abstract private Int           createdMillis;
+    @Abstract private Int           modifiedMillis;
     }

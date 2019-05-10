@@ -535,15 +535,27 @@ public class xFunction
             extends FunctionHandle
         {
         /**
-         * Create an asynchronous function handle.
+         * Create an asynchronous method handle.
          *
-         * @param clazz         the class composition for this handle
-         * @param chain         the call chain
-         * @param fForceNative  if true, the native chain should be invoked asynchronously
+         * @param clazz   the class composition for this handle
+         * @param chain   the call chain
          */
-        protected AsyncHandle(ClassComposition clazz, CallChain chain, boolean fForceNative)
+        protected AsyncHandle(ClassComposition clazz, CallChain chain)
             {
-            super(clazz, chain, fForceNative ? 1 : 0);
+            super(clazz, chain, 0);
+            }
+
+        /**
+         * Create an asynchronous native method handle.
+         *
+         * @param clazz   the class composition for this handle
+         * @param method  the native method
+         */
+        protected AsyncHandle(ClassComposition clazz, MethodStructure method)
+            {
+            super(clazz, method);
+
+            assert method.isNative();
             }
 
         /**
@@ -551,8 +563,8 @@ public class xFunction
          */
         protected boolean isSynchronous()
             {
-            // native method on the service are synchronous unless the "depth" is not zero
-            return f_chain.isNative() && f_nDepth == 0;
+            // native method on the service are asynchronous if they are created without the call chain
+            return f_function != null;
             }
 
         /**
@@ -693,23 +705,23 @@ public class xFunction
         {
         TypeConstant typeFunction = chain.getMethod(0).getIdentityConstant().getType();
 
-        return new AsyncHandle(INSTANCE.ensureClass(typeFunction), chain, false);
+        return new AsyncHandle(INSTANCE.ensureClass(typeFunction), chain);
         }
 
     /**
      * Create a function handle representing an asynchronous (service) native call.
      *
-     * @param chain the method chain
+     * @param method  the method structure
      *
      * @return the corresponding function handle
      */
-    public static AsyncHandle makeAsyncNativeHandle(CallChain chain)
+    public static AsyncHandle makeAsyncNativeHandle(MethodStructure method)
         {
-        assert chain.isNative();
+        assert method.isNative();
 
-        TypeConstant typeFunction = chain.getMethod(0).getIdentityConstant().getType();
+        TypeConstant typeFunction = method.getIdentityConstant().getType();
 
-        return new AsyncHandle(INSTANCE.ensureClass(typeFunction), chain, true);
+        return new AsyncHandle(INSTANCE.ensureClass(typeFunction), method);
         }
 
     public static FunctionHandle makeHandle(CallChain chain, int nDepth)

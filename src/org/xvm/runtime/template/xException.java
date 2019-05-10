@@ -36,6 +36,12 @@ public class xException
     @Override
     public void initDeclared()
         {
+        // cache all the well-known exception classes
+        s_clzException       = INSTANCE.getCanonicalClass();
+        s_clzIllegalArgument = f_templates.getTemplate("IllegalArgument").getCanonicalClass();
+        s_clzIllegalState    = f_templates.getTemplate("IllegalState").getCanonicalClass();
+        s_clzPathException   = f_templates.getTemplate("fs.PathException").getCanonicalClass();
+
         markNativeMethod("to", VOID, STRING);
         }
 
@@ -82,6 +88,13 @@ public class xException
         return makeHandle("UnsupportedOperation");
         }
 
+    public static ExceptionHandle pathException(String sMsg, ObjectHandle path)
+        {
+        ExceptionHandle hException = makeHandle(s_clzPathException, "IOException: " + sMsg);
+        hException.setField("path", path);
+        return hException;
+        }
+
     public static ExceptionHandle outOfRange(long lIndex, long cSize)
         {
         return makeHandle(lIndex < 0 ?
@@ -93,7 +106,12 @@ public class xException
 
     public static ExceptionHandle makeHandle(String sMessage)
         {
-        ExceptionHandle hException = makeMutableStruct(INSTANCE.getCanonicalClass(), null, null);
+        return makeHandle(s_clzException, sMessage);
+        }
+
+    public static ExceptionHandle makeHandle(ClassComposition clz, String sMessage)
+        {
+        ExceptionHandle hException = makeMutableStruct(clz, null, null);
 
         hException.setField("text", xString.makeHandle(sMessage));
         hException.setField("cause", xNullable.NULL);
@@ -115,4 +133,11 @@ public class xException
 
         return hException;
         }
+
+    // ----- well-known exception classes ----------------------------------------------------------
+
+    private static ClassComposition s_clzException;
+    private static ClassComposition s_clzIllegalArgument;
+    private static ClassComposition s_clzIllegalState;
+    private static ClassComposition s_clzPathException;
     }

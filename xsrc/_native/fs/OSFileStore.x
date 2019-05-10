@@ -11,15 +11,16 @@ import Ecstasy.fs.Path;
 class OSFileStore
         implements FileStore
     {
-    construct()
+    construct(OSStorage storage, Boolean readOnly)
         {
-        this.readOnly = False;
-        }
-
-    construct(Boolean readOnly)
-        {
+        this.storage  = storage;
         this.readOnly = readOnly;
         }
+
+    private OSStorage storage;
+
+    @Override
+    public/private Boolean readOnly;
 
     @Override
     @Lazy Directory root.calc()
@@ -31,7 +32,7 @@ class OSFileStore
     @Override
     conditional Directory|File find(Path path)
         {
-        TODO
+        return storage.find(path.to<String>());
         }
 
     @Override
@@ -71,9 +72,6 @@ class OSFileStore
         }
 
     @Override
-    public/private Boolean readOnly;
-
-    @Override
     FileStore ensureReadOnly()
         {
         if (readOnly)
@@ -81,7 +79,7 @@ class OSFileStore
             return this;
             }
 
-        return new OSFileStore(True);
+        return new OSFileStore(storage, True);
         }
 
     @Override

@@ -422,7 +422,8 @@ public class xString
             extends ObjectHandle
         {
         private char[] m_achValue;
-        private JavaLong m_hash;
+        private transient JavaLong m_hash; // cached hash value
+        private transient String m_sValue; // cached String value
 
         protected StringHandle(TypeComposition clazz, char[] achValue)
             {
@@ -439,17 +440,18 @@ public class xString
 
         public String getStringValue()
             {
-            return new String(m_achValue);
+            String sValue = m_sValue;
+            return sValue == null
+                    ? (m_sValue = new String(m_achValue))
+                    : sValue;
             }
 
         public JavaLong getHashCode()
             {
             JavaLong hHash = m_hash;
-            if (hHash == null)
-                {
-                m_hash = hHash = xInt64.makeHandle(Arrays.hashCode(m_achValue));
-                }
-            return hHash;
+            return hHash == null
+                    ? (m_hash = xInt64.makeHandle(Arrays.hashCode(m_achValue)))
+                    : hHash;
             }
 
         @Override
