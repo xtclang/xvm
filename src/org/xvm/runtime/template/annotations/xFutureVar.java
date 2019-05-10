@@ -365,7 +365,8 @@ public class xFutureVar
             }
 
         /**
-         * @return a DeferredCallHandle for getting a property the future represented by this handle
+         * @return a DeferredCallHandle for getting a property from the future object represented by
+         *         this handle
          */
         public DeferredCallHandle makeDeferredGetProperty(Frame frame, PropertyConstant idProp)
             {

@@ -574,6 +574,61 @@ public abstract class ObjectHandle
                 }
             }
 
+        /**
+         * @return a DeferredCallHandle for getting a property from the deferred object represented
+         *         by this handle
+         */
+        public DeferredCallHandle makeDeferredGetProperty(Frame frame, PropertyConstant idProp)
+            {
+            if (f_hException != null)
+                {
+                // this is a deferred exception
+                return this;
+                }
+
+            Op[] aopGetProperty = new Op[]
+                {
+                new Op()
+                    {
+                    public int process(Frame frame, int iPC)
+                        {
+                        return f_frameNext.call(frame);
+                        }
+                    public String toString()
+                        {
+                        return "callDeferred -> this:stack";
+                        }
+                    },
+                new Op()
+                    {
+                    public int process(Frame frame, int iPC)
+                        {
+                        ObjectHandle hTarget = frame.popStack();
+                        return hTarget.getTemplate().getPropertyValue(frame, hTarget, idProp, A_STACK);
+                        }
+                    public String toString()
+                        {
+                        return "getProperty -> this:stack";
+                        }
+                    },
+                new Op()
+                    {
+                    public int process(Frame frame, int iPC)
+                        {
+                        return frame.returnValue(frame.popStack(), false);
+                        }
+                    public String toString()
+                        {
+                        return "return this:stack";
+                        }
+                    },
+                };
+
+            Frame frameGetProperty = frame.createNativeFrame(
+                aopGetProperty, Utils.OBJECTS_NONE, Op.A_STACK, null);
+            return new DeferredCallHandle(frameGetProperty);
+            }
+
         @Override
         public String toString()
             {

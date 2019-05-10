@@ -313,8 +313,12 @@ public class Container
             ObjectHandle hOSStorage = ensureOSStorage(frame);
             if (hOSStorage != null)
                 {
+                ClassTemplate    template = f_templates.getTemplate("_native.fs.OSStorage");
+                PropertyConstant idProp   = template.getCanonicalType().
+                        ensureTypeInfo().findProperty("rootDir").getIdentity();
+
                 m_hRootDir = hDir =
-                    getNativeServiceProperty(frame, hOSStorage, "rootDir", h -> m_hRootDir = h);
+                    getProperty(frame, hOSStorage, idProp, h -> m_hRootDir = h);
                 }
             }
 
@@ -329,8 +333,12 @@ public class Container
             ObjectHandle hOSStorage = ensureOSStorage(frame);
             if (hOSStorage != null)
                 {
+                ClassTemplate    template = f_templates.getTemplate("_native.fs.OSStorage");
+                PropertyConstant idProp   = template.getCanonicalType().
+                        ensureTypeInfo().findProperty("homeDir").getIdentity();
+
                 m_hHomeDir = hDir =
-                    getNativeServiceProperty(frame, hOSStorage, "homeDir", h -> m_hHomeDir = h);
+                    getProperty(frame, hOSStorage, idProp, h -> m_hHomeDir = h);
                 }
             }
 
@@ -362,19 +370,15 @@ public class Container
         }
 
     /**
-     * Helper method to call into a native service.
+     * Helper method to get a property.
      */
-    private ObjectHandle getNativeServiceProperty(Frame frame, ObjectHandle hService, String sProp,
-                                                  Consumer<ObjectHandle> consumer)
+    private ObjectHandle getProperty(Frame frame, ObjectHandle hTarget, PropertyConstant idProp,
+                                     Consumer<ObjectHandle> consumer)
         {
-        ClassTemplate    templateSvc = hService.getTemplate();
-        PropertyConstant idProp      = templateSvc.getCanonicalType().
-                ensureTypeInfo().findProperty(sProp).getIdentity();
-
-        if (hService instanceof FutureHandle)
+        if (hTarget instanceof FutureHandle)
             {
-            DeferredCallHandle hDeferred = ((FutureHandle) hService).
-                makeDeferredGetProperty(frame, idProp);
+            DeferredCallHandle hDeferred =
+                ((FutureHandle) hTarget).makeDeferredGetProperty(frame, idProp);
             hDeferred.addContinuation(frameCaller ->
                 {
                 consumer.accept(frameCaller.peekStack());
@@ -383,7 +387,20 @@ public class Container
             return hDeferred;
             }
 
-        switch (templateSvc.getPropertyValue(frame, hService, idProp, A_STACK))
+        if (hTarget instanceof DeferredCallHandle)
+            {
+            DeferredCallHandle hDeferred =
+                ((DeferredCallHandle) hTarget).makeDeferredGetProperty(frame, idProp);
+            hDeferred.addContinuation(frameCaller ->
+                {
+                consumer.accept(frameCaller.peekStack());
+                return Op.R_NEXT;
+                });
+            return hDeferred;
+            }
+
+        ClassTemplate template = hTarget.getTemplate();
+        switch (template.getPropertyValue(frame, hTarget, idProp, A_STACK))
             {
             case Op.R_NEXT:
                 return frame.popStack();
