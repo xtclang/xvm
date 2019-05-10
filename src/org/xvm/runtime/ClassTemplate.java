@@ -435,20 +435,10 @@ public abstract class ClassTemplate
         // we need to create the call chain in the revers order;
         // the very last frame should also assign the resulting new object
 
-        Frame.Continuation contAssign = frameCaller ->
-            {
-            ObjectHandle hValue = hStruct.ensureAccess(Access.PUBLIC);
-            if (hValue instanceof ServiceHandle)
-                {
-                frameCaller.f_context.setService((ServiceHandle) hValue);
-                }
-            return frameCaller.assignValue(iReturn, hValue);
-            };
-
         Frame frameCD = frame.createFrame1(constructor, hStruct, ahVar, Op.A_IGNORE);
 
         // we need a non-null anchor (see Frame#chainFinalizer)
-        frameCD.m_hfnFinally = Utils.makeFinalizer(constructor, hStruct, ahVar); // hF1
+        FullyBoundHandle hFD = frameCD.m_hfnFinally = Utils.makeFinalizer(constructor, ahVar);
 
         frameCD.setContinuation(frameCaller ->
             {
@@ -463,10 +453,14 @@ public abstract class ClassTemplate
                 hStruct.makeImmutable();
                 }
 
-            FullyBoundHandle hFD = frameCD.m_hfnFinally;
+            ObjectHandle hPublic = hStruct.ensureAccess(Access.PUBLIC);
+            if (hPublic instanceof ServiceHandle)
+                {
+                frameCaller.f_context.setService((ServiceHandle) hPublic);
+                }
 
-            // this:struct -> this:public
-            return hFD.callChain(frameCaller, Access.PUBLIC, contAssign);
+            return hFD.callChain(frameCaller, hPublic, frame0 ->
+                frame0.assignValue(iReturn, hPublic));
             });
 
         if (methodAI == null)

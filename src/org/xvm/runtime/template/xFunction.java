@@ -6,7 +6,6 @@ import java.util.concurrent.CompletableFuture;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -207,9 +206,9 @@ public class xFunction
             return new SingleBoundHandle(m_clazz, this, -1, hArg);
             }
 
-        public FullyBoundHandle bindAll(ObjectHandle hTarget, ObjectHandle[] ahArg)
+        public FullyBoundHandle bindArguments(ObjectHandle[] ahArg)
             {
-            return new FullyBoundHandle(m_clazz, this, hTarget, ahArg);
+            return new FullyBoundHandle(m_clazz, this, ahArg);
             }
 
         protected void addBoundArguments(ObjectHandle[] ahVar)
@@ -440,20 +439,17 @@ public class xFunction
             }
         }
 
-    // all parameter bound function
+    // all parameter bound method or function (the target is not bound)
     public static class FullyBoundHandle
             extends DelegatingHandle
         {
-        protected final ObjectHandle f_hTarget;
         protected final ObjectHandle[] f_ahArg;
         protected FullyBoundHandle m_next;
 
-        protected FullyBoundHandle(TypeComposition clazz, FunctionHandle hDelegate,
-                                   ObjectHandle hTarget, ObjectHandle[] ahArg)
+        protected FullyBoundHandle(TypeComposition clazz, FunctionHandle hDelegate, ObjectHandle[] ahArg)
             {
             super(clazz, hDelegate);
 
-            f_hTarget = hTarget;
             f_ahArg = ahArg;
             }
 
@@ -481,25 +477,17 @@ public class xFunction
             return this;
             }
 
-        // @param access - if specified, apply to "this"
         // @return R_CALL or R_NEXT (see NO_OP override)
-        public int callChain(Frame frame, Constants.Access access, Frame.Continuation continuation)
+        public int callChain(Frame frame, ObjectHandle hTarget, Frame.Continuation continuation)
             {
-            Frame frameNext = chainFrames(frame, access, continuation);
+            Frame frameNext = chainFrames(frame, hTarget, continuation);
 
             return frame.call(frameNext);
             }
 
-        // @param access - if specified, apply to "this"
         // @return the very first frame to be called
-        protected Frame chainFrames(Frame frame, Constants.Access access, Frame.Continuation continuation)
+        protected Frame chainFrames(Frame frame, ObjectHandle hTarget, Frame.Continuation continuation)
             {
-            ObjectHandle hTarget = f_hTarget;
-            if (access != null)
-                {
-                hTarget = hTarget.ensureAccess(access);
-                }
-
             Frame frameSave = frame.m_frameNext;
 
             call1(frame, hTarget, Utils.OBJECTS_NONE, Op.A_IGNORE);
@@ -515,16 +503,16 @@ public class xFunction
                 return frameThis;
                 }
 
-            Frame frameNext = m_next.chainFrames(frame, access, continuation);
+            Frame frameNext = m_next.chainFrames(frame, hTarget, continuation);
             frameThis.setContinuation(frameCaller -> frameCaller.call(frameNext));
             return frameThis;
             }
 
         public static FullyBoundHandle NO_OP = new FullyBoundHandle(
-                INSTANCE.getCanonicalClass(), null, null, null)
+                INSTANCE.getCanonicalClass(), null, null)
             {
             @Override
-            public int callChain(Frame frame, Constants.Access access, Frame.Continuation continuation)
+            public int callChain(Frame frame, ObjectHandle hTarget, Frame.Continuation continuation)
                 {
                 return continuation.proceed(frame);
                 }

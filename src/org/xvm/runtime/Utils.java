@@ -16,6 +16,7 @@ import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xFunction;
+import org.xvm.runtime.template.xFunction.FullyBoundHandle;
 import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xRef.RefHandle;
 import org.xvm.runtime.template.xString.StringHandle;
@@ -90,18 +91,17 @@ public abstract class Utils
      * Create a FullyBoundHandle representing a finalizer of the specified constructor.
      *
      * @param constructor  the constructor
-     * @param hStruct      the struct handle
-     * @param ahArg        the arguments
+     * @param ahArg        the arguments to bind
      *
      * @return a FullyBoundHandle representing the finalizer
      */
-    public static xFunction.FullyBoundHandle makeFinalizer(MethodStructure constructor,
-                                          ObjectHandle hStruct, ObjectHandle[] ahArg)
+    public static FullyBoundHandle makeFinalizer(MethodStructure constructor, ObjectHandle[] ahArg)
         {
         MethodStructure methodFinally = constructor.getConstructFinally();
 
-        return methodFinally == null ? xFunction.FullyBoundHandle.NO_OP :
-                xFunction.makeHandle(methodFinally).bindAll(hStruct, ahArg);
+        return methodFinally == null
+            ? FullyBoundHandle.NO_OP
+            : xFunction.makeHandle(methodFinally).bindArguments(ahArg);
         }
 
 
