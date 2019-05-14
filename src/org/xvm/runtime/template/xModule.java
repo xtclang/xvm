@@ -63,7 +63,7 @@ public class xModule
             frameID.setContinuation(frameCaller ->
                 frameCaller.assignValue(Op.A_STACK, hStruct.ensureAccess(Access.PUBLIC)));
 
-            return frame.call(frame.ensureInitialized(methodID, frameID));
+            return frame.callInitialized(frameID);
             }
 
         return super.createConstHandle(frame, constant);

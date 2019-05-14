@@ -465,15 +465,14 @@ public abstract class ClassTemplate
 
         if (methodAI == null)
             {
-            return frame.call(frame.ensureInitialized(constructor, frameCD));
+            return frame.callInitialized(frameCD);
             }
 
         Frame frameInit = frame.createFrame1(methodAI, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE);
 
-        frameInit.setContinuation(frameCaller ->
-            frameCaller.call(frame.ensureInitialized(constructor, frameCD)));
+        frameInit.setContinuation(frameCaller -> frameCaller.callInitialized(frameCD));
 
-        return frame.call(frame.ensureInitialized(methodAI, frameInit));
+        return frame.callInitialized(frameInit);
         }
 
     /**

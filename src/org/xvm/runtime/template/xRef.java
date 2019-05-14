@@ -503,7 +503,7 @@ public class xRef
                     ? Op.R_NEXT
                     : frameCaller.raiseException(xException.unassignedFields(listUnassigned));
                 });
-            return frame.call(frame.ensureInitialized(methodInit, frameID));
+            return frame.callInitialized(frameID);
             }
 
         public ObjectHandle getValue()

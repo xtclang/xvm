@@ -192,10 +192,16 @@ public class Frame
         return new Frame(this, method, hTarget, ahVar, Op.A_MULTI, aiReturn);
         }
 
-    // ensure that all the singleton constants are initialized for the specified method
-    public Frame ensureInitialized(MethodStructure method, Frame frameNext)
+    /**
+     * Ensure that all the singleton constants are initialized for the specified frame.
+     *
+     * @param frameNext  the frame to be called by this frame
+     *
+     * @return the next frame to execute (almost always same as frameNext)
+     */
+    protected Frame ensureInitialized(Frame frameNext)
         {
-        switch (method.ensureInitialized(this, frameNext))
+        switch (frameNext.f_function.ensureInitialized(this, frameNext))
             {
             case Op.R_NEXT:
                 return frameNext;
@@ -232,66 +238,67 @@ public class Frame
         return Op.R_CALL;
         }
 
+    // a convenience method
+    public int callInitialized(Frame frameNext)
+        {
+        m_frameNext = ensureInitialized(frameNext);
+        return Op.R_CALL;
+        }
+
     // a convenience method; ahVar - prepared variables
     public int call1(MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        m_frameNext = ensureInitialized(method,
-            createFrame1(method, hTarget, ahVar, iReturn));
+        m_frameNext = ensureInitialized(createFrame1(method, hTarget, ahVar, iReturn));
         return Op.R_CALL;
         }
 
     // a convenience method; ahVar - prepared variables
     public int callT(MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        m_frameNext = ensureInitialized(method,
-            createFrameT(method, hTarget, ahVar, iReturn));
+        m_frameNext = ensureInitialized(createFrameT(method, hTarget, ahVar, iReturn));
         return Op.R_CALL;
         }
 
     // a convenience method
     public int callN(MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
-        m_frameNext = ensureInitialized(method,
-            createFrameN(method, hTarget, ahVar, aiReturn));
+        m_frameNext = ensureInitialized(createFrameN(method, hTarget, ahVar, aiReturn));
         return Op.R_CALL;
         }
 
     // a convenience method; ahVar - prepared variables
     public int invoke1(CallChain chain, int nDepth, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        MethodStructure method = chain.getMethod(nDepth);
-
         Frame frameNext = createFrame1(chain.getMethod(nDepth), hTarget, ahVar, iReturn);
-        frameNext.m_chain = chain;
+
+        frameNext.m_chain  = chain;
         frameNext.m_nDepth = nDepth;
 
-        m_frameNext = ensureInitialized(method, frameNext);
+        m_frameNext = ensureInitialized(frameNext);
         return Op.R_CALL;
         }
 
     // a convenience method; ahVar - prepared variables
     public int invokeT(CallChain chain, int nDepth, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        MethodStructure method = chain.getMethod(nDepth);
+        Frame frameNext = createFrameT(chain.getMethod(nDepth), hTarget, ahVar, iReturn);
 
-        Frame frameNext = createFrameT(method, hTarget, ahVar, iReturn);
-        frameNext.m_chain = chain;
+        frameNext.m_chain  = chain;
         frameNext.m_nDepth = nDepth;
 
-        m_frameNext = ensureInitialized(method, frameNext);
+        m_frameNext = ensureInitialized(frameNext);
         return Op.R_CALL;
         }
 
     // a convenience method
     public int invokeN(CallChain chain, int nDepth, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
-        MethodStructure method = chain.getMethod(nDepth);
+        Frame frameNext = createFrameN(chain.getMethod(nDepth), hTarget, ahVar, aiReturn);
 
-        Frame frameNext = createFrameN(method, hTarget, ahVar, aiReturn);
-        frameNext.m_chain = chain;
+        frameNext.m_chain  = chain;
         frameNext.m_nDepth = nDepth;
 
-        m_frameNext = ensureInitialized(method, frameNext);
+        m_frameNext = ensureInitialized(frameNext);
         return Op.R_CALL;
         }
 
