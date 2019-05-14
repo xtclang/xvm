@@ -7,6 +7,8 @@ import java.nio.file.Paths;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
@@ -67,10 +69,26 @@ public class xOSStorage
 
                 Path path = Paths.get(hPathString.getStringValue());
 
-                return Files.exists(path)
-                    ? frame.assignValues(aiReturn, xBoolean.TRUE,
-                            OSFileNode.makeHandle(hStorage, path, Files.isDirectory(path)))
-                    : frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                if (Files.exists(path))
+                    {
+                    switch (OSFileNode.createHandle(frame, hStorage, path, Files.isDirectory(path), Op.A_STACK))
+                        {
+                        case Op.R_NEXT:
+                            return frame.assignValues(aiReturn, xBoolean.TRUE, frame.popStack());
+
+                        case Op.R_CALL:
+                            frame.m_frameNext.setContinuation(frameCaller ->
+                                frameCaller.assignValues(aiReturn, xBoolean.TRUE, frame.popStack()));
+                            return Op.R_CALL;
+
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
+
+                        default:
+                            throw new IllegalStateException();
+                        }
+                    }
+                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                 }
             }
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);

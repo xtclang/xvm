@@ -14,16 +14,9 @@ import org.xvm.runtime.TemplateRegistry;
 public class xOSFile
         extends OSFileNode
     {
-    public static xOSFile INSTANCE;
-
     public xOSFile(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure);
-
-        if (fInstance)
-            {
-            INSTANCE = this;
-            }
         }
 
     @Override
