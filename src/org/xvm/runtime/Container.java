@@ -350,8 +350,16 @@ public class Container
         ObjectHandle hDir = m_hCurDir;
         if (hDir == null)
             {
-            // TODO
-            throw new UnsupportedOperationException();
+            ObjectHandle hOSStorage = ensureOSStorage(frame);
+            if (hOSStorage != null)
+                {
+                ClassTemplate    template = f_templates.getTemplate("_native.fs.OSStorage");
+                PropertyConstant idProp   = template.getCanonicalType().
+                        ensureTypeInfo().findProperty("curDir").getIdentity();
+
+                m_hCurDir = hDir =
+                    getProperty(frame, hOSStorage, idProp, h -> m_hCurDir = h);
+                }
             }
 
         return hDir;
@@ -362,8 +370,16 @@ public class Container
         ObjectHandle hDir = m_hTmpDir;
         if (hDir == null)
             {
-            // TODO
-            throw new UnsupportedOperationException();
+            ObjectHandle hOSStorage = ensureOSStorage(frame);
+            if (hOSStorage != null)
+                {
+                ClassTemplate    template = f_templates.getTemplate("_native.fs.OSStorage");
+                PropertyConstant idProp   = template.getCanonicalType().
+                        ensureTypeInfo().findProperty("tmpDir").getIdentity();
+
+                m_hTmpDir = hDir =
+                    getProperty(frame, hOSStorage, idProp, h -> m_hTmpDir = h);
+                }
             }
 
         return hDir;

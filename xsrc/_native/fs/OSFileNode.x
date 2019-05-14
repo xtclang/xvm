@@ -27,6 +27,7 @@ class OSFileNode
     @Override
     @Lazy DateTime created.calc()
         {
+        // TODO: should be the "local" timezone
         return new DateTime(createdMillis*Time.PICOS_PER_MILLI, TimeZone.UTC);
         }
 
@@ -37,7 +38,10 @@ class OSFileNode
         }
 
     @Override
-    @RO DateTime accessed;
+    @RO DateTime accessed.get()
+        {
+        return new DateTime(accessedMillis*Time.PICOS_PER_MILLI, TimeZone.UTC);
+        }
 
     @Override
     @RO Boolean readable;
@@ -78,5 +82,6 @@ class OSFileNode
     @Abstract protected String      pathString;
 
     @Abstract private Int           createdMillis;
+    @Abstract private Int           accessedMillis;
     @Abstract private Int           modifiedMillis;
     }

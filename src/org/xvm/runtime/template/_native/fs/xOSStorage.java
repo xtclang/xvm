@@ -16,6 +16,7 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xService;
+import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xString.StringHandle;
 
 
@@ -33,7 +34,34 @@ public class xOSStorage
     @Override
     public void initDeclared()
         {
+        markNativeProperty("homeDir");
+        markNativeProperty("curDir");
+        markNativeProperty("tmpDir");
+
         markNativeMethod("find", STRING, null);
+        }
+
+    @Override
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
+        {
+        ServiceHandle hStorage = (ServiceHandle) hTarget;
+
+        switch (sPropName)
+            {
+            case "homeDir":
+                // REVIEW: should we cache those handles?
+                return OSFileNode.createHandle(frame, hStorage,
+                    Paths.get(System.getProperty("user.home")), true, iReturn);
+
+            case "curDir":
+                return OSFileNode.createHandle(frame, hStorage,
+                    Paths.get(System.getProperty("user.dir")), true, iReturn);
+
+            case "tmpDir":
+                return OSFileNode.createHandle(frame, hStorage,
+                    Paths.get(System.getProperty("java.io.tmpdir")), true, iReturn);
+            }
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     @Override

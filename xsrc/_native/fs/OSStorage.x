@@ -26,6 +26,10 @@ service OSStorage
 
     // ----- native --------------------------------------------------------------------------------
 
+    @Abstract @RO Directory homeDir;
+    @Abstract @RO Directory curDir;
+    @Abstract @RO Directory tmpDir;
+
     conditional Directory|File find(String pathString);
 
     Directory directoryFor(String pathString);

@@ -53,7 +53,15 @@ module TestFiles.xqiz.it
         console.println("bytesUsed=" + storage.bytesUsed);
 
         @Inject Directory rootDir;
+        console.println("rootDir=" + rootDir + " created " + rootDir.created);
 
-        console.println("rootDir=" + rootDir + " created at " + rootDir.created);
+        @Inject Directory homeDir;
+        console.println("homeDir=" + homeDir + " modified " + homeDir.modified);
+
+        @Inject Directory curDir;
+        console.println("curDir=" + curDir + " modified " + curDir.modified);
+
+        @Inject Directory tmpDir;
+        console.println("tmpDir=" + tmpDir + " accessed " + tmpDir.accessed);
         }
     }

@@ -61,6 +61,8 @@ public abstract class OSFileNode
         markNativeProperty("pathString");
         markNativeProperty("exists");
         markNativeProperty("createdMillis");
+        markNativeProperty("accessedMillis");
+        markNativeProperty("modifiedMillis");
         }
 
     @Override
@@ -87,8 +89,33 @@ public abstract class OSFileNode
                     }
                 catch (IOException e)
                     {
-                    // TODO: how to get the natural Path efficiently?
-                    return frame.raiseException(xException.pathException(e.getMessage(), xNullable.NULL));
+                    return raisePathException(frame, e, hNode);
+                    }
+                }
+
+            case "accessedMillis":
+                {
+                try
+                    {
+                    BasicFileAttributes attr = Files.readAttributes(hNode.f_path, BasicFileAttributes.class);
+                    return frame.assignValue(iReturn, xInt64.makeHandle(attr.lastAccessTime().toMillis()));
+                    }
+                catch (IOException e)
+                    {
+                    return raisePathException(frame, e, hNode);
+                    }
+                }
+
+            case "modifiedMillis":
+                {
+                try
+                    {
+                    BasicFileAttributes attr = Files.readAttributes(hNode.f_path, BasicFileAttributes.class);
+                    return frame.assignValue(iReturn, xInt64.makeHandle(attr.lastModifiedTime().toMillis()));
+                    }
+                catch (IOException e)
+                    {
+                    return raisePathException(frame, e, hNode);
                     }
                 }
             }
@@ -118,6 +145,15 @@ public abstract class OSFileNode
 
         return clzPublic.getTemplate().callConstructor(frame, constructor,
             clzPublic.ensureAutoInitializer(), hStruct, Utils.OBJECTS_NONE, iReturn);
+        }
+
+
+    // ----- helper methods ------------------------------------------------------------------------
+
+    protected int raisePathException(Frame frame, IOException e, NodeHandle hNode)
+        {
+        // TODO: how to get the natural Path efficiently from hNode.f_path?
+        return frame.raiseException(xException.pathException(e.getMessage(), xNullable.NULL));
         }
 
 
