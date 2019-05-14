@@ -4,13 +4,13 @@ package org.xvm.runtime.template;
 import java.util.Iterator;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IntervalConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -43,6 +43,7 @@ public class xConst
     // name of the synthetic property for cached hash value
     public static final String PROP_HASH = "@hash";
 
+    public static PropertyConstant ID_HASH;
     public static MethodStructure FN_ESTIMATE_LENGTH;
     public static MethodStructure FN_APPEND_TO;
     public static MethodStructure INTERVAL_CONSTRUCT;
@@ -68,6 +69,8 @@ public class xConst
 
             infoConst.findEqualsFunction().setNative(true);
             infoConst.findCompareFunction().setNative(true);
+
+            ID_HASH = infoConst.findProperty("hash").getIdentity();
 
             // Stringable support
             ClassStructure clzHelper = f_templates.getClassStructure("_native.ConstHelper");
@@ -583,7 +586,7 @@ public class xConst
                             xException.makeHandle("Unassigned property: \"" + sProp + '"'));
                     }
 
-                switch (Utils.callGetProperty(frameCaller, hProp, "hash"))
+                switch (Utils.callGetProperty(frameCaller, hProp, ID_HASH))
                     {
                     case Op.R_NEXT:
                         updateResult(frameCaller);

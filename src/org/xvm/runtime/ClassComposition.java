@@ -92,6 +92,7 @@ public class ClassComposition
         f_mapGetters = f_clzInception.f_mapGetters;
         f_mapSetters = f_clzInception.f_mapSetters;
         f_mapFields = f_clzInception.f_mapFields;
+        m_methodInit = f_clzInception.m_methodInit;
         }
 
     /**
@@ -303,13 +304,13 @@ public class ClassComposition
         }
 
     @Override
-    public CallChain getPropertyGetterChain(Object nidProp)
+    public CallChain getPropertyGetterChain(PropertyConstant idProp)
         {
-        return f_mapGetters.computeIfAbsent(nidProp,
-            nid ->
+        return f_mapGetters.computeIfAbsent(idProp,
+            id ->
                 {
                 TypeInfo     info = f_typeInception.ensureTypeInfo();
-                PropertyInfo prop = info.findPropertyByNid(nid);
+                PropertyInfo prop = info.findProperty(id);
 
                 assert prop != null;
                 return new CallChain(info.getOptimizedGetChain(prop.getIdentity()));
@@ -317,13 +318,13 @@ public class ClassComposition
         }
 
     @Override
-    public CallChain getPropertySetterChain(Object nidProp)
+    public CallChain getPropertySetterChain(PropertyConstant idProp)
         {
-        return f_mapSetters.computeIfAbsent(nidProp,
-            nid ->
+        return f_mapSetters.computeIfAbsent(idProp,
+            id ->
                 {
                 TypeInfo     info = f_typeInception.ensureTypeInfo();
-                PropertyInfo prop = info.findPropertyByNid(nid);
+                PropertyInfo prop = info.findProperty(id);
 
                 assert prop != null;
                 return new CallChain(info.getOptimizedSetChain(prop.getIdentity()));
@@ -568,11 +569,11 @@ public class ClassComposition
     // cached method call chain by nid (the top-most method first)
     private final Map<Object, CallChain> f_mapMethods;
 
-    // cached property getter call chain by nid (the top-most method first)
-    private final Map<Object, CallChain> f_mapGetters;
+    // cached property getter call chain by property id (the top-most method first)
+    private final Map<PropertyConstant, CallChain> f_mapGetters;
 
-    // cached property setter call chain by nid (the top-most method first)
-    private final Map<Object, CallChain> f_mapSetters;
+    // cached property setter call chain by property id (the top-most method first)
+    private final Map<PropertyConstant, CallChain> f_mapSetters;
 
     // cached set of field names
     private Set<String> m_setNames;

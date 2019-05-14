@@ -183,34 +183,34 @@ public class PropertyComposition
         }
 
     @Override
-    public CallChain getPropertyGetterChain(Object nidProp)
+    public CallChain getPropertyGetterChain(PropertyConstant idProp)
         {
-        return f_mapGetters.computeIfAbsent(nidProp,
-            nid ->
+        return f_mapGetters.computeIfAbsent(idProp,
+            id ->
                 {
                 // see if there's a nested property first; default to the base otherwise
                 PropertyConstant idNested = (PropertyConstant) f_infoProp.getIdentity().
-                    appendNestedIdentity(ConstantPool.getCurrentPool(), nid);
+                    appendNestedIdentity(ConstantPool.getCurrentPool(), id.getNestedIdentity());
 
                 PropertyInfo infoProp = f_infoParent.findProperty(idNested);
                 return infoProp == null
-                    ? f_clzRef.getPropertyGetterChain(nid)
+                    ? f_clzRef.getPropertyGetterChain(id)
                     : new CallChain(infoProp.ensureOptimizedGetChain(f_infoParent));
                 });
         }
 
     @Override
-    public CallChain getPropertySetterChain(Object nidProp)
+    public CallChain getPropertySetterChain(PropertyConstant idProp)
         {
-        return f_mapSetters.computeIfAbsent(nidProp,
-            nid ->
+        return f_mapSetters.computeIfAbsent(idProp,
+            id ->
                 {
                 PropertyConstant idNested = (PropertyConstant) f_infoProp.getIdentity().
-                    appendNestedIdentity(ConstantPool.getCurrentPool(), nid);
+                    appendNestedIdentity(ConstantPool.getCurrentPool(), id.getNestedIdentity());
 
                 PropertyInfo infoProp = f_infoParent.findProperty(idNested);
                 return infoProp == null
-                    ? f_clzRef.getPropertySetterChain(nid)
+                    ? f_clzRef.getPropertySetterChain(id)
                     : new CallChain(infoProp.ensureOptimizedSetChain(f_infoParent));
                 });
         }
@@ -218,7 +218,7 @@ public class PropertyComposition
     @Override
     public int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
-        assert f_infoProp.getIdentity().equals(idProp);
+        assert f_infoProp.getIdentity().getNestedIdentity().equals(idProp.getNestedIdentity());
 
         return ((xRef) getTemplate()).get(frame, (RefHandle) hTarget, iReturn);
         }
@@ -226,7 +226,7 @@ public class PropertyComposition
     @Override
     public int setFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue)
         {
-        assert f_infoProp.getIdentity().equals(idProp);
+        assert f_infoProp.getIdentity().getNestedIdentity().equals(idProp.getNestedIdentity());
 
         return ((xRef) getTemplate()).set(frame, (RefHandle) hTarget, hValue);
         }
@@ -266,9 +266,9 @@ public class PropertyComposition
     // cached method call chain by nid (the top-most method first)
     private final Map<Object, CallChain> f_mapMethods;
 
-    // cached property getter call chain by nid (the top-most method first)
-    private final Map<Object, CallChain> f_mapGetters;
+    // cached property getter call chain by property id (the top-most method first)
+    private final Map<PropertyConstant, CallChain> f_mapGetters;
 
-    // cached property setter call chain by nid (the top-most method first)
-    private final Map<Object, CallChain> f_mapSetters;
+    // cached property setter call chain by property id (the top-most method first)
+    private final Map<PropertyConstant, CallChain> f_mapSetters;
     }

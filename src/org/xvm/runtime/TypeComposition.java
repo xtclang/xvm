@@ -128,25 +128,25 @@ public interface TypeComposition
     boolean isAtomic(PropertyConstant idProp);
 
     /**
-     * @return a call chain for the method.
-     *
      * @param nidMethod  the method identity (SignatureConstant or NestedIdentity)
+     *
+     * @return a call chain for the method.*
      */
     CallChain getMethodCallChain(Object nidMethod);
 
     /**
-     * @return a call chain for the specified property's getter
+     * @param idProp  the property id
      *
-     * @param nidProp  the property nid (String | NestedIdentity)
+     * @return a call chain for the specified property's getter
      */
-    CallChain getPropertyGetterChain(Object nidProp);
+    CallChain getPropertyGetterChain(PropertyConstant idProp);
 
     /**
-     * @return a call chain for the specified property's setter
+     * @param idProp  the property nid (String | NestedIdentity)
      *
-     * @param nidProp  the property nid (String | NestedIdentity)
+     * @return a call chain for the specified property's setter
      */
-    CallChain getPropertySetterChain(Object nidProp);
+    CallChain getPropertySetterChain(PropertyConstant idProp);
 
     /**
      * Retrieve a field value and place it to the specified register.

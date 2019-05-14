@@ -726,7 +726,7 @@ public abstract class ClassTemplate
 
         TypeComposition clzTarget = hTarget.getComposition();
 
-        CallChain chain = clzTarget.getPropertyGetterChain(idProp.getNestedIdentity());
+        CallChain chain = clzTarget.getPropertyGetterChain(idProp);
         if (chain.isNative())
             {
             return invokeNativeGet(frame, idProp.getName(), hTarget, iReturn);
@@ -844,7 +844,7 @@ public abstract class ClassTemplate
             return frame.raiseException(xException.immutableObject());
             }
 
-        CallChain chain = hTarget.getComposition().getPropertySetterChain(idProp.getNestedIdentity());
+        CallChain chain = hTarget.getComposition().getPropertySetterChain(idProp);
 
         if (chain.isNative())
             {
