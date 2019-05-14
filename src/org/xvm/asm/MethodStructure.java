@@ -1014,11 +1014,12 @@ public class MethodStructure
         }
 
     /**
-     * Ensure that all the SingletonConstants are initialized.
+     * Ensure that all SingletonConstants used by this method are initialized and the next frame is
+     * ready to be called.
      *
      * @param frame      the caller's frame
-     * @param frameNext  the frame to call after initialization is done; could be null if the
-     *                   initialization is performed on the "main" container service
+     * @param frameNext  the frame that is about to execute this method; could be null
+     *                   if the initialization is performed on the "main" container service
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1026,7 +1027,9 @@ public class MethodStructure
         {
         if (m_fInitialized)
             {
-            return Op.R_NEXT;
+            return frameNext == null
+                    ? Op.R_NEXT
+                    : frame.call(frameNext);
             }
 
         boolean fMainContext = false;
@@ -1155,7 +1158,7 @@ public class MethodStructure
             }
 
         // all is done;
-        // if on the main context, me are entitled to set the flag;
+        // if on the main context, we are entitled to set the flag;
         // otherwise, we didn't do anything, so even if other threads don't immediately see the flag
         // (since it's not volatile) they will simply repeat the "do nothing" loop
         m_fInitialized = true;

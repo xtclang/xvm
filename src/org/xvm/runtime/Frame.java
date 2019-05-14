@@ -197,32 +197,11 @@ public class Frame
      *
      * @param frameNext  the frame to be called by this frame
      *
-     * @return the next frame to execute (almost always same as frameNext)
+     * @return one of the {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    protected Frame ensureInitialized(Frame frameNext)
+    protected int ensureInitialized(Frame frameNext)
         {
-        switch (frameNext.f_function.ensureInitialized(this, frameNext))
-            {
-            case Op.R_NEXT:
-                return frameNext;
-
-            case Op.R_CALL:
-                return m_frameNext;
-
-            case Op.R_EXCEPTION:
-                assert m_hException != null;
-
-                // prime the new frame with an exception;
-                // it will be checked at the beginning of the frame execution
-                // (an alternative approach is to replace the function's Op[] with
-                //  a throwing stub)
-                frameNext.m_hException = m_hException;
-                m_hException = null;
-                return frameNext;
-
-            default:
-                throw new IllegalStateException();
-            }
+        return frameNext.f_function.ensureInitialized(this, frameNext);
         }
 
     // create a new pseudo-frame on the same target
@@ -241,29 +220,25 @@ public class Frame
     // a convenience method
     public int callInitialized(Frame frameNext)
         {
-        m_frameNext = ensureInitialized(frameNext);
-        return Op.R_CALL;
+        return ensureInitialized(frameNext);
         }
 
     // a convenience method; ahVar - prepared variables
     public int call1(MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        m_frameNext = ensureInitialized(createFrame1(method, hTarget, ahVar, iReturn));
-        return Op.R_CALL;
+        return ensureInitialized(createFrame1(method, hTarget, ahVar, iReturn));
         }
 
     // a convenience method; ahVar - prepared variables
     public int callT(MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        m_frameNext = ensureInitialized(createFrameT(method, hTarget, ahVar, iReturn));
-        return Op.R_CALL;
+        return ensureInitialized(createFrameT(method, hTarget, ahVar, iReturn));
         }
 
     // a convenience method
     public int callN(MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
-        m_frameNext = ensureInitialized(createFrameN(method, hTarget, ahVar, aiReturn));
-        return Op.R_CALL;
+        return ensureInitialized(createFrameN(method, hTarget, ahVar, aiReturn));
         }
 
     // a convenience method; ahVar - prepared variables
@@ -274,8 +249,7 @@ public class Frame
         frameNext.m_chain  = chain;
         frameNext.m_nDepth = nDepth;
 
-        m_frameNext = ensureInitialized(frameNext);
-        return Op.R_CALL;
+        return ensureInitialized(frameNext);
         }
 
     // a convenience method; ahVar - prepared variables
@@ -286,8 +260,7 @@ public class Frame
         frameNext.m_chain  = chain;
         frameNext.m_nDepth = nDepth;
 
-        m_frameNext = ensureInitialized(frameNext);
-        return Op.R_CALL;
+        return ensureInitialized(frameNext);
         }
 
     // a convenience method
@@ -298,8 +271,7 @@ public class Frame
         frameNext.m_chain  = chain;
         frameNext.m_nDepth = nDepth;
 
-        m_frameNext = ensureInitialized(frameNext);
-        return Op.R_CALL;
+        return ensureInitialized(frameNext);
         }
 
     // start the specified guard as a "current" one
