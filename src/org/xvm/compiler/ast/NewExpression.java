@@ -1317,12 +1317,26 @@ public class NewExpression
             return (ClassStructure) anon.getComponent();
             }
 
+        @Override
+        public void requireThis(long lPos, ErrorListener errs)
+            {
+            if (getComponent().isStatic())
+                {
+                errs.log(Severity.ERROR, Compiler.NO_THIS, null, getSource(), lPos, lPos);
+                }
+            else
+                {
+                super.requireThis(lPos, errs);
+                }
+            }
+
         /**
          * @return true iff the inner class captures the outer "this"
          */
         public boolean isInstanceChild()
             {
-            return isThisCaptured() | true; // TODO it's not immediately obvious how to capture "outer this" (GG?)
+            // TODO it's not immediately obvious how to capture "outer this" (GG?)
+            return isThisCaptured() | !getComponent().isStatic();
             }
         }
 

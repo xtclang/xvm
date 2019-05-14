@@ -1157,7 +1157,7 @@ public class LambdaExpression
                 }
             else
                 {
-                captureThis();
+                super.requireThis(lPos, errs);
                 }
             }
 
