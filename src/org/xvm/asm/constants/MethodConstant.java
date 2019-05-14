@@ -584,21 +584,22 @@ public class MethodConstant
 
         sb.append(getName());
         IdentityConstant idParent = getNamespace();
-        while (idParent != null)
+        while (idParent.isNested())
             {
             switch (idParent.getFormat())
                 {
                 case Method:
                 case Property:
                     sb.insert(0, idParent.getName() + '#');
-                    idParent = idParent.getNamespace();
                     break;
 
                 default:
-                    idParent = null;
+                    break;
                 }
+            idParent = idParent.getNamespace();
             }
-        sb.insert(0, "name=");
+        sb.insert(0, ", name=");
+        sb.insert(0, "host=" + idParent.getName());
 
         if (!isNascent())
             {
