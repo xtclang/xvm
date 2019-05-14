@@ -145,8 +145,8 @@ public class GP_DivMod
         return super.toString()
                 + ' '  + Argument.toIdString(m_argTarget    , m_nTarget)
                 + ", " + Argument.toIdString(m_argValue     , m_nArgValue)
-                + ", " + Argument.toIdString(m_aargReturn[0], m_anRetValue[0])
-                + ", " + Argument.toIdString(m_aargReturn[1], m_anRetValue[1]);
+                + ", " + Argument.toIdString(m_aargReturn[0], m_anRetValue == null ? 0 : m_anRetValue[0])
+                + ", " + Argument.toIdString(m_aargReturn[1], m_anRetValue == null ? 0 : m_anRetValue[1]);
         }
 
     protected int   m_nTarget;
