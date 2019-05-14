@@ -6,15 +6,12 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Argument;
-import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -103,31 +100,16 @@ public class NewC_0
                 {
                 ObjectHandle[] ahHolder = new ObjectHandle[] {hParent};
                 Frame.Continuation stepNext = frameCaller ->
-                    constructChild(frameCaller, constructor, ahHolder[0]);
+                    constructChild(frameCaller, constructor, ahHolder[0], Utils.OBJECTS_NONE);
 
                 return new Utils.GetArguments(ahHolder, stepNext).doNext(frame);
                 }
-            return constructChild(frame, constructor, hParent);
+            return constructChild(frame, constructor, hParent, Utils.OBJECTS_NONE);
             }
         catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }
-        }
-
-    protected int constructChild(Frame frame, MethodStructure constructor, ObjectHandle hParent)
-        {
-        ClassStructure   structChild = (ClassStructure) constructor.getParent().getParent();
-        TypeConstant     typeChild   = getCanonicalChildType(frame, hParent.getType(), structChild.getName());
-        ClassComposition clzTarget   = frame.ensureClass(typeChild);
-
-        if (frame.isNextRegister(m_nRetValue))
-            {
-            frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
-            }
-
-        return clzTarget.getTemplate().construct(
-                frame, constructor, clzTarget, hParent, Utils.OBJECTS_NONE, m_nRetValue);
         }
 
     @Override

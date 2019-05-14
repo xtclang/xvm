@@ -12,6 +12,7 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -244,6 +245,22 @@ public abstract class OpCallable extends Op
         MethodConstant constFunction = (MethodConstant) frame.getConstant(m_nFunctionId);
 
         return m_function = (MethodStructure) constFunction.getComponent();
+        }
+
+    protected int constructChild(Frame frame, MethodStructure constructor,
+                                 ObjectHandle hParent, ObjectHandle[] ahVar)
+        {
+        ClassStructure   structChild = (ClassStructure) constructor.getParent().getParent();
+        TypeConstant     typeChild   = getCanonicalChildType(frame, hParent.getType(), structChild.getName());
+        ClassComposition clzTarget   = frame.ensureClass(typeChild);
+
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
+            }
+
+        return clzTarget.getTemplate().construct(
+                frame, constructor, clzTarget, hParent, ahVar, m_nRetValue);
         }
 
     // return the corresponding VirtualChildType constant
