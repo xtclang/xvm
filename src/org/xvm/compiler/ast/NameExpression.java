@@ -1141,11 +1141,15 @@ public class NameExpression
                 return regRef;
                 }
 
+            case Singleton:
+                assert !isConstant();
+                assert ((IdentityConstant) argRaw).getComponent().isStatic();
+                return argRaw;
+
             case TypeOfTypedef:
             case TypeOfClass:
-            case Singleton:
                 assert isConstant();
-                return super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
+                return toConstant();
 
             case BindTarget:
                 {
@@ -1416,6 +1420,10 @@ public class NameExpression
 
                         if (info.isTopLevel() && info.isStatic() &&
                                 !info.getClassStructure().equals(ctx.getThisClass()))
+                            {
+                            m_propAccessPlan = PropertyAccess.Singleton;
+                            }
+                        else if (prop.isConstant() && prop.getInitializer() != null)
                             {
                             m_propAccessPlan = PropertyAccess.Singleton;
                             }
@@ -1772,7 +1780,7 @@ public class NameExpression
                 if (prop.isConstant())
                     {
                     assert !m_fAssignable;
-                    m_plan = Plan.PropertyDeref;
+                    m_plan = prop.hasInitialValue() ? Plan.PropertyDeref : Plan.Singleton;
                     return type;
                     }
 
