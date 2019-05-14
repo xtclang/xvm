@@ -19,6 +19,7 @@ import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xString.StringHandle;
 
+import org.xvm.runtime.template._native.fs.OSFileNode.NodeHandle;
 
 /**
  * Native OSStorage implementation.
@@ -39,6 +40,7 @@ public class xOSStorage
         markNativeProperty("tmpDir");
 
         markNativeMethod("find", STRING, null);
+        markNativeMethod("names", new String[] {"_native.fs.OSDirectory"}, null);
         }
 
     @Override
@@ -72,7 +74,24 @@ public class xOSStorage
 
         switch (method.getName())
             {
+            case "names":
+                {
+                // this can be done on the caller's fiber
+                NodeHandle hDir = (NodeHandle) hArg;
+                Path       path = hDir.f_path;
 
+                String[] asName = path.toFile().list();
+                int      cNames = asName == null ? 0 : asName.length;
+
+                StringHandle[] ahName = new StringHandle[cNames];
+                int i = 0;
+                for (String sName : asName)
+                    {
+                    ahName[i++] = xString.makeHandle(sName);
+                    }
+
+                return frame.assignValue(iReturn, xString.makeArrayHandle(ahName));
+                }
             }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }

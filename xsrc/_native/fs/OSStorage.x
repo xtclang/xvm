@@ -33,4 +33,6 @@ service OSStorage
     conditional Directory|File find(String pathString);
 
     Directory directoryFor(String pathString);
+
+    String[] names(OSDirectory dir);
     }

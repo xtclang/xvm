@@ -12,7 +12,10 @@ class OSDirectory
         implements Directory
     {
     @Override
-    Iterator<String> names();
+    Iterator<String> names()
+        {
+        return storage.names(this).iterator();
+        }
 
     @Override
     Iterator<Directory> dirs();

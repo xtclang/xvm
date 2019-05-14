@@ -63,5 +63,13 @@ module TestFiles.xqiz.it
 
         @Inject Directory tmpDir;
         console.println("tmpDir=" + tmpDir + " accessed " + tmpDir.accessed);
+
+        console.println(curDir.name + " content: ");
+
+        Iterator<String> names = curDir.names();
+        while (String name : names.next())
+            {
+            console.println("    " + name);
+            }
         }
     }
