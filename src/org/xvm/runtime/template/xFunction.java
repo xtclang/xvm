@@ -564,7 +564,7 @@ public class xFunction
         protected boolean isSynchronous()
             {
             // native method on the service are asynchronous if they are created without the call chain
-            return f_function != null;
+            return f_chain != null;
             }
 
         /**
