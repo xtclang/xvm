@@ -64,6 +64,9 @@ const TimeZone(Int picos, String? name = null)
         @Override
         @RO Boolean isUTC.get()
             {
+            // TODO GG: the following two lines should produce the compiler error
+            // Int i = this.TimeZone.picos;
+            // TimeZone tz = this.TimeZone;
             return true;
             }
 

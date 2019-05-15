@@ -21,6 +21,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.MethodBody.Implementation;
@@ -815,6 +816,11 @@ public class TypeInfo
             return prop2;
             }
 
+        if (prop1 == prop2)
+            {
+            return prop1;
+            }
+
         // "highest" pane of glass for a non-virtual property wins
         IdentityConstant idClass1 = prop1.getIdentity().getClassIdentity();
         IdentityConstant idClass2 = prop2.getIdentity().getClassIdentity();
@@ -987,17 +993,31 @@ public class TypeInfo
      */
     public PropertyInfo findProperty(PropertyConstant id)
         {
-        PropertyInfo prop = f_mapProps.get(id);
-        if (prop != null)
+        PropertyInfo infoProp = f_mapProps.get(id);
+        if (infoProp != null)
             {
-            return prop;
+            return infoProp;
+            }
+
+        IdentityConstant idParent = id.getClassIdentity();
+        if (!idParent.equals(getClassStructure().getIdentityConstant()))
+            {
+            PropertyStructure prop = (PropertyStructure) id.getComponent();
+            if (prop != null && prop.getAccess() == Access.PRIVATE)
+                {
+                // drill down to the TypeInfo for the corresponding class in the hierarchy
+                TypeConstant typeParent = f_listmapClassChain.get(idParent).getType();
+                TypeInfo     infoParent = pool().ensureAccessTypeConstant(
+                                            typeParent, Access.PRIVATE).ensureTypeInfo();
+                return infoParent.findProperty(id);
+                }
             }
 
         int cDeep = id.getNestedDepth();
         if (cDeep == 1)
             {
-            prop = findProperty(id.getName());
-            return prop != null && prop.isIdentityValid(id) ? prop : null;
+            infoProp = findProperty(id.getName());
+            return infoProp != null && infoProp.isIdentityValid(id) ? infoProp : null;
             }
 
         Object nidThis = id.getNestedIdentity();
@@ -1006,10 +1026,10 @@ public class TypeInfo
             PropertyConstant idThat = entry.getKey();
             if (idThat.getNestedDepth() == cDeep && nidThis.equals(idThat.getNestedIdentity()))
                 {
-                prop = entry.getValue();
-                if (prop.isIdentityValid(id))
+                infoProp = entry.getValue();
+                if (infoProp.isIdentityValid(id))
                     {
-                    return prop;
+                    return infoProp;
                     }
                 }
             }
@@ -1173,52 +1193,40 @@ public class TypeInfo
      */
     public MethodInfo getMethodById(MethodConstant id)
         {
-        MethodInfo method = f_cacheById.get(id);
-        if (method != null)
+        MethodInfo infoMethod = f_cacheById.get(id);
+        if (infoMethod != null)
             {
-            return method;
+            return infoMethod;
+            }
+
+        IdentityConstant idParent = id.getClassIdentity();
+        if (!idParent.equals(getClassStructure().getIdentityConstant()))
+            {
+            MethodStructure method = (MethodStructure) id.getComponent();
+            if (method != null && method.getAccess() == Access.PRIVATE)
+                {
+                // drill down to the TypeInfo for the corresponding class in the hierarchy
+                TypeConstant typeParent = f_listmapClassChain.get(idParent).getType();
+                TypeInfo     infoParent = pool().ensureAccessTypeConstant(
+                                            typeParent, Access.PRIVATE).ensureTypeInfo();
+                infoMethod = infoParent.getMethodById(id);
+                if (infoMethod != null)
+                    {
+                    f_cacheById.put(id, infoMethod);
+                    }
+                return infoMethod;
+                }
             }
 
         // try to find a method with the same signature
-        method = f_mapVirtMethods.get(id.resolveNestedIdentity(pool(), f_type));
-        if (method != null)
+        infoMethod = f_mapVirtMethods.get(id.resolveNestedIdentity(pool(), f_type));
+        if (infoMethod != null)
             {
-            for (MethodBody body : method.getChain())
-                {
-                if (body.getIdentity().equals(id))
-                    {
-                    f_cacheById.put(id, method);
-                    f_cacheByNid.put(id.getNestedIdentity(), method);
-                    return method;
-                    }
-                }
+            f_cacheById.put(id, infoMethod);
+            f_cacheByNid.put(id.getNestedIdentity(), infoMethod);
             }
 
-        // it is possible that the map lookup miss is caused by the passed id's signature NOT
-        // having its generic types resolved, so brute-force search
-        // TODO this might no longer be necessary because the cache is now pre-populated
-        String sName  = id.getName();
-        int    cDepth = id.getNestedDepth();
-        for (MethodInfo methodTest : f_mapVirtMethods.values())
-            {
-            // this "if" does not prove that this is the method that we're looking for; it just
-            // eliminates 99% of the potential garbage from our brute force search
-            if (methodTest.getSignature().getName().equals(sName)
-                    && methodTest.getIdentity().getNestedDepth() == cDepth)
-                {
-                for (MethodBody body : methodTest.getChain())
-                    {
-                    if (body.getIdentity().equals(id))
-                        {
-                        f_cacheById.put(id, methodTest);
-                        f_cacheByNid.put(id.getNestedIdentity(), methodTest);
-                        return methodTest;
-                        }
-                    }
-                }
-            }
-
-        return null;
+        return infoMethod;
         }
 
     /**
@@ -2464,6 +2472,4 @@ public class TypeInfo
     private transient Map<String, Set<MethodConstant>> m_mapOps;
     private transient Map<String, Set<MethodConstant>> m_mapMethodsByName;
     private transient Map<IdentityConstant, Map<String, PropertyInfo>> m_mapNestedProperties;
-    private transient Map<IdentityConstant, Map<String, MethodInfo>> m_mapNestedMethods;
-
     }

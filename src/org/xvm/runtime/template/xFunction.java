@@ -559,15 +559,6 @@ public class xFunction
             }
 
         /**
-         * @return true iff the call for this handle needs to be synchronous
-         */
-        protected boolean isSynchronous()
-            {
-            // native method on the service are asynchronous if they are created without the call chain
-            return f_function != null;
-            }
-
-        /**
          * @return true iff all the arguments are immutable
          */
         protected boolean validateImmutable(ObjectHandle[] ahArg)
@@ -597,7 +588,7 @@ public class xFunction
             ServiceHandle hService = (ServiceHandle) hTarget;
 
             // native method on the service means "execute on the caller's thread"
-            if (isSynchronous() || frame.f_context == hService.m_context)
+            if (frame.f_context == hService.m_context)
                 {
                 return super.call1Impl(frame, hTarget, ahVar, iReturn);
                 }
@@ -622,7 +613,7 @@ public class xFunction
             ServiceHandle hService = (ServiceHandle) hTarget;
 
             // native method on the service means "execute on the caller's thread"
-            if (isSynchronous() || frame.f_context == hService.m_context)
+            if (frame.f_context == hService.m_context)
                 {
                 return super.callTImpl(frame, hTarget, ahVar, iReturn);
                 }
@@ -662,7 +653,7 @@ public class xFunction
             {
             ServiceHandle hService = (ServiceHandle) hTarget;
 
-            if (isSynchronous() || frame.f_context == hService.m_context)
+            if (frame.f_context == hService.m_context)
                 {
                 return super.callNImpl(frame, hTarget, ahVar, aiReturn);
                 }
