@@ -57,6 +57,22 @@ public class Parser
         m_lexer         = new Lexer(source, listener);
         }
 
+    /**
+     * Create a temporary lexer that provides a stream of tokens as specified.
+     *
+     * @param parent  the parent parser
+     * @param atoken  the tokens to parse
+     */
+    protected Parser(Parser parent, Token[] atoken)
+        {
+        m_source        = parent.m_source;
+        m_errorListener = parent.m_errorListener;
+        m_lexer         = parent.m_lexer.createLexer(atoken);
+
+        // prime the token stream
+        next();
+        }
+
 
     // ----- parsing -----------------------------------------------------------
 
@@ -3419,6 +3435,35 @@ public class Parser
             case LIT_BIN:
                 return new LiteralExpression(current());
 
+            case TEMPLATE:
+                {
+                Token            token    = current();
+                long             lStart   = token.getStartPosition();
+                long             lEnd     = token.getEndPosition();
+                Object[]         aoParts  = (Object[]) token.getValue();
+                int              cParts   = aoParts.length;
+                List<Expression> listExpr = new ArrayList<>(cParts);
+                for (int i = 0; i < cParts; ++i)
+                    {
+                    Object o = aoParts[i];
+                    if (o instanceof Token[])
+                        {
+                        Parser parser = new Parser(this, (Token[]) o);
+                        listExpr.add(parser.parseExpression());
+                        if (!parser.eof())
+                            {
+                            Token tokNext = parser.next();
+                            log(Severity.ERROR, TEMPLATE_EXTRA, lStart, lEnd, tokNext.getValueText());
+                            }
+                        }
+                    else
+                        {
+                        listExpr.add(new LiteralExpression((Token) o));
+                        }
+                    }
+                return new TemplateExpression(listExpr, lStart, lEnd);
+                }
+
             case FUNCTION:
             case IMMUTABLE:
             case AT:
@@ -5035,7 +5080,13 @@ public class Parser
      */
     protected Token peek()
         {
-        return m_tokenPutBack == null ? m_token : m_tokenPutBack;
+        Token token = m_tokenPutBack == null ? m_token : m_tokenPutBack;
+        if (token == null)
+            {
+            // pretend there's one more closing curly brace
+            m_token = token = new Token(m_source.getPosition(), m_source.getPosition(), Id.R_CURLY);
+            }
+        return token;
         }
 
     /**
@@ -5431,6 +5482,10 @@ public class Parser
      * Expression cannot be assigned to.
      */
     public static final String NOT_ASSIGNABLE    = "PARSER-22";
+    /**
+     * Unexpected token following expression in template: {0}.
+     */
+    public static final String TEMPLATE_EXTRA    = "PARSER-23";
 
 
     // ----- data members ------------------------------------------------------

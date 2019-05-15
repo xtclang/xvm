@@ -145,6 +145,11 @@ public class StatementExpression
     @Override
     public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired)
         {
+        if (atypeRequired != null && atypeRequired.length == 0)
+            {
+            return TypeFit.Fit;
+            }
+
         assert m_atypeRequired == null && m_collector == null;
         if (isValidated())
             {
@@ -192,9 +197,10 @@ public class StatementExpression
         assert m_atypeRequired == null && m_collector == null;
         m_atypeRequired = atypeRequired;
 
-        TypeFit        fit     = TypeFit.Fit;
-        StatementBlock bodyOld = body;
-        StatementBlock bodyNew = (StatementBlock) bodyOld.validate(ctx, errs);
+        TypeFit        fit         = TypeFit.Fit;
+        TypeConstant[] atypeActual = null;
+        StatementBlock bodyOld     = body;
+        StatementBlock bodyNew     = (StatementBlock) bodyOld.validate(ctx, errs);
         if (bodyNew == null)
             {
             fit = TypeFit.NoFit;
@@ -202,17 +208,33 @@ public class StatementExpression
         else
             {
             body = bodyNew;
-            }
 
-        TypeConstant[] atypeActual = null;
-        if (m_collector != null)
-            {
-            atypeActual = m_collector.inferMulti(atypeRequired); // TODO conditional
-            m_collector = null;
-            }
-        if (atypeActual == null)
-            {
-            fit = TypeFit.NoFit;
+            if (m_collector == null)
+                {
+                if (atypeRequired != null && atypeRequired.length == 0)
+                    {
+                    // void is a fit
+                    atypeActual = atypeRequired;
+                    }
+                else
+                    {
+                    log(errs, Severity.ERROR, Compiler.RETURN_REQUIRED);
+                    fit = TypeFit.NoFit;
+                    }
+                }
+            else
+                {
+                atypeActual = m_collector.inferMulti(atypeRequired); // TODO conditional
+                m_collector = null;
+
+                if (atypeActual == null)
+                    {
+                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                            atypeRequired == null || atypeRequired.length == 0 ? "void"
+                                    : atypeRequired[0].getValueString(), "undefined");
+                    fit = TypeFit.NoFit;
+                    }
+                }
             }
 
         return finishValidations(atypeRequired, atypeActual, fit, null, errs);

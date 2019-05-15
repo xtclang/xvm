@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 
+import org.xvm.util.Handy;
+
 import static org.xvm.compiler.Lexer.isLineTerminator;
 
 import static org.xvm.util.Handy.appendString;
@@ -20,7 +22,7 @@ import static org.xvm.util.Handy.readFileChars;
  * lexical analysis (line termination, location and unicode escapes).
  */
 public class Source
-        implements Constants
+        implements Constants, Cloneable
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -39,12 +41,16 @@ public class Source
      *
      * @param file  the File containing the XTC source code to load
      *
+     * @param cDepth  the number of directories up the source code can include files from
+     *
      * @throws IOException
      */
-    public Source(File file)
+    public Source(File file, int cDepth)
             throws IOException
         {
         this(readFileChars(file));
+        m_file      = file;
+        m_cDirDepth = cDepth;
         setFileName(file.getPath());
         }
 
@@ -89,6 +95,72 @@ public class Source
             {
             throw new IllegalStateException("file name cannot be modified");
             }
+        }
+
+    /**
+     * Load a file referenced from inside another source file.
+     *
+     * @param sFile  a string put together from identifier tokens, "/" tokens, "./" tokens, and
+     *               "../" tokens
+     *
+     * @return the Source, or null
+     */
+    public Source loadInclude(String sFile)
+            throws IOException
+        {
+        if (m_file == null || sFile.endsWith("/"))
+            {
+            return null;
+            }
+
+        File   file = m_file.getParentFile();
+        int    cUp  = 0;
+        if (sFile.startsWith("/"))
+            {
+            // it's not absolute; it's relative to the directory containing the module
+            while (cUp < m_cDirDepth)
+                {
+                file = file.getParentFile();
+                assert file != null;
+                ++cUp;
+                }
+            sFile = sFile.substring(1);
+            }
+
+        String[] segments = Handy.parseDelimitedString(sFile, '/');
+        for (String segment : segments)
+            {
+            assert segment.length() > 0;
+            if (segment.equals("."))
+                {
+                // nothing to do
+                }
+            else if (segment.equals(".."))
+                {
+                file = file.getParentFile();
+                if (file == null || ++cUp > m_cDirDepth)
+                    {
+                    return null;
+                    }
+                }
+            else
+                {
+                file = new File(file, segment);
+                --cUp;
+                }
+            }
+
+        if (file.equals(m_file))
+            {
+            return clone();
+            }
+
+        if (file.exists() && file.isFile() && file.canRead())
+            {
+            return new Source(file, m_cDirDepth - cUp);
+            }
+
+        return null;
         }
 
     /**
@@ -405,6 +477,24 @@ public class Source
         }
 
     /**
+     * @return a clone of this Source, but with the position reset to the beginning of the source
+     *         code
+     */
+    public Source clone()
+        {
+        try
+            {
+            Source that = (Source) super.clone();
+            that.reset();
+            return that;
+            }
+        catch (CloneNotSupportedException e)
+            {
+            throw new RuntimeException(e);
+            }
+        }
+
+    /**
      * Reset the position to the very beginning of the source code.
      */
     public void reset()
@@ -516,4 +606,14 @@ public class Source
      * The file name that the source comes from.
      */
     private String m_sFile;
+
+    /**
+     * The file that the source comes from.
+     */
+    private File m_file;
+
+    /**
+     * The directory depth within the module of the file that the source comes from.
+     */
+    private int m_cDirDepth;
     }

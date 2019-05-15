@@ -798,13 +798,17 @@ Literal
     DateTimeLiteral
     TimeZoneLiteral
     DurationLiteral
-    FileLiteral
 
 StringLiteral
     "$"-opt NoWhitespace '"' CharacterString-opt '"'
-    "$"-opt NoWhitespace FreeformLiteral
+    "$"-opt NoWhitespace Path
+    "`|" FreeformLiteral
+    "$|" FreeformLiteral
 
 FreeformLiteral
+    FreeformChars LineTerminator FreeformLines-opt
+
+FreeformLines
     FreeformLine
     FreeformLines FreeformLine
 
@@ -818,14 +822,10 @@ FreeformChars
 FreeformChar
     InputCharacter except LineTerminator
 
-# all BinaryLiteral contents must be whitespace or nibbles
+# The non-templatized "Path" form specifies a file to include as-is (as binary data)
+# All other forms are textual and must contain only nibbles and whitespace
 BinaryLiteral
-    "Byte[]:" AcceptableBinaryContent
-
-AcceptableBinaryContent
-    StringLiteral
-    FreeformLiteral
-    Nibbles
+    "Byte[]:" StringLiteral
 
 Nibbles
     Nibble
@@ -930,12 +930,9 @@ MinutesDuration
 SecondsDuration
     DigitsNoUnderscores "S"                                                 # NoWhitespace
 
-# FileLiterals are not intended to support all possible file names -- just the ones likely to
-# actually occur in the real world; as such, names in a FileLiteral are not permitted to end
-# with a dot, to contain 2 dots in a row, etc.
-FileLiteral
-    "$"-opt NoWhitespace Path
-
+# Paths are not intended to support all possible file names -- just the ones likely to actually
+# occur in the real world; as such, names in a FileLiteral are not permitted to end with a dot,
+# to contain 2 dots in a row, etc.
 Path
     "/" NoWhitespace PathRemainder
     "./" NoWhitespace PathRemainder

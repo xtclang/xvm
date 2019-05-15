@@ -875,6 +875,11 @@ public class Context
      */
     public boolean isVarWritable(String sName)
         {
+        if (sName.equals("$"))
+            {
+            return false;
+            }
+
         if (isVarDeclaredInThisScope(sName))
             {
             Argument arg = getVar(sName);
@@ -955,6 +960,11 @@ public class Context
      */
     public boolean isVarHideable(String sName)
         {
+        if (sName.equals("$"))
+            {
+            return true;
+            }
+
         Context ctxOuter = getOuterContext();
         return ctxOuter == null
                 ? getVar(sName) == null

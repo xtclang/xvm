@@ -6,6 +6,7 @@ import java.math.BigInteger;
 
 import java.net.IDN;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -57,6 +58,15 @@ public class Lexer
         eatWhitespace();
         }
 
+    /**
+     * @param parent a Lexer that this Lexer can delegate to
+     */
+    protected Lexer(Lexer parent)
+        {
+        m_source        = parent.m_source;
+        m_errorListener = parent.m_errorListener;
+        }
+
 
     // ----- Iterator methods --------------------------------------------------
 
@@ -76,10 +86,12 @@ public class Lexer
         return token;
         }
 
+    // ----- public API --------------------------------------------------------
+
     /**
      * Turn on a special pass-through mode for binary data encoded as hex characters.
      *
-     * While in hex mode, each group of contiguos hex characters are return as a literal string
+     * While in hex mode, each group of contiguous hex characters are return as a literal string
      * token.
      *
      * The lexer exits hex mode as soon as a non-hex, non-whitespace character is encountered.
@@ -88,8 +100,6 @@ public class Lexer
         {
         m_fHexMode = true;
         }
-
-    // ----- public API --------------------------------------------------------
 
     /**
      * Lexically analyze the source, emitting a stream of tokens to the
@@ -105,6 +115,37 @@ public class Lexer
             consumer.accept(next());
             eatWhitespace();
             }
+        }
+
+    /**
+     * Create a temporary lexer that provides a stream of tokens as specified.
+     *
+     * @param atoken  the tokens to stream
+     *
+     * @return a new Lexer
+     */
+    public Lexer createLexer(Token[] atoken)
+        {
+        return new Lexer(this)
+            {
+            int iNext = 0;
+
+            @Override
+            public boolean hasNext()
+                {
+                return iNext < atoken.length;
+                }
+
+            @Override
+            public Token next()
+                {
+                if (hasNext())
+                    {
+                    return atoken[iNext++];
+                    }
+                throw new NoSuchElementException();
+                }
+            };
         }
 
 
@@ -136,9 +177,9 @@ public class Lexer
         }
 
     /**
-     * Parse a Eat a single line aka end-of-line comment.
+     * Parse a single token.
      *
-     * @return the comment as a Token
+     * @return the next Token
      */
     protected Token eatToken()
         {
@@ -202,13 +243,20 @@ public class Lexer
                         case '.':
                             if (source.hasNext())
                                 {
-                                if (nextChar() == '.')
+                                switch (nextChar())
                                     {
-                                    return new Token(lInitPos, source.getPosition(), Id.ELLIPSIS);
+                                    case '.':
+                                        return new Token(lInitPos, source.getPosition(), Id.ELLIPSIS);
+
+                                    case '/':
+                                        return new Token(lInitPos, source.getPosition(), Id.DIR_PARENT);
                                     }
                                 source.rewind();
                                 }
                             return new Token(lInitPos, source.getPosition(), Id.DOTDOT);
+
+                        case '/':
+                            return new Token(lInitPos, source.getPosition(), Id.DIR_CUR);
 
                         case '0': case '1': case '2': case '3': case '4':
                         case '5': case '6': case '7': case '8': case '9':
@@ -219,6 +267,48 @@ public class Lexer
                     source.rewind();
                     }
                 return new Token(lInitPos, source.getPosition(), Id.DOT);
+
+            case '$':
+                if (source.hasNext())
+                    {
+                    switch (nextChar())
+                        {
+                        case '\"':
+                            return eatTemplateLiteral(lInitPos);
+
+                        case '/':
+                            return eatTemplateFileLiteral(lInitPos);
+
+                        case '.':
+                            if (source.hasNext())
+                                {
+                                switch (nextChar())
+                                    {
+                                    case '.':
+                                        if (source.hasNext())
+                                            {
+                                            if (nextChar() == '/')
+                                                {
+                                                return eatTemplateFileLiteral(lInitPos);
+                                                }
+
+                                            source.rewind();
+                                            }
+                                        break;
+
+                                    case '/':
+                                        return eatTemplateFileLiteral(lInitPos);
+                                    }
+
+                                source.rewind();
+                                }
+                            break;
+                        }
+
+                    source.rewind();
+                    }
+                return new Token(lInitPos, source.getPosition(), Id.IDENTIFIER, "$");
+
             case '@':
                 return new Token(lInitPos, source.getPosition(), Id.AT);
 
@@ -486,12 +576,10 @@ public class Lexer
                 return eatNumericLiteral();
 
             case '\'':
-                source.rewind();
-                return eatCharLiteral();
+                return eatCharLiteral(lInitPos);
 
             case '\"':
-                source.rewind();
-                return eatStringLiteral();
+                return eatStringLiteral(lInitPos);
 
             case '┌':
             case '┍':
@@ -589,14 +677,10 @@ public class Lexer
      *
      * @return a character literal as a token
      */
-    protected Token eatCharLiteral()
+    protected Token eatCharLiteral(long lInitPos)
         {
-        final Source source = m_source;
-
-        // skip opening quote
-        final long lPosStart = source.getPosition();
-        source.next();
-        final long lPosChar = source.getPosition();
+        final Source source   = m_source;
+        final long   lPosChar = source.getPosition();
 
         char    ch   = '?';
         boolean term = false;
@@ -611,8 +695,7 @@ public class Lexer
                             {
                             // assume the previous one should have been escaped
                             source.rewind();
-                            log(Severity.ERROR, CHAR_BAD_ESC, null,
-                                    lPosChar, source.getPosition());
+                            log(Severity.ERROR, CHAR_BAD_ESC, null, lPosChar, source.getPosition());
                             }
                         else
                             {
@@ -620,8 +703,7 @@ public class Lexer
                             // the character value was instead supposed to be closing quote
                             source.rewind();
                             source.rewind();
-                            log(Severity.ERROR, CHAR_NO_CHAR, null,
-                                    lPosChar, lPosChar);
+                            log(Severity.ERROR, CHAR_NO_CHAR, null, lPosChar, lPosChar);
                             }
                         }
                     break;
@@ -634,8 +716,7 @@ public class Lexer
                         case '\n':
                             // log error: newline in string
                             source.rewind();
-                            log(Severity.ERROR, CHAR_NO_TERM, null,
-                                    lPosStart, source.getPosition());
+                            log(Severity.ERROR, CHAR_NO_TERM, null, lInitPos, source.getPosition());
                             // assume it wasn't supposed to be an escape
                             ch = '\\';
                             break;
@@ -663,8 +744,7 @@ public class Lexer
 
                         default:
                             // log error: bad escape
-                            log(Severity.ERROR, CHAR_BAD_ESC, null,
-                                    lPosChar, source.getPosition());
+                            log(Severity.ERROR, CHAR_BAD_ESC, null, lPosChar, source.getPosition());
                             break;
                         }
                     break;
@@ -673,8 +753,7 @@ public class Lexer
                 case '\n':
                     // log error: newline in string
                     source.rewind();
-                    log(Severity.ERROR, CHAR_NO_TERM, null,
-                            lPosStart, source.getPosition());
+                    log(Severity.ERROR, CHAR_NO_TERM, null, lInitPos, source.getPosition());
                     break;
 
                 default:
@@ -697,11 +776,39 @@ public class Lexer
         if (!term)
             {
             // log error: unterminated string
-            log(Severity.ERROR, CHAR_NO_TERM, null,
-                    lPosStart, source.getPosition());
+            log(Severity.ERROR, CHAR_NO_TERM, null, lInitPos, source.getPosition());
             }
 
-        return new Token(lPosStart, source.getPosition(), Id.LIT_CHAR, new Character(ch));
+        return new Token(lInitPos, source.getPosition(), Id.LIT_CHAR, new Character(ch));
+        }
+
+    /**
+     * Eat a token that specifies a template stored in a file.
+     *
+     * @param lInitPos  the start of the template file literal
+     *
+     * @return the resulting token
+     */
+    protected Token eatTemplateFileLiteral(long lInitPos)
+        {
+        // TODO
+        return null;
+        }
+
+    /**
+     * Eat a template literal. A template literal is a string literal that may contain expressions;
+     * for example:
+     * <blockquote><code><pre>
+     *   "
+     * </pre></code></blockquote>
+     *
+     * @param lInitPos  the start of the template literal
+     *
+     * @return the resulting token
+     */
+    protected Token eatTemplateLiteral(long lInitPos)
+        {
+        return eatStringChars(lInitPos, true);
         }
 
     /**
@@ -709,15 +816,28 @@ public class Lexer
      *
      * @return a string literal as a token
      */
-    protected Token eatStringLiteral()
+    protected Token eatStringLiteral(long lInitPos)
+        {
+        return eatStringChars(lInitPos, false);
+        }
+
+    /**
+     * Eat the character contents of a string literal, including the string literal portion(s) of a
+     * template literal.
+     *
+     * @param lInitPos   the location of the start of the literal (the position of the {@code $} or
+     *                   the {@code "})
+     * @param fTemplate  true iff this is a template literal
+     *
+     * @return the resulting token
+     */
+    protected Token eatStringChars(long lInitPos, boolean fTemplate)
         {
         final Source source = m_source;
 
-        // skip opening quote
-        final long lPosStart = source.getPosition();
-        source.next();
-
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb        = new StringBuilder();
+        ArrayList     list      = fTemplate ? new ArrayList<>() : null;
+        long          lPosStart = lInitPos;
         Appending: while (true)
             {
             if (source.hasNext())
@@ -736,8 +856,7 @@ public class Lexer
                             case '\n':
                                 // log error: newline in string
                                 source.rewind();
-                                log(Severity.ERROR, STRING_NO_TERM, null,
-                                        lPosStart, source.getPosition());
+                                log(Severity.ERROR, STRING_NO_TERM, null, lInitPos, source.getPosition());
                                 // assume it wasn't supposed to be an escape
                                 sb.append('\\');
                                 break Appending;
@@ -767,6 +886,14 @@ public class Lexer
                                 sb.append('\t');
                                 break;
 
+                            case '{':
+                                if (fTemplate)
+                                    {
+                                    sb.append('{');
+                                    break;
+                                    }
+                                // fall through
+
                             default:
                                 // log error: bad escape
                                 long lPosEscEnd = source.getPosition();
@@ -788,9 +915,28 @@ public class Lexer
                     case '\n':
                         // log error: newline in string
                         source.rewind();
-                        log(Severity.ERROR, STRING_NO_TERM, null,
-                                lPosStart, source.getPosition());
+                        log(Severity.ERROR, STRING_NO_TERM, null, lInitPos, source.getPosition());
                         break Appending;
+
+                    case '{':
+                        if (fTemplate)
+                            {
+                            source.rewind();
+                            long lPosCur = source.getPosition();
+                            if (sb.length() > 0)
+                                {
+                                list.add(new Token(lPosStart, lPosCur, Id.LIT_STRING, sb.toString()));
+                                sb = new StringBuilder();
+                                }
+
+                            // eat from the opening { to the closing } (inclusive of both)
+                            list.add(eatTemplateExpression());
+
+                            // start eating a new string portion of the template from this point
+                            lPosStart = source.getPosition();
+                            break;
+                            }
+                        // fall through
 
                     default:
                         sb.append(ch);
@@ -800,12 +946,56 @@ public class Lexer
             else
                 {
                 // log error: unterminated string
-                log(Severity.ERROR, STRING_NO_TERM, null,
-                        lPosStart, source.getPosition());
+                log(Severity.ERROR, STRING_NO_TERM, null, lInitPos, source.getPosition());
                 }
             }
 
+        if (fTemplate)
+            {
+            long lPosCur = source.getPosition();
+            if (sb.length() > 0)
+                {
+                list.add(new Token(lPosStart, lPosCur, Id.LIT_STRING, sb.toString()));
+                }
+            else if (list.isEmpty())
+                {
+                return new Token(lPosStart, lPosCur, Id.LIT_STRING, "");
+                }
+            return new Token(lInitPos, lPosCur, Id.TEMPLATE, list.toArray());
+            }
+
         return new Token(lPosStart, source.getPosition(), Id.LIT_STRING, sb.toString());
+        }
+
+    /**
+     * Eat an inline template expression that begins with a '{' and ends with a '}'. The contents
+     * <b>between</b> the opening and closing curlies are returned as an array of tokens.
+     *
+     * @return the tokens found between the opening and closing curly braces
+     */
+    Token[] eatTemplateExpression()
+        {
+        expect('{');
+        int              cDepth = 1;
+        ArrayList<Token> tokens = new ArrayList<>();
+        while (true)
+            {
+            Token token = next();
+            switch (token.getId())
+                {
+                case L_CURLY:
+                    ++cDepth;
+                    break;
+
+                case R_CURLY:
+                    if (--cDepth <= 0)
+                        {
+                        return tokens.toArray(new Token[0]);
+                        }
+                    break;
+                }
+            tokens.add(token);
+            }
         }
 
     /**
@@ -1730,6 +1920,37 @@ public class Lexer
         }
 
     /**
+     * Get the next character of source code, making sure that it is the specified character.
+     *
+     * @param ch  the expectec character
+     */
+    protected char expect(char ch)
+        {
+        char chActual;
+        try
+            {
+            chActual = nextChar();
+            }
+        catch (NoSuchElementException e)
+            {
+            log(Severity.ERROR, UNEXPECTED_EOF, null,
+                    m_source.getPosition(), m_source.getPosition());
+            return ch;
+            }
+
+        if (chActual != ch)
+            {
+            log(Severity.ERROR, EXPECTED_CHAR,
+                    new Object[] {String.valueOf(ch), String.valueOf(chActual)},
+                    m_source.getPosition(), m_source.getPosition());
+            }
+
+        // already logged an error; just pretend we hit a closing brace (since all roads should have
+        // gone there)
+        return ch;
+        }
+
+    /**
      * Log an error.
      *
      * @param severity
@@ -1747,7 +1968,7 @@ public class Lexer
         }
 
 
-    // ----- helper methods ----------------------------------------------------
+    // ----- helper methods ------------------------------------------------------------------------
 
     /**
      * Determine if the specified character is white-space.
@@ -2113,6 +2334,10 @@ public class Lexer
      * An illegal freeform literal.
      */
     public static final String FREEFORM_BAD         = "LEXER-10";
+    /**
+     * Expected {0}; found {1}.
+     */
+    public static final String EXPECTED_CHAR        = "LEXER-11";
 
 
     // ----- data members ------------------------------------------------------

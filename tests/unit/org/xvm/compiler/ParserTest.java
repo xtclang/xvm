@@ -38,7 +38,7 @@ public class ParserTest
             return;
             }
 
-        Source source = new Source(file);
+        Source source = new Source(file, 0);
         parse(source);
         }
 

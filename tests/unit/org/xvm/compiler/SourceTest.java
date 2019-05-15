@@ -31,7 +31,7 @@ public class SourceTest
             throws IOException
         {
         Source source = new Source(
-                new File(SourceTest.class.getResource("Source_1.x").getPath()));
+                new File(SourceTest.class.getResource("Source_1.x").getPath()), 0);
         Assert.assertEquals(0, source.getLine());
         Assert.assertEquals(0, source.getOffset());
 
@@ -52,7 +52,7 @@ public class SourceTest
             throws IOException
         {
         Source source = new Source(
-                new File(SourceTest.class.getResource("Source_1.x").getPath()));
+                new File(SourceTest.class.getResource("Source_1.x").getPath()), 0);
         Assert.assertEquals(0, source.getLine());
         Assert.assertEquals(0, source.getOffset());
 
@@ -88,7 +88,7 @@ public class SourceTest
             throws IOException
         {
         Source source = new Source(
-                new File(SourceTest.class.getResource("Source_1.x").getPath()));
+                new File(SourceTest.class.getResource("Source_1.x").getPath()), 0);
 
         int iLinePre1     = source.getLine();
         int iOffsetPre1   = source.getOffset();

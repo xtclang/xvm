@@ -415,7 +415,7 @@ public class CommandLine
             File moduleFile = findModule(file);
             if (moduleFile != null && !modules.containsKey(moduleFile))
                 {
-                modules.put(moduleFile, buildTree(moduleFile));
+                modules.put(moduleFile, buildTree(moduleFile, 0));
                 }
             }
         if (modules.isEmpty())
@@ -506,7 +506,7 @@ public class CommandLine
         ErrorList errlist = new ErrorList(100);
         try
             {
-            Source source  = new Source(file);
+            Source source  = new Source(file, 0);
             Parser parser  = new Parser(source, errlist);
             stmt = parser.parseSource();
             }
@@ -551,11 +551,12 @@ public class CommandLine
      * Build a tree of files that need to be compiled in order to compile
      * a module.
      *
-     * @param file  a module file, or a directory that is part of a module
+     * @param file    a module file, or a directory that is part of a module
+     * @param cDepth  the directory-nested depth (module is at 0)
      *
      * @return a node iff there is anything "there" to compile, otherwise null
      */
-    protected Node buildTree(File file)
+    protected Node buildTree(File file, int cDepth)
         {
         DirNode node  = new DirNode();
         boolean fRoot = false;
@@ -568,7 +569,7 @@ public class CommandLine
             if (filePkg.exists() && filePkg.isFile())
                 {
                 node.filePkg = filePkg;
-                node.pkgNode = new FileNode(filePkg);
+                node.pkgNode = new FileNode(filePkg, cDepth);
                 }
             }
         else if (file.getName().equalsIgnoreCase("module.x"))
@@ -576,20 +577,20 @@ public class CommandLine
             // this is the module root
             node.filePkg = file;
             node.fileDir = file.getParentFile();
-            node.pkgNode = new FileNode(file);
+            node.pkgNode = new FileNode(file, 0);
             fRoot        = true;
             }
         else
             {
             // this is the entire module
-            return new FileNode(file);
+            return new FileNode(file, 0);
             }
 
         NextChild: for (File child : node.fileDir.listFiles())
             {
             if (child.isDirectory())
                 {
-                DirNode nodeChild = (DirNode) buildTree(child);
+                DirNode nodeChild = (DirNode) buildTree(child, cDepth+1);
                 if (nodeChild != null)
                     {
                     nodeChild.parent = node;
@@ -623,7 +624,7 @@ public class CommandLine
                     }
 
                 // it's a source file
-                FileNode cmp = new FileNode(child);
+                FileNode cmp = new FileNode(child, cDepth);
                 node.sources.put(child, cmp);
                 }
             }
@@ -634,7 +635,7 @@ public class CommandLine
             File fileNative = new File(node.fileDir.getParentFile(), "_native");
             if (fileNative.isDirectory())
                 {
-                DirNode nodeNative = (DirNode) buildTree(fileNative);
+                DirNode nodeNative = (DirNode) buildTree(fileNative, 0);
                 if (nodeNative != null)
                     {
                     nodeNative.parent = node;
@@ -1235,12 +1236,12 @@ public class CommandLine
          *
          * @param file  the source file containing the code
          */
-        public FileNode(File file)
+        public FileNode(File file, int cDepth)
             {
-            this.file   = file;
+            this.file = file;
             try
                 {
-                source = new Source(file);
+                source = new Source(file, cDepth);
                 }
             catch (IOException e)
                 {

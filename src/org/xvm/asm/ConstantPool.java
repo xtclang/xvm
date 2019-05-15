@@ -1908,6 +1908,8 @@ public class ConstantPool
     public ClassConstant     clzIntLiteral()    {ClassConstant     c = m_clzIntLiteral;   if (c == null) {m_clzIntLiteral   = c = (ClassConstant) getImplicitlyImportedIdentity("IntLiteral" );} return c;}
     public ClassConstant     clzFPLiteral()     {ClassConstant     c = m_clzFPLiteral;    if (c == null) {m_clzFPLiteral    = c = (ClassConstant) getImplicitlyImportedIdentity("FPLiteral"  );} return c;}
     public ClassConstant     clzString()        {ClassConstant     c = m_clzString;       if (c == null) {m_clzString       = c = (ClassConstant) getImplicitlyImportedIdentity("String"     );} return c;}
+    public ClassConstant     clzStringable()    {ClassConstant     c = m_clzStringable;   if (c == null) {m_clzStringable   = c = (ClassConstant) getImplicitlyImportedIdentity("Stringable" );} return c;}
+    public ClassConstant     clzStringBuffer()  {ClassConstant     c = m_clzStringBuffer; if (c == null) {m_clzStringBuffer = c = (ClassConstant) getImplicitlyImportedIdentity("StringBuffer");} return c;}
     public ClassConstant     clzByte()          {ClassConstant     c = m_clzByte;         if (c == null) {m_clzByte         = c = (ClassConstant) getImplicitlyImportedIdentity("Byte"       );} return c;}
     public ClassConstant     clzInt()           {ClassConstant     c = m_clzInt;          if (c == null) {m_clzInt          = c = (ClassConstant) getImplicitlyImportedIdentity("Int"        );} return c;}
     public ClassConstant     clzIndexed()       {ClassConstant     c = m_clzIndexed;      if (c == null) {m_clzIndexed      = c = (ClassConstant) getImplicitlyImportedIdentity("UniformIndexed");} return c;}
@@ -1976,6 +1978,8 @@ public class ConstantPool
     public TypeConstant      typeIntLiteral()   {TypeConstant      c = m_typeIntLiteral;  if (c == null) {m_typeIntLiteral  = c = ensureTerminalTypeConstant(clzIntLiteral()                 );} return c;}
     public TypeConstant      typeFPLiteral()    {TypeConstant      c = m_typeFPLiteral;   if (c == null) {m_typeFPLiteral   = c = ensureTerminalTypeConstant(clzFPLiteral()                  );} return c;}
     public TypeConstant      typeString()       {TypeConstant      c = m_typeString;      if (c == null) {m_typeString      = c = ensureTerminalTypeConstant(clzString()                     );} return c;}
+    public TypeConstant      typeStringable()   {TypeConstant      c = m_typeStringable;  if (c == null) {m_typeStringable  = c = ensureTerminalTypeConstant(clzStringable()                 );} return c;}
+    public TypeConstant      typeStringBuffer() {TypeConstant      c = m_typeStringBuffer;if (c == null) {m_typeStringBuffer= c = ensureTerminalTypeConstant(clzStringBuffer()               );} return c;}
     public TypeConstant      typeByte()         {TypeConstant      c = m_typeByte;        if (c == null) {m_typeByte        = c = ensureTerminalTypeConstant(clzByte()                       );} return c;}
     public TypeConstant      typeInt()          {TypeConstant      c = m_typeInt;         if (c == null) {m_typeInt         = c = ensureTerminalTypeConstant(clzInt()                        );} return c;}
     public TypeConstant      typeIndexed()      {TypeConstant      c = m_typeIndexed;     if (c == null) {m_typeIndexed     = c = ensureTerminalTypeConstant(clzIndexed()                    );} return c;}
@@ -2638,6 +2642,8 @@ public class ConstantPool
         m_clzIntLiteral   = null;
         m_clzFPLiteral    = null;
         m_clzString       = null;
+        m_clzStringable   = null;
+        m_clzStringBuffer = null;
         m_clzByte         = null;
         m_clzInt          = null;
         m_clzIndexed      = null;
@@ -2706,6 +2712,8 @@ public class ConstantPool
         m_typeIntLiteral  = null;
         m_typeFPLiteral   = null;
         m_typeString      = null;
+        m_typeStringable  = null;
+        m_typeStringBuffer= null;
         m_typeString१     = null;
         m_typeByte        = null;
         m_typeByteArray   = null;
@@ -3102,6 +3110,8 @@ public class ConstantPool
     private transient ClassConstant     m_clzIntLiteral;
     private transient ClassConstant     m_clzFPLiteral;
     private transient ClassConstant     m_clzString;
+    private transient ClassConstant     m_clzStringable;
+    private transient ClassConstant     m_clzStringBuffer;
     private transient ClassConstant     m_clzByte;
     private transient ClassConstant     m_clzInt;
     private transient ClassConstant     m_clzIndexed;
@@ -3170,6 +3180,8 @@ public class ConstantPool
     private transient TypeConstant      m_typeIntLiteral;
     private transient TypeConstant      m_typeFPLiteral;
     private transient TypeConstant      m_typeString;
+    private transient TypeConstant      m_typeStringable;
+    private transient TypeConstant      m_typeStringBuffer;
     private transient TypeConstant      m_typeString१;
     private transient TypeConstant      m_typeByte;
     private transient TypeConstant      m_typeByteArray;

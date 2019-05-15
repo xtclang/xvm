@@ -1931,18 +1931,7 @@ public class MethodStructure
             if (f_method.m_abOps == null)
                 {
                 f_method.m_registry = registry = new Op.ConstantRegistry(f_method.getConstantPool());
-                Op[] aop;
-                try
-                    {
-                    aop = ensureOps();
-                    }
-                catch (UnsupportedOperationException e)
-                    {
-                    // TODO: remove when the compiler is working
-                    System.err.println("Error in MethodStructure.ensureConstantRegistry(): " + e);
-                    aop = Op.NO_OPS;
-                    }
-
+                Op[] aop = ensureOps();
                 for (Op op : aop)
                     {
                     op.registerConstants(registry);

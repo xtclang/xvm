@@ -87,8 +87,16 @@ module TestMaps.xqiz.it
         loop: for (String key : map.keys)
             {
             console.println("[" + loop.count + "]=" + key);
+            // or: console.println($"[{loop.count}]={key}");
             }
         // TODO CP "loop" should cease to exist in the context at this point
+
+        // same thing, but using "$" syntax
+        // TODO console.println($"keys={{L: for (val v : map.keys) {$.add($"[{L.count}]={v}");}}}");
+        Int x = 0;
+        console.println($"x={x}");
+
+        // TODO remember to test: $"x={{for (Int i : 0..5) {$.append(i);}}}}"
 
         console.println("values:");
         loop2: for (String value : map.values)

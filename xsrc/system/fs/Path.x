@@ -18,7 +18,7 @@ const Path
 
     construct(String pathString)
         {
-        // TODO: parse
+        // TODO: parse (a la Version.x constructor)
         construct Path(ROOT, pathString);
         }
 

@@ -1330,10 +1330,11 @@ public class TypeInfo
      * @param sName       the name of the method or function
      * @param fMethod     true to include methods in the search
      * @param fFunction   true to include functions in the search
-     * @param aRedundant  the redundant return type information (helps to clarify which method or
-     *                    function to select)
-     * @param aArgs       the types of the arguments being provided (some of which may be null to
-     *                    indicate "unknown" in a pre-validation stage, or "non-binding unknown")
+     * @param aRedundant  an optional array of redundant return type information (helps to clarify
+     *                    which method or function to select)
+     * @param aArgs       an optional array of the types of the arguments being provided (some of
+     *                    which may be null to indicate "unknown" in a pre-validation stage, or
+     *                    "non-binding unknown")
      * @param asArgNames  an optional array of argument names, each (if provided) corresponding to
      *                    an element in {@code aArgs}
      *

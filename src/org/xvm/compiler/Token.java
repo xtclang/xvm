@@ -374,6 +374,8 @@ public class Token
         DOT          ("."              ),
         DOTDOT       (".."             ),
         ELLIPSIS     ("..."            ),
+        DIR_CUR      ("./"             ),
+        DIR_PARENT   ("../"            ),
         AT           ("@"              ),
         COND         ("?"              ),
         L_PAREN      ("("              ),
@@ -505,6 +507,7 @@ public class Token
         LIT_INT      (null             ),
         LIT_DEC      (null             ),
         LIT_BIN      (null             ),
+        TEMPLATE     ("{...}"          ),            // not a real token
         ENUM_VAL     ("enum-value"     );            // not a real token
 
         /**
