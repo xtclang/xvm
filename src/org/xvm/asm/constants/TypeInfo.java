@@ -1374,7 +1374,9 @@ public class TypeInfo
                     && id.getName().equals(sName)
                     && id.getRawParams() .length >= cArgs
                     && id.getRawReturns().length >= cRedundant
-                    && (info.isFunction() ? fFunction : fMethod))
+                    && (info.isConstructor()
+                            ? (!fMethod && !fFunction)
+                            : info.isFunction() ? fFunction : fMethod))
                 {
                 SignatureConstant sig      = info.getSignature();
                 TypeConstant[]    aParams  = sig.getRawParams();
@@ -1384,10 +1386,7 @@ public class TypeInfo
                     TypeConstant typeReturn    = aReturns  [i];
                     TypeConstant typeRedundant = aRedundant[i];
 
-                    assert typeRedundant.isA(pool().typeType()) &&
-                           typeRedundant.getParamsCount() == 1;
-
-                    if (!typeReturn.isA(typeRedundant.getParamTypesArray()[0]))
+                    if (!typeReturn.isA(typeRedundant))
                         {
                         continue NextMethod;
                         }
@@ -1396,30 +1395,9 @@ public class TypeInfo
                     {
                     TypeConstant typeParam = aParams[i];
                     TypeConstant typeArg   = aArgs  [i];
-                    if (typeArg != null &&                // null means unbound
-                            !typeArg.isAssignableTo(typeParam))
+                    if (typeArg != null && !typeArg.isAssignableTo(typeParam))
                         {
                         continue NextMethod;
-                        }
-                    }
-
-                int cParams = aParams.length;
-                if (cParams > cArgs)
-                    {
-                    // make sure that all required parameters have been satisfied;
-                    // the challenge that we have here is that there are potentially a large number
-                    // of MethodStructures that contribute to the resulting MethodInfo, and each can
-                    // have different defaults for the parameters
-                    // TODO: improve the naive implementation below
-                    MethodBody      body   = info.getHead();
-                    MethodStructure method = body.getMethodStructure();
-                    for (int i = cArgs; i < cParams; ++i)
-                        {
-                        // make sure that the argument is optional
-                        if (!method.getParam(i).hasDefaultValue())
-                            {
-                            continue NextMethod;
-                            }
                         }
                     }
 
@@ -1491,7 +1469,7 @@ public class TypeInfo
      */
     public MethodConstant findConstructor(TypeConstant[] aArgs, String[] asArgNames)
         {
-        return findCallable("construct", false, true, TypeConstant.NO_TYPES, aArgs, asArgNames);
+        return findCallable("construct", false, false, TypeConstant.NO_TYPES, aArgs, asArgNames);
         }
 
     /**

@@ -71,17 +71,17 @@ module TestMaps.xqiz.it
         console.println("\n** testListMap()");
 
         Map<String, String> map = new ListMap();
-        console.println("empty map=" + map);
+        console.println($"empty map={map}");
 
         console.println("adding entries...");
         map.put("k1", "v2");
         map.put("k2", "v2");
 
-        console.println("map.size=" + map.size + ", map.empty=" + map.empty);
-        console.println("keys.size=" + map.keys.size);
-        console.println("entries.size=" + map.entries.size);
-        console.println("values.size=" + map.values.size);
-        console.println("map=" + map);
+        console.println($"map.size={map.size}, map.empty={map.empty}");
+        console.println($"keys.size={map.keys.size}");
+        console.println($"entries.size={map.entries.size}");
+        console.println($"values.size={map.values.size}");
+        console.println($"map={map}");
 
         console.println("keys:");
         loop: for (String key : map.keys)
@@ -93,8 +93,6 @@ module TestMaps.xqiz.it
 
         // same thing, but using "$" syntax
         // TODO console.println($"keys={{L: for (val v : map.keys) {$.add($"[{L.count}]={v}");}}}");
-        Int x = 0;
-        console.println($"x={x}");
 
         // TODO remember to test: $"x={{for (Int i : 0..5) {$.append(i);}}}}"
 

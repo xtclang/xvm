@@ -221,7 +221,7 @@ public class TemplateExpression
         TypeConstant   typeBuf  = pool.typeStringBuffer();
         TypeInfo       infoBuf  = typeBuf.ensureTypeInfo(errs);
         TypeConstant   typeInt  = pool.typeInt();
-        MethodConstant idNewBuf = pool.clzStringBuffer().findConstructor(typeInt);
+        MethodConstant idNewBuf = infoBuf.findConstructor(new TypeConstant[] {typeInt}, null);
         assert idNewBuf != null;
         code.add(new New_1(idNewBuf, pool.ensureIntConstant(cchMin), m_reg$));
 
@@ -230,8 +230,8 @@ public class TemplateExpression
         Assignable     lvalStr    = createTempVar(code, typeStr, true, errs);
         TypeConstant   typeObj    = pool.typeObject();
         Assignable     lvalObj    = createTempVar(code, typeObj, true, errs);
-        MethodConstant idAppendTo = infoStr.findCallable("appendTo", true, false, null, null, null); // _10
-        MethodConstant idAppend   = infoBuf.findCallable("append"  , true, false, null, null, null); // _11
+        MethodConstant idAppendTo = infoStr.findCallable("appendTo", true, false, null, null, null);
+        MethodConstant idAppend   = infoBuf.findCallable("append"  , true, false, null, null, null);
         for (Expression expr : exprs)
             {
             if (isStringConst(expr))
