@@ -233,33 +233,6 @@ public abstract class Expression
         }
 
     /**
-     * @param errs  the error listener to log to
-     *
-     * @return an array of expressions, one for each field of this tuple
-     */
-    protected Expression[] unpackedExpressions(ErrorListener errs)
-        {
-        TypeConstant type = getType();
-        if (!type.isTuple())
-            {
-            throw new IllegalStateException("tuple required");
-            }
-
-        if (!type.isParamsSpecified())
-            {
-            throw new IllegalStateException("tuple field information required");
-            }
-
-        int c = type.getParamsCount();
-        UnpackExpression[] aExpr = new UnpackExpression[c];
-        for (int i = 0; i < c; ++i)
-            {
-            aExpr[i] = new UnpackExpression(this, aExpr, i, errs);
-            }
-        return aExpr;
-        }
-
-    /**
      * (Pre-validation) Determine the type that the expression will resolve to, if it is given no
      * type inference information. If an expression is not able to determine an implicit type, that
      * indicates that a compile time error is likely to occur when the expression is validated, but

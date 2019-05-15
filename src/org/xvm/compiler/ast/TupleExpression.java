@@ -153,12 +153,6 @@ public class TupleExpression
         }
 
     @Override
-    protected Expression[] unpackedExpressions(ErrorListener errs)
-        {
-        return getExpressionArray();
-        }
-
-    @Override
     public TypeConstant getImplicitType(Context ctx)
         {
         ConstantPool pool      = pool();
@@ -212,9 +206,20 @@ public class TupleExpression
         }
 
     @Override
-    public TypeConstant[] getImplicitTypes(Context ctx)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired)
         {
-        return getImplicitType(ctx).getParamTypesArray();
+        TypeConstant typeTuple = getImplicitType(ctx);
+        if (atypeRequired.length == 1)
+            {
+            TypeFit fit = calcFit(ctx, typeTuple, atypeRequired[0]);
+            if (fit.isFit())
+                {
+                return fit;
+                }
+            // fall through
+            }
+
+        return calcFitMulti(ctx, typeTuple.getParamTypesArray(), atypeRequired);
         }
 
     @Override
@@ -387,27 +392,25 @@ public class TupleExpression
 
         if (fValid)
             {
-            m_fMultiplexing = fMultiplexing;
+            typeResult = (typeResult == null ? pool.typeTuple() : typeResult).
+                    adoptParameters(pool, aFieldTypes);
 
-            if (fMultiplexing)
+            ArrayConstant constVal = null;
+            if (aFieldVals != null)
                 {
-                typeResult = (typeResult == null ? pool.typeTuple() : typeResult).
-                        adoptParameters(pool, aFieldTypes);
-
-                ArrayConstant constVal = null;
-                if (aFieldVals != null)
-                    {
-                    typeResult = pool.ensureImmutableTypeConstant(typeResult);
-                    constVal   = pool.ensureTupleConstant(typeResult, aFieldVals);
-                    }
-
-                return finishValidation(typeRequired, typeResult, TypeFit.Fit, constVal, errs);
+                typeResult = pool.ensureImmutableTypeConstant(typeResult);
+                constVal   = pool.ensureTupleConstant(typeResult, aFieldVals);
                 }
-            else
+
+            Expression exprNew = finishValidation(typeRequired, typeResult, TypeFit.Fit, constVal, errs);
+            if (!fMultiplexing)
                 {
-                return finishValidations(atypeRequired, aFieldTypes, TypeFit.Fit, aFieldVals, errs);
+                assert this == exprNew;
+                exprNew = new UnpackExpression(this, errs);
                 }
+            return exprNew;
             }
+
         return null;
         }
 
@@ -451,7 +454,6 @@ public class TupleExpression
     @Override
     public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        assert m_fMultiplexing;
         if (isConstant())
             {
             return toConstant();
@@ -467,26 +469,6 @@ public class TupleExpression
         // generate the tuple itself, and return it as an argument
         code.add(new Var_T(getType(), aArgs));
         return code.lastRegister();
-        }
-
-    @Override
-    public Argument[] generateArguments(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
-        {
-        assert !m_fMultiplexing;
-        if (isConstant())
-            {
-            return toConstants();
-            }
-
-        int        cExprs = exprs.size();
-        Argument[] aArgs  = new Argument[cExprs];
-        for (int i = 0; i < cExprs; ++i)
-            {
-            aArgs[i] = exprs.get(i).generateArgument(ctx, code, false, false, errs);
-            }
-
-        return aArgs;
         }
 
 
@@ -534,8 +516,6 @@ public class TupleExpression
     protected List<Expression> exprs;
     protected long             m_lStartPos;
     protected long             m_lEndPos;
-
-    protected transient boolean m_fMultiplexing; // if true, the result is a tuple; otherwise a multi-value
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TupleExpression.class, "type", "exprs");
     }
