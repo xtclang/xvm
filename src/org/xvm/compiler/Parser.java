@@ -1,6 +1,8 @@
 package org.xvm.compiler;
 
 
+import java.io.IOException;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -3464,6 +3466,26 @@ public class Parser
                 return new TemplateExpression(listExpr, lStart, lEnd);
                 }
 
+            case DIV:
+            case DIR_CUR:
+            case DIR_PARENT:
+                {
+                long   lStart = peek().getStartPosition();
+                String sFile  = parseFileName();
+                long   lEnd   = peek().getStartPosition();
+                Source source;
+                try
+                    {
+                    source = m_source.loadInclude(sFile);
+                    }
+                catch (IOException e)
+                    {
+                    log(Severity.ERROR, INVALID_PATH, lStart, lEnd, sFile);
+                    throw new CompilerException(e);
+                    }
+                return new LiteralExpression(new Token(lStart, lEnd, Id.LIT_STRING, source.toRawString()));
+                }
+
             case FUNCTION:
             case IMMUTABLE:
             case AT:
@@ -3481,6 +3503,61 @@ public class Parser
         List<Token> names = left.getNameTokens();
         names.add(name);
         return names;
+        }
+
+    /**
+     * TODO doc
+     *
+     * @return
+     */
+    String parseFileName()
+        {
+        StringBuilder sb     = new StringBuilder();
+        Token         tokDiv = current();
+        long          lPos   = tokDiv.getStartPosition();
+        while (true)
+            {
+            sb.append(tokDiv.getId().TEXT);
+
+            // the divider needs to have no space after it
+            if (tokDiv.hasTrailingWhitespace())
+                {
+                log(Severity.ERROR, INVALID_PATH, lPos, tokDiv.getEndPosition(), sb.toString());
+                throw new CompilerException("illegal include-file path: " + sb.toString());
+                }
+
+            // the divider must be followed by a name
+            Token tokName = expect(Id.IDENTIFIER);
+            sb.append(tokName.getValue());
+
+            // a name followed by white-space is the end of the path, as is a name followed
+            // by any token that cannot continue the path (anything but a dot or slash)
+            boolean fDone;
+            if (tokName.hasTrailingWhitespace())
+                {
+                fDone = true;
+                }
+            else
+                {
+                switch (peek().getId())
+                    {
+                    case DOT:
+                    case DIV:
+                        tokDiv = current();
+                        fDone  = false;
+                        break;
+
+                    default:
+                        fDone = true;
+                        break;
+                    }
+                }
+
+            if (fDone)
+                {
+                return sb.toString();
+                }
+            }
         }
 
     /**
@@ -3658,6 +3735,7 @@ public class Parser
 
     /**
      * Parse a complex literal.
+     * TODO update doc
      *
      * <p/><code><pre>
      * # Whitespace allowed
@@ -3672,9 +3750,8 @@ public class Parser
      *     "0" "1" "2" "3" "4" "5" "6" "7" "8" "9" "A" "a" "B" "b" "C" "c" "D" "d" "E" "e" "F" "f"
      *
      * TupleLiteral
-     *     "(" ExpressionList "," Expression ")"
-     *     "Tuple:(" ExpressionList-opt ")"         // REVIEW drop this odd-man-out support?
-     *     "Tuple:{" ExpressionList-opt "}"
+     *     "(" ExpressionList "," Expression ")"                       # compile/runtime type is Tuple
+     *     TypeExpression NoWhitespace ":(" ExpressionList-opt ")"     # type must be a Tuple
      *
      * ListLiteral
      *     "[" ExpressionList-opt "]"
@@ -3717,8 +3794,10 @@ public class Parser
 
         switch (sType)
             {
-            case "Binary":
+            case "Binary": // TODO Byte[] (not Binary)
                 {
+                // TODO path support
+
                 // special note: at this point, the current token (already parsed) is the opening
                 // curly bracket, so the lexer has already eaten any whitespace after that, and is
                 // ready to eat the hex contents of the literal itself; unfortunately, this means
@@ -5486,6 +5565,10 @@ public class Parser
      * Unexpected token following expression in template: {0}.
      */
     public static final String TEMPLATE_EXTRA    = "PARSER-23";
+    /**
+     * Invalid path: {0}.
+     */
+    public static final String INVALID_PATH      = "PARSER-24";
 
 
     // ----- data members ------------------------------------------------------

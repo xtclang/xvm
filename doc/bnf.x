@@ -823,7 +823,7 @@ FreeformChar
     InputCharacter except LineTerminator
 
 # The non-templatized "Path" form specifies a file to include as-is (as binary data)
-# All other forms are textual and must contain only nibbles and whitespace
+# All other forms are textual and must contain only nibbles and whitespace (no '$' allowed)
 BinaryLiteral
     "Byte[]:" StringLiteral
 
