@@ -20,7 +20,7 @@ module TestSimple.xqiz.it
         @Inject X.io.Console console;
 
         Int i = answer;
-        console.println("answer is " + i);
+        console.println($"answer is {i}");
         }
 
     @Lazy Int answer.calc()
@@ -33,7 +33,7 @@ module TestSimple.xqiz.it
         @Inject X.io.Console console;
         @Inject X.Clock clock;
 
-        console.println(clock.now.to<String>() + ": Hello " + s);
+        console.println(clock.now.to<String>() + $": Hello {s}");
         }
 
     void testIn()

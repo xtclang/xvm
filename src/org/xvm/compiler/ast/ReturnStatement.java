@@ -296,30 +296,47 @@ public class ReturnStatement
                 case 1:
                     {
                     Expression expr = listExprs.get(0);
-                    if (expr.isVoid() || cRets == 0)
+                    if (expr.isVoid())
                         {
                         code.add(new Return_0());
                         }
-                    else if (cRets == 1)
+
+                    // we need to get all the arguments the expression can provide. but
+                    // return only as many as the caller expects
+                    Argument[] args  = expr.generateArguments(ctx, code, true, true, errs);
+                    int        cArgs = args.length;
+
+                    switch (cRets)
                         {
-                        Argument arg = expr.generateArgument(ctx, code, true, true, errs);
-                        code.add(new Return_1(arg));
-                        }
-                    else
-                        {
-                        Argument[] args = expr.generateArguments(ctx, code, true, true, errs);
-                        if (args.length > 1)
-                            {
-                            code.add(new Return_N(args));
-                            }
-                        else
-                            {
-                            if (!container.isReturnConditional())
-                                {
-                                throw new AssertionError();
-                                }
+                        case 0:
+                            code.add(new Return_0());
+                            break;
+
+                        case 1:
                             code.add(new Return_1(args[0]));
-                            }
+                            break;
+
+                        default:
+                            if (cArgs > 1)
+                                {
+                                if (cArgs == cRets)
+                                    {
+                                    code.add(new Return_N(args));
+                                    }
+                                else
+                                    {
+                                    code.add(new Return_N(Arrays.copyOfRange(args, 0, cRets)));
+                                    }
+                                }
+                            else
+                                {
+                                if (!container.isReturnConditional())
+                                    {
+                                    throw new AssertionError();
+                                    }
+                                // REVIEW: we can use pool.valFalse() or add an Assert op here
+                                code.add(new Return_1(args[0]));
+                                }
                         }
                     break;
                     }
