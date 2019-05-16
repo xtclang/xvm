@@ -13,6 +13,40 @@ module TestServices.xqiz.it
         Int n = svc.calcSomethingBig(new Duration(0));
         console.println("[main] async/wait-style result=" + n);
 
+        @Future Int n0 = svc.terminateExceptionally("n0");
+        &n0.whenComplete((n, e) ->
+            {
+            assert e != null;
+            console.println("[main] 4. expected exception=" + e.text);
+            });
+
+        try
+            {
+            Int n1 = svc.terminateExceptionally("n1");
+            assert;
+            }
+        catch (Exception e)
+            {
+            console.println("[main] 1. expected exception=" + e.text);
+            }
+
+        @Future Int n2 = svc.terminateExceptionally("n2");
+        try
+            {
+            n2++;
+            assert;
+            }
+        catch (Exception e)
+            {
+            console.println("[main] 2. expected exception=" + e.text);
+            }
+
+        &n2.whenComplete((n, e) ->
+            {
+            assert e != null;
+            console.println("[main] 3. expected exception=" + e.text);
+            });
+
         for (Int i : 0..4)
             {
             console.println("[main] calling service future-style: " + i);
@@ -22,6 +56,7 @@ module TestServices.xqiz.it
                 console.println("[main] result=" + (n ?: e ?: "???"));
                 });
             }
+
         }
 
     service TestService
@@ -41,6 +76,11 @@ module TestServices.xqiz.it
 
             console.println("[svc ] returning result");
             return result;
+            }
+
+        Int terminateExceptionally(String message)
+            {
+            throw new Exception(message);
             }
         }
     }

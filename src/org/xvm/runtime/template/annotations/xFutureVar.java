@@ -1,6 +1,7 @@
 package org.xvm.runtime.template.annotations;
 
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -14,6 +15,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle.WrapperException;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
@@ -96,10 +98,10 @@ public class xFutureVar
                     catch (Exception e)
                         {
                         Throwable eOrig = e.getCause();
-                        if (eOrig instanceof ExceptionHandle.WrapperException)
+                        if (eOrig instanceof WrapperException)
                             {
                             ExceptionHandle hException =
-                                    ((ExceptionHandle.WrapperException) eOrig).getExceptionHandle();
+                                    ((WrapperException) eOrig).getExceptionHandle();
                             return frame.assignValue(iReturn, hException);
                             }
                         throw new UnsupportedOperationException("Unexpected exception", e);
@@ -148,47 +150,181 @@ public class xFutureVar
                 {
                 FunctionHandle hRun = (FunctionHandle) hArg;
 
-                CompletableFuture cf = hThis.m_future.thenRun(() ->
+                CompletableFuture<ObjectHandle> cf = hThis.m_future;
+                if (cf.isDone())
                     {
-                    frame.f_context.callLater(hRun, Utils.OBJECTS_NONE);
-                    });
+                    ObjectHandle[] ahArg = extractResult(cf);
+                    if (ahArg[1] != xNullable.NULL)
+                        {
+                        // the future terminated exceptionally; re-throw it
+                        return frame.raiseException((ExceptionHandle) ahArg[1]);
+                        }
 
-                return frame.assignValue(iReturn, makeHandle(cf), true);
+                    switch (hRun.call1(frame, null, Utils.OBJECTS_NONE, Op.A_IGNORE))
+                        {
+                        case Op.R_NEXT:
+                            // we can return the same handle since it's completed
+                            return frame.assignValue(iReturn, hThis);
+
+                        case Op.R_CALL:
+                            frame.m_frameNext.setContinuation(frameCaller ->
+                                frameCaller.assignValue(iReturn, hThis));
+                            return Op.R_CALL;
+
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
+
+                        default:
+                            throw new IllegalStateException();
+                        }
+                    }
+                else
+                    {
+                    CompletableFuture cf0 = cf.thenRun(() ->
+                        frame.f_context.callLater(hRun, Utils.OBJECTS_NONE));
+                    return frame.assignValue(iReturn, makeHandle(cf0));
+                    }
                 }
 
             case "passTo":
                 {
                 FunctionHandle hConsume = (FunctionHandle) hArg;
 
-                CompletableFuture cf = hThis.m_future.thenAccept(r ->
+                CompletableFuture<ObjectHandle> cf = hThis.m_future;
+                if (cf.isDone())
                     {
-                    ObjectHandle[] ahArg = new ObjectHandle[1];
-                    ahArg[0] = r;
-                    frame.f_context.callLater(hConsume, ahArg);
-                    });
+                    ObjectHandle[] ahArg = extractResult(cf);
+                    if (ahArg[1] != xNullable.NULL)
+                        {
+                        // the future terminated exceptionally; re-throw it
+                        return frame.raiseException((ExceptionHandle) ahArg[1]);
+                        }
 
-                return frame.assignValue(iReturn, makeHandle(cf), true);
+                    ahArg[1] = null; // the consumer doesn't need it
+
+                    switch (hConsume.call1(frame, null, ahArg, Op.A_IGNORE))
+                        {
+                        case Op.R_NEXT:
+                            // we can return the same handle since it's completed
+                            return frame.assignValue(iReturn, hThis);
+
+                        case Op.R_CALL:
+                            frame.m_frameNext.setContinuation(frameCaller ->
+                                frameCaller.assignValue(iReturn, hThis));
+                            return Op.R_CALL;
+
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
+
+                        default:
+                            throw new IllegalStateException();
+                        }
+                    }
+                else
+                    {
+                    CompletableFuture cf0 = cf.thenAccept(r ->
+                        {
+                        ObjectHandle[] ahArg = new ObjectHandle[1];
+                        ahArg[0] = r;
+                        frame.f_context.callLater(hConsume, ahArg);
+                        });
+
+                    return frame.assignValue(iReturn, makeHandle(cf0));
+                    }
                 }
 
             case "whenComplete":
                 {
                 FunctionHandle hNotify = (FunctionHandle) hArg;
 
-                CompletableFuture<ObjectHandle> cf = hThis.m_future.whenComplete((r, x) ->
+                CompletableFuture<ObjectHandle> cf = hThis.m_future;
+                if (cf.isDone())
                     {
-                    ObjectHandle[] ahArg = new ObjectHandle[2];
-                    ahArg[0] = r;
-                    ahArg[1] = x == null ? xNullable.NULL :
-                                ((ExceptionHandle.WrapperException) x).getExceptionHandle();
+                    ObjectHandle[] ahArg = extractResult(cf);
 
-                    frame.f_context.callLater(hNotify, ahArg);
-                    });
+                    switch (hNotify.call1(frame, null, ahArg, Op.A_IGNORE))
+                        {
+                        case Op.R_NEXT:
+                            // we can return the same handle since it's completed
+                            return frame.assignValue(iReturn, hThis);
 
-                return frame.assignValue(iReturn, makeHandle(cf), true);
+                        case Op.R_CALL:
+                            frame.m_frameNext.setContinuation(frameCaller ->
+                                frameCaller.assignValue(iReturn, hThis));
+                            return Op.R_CALL;
+
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
+
+                        default:
+                            throw new IllegalStateException();
+                        }
+                    }
+                else
+                    {
+                    cf = cf.whenComplete((r, x) ->
+                        frame.f_context.callLater(hNotify, combineResult(r, x)));
+
+                    return frame.assignValue(iReturn, makeHandle(cf));
+                    }
                 }
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    /**
+     * Extract the result of the completed future into an ObjectHandle array.
+     *
+     * @param cf  the future
+     *
+     * @return an ObjectHandle array containing the result and the exception handles
+     */
+    protected ObjectHandle[] extractResult(CompletableFuture<ObjectHandle> cf)
+        {
+        ObjectHandle[] ahArg = new ObjectHandle[2];
+        try
+            {
+            ahArg[0] = cf.get();
+            ahArg[1] = xNullable.NULL;
+            }
+        catch (Throwable e)
+            {
+            ExceptionHandle hException;
+            if (e instanceof ExecutionException)
+                {
+                hException = ((WrapperException) e.getCause()).getExceptionHandle();
+                }
+            else if (e instanceof CancellationException)
+                {
+                hException = xException.makeHandle("cancelled");
+                }
+            else
+                {
+                hException = xException.makeHandle("interrupted");
+                }
+            ahArg[0] = xNullable.NULL;
+            ahArg[1] = hException;
+            }
+        return ahArg;
+        }
+
+    /**
+     * Combine the result of the completed future phase into an ObjectHandle array.
+     *
+     * @param hResult  the execution result
+     * @param exception        an exception
+     *
+     * @return an ObjectHandle array containing the result and the exception handles
+     */
+    protected ObjectHandle[] combineResult(ObjectHandle hResult, Throwable exception)
+        {
+        ObjectHandle[] ahArg = new ObjectHandle[2];
+        ahArg[0] = hResult;
+        ahArg[1] = exception == null
+                ? xNullable.NULL
+                : ((WrapperException) exception).getExceptionHandle();
+        return ahArg;
         }
 
     @Override
@@ -221,9 +357,9 @@ public class xFutureVar
             catch (ExecutionException e)
                 {
                 Throwable eOrig = e.getCause();
-                if (eOrig instanceof ExceptionHandle.WrapperException)
+                if (eOrig instanceof WrapperException)
                     {
-                    return frame.raiseException((ExceptionHandle.WrapperException) eOrig);
+                    return frame.raiseException((WrapperException) eOrig);
                     }
                 throw new UnsupportedOperationException("Unexpected exception", eOrig);
                 }
