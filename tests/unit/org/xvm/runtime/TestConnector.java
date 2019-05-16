@@ -57,7 +57,7 @@ public class TestConnector
 
         for (int i = 0; i < cModules; i++)
             {
-            System.out.println("+++ Loading module: " + asModule[i]);
+            System.out.println("\n++++++ Loading module: " + asModule[i] + " +++++++\n");
 
             // +++ that is the actual use +++
             Connector connector = new Connector(repository);
