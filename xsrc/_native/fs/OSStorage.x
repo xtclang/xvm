@@ -30,9 +30,11 @@ service OSStorage
     @Abstract @RO Directory curDir;
     @Abstract @RO Directory tmpDir;
 
-    conditional Directory|File find(String pathString);
+    conditional Directory|File find(OSFileStore store, String pathString);
 
-    Directory directoryFor(String pathString);
+    Directory dirFor(OSFileStore store, String pathString);
+
+    File fileFor(OSFileStore store, String pathString);
 
     String[] names(OSDirectory dir);
     }

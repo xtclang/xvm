@@ -50,6 +50,11 @@ public class xOSFileStore
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
+    @Override
+    protected boolean isConstructImmutable()
+        {
+        return true;
+        }
 
     // ----- constants -----------------------------------------------------------------------------
 

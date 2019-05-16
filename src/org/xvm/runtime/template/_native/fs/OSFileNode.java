@@ -57,12 +57,13 @@ public abstract class OSFileNode
         s_constructorDir  = s_clzOSDir.getTemplate().f_struct.findConstructor();
         s_constructorFile = s_clzOSFile.getTemplate().f_struct.findConstructor();
 
-        markNativeProperty("storage");
+        markNativeProperty("store");
         markNativeProperty("pathString");
         markNativeProperty("exists");
         markNativeProperty("createdMillis");
         markNativeProperty("accessedMillis");
         markNativeProperty("modifiedMillis");
+        markNativeProperty("size");
         }
 
     @Override
@@ -71,8 +72,8 @@ public abstract class OSFileNode
         NodeHandle hNode = (NodeHandle) hTarget;
         switch (sPropName)
             {
-            case "storage":
-                return frame.assignValue(iReturn, hNode.getField("storage"));
+            case "store":
+                return frame.assignValue(iReturn, hNode.getField(sPropName));
 
             case "pathString":
                 return frame.assignValue(iReturn, xString.makeHandle(hNode.f_path.toString()));
@@ -118,6 +119,19 @@ public abstract class OSFileNode
                     return raisePathException(frame, e, hNode);
                     }
                 }
+
+            case "size":
+                {
+                try
+                    {
+                    BasicFileAttributes attr = Files.readAttributes(hNode.f_path, BasicFileAttributes.class);
+                    return frame.assignValue(iReturn, xInt64.makeHandle(attr.size()));
+                    }
+                catch (IOException e)
+                    {
+                    return raisePathException(frame, e, hNode);
+                    }
+                }
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -127,21 +141,21 @@ public abstract class OSFileNode
      *
      * Construct a new {@link NodeHandle} representing the specified file or directory.
      *
-     * @param frame        the current frame
-     * @param hOSStorage   the "host" OSStorage handle
-     * @param path         the node's path
-     * @param fDir         true iff the path represents a directory; false otherwise
-     * @param iReturn      the register id to place the created handle into
+     * @param frame      the current frame
+     * @param hOSStore   the "host" OSStore handle
+     * @param path       the node's path
+     * @param fDir       true iff the path represents a directory; false otherwise
+     * @param iReturn    the register id to place the created handle into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
-    static int createHandle(Frame frame, ObjectHandle hOSStorage, Path path, boolean fDir, int iReturn)
+    static int createHandle(Frame frame, ObjectHandle hOSStore, Path path, boolean fDir, int iReturn)
         {
         ClassComposition clzPublic   = fDir ? s_clzOSDir       : s_clzOSFile;
         ClassComposition clzStruct   = fDir ? s_clzOSDirStruct : s_clzOSFileStruct;
         MethodStructure  constructor = fDir ? s_constructorDir : s_constructorFile;
 
-        NodeHandle hStruct = new NodeHandle(clzStruct,  path, hOSStorage);
+        NodeHandle hStruct = new NodeHandle(clzStruct,  path, hOSStore);
 
         return clzPublic.getTemplate().callConstructor(frame, constructor,
             clzPublic.ensureAutoInitializer(), hStruct, Utils.OBJECTS_NONE, iReturn);
@@ -166,13 +180,13 @@ public abstract class OSFileNode
 
         // TODO: lazy file channel, etc.
 
-        protected NodeHandle(TypeComposition clazz, Path path, ObjectHandle hOSStorage)
+        protected NodeHandle(TypeComposition clazz, Path path, ObjectHandle hOSStore)
             {
             super(clazz);
 
             f_path = path;
 
-            setField("storage", hOSStorage);
+            setField("store", hOSStore);
 
             // NodeHandles need be sent across the service lines; mark as immutable
             m_fMutable = true;

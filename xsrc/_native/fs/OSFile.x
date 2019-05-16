@@ -31,5 +31,8 @@ class OSFile
     // ----- native --------------------------------------------------------------------------------
 
     @Override
-    immutable Byte[] contents;
+    @Abstract immutable Byte[] contents;
+
+    @Override
+    @Abstract Int size;
     }

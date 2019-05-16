@@ -62,9 +62,6 @@ class OSFileNode
     conditional FileNode renameTo(String name);
 
     @Override
-    @RO Int size;
-
-    @Override
     Cancellable watch(FileWatcher watch)
         {
         TODO
@@ -76,10 +73,16 @@ class OSFileNode
         return pathString;
         }
 
+    // ----- internal -----------------------------------------------------------------------------
+
+
     // ----- native --------------------------------------------------------------------------------
 
-    @Abstract protected OSStorage   storage;
+    @Abstract protected OSFileStore store;
     @Abstract protected String      pathString;
+
+    @Override
+    @Abstract Int size;
 
     @Abstract private Int           createdMillis;
     @Abstract private Int           accessedMillis;
