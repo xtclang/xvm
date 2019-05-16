@@ -39,28 +39,35 @@ public class xOSStorage
         markNativeProperty("curDir");
         markNativeProperty("tmpDir");
 
-        markNativeMethod("find", STRING, null);
+        markNativeMethod("find", new String[] {"_native.fs.OSFileStore", "String"}, null);
         markNativeMethod("names", new String[] {"_native.fs.OSDirectory"}, null);
+        }
+
+    @Override
+    protected ObjectHandle.ExceptionHandle makeImmutable(ObjectHandle hTarget)
+        {
+        return null;
         }
 
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         ServiceHandle hStorage = (ServiceHandle) hTarget;
+        ObjectHandle  hStore   = hStorage.getField("fileStore");
 
         switch (sPropName)
             {
             case "homeDir":
                 // REVIEW: should we cache those handles?
-                return OSFileNode.createHandle(frame, hStorage,
+                return OSFileNode.createHandle(frame, hStore,
                     Paths.get(System.getProperty("user.home")), true, iReturn);
 
             case "curDir":
-                return OSFileNode.createHandle(frame, hStorage,
+                return OSFileNode.createHandle(frame, hStore,
                     Paths.get(System.getProperty("user.dir")), true, iReturn);
 
             case "tmpDir":
-                return OSFileNode.createHandle(frame, hStorage,
+                return OSFileNode.createHandle(frame, hStore,
                     Paths.get(System.getProperty("java.io.tmpdir")), true, iReturn);
             }
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -70,8 +77,6 @@ public class xOSStorage
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn)
         {
-        ServiceHandle hStorage = (ServiceHandle) hTarget;
-
         switch (method.getName())
             {
             case "names":
@@ -110,15 +115,16 @@ public class xOSStorage
 
         switch (method.getName())
             {
-            case "find":  // ahArg[0] == pathString
+            case "find":  // (store, pathString)
                 {
-                StringHandle hPathString = (StringHandle) ahArg[0];
+                ObjectHandle hStore      = ahArg[0];
+                StringHandle hPathString = (StringHandle) ahArg[1];
 
                 Path path = Paths.get(hPathString.getStringValue());
 
                 if (Files.exists(path))
                     {
-                    switch (OSFileNode.createHandle(frame, hStorage, path, Files.isDirectory(path), Op.A_STACK))
+                    switch (OSFileNode.createHandle(frame, hStore, path, Files.isDirectory(path), Op.A_STACK))
                         {
                         case Op.R_NEXT:
                             return frame.assignValues(aiReturn, xBoolean.TRUE, frame.popStack());

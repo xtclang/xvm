@@ -1,10 +1,10 @@
 package org.xvm.runtime;
 
 
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -265,6 +265,14 @@ public class ClassComposition
         }
 
     @Override
+    public boolean isLazy(Object nid)
+        {
+        TypeComposition clz = f_mapFields.get(nid);
+        return clz instanceof PropertyComposition &&
+                ((PropertyComposition) clz).isLazy();
+        }
+
+    @Override
     public boolean isAllowedUnassigned(Object nid)
         {
         if (nid instanceof NestedIdentity)
@@ -332,32 +340,36 @@ public class ClassComposition
         }
 
     @Override
-    public Set<String> getFieldNames()
+    public List<String> getFieldNames()
         {
-        Set<String> setNames = m_setNames;
-        if (setNames == null)
+        List<String> listNames = m_listNames;
+        if (listNames == null)
             {
             Map<Object, TypeComposition> mapFields = f_mapFields;
             if (mapFields == null)
                 {
-                setNames = Collections.EMPTY_SET;
+                listNames = Collections.EMPTY_LIST;
                 }
             else
                 {
-                setNames = new HashSet<>(mapFields.size());
+                listNames = new ArrayList<>(mapFields.size());
                 for (Object nid : mapFields.keySet())
                     {
-                    // disregard nested (private) properties
+                    // disregard nested (private) and synthetic properties
                     if (nid instanceof String)
                         {
-                        setNames.add((String) nid);
+                        String sName = (String) nid;
+                        if (sName.charAt(0) != '$')
+                            {
+                            listNames.add(sName);
+                            }
                         }
                     }
                 }
-            m_setNames = setNames;
+            m_listNames = listNames;
             }
 
-        return setNames;
+        return listNames;
         }
 
     @Override
@@ -366,12 +378,12 @@ public class ClassComposition
         StringHandle[] ashNames = m_ashFieldNames;
         if (ashNames == null)
             {
-            Set<String> setNames = getFieldNames();
+            List<String> listNames = getFieldNames();
 
-            ashNames = new StringHandle[setNames.size()];
+            ashNames = new StringHandle[listNames.size()];
 
             int i = 0;
-            for (String sName : setNames)
+            for (String sName : listNames)
                 {
                 ashNames[i++] = xString.makeHandle(sName);
                 }
@@ -383,16 +395,16 @@ public class ClassComposition
     @Override
     public ObjectHandle[] getFieldValueArray(GenericHandle hValue)
         {
-        Set<String> setNames = getFieldNames();
-        if (setNames.isEmpty())
+        List<String> listNames = getFieldNames();
+        if (listNames.isEmpty())
             {
             return Utils.OBJECTS_NONE;
             }
 
-        ObjectHandle[] ahFields = new ObjectHandle[setNames.size()];
+        ObjectHandle[] ahFields = new ObjectHandle[listNames.size()];
 
         int i = 0;
-        for (String sName : setNames)
+        for (String sName : listNames)
             {
             ahFields[i++] = hValue.getField(sName);
             }
@@ -575,8 +587,8 @@ public class ClassComposition
     // cached property setter call chain by property id (the top-most method first)
     private final Map<PropertyConstant, CallChain> f_mapSetters;
 
-    // cached set of field names
-    private Set<String> m_setNames;
+    // cached list of field names
+    private List<String> m_listNames;
 
     // cached array of field name handles
     private StringHandle[] m_ashFieldNames;

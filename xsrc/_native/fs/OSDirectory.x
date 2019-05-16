@@ -14,7 +14,7 @@ class OSDirectory
     @Override
     Iterator<String> names()
         {
-        return storage.names(this).iterator();
+        return store.storage.names(this).iterator();
         }
 
     @Override
@@ -27,13 +27,22 @@ class OSDirectory
     Iterator<File> filesRecursively();
 
     @Override
-    conditional Directory|File find(String name);
+    conditional Directory|File find(String name)
+        {
+        return store.find(path + name);
+        }
 
     @Override
-    Directory dirFor(String name);
+    Directory dirFor(String name)
+        {
+        return store.dirFor(path + name);
+        }
 
     @Override
-    File fileFor(String name);
+    File fileFor(String name)
+        {
+        return store.fileFor(path + name);
+        }
 
     @Override
     conditional Directory deleteRecursively();

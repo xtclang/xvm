@@ -33,6 +33,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
 import org.xvm.runtime.Utils.BinaryAction;
@@ -450,7 +451,7 @@ public abstract class ClassTemplate
 
             if (isConstructImmutable())
                 {
-                hStruct.makeImmutable();
+                makeImmutable(hStruct);
                 }
 
             ObjectHandle hPublic = hStruct.ensureAccess(Access.PUBLIC);
@@ -493,6 +494,44 @@ public abstract class ClassTemplate
         clazz = clazz.ensureAccess(Access.STRUCT);
 
         return new GenericHandle(clazz);
+        }
+
+
+    // ----- mutability ----------------------------------------------------------------------------
+
+    /**
+     * Make the specified object handle immutable.
+     *
+     * @param hTarget  the object handle
+     *
+     * @return null if the operation succeeded, an exception to throw otherwise
+     */
+    protected ExceptionHandle makeImmutable(ObjectHandle hTarget)
+        {
+        if (hTarget.isMutable())
+            {
+            hTarget.makeImmutable();
+
+            if (hTarget instanceof GenericHandle)
+                {
+                TypeComposition           clz       = hTarget.getComposition();
+                Map<Object, ObjectHandle> mapFields = ((GenericHandle) hTarget).getFields();
+                for (Map.Entry<Object, ObjectHandle> entry : mapFields.entrySet())
+                    {
+                    Object       nid    = entry.getKey();
+                    ObjectHandle hValue = entry.getValue();
+                    if (hValue != null && hValue.isMutable() && !clz.isLazy(nid))
+                        {
+                        ExceptionHandle hEx = hValue.getTemplate().makeImmutable(hValue);
+                        if (hEx != null)
+                            {
+                            return hEx;
+                            }
+                        }
+                    }
+                }
+            }
+        return null;
         }
 
 

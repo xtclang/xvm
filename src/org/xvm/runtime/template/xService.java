@@ -18,6 +18,7 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ServiceContext;
@@ -84,6 +85,12 @@ public class xService
         {
         // called via constructSync()
         return new ServiceHandle(clazz.ensureAccess(Access.STRUCT), frame.f_context);
+        }
+
+    @Override
+    protected ExceptionHandle makeImmutable(ObjectHandle hTarget)
+        {
+        return xException.unsupportedOperation();
         }
 
     @Override

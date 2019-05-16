@@ -1,13 +1,14 @@
 package org.xvm.runtime;
 
 
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -108,6 +109,39 @@ public interface TypeComposition
     boolean isInflated(Object nid);
 
     /**
+     * Check whether or not the property referred by the specified nid is LazyVar annotated.
+     *
+     * @param nid  the property nid
+     *
+     * @return true iff the property is LazyVar annotated
+     */
+    boolean isLazy(Object nid);
+
+    /**
+     * Check whether or not the property referred by the specified nid is a "regular" one, meaning
+     * that it's neither nested nor synthetic nor lazy.
+     *
+     * @param nid  the property nid
+     *
+     * @return true iff the property is "regular"
+     */
+    default boolean isRegular(Object nid)
+        {
+        if (nid instanceof NestedIdentity)
+            {
+            return false;
+            }
+
+        String sName = (String) nid;
+        if (sName.charAt(0) == '$')
+            {
+            return false;
+            }
+
+        return !isInflated(sName) && !isLazy(sName);
+        }
+
+    /**
      * Check whether or not the property referred by the specified nid is allowed to stay
      * unassigned after the construction.
      *
@@ -181,9 +215,9 @@ public interface TypeComposition
         }
 
     /**
-     * @return a set of field names
+     * @return a list of field names
      */
-    Set<String> getFieldNames();
+    List<String> getFieldNames();
 
     /**
      * @return an array of field name handles

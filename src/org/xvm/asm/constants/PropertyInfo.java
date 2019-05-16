@@ -1010,14 +1010,29 @@ public class PropertyInfo
         }
 
     /**
+     * @return true iff the property has the LazyVar annotation
+     */
+    public boolean isLazy()
+        {
+        return containsRefAnnotation(pool().clzLazy());
+        }
+
+    /**
      * @return true iff the property has an Atomic annotation
      */
     public boolean isAtomic()
         {
-        IdentityConstant idAtomic = pool().clzAtomic();
+        return containsRefAnnotation(pool().clzAtomic());
+        }
+
+    /**
+     * @return true iff this property contains the specified annotation
+     */
+    public boolean containsRefAnnotation(IdentityConstant idAnno)
+        {
         for (Annotation anno : getRefAnnotations())
             {
-            if (anno.getAnnotationClass().equals(idAtomic))
+            if (anno.getAnnotationClass().equals(idAnno))
                 {
                 return true;
                 }
@@ -1046,22 +1061,9 @@ public class PropertyInfo
      */
     public boolean isImplicitlyUnassigned()
         {
-        if (m_annotations != null)
-            {
-            ConstantPool pool = pool();
-
-            for (Annotation anno : m_annotations)
-                {
-                ClassConstant id = (ClassConstant) anno.getAnnotationClass();
-
-                if (id.equals(pool.getImplicitlyImportedIdentity("Lazy")) ||
-                    id.equals(pool.getImplicitlyImportedIdentity("Unassigned")))
-                    {
-                    return true;
-                    }
-                }
-            }
-        return false;
+        ConstantPool pool = pool();
+        return containsRefAnnotation(pool.clzUnassigned())
+            || containsRefAnnotation(pool.clzLazy());
         }
 
     /**

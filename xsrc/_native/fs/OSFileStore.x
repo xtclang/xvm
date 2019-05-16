@@ -17,8 +17,6 @@ class OSFileStore
         this.readOnly = readOnly;
         }
 
-    private OSStorage storage;
-
     @Override
     public/private Boolean readOnly;
 
@@ -32,19 +30,19 @@ class OSFileStore
     @Override
     conditional Directory|File find(Path path)
         {
-        return storage.find(path.to<String>());
+        return storage.find(this, path.to<String>());
         }
 
     @Override
     Directory dirFor(Path path)
         {
-        TODO
+        return storage.dirFor(this, path.to<String>());
         }
 
     @Override
     File fileFor(Path path)
         {
-        TODO
+        return storage.fileFor(this, path.to<String>());
         }
 
     @Override
@@ -90,4 +88,8 @@ class OSFileStore
 
     @Override
     @RO Int bytesFree;
+
+    // ----- internal ------------------------------------------------------------------------------
+
+    OSStorage storage;
     }

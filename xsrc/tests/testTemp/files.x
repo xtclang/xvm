@@ -1,6 +1,7 @@
 module TestFiles.xqiz.it
     {
     import X.fs.Directory;
+    import X.fs.File;
     import X.fs.Path;
     import X.fs.FileStore;
 
@@ -65,11 +66,21 @@ module TestFiles.xqiz.it
         console.println("tmpDir=" + tmpDir + " accessed " + tmpDir.accessed);
 
         console.println(curDir.name + " content: ");
-
-        Iterator<String> names = curDir.names();
-        while (String name : names.next())
+        for (String name : curDir.names())
             {
-            console.println("    " + name);
+            if (File|Directory node : curDir.find(name))
+                {
+                console.print(name);
+
+                if (node.is(File))
+                    {
+                    console.println("\t- file " + node.size);
+                    }
+                else
+                    {
+                    console.println("\t- dir");
+                    }
+                }
             }
         }
     }
