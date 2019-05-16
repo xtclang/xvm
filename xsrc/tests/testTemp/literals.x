@@ -10,6 +10,8 @@ module TestLiterals.xqiz.it
 
         testVersions();
         testIncludes();
+        testMultiline();
+        testMultilineTemplate();
         }
 
     void testVersions()
@@ -59,5 +61,59 @@ module TestLiterals.xqiz.it
 
         String s = ./literals.x;
         console.println($"./literals.x={s}");
+        }
+
+    void testMultiline()
+        {
+        console.println("\n** testMultiline()");
+
+        String s = `|<%@ taglib uri="/WEB-INF/jspwiki.tld" prefix="wiki" %>
+                    |<%@ taglib uri="http://stripes.sourceforge.net/stripes.tld" prefix="stripes" %>
+                    |<stripes:useActionBean binding="/View.action" />
+                    |<wiki:Include page="ViewTemplate.jsp" />
+                    |String myString = "This is my string\n" +
+                    |        " which I want to be \n" +
+                    |        "on multiple lines.";
+                    ||s = """ this is a very
+                    |        long string if I had the
+                    |        energy to type more and more ..."""
+                    |`string text`
+                    |
+                    |`string text line 1
+                    | string text line 2`
+                    |
+                    |`string text ${expression} string text`
+                    |
+                    |tag `string text ${expression} string text`
+                    |//const char* p = "\xfff"; // error: hex escape sequence out of range
+                    |const char* p = "\xff""f"; // OK: the literal is const char[3] holding {'\xff','f','\0'}
+                  ; // semi-colon is the end of the declaration statement
+        console.println($"s={s}");
+        }
+
+    void testMultilineTemplate()
+        {
+        console.println("\n** testMultiline()");
+
+        const Person(String firstname, String lastname);
+        Person person = new Person("Bob", "Smith");
+
+        String s = $|# TOML doc
+                    |[name]
+                    |first = "{person.firstname}"
+                    |last = "{person.lastname}"
+                    ;
+
+        console.println($"\nTOML=\n{s}");
+
+        s = $|\{
+             |person: \{
+             |  "first": "{person.firstname}"
+             |  "last": "{person.lastname}"
+             |  }
+             |}
+             ;
+
+        console.println($"\nJSON=\n{s}");
         }
     }

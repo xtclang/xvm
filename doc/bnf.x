@@ -783,21 +783,22 @@ TodoFinish
     NoWhitespace "(" Expression ")"
 
 Literal
-    IntLiteral                  # defined in language spec
-    FPDecimalLiteral            # defined in language spec
-    FPBinaryLiteral             # defined in language spec
-    CharLiteral                 # defined in language spec
+    IntLiteral                                                      # defined in language spec
+    FPDecimalLiteral                                                # defined in language spec
+    FPBinaryLiteral                                                 # defined in language spec
+    CharLiteral                                                     # defined in language spec
     StringLiteral
-    BinaryLiteral
+    BinaryLiteral                                                   # TODO
     TupleLiteral
     ListLiteral
     MapLiteral
     VersionLiteral
-    DateLiteral
-    TimeLiteral
-    DateTimeLiteral
-    TimeZoneLiteral
-    DurationLiteral
+    DateLiteral                                                     # TODO
+    TimeLiteral                                                     # TODO
+    DateTimeLiteral                                                 # TODO
+    TimeZoneLiteral                                                 # TODO
+    DurationLiteral                                                 # TODO
+    FileStoreLiteral                                                # TODO
 
 StringLiteral
     "$"-opt NoWhitespace '"' CharacterString-opt '"'
@@ -822,17 +823,10 @@ FreeformChars
 FreeformChar
     InputCharacter except LineTerminator
 
-# The non-templatized "Path" form specifies a file to include as-is (as binary data)
-# All other forms are textual and must contain only nibbles and whitespace (no '$' allowed)
 BinaryLiteral
-    "Byte[]:" StringLiteral
-
-Nibbles
-    Nibble
-    Nibbles Nibble
-
-Nibble: one of ...
-    "0" "1" "2" "3" "4" "5" "6" "7" "8" "9" "A" "a" "B" "b" "C" "c" "D" "d" "E" "e" "F" "f"
+    "#" NoWhitespace Hexits                                     # "Hexits" defined in language spec
+    "#|" FreeformLiteral                                        # containing only Hexits and whitespace
+    "#" NoWhitespace Path                                       # file to include as binary data
 
 TupleLiteral
     "(" ExpressionList "," Expression ")"                       # compile/runtime type is Tuple
@@ -840,11 +834,11 @@ TupleLiteral
 
 CollectionLiteral
     "[" ExpressionList-opt "]"                                  # compile/runtime type is Array
-    TypeExpression ":[" ExpressionList-opt "]"                  # type must be a collection
+    TypeExpression ":[" ExpressionList-opt "]"                  # type must be Collection, Sequence, or List
 
 MapLiteral
     "[" Entries-opt "]"                                         # compile/runtime type is Map
-    TypeExpression ":[" Entries-opt "]"                         # type must be a Map or Entry
+    TypeExpression ":[" Entries-opt "]"                         # type must be Map
 
 Entries
     Entry
@@ -930,28 +924,30 @@ MinutesDuration
 SecondsDuration
     DigitsNoUnderscores "S"                                                 # NoWhitespace
 
-# Paths are not intended to support all possible file names -- just the ones likely to actually
-# occur in the real world; as such, names in a FileLiteral are not permitted to end with a dot,
-# to contain 2 dots in a row, etc.
-Path
-    "/" NoWhitespace PathRemainder
-    "./" NoWhitespace PathRemainder
-    "../" NoWhitespace PathRemainder
+FileStoreLiteral
+    Path NoWhitespace "/"
 
-PathRemainder
-    PathName
-    PathElements NoWhitespace "/" NoWhitespace PathName
+# Dir and File paths are not intended to support all possible directory and file names -- just the
+# ones likely to actually occur in the real world; names in a FileLiteral are NOT permitted to end
+# with a dot, contain 2 dots in a row, contain spaces, etc.
+File
+    Dir NoWhitespace PathName
 
-PathElements
-    PathElement
-    PathElements NoWhitespace "/" NoWhitespace PathElement
+Dir
+    "/" NoWhitespace DirElements-opt
+    "./" NoWhitespace DirElements-opt
+    "../" NoWhitespace DirElements-opt
 
-PathElement
-    ".."
-    PathName
+DirElements
+    DirElement
+    DirElements NoWhitespace DirElement
+
+DirElement
+    "../"
+    PathName NoWhitespace "/"
 
 PathName
-    "."-opt NoWhitespace PathNameParts      # allows UNIX-style hidden files, e.g. ".gitignore"
+    "."-opt NoWhitespace PathNameParts          # allows UNIX-style hidden files, e.g. ".gitignore"
 
 PathNameParts
     PathNamePart
@@ -965,7 +961,7 @@ IdentifierTrails
     IdentifierTrails IdentifierTrail
 
 IdentifierTrail
-    # defined by the Ecstasy spec as Unicdoe categories Lu Ll Lt Lm Lo Mn Mc Me Nd Nl No Sc plus U+005F
+    # defined by the Ecstasy spec as Unicode categories Lu Ll Lt Lm Lo Mn Mc Me Nd Nl No Sc plus U+005F
 
 #
 # types
