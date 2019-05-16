@@ -9,10 +9,13 @@ module TestLiterals.xqiz.it
         console.println("*** literal tests ***\n");
 
         testVersions();
+        testIncludes();
         }
 
     void testVersions()
         {
+        console.println("\n** test Versions()");
+
         Version version = new Version(null, 1);
         console.println("version=" + version);
 
@@ -48,5 +51,13 @@ module TestLiterals.xqiz.it
                 + new Version("1.2-beta3").stepsTo(new Version("1.2-beta")));
         console.println("steps from 1.2-beta3 to 1.2-beta5="
                 + new Version("1.2-beta3").stepsTo(new Version("1.2-beta5")));
+        }
+
+    void testIncludes()
+        {
+        console.println("\n** testIncludes()");
+
+        String s = ./literals.x;
+        console.println($"./literals.x={s}");
         }
     }

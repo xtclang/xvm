@@ -7,7 +7,6 @@ module TestMisc.xqiz.it
         {
         console.println("hello world!");
 
-        testIncludes();
         testBools();
         testInts();
         testIsA();
@@ -41,14 +40,6 @@ module TestMisc.xqiz.it
         testConstants();
         testImport();
         testChild();
-        }
-
-    void testIncludes()
-        {
-        console.println("\n** testIncludes()");
-
-        String s = ./misc.x;
-        console.println($"./misc.x={s}");
         }
 
     void testInts()
