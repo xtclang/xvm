@@ -346,9 +346,15 @@ public class xConst
 
         public int doNext(Frame frameCaller)
             {
+            ClassComposition clz = (ClassComposition) hValue1.getComposition();
             while (iterFields.hasNext())
                 {
                 String sProp = iterFields.next();
+
+                if (!clz.isRegular(sProp))
+                    {
+                    continue;
+                    }
 
                 ObjectHandle h1 = hValue1.getField(sProp);
                 ObjectHandle h2 = hValue2.getField(sProp);
@@ -420,9 +426,15 @@ public class xConst
 
         public int doNext(Frame frameCaller)
             {
+            ClassComposition clz = (ClassComposition) hValue1.getComposition();
             while (iterFields.hasNext())
                 {
                 String sProp = iterFields.next();
+
+                if (!clz.isRegular(sProp))
+                    {
+                    continue;
+                    }
 
                 ObjectHandle h1 = hValue1.getField(sProp);
                 ObjectHandle h2 = hValue2.getField(sProp);
@@ -497,9 +509,15 @@ public class xConst
 
         protected int doNext(Frame frameCaller)
             {
+            ClassComposition clz = (ClassComposition) hConst.getComposition();
             while (iterFields.hasNext())
                 {
                 String sProp = iterFields.next();
+
+                if (!clz.isRegular(sProp))
+                    {
+                    continue;
+                    }
 
                 ObjectHandle hProp = hConst.getField(sProp);
 
@@ -575,9 +593,15 @@ public class xConst
 
         protected int doNext(Frame frameCaller)
             {
+            ClassComposition clz = (ClassComposition) hConst.getComposition();
             while (iterFields.hasNext())
                 {
                 String sProp = iterFields.next();
+
+                if (!clz.isRegular(sProp))
+                    {
+                    continue;
+                    }
 
                 ObjectHandle hProp = hConst.getField(sProp);
                 if (hProp == null)

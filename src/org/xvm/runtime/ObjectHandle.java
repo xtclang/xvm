@@ -2,13 +2,13 @@ package org.xvm.runtime;
 
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Constants;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -239,6 +239,11 @@ public abstract class ObjectHandle
             m_mapFields = clazz.initializeStructure();
             }
 
+        public Map<Object, ObjectHandle> getFields()
+            {
+            return m_mapFields == null ? Collections.EMPTY_MAP : m_mapFields;
+            }
+
         public boolean containsField(PropertyConstant idProp)
             {
             return m_mapFields != null && m_mapFields.containsKey(idProp.getNestedIdentity());
@@ -296,22 +301,6 @@ public abstract class ObjectHandle
                     }
                 }
             return hClone;
-            }
-
-        @Override
-        public void makeImmutable()
-            {
-            if (isMutable())
-                {
-                if (m_mapFields != null)
-                    {
-                    for (ObjectHandle hValue : m_mapFields.values())
-                        {
-                        hValue.makeImmutable();
-                        }
-                    }
-                super.makeImmutable();
-                }
             }
 
         @Override

@@ -587,10 +587,11 @@ public class xFunction
             {
             ServiceHandle hService = (ServiceHandle) hTarget;
 
-            // native method on the service means "execute on the caller's thread"
             if (frame.f_context == hService.m_context)
                 {
-                return super.call1Impl(frame, hTarget, ahVar, iReturn);
+                return f_function != null && f_function.isNative()
+                    ? hService.getTemplate().invokeNativeN(frame, f_function, hTarget, ahVar, iReturn)
+                    : super.call1Impl(frame, hTarget, ahVar, iReturn);
                 }
 
             if (!validateImmutable(ahVar))
@@ -612,10 +613,11 @@ public class xFunction
             {
             ServiceHandle hService = (ServiceHandle) hTarget;
 
-            // native method on the service means "execute on the caller's thread"
             if (frame.f_context == hService.m_context)
                 {
-                return super.callTImpl(frame, hTarget, ahVar, iReturn);
+                return f_function != null && f_function.isNative()
+                    ? hService.getTemplate().invokeNativeT(frame, f_function, hTarget, ahVar, iReturn)
+                    : super.callTImpl(frame, hTarget, ahVar, iReturn);
                 }
 
             if (!validateImmutable(ahVar))
@@ -635,19 +637,6 @@ public class xFunction
             return assignResult(frame, iReturn, cfResult);
             }
 
-        private int assignResult(Frame frame, int iReturn, CompletableFuture<ObjectHandle> cfResult)
-            {
-            if (iReturn >= 0)
-                {
-                return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult), true);
-                }
-
-            // the return value is either a A_LOCAL or a local property;
-            // in either case there is no "VarInfo" to mark as "waiting", so we need to create
-            // a pseudo frame to deal with the wait
-            return frame.call(Utils.createWaitFrame(frame, cfResult, iReturn));
-            }
-
         @Override
         protected int callNImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
             {
@@ -655,7 +644,9 @@ public class xFunction
 
             if (frame.f_context == hService.m_context)
                 {
-                return super.callNImpl(frame, hTarget, ahVar, aiReturn);
+                return f_function != null && f_function.isNative()
+                    ? hService.getTemplate().invokeNativeNN(frame, f_function, hTarget, ahVar, aiReturn)
+                    : super.callNImpl(frame, hTarget, ahVar, aiReturn);
                 }
 
             if (!validateImmutable(ahVar))
@@ -677,11 +668,24 @@ public class xFunction
             if (cReturns == 1)
                 {
                 CompletableFuture<ObjectHandle> cfReturn =
-                        cfResult.thenApply(ahResult -> ahResult[0]);
+                    cfResult.thenApply(ahResult -> ahResult[0]);
                 return assignResult(frame, aiReturn[0], cfReturn);
                 }
 
             return frame.call(Utils.createWaitFrame(frame, cfResult, aiReturn));
+            }
+
+        private int assignResult(Frame frame, int iReturn, CompletableFuture<ObjectHandle> cfResult)
+            {
+            if (iReturn >= 0)
+                {
+                return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult), true);
+                }
+
+            // the return value is either a A_LOCAL or a local property;
+            // in either case there is no "VarInfo" to mark as "waiting", so we need to create
+            // a pseudo frame to deal with the wait
+            return frame.call(Utils.createWaitFrame(frame, cfResult, iReturn));
             }
         }
 

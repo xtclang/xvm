@@ -1,7 +1,7 @@
 package org.xvm.runtime;
 
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -149,6 +149,12 @@ public class PropertyComposition
         }
 
     @Override
+    public boolean isLazy(Object nid)
+        {
+        return f_clzRef.isLazy(nid);
+        }
+
+    @Override
     public boolean isAllowedUnassigned(Object nid)
         {
         return f_clzRef.isAllowedUnassigned(nid);
@@ -232,7 +238,7 @@ public class PropertyComposition
         }
 
     @Override
-    public Set<String> getFieldNames()
+    public List<String> getFieldNames()
         {
         throw new UnsupportedOperationException();
         }
@@ -255,7 +261,19 @@ public class PropertyComposition
         return "PropertyComposition: " + f_clzParent + "." + f_infoProp.getIdentity().getValueString();
         }
 
-    // ----- data fields
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * @return true if the custom property this class represents is LazyVar annotated.
+     */
+    public boolean isLazy()
+        {
+        return f_infoProp.isLazy();
+        }
+
+
+    // ----- data fields ---------------------------------------------------------------------------
 
     private final ClassComposition f_clzParent;
 
