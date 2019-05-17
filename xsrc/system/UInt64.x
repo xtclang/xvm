@@ -308,21 +308,20 @@ const UInt64
     @Override
     void appendTo(Appender<Char> appender)
         {
-        if (this == 0)
+        if (sign == Zero)
             {
             appender.add('0');
             }
         else
             {
             (UInt64 left, UInt64 digit) = this /% 10;
-            if (left != 0)
+            if (left.sign != Zero)
                 {
                 left.appendTo(appender);
                 }
             appender.add(DIGITS[digit]);
             }
         }
-
 
     // maxvalue = 18_446_744_073_709_551_615 (20 digits)
     static private UInt64[] sizeArray =

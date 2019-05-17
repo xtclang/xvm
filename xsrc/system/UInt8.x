@@ -298,4 +298,33 @@ const UInt8
 
         return result;
         }
+
+    @Override
+    Int estimateStringLength()
+        {
+        return calculateStringSize(this, sizeArray);
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        if (sign == Zero)
+            {
+            appender.add('0');
+            }
+        else
+            {
+            (UInt8 left, UInt8 digit) = this /% 10;
+            if (left.sign != Zero)
+                {
+                left.appendTo(appender);
+                }
+            appender.add(DIGITS[digit]);
+            }
+        }
+
+    static private UInt8[] sizeArray =
+         [
+         9, 99, 255
+         ];
     }

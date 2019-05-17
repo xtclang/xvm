@@ -401,6 +401,23 @@ const IntNumber
         return new Array<Boolean>(bits.size, i -> bits[i] == 1);
         }
 
+    // ----- Stringable ----------------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        return magnitude.estimateStringLength() + (sign == Negative ? 1 : 0);
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        if (sign == Negative)
+            {
+            appender.add('-');
+            }
+        magnitude.appendTo(appender);
+        }
 
     // ----- Stringable support --------------------------------------------------------------------
 

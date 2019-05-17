@@ -315,22 +315,4 @@ const Int128
 
         return result;
         }
-
-    // ----- Stringable ----------------------------------------------------------------------------
-
-    @Override
-    Int estimateStringLength()
-        {
-        return magnitude.estimateStringLength() + (this < 0 ? 1 : 0);
-        }
-
-    @Override
-    void appendTo(Appender<Char> appender)
-        {
-        if (this < 0)
-            {
-            appender.add('-');
-            }
-        magnitude.appendTo(appender);
-        }
     }

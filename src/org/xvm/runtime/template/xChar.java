@@ -16,7 +16,7 @@ import org.xvm.runtime.TemplateRegistry;
 
 
 /**
- * TODO:
+ * Native Char implementation.
  */
 public class xChar
         extends xConst
@@ -30,14 +30,20 @@ public class xChar
         if (fInstance)
             {
             INSTANCE = this;
+            }
+        }
 
-            if (cache[0] == null) // REVIEW GG
+    @Override
+    public void initDeclared()
+        {
+        super.initDeclared();
+
+        if (cache[0] == null)
+            {
+            ClassComposition clz = getCanonicalClass();
+            for (int i = 0; i < cache.length; ++i)
                 {
-                ClassComposition clz = getCanonicalClass();
-                for (int i = 0; i < cache.length; ++i)
-                    {
-                    cache[i] = new JavaLong(clz, i);
-                    }
+                cache[i] = new JavaLong(clz, i);
                 }
             }
         }
@@ -59,12 +65,6 @@ public class xChar
             }
 
         return super.createConstHandle(frame, constant);
-        }
-
-    @Override
-    public void initDeclared()
-        {
-        super.initDeclared();
         }
 
     @Override

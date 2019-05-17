@@ -63,6 +63,7 @@ public class xArray
         registerNative(new xCharArray(f_templates, f_struct, true));
         registerNative(new xBooleanArray(f_templates, f_struct, true));
         registerNative(new xBitArray(f_templates, f_struct, true));
+        registerNative(new xByteArray(f_templates, f_struct, true));
 
         markNativeProperty("size");
         markNativeProperty("mutability");
@@ -163,6 +164,10 @@ public class xArray
             if (typeParam.equals(pool.typeInt()))
                 {
                 return xIntArray.INSTANCE;
+                }
+            if (typeParam.equals(pool.typeByte()))
+                {
+                return xByteArray.INSTANCE;
                 }
             if (typeParam.equals(pool.typeChar()))
                 {

@@ -327,7 +327,6 @@ const UInt128
             }
         }
 
-
     // maxvalue = 340_282_366_920_938_463_463_374_607_431_768_211_455 (39 digits)
     static private UInt128[] sizeArray =
          [

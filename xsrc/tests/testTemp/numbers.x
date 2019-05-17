@@ -8,6 +8,7 @@ module TestNumbers.xqiz.it
     void run()
         {
         testUInt();
+        testByte();
         testInt128();
         testUInt128();
         }
@@ -27,6 +28,23 @@ module TestNumbers.xqiz.it
         UInt d3 = n2 / 1000;
         console.println("d3=" + d3);
         console.println("n3=" + (d3*1000 + n2 % 1000));
+        }
+
+    void testByte()
+        {
+        console.println("\n** testByte()");
+
+        Byte n1 = 42;
+        console.println("n1=" + n1);
+
+        Byte n2 = 0xFF;
+        console.println("n2=" + n2);
+        console.println("-1=" + (--n2));
+        console.println("+1=" + (++n2));
+
+        Byte d3 = n2 / 10;
+        console.println("d3=" + d3);
+        console.println("n3=" + (d3*10 + n2 % 10));
         }
 
     void testInt128()
