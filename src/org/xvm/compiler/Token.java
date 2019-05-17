@@ -6,6 +6,7 @@ import java.util.Map;
 
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.appendChar;
@@ -321,8 +322,11 @@ public class Token
 
             case LIT_INT:
             case LIT_DEC:
-            case LIT_BIN:
                 sb.append(m_oValue);
+                break;
+
+            case LIT_BIN:
+                sb.append(Handy.byteArrayToHexString((byte[]) m_oValue));
                 break;
 
             case IDENTIFIER:
@@ -376,6 +380,7 @@ public class Token
         ELLIPSIS     ("..."            ),
         DIR_CUR      ("./"             ),
         DIR_PARENT   ("../"            ),
+        BIN_FILE     ("#"              ),
         AT           ("@"              ),
         COND         ("?"              ),
         L_PAREN      ("("              ),
@@ -504,6 +509,7 @@ public class Token
         ENC_COMMENT  (null             ),
         LIT_CHAR     (null             ),
         LIT_STRING   (null             ),
+        LIT_BINSTR   (null             ),
         LIT_INT      (null             ),
         LIT_DEC      (null             ),
         LIT_BIN      (null             ),

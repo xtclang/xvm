@@ -808,6 +808,9 @@ public abstract class Constant
         Map,
         Interval,
         Any,
+        FileStore,
+        Dir,
+        File,
 
         /*
          * Structural identifiers.
