@@ -38,13 +38,10 @@ public class xChar
         {
         super.initDeclared();
 
-        if (cache[0] == null)
+        ClassComposition clz = getCanonicalClass();
+        for (int i = 0; i < cache.length; ++i)
             {
-            ClassComposition clz = getCanonicalClass();
-            for (int i = 0; i < cache.length; ++i)
-                {
-                cache[i] = new JavaLong(clz, i);
-                }
+            cache[i] = new JavaLong(clz, i);
             }
         }
 

@@ -8,8 +8,8 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.UInt8Constant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
 
@@ -33,6 +33,18 @@ public class xUInt8
         }
 
     @Override
+    public void initDeclared()
+        {
+        super.initDeclared();
+
+        ClassComposition clz = getCanonicalClass();
+        for (int i = 0; i < cache.length; ++i)
+            {
+            cache[i] = new JavaLong(clz, i);
+            }
+        }
+
+    @Override
     protected xConstrainedInteger getComplimentaryTemplate()
         {
         return xInt8.INSTANCE;
@@ -43,19 +55,25 @@ public class xUInt8
         {
         if (constant instanceof UInt8Constant)
             {
-            frame.pushStack(new ObjectHandle.JavaLong(getCanonicalClass(),
-                    (((UInt8Constant) constant).getValue().longValue())));
+            frame.pushStack(
+                makeHandle(((UInt8Constant) constant).getValue().longValue()));
             return Op.R_NEXT;
             }
 
         return super.createConstHandle(frame, constant);
         }
 
-    public static JavaLong makeHandle(long chValue)
+    @Override
+    public JavaLong makeJavaLong(long lValue)
         {
-        assert chValue >= -128 & chValue <= 127;
-
-        // TODO: cache?
-        return new ObjectHandle.JavaLong(INSTANCE.getCanonicalClass(), chValue);
+        return makeHandle(lValue & 0xFFL);
         }
+
+    public static JavaLong makeHandle(long lValue)
+        {
+        assert lValue >= 0 & lValue <= 255;
+        return cache[(int) lValue];
+        }
+
+    private static final JavaLong[] cache = new JavaLong[256];
     }

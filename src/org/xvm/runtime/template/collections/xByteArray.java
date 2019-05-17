@@ -105,7 +105,9 @@ public class xByteArray
             {
             return frame.raiseException(xException.outOfRange(lIndex, hArray.m_cSize));
             }
-        return frame.assignValue(iReturn, xUInt8.makeHandle(hArray.m_abValue[(int) lIndex]));
+
+        byte b = hArray.m_abValue[(int) lIndex];
+        return frame.assignValue(iReturn, xUInt8.makeHandle(((long) b) & 0xFF));
         }
 
     @Override
