@@ -79,6 +79,9 @@ public class LiteralExpression
             case LIT_STRING:
                 return pool.typeString();
 
+            case LIT_BINSTR:
+                return pool.typeBinary();
+
             case LIT_INT:
                 return pool.typeIntLiteral();
 
@@ -173,6 +176,9 @@ public class LiteralExpression
             case LIT_STRING:
                 return pool.ensureStringConstant((String) literal.getValue());
 
+            case LIT_BINSTR:
+                return pool.ensureByteStringConstant((byte[]) literal.getValue());
+
             case LIT_INT:
                 return pool.ensureLiteralConstant(Format.IntLiteral, literal.getString(getSource()), literal.getValue());
 
@@ -203,6 +209,9 @@ public class LiteralExpression
 
             case LIT_STRING:
                  return Handy.quotedString(String.valueOf(literal.getValue()));
+
+            case LIT_BINSTR:
+                return '#' + Handy.byteArrayToHexString((byte[]) literal.getValue()).substring(2);
 
             case TODO:
                 return "TODO(" + Handy.quotedString(String.valueOf(literal.getValue())) + ')';

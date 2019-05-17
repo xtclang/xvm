@@ -192,6 +192,7 @@ public class Lexer
                 return new Token(lInitPos, source.getPosition(), Id.SEMICOLON);
             case ',':
                 return new Token(lInitPos, source.getPosition(), Id.COMMA);
+
             case '.':
                 if (source.hasNext())
                     {
@@ -242,90 +243,30 @@ public class Lexer
                 return new Token(lInitPos, source.getPosition(), Id.IDENTIFIER, "$");
 
             case '#':
-                // TODO
-//                {
-//                if (isHexit(chInit))
-//                    {
-//                    StringBuilder sb = new StringBuilder();
-//                    char ch = chInit;
-//                    while (true)
-//                        {
-//                        sb.append(ch);
-//                        if (source.hasNext())
-//                            {
-//                            ch = source.next();
-//                            if (!isHexit(ch))
-//                                {
-//                                source.rewind();
-//                                break;
-//                                }
-//                            }
-//                        else
-//                            {
-//                            break;
-//                            }
-//                        }
-//                    return new Token(lInitPos, source.getPosition(), Id.LIT_STRING, sb.toString());
-//                    }
-//                }
-//            case "Byte[]":
-//            case "UInt8[]":
-//            case "Array<Byte>":
-//            case "Array<UInt8>":
-//                {
-//                // TODO path support
-//
-//                // special note: at this point, the current token (already parsed) is the opening
-//                // curly bracket, so the lexer has already eaten any whitespace after that, and is
-//                // ready to eat the hex contents of the literal itself; unfortunately, this means
-//                // that we know the explicit details about how both the current/next token handling
-//                // works on the parser, and to some extent how the lexer works as well, but it is
-//                // context-sensitive parsing in the first place, which is already the bane of
-//                // parsing purists everywhere
-//                m_lexer.expectHex();
-//                long lPosStart = m_source.getPosition();
-//
-//                expect(Id.L_CURLY);
-//                StringBuilder sb = new StringBuilder();
-//                Token literal;
-//                while ((literal = match(Id.LIT_STRING)) != null)
-//                    {
-//                    for (char ch : ((String) literal.getValue()).toCharArray())
-//                        {
-//                        if (isHexit(ch))
-//                            {
-//                            sb.append(ch);
-//                            }
-//                        else if (!Lexer.isWhitespace(ch))
-//                            {
-//                            log(Severity.ERROR, BAD_HEX_LITERAL, literal.getStartPosition(),
-//                                    literal.getEndPosition(), Handy.quotedChar(ch));
-//                            }
-//                        }
-//                    }
-//                long lPosEnd = m_source.getPosition();
-//                expect(Id.R_CURLY);
-//
-//                int    cch  = sb.length();
-//                int    ofch = 0;
-//                int    cb   = (cch + 1) / 2;
-//                int    ofb  = 0;
-//                byte[] ab   = new byte[cb];
-//                if ((cch & 0x1) != 0)
-//                    {
-//                    // odd number of characters means that the first nibble is a pre-pended zero
-//                    ab[ofb++] = (byte) hexitValue(sb.charAt(ofch++));
-//                    }
-//                while (ofb < cb)
-//                    {
-//                    ab[ofb++] = (byte) ((hexitValue(sb.charAt(ofch++)) << 4)
-//                                       + hexitValue(sb.charAt(ofch++)));
-//                    }
-//
-//                return new BinaryExpression(ab, lPosStart, lPosEnd, type.getStartPosition(),
-//                        getLastMatch().getEndPosition());
-//                }
+                if (source.hasNext())
+                    {
+                    switch (nextChar())
+                        {
+                        case '.':
+                        case '/':
+                            // it is a file name
+                            source.rewind();
+                            return new Token(lInitPos, source.getPosition(), Id.BIN_FILE);
 
+                        case '|':
+                            return eatBinaryLiteral(lInitPos, true);
+
+                        default:
+                            // fall through (it will be an error)
+                        case '0': case '1': case '2': case '3': case '4':
+                        case '5': case '6': case '7': case '8': case '9':
+                        case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
+                        case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
+                            source.rewind();
+                            // fall through
+                        }
+                    }
+                return eatBinaryLiteral(lInitPos, false);
 
             case '@':
                 return new Token(lInitPos, source.getPosition(), Id.AT);
@@ -1055,7 +996,7 @@ public class Lexer
         return new Token(lPosStart, source.getPosition(), Id.LIT_STRING, sb.toString());
         }
 
-    boolean isMultilineContinued()
+    protected boolean isMultilineContinued()
         {
         long   lPrev  = getPosition();
         Source source = m_source;
@@ -1082,7 +1023,7 @@ public class Lexer
      *
      * @return the tokens found between the opening and closing curly braces
      */
-    Token[] eatTemplateExpression()
+    protected Token[] eatTemplateExpression()
         {
         expect('{');
         int              cDepth = 1;
@@ -1105,6 +1046,88 @@ public class Lexer
                 }
             tokens.add(token);
             }
+        }
+
+    /**
+     * Parse the binary literal value.
+     *
+     * @param lInitPos    the location of the "#" at the start of the binary literal value
+     * @param fMultiline  true iff the format is a multiline format
+     *
+     * @return the binary literal
+     */
+    protected Token eatBinaryLiteral(long lInitPos, boolean fMultiline)
+        {
+        StringBuilder sb     = new StringBuilder();
+        Source        source = m_source;
+        boolean       fFirst = true;
+        while (source.hasNext())
+            {
+            char ch = source.next();
+            if (isHexit(ch))
+                {
+                sb.append(ch);
+                }
+            else if (ch == '_')
+                {
+                if (fFirst)
+                    {
+                    // it's an error to start with an underscore
+                    log(Severity.ERROR, ILLEGAL_HEX, new Object[] {String.valueOf(ch)},
+                            lInitPos, source.getPosition());
+                    }
+                // ignore the _ (it's used for spacing within the literal)
+                }
+            else if (!fMultiline)
+                {
+                // the first non-hexit / non-underscore character indicates an end-of-value
+                source.rewind();
+                break;
+                }
+            else if (isWhitespace(ch))
+                {
+                // ignore whitespace, unless it's newline
+                if ((ch == '\r' || ch == '\n') && !isMultilineContinued())
+                    {
+                    source.rewind();
+                    break;
+                    }
+                }
+            else
+                {
+                // error
+                log(Severity.ERROR, ILLEGAL_HEX, new Object[] {String.valueOf(ch)},
+                        lInitPos, source.getPosition());
+                source.rewind();
+                break;
+                }
+
+            fFirst = false;
+            }
+
+        return new Token(lInitPos, source.getPosition(), Id.LIT_BINSTR,
+                toBinary(sb.toString().toCharArray()));
+        }
+
+    protected byte[] toBinary(char[] ach)
+        {
+        int    cch  = ach.length;
+        int    ofch = 0;
+        int    cb   = (cch + 1) / 2;
+        int    ofb  = 0;
+        byte[] ab   = new byte[cb];
+        if ((cch & 0x1) != 0)
+            {
+            // odd number of characters means that the first nibble is a pre-pended zero
+            ab[ofb++] = (byte) hexitValue(ach[ofch++]);
+            }
+        while (ofb < cb)
+            {
+            ab[ofb++] = (byte) ( (hexitValue(ach[ofch++]) << 4)
+                                + hexitValue(ach[ofch++])       );
+            }
+
+        return ab;
         }
 
     /**
@@ -2018,9 +2041,9 @@ public class Lexer
      */
     public static final String STRING_BAD_ESC       = "LEXER-09";
     /**
-     * An illegal freeform literal.
+     * An illegal hex (binary) literal.
      */
-    public static final String FREEFORM_BAD         = "LEXER-10";
+    public static final String ILLEGAL_HEX          = "LEXER-10";
     /**
      * Expected {0}; found {1}.
      */

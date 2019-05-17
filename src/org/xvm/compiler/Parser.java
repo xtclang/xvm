@@ -3435,6 +3435,7 @@ public class Parser
 
             case LIT_CHAR:
             case LIT_STRING:
+            case LIT_BINSTR:
             case LIT_INT:
             case LIT_DEC:
             case LIT_BIN:
@@ -3469,24 +3470,45 @@ public class Parser
                 return new TemplateExpression(listExpr, lStart, lEnd);
                 }
 
+            case BIN_FILE:
             case DIV:
             case DIR_CUR:
             case DIR_PARENT:
                 {
-                long   lStart = peek().getStartPosition();
-                String sFile  = parseFileName();
-                long   lEnd   = peek().getStartPosition();
-                Source source;
+                Token   tokStart = peek();
+                long    lStart   = tokStart.getStartPosition();
+                boolean fBin     = tokStart.getId() == Id.BIN_FILE;
+                if (fBin)
+                    {
+                    assert !tokStart.hasTrailingWhitespace();
+                    next();
+                    }
+
+                String  sFile = parseFileName();
+                long    lEnd  = peek().getStartPosition();
+                Object  oData = null;
                 try
                     {
-                    source = m_source.includeString(sFile);
+                    if (fBin)
+                        {
+                        oData = m_source.includeBinary(sFile);
+                        }
+                    else
+                        {
+                        Source source = m_source.includeString(sFile);
+                        oData = source.toRawString();
+                        }
                     }
-                catch (IOException e)
+                catch (IOException e) {}
+
+                if (oData == null)
                     {
                     log(Severity.ERROR, INVALID_PATH, lStart, lEnd, sFile);
-                    throw new CompilerException(e);
+                    oData = fBin ? new byte[0] : "";
                     }
-                return new LiteralExpression(new Token(lStart, lEnd, Id.LIT_STRING, source.toRawString()));
+
+                return new LiteralExpression(new Token(lStart, lEnd,
+                        fBin ? Id.LIT_BINSTR : Id.LIT_STRING, oData));
                 }
 
             case FUNCTION:

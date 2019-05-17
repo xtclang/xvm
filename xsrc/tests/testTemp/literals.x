@@ -12,6 +12,7 @@ module TestLiterals.xqiz.it
         testIncludes();
         testMultiline();
         testMultilineTemplate();
+        testHex();
         }
 
     void testVersions()
@@ -107,7 +108,7 @@ module TestLiterals.xqiz.it
         console.println($"\nTOML=\n{s}");
 
         s = $|\{
-             |person: \{
+             |"person": \{
              |  "first": "{person.firstname}"
              |  "last": "{person.lastname}"
              |  }
@@ -115,5 +116,23 @@ module TestLiterals.xqiz.it
              ;
 
         console.println($"\nJSON=\n{s}");
+        }
+
+    void testHex()
+        {
+        console.println("\n** testHex()");
+
+        Byte[] bytes = #123_4567_89aB_cDeF;
+        console.println("bytes={bytes}");
+
+        bytes = #|0123456789aBcDeF 0123456789aBcDeF 0123456789aBcDeF 0123456789aBcDeF
+                 |0123456789aBcDeF_0123456789aBcDeF_0123456789aBcDeF_0123456789aBcDeF
+                 |0123456789aBcDeF 0123456789aBcDeF_0123456789aBcDeF_0123456789aBcDeF
+                 ;
+
+        console.println("bytes={bytes}");
+
+        bytes = #/testLiterals.xtc;
+        console.println("bytes={bytes}");
         }
     }
