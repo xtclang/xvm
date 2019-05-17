@@ -123,16 +123,15 @@ module TestLiterals.xqiz.it
         console.println("\n** testHex()");
 
         Byte[] bytes = #123_4567_89aB_cDeF;
-        console.println("bytes={bytes}");
+        console.println($"bytes={bytes}");
 
         bytes = #|0123456789aBcDeF 0123456789aBcDeF 0123456789aBcDeF 0123456789aBcDeF
                  |0123456789aBcDeF_0123456789aBcDeF_0123456789aBcDeF_0123456789aBcDeF
-                 |0123456789aBcDeF 0123456789aBcDeF_0123456789aBcDeF_0123456789aBcDeF
                  ;
-
-        console.println("bytes={bytes}");
+        console.println($"bytes={bytes[0..10]}...{bytes[bytes.size-10..bytes.size-1]}");
 
         bytes = #/testLiterals.xtc;
-        console.println("bytes={bytes}");
+        // console.println($"bytes={bytes[0..10]}..{bytes[bytes.size-10..bytes.size-1]"); TODO CP - infinite loop in lexer?
+        console.println($"bytes={bytes[0..10]}...{bytes[bytes.size-10..bytes.size-1]}");
         }
     }

@@ -4,9 +4,11 @@ package org.xvm.runtime.template.collections;
 import java.util.Arrays;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.UInt8ArrayConstant;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
@@ -49,8 +51,22 @@ public class xByteArray
     @Override
     public TypeConstant getCanonicalType()
         {
-        ConstantPool pool = pool();
-        return pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeByte());
+        return pool().typeByteArray();
+        }
+
+    @Override
+    public int createConstHandle(Frame frame, Constant constant)
+        {
+        if (constant instanceof UInt8ArrayConstant)
+            {
+            UInt8ArrayConstant constBytes = (UInt8ArrayConstant) constant;
+
+            frame.pushStack(makeHandle(constBytes.getValue(), Mutability.Constant));
+
+            return Op.R_NEXT;
+            }
+
+        return super.createConstHandle(frame, constant);
         }
 
     @Override

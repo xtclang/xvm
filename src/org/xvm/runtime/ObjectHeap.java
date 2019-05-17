@@ -170,7 +170,7 @@ public class ObjectHeap
                 return ((ArrayConstant) constValue).getType();
 
             case UInt8Array:
-                throw new UnsupportedOperationException("TODO: " + constValue);
+                return f_poolRoot.typeByteArray();
 
             case Set:
             case MapEntry:
