@@ -32,11 +32,12 @@ public class PropertyInfo
     /**
      * Create a PropertyInfo.
      *
-     * @param body  a PropertyBody
+     * @param body   a PropertyBody
+     * @param nRank  the property's rank
      */
-    public PropertyInfo(PropertyBody body)
+    public PropertyInfo(PropertyBody body, int nRank)
         {
-        this(new PropertyBody[] {body}, body.getType(), body.hasField(), false);
+        this(new PropertyBody[] {body}, body.getType(), body.hasField(), false, nRank);
         }
 
     /**
@@ -48,19 +49,21 @@ public class PropertyInfo
     public PropertyInfo(PropertyInfo that, PropertyBody body)
         {
         this(Handy.appendHead(that.getPropertyBodies(), body),
-            body.getType(), body.hasField(), body.isSetterBlockingSuper());
+            body.getType(), body.hasField(), body.isSetterBlockingSuper(), that.m_nRank);
         }
 
     protected PropertyInfo(
             PropertyBody[] aBody,
             TypeConstant   type,
             boolean        fRequireField,
-            boolean        fSuppressVar)
+            boolean        fSuppressVar,
+            int            nRank)
         {
         m_aBody          = aBody;
         m_type           = type;
         m_fRequireField  = fRequireField;
         m_fSuppressVar   = fSuppressVar;
+        m_nRank          = nRank;
         }
 
     /**
@@ -322,7 +325,7 @@ public class PropertyInfo
                     getName());
             }
 
-        return new PropertyInfo(aResult, typeResult, fRequireField, fSuppressVar);
+        return new PropertyInfo(aResult, typeResult, fRequireField, fSuppressVar, that.m_nRank);
         }
 
     /**
@@ -382,7 +385,7 @@ public class PropertyInfo
                     Effect.BlocksSuper, fRO ? Effect.None : Effect.BlocksSuper, false, false, null, null)
                 : new PropertyBody(struct, Implementation.SansCode, null, getType(), fRO, false, false,
                     Effect.None, Effect.None, !fRO, false, null, null);
-        return layerOn(new PropertyInfo(bodyNew), false, false, errs);
+        return layerOn(new PropertyInfo(bodyNew, m_nRank), false, false, errs);
         }
 
     /**
@@ -454,7 +457,8 @@ public class PropertyInfo
 
         return list.isEmpty()
                 ? null
-                : new PropertyInfo(list.toArray(new PropertyBody[0]), m_type, m_fRequireField, m_fSuppressVar);
+                : new PropertyInfo(list.toArray(new PropertyBody[0]),
+                        m_type, m_fRequireField, m_fSuppressVar, m_nRank);
         }
 
     /**
@@ -482,7 +486,7 @@ public class PropertyInfo
         if (accessVar != null && isVar() && accessVar.isLessAccessibleThan(access))
             {
             // create the Ref-only form of this property
-            return new PropertyInfo(m_aBody, m_type, m_fRequireField, true);
+            return new PropertyInfo(m_aBody, m_type, m_fRequireField, true, m_nRank);
             }
 
         return this;
@@ -495,7 +499,7 @@ public class PropertyInfo
         {
         return hasField()
                 ? this
-                : new PropertyInfo(m_aBody, m_type, true, m_fSuppressVar);
+                : new PropertyInfo(m_aBody, m_type, true, m_fSuppressVar, m_nRank);
         }
 
     /**
@@ -520,7 +524,8 @@ public class PropertyInfo
 
         PropertyBody body = new PropertyBody(getHead().getStructure(), Implementation.Implicit, null,
                 getType(), fRO, fRW, false, Effect.None, Effect.None, hasField(), false, null, null);
-        return new PropertyInfo(new PropertyBody[] {body}, m_type, m_fRequireField, m_fSuppressVar);
+        return new PropertyInfo(new PropertyBody[] {body},
+                m_type, m_fRequireField, m_fSuppressVar, m_nRank);
         }
 
     /**
@@ -1254,6 +1259,14 @@ public class PropertyInfo
         }
 
     /**
+     * @return the current rank
+     */
+    public int getRank()
+        {
+        return m_nRank;
+        }
+
+    /**
      * @return the ConstantPool
      */
     private ConstantPool pool()
@@ -1342,6 +1355,13 @@ public class PropertyInfo
      * treated as a Ref.
      */
     private final boolean m_fSuppressVar;
+
+    /**
+     * The property rank represents a relative order of property's appearance in the containing
+     * class. It's used only to preserve a natural (in the order of introduction) enumeration of
+     * fields by auto-generated code, such as Const.to<String>() and reflection API.
+     */
+    private final int m_nRank;
 
     /**
      * Cached "get" chain.

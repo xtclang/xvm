@@ -2370,11 +2370,13 @@ public abstract class TypeConstant
                 mapContribProps   = new HashMap<>();
                 mapContribMethods = new HashMap<>();
 
-                collectSelfTypeParameters(struct, mapTypeParams, mapContribProps, errs);
+                int nBaseRank = mapProps.size();
+
+                collectSelfTypeParameters(struct, mapTypeParams, mapContribProps, nBaseRank, errs);
 
                 ArrayList<PropertyConstant> listExplode = new ArrayList<>();
-                if (!createMemberInfo(constId, isInterface(constId, struct),
-                        struct, mapTypeParams, mapContribProps, mapContribMethods, listExplode, errs))
+                if (!createMemberInfo(constId, isInterface(constId, struct), struct, mapTypeParams,
+                        mapContribProps, mapContribMethods, listExplode, nBaseRank, errs))
                     {
                     fIncomplete = true;
                     errs        = ErrorListener.BLACKHOLE;
@@ -3230,16 +3232,18 @@ public abstract class TypeConstant
         }
 
     /**
-     * Collect type parameters for the specified class and all its instance parents.
+     * Collect type parameters for "this" class of "this" type and all its instance parents.
      *
      * @param struct         the class structure
      * @param mapTypeParams  the map of type parameters
      * @param mapProps       the properties of the class
+     * @param nBaseRank      the base rank for any properties added by "this" class
      */
     private void collectSelfTypeParameters(
             ClassStructure                      struct,
             Map<Object, ParamInfo>              mapTypeParams,
             Map<PropertyConstant, PropertyInfo> mapProps,
+            int                                 nBaseRank,
             ErrorListener                       errs)
         {
         ConstantPool pool = getConstantPool();
@@ -3278,10 +3282,11 @@ public abstract class TypeConstant
                 PropertyStructure prop = (PropertyStructure) child;
                 if (prop.isGenericTypeParameter())
                     {
-                    PropertyConstant id = prop.getIdentityConstant();
+                    PropertyConstant id    = prop.getIdentityConstant();
+                    int              nRank = nBaseRank + mapProps.size() + 1;
 
                     mapProps.put(id, new PropertyInfo(new PropertyBody(pool, prop,
-                                        mapTypeParams.get(id.getName()))));
+                                        mapTypeParams.get(id.getName())), nRank));
                     }
                 }
             }
@@ -3296,6 +3301,7 @@ public abstract class TypeConstant
      * @param mapTypeParams  the map of type parameters
      * @param mapProps       the properties of the class
      * @param mapMethods     the methods of the class
+     * @param nBaseRank      the base rank for any properties added by "this" class
      * @param errs           the error list to log any errors to
      *
      * @return true iff the processing was able to obtain all of its dependencies
@@ -3308,6 +3314,7 @@ public abstract class TypeConstant
             Map<PropertyConstant, PropertyInfo> mapProps,
             Map<MethodConstant  , MethodInfo>   mapMethods,
             List<PropertyConstant>              listExplode,
+            int                                 nBaseRank,
             ErrorListener                       errs)
         {
         ConstantPool pool      = getConstantPool();
@@ -3344,8 +3351,9 @@ public abstract class TypeConstant
 
             assert !(fRebase && fInterface); // cannot be native and interface at the same time
 
-            PropertyConstant  id   = prop.getIdentityConstant();
-            PropertyInfo      info = createPropertyInfo(prop, constId, fRebase, fInterface, errs);
+            PropertyConstant  id    = prop.getIdentityConstant();
+            int               nRank = nBaseRank + mapProps.size() + 1;
+            PropertyInfo      info  = createPropertyInfo(prop, constId, fRebase, fInterface, nRank, errs);
             mapProps.put(id, info);
 
             if (info.isCustomLogic() || info.isRefAnnotated())
@@ -3365,7 +3373,7 @@ public abstract class TypeConstant
                 PropertyConstant idParam   = pool.ensurePropertyConstant(id, "RefType");
                 Object           nidParam  = idParam.resolveNestedIdentity(pool, this);
                 ParamInfo        param     = new ParamInfo(nidParam, "RefType", pool.typeObject(), info.getType());
-                PropertyInfo     propParam = new PropertyInfo(new PropertyBody(pool, null, param));
+                PropertyInfo     propParam = new PropertyInfo(new PropertyBody(pool, null, param), nRank + 1);
                 mapTypeParams.put(nidParam, param);
                 mapProps.put(idParam, propParam);
                 }
@@ -3381,14 +3389,14 @@ public abstract class TypeConstant
                     if (!method.getIdentityConstant().isLambda())
                         {
                         fComplete &= createMemberInfo(constId, fInterface, method, mapTypeParams,
-                                mapProps, mapMethods, listExplode, errs);
+                                mapProps, mapMethods, listExplode, nBaseRank, errs);
                         }
                     }
                 }
             else if (child instanceof PropertyStructure)
                 {
                 fComplete &= createMemberInfo(constId, fInterface, child, mapTypeParams,
-                        mapProps, mapMethods, listExplode, errs);
+                        mapProps, mapMethods, listExplode, nBaseRank, errs);
                 }
             }
 
@@ -3402,6 +3410,7 @@ public abstract class TypeConstant
      * @param constId     the identity of the containing structure (used only for error messages)
      * @param fNative     true if the type is a native rebase
      * @param fInterface  true if the type is an interface, not a class or mixin (only if not native)
+     * @param nRank       the property rank
      * @param errs        the error list to log any errors to
      *
      * @return a new PropertyInfo for the passed PropertyStructure
@@ -3411,6 +3420,7 @@ public abstract class TypeConstant
             IdentityConstant  constId,
             boolean           fNative,
             boolean           fInterface,
+            int               nRank,
             ErrorListener     errs)
         {
         ConstantPool pool  = getConstantPool();
@@ -3827,7 +3837,7 @@ public abstract class TypeConstant
         return new PropertyInfo(new PropertyBody(prop, impl, null,
                 typeProp, fRO, fRW, cCustomMethods > 0,
                 effectGet, effectSet,  fField, fConstant, prop.getInitialValue(),
-                methodInit == null ? null : methodInit.getIdentityConstant()));
+                methodInit == null ? null : methodInit.getIdentityConstant()), nRank);
         }
 
     private Effect effectOf(boolean fSupers, boolean fBlocks)

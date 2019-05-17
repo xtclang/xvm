@@ -2,7 +2,9 @@ package org.xvm.runtime;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -482,7 +484,16 @@ public class ClassComposition
         TypeInfo     infoStruct = typeStruct.ensureTypeInfo();
 
         Map<Object, TypeComposition> mapFields = new ListMap<>();
-        for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoStruct.getProperties().entrySet())
+
+        Map.Entry<PropertyConstant, PropertyInfo>[] aEntry =
+                infoStruct.getProperties().entrySet().toArray(new Map.Entry[0]);
+
+        if (aEntry.length > 1)
+            {
+            Arrays.sort(aEntry, RANKER);
+            }
+
+        for (Map.Entry<PropertyConstant, PropertyInfo> entry : aEntry)
             {
             PropertyConstant idProp   = entry.getKey();
             PropertyInfo     infoProp = entry.getValue();
@@ -595,4 +606,10 @@ public class ClassComposition
 
     // cached auto-generated structure initializer
     private MethodStructure m_methodInit;
+
+    /**
+     * Rank comparator for new Map.Entry<PropertyConstant, PropertyInfo> objects.
+     */
+    public static Comparator<Map.Entry<PropertyConstant, PropertyInfo>> RANKER =
+        Comparator.comparingInt(e -> e.getValue().getRank());
     }
