@@ -89,19 +89,6 @@ public class Lexer
     // ----- public API --------------------------------------------------------
 
     /**
-     * Turn on a special pass-through mode for binary data encoded as hex characters.
-     *
-     * While in hex mode, each group of contiguous hex characters are return as a literal string
-     * token.
-     *
-     * The lexer exits hex mode as soon as a non-hex, non-whitespace character is encountered.
-     */
-    public void expectHex()
-        {
-        m_fHexMode = true;
-        }
-
-    /**
      * Lexically analyze the source, emitting a stream of tokens to the
      * specified consumer.
      *
@@ -113,7 +100,6 @@ public class Lexer
         while (source.hasNext())
             {
             consumer.accept(next());
-            eatWhitespace();
             }
         }
 
@@ -187,35 +173,6 @@ public class Lexer
         final long   lInitPos = source.getPosition();
         final char   chInit   = nextChar();
 
-        if (m_fHexMode)
-            {
-            if (isHexit(chInit))
-                {
-                StringBuilder sb = new StringBuilder();
-                char ch = chInit;
-                while (true)
-                    {
-                    sb.append(ch);
-                    if (source.hasNext())
-                        {
-                        ch = source.next();
-                        if (!isHexit(ch))
-                            {
-                            source.rewind();
-                            break;
-                            }
-                        }
-                    else
-                        {
-                        break;
-                        }
-                    }
-                return new Token(lInitPos, source.getPosition(), Id.LIT_STRING, sb.toString());
-                }
-
-            m_fHexMode = false;
-            }
-
         switch (chInit)
             {
             case '{':
@@ -276,38 +233,99 @@ public class Lexer
                         case '\"':
                             return eatTemplateLiteral(lInitPos);
 
-                        case '/':
-                            return eatTemplateFileLiteral(lInitPos);
-
-                        case '.':
-                            if (source.hasNext())
-                                {
-                                switch (nextChar())
-                                    {
-                                    case '.':
-                                        if (source.hasNext())
-                                            {
-                                            if (nextChar() == '/')
-                                                {
-                                                return eatTemplateFileLiteral(lInitPos);
-                                                }
-
-                                            source.rewind();
-                                            }
-                                        break;
-
-                                    case '/':
-                                        return eatTemplateFileLiteral(lInitPos);
-                                    }
-
-                                source.rewind();
-                                }
-                            break;
+                        case '|':
+                            return eatMultilineTemplateLiteral(lInitPos);
                         }
 
                     source.rewind();
                     }
                 return new Token(lInitPos, source.getPosition(), Id.IDENTIFIER, "$");
+
+            case '#':
+                // TODO
+//                {
+//                if (isHexit(chInit))
+//                    {
+//                    StringBuilder sb = new StringBuilder();
+//                    char ch = chInit;
+//                    while (true)
+//                        {
+//                        sb.append(ch);
+//                        if (source.hasNext())
+//                            {
+//                            ch = source.next();
+//                            if (!isHexit(ch))
+//                                {
+//                                source.rewind();
+//                                break;
+//                                }
+//                            }
+//                        else
+//                            {
+//                            break;
+//                            }
+//                        }
+//                    return new Token(lInitPos, source.getPosition(), Id.LIT_STRING, sb.toString());
+//                    }
+//                }
+//            case "Byte[]":
+//            case "UInt8[]":
+//            case "Array<Byte>":
+//            case "Array<UInt8>":
+//                {
+//                // TODO path support
+//
+//                // special note: at this point, the current token (already parsed) is the opening
+//                // curly bracket, so the lexer has already eaten any whitespace after that, and is
+//                // ready to eat the hex contents of the literal itself; unfortunately, this means
+//                // that we know the explicit details about how both the current/next token handling
+//                // works on the parser, and to some extent how the lexer works as well, but it is
+//                // context-sensitive parsing in the first place, which is already the bane of
+//                // parsing purists everywhere
+//                m_lexer.expectHex();
+//                long lPosStart = m_source.getPosition();
+//
+//                expect(Id.L_CURLY);
+//                StringBuilder sb = new StringBuilder();
+//                Token literal;
+//                while ((literal = match(Id.LIT_STRING)) != null)
+//                    {
+//                    for (char ch : ((String) literal.getValue()).toCharArray())
+//                        {
+//                        if (isHexit(ch))
+//                            {
+//                            sb.append(ch);
+//                            }
+//                        else if (!Lexer.isWhitespace(ch))
+//                            {
+//                            log(Severity.ERROR, BAD_HEX_LITERAL, literal.getStartPosition(),
+//                                    literal.getEndPosition(), Handy.quotedChar(ch));
+//                            }
+//                        }
+//                    }
+//                long lPosEnd = m_source.getPosition();
+//                expect(Id.R_CURLY);
+//
+//                int    cch  = sb.length();
+//                int    ofch = 0;
+//                int    cb   = (cch + 1) / 2;
+//                int    ofb  = 0;
+//                byte[] ab   = new byte[cb];
+//                if ((cch & 0x1) != 0)
+//                    {
+//                    // odd number of characters means that the first nibble is a pre-pended zero
+//                    ab[ofb++] = (byte) hexitValue(sb.charAt(ofch++));
+//                    }
+//                while (ofb < cb)
+//                    {
+//                    ab[ofb++] = (byte) ((hexitValue(sb.charAt(ofch++)) << 4)
+//                                       + hexitValue(sb.charAt(ofch++)));
+//                    }
+//
+//                return new BinaryExpression(ab, lPosStart, lPosEnd, type.getStartPosition(),
+//                        getLastMatch().getEndPosition());
+//                }
+
 
             case '@':
                 return new Token(lInitPos, source.getPosition(), Id.AT);
@@ -581,16 +599,16 @@ public class Lexer
             case '\"':
                 return eatStringLiteral(lInitPos);
 
-            case '┌':
-            case '┍':
-            case '┎':
-            case '┏':
-            case '╒':
-            case '╓':
-            case '╔':
-            case '╭':
-                source.rewind();
-                return eatFreeformLiteral();
+            case '`':
+                if (source.hasNext())
+                    {
+                    if (nextChar() == '|')
+                        {
+                        return eatMultilineLiteral(lInitPos);
+                        }
+                    source.rewind();
+                    }
+                // fall through
 
             default:
                 if (!isIdentifierStart(chInit))
@@ -783,23 +801,30 @@ public class Lexer
         }
 
     /**
-     * Eat a token that specifies a template stored in a file.
+     * Eat a string literal.
      *
-     * @param lInitPos  the start of the template file literal
-     *
-     * @return the resulting token
+     * @return a string literal as a token
      */
-    protected Token eatTemplateFileLiteral(long lInitPos)
+    protected Token eatStringLiteral(long lInitPos)
         {
-        // TODO
-        return null;
+        return eatStringChars(lInitPos, false, false);
+        }
+
+    /**
+     * Eat a string literal that is in the freeform/multi-line form.
+     *
+     * @return a string literal as a token
+     */
+    protected Token eatMultilineLiteral(long lInitPos)
+        {
+        return eatStringChars(lInitPos, false, true);
         }
 
     /**
      * Eat a template literal. A template literal is a string literal that may contain expressions;
      * for example:
      * <blockquote><code><pre>
-     *   "
+     *   $"x={x}"
      * </pre></code></blockquote>
      *
      * @param lInitPos  the start of the template literal
@@ -808,17 +833,26 @@ public class Lexer
      */
     protected Token eatTemplateLiteral(long lInitPos)
         {
-        return eatStringChars(lInitPos, true);
+        return eatStringChars(lInitPos, true, false);
         }
 
     /**
-     * Eat a string literal.
+     * Eat a template literal that uses the multi-line format. A template literal is a string
+     * literal that may contain expressions; for example:
+     * <blockquote><code><pre>
+     *    $|# TOML doc
+     *     |[name]
+     *     |first = "{person.firstname}"
+     *     |last = "{person.lastname}"
+     * </pre></code></blockquote>
      *
-     * @return a string literal as a token
+     * @param lInitPos  the start of the template literal
+     *
+     * @return the resulting token
      */
-    protected Token eatStringLiteral(long lInitPos)
+    protected Token eatMultilineTemplateLiteral(long lInitPos)
         {
-        return eatStringChars(lInitPos, false);
+        return eatStringChars(lInitPos, true, true);
         }
 
     /**
@@ -831,7 +865,7 @@ public class Lexer
      *
      * @return the resulting token
      */
-    protected Token eatStringChars(long lInitPos, boolean fTemplate)
+    protected Token eatStringChars(long lInitPos, boolean fTemplate, boolean fMultiline)
         {
         final Source source = m_source;
 
@@ -846,9 +880,20 @@ public class Lexer
                 switch (ch)
                     {
                     case '\"':
+                        if (fMultiline)
+                            {
+                            sb.append(ch);
+                            break;
+                            }
                         break Appending;
 
                     case '\\':
+                        if (fMultiline && !fTemplate)
+                            {
+                            sb.append(ch);
+                            break;
+                            }
+
                         // process escaped char
                         switch (ch = source.next())
                             {
@@ -913,9 +958,52 @@ public class Lexer
 
                     case '\r':
                     case '\n':
-                        // log error: newline in string
-                        source.rewind();
-                        log(Severity.ERROR, STRING_NO_TERM, null, lInitPos, source.getPosition());
+                        if (fMultiline)
+                            {
+                            boolean fCRLF = false;
+                            if (ch == '\r' && source.hasNext())
+                                {
+                                if (source.next() == '\n')
+                                    {
+                                    fCRLF = true;
+                                    }
+                                else
+                                    {
+                                    source.rewind();
+                                    }
+                                }
+
+                            // eat whitespace and look for a continuation character
+                            if (isMultilineContinued())
+                                {
+                                // it is a multi-line continuation, so include the newline that we
+                                // just ate in the resulting text
+                                if (fCRLF)
+                                    {
+                                    sb.append("\r\n");
+                                    }
+                                else
+                                    {
+                                    sb.append(ch);
+                                    }
+                                break;
+                                }
+                            else
+                                {
+                                // leave the newline in place (it's not part of the multiline)
+                                source.rewind();
+                                if (fCRLF)
+                                    {
+                                    source.rewind();
+                                    }
+                                }
+                            }
+                        else
+                            {
+                            // not a multi-line literal; log error: newline in string
+                            source.rewind();
+                            log(Severity.ERROR, STRING_NO_TERM, null, lInitPos, source.getPosition());
+                            }
                         break Appending;
 
                     case '{':
@@ -967,6 +1055,27 @@ public class Lexer
         return new Token(lPosStart, source.getPosition(), Id.LIT_STRING, sb.toString());
         }
 
+    boolean isMultilineContinued()
+        {
+        long   lPrev  = getPosition();
+        Source source = m_source;
+        while (m_source.hasNext())
+            {
+            char ch = source.next();
+            if (!isWhitespace(ch))
+                {
+                if (ch == '|')
+                    {
+                    return true;
+                    }
+                break;
+                }
+            }
+
+        setPosition(lPrev);
+        return false;
+        }
+
     /**
      * Eat an inline template expression that begins with a '{' and ends with a '}'. The contents
      * <b>between</b> the opening and closing curlies are returned as an array of tokens.
@@ -995,423 +1104,6 @@ public class Lexer
                     break;
                 }
             tokens.add(token);
-            }
-        }
-
-    /**
-     * Eat a "free form" literal:
-     *
-     * <p/><code><pre>
-     * #   ╔═════════════════════╗
-     * #   ║This could be any    ║
-     * #   ║freeform text that   ║
-     * #   ║could be inside of an║
-     * #   ║Ecstasy source file  ║
-     * #   ╚═════════════════════╝
-     * #
-     * #        U+2550
-     * # U+2554 ╔═════╗ U+2557
-     * # U+2551 ║     ║ U+2551
-     * # U+255A ╚═════╝ U+255D
-     * #        U+2550
-     * #
-     * #
-     * #        U+2500
-     * # U+256D ╭─────╮ U+256E
-     * # U+2502 │     │ U+2502
-     * # U+2570 ╰─────╯ U+256F
-     * #        U+2500
-     * #
-     * FreeformLiteral
-     *     FreeformTop FreeformLines FreeformBottom
-     *
-     * FreeformTop
-     *     Whitespace-opt FreeformUpperLeft NoWhitespace FreeformHorizontals NoWhitespace FreeformUpperRight Whitespace-opt LineTerminator
-     *
-     * FreeformLines
-     *     FreeformLine
-     *     FreeformLines FreeformLine
-     *
-     * FreeformLine
-     *     Whitespace-opt FreeformVertical FreeformChars FreeformVertical Whitespace-opt LineTerminator
-     *
-     * FreeformChars
-     *     FreeformChar
-     *     FreeformChars FreeformChars
-     *
-     * FreeformChar
-     *     InputCharacter except FreeFormReserved or LineTerminator
-     *
-     * FreeformBottom
-     *     Whitespace-opt FreeformLowerLeft NoWhitespace FreeformHorizontals NoWhitespace FreeformLowerRight
-     *
-     * FreeFormReserved
-     *     FreeformUpperLeft
-     *     FreeformUpperRight
-     *     FreeformLowerLeft
-     *     FreeformLowerRight
-     *     FreeformHorizontal
-     *     FreeformVertical
-     *
-     * FreeformUpperLeft
-     *     U+250C  ┌
-     *     U+250D  ┍
-     *     U+250E  ┎
-     *     U+250F  ┏
-     *     U+2552  ╒
-     *     U+2553  ╓
-     *     U+2554  ╔
-     *     U+256D  ╭
-     *
-     * FreeformUpperRight
-     *     U+2510  ┐
-     *     U+2511  ┑
-     *     U+2512  ┒
-     *     U+2513  ┓
-     *     U+2555  ╕
-     *     U+2556  ╖
-     *     U+2557  ╗
-     *     U+256E  ╮
-     *
-     * FreeformLowerLeft
-     *     U+2514  └
-     *     U+2515  ┕
-     *     U+2516  ┖
-     *     U+2517  ┗
-     *     U+2558  ╘
-     *     U+2559  ╙
-     *     U+255A  ╚
-     *     U+2570  ╰
-     *
-     * FreeformLowerRight
-     *     U+2518  ┘
-     *     U+2519  ┙
-     *     U+251A  ┚
-     *     U+251B  ┛
-     *     U+255B  ╛
-     *     U+255C  ╜
-     *     U+255D  ╝
-     *     U+256F  ╯
-     *
-     * FreeformHorizontals
-     *     FreeformHorizontal
-     *     FreeformHorizontals NoWhitespace FreeformHorizontal
-     *
-     * FreeformHorizontal
-     *     U+2500  ─
-     *     U+2501  ━
-     *     U+2504  ┄
-     *     U+2505  ┅
-     *     U+2508  ┈
-     *     U+2509  ┉
-     *     U+254C  ╌
-     *     U+254D  ╍
-     *     U+2550  ═
-     *
-     * FreeformVertical
-     *     U+2502  │
-     *     U+2503  ┃
-     *     U+2506  ┆
-     *     U+2507  ┇
-     *     U+250A  ┊
-     *     U+250B  ┋
-     *     U+254E  ╎
-     *     U+254F  ╏
-     *     U+2551  ║
-     * </pre></code>
-     *
-     * @return
-     */
-    protected Token eatFreeformLiteral()
-        {
-        final Source source    = m_source;
-        final long   lPosStart = source.getPosition();
-        StringBuilder sb = new StringBuilder();
-
-        char ch = source.next();
-        if (!isFreeformUpperLeft(ch) || !source.hasNext())
-            {
-            return badFreeform(sb);
-            }
-
-        ch = source.next();
-        while (isFreeformHorizontal(ch) && source.hasNext())
-            {
-            ch = source.next();
-            }
-
-        if (!isFreeformUpperRight(ch) || !source.hasNext())
-            {
-            return badFreeform(sb);
-            }
-
-        ch = source.next();
-        boolean firstLine = true;
-        while (source.hasNext())
-            {
-            // parse non-line-terminating whitespace followed by a line terminator followed by
-            // non-line-terminating whitespace followed by a "freeform vertical"
-            boolean fLineTerminated = false;
-            while (isWhitespace(ch) && source.hasNext())
-                {
-                if ((isLineTerminator(ch)))
-                    {
-                    if (fLineTerminated)
-                        {
-                        return badFreeform(sb);
-                        }
-                    else if (ch == '\r' && source.hasNext() && source.next() != '\n')
-                        {
-                        // we were looking for cr:lf but only found cr
-                        source.rewind();
-                        }
-                    fLineTerminated = true;
-                    }
-                ch = source.next();
-                }
-            if (!fLineTerminated)
-                {
-                return badFreeform(sb);
-                }
-
-            if (isFreeformLowerLeft(ch))
-                {
-                break;
-                }
-
-            // opening vertical
-            if (!isFreeformVertical(ch) || !source.hasNext())
-                {
-                return badFreeform(sb);
-                }
-
-            if (firstLine)
-                {
-                firstLine = false;
-                }
-            else
-                {
-                sb.append('\n');
-                }
-
-            // parse freeform text
-            ch = source.next();
-            int nonWhiteSpaceLength = sb.length();
-            while (!isFreeformVertical(ch) && !isLineTerminator(ch) && source.hasNext())
-                {
-                sb.append(ch);
-                if (!isWhitespace(ch))
-                    {
-                    nonWhiteSpaceLength = sb.length();
-                    }
-                ch = source.next();
-                }
-
-            // chop off any trailing whitespace
-            if (sb.length() > nonWhiteSpaceLength)
-                {
-                sb.setLength(nonWhiteSpaceLength);
-                }
-
-            // closing vertical
-            if (!isFreeformVertical(ch) || !source.hasNext())
-                {
-                return badFreeform(sb);
-                }
-
-            ch = source.next();
-            }
-
-        if (!isFreeformLowerLeft(ch) || !source.hasNext())
-            {
-            return badFreeform(sb);
-            }
-
-        ch = source.next();
-        while (isFreeformHorizontal(ch) && source.hasNext())
-            {
-            ch = source.next();
-            }
-
-        if (!isFreeformLowerRight(ch))
-            {
-            return badFreeform(sb);
-            }
-
-        return new Token(lPosStart, source.getPosition(), Id.LIT_STRING, sb.toString());
-        }
-
-    protected Token badFreeform(StringBuilder sb)
-        {
-        // pretend we parsed something successfully
-        final Source source  = m_source;
-        final Token  literal = new Token(source.getPosition(), source.getPosition(), Id.LIT_STRING, sb.toString());
-
-        log(Severity.ERROR, FREEFORM_BAD, null, source.getPosition(), source.getPosition());
-
-        // expurgate the remainder of the literal (or the remainder of the file if necessary)
-        while (source.hasNext() && !isFreeformLowerRight(source.next()))
-            {
-            }
-
-        return literal;
-        }
-
-    /**
-     * Determine if the specified character is a free-form upper-left.
-     *
-     * @param ch  the character
-     *
-     * @return true iff the character is a free-form upper left corner
-     */
-    public static boolean isFreeformUpperLeft(char ch)
-        {
-        switch (ch)
-            {
-            case '┌':
-            case '┍':
-            case '┎':
-            case '┏':
-            case '╒':
-            case '╓':
-            case '╔':
-            case '╭':
-                return true;
-
-            default:
-                return false;
-            }
-        }
-
-    /**
-     * Determine if the specified character is a free-form upper-right.
-     *
-     * @param ch  the character
-     *
-     * @return true iff the character is a free-form upper right corner
-     */
-    public static boolean isFreeformUpperRight(char ch)
-        {
-        switch (ch)
-            {
-            case '┐':
-            case '┑':
-            case '┒':
-            case '┓':
-            case '╕':
-            case '╖':
-            case '╗':
-            case '╮':
-                return true;
-
-            default:
-                return false;
-            }
-        }
-
-    /**
-     * Determine if the specified character is a free-form lower-left.
-     *
-     * @param ch  the character
-     *
-     * @return true iff the character is a free-form lower left corner
-     */
-    public static boolean isFreeformLowerLeft(char ch)
-        {
-        switch (ch)
-            {
-            case '└':
-            case '┕':
-            case '┖':
-            case '┗':
-            case '╘':
-            case '╙':
-            case '╚':
-            case '╰':
-                return true;
-
-            default:
-                return false;
-            }
-        }
-
-    /**
-     * Determine if the specified character is a free-form lower-right.
-     *
-     * @param ch  the character
-     *
-     * @return true iff the character is a free-form lower right corner
-     */
-    public static boolean isFreeformLowerRight(char ch)
-        {
-        switch (ch)
-            {
-            case '┘':
-            case '┙':
-            case '┚':
-            case '┛':
-            case '╛':
-            case '╜':
-            case '╝':
-            case '╯':
-                return true;
-
-            default:
-                return false;
-            }
-        }
-
-    /**
-     * Determine if the specified character is a free-form top or bottom horizontal piece.
-     *
-     * @param ch  the character
-     *
-     * @return true iff the character is a free-form horizontal
-     */
-    public static boolean isFreeformHorizontal(char ch)
-        {
-        switch (ch)
-            {
-            case '─':
-            case '━':
-            case '┄':
-            case '┅':
-            case '┈':
-            case '┉':
-            case '╌':
-            case '╍':
-            case '═':
-                return true;
-
-            default:
-                return false;
-            }
-        }
-
-    /**
-     * Determine if the specified character is a free-form left or right vertical piece.
-     *
-     * @param ch  the character
-     *
-     * @return true iff the character is a free-form vertical
-     */
-    public static boolean isFreeformVertical(char ch)
-        {
-        switch (ch)
-            {
-            case '│':
-            case '┃':
-            case '┆':
-            case '┇':
-            case '┊':
-            case '┋':
-            case '╎':
-            case '╏':
-            case '║':
-                return true;
-
-            default:
-                return false;
             }
         }
 
@@ -1847,14 +1539,10 @@ public class Lexer
         {
         // this adds a bit of information to the source's position info
         long lPos = m_source.getPosition();
-        assert (lPos & (3L << 62)) == 0L;
+        assert (lPos & (1L << 63)) == 0L;
         if (m_fWhitespace)
             {
             lPos |= (1L << 63);
-            }
-        if (m_fHexMode)
-            {
-            lPos |= (1L << 62);
             }
         return lPos;
         }
@@ -1867,7 +1555,6 @@ public class Lexer
     public void setPosition(long lPos)
         {
         m_fWhitespace = (lPos & (1L << 63)) != 0L;
-        m_fHexMode    = (lPos & (1L << 62)) != 0L;
         m_source.setPosition(lPos & ~(1L << 63));
         }
 
@@ -2356,9 +2043,4 @@ public class Lexer
      * Keeps track of whether whitespace was encountered.
      */
     private boolean m_fWhitespace;
-
-    /**
-     * A special mode that parses raw hex literals.
-     */
-    private boolean m_fHexMode;
     }

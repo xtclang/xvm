@@ -22,11 +22,8 @@ import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.*;
 
-import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
-import static org.xvm.util.Handy.hexitValue;
-import static org.xvm.util.Handy.isHexit;
 import static org.xvm.util.Handy.parseDelimitedString;
 
 
@@ -3081,8 +3078,11 @@ public class Parser
                     if (match(Id.R_SQUARE) != null)
                         {
                         // "SomeClass[]"
-                        expr = new ArrayTypeExpression(expr.toTypeExpression(), 0,
+                        TypeExpression type = new ArrayTypeExpression(expr.toTypeExpression(), 0,
                                 getLastMatch().getEndPosition());
+                        expr = match(Id.COLON) == null
+                                ? type
+                                : parseComplexLiteral(type);
                         }
                     else if (match(Id.COND) != null)
                         {
@@ -3094,8 +3094,11 @@ public class Parser
                             expect(Id.COND);
                             ++cExplicitDims;
                             }
-                        expr = new ArrayTypeExpression(expr.toTypeExpression(), cExplicitDims,
-                                getLastMatch().getEndPosition());
+                        TypeExpression type = new ArrayTypeExpression(expr.toTypeExpression(),
+                                cExplicitDims, getLastMatch().getEndPosition());
+                        expr = match(Id.COLON) == null
+                                ? type
+                                : parseComplexLiteral(type);
                         }
                     else
                         {
@@ -3319,14 +3322,14 @@ public class Parser
                                     }
                                 // fall through
                             case L_CURLY:
-                                return parseCustomLiteral(new NamedTypeExpression(null,
+                                return parseComplexLiteral(new NamedTypeExpression(null,
                                         toList(left, name), access, tokNoNarrow, params, lEndPos));
 
                             case LIT_STRING:
                                 if (left == null && (name.getValueText().equals("v")
                                         || name.getValueText().equals("Version")))
                                     {
-                                    return parseCustomLiteral(new NamedTypeExpression(
+                                    return parseComplexLiteral(new NamedTypeExpression(
                                             null, Collections.singletonList(name), access,
                                             tokNoNarrow, params, lEndPos));
                                     }
@@ -3428,7 +3431,7 @@ public class Parser
                 return parseSwitchExpression();
 
             case L_SQUARE:
-                return parseCustomLiteral(null);
+                return parseComplexLiteral(null);
 
             case LIT_CHAR:
             case LIT_STRING:
@@ -3476,7 +3479,7 @@ public class Parser
                 Source source;
                 try
                     {
-                    source = m_source.loadInclude(sFile);
+                    source = m_source.includeString(sFile);
                     }
                 catch (IOException e)
                     {
@@ -3506,9 +3509,10 @@ public class Parser
         }
 
     /**
-     * TODO doc
+     * Starting with the current token, eat all of the tokens that are part of a potential file
+     * name, and return that file name as a String.
      *
-     * @return
+     * @return  the file name
      */
     String parseFileName()
         {
@@ -3735,52 +3739,23 @@ public class Parser
 
     /**
      * Parse a complex literal.
-     * TODO update doc
      *
      * <p/><code><pre>
-     * # Whitespace allowed
-     * BinaryLiteral
-     *     "Binary:{" Nibbles-opt "}"
-     *
-     * Nibbles
-     *     Nibble
-     *     Nibbles Nibble
-     *
-     * Nibble: one of ...
-     *     "0" "1" "2" "3" "4" "5" "6" "7" "8" "9" "A" "a" "B" "b" "C" "c" "D" "d" "E" "e" "F" "f"
-     *
-     * TupleLiteral
-     *     "(" ExpressionList "," Expression ")"                       # compile/runtime type is Tuple
-     *     TypeExpression NoWhitespace ":(" ExpressionList-opt ")"     # type must be a Tuple
-     *
-     * ListLiteral
-     *     "[" ExpressionList-opt "]"
-     *     "Sequence:{" ExpressionList-opt "}"
-     *     "List:{" ExpressionList-opt "}"
-     *     "Array:{" ExpressionList-opt "}"
-     *
-     * MapLiteral
-     *     "Map:{" Entries-opt "}"
-     *
-     * Entries
-     *     Entry
-     *     Entries "," Entry
-     *
-     * Entry
-     *     Expression "=" Expression
-     *
-     * CustomLiteral
-     *     TypeExpression NoWhitespace ":{" Expression "}"
+     *   TODO update doc
      * </pre></code>
      *
-     * @return
+     * @return a literal expression
      */
-    Expression parseCustomLiteral(TypeExpression type)
+    Expression parseComplexLiteral(TypeExpression type)
         {
         String sType;
-        if (type == null)
+        if (type == null || type instanceof ArrayTypeExpression)
             {
             sType = "Array";
+            }
+        else if (type instanceof SequenceTypeExpression)
+            {
+            sType = "Sequence";
             }
         else
             {
@@ -3794,61 +3769,6 @@ public class Parser
 
         switch (sType)
             {
-            case "Binary": // TODO Byte[] (not Binary)
-                {
-                // TODO path support
-
-                // special note: at this point, the current token (already parsed) is the opening
-                // curly bracket, so the lexer has already eaten any whitespace after that, and is
-                // ready to eat the hex contents of the literal itself; unfortunately, this means
-                // that we know the explicit details about how both the current/next token handling
-                // works on the parser, and to some extent how the lexer works as well, but it is
-                // context-sensitive parsing in the first place, which is already the bane of
-                // parsing purists everywhere
-                m_lexer.expectHex();
-                long lPosStart = m_source.getPosition();
-
-                expect(Id.L_CURLY);
-                StringBuilder sb = new StringBuilder();
-                Token literal;
-                while ((literal = match(Id.LIT_STRING)) != null)
-                    {
-                    for (char ch : ((String) literal.getValue()).toCharArray())
-                        {
-                        if (isHexit(ch))
-                            {
-                            sb.append(ch);
-                            }
-                        else if (!Lexer.isWhitespace(ch))
-                            {
-                            log(Severity.ERROR, BAD_HEX_LITERAL, literal.getStartPosition(),
-                                    literal.getEndPosition(), Handy.quotedChar(ch));
-                            }
-                        }
-                    }
-                long lPosEnd = m_source.getPosition();
-                expect(Id.R_CURLY);
-
-                int    cch  = sb.length();
-                int    ofch = 0;
-                int    cb   = (cch + 1) / 2;
-                int    ofb  = 0;
-                byte[] ab   = new byte[cb];
-                if ((cch & 0x1) != 0)
-                    {
-                    // odd number of characters means that the first nibble is a pre-pended zero
-                    ab[ofb++] = (byte) hexitValue(sb.charAt(ofch++));
-                    }
-                while (ofb < cb)
-                    {
-                    ab[ofb++] = (byte) ((hexitValue(sb.charAt(ofch++)) << 4)
-                                       + hexitValue(sb.charAt(ofch++)));
-                    }
-
-                return new BinaryExpression(ab, lPosStart, lPosEnd, type.getStartPosition(),
-                        getLastMatch().getEndPosition());
-                }
-
             case "Array":
             case "Sequence":
             case "List":
@@ -3928,6 +3848,14 @@ public class Parser
                         getLastMatch().getEndPosition());
                 }
 
+            case "Date":
+            case "Time":
+            case "DateTime":
+            case "TimeZone":
+            case "Duration":
+                // TODO
+                throw new UnsupportedOperationException("parsing " + sType + " literal");
+
             case "Version":
             case "v":
                 {
@@ -3938,11 +3866,8 @@ public class Parser
 
             default:
                 {
-                Token      open  = expect(Id.L_CURLY);
-                Expression expr  = parseExpression();
-                Token      close = expect(Id.R_CURLY);
-                // custom type parsing is not supported in the prototype compiler
-                log(Severity.ERROR, BAD_CUSTOM, open.getStartPosition(), close.getEndPosition(), type, expr);
+                Expression expr = parseExpression();
+                log(Severity.ERROR, BAD_CUSTOM, expr.getStartPosition(), expr.getEndPosition(), type, expr);
                 return expr;
                 }
             }

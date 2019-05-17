@@ -98,33 +98,45 @@ public class Source
         }
 
     /**
-     * Load a file referenced from inside another source file.
+     * Determine the File referenced from inside another source file using the "File" or "Dir"
+     * BNF constructions.
      *
-     * @param sFile  a string put together from identifier tokens, "/" tokens, "./" tokens, and
-     *               "../" tokens
+     * @param sFile  a string put together from identifier tokens, "." tokens, "/" tokens, "./"
+     *               tokens, and "../" tokens, following the rules defined in the Ecstasy BNF
      *
-     * @return the Source, or null
+     * @return the File for the file or directory, or null if unresolvable
      */
-    public Source loadInclude(String sFile)
+    public File resolvePath(String sFile)
             throws IOException
         {
-        if (m_file == null || sFile.endsWith("/"))
+        if (m_file == null || sFile.length() == 0)
             {
             return null;
             }
 
-        File   file = m_file.getParentFile();
-        int    cUp  = 0;
+        File file = m_file.getParentFile();
+        m_cUp = 0;
         if (sFile.startsWith("/"))
             {
             // it's not absolute; it's relative to the directory containing the module
-            while (cUp < m_cDirDepth)
+            while (m_cUp < m_cDirDepth)
                 {
                 file = file.getParentFile();
                 assert file != null;
-                ++cUp;
+                ++m_cUp;
                 }
             sFile = sFile.substring(1);
+            }
+
+        if (sFile.length() == 0)
+            {
+            return file.isDirectory() ? file : null;
+            }
+
+        boolean fDir = sFile.endsWith("/");
+        if (fDir)
+            {
+            sFile = sFile.substring(0, sFile.length()-1);
             }
 
         String[] segments = Handy.parseDelimitedString(sFile, '/');
@@ -138,16 +150,45 @@ public class Source
             else if (segment.equals(".."))
                 {
                 file = file.getParentFile();
-                if (file == null || ++cUp > m_cDirDepth)
+                if (file == null || !file.exists() || ++m_cUp > m_cDirDepth)
                     {
                     return null;
                     }
                 }
             else
                 {
+                if (!file.isDirectory())
+                    {
+                    return null;
+                    }
                 file = new File(file, segment);
-                --cUp;
+                if (!file.exists())
+                    {
+                    return null;
+                    }
+                --m_cUp;
                 }
+            }
+
+        return fDir == file.isDirectory() ? file : null;
+        }
+    private transient int m_cUp;    // Java needs multiple return values. This is a hack.
+
+    /**
+     * Load a file (as text) referenced from inside another source file.
+     *
+     * @param sFile  a string put together from identifier tokens, "/" tokens, "./" tokens, and
+     *               "../" tokens
+     *
+     * @return the Source, or null
+     */
+    public Source includeString(String sFile)
+            throws IOException
+        {
+        File file = resolvePath(sFile);
+        if (file == null)
+            {
+            return null;
             }
 
         if (file.equals(m_file))
@@ -157,7 +198,32 @@ public class Source
 
         if (file.exists() && file.isFile() && file.canRead())
             {
-            return new Source(file, m_cDirDepth - cUp);
+            return new Source(file, m_cDirDepth - m_cUp);
+            }
+
+        return null;
+        }
+
+    /**
+     * Load a file (as binary) referenced from inside another source file.
+     *
+     * @param sFile  a string put together from identifier tokens, "/" tokens, "./" tokens, and
+     *               "../" tokens
+     *
+     * @return the binary contents of the file, or null
+     */
+    public byte[] includeBinary(String sFile)
+            throws IOException
+        {
+        File file = resolvePath(sFile);
+        if (file == null)
+            {
+            return null;
+            }
+
+        if (file.exists() && file.isFile() && file.canRead())
+            {
+            return Handy.readFileBytes(file);
             }
 
         return null;
