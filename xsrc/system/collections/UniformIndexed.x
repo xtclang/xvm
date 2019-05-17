@@ -24,13 +24,13 @@ interface UniformIndexed<IndexType, ElementType>
      */
     Ref<ElementType> elementAt(IndexType index)
         {
-        return new SimpleVar(index);
+        return new SimpleVar<IndexType, ElementType>(this, index);
 
         /**
          * An implementation of Var that delegates all of the complicated Ref responsibilities to
          * the return value from the {@link UniformIndexed.get} method.
          */
-        class SimpleVar(IndexType index)
+        class SimpleVar<IndexType, ElementType>(UniformIndexed<IndexType, ElementType> indexed, IndexType index)
                 delegates Var<ElementType>(ref)
             {
             @Override
@@ -42,13 +42,13 @@ interface UniformIndexed<IndexType, ElementType>
             @Override
             ElementType get()
                 {
-                return this.UniformIndexed.getElement(index);
+                return indexed.getElement(index);
                 }
 
             @Override
             void set(ElementType value)
                 {
-                this.UniformIndexed.setElement(index, value);
+                indexed.setElement(index, value);
                 }
 
             private Var<ElementType> ref.get()

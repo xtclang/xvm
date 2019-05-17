@@ -705,7 +705,8 @@ public class TypeCompositionStatement
             }
 
         // configure the static bit on the component
-        if (fExplicitlyStatic || component.getFormat().isImplicitlyStatic())
+        if (fExplicitlyStatic || component.getFormat().isImplicitlyStatic() ||
+                (fInner && !m_fVirtChild && !m_fAnon))
             {
             component.setStatic(true);
             }
