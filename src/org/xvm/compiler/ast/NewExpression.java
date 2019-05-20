@@ -258,7 +258,13 @@ public class NewExpression
             {
             // infer type information from the required type; that information needs to be used to
             // inform the validation of the type that we are "new-ing"
-            typeTarget = type.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool);
+            typeTarget = type.ensureTypeConstant(ctx);
+            if (typeTarget.containsUnresolved())
+                {
+                type.log(errs, Severity.FATAL, Compiler.NAME_UNRESOLVABLE, type.toString());
+                return null;
+                }
+            typeTarget = typeTarget.resolveAutoNarrowingBase(pool);
             }
         else
             {

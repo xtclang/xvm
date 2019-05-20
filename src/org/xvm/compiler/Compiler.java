@@ -774,11 +774,11 @@ public class Compiler
      */
     public static final String NAME_AMBIGUOUS                     = "COMPILER-37";
     /**
-     * Cannot find name.
+     * Name "{0}" is unresolvable..
      */
     public static final String NAME_UNRESOLVABLE                  = "COMPILER-38";
     /**
-     * Cannot hide name.
+     * Name "{0}" is unhideable; attempt to hide "{1}" is an error.
      */
     public static final String NAME_UNHIDEABLE                    = "COMPILER-39";
     /**
