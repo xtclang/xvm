@@ -36,13 +36,13 @@ class OSFileStore
     @Override
     Directory dirFor(Path path)
         {
-        return storage.dirFor(this, path.to<String>());
+        return dirFor(path.to<String>());
         }
 
     @Override
     File fileFor(Path path)
         {
-        return storage.fileFor(this, path.to<String>());
+        return fileFor(path.to<String>());
         }
 
     @Override
@@ -89,7 +89,20 @@ class OSFileStore
     @Override
     @RO Int bytesFree;
 
+
     // ----- internal ------------------------------------------------------------------------------
 
     OSStorage storage;
+
+    // ----- native --------------------------------------------------------------------------------
+
+    OSDirectory dirFor(String pathString)
+        {
+        TODO native
+        }
+
+    OSFile fileFor(String pathString)
+        {
+        TODO native
+        }
     }

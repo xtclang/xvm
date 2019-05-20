@@ -32,9 +32,11 @@ service OSStorage
 
     conditional Directory|File find(OSFileStore store, String pathString);
 
-    Directory dirFor(OSFileStore store, String pathString);
-
-    File fileFor(OSFileStore store, String pathString);
-
     String[] names(OSDirectory dir);
+
+    Boolean createDir(OSFileStore store, String path);
+
+    Boolean createFile(OSFileStore store, String path);
+
+    Boolean delete(OSFileStore store, String path);
     }

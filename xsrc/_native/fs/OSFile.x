@@ -14,12 +14,6 @@ class OSFile
     File truncate(Int newSize = 0);
 
     @Override
-    conditional File link()
-        {
-        return False; // TODO
-        }
-
-    @Override
     conditional FileStore archive()
         {
         return False; // TODO

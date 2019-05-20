@@ -19,6 +19,19 @@ interface FileNode
     @RO Boolean exists;
 
     /**
+     * Determine if this node is a _link_ to another node, and if it is, obtain a reference to the
+     * link itself, instead of the node that is linked-to. This allows the link to be deleted, for
+     * example, instead of deleting the node that is linked-to.
+     *
+     * Normally, applications can ignore the detail of whether or not a node is a link (such as a
+     * _symbolic link_), because the `Directory` qnd `File` interfaces represent the node that is
+     * _linked to_. For example, opening a node linked to a file will open the file that is _linked
+     * to_, so the application can read and write data directly from that linked-to file without
+     * any knowledge that it is doing so via a link.
+     */
+    conditional File linkAsFile();
+
+    /**
      * The date/time at which the file node was created. The value has no meaning for a
      * file-node that does not exist, or in a file system that does not track creation times.
      */
@@ -54,12 +67,12 @@ interface FileNode
     /**
      * Create the file-node only if and only if it does not already exist. This operation is atomic.
      *
-     * @return this FileNode iff the file-node did not exist, and now it does
+     * @return True iff the file-node did not exist, and now it does
      *
      * @throws AccessDenied  if the file does not exist, and permission to create the file has
      *                       not been granted
      */
-    conditional FileNode create();
+    Boolean create();
 
     /**
      * Create the file-node if it does not already exist.
@@ -74,11 +87,11 @@ interface FileNode
     /**
      * Delete the file-node if and only if it exists. This operation may not be atomic.
      *
-     * @return this FileNode iff the file-node did exist, and now does not
+     * @return True iff the file-node did exist, and now does not
      *
      * @throws AccessDenied  if permission to delete the file has not been granted
      */
-    conditional FileNode delete();
+    Boolean delete();
 
     /**
      * Attempt to rename the file-node. This operation is atomic.

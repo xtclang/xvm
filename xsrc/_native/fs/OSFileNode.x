@@ -1,3 +1,6 @@
+import Ecstasy.fs.AccessDenied;
+import Ecstasy.fs.Directory;
+import Ecstasy.fs.File;
 import Ecstasy.fs.FileNode;
 import Ecstasy.fs.FileStore;
 import Ecstasy.fs.FileWatcher;
@@ -25,6 +28,12 @@ class OSFileNode
     @RO Boolean exists;
 
     @Override
+    conditional File linkAsFile()
+        {
+        return False; // TODO
+        }
+
+    @Override
     @Lazy DateTime created.calc()
         {
         // TODO: should be the "local" timezone
@@ -50,13 +59,46 @@ class OSFileNode
     @RO Boolean writable;
 
     @Override
-    conditional FileNode create();
+    Boolean create()
+        {
+        if (!exists)
+            {
+            if (store.readOnly)
+                {
+                throw new AccessDenied(path, "Read-only store");
+                }
+
+            return this.is(Directory)
+                ? store.storage.createDir(store, pathString)
+                : store.storage.createFile(store, pathString);
+            }
+        return False;
+        }
 
     @Override
-    FileNode ensure();
+    FileNode ensure()
+        {
+        if (!exists)
+            {
+            create();
+            }
+        return this;
+        }
 
     @Override
-    conditional FileNode delete();
+    Boolean delete()
+        {
+        if (exists)
+            {
+            if (store.readOnly)
+                {
+                throw new AccessDenied(path, "Read-only store");
+                }
+
+            return store.storage.delete(store, pathString);
+            }
+        return False;
+        }
 
     @Override
     conditional FileNode renameTo(String name);

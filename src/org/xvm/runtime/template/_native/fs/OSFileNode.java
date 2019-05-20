@@ -64,6 +64,9 @@ public abstract class OSFileNode
         markNativeProperty("accessedMillis");
         markNativeProperty("modifiedMillis");
         markNativeProperty("size");
+
+        markNativeMethod("create", VOID, null);
+        markNativeMethod("ensure", VOID, null);
         }
 
     @Override

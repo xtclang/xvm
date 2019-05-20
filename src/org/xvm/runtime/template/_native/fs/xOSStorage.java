@@ -13,6 +13,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
 
+import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xFunction;
@@ -42,6 +43,9 @@ public class xOSStorage
 
         markNativeMethod("find", new String[] {"_native.fs.OSFileStore", "String"}, null);
         markNativeMethod("names", new String[] {"_native.fs.OSDirectory"}, null);
+        markNativeMethod("createDir", new String[] {"_native.fs.OSFileStore", "String"}, BOOLEAN);
+        markNativeMethod("createFile", new String[] {"_native.fs.OSFileStore", "String"}, BOOLEAN);
+        markNativeMethod("delete", new String[] {"_native.fs.OSFileStore", "String"}, BOOLEAN);
         }
 
     @Override
@@ -103,6 +107,32 @@ public class xOSStorage
         }
 
     @Override
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
+        {
+        ServiceHandle hStorage = (ServiceHandle) hTarget;
+
+        if (frame.f_context != hStorage.m_context)
+            {
+            // for now let's make sure all the calls are processed on the service fibers
+            return xFunction.makeAsyncNativeHandle(method).call1(frame, hTarget, ahArg, iReturn);
+            }
+
+        switch (method.getName())
+            {
+            case "createFile":  // (store, pathString)
+                {
+                ObjectHandle hStore      = ahArg[0];
+                StringHandle hPathString = (StringHandle) ahArg[1];
+
+                Path path = Paths.get(hPathString.getStringValue());
+                return frame.assignValue(iReturn, null); // TODO
+                }
+            }
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        }
+
+    @Override
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                               ObjectHandle[] ahArg, int[] aiReturn)
         {
@@ -122,31 +152,19 @@ public class xOSStorage
                 StringHandle hPathString = (StringHandle) ahArg[1];
 
                 Path path = Paths.get(hPathString.getStringValue());
-
                 if (Files.exists(path))
                     {
-                    switch (OSFileNode.createHandle(frame, hStore, path, Files.isDirectory(path), Op.A_STACK))
-                        {
-                        case Op.R_NEXT:
-                            return frame.assignValues(aiReturn, xBoolean.TRUE, frame.popStack());
-
-                        case Op.R_CALL:
-                            frame.m_frameNext.setContinuation(frameCaller ->
-                                frameCaller.assignValues(aiReturn, xBoolean.TRUE, frame.popStack()));
-                            return Op.R_CALL;
-
-                        case Op.R_EXCEPTION:
-                            return Op.R_EXCEPTION;
-
-                        default:
-                            throw new IllegalStateException();
-                        }
+                    return Utils.assignConditionalResult(
+                        frame,
+                        OSFileNode.createHandle(frame, hStore, path, Files.isDirectory(path), Op.A_STACK),
+                        aiReturn);
                     }
                 return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                 }
             }
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
+
 
 
 

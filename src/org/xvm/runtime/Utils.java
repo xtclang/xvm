@@ -167,6 +167,35 @@ public abstract class Utils
         return callMethod(frame, hValue, frame.f_context.f_pool.sigToString(), Utils.OBJECTS_NONE);
         }
 
+    /**
+     * A trivial adapter method that assigns the result of a natural execution to a calling frame
+     * that expects a conditional return.
+     *
+     * @param frame     the frame that expects a conditional return value
+     * @param iResult   the result of the previous execution
+     * @param aiReturn  the return indexes for the conditional return
+     *
+     * @return one of R_EXCEPTION, R_NEXT or R_CALL values
+     */
+    public static int assignConditionalResult(Frame frame, int iResult, int[] aiReturn)
+        {
+        switch (iResult)
+            {
+            case Op.R_NEXT:
+                return frame.assignValues(aiReturn, xBoolean.TRUE, frame.popStack());
+
+            case Op.R_CALL:
+                frame.m_frameNext.setContinuation(frameCaller ->
+                    frameCaller.assignValues(aiReturn, xBoolean.TRUE, frame.popStack()));
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
 
     // ----- "local property or DeferredCallHandle as an argument" support -----
 
