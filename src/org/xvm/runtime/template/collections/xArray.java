@@ -2,6 +2,8 @@ package org.xvm.runtime.template.collections;
 
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
@@ -33,6 +35,7 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xInt64;
 import org.xvm.runtime.template.xString;
+import org.xvm.runtime.template.xString.StringHandle;
 
 
 /**
@@ -59,12 +62,25 @@ public class xArray
     @Override
     public void initDeclared()
         {
+        // register array specializations
+        ConstantPool              pool         = pool();
+        Map<TypeConstant, xArray> mapTemplates = new HashMap<>();
+
         registerNative(new xIntArray(f_templates, f_struct, true));
         registerNative(new xCharArray(f_templates, f_struct, true));
         registerNative(new xBooleanArray(f_templates, f_struct, true));
         registerNative(new xBitArray(f_templates, f_struct, true));
         registerNative(new xByteArray(f_templates, f_struct, true));
 
+        mapTemplates.put(pool.typeInt(), xIntArray.INSTANCE);
+        mapTemplates.put(pool.typeByte(), xByteArray.INSTANCE);
+        mapTemplates.put(pool.typeChar(), xCharArray.INSTANCE);
+        mapTemplates.put(pool.typeBoolean(), xBooleanArray.INSTANCE);
+        mapTemplates.put(pool.ensureEcstasyTypeConstant("Bit"), xBitArray.INSTANCE);
+
+        ARRAY_TEMPLATES = mapTemplates;
+
+        // mark native properties and methods
         markNativeProperty("size");
         markNativeProperty("mutability");
 
@@ -76,7 +92,6 @@ public class xArray
         markNativeMethod("slice", new String[] {"Range<Int64>"}, ARRAY);
 
         // cache the constructors
-        ConstantPool pool = f_struct.getConstantPool();
         for (MethodStructure method :
                 ((MultiMethodStructure) f_struct.getChild("construct")).methods())
             {
@@ -136,53 +151,27 @@ public class xArray
         }
 
     @Override
-    public ClassComposition ensureParameterizedClass(ConstantPool pool, TypeConstant... typeParams)
+    public ClassComposition ensureParameterizedClass(ConstantPool pool, TypeConstant... atypeParams)
         {
-        assert typeParams.length == 1;
+        assert atypeParams.length == 1;
 
-        TypeConstant typeEl = typeParams[0];
+        xArray template = ARRAY_TEMPLATES.get(atypeParams[0]);
 
-        // TODO: we should obtain the array template from the element's template
-        if (typeEl.equals(pool.typeInt()))
+        if (template != null)
             {
-            TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
-                pool.typeArray(), typeEl);
-            return xIntArray.INSTANCE.ensureClass(typeInception, typeInception);
+            return template.getCanonicalClass();
             }
 
-        return super.ensureParameterizedClass(pool, typeParams);
+        return super.ensureParameterizedClass(pool, atypeParams);
         }
 
     @Override
     public ClassTemplate getTemplate(TypeConstant type)
         {
         TypeConstant[] atypeParams = type.getParamTypesArray();
-        if (atypeParams.length > 0)
-            {
-            ConstantPool pool      = pool();
-            TypeConstant typeParam = atypeParams[0];
-            if (typeParam.equals(pool.typeInt()))
-                {
-                return xIntArray.INSTANCE;
-                }
-            if (typeParam.equals(pool.typeByte()))
-                {
-                return xByteArray.INSTANCE;
-                }
-            if (typeParam.equals(pool.typeChar()))
-                {
-                return xCharArray.INSTANCE;
-                }
-            if (typeParam.equals(pool.typeBoolean()))
-                {
-                return xBooleanArray.INSTANCE;
-                }
-            if (typeParam.equals(pool.ensureEcstasyTypeConstant("Bit")))
-                {
-                return xBitArray.INSTANCE;
-                }
-            }
-        return this;
+        return atypeParams.length > 0
+                ? getArrayTemplate(atypeParams[0])
+                : this;
         }
 
     @Override
@@ -193,10 +182,7 @@ public class xArray
         assert constArray.getFormat() == Constant.Format.Array;
 
         TypeConstant typeArray = constArray.getType();
-        TypeConstant typeEl = typeArray.resolveGenericType("ElementType");
-        ClassComposition clzArray = ensureParameterizedClass(frame.poolContext(), typeEl);
-
-        Constant[] aconst = constArray.getValue();
+        Constant[]   aconst    = constArray.getValue();
         int cSize = aconst.length;
 
         ObjectHandle[] ahValue = new ObjectHandle[cSize];
@@ -211,8 +197,9 @@ public class xArray
             ahValue[i] = hValue;
             }
 
-        xArray template = (xArray) clzArray.getTemplate();
-        ArrayHandle hArray = template.createArrayHandle(clzArray, ahValue);
+        ClassComposition clzArray = f_templates.resolveClass(typeArray);
+        ArrayHandle      hArray   = ((xArray) clzArray.getTemplate()).
+            createArrayHandle(clzArray, ahValue);
 
         frame.pushStack(hArray);
         return Op.R_NEXT;
@@ -694,6 +681,12 @@ public class xArray
 
     // ----- helper methods -----
 
+    private xArray getArrayTemplate(TypeConstant typeParam)
+        {
+        xArray template = ARRAY_TEMPLATES.get(typeParam);
+        return template == null ? this : template;
+        }
+
     private ObjectHandle[] grow(ObjectHandle[] ahValue, int cSize)
         {
         int cCapacity = calculateCapacity(ahValue.length, cSize);
@@ -872,7 +865,7 @@ public class xArray
 
         protected void updateResult(Frame frameCaller)
             {
-            sb.append(((xString.StringHandle) frameCaller.popStack()).getValue())
+            sb.append(((StringHandle) frameCaller.popStack()).getValue())
               .append(", ");
             }
 
@@ -929,6 +922,38 @@ public class xArray
 
     // ----- ObjectHandle helpers -----
 
+    /**
+     * @return an immutable String array handle
+     */
+    public static ArrayHandle makeStringArrayHandle(StringHandle[] ahValue)
+        {
+        if (s_clzStringArray == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeArray = pool.ensureParameterizedTypeConstant(
+                pool.typeArray(), pool.typeString());
+            s_clzStringArray = INSTANCE.f_templates.resolveClass(typeArray);
+            }
+
+        return xArray.INSTANCE.createArrayHandle(s_clzStringArray, ahValue);
+        }
+
+    /**
+     * @return an immutable Object array handle
+     */
+    public static ArrayHandle makeObjectArrayHandle(ObjectHandle[] ahValue)
+        {
+        if (s_clzObjectArray == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeArray = pool.ensureParameterizedTypeConstant(
+                pool.typeArray(), pool.typeObject());
+            s_clzObjectArray = INSTANCE.f_templates.resolveClass(typeArray);
+            }
+
+        return xArray.INSTANCE.createArrayHandle(s_clzObjectArray, ahValue);
+        }
+
     // generic array handle
     public static class GenericArrayHandle
             extends ArrayHandle
@@ -959,9 +984,12 @@ public class xArray
 
     // array of constructors
     private static MethodStructure[] CONSTRUCTORS = new MethodStructure[4];
-
     private static MethodStructure ITERABLE_TO_ARRAY;
 
     protected static final String[] ELEMENT_TYPE = new String[] {"ElementType"};
     protected static final String[] ARRAY = new String[]{"collections.Array!<ElementType>"};
+
+    private static ClassComposition s_clzStringArray;
+    private static ClassComposition s_clzObjectArray;
+    private static Map<TypeConstant, xArray> ARRAY_TEMPLATES;
     }

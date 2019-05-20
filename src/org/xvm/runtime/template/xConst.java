@@ -47,8 +47,6 @@ public class xConst
     public static MethodStructure FN_ESTIMATE_LENGTH;
     public static MethodStructure FN_APPEND_TO;
     public static MethodStructure INTERVAL_CONSTRUCT;
-    public static ClassComposition CLZ_STRINGS;
-    public static ClassComposition CLZ_OBJECTS;
 
     public xConst(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -85,9 +83,6 @@ public class xConst
                 {
                 FN_APPEND_TO = method;
                 }
-
-            CLZ_STRINGS = f_templates.resolveClass(f_templates.f_adapter.getClassType("collections.Array<String>", null));
-            CLZ_OBJECTS = f_templates.resolveClass(f_templates.f_adapter.getClassType("collections.Array<Object>", null));
 
             // Interval support
             ClassStructure clzInterval = f_templates.getClassStructure("Interval");
@@ -257,8 +252,8 @@ public class xConst
         ObjectHandle[] ahFields = clz.getFieldValueArray(hConst);
         if (ahNames.length > 0)
             {
-            ArrayHandle hNames  = xArray.INSTANCE.createArrayHandle(CLZ_STRINGS, ahNames);
-            ArrayHandle hValues = xArray.INSTANCE.createArrayHandle(CLZ_OBJECTS, ahFields);
+            ArrayHandle hNames  = xArray.makeStringArrayHandle(ahNames);
+            ArrayHandle hValues = xArray.makeObjectArrayHandle(ahFields);
 
             // estimateStringLength(String[] names, Object[] fields)
             ObjectHandle[] ahVars = new ObjectHandle[FN_ESTIMATE_LENGTH.getMaxVars()];
@@ -293,8 +288,8 @@ public class xConst
 
         if (ahNames.length > 0)
             {
-            ArrayHandle hNames  = xArray.INSTANCE.createArrayHandle(CLZ_STRINGS, ahNames);
-            ArrayHandle hValues = xArray.INSTANCE.createArrayHandle(CLZ_OBJECTS, ahFields);
+            ArrayHandle hNames  = xArray.makeStringArrayHandle(ahNames);
+            ArrayHandle hValues = xArray.makeObjectArrayHandle(ahFields);
 
             // appendTo(Appender<Char> appender, String[] names, Object[] fields)
             ObjectHandle[] ahVars = new ObjectHandle[FN_APPEND_TO.getMaxVars()];

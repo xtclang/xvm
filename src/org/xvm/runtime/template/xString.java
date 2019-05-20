@@ -5,7 +5,6 @@ import java.util.Arrays;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -15,7 +14,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
@@ -51,12 +49,6 @@ public class xString
     @Override
     public void initDeclared()
         {
-        ConstantPool pool      = f_struct.getConstantPool();
-        TypeConstant typeArray = pool.ensureParameterizedTypeConstant(
-                pool.typeArray(), pool.typeString());
-
-        s_clzArray = f_templates.resolveClass(typeArray);
-
         markNativeProperty("size");
         markNativeProperty("chars");
         markNativeMethod("construct", new String[]{"collections.Array<Char>"}, VOID);
@@ -494,13 +486,6 @@ public class xString
             ? EMPTY_STRING
             : new StringHandle(INSTANCE.getCanonicalClass(), achValue);
         }
-
-    public static ArrayHandle makeArrayHandle(StringHandle[] ahValue)
-        {
-        return xArray.INSTANCE.createArrayHandle(s_clzArray, ahValue);
-        }
-
-    public static ClassComposition s_clzArray; // String[]
 
     public static StringHandle EMPTY_STRING;
     public static StringHandle EMPTY_ARRAY;
