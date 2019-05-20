@@ -1,110 +1,3 @@
-+ super() method call
-
-+ Service
-        - cleanup an un-referenced service (phantom refs?)
-        +/- container terminates when all services are stopped
-
-+ Function wrapping for services
-+ Get/Set on the service
-
-+ Matching the function/method return value with a Ref
-
-+ FutureRef async completion handling
-
-+ Atomics
-
-+ Vars as "deferrable" registers
-
-+ Arrays, Generic types
-
-+ Refs to array elements
-
-+ Refs to method arguments
-
-+ DaemonPool scheduling - "native" stack implementation
-
-+ Tuple, ConditionalTuple
-
-+ Tuple construction - new TVAR, SVAR op-codes
-
-+ Service reentrancy, timeouts and Fibers
-
-+ injection
-
-+ native Service methods
-
-+ Multi:
-    +- new
-    +- call
-    +- invoke
-
-+ try-finally
-
-+ op-code serialization/deserialization
-
-+ introduce "native super" in ClassTemplate to allow Object -> MyClass -> MyService inheritance
-
-+ Const
-
-+ hash implementation
-
-+ revisit hash and to<String> implementation
-
-+ change the continuation API
-
-+ implement missing enum methods
-
-+ mixin processing
-
-+ revisit PreInc, PostInc; add Inc, Dec ops
-
-+ use of the MethodSignature instead of MethodConstant
-
-+ re-work ops:
-    + Merge Ref and MoveRef
-    + Move, Ref - allow next unallocated register;
-    + allow local property for Invoke_*
-    + allow next register and local property for GP_Add, GP_NEG
-    + allow local property for Call_*
-    + allow local property for PIP_*
-    + allow local property for Call_* and Invoke_* returns
-    + allow local property for l-values (assignValue)
-    + allow next register for *GET
-    + allow local property for IS_*
-    + allow local property for JMP_*
-    + allow local property for GP_*
-    + allow local property for IP_*
-    + allow local property for IIP_*
-    + allow next register for IS_*
-    + allow next register for Invoke_*
-    + allow next register for Call_*
-
-+ change tests using "local property" mode
-
-+ access exchange (public vs private vs struct) during invocations
-
-+ change VAR_S to be consistent with VAR_T op (TYPE = Sequence type)
-
-+ createConst() processing for Array
-
-+ singleton initialization contracts
-    + singletons represented by constants (SingletonConstant)
-    + initialization during the frame construction based on a transient
-      "initialized" flag on the MethodStructure
-    + circular initialization check
-
-+ ClassTemplate - check for @Op for Add, Sub, ...
-
-+ generate the default constructor
-
-+ isA() to support auto-narrowing types
-    - add a test for auto-narrowing method invocation
-    + Tuple, Function (and Method?) have to have specialized "isA" algorithms
-
-+ changed the Service API - Void registerAsyncSection(AsyncSection asyncSection);
-    - pending futures are kept along with the corresponding AsyncSection
-    - registerAsyncSection blocks
-
 - add a ReentrantLock for the ServiceContext to allow for an optimistic (message-less) context switch
     - DaemonPool to acquire the lock prior to nextFiber() call
     - ServiceContext.sendXyz() to set a target ServiceContext reference that would be used by
@@ -124,8 +17,6 @@
 
 - introduce stock exception (Bounds, IllegalState, etc.)
 
-- introduce native functions
-
 - Type: by-method comparison
 
 - Move op-code: "safe wrapper" logic
@@ -138,25 +29,15 @@
 
 - AssignmentStatement - avoid narrowing if reference is taken
 
-- create native xBitArray
-
-+ implement default argument constant calculation (currently always zero value)
-
-+ runtime support for property initializer "="
-
 - native optimization Stringable methods on xInt*, xUInt*, etc.
 
 - consider a FormalTypeConstant instead of TerminalType(PropertyConstant)
-
-++ make TypeConstant.resolveGeneric() idempotent (resolved to some extent)
 
 -- tuple support
    - InvocationExpression - needs to generate _xT ops (i.e. it must be able to testFit & validate for a tuple type)
    - verify (and test) the logic in ReturnStatement that gens RETURN_T
    - assignment w/ multi-LVal needs to testFit for Tuple if testFit for multi fails
      (and use Expression.packedExpression and unpackedExpressions for code gen?)
-
-- base class for VirtChild and AnonymousClass
 
 - refactor AnonInnerClass to process errors correctly
 
@@ -165,6 +46,9 @@
 - AnnotationTypeConstant method layers processing should be similar to properties
 
 - heap.getType() vs. Constant.getType()
+
+- get rid of the native knowledge about LazyVar; limit it to Unassigned only and make LazyVar to
+  mixin into UnassignedVar
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
