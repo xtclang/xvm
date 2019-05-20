@@ -427,7 +427,7 @@ class ListMap<KeyType, ValueType>
          *
          * @param key    the key for the entry
          */
-        CursorEntry advance(Int index)    // REVIEW GG I would like to have this "protected"
+        protected CursorEntry advance(Int index)
             {
             assert cursor;
             this.key    = listKeys[index];
