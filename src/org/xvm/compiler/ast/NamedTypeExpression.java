@@ -365,19 +365,14 @@ public class NamedTypeExpression
                 type = pool.ensureParameterizedTypeConstant(type, atypeParams);
                 }
 
-            // unlike the parametrization, we shouldn't modify unresolved types; doing so can cause
-            // a double-dipping during resolution (e.g. Object:protected:protected)
-            if (!type.containsUnresolved())
+            if (access != null && access != Access.PUBLIC)
                 {
-                if (access != null && access != Access.PUBLIC)
-                    {
-                    type = pool.ensureAccessTypeConstant(type, access);
-                    }
+                type = pool.ensureAccessTypeConstant(type, access);
+                }
 
-                if (immutable != null)
-                    {
-                    type = pool.ensureImmutableTypeConstant(type);
-                    }
+            if (immutable != null)
+                {
+                type = pool.ensureImmutableTypeConstant(type);
                 }
             }
         else
