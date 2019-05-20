@@ -799,7 +799,6 @@ public abstract class Constant
         Version,
         SingletonConst,     // identity constant for a Module, Package, an enum value or a static const
         SingletonService,   // identity constant of a Service class
-        ConstantValue,      // PropertyConstant that represents the value of a const or a service
         Tuple,
         Array,
         UInt8Array,         // byte[]
@@ -809,8 +808,9 @@ public abstract class Constant
         Interval,
         Any,
         FileStore,
-        Dir,
-        File,
+        FSDir,
+        FSFile,
+        FSLink,
 
         /*
          * Structural identifiers.
@@ -835,7 +835,6 @@ public abstract class Constant
         FormalTypeChild,
         Signature,
         NativeClass,
-        CapturedVariable,
 
         /*
          * Types.
