@@ -934,6 +934,7 @@ public abstract class TypeConstant
     public boolean isNestMateOf(IdentityConstant idClass)
         {
         return !isFormalType() &&
+                isSingleDefiningConstant() &&
                 isSingleUnderlyingClass(false) &&
                 getSingleUnderlyingClass(false).isNestMateOf(idClass);
         }

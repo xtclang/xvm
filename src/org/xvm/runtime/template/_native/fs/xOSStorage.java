@@ -13,6 +13,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
 
+import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xService;
@@ -95,7 +96,7 @@ public class xOSStorage
                     ahName[i++] = xString.makeHandle(sName);
                     }
 
-                return frame.assignValue(iReturn, xString.makeArrayHandle(ahName));
+                return frame.assignValue(iReturn, xArray.makeStringArrayHandle(ahName));
                 }
             }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);

@@ -322,6 +322,11 @@ public class InvocationExpression
                     {
                     return TypeConstant.NO_TYPES;
                     }
+
+                if (isNestMate(ctx, typeLeft))
+                    {
+                    typeLeft = pool.ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
+                    }
                 }
 
             // collect as many redundant return types as possible to help narrow down the
@@ -506,6 +511,11 @@ public class InvocationExpression
                         {
                         fValid = false;
                         }
+                    }
+
+                if (isNestMate(ctx, typeLeft))
+                    {
+                    typeLeft = pool.ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
                     }
                 }
 

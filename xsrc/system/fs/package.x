@@ -7,7 +7,6 @@ package fs
     /**
      * A generic path-related exception, used as the basis for many filing system exceptions.
      */
-    // REVIEW GG - it couldn't find this if it was marked "protected"
     const PathException(Path? path = null, String? text = null, Exception? cause = null)
             extends Exception(text, cause);
 
@@ -33,7 +32,7 @@ package fs
             extends PathException(path, text, cause);
 
     /**
-     * TODO
+     * Indicates that an end of file or stream has been reached unexpectedly.
      */
     const EndOfFile(Path? path = null, String? text = null, Exception? cause = null)
             extends PathException(path, text, cause);

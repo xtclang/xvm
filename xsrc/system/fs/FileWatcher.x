@@ -8,10 +8,10 @@ interface FileWatcher
 
     enum Event {Created, Modified, Deleted}
 
-    // REVIEW GG this requires me to say "Set<Event>"; it does not infer the parameter
     static Set<Event> ALL_EVENTS = new collections.ListSet<Event>(
-            // REVIEW GG why do I need "Event." for these? ;-)
-            [Event.Created, Event.Modified, Event.Deleted]).ensureConst(true);
+            [Created, Modified, Deleted]).ensureConst(true);
+    // TODO CP the ideal way to present it would be a "set" literal
+    // static Set<Event> ALL_EVENTS = Set<Event>:[Created, Modified, Deleted];
 
     /**
      * If the mechanism that is detecting and reporting the changes to this FileWatcher is capable
