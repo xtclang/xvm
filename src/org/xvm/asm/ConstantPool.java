@@ -6,6 +6,11 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import java.nio.file.attribute.FileTime;
+
+import java.time.Instant;
+import java.time.ZoneOffset;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -511,6 +516,43 @@ public class ConstantPool
         }
 
     /**
+     * @param ft  the FileTime value or null
+     *
+     * @return the DateTime constant for the specified FileTime (or the epoch if the FileTime is
+     *         null)
+     */
+    public LiteralConstant ensureDateTimeConstant(FileTime ft)
+        {
+        if (ft == null)
+            {
+            return defaultDateTimeConstant();
+            }
+
+        String sDT = ft.toInstant().atOffset(ZoneOffset.UTC).toString();
+        return ensureLiteralConstant(Format.DateTime, sDT);
+        }
+
+    /**
+     * @param instant  the Instant value or null
+     *
+     * @return the DateTime constant for the specified instant (or the epoch if the Instant is null)
+     */
+    public LiteralConstant ensureDateTimeConstant(Instant instant)
+        {
+        return instant == null
+                ? defaultDateTimeConstant()
+                : ensureLiteralConstant(Format.DateTime, instant.toString());
+        }
+
+    /**
+     * @return the DateTime constant for the epoch (zero) value
+     */
+    public LiteralConstant defaultDateTimeConstant()
+        {
+        return ensureLiteralConstant(Format.DateTime, Instant.EPOCH.toString());
+        }
+
+    /**
      * Given the specified Version value, obtain a VersionConstant that represents it.
      *
      * @param ver  a version
@@ -614,6 +656,57 @@ public class ConstantPool
         {
         // TODO validations
         return new IntervalConstant(this, const1, const2);
+        }
+
+    /**
+     * Create a FileStore constant for the specified directory.
+     *
+     * @param sPath     the path used to specify the FileStore
+     * @param constDir  the directory contents of the FileStore
+     *
+     * @return
+     */
+    public FileStoreConstant ensureFileStoreConstant(String sPath, FSNodeConstant constDir)
+        {
+        return new FileStoreConstant(this, sPath, constDir);
+        }
+
+    /**
+     * Create a directory FSNodeConstant for the specified directory.
+     *
+     * @param sName       the (simple) name of the directory
+     * @param ftCreated   the creation date/time of the directory, or null
+     * @param ftModified  the last-modified date/time of the directory, or null
+     * @param afiles      the contents of the directory
+     *
+     * @return a directory FSNodeConstant
+     */
+    public FSNodeConstant ensureDirectoryConstant(
+            String           sName,
+            FileTime         ftCreated,
+            FileTime         ftModified,
+            FSNodeConstant[] afiles)
+        {
+        return new FSNodeConstant(this, sName, ftCreated, ftModified, afiles);
+        }
+
+    /**
+     * Create a file FSNodeConstant for the specified bytes.
+     *
+     * @param sName       the name of the file within its directory
+     * @param ftCreated   the creation date/time of the file, or null
+     * @param ftModified  the last-modified date/time of the file, or null
+     * @param ab          the contents of the file
+     *
+     * @return a file FSNodeConstant
+     */
+    public FSNodeConstant ensureFileConstant(
+            String   sName,
+            FileTime ftCreated,
+            FileTime ftModified,
+            byte[]   ab)
+        {
+        return new FSNodeConstant(this, sName, ftCreated, ftModified, ab);
         }
 
     /**
@@ -1020,6 +1113,11 @@ public class ConstantPool
                 sClz = "UInt64";
                 break;
 
+            case "StackFrame":
+                sClz = "Exception";
+                sSub = "StackFrame";
+                break;
+
             case "Array":
             case "Hashable":
             case "List":
@@ -1146,6 +1244,13 @@ public class ConstantPool
 
             case "Console":
                 sPkg = "io";
+                sClz = sName;
+                break;
+
+            case "FileStore":
+            case "File":
+            case "Directory":
+                sPkg = "fs";
                 sClz = sName;
                 break;
 
@@ -1928,6 +2033,10 @@ public class ConstantPool
     public ClassConstant     clzIterable()      {ClassConstant     c = m_clzIterable;     if (c == null) {m_clzIterable     = c = (ClassConstant) getImplicitlyImportedIdentity("Iterable"   );} return c;}
     public ClassConstant     clzIterator()      {ClassConstant     c = m_clzIterator;     if (c == null) {m_clzIterator     = c = (ClassConstant) getImplicitlyImportedIdentity("Iterator"   );} return c;}
     public ClassConstant     clzTuple()         {ClassConstant     c = m_clzTuple;        if (c == null) {m_clzTuple        = c = (ClassConstant) getImplicitlyImportedIdentity("Tuple"      );} return c;}
+    public ClassConstant     clzFileStore()     {ClassConstant     c = m_clzFileStore;    if (c == null) {m_clzFileStore    = c = (ClassConstant) getImplicitlyImportedIdentity("FileStore"  );} return c;}
+    public ClassConstant     clzDirectory()     {ClassConstant     c = m_clzDirectory;    if (c == null) {m_clzDirectory    = c = (ClassConstant) getImplicitlyImportedIdentity("Directory"  );} return c;}
+    public ClassConstant     clzFile()          {ClassConstant     c = m_clzFile;         if (c == null) {m_clzFile         = c = (ClassConstant) getImplicitlyImportedIdentity("File"       );} return c;}
+    public ClassConstant     clzFileNode()      {ClassConstant     c = m_clzFileNode;     if (c == null) {m_clzFileNode     = c = (ClassConstant) getImplicitlyImportedIdentity("FileNode"   );} return c;}
     public ClassConstant     clzFrame()         {ClassConstant     c = m_clzFrame;        if (c == null) {m_clzFrame        = c = (ClassConstant) getImplicitlyImportedIdentity("StackFrame" );} return c;}
     public ClassConstant     clzAuto()          {ClassConstant     c = m_clzAuto;         if (c == null) {m_clzAuto         = c = (ClassConstant) getImplicitlyImportedIdentity("Auto"       );} return c;}
     public ClassConstant     clzOp()            {ClassConstant     c = m_clzOp;           if (c == null) {m_clzOp           = c = (ClassConstant) getImplicitlyImportedIdentity("Op"         );} return c;}
@@ -1998,6 +2107,10 @@ public class ConstantPool
     public TypeConstant      typeIterable()     {TypeConstant      c = m_typeIterable;    if (c == null) {m_typeIterable    = c = ensureTerminalTypeConstant(clzIterable()                   );} return c;}
     public TypeConstant      typeIterator()     {TypeConstant      c = m_typeIterator;    if (c == null) {m_typeIterator    = c = ensureTerminalTypeConstant(clzIterator()                   );} return c;}
     public TypeConstant      typeTuple()        {TypeConstant      c = m_typeTuple;       if (c == null) {m_typeTuple       = c = ensureTerminalTypeConstant(clzTuple()                      );} return c;}
+    public TypeConstant      typeFileStore()    {TypeConstant      c = m_typeFileStore;   if (c == null) {m_typeFileStore   = c = ensureTerminalTypeConstant(clzFileStore()                  );} return c;}
+    public TypeConstant      typeDirectory()    {TypeConstant      c = m_typeDirectory;   if (c == null) {m_typeDirectory   = c = ensureTerminalTypeConstant(clzDirectory()                  );} return c;}
+    public TypeConstant      typeFile()         {TypeConstant      c = m_typeFile;        if (c == null) {m_typeFile        = c = ensureTerminalTypeConstant(clzFile()                       );} return c;}
+    public TypeConstant      typeFileNode()     {TypeConstant      c = m_typeFileNode;    if (c == null) {m_typeFileNode    = c = ensureTerminalTypeConstant(clzFileNode()                   );} return c;}
     public TypeConstant      typeFrame()        {TypeConstant      c = m_typeFrame;       if (c == null) {m_typeFrame       = c = ensureTerminalTypeConstant(clzFrame()                      );} return c;}
 
     public TypeConstant      typeByteArray()    {TypeConstant      c = m_typeByteArray;   if (c == null) {m_typeByteArray   = c = ensureClassTypeConstant(clzArray(), null, typeByte()       );} return c;}
@@ -2160,6 +2273,8 @@ public class ConstantPool
                     constant = new LiteralConstant(this, format, in);
                     break;
 
+                case Bit:
+                case Nibble:
                 case Int8:
                     constant = new Int8Constant(this, format, in);
                     break;
@@ -2248,6 +2363,16 @@ public class ConstantPool
                     constant = new MatchAnyConstant(this, format, in);
                     break;
 
+                case FileStore:
+                    constant = new FileStoreConstant(this, format, in);
+                    break;
+
+                case FSDir:
+                case FSFile:
+                case FSLink:
+                    constant = new FSNodeConstant(this, format, in);
+                    break;
+
                 /*
                 * Structural identifiers.
                 */
@@ -2279,6 +2404,10 @@ public class ConstantPool
                     constant = new MethodConstant(this, format, in);
                     break;
 
+                case Annotation:
+                    // it does extend Constant, but it's not stored in the ConstantPool itself
+                    throw new IllegalStateException();
+
                 /*
                 * Pseudo identifiers.
                 */
@@ -2301,9 +2430,17 @@ public class ConstantPool
                     constant = new TypeParameterConstant(this, format, in);
                     break;
 
+                case FormalTypeChild:
+                    constant = new FormalTypeChildConstant(this, format, in);
+                    break;
+
                 case Signature:
                     constant = new SignatureConstant(this, format, in);
                     break;
+
+                case NativeClass:
+                    // it is not used in the persistent form of the module
+                    throw new IllegalStateException();
 
                 /*
                 * Types.
@@ -2333,6 +2470,18 @@ public class ConstantPool
 
                 case TurtleType:
                     constant = new TypeSequenceTypeConstant(this);
+                    break;
+
+                case VirtualChildType:
+                    constant = new VirtualChildTypeConstant(this, format, in);
+                    break;
+
+                case AnonymousClassType:
+                    constant = new AnonymousClassTypeConstant(this, format, in);
+                    break;
+
+                case PropertyClassType:
+                    constant = new PropertyClassTypeConstant(this, format, in);
                     break;
 
                 case UnionType:
@@ -2663,6 +2812,10 @@ public class ConstantPool
         m_clzIterable     = null;
         m_clzIterator     = null;
         m_clzTuple        = null;
+        m_clzFileStore    = null;
+        m_clzDirectory    = null;
+        m_clzFile         = null;
+        m_clzFileNode     = null;
         m_clzFrame        = null;
         m_clzAuto         = null;
         m_clzOp           = null;
@@ -2736,6 +2889,10 @@ public class ConstantPool
         m_typeIterable    = null;
         m_typeIterator    = null;
         m_typeTuple       = null;
+        m_typeFileStore   = null;
+        m_typeDirectory   = null;
+        m_typeFile        = null;
+        m_typeFileNode    = null;
         m_typeFrame       = null;
         m_val0            = null;
         m_val1            = null;
@@ -3132,6 +3289,10 @@ public class ConstantPool
     private transient ClassConstant     m_clzIterable;
     private transient ClassConstant     m_clzIterator;
     private transient ClassConstant     m_clzTuple;
+    private transient ClassConstant     m_clzFileStore;
+    private transient ClassConstant     m_clzDirectory;
+    private transient ClassConstant     m_clzFile;
+    private transient ClassConstant     m_clzFileNode;
     private transient ClassConstant     m_clzFrame;
     private transient ClassConstant     m_clzAuto;
     private transient ClassConstant     m_clzOp;
@@ -3205,6 +3366,10 @@ public class ConstantPool
     private transient TypeConstant      m_typeIterable;
     private transient TypeConstant      m_typeIterator;
     private transient TypeConstant      m_typeTuple;
+    private transient TypeConstant      m_typeFileStore;
+    private transient TypeConstant      m_typeDirectory;
+    private transient TypeConstant      m_typeFile;
+    private transient TypeConstant      m_typeFileNode;
     private transient TypeConstant      m_typeFrame;
     private transient IntConstant       m_val0;
     private transient IntConstant       m_val1;

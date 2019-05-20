@@ -1,6 +1,7 @@
 package org.xvm.compiler;
 
 
+import java.io.File;
 import java.io.IOException;
 
 import java.util.ArrayList;
@@ -3484,12 +3485,19 @@ public class Parser
                     next();
                     }
 
-                String  sFile = parseFileName();
-                long    lEnd  = peek().getStartPosition();
-                Object  oData = null;
+                Token   tokFile = parsePath();
+                String  sFile   = (String) tokFile.getValue();
+                long    lEnd    = tokFile.getEndPosition();
+                boolean fDir    = !fBin && sFile.endsWith("/");
+                File    dir     = null;
+                Object  oData   = null;
                 try
                     {
-                    if (fBin)
+                    if (fDir)
+                        {
+                        dir = m_source.resolvePath(sFile);
+                        }
+                    else if (fBin)
                         {
                         oData = m_source.includeBinary(sFile);
                         }
@@ -3500,6 +3508,19 @@ public class Parser
                         }
                     }
                 catch (IOException e) {}
+
+                if (fDir)
+                    {
+                    if (dir == null || !dir.exists() || !dir.isDirectory())
+                        {
+                        log(Severity.ERROR, INVALID_PATH, lStart, lEnd, sFile);
+                        oData = "";
+                        }
+                    else
+                        {
+                        return new DirectoryExpression(tokFile, dir);
+                        }
+                    }
 
                 if (oData == null)
                     {
@@ -3532,11 +3553,11 @@ public class Parser
 
     /**
      * Starting with the current token, eat all of the tokens that are part of a potential file
-     * name, and return that file name as a String.
+     * or directory name, and return that file name as a String token.
      *
-     * @return  the file name
+     * @return  the file or directory name as if it were a literal string token
      */
-    String parseFileName()
+    Token parsePath()
         {
         StringBuilder sb     = new StringBuilder();
         Token         tokDiv = current();
@@ -3545,43 +3566,67 @@ public class Parser
             {
             sb.append(tokDiv.getId().TEXT);
 
-            // the divider needs to have no space after it
+            // whitespace after the divider indicates the end of the path
             if (tokDiv.hasTrailingWhitespace())
                 {
-                log(Severity.ERROR, INVALID_PATH, lPos, tokDiv.getEndPosition(), sb.toString());
-                throw new CompilerException("illegal include-file path: " + sb.toString());
+                return new Token(lPos, tokDiv.getEndPosition(), Id.LIT_STRING, sb.toString());
                 }
 
-            // the divider must be followed by a name
-            Token tokName = expect(Id.IDENTIFIER);
-            sb.append(tokName.getValue());
-
-            // a name followed by white-space is the end of the path, as is a name followed
-            // by any token that cannot continue the path (anything but a dot or slash)
-            boolean fDone;
-            if (tokName.hasTrailingWhitespace())
+            // DIV          -> DIR_CUR | DIR_PARENT | DOT | IDENTIFIER
+            // DIR_CUR      -> DIR_CUR | DIR_PARENT | DOT | IDENTIFIER
+            // DIR_PARENT   -> DIR_CUR | DIR_PARENT | DOT | IDENTIFIER
+            // IDENTIFIER   -> DOT | DIV
+            // DOT          -> IDENTIFIER
+            switch (peek().getId())
                 {
-                fDone = true;
-                }
-            else
-                {
-                switch (peek().getId())
-                    {
-                    case DOT:
-                    case DIV:
-                        tokDiv = current();
-                        fDone  = false;
-                        break;
+                case DOT:
+                    Token tokDot = current();
+                    sb.append('.');
+                    if (tokDot.hasTrailingWhitespace())
+                        {
+                        log(Severity.ERROR, INVALID_PATH, lPos, tokDot.getEndPosition(), sb.toString());
+                        throw new CompilerException("illegal include-file path: " + sb.toString());
+                        }
+                    // fall through
+                case IDENTIFIER:
+                    untilDiv: while (true)
+                        {
+                        Token tokName = expect(Id.IDENTIFIER);
+                        sb.append(tokName.getValue());
+                        if (tokName.hasTrailingWhitespace())
+                            {
+                            return new Token(lPos, tokName.getEndPosition(), Id.LIT_STRING, sb.toString());
+                            }
 
-                    default:
-                        fDone = true;
-                        break;
-                    }
-                }
+                        switch (peek().getId())
+                            {
+                            case DOT:
+                                tokDot = current();
+                                sb.append('.');
+                                if (tokDot.hasTrailingWhitespace())
+                                    {
+                                    log(Severity.ERROR, INVALID_PATH, lPos, tokDot.getEndPosition(), sb.toString());
+                                    throw new CompilerException("illegal include-file path: " + sb.toString());
+                                    }
+                                break;
 
-            if (fDone)
-                {
-                return sb.toString();
+                            case DIV:
+                                tokDiv = current();
+                                break untilDiv;
+
+                            default:
+                                return new Token(lPos, tokName.getEndPosition(), Id.LIT_STRING, sb.toString());
+                            }
+                        }
+                    break;
+
+                case DIR_CUR:
+                case DIR_PARENT:
+                    tokDiv = current();
+                    break;
+
+                default:
+                    return new Token(lPos, tokDiv.getEndPosition(), Id.LIT_STRING, sb.toString());
                 }
             }
         }
