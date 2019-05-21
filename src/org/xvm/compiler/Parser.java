@@ -3504,7 +3504,7 @@ public class Parser
                     else
                         {
                         Source source = m_source.includeString(sFile);
-                        oData = source.toRawString();
+                        oData = source == null ? null : source.toRawString();
                         }
                     }
                 catch (IOException e) {}

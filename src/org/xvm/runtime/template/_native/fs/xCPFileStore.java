@@ -5,6 +5,7 @@ import java.io.File;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Constant.Format;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -20,6 +21,10 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ConstantHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Utils;
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xInt64;
+import org.xvm.runtime.template.xString;
 
 
 /**
@@ -88,11 +93,19 @@ public class xCPFileStore
 
         switch (method.getName())
             {
-            // protected (Boolean isdir, String name, UInt128 created, UInt128 modified, Int size) loadNode(Object constNode)
+            // protected (Boolean isdir, String name, String created, String modified, Int size) loadNode(Object constNode)
             case "loadNode":
                 {
-                // TODO
-                int x = 0;
+                ConstantHandle hNode     = (ConstantHandle) ahArg[0];
+                FSNodeConstant constNode = (FSNodeConstant) hNode.get();
+
+                ObjectHandle[] ahValue = new ObjectHandle[5];
+                ahValue[0] = xBoolean.makeHandle(constNode.getFormat() == Format.FSDir);
+                ahValue[1] = xString.makeHandle(constNode.getName());
+                ahValue[2] = xString.makeHandle("created");     // TODO
+                ahValue[3] = xString.makeHandle("modified");    // TODO
+                ahValue[4] = xInt64.makeHandle(calcSize(constNode));
+                return new Utils.AssignValues(aiReturn, ahValue, null).proceed(frame);
                 }
 
             // protected (String[] names, Object[] cookies) loadDirectory(Object constNode);
@@ -111,6 +124,32 @@ public class xCPFileStore
         {
         return true;
         }
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    static long calcSize(FSNodeConstant node)
+        {
+        switch (node.getFormat())
+            {
+            case FSDir:
+                long lSum = 0;
+                for (FSNodeConstant nodeSub : node.getDirectoryContents())
+                    {
+                    lSum += calcSize(nodeSub);
+                    }
+                return lSum;
+
+            case FSFile:
+                return node.getFileBytes().length;
+
+            case FSLink:
+                return calcSize(node.getLinkTarget());
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
 
     // ----- constants -----------------------------------------------------------------------------
 

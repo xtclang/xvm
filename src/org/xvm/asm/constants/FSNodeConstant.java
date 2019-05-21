@@ -200,8 +200,13 @@ public class FSNodeConstant
         return ((UInt8ArrayConstant) m_constData).getValue();
         }
 
+    public FSNodeConstant getLinkTarget()
+        {
+        assert m_fmt == Format.FSLink;
+        return (FSNodeConstant) m_constData;
+        }
 
-    // ----- ValueConstant methods -----------------------------------------------------------------
+        // ----- ValueConstant methods -----------------------------------------------------------------
 
     @Override
     public TypeConstant getType()
