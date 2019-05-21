@@ -12,7 +12,7 @@ const CPFileStore(Object constRoot)
         implements FileStore
     {
     @Override
-    @Lazy @RO Directory root.calc()
+    @Lazy Directory root.calc()
         {
         (Boolean isdir, String name, UInt128 created, UInt128 modified, Int size) = loadNode(constRoot);
         assert isdir;

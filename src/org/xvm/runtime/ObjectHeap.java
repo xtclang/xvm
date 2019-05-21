@@ -103,9 +103,6 @@ public class ObjectHeap
         {
         switch (constValue.getFormat())
             {
-            case Array:
-                return ((ArrayConstant) constValue).getType();
-
             case Int64:
                 return f_poolRoot.typeInt();
 
@@ -133,6 +130,10 @@ public class ObjectHeap
             case Dec64:
             case Dec128:
             case VarDec:
+            case Array:
+            case Map:
+            case Tuple:
+            case FileStore:
                 return constValue.getType();
 
             case Char:
@@ -166,18 +167,12 @@ public class ObjectHeap
                 return pool.ensureParameterizedTypeConstant(f_poolRoot.typeInterval(), typeEl);
                 }
 
-            case Tuple:
-                return ((ArrayConstant) constValue).getType();
-
             case UInt8Array:
                 return f_poolRoot.typeByteArray();
 
             case Set:
             case MapEntry:
                 throw new UnsupportedOperationException("TODO: " + constValue);
-
-            case Map:
-                return ((MapConstant) constValue).getType();
 
             case Module:
                 return f_poolRoot.typeModule();

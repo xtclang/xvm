@@ -13,6 +13,7 @@ module TestLiterals.xqiz.it
         testMultiline();
         testMultilineTemplate();
         testHex();
+        testDirs();
         }
 
     void testVersions()
@@ -133,5 +134,13 @@ module TestLiterals.xqiz.it
         bytes = #/testLiterals.xtc;
         // console.println($"bytes={bytes[0..10]}..{bytes[bytes.size-10..bytes.size-1]"); TODO CP - infinite loop in lexer?
         console.println($"bytes={bytes[0..10]}...{bytes[bytes.size-10..bytes.size-1]}");
+        }
+
+    void testDirs()
+        {
+        console.println("\n** testDirs()");
+
+        FileStore fs = /;
+        console.println(fs);
         }
     }

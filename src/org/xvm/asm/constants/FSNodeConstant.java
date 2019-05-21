@@ -105,6 +105,7 @@ public class FSNodeConstant
             throw new IllegalArgumentException("file contents required");
             }
 
+        m_fmt           = Format.FSFile;
         m_constName     = pool.ensureStringConstant(sName);
         m_constCreated  = pool.ensureDateTimeConstant(ftCreated);
         m_constModified = pool.ensureDateTimeConstant(ftModified);
@@ -138,6 +139,7 @@ public class FSNodeConstant
             throw new IllegalArgumentException("link-to node required");
             }
 
+        m_fmt           = Format.FSLink;
         m_constName     = pool.ensureStringConstant(sName);
         m_constCreated  = pool.ensureDateTimeConstant(ftCreated);
         m_constModified = pool.ensureDateTimeConstant(ftModified);

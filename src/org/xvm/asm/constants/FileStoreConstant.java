@@ -129,6 +129,12 @@ public class FileStoreConstant
         }
 
     @Override
+    public TypeConstant getType()
+        {
+        return getConstantPool().ensureEcstasyTypeConstant("_native.fs.CPFileStore");
+        }
+
+    @Override
     public boolean containsUnresolved()
         {
         return m_constDir.containsUnresolved();

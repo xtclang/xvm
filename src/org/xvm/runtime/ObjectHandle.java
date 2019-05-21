@@ -519,7 +519,7 @@ public abstract class ObjectHandle
     public static class ConstantHandle
             extends ObjectHandle
         {
-        protected ConstantHandle(Constant constant)
+        public ConstantHandle(Constant constant)
             {
             super(xObject.CLASS);
 

@@ -2036,7 +2036,7 @@ public class ConstantPool
     public ClassConstant     clzFileStore()     {ClassConstant     c = m_clzFileStore;    if (c == null) {m_clzFileStore    = c = (ClassConstant) getImplicitlyImportedIdentity("FileStore"  );} return c;}
     public ClassConstant     clzDirectory()     {ClassConstant     c = m_clzDirectory;    if (c == null) {m_clzDirectory    = c = (ClassConstant) getImplicitlyImportedIdentity("Directory"  );} return c;}
     public ClassConstant     clzFile()          {ClassConstant     c = m_clzFile;         if (c == null) {m_clzFile         = c = (ClassConstant) getImplicitlyImportedIdentity("File"       );} return c;}
-    public ClassConstant     clzFileNode()      {ClassConstant     c = m_clzFileNode;     if (c == null) {m_clzFileNode     = c = (ClassConstant) getImplicitlyImportedIdentity("FileNode"   );} return c;}
+    public ClassConstant     clzFileNode()      {ClassConstant     c = m_clzFileNode;     if (c == null) {m_clzFileNode     = c = (ClassConstant) ensureEcstasyClassConstant("fs.FileNode"   );} return c;}
     public ClassConstant     clzFrame()         {ClassConstant     c = m_clzFrame;        if (c == null) {m_clzFrame        = c = (ClassConstant) getImplicitlyImportedIdentity("StackFrame" );} return c;}
     public ClassConstant     clzAuto()          {ClassConstant     c = m_clzAuto;         if (c == null) {m_clzAuto         = c = (ClassConstant) getImplicitlyImportedIdentity("Auto"       );} return c;}
     public ClassConstant     clzOp()            {ClassConstant     c = m_clzOp;           if (c == null) {m_clzOp           = c = (ClassConstant) getImplicitlyImportedIdentity("Op"         );} return c;}
