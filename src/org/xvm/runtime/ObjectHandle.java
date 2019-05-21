@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.Constants;
 import org.xvm.asm.Op;
 
@@ -13,6 +14,7 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
+import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xRef.RefHandle;
 
 import org.xvm.util.ListMap;
@@ -511,6 +513,32 @@ public abstract class ObjectHandle
             {
             return super.toString() + m_mutability + ", size=" + m_cSize;
             }
+        }
+
+    // native handle that holds a reference to a Constant from the ConstantPool
+    public static class ConstantHandle
+            extends ObjectHandle
+        {
+        protected ConstantHandle(Constant constant)
+            {
+            super(xObject.CLASS);
+
+            assert constant != null;
+            m_const = constant;
+            }
+
+        public Constant get()
+            {
+            return m_const;
+            }
+
+        @Override
+        public String toString()
+            {
+            return m_const.toString();
+            }
+
+        private Constant m_const;
         }
 
     /**

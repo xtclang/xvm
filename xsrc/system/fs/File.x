@@ -39,7 +39,7 @@ interface File
      *
      * Common archive formats include: .zip, .tar, .gz, .dmg.
      */
-    conditional FileStore archive();
+    conditional FileStore openArchive();
 
     enum ReadOption
         {

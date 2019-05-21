@@ -45,7 +45,7 @@ class OSDirectory
         }
 
     @Override
-    conditional Directory deleteRecursively();
+    Boolean deleteRecursively();
 
     @Override
     Cancellable watchRecursively(FileWatcher watch);

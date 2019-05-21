@@ -65,7 +65,7 @@ interface Directory
      *
      * @throws AccessDenied  if permission to delete the file has not been granted
      */
-    conditional Directory deleteRecursively();
+    Boolean deleteRecursively();
 
     typedef function void () Cancellable;
 

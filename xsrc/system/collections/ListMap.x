@@ -22,10 +22,42 @@ class ListMap<KeyType, ValueType>
     {
     // ----- constructors --------------------------------------------------------------------------
 
+    /**
+     * Construct a mutable ListMap with an optional initial capacity.
+     *
+     * @param initCapacity  an optional suggested capacity for the map, expressed in terms of the
+     *                      number of entries
+     */
     construct(Int initCapacity = 0)
         {
         listKeys = new Array(initCapacity);
         listVals = new Array(initCapacity);
+        }
+
+    /**
+     * Construct a persistent (Persistent or Constant) ListMap pre-populated with the specified
+     * keys and values.
+     *
+     * @param keys  the keys for the map
+     * @param vals  the values for the map
+     */
+    construct(KeyType[] keys, ValueType[] vals)
+        {
+        listKeys = keys;
+        listVals = vals;
+        // TODO various checks, and do we need to copy the array(s) if they aren't immutable?
+        }
+    finally
+        {
+        if (listKeys.is(immutable Array) && listVals.is(immutable Array))
+            {
+            mutability = Constant;
+            makeImmutable();
+            }
+        else
+            {
+            mutability = Persistent;
+            }
         }
 
 

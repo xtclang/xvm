@@ -21,7 +21,7 @@ interface FileStore
     /**
      * Obtain the Directory or File at the specified path.
      *
-     * @param path   the Path of the Directory or File to find
+     * @param path  the Path of the Directory or File to find
      *
      * @return the Directory or File at that path, only if is exists
      */

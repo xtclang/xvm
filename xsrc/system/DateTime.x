@@ -20,6 +20,8 @@ const DateTime(Int128 epochPicos, TimeZone timezone)
         construct DateTime(picos, timezone);
         }
 
+    static DateTime EPOCH = new DateTime(0, TimeZone.UTC);
+
     // ----- accessors -----------------------------------------------------------------------------
 
     /**

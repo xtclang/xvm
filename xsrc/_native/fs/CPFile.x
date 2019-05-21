@@ -8,36 +8,29 @@ import Ecstasy.fs.Path;
 /**
  * Constant Pool File implementation.
  */
-const CPFile(CPFileStore store, Path path, DateTime created, DateTime modified, Boolean exists)
-        extends CPFileNode(store, path, created, modified, exists)
+const CPFile(CPFileStore:protected store, Object cookie, Path path, DateTime created, DateTime modified, Int size)
+        extends CPFileNode(store, cookie, path, created, modified, size)
         implements File
     {
     @Override
-    immutable Byte[] contents.get()
+    @Lazy immutable Byte[] contents.calc()
         {
         if (!exists)
             {
             throw new FileNotFound();
             }
 
-        TODO
+        return store.loadFile(cookie);
         }
 
     @Override
     File truncate(Int newSize = 0)
         {
-        if (exists)
-            {
-            throw new AccessDenied();
-            }
-        else
-            {
-            throw new FileNotFound();
-            }
+        throw exists ? new AccessDenied() : new FileNotFound();
         }
 
     @Override
-    conditional FileStore archive()
+    conditional FileStore openArchive()
         {
         // TODO eventually
         return False;
@@ -47,11 +40,5 @@ const CPFile(CPFileStore store, Path path, DateTime created, DateTime modified, 
     FileChannel open(ReadOption read=Read, WriteOption... write=[Write])
         {
         TODO
-        }
-
-    @Override
-    @RO Int size.get()
-        {
-        return contents.size;
         }
     }

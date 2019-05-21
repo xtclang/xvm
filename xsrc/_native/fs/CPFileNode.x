@@ -7,38 +7,32 @@ import Ecstasy.fs.Path;
 /**
  * Constant Pool FileNode implementation.
  */
-const CPFileNode(CPFileStore store, Path path, DateTime created, DateTime modified, Boolean exists)
+const CPFileNode(CPFileStore:protected store, Object cookie, Path path, DateTime created, DateTime modified, Int size)
         implements FileNode
         implements Stringable
     {
-//    @Override
-//    Path path;
-
     @Override
     @RO String name.get()
         {
         return path.form == Root ? "" : path.name;
         }
 
-//    @Override
-//    Boolean exists;
+    @Override
+    @RO Boolean exists.get()
+        {
+        return cookie != Null;
+        }
 
     @Override
     conditional File linkAsFile()
         {
-        return False;
+        return False; // not implemented yet
         }
-
-//    @Override
-//    DateTime created;
-//
-//    @Override
-//    DateTime modified;
 
     @Override
     @RO DateTime accessed.get()
         {
-        return EPOCH;
+        return DateTime.EPOCH;
         }
 
     @Override
@@ -96,9 +90,6 @@ const CPFileNode(CPFileStore store, Path path, DateTime created, DateTime modifi
         }
 
     @Override
-    @Abstract @RO Int size;
-
-    @Override
     String to<String>()
         {
         return path.to<String>();
@@ -120,7 +111,15 @@ const CPFileNode(CPFileStore store, Path path, DateTime created, DateTime modifi
         }
 
 
-    // ----- constants -----------------------------------------------------------------------------
+    // ----- native support ------------------------------------------------------------------------
 
-    static DateTime EPOCH = new DateTime(0, TimeZone.UTC);
+    /**
+     * The ConstantPool FileStore that created this node.
+     */
+    protected CPFileStore:protected store;
+
+    /**
+     * The native handle for the constant which this node represents.
+     */
+    protected Object cookie;
     }

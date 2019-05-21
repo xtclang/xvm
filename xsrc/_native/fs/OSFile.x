@@ -14,7 +14,7 @@ class OSFile
     File truncate(Int newSize = 0);
 
     @Override
-    conditional FileStore archive()
+    conditional FileStore openArchive()
         {
         return False; // TODO
         }

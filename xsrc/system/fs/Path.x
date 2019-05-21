@@ -16,10 +16,45 @@ const Path
         Name   ("name",  1)
         }
 
+    /**
+     * Construct a Path from a String representation.
+     *
+     * @param pathString  a legal path string, such as one emitted by `Path.to<String>()`
+     */
     construct(String pathString)
         {
-        // TODO: parse (a la Version.x constructor)
-        construct Path(ROOT, pathString);
+        assert pathString.size > 0;
+        if (pathString == "/")
+            {
+            construct Path(Null, Root);
+            return;
+            }
+
+        Path? parent = Null;
+        if (pathString[0] == '/')
+            {
+            parent     = ROOT;
+            pathString = pathString.substring(1);
+            }
+
+        String[] segments = pathString.split('/');
+        Int      last     = segments.size - 1;
+        for (Int cur = 0; cur < last; ++cur)
+            {
+            parent = switch (String segment = segments[cur])
+                {
+                case "." : new Path(parent, Current);
+                case "..": new Path(parent, Parent );
+                default  : new Path(parent, segment);
+                };
+            }
+
+        switch (String segment = segments[last])
+            {
+            case "." : construct Path(parent, Current); break;
+            case "..": construct Path(parent, Parent ); break;
+            default  : construct Path(parent, segment); break;
+            }
         }
 
     construct(Path? parent, String name)
