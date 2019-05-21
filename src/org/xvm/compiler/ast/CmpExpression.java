@@ -282,7 +282,7 @@ public class CmpExpression
         TypeConstant typeTrue   = null;
         TypeConstant typeFalse  = null;
 
-        if (!typeTarget.isNullable())
+        if (!typeTarget.isNullable() && !typeNull.isA(typeTarget))
             {
             log(errs, Severity.ERROR, Compiler.EXPRESSION_NOT_NULLABLE, typeTarget.getValueString());
             return false;
