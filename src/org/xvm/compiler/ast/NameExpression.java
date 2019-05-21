@@ -24,6 +24,7 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -1516,6 +1517,11 @@ public class NameExpression
                 TypeConstant typeLeft = left.getImplicitType(ctx);
                 if (typeLeft != null)
                     {
+                    if (typeLeft.isFormalType() && !typeLeft.isFormalTypeSequence())
+                        {
+                        typeLeft = ((FormalConstant) typeLeft.getDefiningConstant()).getConstraintType();
+                        }
+
                     // TODO support or properties nested under something other than a class (need nested type infos?)
                     if (left instanceof NameExpression)
                         {
