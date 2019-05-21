@@ -304,7 +304,7 @@ public abstract class ClassTemplate
 
                         for (int i = 0; i < cParams; i++)
                             {
-                            if (!atParam[i].isA(atParam[i]))
+                            if (!atParamTest[i].isA(atParam[i]))
                                 {
                                 continue nextMethod;
                                 }
@@ -320,7 +320,7 @@ public abstract class ClassTemplate
 
                         for (int i = 0; i < cReturns; i++)
                             {
-                            if (!atReturn[i].isA(atReturnTest[i]))
+                            if (!atReturnTest[i].isA(atReturn[i]))
                                 {
                                 continue nextMethod;
                                 }

@@ -590,7 +590,9 @@ public class xFunction
             if (frame.f_context == hService.m_context)
                 {
                 return f_function != null && f_function.isNative()
-                    ? hService.getTemplate().invokeNativeN(frame, f_function, hTarget, ahVar, iReturn)
+                    ? ahVar.length == 1
+                        ? hService.getTemplate().invokeNative1(frame, f_function, hTarget, ahVar[0], iReturn)
+                        : hService.getTemplate().invokeNativeN(frame, f_function, hTarget, ahVar, iReturn)
                     : super.call1Impl(frame, hTarget, ahVar, iReturn);
                 }
 
