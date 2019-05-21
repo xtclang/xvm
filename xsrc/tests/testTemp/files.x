@@ -11,6 +11,7 @@ module TestFiles.xqiz.it
         {
         testPaths();
         testInject();
+        testModify();
         }
 
     void testPaths()
@@ -48,22 +49,19 @@ module TestFiles.xqiz.it
 
         @Inject FileStore storage;
 
-        console.println("readOnly="  + storage.readOnly);
-        console.println("capacity="  + storage.capacity);
-        console.println("bytesFree=" + storage.bytesFree);
-        console.println("bytesUsed=" + storage.bytesUsed);
+        console.println($"readOnly={storage.readOnly}");
+        console.println($"capacity={storage.capacity}");
+        console.println($"bytesFree={storage.bytesFree}");
+        console.println($"bytesUsed={storage.bytesUsed}");
 
         @Inject Directory rootDir;
-        console.println("rootDir=" + rootDir + " created " + rootDir.created);
+        console.println($"rootDir={rootDir} created {rootDir.created}");
 
         @Inject Directory homeDir;
-        console.println("homeDir=" + homeDir + " modified " + homeDir.modified);
+        console.println($"homeDir={homeDir} modified {homeDir.modified}");
 
         @Inject Directory curDir;
-        console.println("curDir=" + curDir + " modified " + curDir.modified);
-
-        @Inject Directory tmpDir;
-        console.println("tmpDir=" + tmpDir + " accessed " + tmpDir.accessed);
+        console.println($"curDir={curDir} accessed {curDir.accessed}");
 
         console.println(curDir.name + " content: ");
         for (String name : curDir.names())
@@ -82,5 +80,24 @@ module TestFiles.xqiz.it
                     }
                 }
             }
+        }
+
+    void testModify()
+        {
+        console.println("\n** testModify()");
+
+        @Inject Directory tmpDir;
+        console.println($"tmpDir={tmpDir} modified {tmpDir.modified}");
+
+        File file = tmpDir.fileFor("test.dat");
+        assert !file.exists;
+
+        file.create();
+        assert file.exists;
+
+        file.delete();
+        assert !file.exists;
+
+        console.println($"tmpDir={tmpDir} modified {tmpDir.modified}");
         }
     }

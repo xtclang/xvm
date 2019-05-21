@@ -1,3 +1,4 @@
+import Ecstasy.fs.AccessDenied;
 import Ecstasy.fs.Directory;
 import Ecstasy.fs.File;
 import Ecstasy.fs.FileNode;
@@ -93,6 +94,33 @@ class OSFileStore
     // ----- internal ------------------------------------------------------------------------------
 
     OSStorage storage;
+
+    String[] names(OSDirectory:protected dir)
+        {
+        return storage.names(dir.pathString);
+        }
+
+    Boolean create(OSFileNode:protected node)
+        {
+        if (readOnly)
+            {
+            throw new AccessDenied(node.path, "Read-only store");
+            }
+
+        return node.is(OSDirectory)
+            ? storage.createDir(node.pathString)
+            : storage.createFile(node.pathString);
+        }
+
+    Boolean delete(OSFileNode:protected node)
+        {
+        if (readOnly)
+            {
+            throw new AccessDenied(node.path, "Read-only store");
+            }
+
+        return storage.delete(node.pathString);
+        }
 
     // ----- native --------------------------------------------------------------------------------
 

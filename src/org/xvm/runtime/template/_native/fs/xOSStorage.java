@@ -1,6 +1,8 @@
 package org.xvm.runtime.template._native.fs;
 
 
+import java.io.IOException;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -11,17 +13,19 @@ import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TemplateRegistry;
-
 import org.xvm.runtime.Utils;
+
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction;
+import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xString.StringHandle;
 
-import org.xvm.runtime.template._native.fs.OSFileNode.NodeHandle;
 
 /**
  * Native OSStorage implementation.
@@ -42,14 +46,14 @@ public class xOSStorage
         markNativeProperty("tmpDir");
 
         markNativeMethod("find", new String[] {"_native.fs.OSFileStore", "String"}, null);
-        markNativeMethod("names", new String[] {"_native.fs.OSDirectory"}, null);
-        markNativeMethod("createDir", new String[] {"_native.fs.OSFileStore", "String"}, BOOLEAN);
-        markNativeMethod("createFile", new String[] {"_native.fs.OSFileStore", "String"}, BOOLEAN);
-        markNativeMethod("delete", new String[] {"_native.fs.OSFileStore", "String"}, BOOLEAN);
+        markNativeMethod("names", STRING, null);
+        markNativeMethod("createDir", STRING, BOOLEAN);
+        markNativeMethod("createFile", STRING, BOOLEAN);
+        markNativeMethod("delete", STRING, BOOLEAN);
         }
 
     @Override
-    protected ObjectHandle.ExceptionHandle makeImmutable(ObjectHandle hTarget)
+    protected ExceptionHandle makeImmutable(ObjectHandle hTarget)
         {
         return null;
         }
@@ -82,14 +86,21 @@ public class xOSStorage
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn)
         {
+        ServiceHandle hStorage = (ServiceHandle) hTarget;
+
+        if (frame.f_context != hStorage.m_context)
+            {
+            return xFunction.makeAsyncNativeHandle(method).
+                call1(frame, hTarget, new ObjectHandle[] {hArg}, iReturn);
+            }
+
         switch (method.getName())
             {
             case "names":
                 {
-                // this can be done on the caller's fiber
-                NodeHandle hDir = (NodeHandle) hArg;
-                Path       path = hDir.f_path;
+                StringHandle hPathString = (StringHandle) hArg;
 
+                Path     path   = Paths.get(hPathString.getStringValue());
                 String[] asName = path.toFile().list();
                 int      cNames = asName == null ? 0 : asName.length;
 
@@ -101,6 +112,62 @@ public class xOSStorage
                     }
 
                 return frame.assignValue(iReturn, xArray.makeStringArrayHandle(ahName));
+                }
+
+            case "createFile":  // (pathString)
+                {
+                StringHandle hPathString = (StringHandle) hArg;
+
+                Path path = Paths.get(hPathString.getStringValue());
+                if (Files.exists(path) && !Files.isDirectory(path))
+                    {
+                    return frame.assignValue(iReturn, xBoolean.FALSE);
+                    }
+
+                try
+                    {
+                    return frame.assignValue(iReturn,
+                        xBoolean.makeHandle(path.toFile().createNewFile()));
+                    }
+                catch (IOException e)
+                    {
+                    return raisePathException(frame, e, path.toString());
+                    }
+                }
+
+            case "createDir":  // (pathString)
+                {
+                StringHandle hPathString = (StringHandle) hArg;
+
+                Path path = Paths.get(hPathString.getStringValue());
+                if (Files.exists(path) && Files.isDirectory(path))
+                    {
+                    return frame.assignValue(iReturn, xBoolean.FALSE);
+                    }
+
+                try
+                    {
+                    return frame.assignValue(iReturn,
+                        xBoolean.makeHandle(path.toFile().createNewFile()));
+                    }
+                catch (IOException e)
+                    {
+                    return raisePathException(frame, e, path.toString());
+                    }
+                }
+
+            case "delete":  // (pathString)
+                {
+                StringHandle hPathString = (StringHandle) hArg;
+
+                Path path = Paths.get(hPathString.getStringValue());
+                if (!Files.exists(path))
+                    {
+                    return frame.assignValue(iReturn, xBoolean.FALSE);
+                    }
+
+                return frame.assignValue(iReturn,
+                    xBoolean.makeHandle(path.toFile().delete()));
                 }
             }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -120,14 +187,6 @@ public class xOSStorage
 
         switch (method.getName())
             {
-            case "createFile":  // (store, pathString)
-                {
-                ObjectHandle hStore      = ahArg[0];
-                StringHandle hPathString = (StringHandle) ahArg[1];
-
-                Path path = Paths.get(hPathString.getStringValue());
-                return frame.assignValue(iReturn, null); // TODO
-                }
             }
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
@@ -165,6 +224,14 @@ public class xOSStorage
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
+
+    // ----- helper methods ------------------------------------------------------------------------
+
+    protected int raisePathException(Frame frame, IOException e, String sPath)
+        {
+        // TODO: how to get the natural Path efficiently from sPath?
+        return frame.raiseException(xException.pathException(e.getMessage(), xNullable.NULL));
+        }
 
 
 

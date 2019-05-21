@@ -8,14 +8,12 @@ import java.nio.file.Paths;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Op;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
 
-import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xInt64;
 import org.xvm.runtime.template.xString.StringHandle;
 
@@ -61,8 +59,8 @@ public class xOSFileStore
         }
 
     @Override
-    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle hArg, int iReturn)
         {
         ObjectHandle hStore = hTarget;
 
@@ -70,7 +68,7 @@ public class xOSFileStore
             {
             case "dirFor":  // (pathString)
                 {
-                StringHandle hPathString = (StringHandle) ahArg[1];
+                StringHandle hPathString = (StringHandle) hArg;
 
                 Path path = Paths.get(hPathString.getStringValue());
                 return OSFileNode.createHandle(frame, hStore, path, true, iReturn);
@@ -78,14 +76,14 @@ public class xOSFileStore
 
             case "fileFor":  // (pathString)
                 {
-                StringHandle hPathString = (StringHandle) ahArg[1];
+                StringHandle hPathString = (StringHandle) hArg;
 
                 Path path = Paths.get(hPathString.getStringValue());
                 return OSFileNode.createHandle(frame, hStore, path, false, iReturn);
                 }
             }
 
-        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
     @Override

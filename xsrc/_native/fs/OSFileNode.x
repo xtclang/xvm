@@ -1,4 +1,3 @@
-import Ecstasy.fs.AccessDenied;
 import Ecstasy.fs.Directory;
 import Ecstasy.fs.File;
 import Ecstasy.fs.FileNode;
@@ -61,18 +60,7 @@ class OSFileNode
     @Override
     Boolean create()
         {
-        if (!exists)
-            {
-            if (store.readOnly)
-                {
-                throw new AccessDenied(path, "Read-only store");
-                }
-
-            return this.is(Directory)
-                ? store.storage.createDir(store, pathString)
-                : store.storage.createFile(store, pathString);
-            }
-        return False;
+        return !exists && store.create(this:protected);
         }
 
     @Override
@@ -88,16 +76,7 @@ class OSFileNode
     @Override
     Boolean delete()
         {
-        if (exists)
-            {
-            if (store.readOnly)
-                {
-                throw new AccessDenied(path, "Read-only store");
-                }
-
-            return store.storage.delete(store, pathString);
-            }
-        return False;
+        return exists && store.delete(this:protected);
         }
 
     @Override

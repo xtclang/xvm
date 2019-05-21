@@ -14,7 +14,7 @@ class OSDirectory
     @Override
     Iterator<String> names()
         {
-        return store.storage.names(this).iterator();
+        return store.names(this:protected).iterator();
         }
 
     @Override

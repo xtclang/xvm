@@ -64,9 +64,6 @@ public abstract class OSFileNode
         markNativeProperty("accessedMillis");
         markNativeProperty("modifiedMillis");
         markNativeProperty("size");
-
-        markNativeMethod("create", VOID, null);
-        markNativeMethod("ensure", VOID, null);
         }
 
     @Override
@@ -141,7 +138,6 @@ public abstract class OSFileNode
         }
 
     /**
-     *
      * Construct a new {@link NodeHandle} representing the specified file or directory.
      *
      * @param frame      the current frame
@@ -192,7 +188,7 @@ public abstract class OSFileNode
             setField("store", hOSStore);
 
             // NodeHandles need be sent across the service lines; mark as immutable
-            m_fMutable = true;
+            m_fMutable = false;
             }
         }
 
