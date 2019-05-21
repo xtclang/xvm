@@ -9,7 +9,7 @@ import Ecstasy.fs.Path;
 /**
  * Constant Pool Directory implementation.
  */
-class CPDirectory(CPFileStore:protected store, Object cookie, Path path, DateTime created, DateTime modified, Int size)
+const CPDirectory(CPFileStore:protected store, Object cookie, Path path, DateTime created, DateTime modified, Int size)
         extends CPFileNode(store, cookie, path, created, modified, size)
         implements Directory
     {
