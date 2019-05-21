@@ -513,7 +513,7 @@ public class InvocationExpression
                         }
                     }
 
-                if (isNestMate(ctx, typeLeft))
+                if (fValid && isNestMate(ctx, typeLeft))
                     {
                     typeLeft = pool.ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
                     }
