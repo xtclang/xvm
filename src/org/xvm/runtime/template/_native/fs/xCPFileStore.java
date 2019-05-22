@@ -103,8 +103,8 @@ public class xCPFileStore
                 ObjectHandle[] ahValue = new ObjectHandle[5];
                 ahValue[0] = xBoolean.makeHandle(constNode.getFormat() == Format.FSDir);
                 ahValue[1] = xString.makeHandle(constNode.getName());
-                ahValue[2] = xString.makeHandle("created");     // TODO GG
-                ahValue[3] = xString.makeHandle("modified");    // TODO GG
+                ahValue[2] = xString.makeHandle("created");     // TODO GG this needs to be of Ecstasy type DateTime from constNode.m_constCreated
+                ahValue[3] = xString.makeHandle("modified");    // TODO GG this needs to be of Ecstasy type DateTime from constNode.m_constModified
                 ahValue[4] = xInt64.makeHandle(calcSize(constNode));
                 return new Utils.AssignValues(aiReturn, ahValue, null).proceed(frame);
                 }
