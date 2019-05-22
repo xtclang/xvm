@@ -29,6 +29,34 @@ const Date(Int epochDay)
         construct Date(calcEpochOffset(year, month, day));
         }
 
+    /**
+     * Construct a Date from an ISO-8601 date string.
+     */
+    construct (String date)
+        {
+        Int year;
+        Int month;
+        Int day;
+
+        if (date.size == 10)
+            {
+            assert date[4] == '-' && date[7] == '-';
+            year  = new IntLiteral(date[0..3]).to<Int>();
+            month = new IntLiteral(date[5..6]).to<Int>();
+            day   = new IntLiteral(date[8..9]).to<Int>();
+            }
+        else
+            {
+            String[] parts = date.split('-');
+            year  = new IntLiteral(parts[0]).to<Int>();
+            month = new IntLiteral(parts[1]).to<Int>();
+            day   = new IntLiteral(parts[2]).to<Int>();
+            }
+
+        construct Date(year, month, day);
+        }
+
+
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
@@ -298,8 +326,7 @@ const Date(Int epochDay)
      *
      * @return a tuple of year, month, day, and day-of-year
      */
-// TODO static (Int year, Int month, Int day, Int dayOfYear) calcDate(Int epochDay)
-    static (Int, Int, Int, Int) calcDate(Int epochDay)
+    static (Int year, Int month, Int day, Int dayOfYear) calcDate(Int epochDay)
         {
         assert epochDay >= GREGORIAN_OFFSET;
 
@@ -336,8 +363,7 @@ const Date(Int epochDay)
      *
      * @return a tuple of month and day
      */
-// TODO static (Int month, Int day) calcDate(Int year, Int dayOfYear)
-    static (Int, Int) calcDate(Int year, Int dayOfYear)
+    static (Int month, Int day) calcDate(Int year, Int dayOfYear)
         {
         assert dayOfYear >= 1 && dayOfYear <= daysInYear(year);
 
