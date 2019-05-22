@@ -20,10 +20,12 @@ import org.xvm.runtime.ObjectHandle.ConstantHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
+import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xInt64;
 import org.xvm.runtime.template.xString;
+import org.xvm.runtime.template.xString.StringHandle;
 
 
 /**
@@ -110,8 +112,23 @@ public class xCPFileStore
             // protected (String[] names, Object[] cookies) loadDirectory(Object constNode);
             case "loadDirectory":
                 {
-                // TODO
-                int x = 0;
+                ConstantHandle hNode     = (ConstantHandle) ahArg[0];
+                FSNodeConstant constNode = (FSNodeConstant) hNode.get();
+
+                FSNodeConstant[] aNodes    = constNode.getDirectoryContents();
+                int              cNodes    = aNodes.length;
+                StringHandle[]   ahNames   = new StringHandle[cNodes];
+                ObjectHandle[]   ahCookies = new ObjectHandle[cNodes];
+                for (int i = 0; i < cNodes; ++i)
+                    {
+                    FSNodeConstant constEach = aNodes[i];
+                    ahNames  [i] = xString.makeHandle(constEach.getName());
+                    ahCookies[i] = new ConstantHandle(constEach);
+                    }
+
+                return frame.assignValues(aiReturn,
+                        xArray.makeStringArrayHandle(ahNames),
+                        xArray.makeObjectArrayHandle(ahCookies));
                 }
             }
 

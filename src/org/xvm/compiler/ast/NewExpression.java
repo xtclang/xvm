@@ -252,6 +252,10 @@ public class NewExpression
         if (fAnon)
             {
             ensureInnerClass(ctx, AnonPurpose.RoughDraft, errs);
+            if (errs.isAbortDesired())
+                {
+                return null;
+                }
             }
 
         if (left == null)
@@ -336,6 +340,10 @@ public class NewExpression
                 if (fAnon)
                     {
                     ensureInnerClass(ctx, AnonPurpose.Actual, errs);
+                    if (errs.isAbortDesired())
+                        {
+                        return null;
+                        }
                     }
 
                 boolean fNestMate = isNestMate(ctx, typeTarget);

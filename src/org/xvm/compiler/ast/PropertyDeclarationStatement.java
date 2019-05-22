@@ -378,7 +378,11 @@ public class PropertyDeclarationStatement
                 else
                     {
                     TypeConstant type = prop.getType();
-                    assert !type.containsUnresolved();
+                    if (type.containsUnresolved())
+                        {
+                        mgr.requestRevisit();
+                        return;
+                        }
 
                     // create an initializer function
                     MethodStructure methodInit = prop.createMethod(isStatic(), Access.PRIVATE,

@@ -3,6 +3,7 @@ import Ecstasy.collections.ListMap;
 import Ecstasy.fs.AccessDenied;
 import Ecstasy.fs.Directory;
 import Ecstasy.fs.File;
+import Ecstasy.fs.FileNode;
 import Ecstasy.fs.FileWatcher;
 import Ecstasy.fs.Path;
 
@@ -28,43 +29,54 @@ const CPDirectory(CPFileStore:protected store, Object cookie, Path path, DateTim
                 };
             }
 
+DEBUG;
         return contents.keys.iterator();
         }
 
     @Override
     Iterator<Directory> dirs()
         {
-        if (!exists)
+        return new Iterator<Directory>()
             {
-            return new Iterator<Directory>()
-                {
-                @Override
-                conditional ElementType next()
-                    {
-                    return False;
-                    }
-                };
-            }
+            Iterator<FileNode>? iter = exists ? contents.values.iterator(node -> node.is(Directory)) : Null;
 
-        TODO
+            @Override
+            conditional Directory next() // TODO GG "ElementType> did not work here (or below in files())
+                {
+                if (iter != null)
+                    {
+                    if (FileNode node : iter?.next())
+                        {
+                        return True, node.as(Directory);
+                        }
+                    }
+
+                return False;
+                }
+            };
         }
 
     @Override
     Iterator<File> files()
         {
-        if (!exists)
+        return new Iterator<File>()
             {
-            return new Iterator<File>()
-                {
-                @Override
-                conditional ElementType next()
-                    {
-                    return False;
-                    }
-                };
-            }
+            Iterator<FileNode>? iter = exists ? contents.values.iterator(node -> node.is(File)) : Null;
 
-        TODO
+            @Override
+            conditional File next()
+                {
+                if (iter != null)
+                    {
+                    if (FileNode node : iter?.next())
+                        {
+                        return True, node.as(File);
+                        }
+                    }
+
+                return False;
+                }
+            };
         }
 
     @Override
@@ -131,9 +143,19 @@ const CPDirectory(CPFileStore:protected store, Object cookie, Path path, DateTim
 
     // ----- native support ------------------------------------------------------------------------
 
-    @Lazy protected ListMap<String, Object> contents.calc()
+    @Lazy protected ListMap<String, CPDirectory|CPFile> contents.calc()
         {
         (String[] names, Object[] cookies) = store.loadDirectory(cookie);
-        return new ListMap(names, cookies);
+        Int count = names.size;
+        var nodes = new Array<CPDirectory|CPFile>(count);
+        for (Int i = 0; i < count; ++i)
+            {
+            Object cookie = cookies[i];
+            (Boolean isdir, String name, String created, String modified, Int size) = store.loadNode(cookie);
+            nodes[i] = isdir
+                    ? new CPDirectory(store, cookie, path + name, DateTime.EPOCH, DateTime.EPOCH, size)    // TODO date/times
+                    : new CPFile(store, cookie, path + name, DateTime.EPOCH, DateTime.EPOCH, size);
+            }
+        return new ListMap(names, nodes);
         }
     }

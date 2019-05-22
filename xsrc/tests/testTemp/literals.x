@@ -131,7 +131,7 @@ module TestLiterals.xqiz.it
                  ;
         console.println($"bytes={bytes[0..10]}...{bytes[bytes.size-10..bytes.size-1]}");
 
-        bytes = #/testLiterals.xtc;
+        bytes = #/testFiles.xtc;
         // console.println($"bytes={bytes[0..10]}..{bytes[bytes.size-10..bytes.size-1]"); TODO CP - infinite loop in lexer?
         console.println($"bytes={bytes[0..10]}...{bytes[bytes.size-10..bytes.size-1]}");
         }
@@ -148,4 +148,32 @@ module TestLiterals.xqiz.it
             console.println("name=" + s);
             }
         }
+
+/**
+ * Should look something like:
+ *
+ *   /resources/
+ *    +- somedir
+ *    |   +- somefile.txt
+ *    +- msgs_EN.txt
+ *    +- msgs_FR.txt
+ */
+    void printNode(Directory|File node, String sIndent)
+        {
+        console.print(sIndent + node.name);
+        if (node.is(Directory))
+            {
+            String sNext = sIndent=="" ? " +- " : " |  "+sIndent;
+            // TODO this causes an ugly compiler error:  for (Directory dir : node.dirs)
+            for (Directory dir : node.dirs())
+                {
+                printNode(dir, sIndent);
+                }
+            for (File file : node.files())
+                {
+                printNode(file, sIndent);
+                }
+            }
+        }
     }
+
