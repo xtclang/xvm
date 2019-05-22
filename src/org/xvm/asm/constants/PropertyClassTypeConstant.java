@@ -113,6 +113,14 @@ public class PropertyClassTypeConstant
         return info;
         }
 
+    /**
+     * @return the property type
+     */
+    public TypeConstant getPropertyType()
+        {
+        return getPropertyInfo().getType();
+        }
+
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
@@ -217,6 +225,24 @@ public class PropertyClassTypeConstant
         return m_typeParent.getGenericParamType(sName, Collections.EMPTY_LIST);
         }
 
+    @Override
+    protected Relation calculateRelationToLeft(TypeConstant typeLeft)
+        {
+        return getPropertyType().calculateRelationToLeft(typeLeft);
+        }
+
+    @Override
+    protected Relation calculateRelationToRight(TypeConstant typeRight)
+        {
+        return getPropertyType().calculateRelationToRight(typeRight);
+        }
+
+    @Override
+    public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
+                                               List<TypeConstant> listParams)
+        {
+        return getPropertyType().containsSubstitutableMethod(signature, access, listParams);
+        }
 
     // ----- run-time support ----------------------------------------------------------------------
 

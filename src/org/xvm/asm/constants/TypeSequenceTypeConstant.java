@@ -169,7 +169,7 @@ public class TypeSequenceTypeConstant
         }
 
 
-// ----- Constant methods ----------------------------------------------------------------------
+    // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
     public Format getFormat()
