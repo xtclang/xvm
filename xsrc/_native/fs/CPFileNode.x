@@ -20,6 +20,7 @@ const CPFileNode(CPFileStore:protected store, Object cookie, Path path, DateTime
     @Override
     @RO Boolean exists.get()
         {
+        DEBUG;
         return cookie != Null;
         }
 

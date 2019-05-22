@@ -8,7 +8,7 @@ import Ecstasy.fs.Path;
 /**
  * Constant Pool FileStore implementation.
  */
-const CPFileStore(Object constRoot)
+const CPFileStore(String path, Object constRoot)
         implements FileStore
     {
     @Override
@@ -161,6 +161,22 @@ const CPFileStore(Object constRoot)
     @RO Int bytesFree.get()
         {
         return 0;
+        }
+
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        return 10 + path.estimateStringLength();
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        "FileStore:".appendTo(appender);
+        path.appendTo(appender);
         }
 
 

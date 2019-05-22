@@ -1778,6 +1778,7 @@ public abstract class ClassTemplate
         else
             {
             method.setNative(true);
+            f_struct.getCanonicalType().invalidateTypeInfo();
             }
         }
 
@@ -1802,11 +1803,14 @@ public abstract class ClassTemplate
                 {
                 methGetter.setNative(true);
                 }
+
             MethodStructure methSetter = prop.getGetter();
             if (methSetter != null)
                 {
                 methSetter.setNative(true);
                 }
+
+            f_struct.getCanonicalType().invalidateTypeInfo();
             }
         }
 

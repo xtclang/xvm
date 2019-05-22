@@ -13,9 +13,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.FSNodeConstant;
 import org.xvm.asm.constants.FileStoreConstant;
 
-import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassComposition;
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ConstantHandle;
@@ -23,6 +21,7 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xInt64;
 import org.xvm.runtime.template.xString;
 
@@ -31,11 +30,11 @@ import org.xvm.runtime.template.xString;
  * Native OSFileStore implementation.
  */
 public class xCPFileStore
-        extends ClassTemplate
+        extends xConst
     {
     public xCPFileStore(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(templates, structure, false);
         }
 
     @Override
@@ -43,7 +42,7 @@ public class xCPFileStore
         {
         s_clz         = ensureClass(getCanonicalType(), pool().typeFileStore());
         s_clzStruct   = s_clz.ensureAccess(Access.STRUCT);
-        s_constructor = f_struct.findConstructor(pool().typeObject());
+        s_constructor = f_struct.findConstructor(pool().typeString(), pool().typeObject());
 
         markNativeMethod("loadNode"     , null, null);
         markNativeMethod("loadDirectory", null, null);
@@ -60,7 +59,7 @@ public class xCPFileStore
 
             GenericHandle hStruct = new GenericHandle(s_clzStruct);
             return callConstructor(frame, s_constructor, s_clz.ensureAutoInitializer(), hStruct,
-                    new ObjectHandle[] {new ConstantHandle(constRoot)}, Op.A_STACK);
+                    new ObjectHandle[] {xString.makeHandle(constStore.getPath()), new ConstantHandle(constRoot)}, Op.A_STACK);
             }
 
         return super.createConstHandle(frame, constant);
