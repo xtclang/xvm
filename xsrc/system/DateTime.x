@@ -4,7 +4,7 @@
  *
  * The DateTime _renders_ dates according to the Gregorian calendar, which began on 1582-10-15.
  */
-const DateTime(Int128 epochPicos, TimeZone timezone)
+const DateTime(Int128 epochPicos, TimeZone timezone) // TODO GG "= TimeZone.UTC" default value
     {
     construct(Date date, Time time, TimeZone timezone)
         {

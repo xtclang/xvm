@@ -216,26 +216,27 @@ public class LiteralConstant
         {
         assert getFormat() == Format.IntLiteral;
 
-        PackedInteger pint = (PackedInteger) m_oVal;
-        if (pint != null)
+        PackedInteger pint = m_oVal instanceof PackedInteger ? (PackedInteger) m_oVal : null;
+        if (pint == null)
             {
-            return pint;
+            String s = getValue().replace("_", ""); // TODO all of the lexer logic has to show up here
+            int    r = getIntRadix();
+            if (r == 10)
+                {
+                pint = s.length() < 20
+                        ? PackedInteger.valueOf(Long.parseLong(s))
+                        : new PackedInteger(new BigInteger(s));
+                }
+            else
+                {
+                pint = s.length() < 2 + (64 / Integer.numberOfTrailingZeros(r))
+                        ? new PackedInteger(Long.parseLong(s.substring(2), r))
+                        : new PackedInteger(new BigInteger(s.substring(2), r));
+                }
+            m_oVal = pint;
             }
 
-        String s = getValue().replace("_", ""); // TODO all of the lexer logic has to show up here
-        int    r = getIntRadix();
-        if (r == 10)
-            {
-            return s.length() < 20
-                    ? PackedInteger.valueOf(Long.parseLong(s))
-                    : new PackedInteger(new BigInteger(s));
-            }
-        else
-            {
-            return s.length() < 2 + (64 / Integer.numberOfTrailingZeros(r))
-                    ? new PackedInteger(Long.parseLong(s.substring(2), r))
-                    : new PackedInteger(new BigInteger(s.substring(2), r));
-            }
+        return pint;
         }
 
     /**
@@ -266,19 +267,27 @@ public class LiteralConstant
         {
         assert getFormat() == Format.IntLiteral || getFormat() == Format.FPLiteral && getFPRadix() == 10;
 
-        Object oVal = m_oVal;
-        if (oVal != null)
+        BigDecimal dec;
+
+        if (m_oVal == null)
             {
-            return oVal instanceof BigDecimal
-                    ? (BigDecimal) oVal
-                    : new BigDecimal(((PackedInteger) oVal).getBigInteger());
+            // Java BigDecimal uses "E" to indicate a decimal exponent, while ISO uses "P"
+            m_oVal = dec = getFormat() == Format.IntLiteral
+                    ? new BigDecimal(getPackedInteger().getBigInteger())
+                    : new BigDecimal(m_constStr.getValue().replace('p', 'e').replace('P', 'E'));
             }
-
-
-        // Java BigDecimal uses "E" to indicate a decimal exponent, while ISO uses "P"
-        return getFormat() == Format.IntLiteral
-                ? new BigDecimal(getPackedInteger().getBigInteger())
-                : new BigDecimal(m_constStr.getValue().replace('p', 'e').replace('P', 'E'));
+        else
+            {
+            if (m_oVal instanceof PackedInteger)
+                {
+                m_oVal = dec = new BigDecimal(((PackedInteger) m_oVal).getBigInteger());
+                }
+            else
+                {
+                dec = (BigDecimal) m_oVal;
+                }
+            }
+        return dec;
         }
 
     /**
@@ -313,14 +322,25 @@ public class LiteralConstant
      */
     public float getFloat()
         {
-        if (getFormat() == Format.IntLiteral)
+        if (m_oVal instanceof Float)
             {
-            return getPackedInteger().getBigInteger().floatValue();
+            return (Float) m_oVal;
             }
 
-        return getFPRadix() == 2
-                ? Float.parseFloat(m_constStr.getValue())
-                : getBigDecimal().floatValue();
+        float fl;
+        if (getFormat() == Format.IntLiteral)
+            {
+            fl = getPackedInteger().getBigInteger().floatValue();
+            }
+        else
+            {
+            fl = getFPRadix() == 2
+                    ? Float.parseFloat(m_constStr.getValue())
+                    : getBigDecimal().floatValue();
+            }
+
+        m_oVal = fl;
+        return fl;
         }
 
     /**
@@ -332,14 +352,25 @@ public class LiteralConstant
      */
     public double getDouble()
         {
-        if (getFormat() == Format.IntLiteral)
+        if (m_oVal instanceof Double)
             {
-            return getPackedInteger().getBigInteger().doubleValue();
+            return (Double) m_oVal;
             }
 
-        return getFPRadix() == 2
-                ? Double.parseDouble(m_constStr.getValue())
-                : getBigDecimal().doubleValue();
+        double dfl;
+        if (getFormat() == Format.IntLiteral)
+            {
+            dfl = getPackedInteger().getBigInteger().doubleValue();
+            }
+        else
+            {
+            dfl = getFPRadix() == 2
+                    ? Double.parseDouble(m_constStr.getValue())
+                    : getBigDecimal().doubleValue();
+            }
+
+        m_oVal = dfl;
+        return dfl;
         }
 
     /**
