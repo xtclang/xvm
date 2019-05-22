@@ -29,7 +29,6 @@ const CPDirectory(CPFileStore:protected store, Object cookie, Path path, DateTim
                 };
             }
 
-DEBUG;
         return contents.keys.iterator();
         }
 

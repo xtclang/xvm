@@ -61,8 +61,8 @@ module TestLiterals.xqiz.it
         {
         console.println("\n** testIncludes()");
 
-        String s = ./literals.x;
-        console.println($"./literals.x={s}");
+        String s = ./resources/more/msgs_EN.txt;
+        console.println($"./resources/more/msgs_EN.txt={s}");
         }
 
     void testMultiline()
