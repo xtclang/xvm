@@ -79,4 +79,41 @@ interface Directory
      * @return a Cancellable object that allows the caller to cancel the watch
      */
     Cancellable watchRecursively(FileWatcher watch);
+
+    @Override
+    void emitListing(Appender<Char> appender, Boolean recursive = False, String indent = "")
+        {
+        Boolean root = indent == "";
+
+//        created.append(appender);
+//        appender.add("  ");
+//        modified.append(appender);
+//        appender.add("  ");
+//        String bytes = size.to<String>()
+
+        if (recursive || !root)
+            {
+            appender.add(indent)
+                    .add(name)
+                    .add('/')
+                    .add('\n');
+            }
+
+        if (recursive || root)
+            {
+            String nextIndent = root
+                    ? "  +- "
+                    : "  |  " + indent;
+
+            for (Directory dir : dirs())
+                {
+                dir.emitListing(appender, recursive, nextIndent);
+                }
+
+            for (File file : files())
+                {
+                file.emitListing(appender, recursive, nextIndent);
+                }
+            }
+        }
     }

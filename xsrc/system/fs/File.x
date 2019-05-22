@@ -160,4 +160,12 @@ interface File
      *                            implied
      */
     FileChannel open(ReadOption read=Read, WriteOption... write=[Write]);
+
+    @Override
+    void emitListing(Appender<Char> appender, Boolean recursive = False, String indent = "")
+        {
+        appender.add(indent)
+                .add(name)
+                .add('\n');
+        }
     }

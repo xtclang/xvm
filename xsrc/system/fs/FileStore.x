@@ -203,4 +203,16 @@ interface FileStore
      * considered to be _advisory_, and not definitive.
      */
     @RO Int bytesFree;
+
+    /**
+     * Emit a directory-style hierarchical listing to the specified appender.
+     *
+     * @param appender  the Appender to emit the listing to
+     * @param recursive  True to have the listing recurse through sub-directories
+     */
+    void emitListing(Appender<Char> appender, Boolean recursive = True)
+        {
+        appender.add("FileStore:\n");
+        root.emitListing(appender, recursive, "");
+        }
     }

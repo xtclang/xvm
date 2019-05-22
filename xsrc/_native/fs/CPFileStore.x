@@ -163,6 +163,14 @@ const CPFileStore(String path, Object constRoot)
         return 0;
         }
 
+    @Override
+    void emitListing(Appender<Char> appender, Boolean recursive = True)
+        {
+        appender.add("FileStore:")
+                .add(path)
+                .add('\n');
+        root.emitListing(appender, recursive, "");
+        }
 
     // ----- Stringable methods --------------------------------------------------------------------
 

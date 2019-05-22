@@ -143,37 +143,15 @@ module TestLiterals.xqiz.it
         FileStore fs = /resources/;
         console.println("fs=" + fs);
 
-        for (String s : fs.root.names())
-            {
-            console.println("name=" + s);
-            }
-        }
+        StringBuffer sb = new StringBuffer();
+        fs.emitListing(sb);
+        console.println("\n(recursive)");
+        console.println(sb.to<String>());
 
-/**
- * Should look something like:
- *
- *   /resources/
- *    +- somedir
- *    |   +- somefile.txt
- *    +- msgs_EN.txt
- *    +- msgs_FR.txt
- */
-    void printNode(Directory|File node, String sIndent)
-        {
-        console.print(sIndent + node.name);
-        if (node.is(Directory))
-            {
-            String sNext = sIndent=="" ? " +- " : " |  "+sIndent;
-            // TODO this causes an ugly compiler error:  for (Directory dir : node.dirs)
-            for (Directory dir : node.dirs())
-                {
-                printNode(dir, sIndent);
-                }
-            for (File file : node.files())
-                {
-                printNode(file, sIndent);
-                }
-            }
+        StringBuffer sb = new StringBuffer();
+        fs.emitListing(sb, False);
+        console.println("\n(non-recursive)");
+        console.println(sb.to<String>());
         }
     }
 
