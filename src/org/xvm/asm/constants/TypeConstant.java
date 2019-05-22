@@ -1323,8 +1323,6 @@ public abstract class TypeConstant
                         : info.limitAccess(Access.PUBLIC);
             }
 
-        assert !isAutoNarrowing(false);
-
         // this implementation only deals with modifying (not including immutable) and terminal type
         // constants (not including typedefs, type parameters, auto-narrowing types, and unresolved
         // names); in other words, there must be an identity constant and a component structure
@@ -1358,7 +1356,7 @@ public abstract class TypeConstant
         int cInvalidations = getConstantPool().getInvalidationCount();
 
         List<Contribution> listContribs = struct.getContributionsAsList();
-        TypeConstant[]     aContribType = resolveContributionTypes(listContribs, errs);
+        TypeConstant[]     aContribType = resolveContributionTypes(listContribs);
         TypeConstant[]     atypeCondInc = extractConditionalContributes(
                                             constId, struct, listContribs, aContribType, errs);
 
@@ -2004,31 +2002,23 @@ public abstract class TypeConstant
         }
 
     /**
-     * TODO
+     * Resolve and collect contribution types for the specified list if contributions.
      *
-     * @param listContribs
-     * @param errs
-     * @return
+     * @param listContribs  the contribution list
+     *
+     * @return an array of resolved TypeConstants where some elements could be null for conditional
+     *         incorporates
      */
-    private TypeConstant[] resolveContributionTypes(List<Contribution> listContribs, ErrorListener errs)
+    private TypeConstant[] resolveContributionTypes(List<Contribution> listContribs)
         {
         ConstantPool   pool         = getConstantPool();
         int            cContribs    = listContribs.size();
         TypeConstant[] aContribType = new TypeConstant[cContribs];
 
-        // resolve auto-narrowing and collect contribution types (null for conditional incorporates)
         for (int iContrib = 0 ; iContrib < cContribs; ++iContrib)
             {
-            Contribution contrib     = listContribs.get(iContrib);
-            TypeConstant typeContrib = contrib.resolveGenerics(pool, this);
-
-            if (typeContrib != null && typeContrib.isAutoNarrowing(false))
-                {
-                log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
-                        typeContrib.getValueString(), this.getValueString());
-                typeContrib = typeContrib.resolveAutoNarrowing(pool, false, null);
-                }
-            aContribType[iContrib] = typeContrib;
+            aContribType[iContrib] = listContribs.get(iContrib).
+                resolveGenerics(pool, this);
             }
         return aContribType;
         }
@@ -2612,11 +2602,6 @@ public abstract class TypeConstant
                                         ? pool.typeRefRB()
                                         : pool.typeRefNaked();
         TypeConstant typeProp = info.getType();
-
-        if (typeProp.isAutoNarrowing())
-            {
-            typeProp = typeProp.resolveAutoNarrowing(pool, false, this);
-            }
 
         TypeConstant typeInto = pool.ensureAccessTypeConstant(
             pool.ensureParameterizedTypeConstant(typeBase, typeProp), Access.PROTECTED);
