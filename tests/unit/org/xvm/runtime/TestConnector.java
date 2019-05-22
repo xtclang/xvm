@@ -55,12 +55,13 @@ public class TestConnector
             dump(repository.loadModule(asModule[0]));
             }
 
+        Connector connector = new Connector(repository);
+
         for (int i = 0; i < cModules; i++)
             {
             System.out.println("\n++++++ Loading module: " + asModule[i] + " +++++++\n");
 
             // +++ that is the actual use +++
-            Connector connector = new Connector(repository);
             connector.loadModule(asModule[i]);
 
             // configuration of the container happens here
