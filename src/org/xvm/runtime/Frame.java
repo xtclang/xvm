@@ -577,7 +577,7 @@ public class Frame
 
         if (nVar >= 0)
             {
-            VarInfo info = f_aInfo[nVar];
+            VarInfo info = getVarInfo(nVar);
 
             switch (info.getStyle())
                 {

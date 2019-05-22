@@ -168,7 +168,7 @@ public class xString
                     return frame.assignValue(iReturn, EMPTY_STRING);
                     }
 
-                int    cchNew = cch - ofStart - 1;
+                int    cchNew = cch - ofStart;
                 char[] achNew = new char[cchNew];
                 System.arraycopy(ach, ofStart, achNew, 0, cchNew);
                 return frame.assignValue(iReturn, makeHandle(achNew));
