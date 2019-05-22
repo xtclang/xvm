@@ -43,6 +43,41 @@ const Time(Int picos)
         }
 
     /**
+     * Construct a Time from an ISO-8601 time string.
+     */
+    construct (String time)
+        {
+        Int hour;
+        Int min;
+        Int sec   = 0;
+        Int picos = 0;
+
+        switch (time.size)
+            {
+            case 0, 1, 2, 3:
+                throw new IllegalArgument($"invalid ISO-8601 time: \"{time}\"");
+
+            case 4: // hhmm
+                hour = new IntLiteral(time[0..1]).to<Int>();
+                min  = new IntLiteral(time[2..3]).to<Int>();
+                break;
+
+            case 5: // hh:mm
+                assert time[2] == ':';
+                hour = new IntLiteral(time[0..1]).to<Int>();
+                min  = new IntLiteral(time[3..4]).to<Int>();
+                break;
+
+            case 7: // hh:mm:ss
+            case 6: // hhmmss
+            default:
+                TODO break;
+            }
+
+        construct Time(hour, min, sec, picos);
+        }
+
+    /**
      * The hour of the day, in the range 0..23.
      */
     Int hour.get()

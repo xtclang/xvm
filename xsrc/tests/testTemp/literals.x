@@ -14,6 +14,7 @@ module TestLiterals.xqiz.it
         testMultilineTemplate();
         testHex();
         testDirs();
+        testDates();
         }
 
     void testVersions()
@@ -152,6 +153,37 @@ module TestLiterals.xqiz.it
         fs.emitListing(sb, False);
         console.println("\n(non-recursive)");
         console.println(sb.to<String>());
+        }
+
+    void testDates()
+        {
+        console.println("\n** testDates()");
+
+        Date date = new Date("1999-12-25");
+        console.println($"date={date}");
+
+        date = new Date("19991225");
+        console.println($"date={date}");
+
+        date = new Date("99999-01-23");
+        console.println($"date={date}");
+        }
+
+    void testTimes()
+        {
+        console.println("\n** testTimes()");
+
+        Time time = new Time("12:01:23");
+        console.println($"time={time}");
+
+        time = new Time("120123");
+        console.println($"time={time}");
+
+        time = new Time("12:01:23.456");
+        console.println($"time={time}");
+
+        time = new Time("120123.456");
+        console.println($"time={time}");
         }
     }
 

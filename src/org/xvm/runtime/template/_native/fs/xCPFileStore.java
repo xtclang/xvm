@@ -21,6 +21,8 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.Mutability;
+import org.xvm.runtime.template.collections.xByteArray;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xInt64;
@@ -78,8 +80,11 @@ public class xCPFileStore
             // protected immutable Byte[] loadFile(Object constNode);
             case "loadFile":
                 {
-                // TODO
-                int x = 0;
+                ConstantHandle hNode     = (ConstantHandle) hArg;
+                FSNodeConstant constNode = (FSNodeConstant) hNode.get();
+                ObjectHandle   hBinary   = xByteArray.makeHandle(
+                        constNode.getFileBytes(), Mutability.Constant);
+                return frame.assignValue(iReturn, hBinary);
                 }
             }
 
