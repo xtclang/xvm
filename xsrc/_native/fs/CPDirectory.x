@@ -143,8 +143,7 @@ DEBUG;
 
     // ----- native support ------------------------------------------------------------------------
 
-    // @Lazy protected ListMap<String, CPDirectory|CPFile> contents.calc()
-    protected ListMap<String, CPDirectory|CPFile> contents.get()
+    @Lazy protected ListMap<String, CPDirectory|CPFile> contents.calc()
         {
         (String[] names, Object[] cookies) = store.loadDirectory(cookie);
         Int count = names.size;
