@@ -5,14 +5,19 @@ import java.io.IOException;
 
 import java.util.List;
 
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.FileRepository;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
+import org.xvm.asm.ModuleStructure;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHeap;
 import org.xvm.runtime.Runtime;
+import org.xvm.runtime.TemplateRegistry;
 
 /**
  * The API between Java host environment and an XVM runtime.
@@ -33,18 +38,23 @@ import org.xvm.runtime.Runtime;
 public class Connector
     {
     /**
-     * Default constructor.
-     */
-    public Connector()
-        {
-        }
-
-    /**
      * Construct the Connector based on the specified ModuleRepository.
      */
     public Connector(ModuleRepository repository)
         {
         m_repository = repository;
+        f_runtime    = new Runtime();
+
+        ModuleStructure moduleRoot = repository.loadModule(Constants.ECSTASY_MODULE);
+
+        f_templates  = new TemplateRegistry(moduleRoot);
+        f_heapGlobal = new ObjectHeap(moduleRoot.getConstantPool(), f_templates);
+
+        ConstantPool.setCurrentPool(moduleRoot.getConstantPool());
+
+        f_templates.loadNativeTemplates(moduleRoot);
+
+        ConstantPool.setCurrentPool(null);
         }
 
     /**
@@ -90,13 +100,12 @@ public class Connector
             throw new IllegalStateException("Connector is already activated");
             }
 
-        m_runtime   = new Runtime();
-        m_container = new Container(m_runtime, sAppName, m_repository);
+        m_container = new Container(f_runtime, sAppName, m_repository, f_templates, f_heapGlobal);
         }
 
     public Runtime getRuntime()
         {
-        return m_runtime;
+        return f_runtime;
         }
 
     public Container getContainer()
@@ -111,11 +120,11 @@ public class Connector
         {
         if (!m_fStarted)
             {
-            m_runtime.start();
-            m_container.start();
-
+            f_runtime.start();
             m_fStarted = true;
             }
+
+        m_container.start();
         }
 
     /**
@@ -150,7 +159,9 @@ public class Connector
         do {
             Thread.sleep(500);
             }
-        while (!m_runtime.isIdle() || !m_container.isIdle());
+        while (!f_runtime.isIdle() || !m_container.isIdle());
+
+        m_container = null;
         }
 
 
@@ -164,7 +175,17 @@ public class Connector
     /**
      * The runtime associated with this Connector.
      */
-    private Runtime m_runtime;
+    private final Runtime f_runtime;
+
+    /**
+     * The template registry.
+     */
+    private final TemplateRegistry f_templates;
+
+    /**
+     * The template registry.
+     */
+    private final ObjectHeap f_heapGlobal;
 
     /**
      * The container associated with this Connector.

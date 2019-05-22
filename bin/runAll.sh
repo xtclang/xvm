@@ -1,5 +1,7 @@
 #!/bin/bash
 
+START_TIME=$(date +%s)
+
 java -classpath ../classes/ org.xvm.runtime.TestConnector \
     TestArray.xqiz.it tests/testTemp/array.x \
     TestInnerOuter.xqiz.it tests/TestTemp/innerOuter.x \
@@ -17,3 +19,6 @@ java -classpath ../classes/ org.xvm.runtime.TestConnector \
     TestServices.xqiz.it tests/testTemp/services.x \
     TestQueues.xqiz.it tests/testTemp/queues.x \
     TestTuples.xqiz.it tests/testTemp/tuple.x
+
+END_TIME=$(date +%s)
+echo "Elapsed $(($END_TIME - $START_TIME)) seconds" 1>&2

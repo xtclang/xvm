@@ -43,24 +43,23 @@ import static org.xvm.asm.Op.A_STACK;
  */
 public class Container
     {
-    public Container(Runtime runtime, String sAppName, ModuleRepository repository)
+    public Container(Runtime runtime, String sAppName, ModuleRepository repository,
+                     TemplateRegistry templates, ObjectHeap heapGlobal)
         {
-        f_runtime = runtime;
+        f_runtime  = runtime;
         f_sAppName = sAppName;
 
-        f_repository = repository;
         f_moduleRoot = repository.loadModule(Constants.ECSTASY_MODULE);
-
-        f_templates = new TemplateRegistry(f_moduleRoot);
-        f_adapter = f_templates.f_adapter;
-        f_heapGlobal = new ObjectHeap(f_moduleRoot.getConstantPool(), f_templates);
 
         ModuleStructure module = repository.loadModule(sAppName);
         if (module == null)
             {
             throw new IllegalStateException("Unable to load module \"" + sAppName + "\"");
             }
-        f_idModule = module.getIdentityConstant();
+
+        f_idModule   = module.getIdentityConstant();
+        f_templates  = templates;
+        f_heapGlobal = heapGlobal;
         }
 
     public void start()
@@ -69,12 +68,6 @@ public class Container
             {
             throw new IllegalStateException("Already started");
             }
-
-        ConstantPool.setCurrentPool(f_moduleRoot.getConstantPool());
-
-        f_templates.loadNativeTemplates(f_moduleRoot);
-
-        ConstantPool.setCurrentPool(null);
 
         ModuleStructure structModule = (ModuleStructure) f_idModule.getComponent();
         ConstantPool.setCurrentPool(structModule.getConstantPool());
@@ -94,7 +87,7 @@ public class Container
     public void invoke0(String sMethodName, ObjectHandle... ahArg)
         {
         ConstantPool poolPrev = ConstantPool.getCurrentPool();
-        ConstantPool.setCurrentPool(f_moduleRoot.getConstantPool());
+        ConstantPool.setCurrentPool(m_templateModule.pool());
 
         try
             {
@@ -546,13 +539,11 @@ public class Container
         }
 
     public final Runtime          f_runtime;
-    public final ModuleRepository f_repository;
     public final TemplateRegistry f_templates;
-    public final Adapter          f_adapter;
     public final ObjectHeap       f_heapGlobal;
 
-    final protected ModuleStructure f_moduleRoot;
-    final protected ModuleConstant  f_idModule;
+    protected final ModuleStructure f_moduleRoot;
+    protected final ModuleConstant  f_idModule;
 
     // service context map (concurrent set)
     final Map<ServiceContext, ServiceContext> f_mapServices = new ConcurrentHashMap<>();

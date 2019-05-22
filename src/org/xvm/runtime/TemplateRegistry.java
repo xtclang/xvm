@@ -42,13 +42,13 @@ public class TemplateRegistry
     // cache - ClassTemplates by type
     private final Map<TypeConstant, ClassTemplate> f_mapTemplatesByType = new ConcurrentHashMap<>();
 
-    TemplateRegistry(ModuleStructure moduleRoot)
+    public TemplateRegistry(ModuleStructure moduleRoot)
         {
         f_moduleRoot = moduleRoot;
         f_adapter = new Adapter(this, moduleRoot);
         }
 
-    void loadNativeTemplates(ModuleStructure moduleRoot)
+    public void loadNativeTemplates(ModuleStructure moduleRoot)
         {
         Class clzObject = xObject.class;
         URL url = clzObject.getProtectionDomain().getCodeSource().getLocation();
