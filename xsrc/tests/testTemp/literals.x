@@ -140,7 +140,12 @@ module TestLiterals.xqiz.it
         {
         console.println("\n** testDirs()");
 
-        FileStore fs = /;
-        console.println(fs);
+        FileStore fs = /resources/;
+        console.println("fs=" + fs);
+
+        for (String s : fs.root.names())
+            {
+            console.println("name=" + s);
+            }
         }
     }

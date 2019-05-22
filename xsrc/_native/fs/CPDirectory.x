@@ -86,8 +86,16 @@ const CPDirectory(CPFileStore:protected store, Object cookie, Path path, DateTim
             return False;
             }
 
-        // TODO
-        return store.find(path + name);
+        Object cookie = contents.get(name);
+        assert cookie != Null;
+
+        return True, new CPDirectory(
+                store,
+                cookie,
+                path + name,
+                DateTime.EPOCH, // TODO new DateTime(created, TimeZone.UTC),
+                DateTime.EPOCH, // TODO new DateTime(modified, TimeZone.UTC),
+                1);             // TODO
         }
 
     @Override
