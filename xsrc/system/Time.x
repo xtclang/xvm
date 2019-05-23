@@ -105,6 +105,10 @@ const Time(Int picos)
                     pico = new IntLiteral(picos).to<Int>() * SCALE_10[picos.size];
                     }
                 }
+            else
+                {
+                sec = new IntLiteral(secs).to<Int>();
+                }
             }
 
         construct Time(hour, min, sec, pico);

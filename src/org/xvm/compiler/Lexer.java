@@ -623,15 +623,17 @@ public class Lexer
                             switch (name)
                                 {
                                 case "Date":
-                                    return eatDate(lInitPos);
+                                    return eatDate(lInitPos, false);
                                 case "Time":
-                                    return eatTime(lInitPos);
+                                    return eatTime(lInitPos, false);
                                 case "DateTime":
                                     return eatDateTime(lInitPos);
                                 case "TimeZone":
                                     return eatTimeZone(lInitPos);
                                 case "Duration":
                                     return eatDuration(lInitPos);
+
+                                // TODO "v:" and "Version:"
 
                                 default:
                                     source.rewind();
@@ -1531,7 +1533,7 @@ public class Lexer
                 return -n;
                 }
 
-            n *= 10 + (nextChar() - '0');
+            n = n * 10 + (nextChar() - '0');
             }
         return n;
         }
@@ -1539,11 +1541,12 @@ public class Lexer
     /**
      * Eat a literal ISO-8601 date value.
      *
-     * @param lInitPos  the location of the start of the literal token
+     * @param lInitPos    the location of the start of the literal token
+     * @param fContinued  true if this is just part of a larger literal
      *
      * @return the literal as a Token
      */
-    protected Token eatDate(long lInitPos)
+    protected Token eatDate(long lInitPos, boolean fContinued)
         {
         final Source source  = m_source;
         final long   lLitPos = source.getPosition();
@@ -1561,7 +1564,13 @@ public class Lexer
                     {
                     expect('-');
                     }
-                nDay = eatDigits(2);
+                if ((nDay = eatDigits(2)) >= 0)
+                    {
+                    if (!fContinued)
+                        {
+                        peekNotIdentifierOrNumber();
+                        }
+                    }
                 }
             }
 
@@ -1582,13 +1591,69 @@ public class Lexer
      * Eat a literal ISO-8601 time value.
      *
      * @param lInitPos  the location of the start of the literal token
+     * @param fContinued  true if this is just part of a larger literal
      *
      * @return the literal as a Token
      */
-    protected Token eatTime(long lInitPos)
+    protected Token eatTime(long lInitPos, boolean fContinued)
         {
-        // TODO
-        throw new UnsupportedOperationException();
+        final Source source = m_source;
+        final long   lStart = source.getPosition();
+
+        int  nHour   = 0;
+        int  nMin    = 0;
+        int  nSec    = 0;
+        long nPicos  = 0;
+        int  cDigits = -1;
+
+        if ((nHour = eatDigits(2)) >= 0)
+            {
+            boolean fSep = match(':');
+            if ((nMin = eatDigits(2)) >= 0)
+                {
+                if (fSep && match(':') || !fSep && isNextCharDigit(10))
+                    {
+                    nSec = eatDigits(2);
+                    if (match('.'))
+                        {
+                        if (isNextCharDigit(10))
+                            {
+                            cDigits = 0;
+                            do
+                                {
+                                ++cDigits;
+                                nPicos = nPicos * 10 + (nextChar() - '0');
+                                }
+                            while (isNextCharDigit(10));
+
+                            // scale the integer value up to picos (trillionths)
+                            for (int i = cDigits; i < 12; ++i)
+                                {
+                                nPicos *= 10;
+                                }
+                            }
+                        }
+                    }
+                if (!fContinued)
+                    {
+                    peekNotIdentifierOrNumber();
+                    }
+                }
+            }
+
+        long   lEnd  = source.getPosition();
+        String sTime = source.toString(lStart, lEnd);
+        if (nHour >= 0 && nMin >= 0 && nSec >= 0)
+            {
+            if (!((nHour >= 0 && nHour <= 23 || nHour == 24 && nMin == 0 && nSec == 0)
+                    && (nMin >= 0 && nMin <= 59)
+                    && (nSec >= 0 && nSec <= 59 || nMin == 59 && nSec == 60)))
+                {
+                log(Severity.ERROR, BAD_TIME, new Object[] {sTime}, lStart, lEnd);
+                }
+            }
+
+        return new Token(lInitPos, lEnd, Id.LIT_TIME, sTime);
         }
 
     /**
@@ -1600,8 +1665,27 @@ public class Lexer
      */
     protected Token eatDateTime(long lInitPos)
         {
-        // TODO
-        throw new UnsupportedOperationException();
+        Token tokDate = eatDate(lInitPos, true);
+        if (!expect('T'))
+            {
+            log(Severity.ERROR, BAD_DATETIME, new Object[] {tokDate.getValue()},
+                    tokDate.getStartPosition(), tokDate.getEndPosition());
+            return tokDate;
+            }
+
+        Token tokTime = eatTime(lInitPos, true);
+        long  lEndPos = tokTime.getEndPosition();
+
+        String sDT = tokDate.getValue() + "T" + tokTime.getValue();
+        if (match('Z') || match('+') || match('-'))
+            {
+            m_source.rewind();
+            Token tokZone = eatTimeZone(lInitPos);
+            sDT    += tokZone.getValue();
+            lEndPos = tokZone.getEndPosition();
+            }
+
+        return new Token(lInitPos, lEndPos, Id.LIT_DATETIME, sDT);
         }
 
     /**
@@ -1613,8 +1697,44 @@ public class Lexer
      */
     protected Token eatTimeZone(long lInitPos)
         {
-        // TODO Z or +/- hh or hhmm or hh:mm
-        throw new UnsupportedOperationException();
+        if (match('Z'))
+            {
+            peekNotIdentifierOrNumber();
+            return new Token(lInitPos, m_source.getPosition(), Id.LIT_TIMEZONE, "Z");
+            }
+
+        long lStart = m_source.getPosition();
+        int  nHour  = 0;
+        int  nMin   = 0;
+        if (match('-') || expect('+'))
+            {
+            if ((nHour = eatDigits(2)) >= 0)
+                {
+                if (match(':') || isNextCharDigit(10))
+                    {
+                    if ((nMin = eatDigits(2)) >= 0)
+                        {
+                        peekNotIdentifierOrNumber();
+                        }
+                    }
+                else
+                    {
+                    peekNotIdentifierOrNumber();
+                    }
+                }
+            }
+        long   lEnd  = m_source.getPosition();
+        String sZone = m_source.toString(lStart, lEnd);
+
+        if (nHour >= 0 && nMin >= 0)
+            {
+            if (nHour > 16 || nMin > 59)
+                {
+                log(Severity.ERROR, BAD_TIMEZONE, new Object[] {sZone}, lStart, lEnd);
+                }
+            }
+
+        return new Token(lInitPos, lEnd, Id.LIT_TIMEZONE, sZone);
         }
 
     /**
@@ -1796,6 +1916,7 @@ public class Lexer
         if (chActual != ch)
             {
             m_source.rewind();
+            return false;
             }
 
         return true;
@@ -1831,6 +1952,20 @@ public class Lexer
             }
 
         return true;
+        }
+
+    /**
+     * Verify that the next character is NOT a number or an identifier char.
+     */
+    protected void peekNotIdentifierOrNumber()
+        {
+        char ch   = nextChar();
+        long lEnd = m_source.getPosition();
+        m_source.rewind();
+        if (ch >= '0' && ch <= '9' || isIdentifierPart(ch))
+            {
+            log(Severity.ERROR, UNEXPECTED_CHAR, new Object[] {ch}, m_source.getPosition(), lEnd);
+            }
         }
 
     /**
@@ -2245,6 +2380,10 @@ public class Lexer
      * Invalid ISO-8601 duration {0}; ...
      */
     public static final String BAD_DURATION         = "LEXER-17";
+    /**
+     * Unexpected character: {0}
+     */
+    public static final String UNEXPECTED_CHAR      = "LEXER-18";
 
 
     // ----- data members ------------------------------------------------------

@@ -138,17 +138,17 @@ public class xConst
             switch (constant.getFormat())
                 {
                 case DateTime:
-                    clz         = ensureClass(pool().ensureEcstasyTypeConstant("DateTime"));
+                    clz         = ensureClass(pool().typeDateTime());
                     constructor = DATETIME_CONSTRUCT;
                     break;
 
                 case Date:
-                    clz         = ensureClass(pool().ensureEcstasyTypeConstant("Date"));
+                    clz         = ensureClass(pool().typeDate());
                     constructor = DATE_CONSTRUCT;
                     break;
 
                 case Time:
-                    clz         = ensureClass(pool().ensureEcstasyTypeConstant("Time"));
+                    clz         = ensureClass(pool().typeTime());
                     constructor = TIME_CONSTRUCT;
                     break;
 

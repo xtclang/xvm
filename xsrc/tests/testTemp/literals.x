@@ -156,13 +156,14 @@ module TestLiterals.xqiz.it
         console.println("\n** testDates()");
 
         Date date = new Date("1999-12-25");
-        console.println($"date={date}");
+        // TODO BUGBUG CP template eating space after "}"
+        console.println($"date={date} or {Date:1999-12-25}");
 
         date = new Date("19991225");
-        console.println($"date={date}");
+        console.println($"date={date} or {Date:19991225}");
 
         date = new Date("99999-01-23");
-        console.println($"date={date}");
+        console.println($"date={date} or {Date:9999-01-23} (one less 9)");
         }
 
     void testTimes()
@@ -170,39 +171,39 @@ module TestLiterals.xqiz.it
         console.println("\n** testTimes()");
 
         Time time = new Time("12:01:23");
-        console.println($"time={time}");
+        console.println($"time={time} or {Time:12:01:23}");
 
         time = new Time("120123");
-        console.println($"time={time}");
+        console.println($"time={time} or {Time:120123}");
 
         time = new Time("12:01:23.456");
-        console.println($"time={time}");
+        console.println($"time={time} or {Time:12:01:23.456}");
 
         time = new Time("120123.456");
-        console.println($"time={time}");
+        console.println($"time={time} or {Time:120123.456}");
         }
-        
+
     void testDateTimes()
         {
         console.println("\n** testDateTimes()");
 
         DateTime dt = new DateTime("1999-12-25T12:01:23");
-        console.println($"dt={dt}");
+        console.println($"dt={dt} or {DateTime:1999-12-25T12:01:23}");
 
         dt = new DateTime("19991225T120123");
-        console.println($"dt={dt}");
+        console.println($"dt={dt} or {DateTime:19991225T120123}");
 
         dt = new DateTime("99999-01-23T12:01:23.456");
-        console.println($"dt={dt}");
+        console.println($"dt={dt} or {DateTime:9999-01-23T12:01:23.456} (one less 9)");
 
         dt = new DateTime("2019-05-22T120123.456Z");
-        console.println($"dt={dt}");
+        console.println($"dt={dt} or {DateTime:2019-05-22T120123.456Z}");
 
         dt = new DateTime("2019-05-22T120123.456+01:30");
-        console.println($"dt={dt}");
+        console.println($"dt={dt} or {DateTime:2019-05-22T120123.456+01:30}");
 
         dt = new DateTime("2019-05-22T120123.456-5:00");
-        console.println($"dt={dt}");
+        console.println($"dt={dt} or {DateTime:2019-05-22T120123.456-05:00}");
         }
     }
 
