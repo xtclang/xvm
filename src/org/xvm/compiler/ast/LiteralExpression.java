@@ -89,6 +89,21 @@ public class LiteralExpression
             case LIT_BIN:
                 return pool.typeFPLiteral();
 
+            case LIT_DATE:
+                return pool.typeDate();
+
+            case LIT_TIME:
+                return pool.typeTime();
+
+            case LIT_DATETIME:
+                return pool.typeDateTime();
+
+            case LIT_TIMEZONE:
+                return pool.typeTimeZone();
+
+            case LIT_DURATION:
+                return pool.typeDuration();
+
             default:
                 throw new IllegalStateException(literal.getId().name() + "=" + literal.getValue());
             }
@@ -186,6 +201,21 @@ public class LiteralExpression
             case LIT_BIN:
                 return pool.ensureLiteralConstant(Format.FPLiteral, literal.getString(getSource()), literal.getValue());
 
+            case LIT_DATE:
+                return pool.ensureLiteralConstant(Format.Date, (String) literal.getValue());
+
+            case LIT_TIME:
+                return pool.ensureLiteralConstant(Format.Time, (String) literal.getValue());
+
+            case LIT_DATETIME:
+                return pool.ensureLiteralConstant(Format.DateTime, (String) literal.getValue());
+
+            case LIT_TIMEZONE:
+                return pool.ensureLiteralConstant(Format.TimeZone, (String) literal.getValue());
+
+            case LIT_DURATION:
+                return pool.ensureLiteralConstant(Format.Duration, (String) literal.getValue());
+
             default:
                 throw new IllegalStateException(literal.getId().name() + "=" + literal.getValue());
             }
@@ -212,6 +242,21 @@ public class LiteralExpression
 
             case LIT_BINSTR:
                 return '#' + Handy.byteArrayToHexString((byte[]) literal.getValue()).substring(2);
+
+            case LIT_DATE:
+                return "Date:" + literal.getValue();
+
+            case LIT_TIME:
+                return "Time:" + literal.getValue();
+
+            case LIT_DATETIME:
+                return "DateTime:" + literal.getValue();
+
+            case LIT_TIMEZONE:
+                return "TimeZone:" + literal.getValue();
+
+            case LIT_DURATION:
+                return "Duration:" + literal.getValue();
 
             case TODO:
                 return "TODO(" + Handy.quotedString(String.valueOf(literal.getValue())) + ')';

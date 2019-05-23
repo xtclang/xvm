@@ -2033,6 +2033,11 @@ public class ConstantPool
     public ClassConstant     clzIterable()      {ClassConstant     c = m_clzIterable;     if (c == null) {m_clzIterable     = c = (ClassConstant) getImplicitlyImportedIdentity("Iterable"   );} return c;}
     public ClassConstant     clzIterator()      {ClassConstant     c = m_clzIterator;     if (c == null) {m_clzIterator     = c = (ClassConstant) getImplicitlyImportedIdentity("Iterator"   );} return c;}
     public ClassConstant     clzTuple()         {ClassConstant     c = m_clzTuple;        if (c == null) {m_clzTuple        = c = (ClassConstant) getImplicitlyImportedIdentity("Tuple"      );} return c;}
+    public ClassConstant     clzDate()          {ClassConstant     c = m_clzDate;         if (c == null) {m_clzTuple        = c = (ClassConstant) getImplicitlyImportedIdentity("Date"       );} return c;}
+    public ClassConstant     clzTime()          {ClassConstant     c = m_clzTime;         if (c == null) {m_clzTuple        = c = (ClassConstant) getImplicitlyImportedIdentity("Time"       );} return c;}
+    public ClassConstant     clzDateTime()      {ClassConstant     c = m_clzDateTime;     if (c == null) {m_clzTuple        = c = (ClassConstant) getImplicitlyImportedIdentity("DateTime"   );} return c;}
+    public ClassConstant     clzTimeZone()      {ClassConstant     c = m_clzTimeZone;     if (c == null) {m_clzTuple        = c = (ClassConstant) getImplicitlyImportedIdentity("TimeZone"   );} return c;}
+    public ClassConstant     clzDuration()      {ClassConstant     c = m_clzDuration;     if (c == null) {m_clzTuple        = c = (ClassConstant) getImplicitlyImportedIdentity("Duration"   );} return c;}
     public ClassConstant     clzFileStore()     {ClassConstant     c = m_clzFileStore;    if (c == null) {m_clzFileStore    = c = (ClassConstant) getImplicitlyImportedIdentity("FileStore"  );} return c;}
     public ClassConstant     clzDirectory()     {ClassConstant     c = m_clzDirectory;    if (c == null) {m_clzDirectory    = c = (ClassConstant) getImplicitlyImportedIdentity("Directory"  );} return c;}
     public ClassConstant     clzFile()          {ClassConstant     c = m_clzFile;         if (c == null) {m_clzFile         = c = (ClassConstant) getImplicitlyImportedIdentity("File"       );} return c;}
@@ -2107,6 +2112,11 @@ public class ConstantPool
     public TypeConstant      typeIterable()     {TypeConstant      c = m_typeIterable;    if (c == null) {m_typeIterable    = c = ensureTerminalTypeConstant(clzIterable()                   );} return c;}
     public TypeConstant      typeIterator()     {TypeConstant      c = m_typeIterator;    if (c == null) {m_typeIterator    = c = ensureTerminalTypeConstant(clzIterator()                   );} return c;}
     public TypeConstant      typeTuple()        {TypeConstant      c = m_typeTuple;       if (c == null) {m_typeTuple       = c = ensureTerminalTypeConstant(clzTuple()                      );} return c;}
+    public TypeConstant      typeDate()         {TypeConstant      c = m_typeDate;        if (c == null) {m_typeDate        = c = ensureTerminalTypeConstant(clzDate()                       );} return c;}
+    public TypeConstant      typeTime()         {TypeConstant      c = m_typeTime;        if (c == null) {m_typeTime        = c = ensureTerminalTypeConstant(clzTime()                       );} return c;}
+    public TypeConstant      typeDateTime()     {TypeConstant      c = m_typeDateTime;    if (c == null) {m_typeDateTime    = c = ensureTerminalTypeConstant(clzDateTime()                   );} return c;}
+    public TypeConstant      typeTimeZone()     {TypeConstant      c = m_typeTimeZone;    if (c == null) {m_typeTimeZone    = c = ensureTerminalTypeConstant(clzTimeZone()                   );} return c;}
+    public TypeConstant      typeDuration()     {TypeConstant      c = m_typeDuration;    if (c == null) {m_typeDuration    = c = ensureTerminalTypeConstant(clzDuration()                   );} return c;}
     public TypeConstant      typeFileStore()    {TypeConstant      c = m_typeFileStore;   if (c == null) {m_typeFileStore   = c = ensureTerminalTypeConstant(clzFileStore()                  );} return c;}
     public TypeConstant      typeDirectory()    {TypeConstant      c = m_typeDirectory;   if (c == null) {m_typeDirectory   = c = ensureTerminalTypeConstant(clzDirectory()                  );} return c;}
     public TypeConstant      typeFile()         {TypeConstant      c = m_typeFile;        if (c == null) {m_typeFile        = c = ensureTerminalTypeConstant(clzFile()                       );} return c;}
@@ -2812,6 +2822,11 @@ public class ConstantPool
         m_clzIterable     = null;
         m_clzIterator     = null;
         m_clzTuple        = null;
+        m_clzDate         = null;
+        m_clzTime         = null;
+        m_clzDateTime     = null;
+        m_clzTimeZone     = null;
+        m_clzDuration     = null;
         m_clzFileStore    = null;
         m_clzDirectory    = null;
         m_clzFile         = null;
@@ -2889,6 +2904,11 @@ public class ConstantPool
         m_typeIterable    = null;
         m_typeIterator    = null;
         m_typeTuple       = null;
+        m_typeDate        = null;
+        m_typeTime        = null;
+        m_typeDateTime    = null;
+        m_typeTimeZone    = null;
+        m_typeDuration    = null;
         m_typeFileStore   = null;
         m_typeDirectory   = null;
         m_typeFile        = null;
@@ -3289,6 +3309,11 @@ public class ConstantPool
     private transient ClassConstant     m_clzIterable;
     private transient ClassConstant     m_clzIterator;
     private transient ClassConstant     m_clzTuple;
+    private transient ClassConstant     m_clzDate;
+    private transient ClassConstant     m_clzTime;
+    private transient ClassConstant     m_clzDateTime;
+    private transient ClassConstant     m_clzTimeZone;
+    private transient ClassConstant     m_clzDuration;
     private transient ClassConstant     m_clzFileStore;
     private transient ClassConstant     m_clzDirectory;
     private transient ClassConstant     m_clzFile;
@@ -3366,6 +3391,11 @@ public class ConstantPool
     private transient TypeConstant      m_typeIterable;
     private transient TypeConstant      m_typeIterator;
     private transient TypeConstant      m_typeTuple;
+    private transient TypeConstant      m_typeDate;
+    private transient TypeConstant      m_typeTime;
+    private transient TypeConstant      m_typeDateTime;
+    private transient TypeConstant      m_typeTimeZone;
+    private transient TypeConstant      m_typeDuration;
     private transient TypeConstant      m_typeFileStore;
     private transient TypeConstant      m_typeDirectory;
     private transient TypeConstant      m_typeFile;

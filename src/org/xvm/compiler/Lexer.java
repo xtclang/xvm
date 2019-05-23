@@ -578,48 +578,69 @@ public class Lexer
                     }
 
                 String name = source.toString(lInitPos, source.getPosition());
-                if (Token.Id.valueByPrefix(name) != null && source.hasNext())
+                if (source.hasNext())
                     {
-                    long lPos = source.getPosition();
-                    if (source.next() == ':')
+                    long lPos   = source.getPosition();
+                    char chNext = source.next();
+                    if (name.equals(Id.TODO.TEXT))
                         {
-                        // check for a legal suffix, e.g. "this:private"
-                        while (source.hasNext())
+                        source.rewind();
+                        if (chNext != '(')
                             {
-                            if (!isIdentifierPart(nextChar()))
-                                {
-                                source.rewind();
-                                break;
-                                }
+                            // parse the to-do statement in the same manner as a single line comment
+                            Token comment = eatSingleLineComment(lInitPos);
+                            return new Token(comment.getStartPosition(), comment.getEndPosition(),
+                                    Id.TODO, comment.getValue());
                             }
-
-                        String full = source.toString(lInitPos, source.getPosition());
-                        if (Id.valueByContextSensitiveText(full) != null)
+                        }
+                    else if (chNext == ':')
+                        {
+                        if (Token.Id.valueByPrefix(name) != null)
                             {
-                            name = full;
+                            // check for a legal suffix, e.g. "this:private"
+                            while (source.hasNext())
+                                {
+                                if (!isIdentifierPart(nextChar()))
+                                    {
+                                    source.rewind();
+                                    break;
+                                    }
+                                }
+
+                            String full = source.toString(lInitPos, source.getPosition());
+                            if (Id.valueByContextSensitiveText(full) != null)
+                                {
+                                name = full;
+                                }
+                            else
+                                {
+                                // false alarm; back up and just take "this"
+                                source.setPosition(lPos);
+                                }
                             }
                         else
                             {
-                            // false alarm; back up and just take "this"
-                            source.setPosition(lPos);
+                            switch (name)
+                                {
+                                case "Date":
+                                    return eatDate(lInitPos);
+                                case "Time":
+                                    return eatTime(lInitPos);
+                                case "DateTime":
+                                    return eatDateTime(lInitPos);
+                                case "TimeZone":
+                                    return eatTimeZone(lInitPos);
+                                case "Duration":
+                                    return eatDuration(lInitPos);
+
+                                default:
+                                    source.rewind();
+                                }
                             }
                         }
                     else
                         {
                         source.rewind();
-                        }
-                    }
-                else if (name.equals(Id.TODO.TEXT) && source.hasNext())
-                    {
-                    char chNext = source.next();
-                    source.rewind();
-
-                    if (chNext != '(')
-                        {
-                        // parse the to-do statement in the same manner as a single line comment
-                        Token comment = eatSingleLineComment(lInitPos);
-                        return new Token(comment.getStartPosition(), comment.getEndPosition(),
-                                Id.TODO, comment.getValue());
                         }
                     }
 
@@ -1489,6 +1510,128 @@ public class Lexer
         }
 
     /**
+     * Eat a specified number of decimal digits, and convert them to an integer.
+     *
+     * @param digitCount  the number of digits to eat
+     *
+     * @return the parsed integer value, or the negative thereof if an error was encountered
+     */
+    protected int eatDigits(int digitCount)
+        {
+        final Source source    = m_source;
+        final long   lPosStart = source.getPosition();
+
+        int n = 0;
+        for (int i = 0; i < digitCount; ++i)
+            {
+            if (!isNextCharDigit(10))
+                {
+                log(Severity.ERROR, EXPECTED_DIGITS, new Object[] {digitCount, i},
+                        lPosStart, source.getPosition());
+                return -n;
+                }
+
+            n *= 10 + (nextChar() - '0');
+            }
+        return n;
+        }
+
+    /**
+     * Eat a literal ISO-8601 date value.
+     *
+     * @param lInitPos  the location of the start of the literal token
+     *
+     * @return the literal as a Token
+     */
+    protected Token eatDate(long lInitPos)
+        {
+        final Source source  = m_source;
+        final long   lLitPos = source.getPosition();
+
+        int nYear  = 0;
+        int nMonth = 0;
+        int nDay   = 0;
+
+        if ((nYear = eatDigits(4)) >= 0)
+            {
+            boolean fSep = match('-');
+            if ((nMonth = eatDigits(2)) >= 0)
+                {
+                if (fSep)
+                    {
+                    expect('-');
+                    }
+                nDay = eatDigits(2);
+                }
+            }
+
+        long   lEndPos = source.getPosition();
+        String sDate   = source.toString(lLitPos, lEndPos);
+        if (nYear >= 0 && nMonth >= 0 && nDay >= 0)
+            {
+            if (nYear < 1582 || nMonth < 1 || nMonth > 12 || nDay < 1 || nDay > 31)
+                {
+                log(Severity.ERROR, BAD_DATE, new Object[] {sDate}, lLitPos, lEndPos);
+                }
+            }
+
+        return new Token(lInitPos, lEndPos, Id.LIT_DATE, sDate);
+        }
+
+    /**
+     * Eat a literal ISO-8601 time value.
+     *
+     * @param lInitPos  the location of the start of the literal token
+     *
+     * @return the literal as a Token
+     */
+    protected Token eatTime(long lInitPos)
+        {
+        // TODO
+        throw new UnsupportedOperationException();
+        }
+
+    /**
+     * Eat a literal ISO-8601 datetime value.
+     *
+     * @param lInitPos  the location of the start of the literal token
+     *
+     * @return the literal as a Token
+     */
+    protected Token eatDateTime(long lInitPos)
+        {
+        // TODO
+        throw new UnsupportedOperationException();
+        }
+
+    /**
+     * Eat a literal ISO-8601 timezone value.
+     *
+     * @param lInitPos  the location of the start of the literal token
+     *
+     * @return the literal as a Token
+     */
+    protected Token eatTimeZone(long lInitPos)
+        {
+        // TODO Z or +/- hh or hhmm or hh:mm
+        throw new UnsupportedOperationException();
+        }
+
+    /**
+     * Eat a literal ISO-8601 duration value.
+     *
+     * @param lInitPos  the location of the start of the literal token
+     *
+     * @return the literal as a Token
+     */
+    protected Token eatDuration(long lInitPos)
+        {
+        // TODO PnYnMnDTnHnMnS
+        throw new UnsupportedOperationException();
+        }
+
+
+    /**
      * Eat a single line aka end-of-line comment.
      *
      * @return the comment as a Token
@@ -1632,9 +1775,11 @@ public class Lexer
     /**
      * Get the next character of source code, making sure that it is the specified character.
      *
-     * @param ch  the expectec character
+     * @param ch  the desired character
+     *
+     * @return true iff the next character was matched
      */
-    protected char expect(char ch)
+    protected boolean match(char ch)
         {
         char chActual;
         try
@@ -1645,7 +1790,36 @@ public class Lexer
             {
             log(Severity.ERROR, UNEXPECTED_EOF, null,
                     m_source.getPosition(), m_source.getPosition());
-            return ch;
+            return false;
+            }
+
+        if (chActual != ch)
+            {
+            m_source.rewind();
+            }
+
+        return true;
+        }
+
+    /**
+     * Get the next character of source code, making sure that it is the specified character.
+     *
+     * @param ch  the expected character
+     *
+     * @return true iff the next character was found
+     */
+    protected boolean expect(char ch)
+        {
+        char chActual;
+        try
+            {
+            chActual = nextChar();
+            }
+        catch (NoSuchElementException e)
+            {
+            log(Severity.ERROR, UNEXPECTED_EOF, null,
+                    m_source.getPosition(), m_source.getPosition());
+            return false;
             }
 
         if (chActual != ch)
@@ -1653,11 +1827,10 @@ public class Lexer
             log(Severity.ERROR, EXPECTED_CHAR,
                     new Object[] {String.valueOf(ch), String.valueOf(chActual)},
                     m_source.getPosition(), m_source.getPosition());
+            return false;
             }
 
-        // already logged an error; just pretend we hit a closing brace (since all roads should have
-        // gone there)
-        return ch;
+        return true;
         }
 
     /**
@@ -2048,6 +2221,30 @@ public class Lexer
      * Expected {0}; found {1}.
      */
     public static final String EXPECTED_CHAR        = "LEXER-11";
+    /**
+     * {0} digits were required; only {1} digits were found.
+     */
+    public static final String EXPECTED_DIGITS      = "LEXER-12";
+    /**
+     * Invalid ISO-8601 date {0}; ...
+     */
+    public static final String BAD_DATE             = "LEXER-13";
+    /**
+     * Invalid ISO-8601 time {0}; ...
+     */
+    public static final String BAD_TIME             = "LEXER-14";
+    /**
+     * Invalid ISO-8601 datetime {0}; ...
+     */
+    public static final String BAD_DATETIME         = "LEXER-15";
+    /**
+     * Invalid ISO-8601 timezone {0}; ...
+     */
+    public static final String BAD_TIMEZONE         = "LEXER-16";
+    /**
+     * Invalid ISO-8601 duration {0}; ...
+     */
+    public static final String BAD_DURATION         = "LEXER-17";
 
 
     // ----- data members ------------------------------------------------------

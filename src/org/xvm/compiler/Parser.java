@@ -3440,6 +3440,11 @@ public class Parser
             case LIT_INT:
             case LIT_DEC:
             case LIT_BIN:
+            case LIT_DATE:
+            case LIT_TIME:
+            case LIT_DATETIME:
+            case LIT_TIMEZONE:
+            case LIT_DURATION:
                 return new LiteralExpression(current());
 
             case TEMPLATE:

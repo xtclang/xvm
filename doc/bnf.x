@@ -788,17 +788,17 @@ Literal
     FPBinaryLiteral                                                 # defined in language spec
     CharLiteral                                                     # defined in language spec
     StringLiteral
-    BinaryLiteral                                                   # TODO
+    BinaryLiteral
     TupleLiteral
     ListLiteral
     MapLiteral
     VersionLiteral
-    DateLiteral                                                     # TODO
-    TimeLiteral                                                     # TODO
-    DateTimeLiteral                                                 # TODO
-    TimeZoneLiteral                                                 # TODO
-    DurationLiteral                                                 # TODO
-    FileStoreLiteral                                                # TODO
+    DateLiteral
+    TimeLiteral
+    DateTimeLiteral
+    TimeZoneLiteral
+    DurationLiteral
+    FileStoreLiteral
 
 StringLiteral
     "$"-opt NoWhitespace '"' CharacterString-opt '"'

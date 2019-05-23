@@ -793,6 +793,7 @@ public abstract class Constant
         String,
         Date,               // ISO8601 YYYY-MM-DD date format
         Time,               // ISO8601 HH:MM[:SS[.sssssssss]]['Z' | ('+'|'-')hh[:mm]] format
+        TimeZone,           // ISO8601 ['Z' | ('+'|'-')hh[:mm]] format
         DateTime,           // ISO8601 date ['T' time] format
         Duration,           // ISO8601 P[n]Y[n]M[n]DT[n]H[n]M[n]S | P[n]W format
         TimeInterval,       // ISO8601 datetime '/' datetime format
