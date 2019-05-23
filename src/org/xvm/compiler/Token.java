@@ -513,6 +513,11 @@ public class Token
         LIT_INT      (null             ),
         LIT_DEC      (null             ),
         LIT_BIN      (null             ),
+        LIT_DATE     (null             ),
+        LIT_TIME     (null             ),
+        LIT_DATETIME (null             ),
+        LIT_TIMEZONE (null             ),
+        LIT_DURATION (null             ),
         TEMPLATE     ("{...}"          ),            // not a real token
         ENUM_VAL     ("enum-value"     );            // not a real token
 
