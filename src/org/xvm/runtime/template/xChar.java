@@ -38,6 +38,8 @@ public class xChar
         {
         super.initDeclared();
 
+        markNativeProperty("codepoint");
+
         ClassComposition clz = getCanonicalClass();
         for (int i = 0; i < cache.length; ++i)
             {
@@ -62,6 +64,19 @@ public class xChar
             }
 
         return super.createConstHandle(frame, constant);
+        }
+
+    @Override
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
+        {
+        switch (sPropName)
+            {
+            case "codepoint":
+                return frame.assignValue(iReturn,
+                    xUInt32.INSTANCE.makeJavaLong(((JavaLong) hTarget).getValue()));
+            }
+
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     @Override

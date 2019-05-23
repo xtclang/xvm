@@ -41,7 +41,7 @@ const TimeZone(Int picos, String? name = null)
      *
      *   ±hh:mm
      *   ±hhmm
-     *   ±hh 
+     *   ±hh
      */
     construct(String tz)
         {
@@ -55,29 +55,29 @@ const TimeZone(Int picos, String? name = null)
             return valOf(s[of]) * 10 + valOf(s[of+1]);
             }
 
-        if (tz.size >= 3 && (tz[0]=='+' || tz[0]=='-'))
+        if (tz.size >= 2 && (tz[0]=='+' || tz[0]=='-'))
             {
-            Int hours = -1; // purposefully invalid
+            Int hours = -1;
             Int mins  = 0;
-            switch (tz.size)
+            if (Int colon : tz.indexOf(':'))
                 {
-                case 3:
-                    hours = parseInt(tz, 1);
-                    mins  = parseInt(tz, 1);
-                    break;
-
-                case 5:
-                    hours = parseInt(tz, 1);
-                    mins  = parseInt(tz, 3);
-                    break;
-
-                case 6:
-                    if (tz[3]==':')
-                        {
+                if (colon > 1 && colon < tz.size-1)
+                    {
+                    hours = new IntLiteral(tz[1..colon-1]).to<Int>();
+                    mins  = new IntLiteral(tz.substring(colon+1)).to<Int>();
+                    }
+                }
+            else
+                {
+                switch (tz.size)
+                    {
+                    case 5:
+                        mins  = parseInt(tz, 3);
+                        continue;
+                    case 3:
                         hours = parseInt(tz, 1);
-                        mins  = parseInt(tz, 4);
-                        }
-                    break;
+                        break;
+                    }
                 }
 
             if (hours >= 0 && hours <= 16 && mins >= 0 && mins <= 59)

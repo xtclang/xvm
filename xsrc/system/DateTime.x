@@ -57,6 +57,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone) // TODO GG "= TimeZone.UTC"
                 Date date = new Date(dt[0..timeOffset-1]);
                 Time time = new Time(dt[timeOffset+1..tzOffset-1]);
                 construct DateTime(date, time, zone);
+                return;
                 }
             }
 

@@ -407,8 +407,9 @@ public abstract class xConstrainedInteger
             if ((a1 | a2) >>> f_cMulCheckShift != 0)
                 {
                 // see Math.multiplyExact()
-                if (((l2 != 0) && ((lr & f_cMaxValue) / l2 != l1)) ||
-                        (l1 == f_cMinValue && l2 == -1))
+                if (((l2 != 0) && (lr / l2 != l1)) ||
+                        (l1 == f_cMinValue && l2 == -1) ||
+                        lr > f_cMaxValue || lr < f_cMinValue)
                     {
                     return overflow(frame);
                     }

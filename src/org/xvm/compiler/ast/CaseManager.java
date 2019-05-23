@@ -609,13 +609,20 @@ public class CaseManager<CookieType>
             {
             m_labelConstant = m_labelDefault;
             }
-        else if (m_labelDefault == null && (m_nodeSwitch instanceof Expression)
+        else if (m_labelDefault == null
                 && (!isCardinal() || m_listsetCase.size() < m_typeCase.getIntCardinality()))
             {
-            // this means that the switch expression would "short circuit" (not result in a value),
-            // which is not allowed
-            m_nodeSwitch.log(errs, Severity.ERROR, Compiler.SWITCH_DEFAULT_REQUIRED);
-            fValid = false;
+            if (m_nodeSwitch instanceof Expression)
+                {
+                // this means that the switch expression would "short circuit" (not result in a value),
+                // which is not allowed
+                m_nodeSwitch.log(errs, Severity.ERROR, Compiler.SWITCH_DEFAULT_REQUIRED);
+                fValid = false;
+                }
+            else
+                {
+                m_labelDefault = ((Statement) m_nodeSwitch).getEndLabel();
+                }
             }
 
         if (m_ctxSwitch != null)
