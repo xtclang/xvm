@@ -134,6 +134,9 @@ public class ObjectHeap
             case Map:
             case Tuple:
             case FileStore:
+            case Date:
+            case Time:
+            case DateTime:
                 return constValue.getType();
 
             case Char:
@@ -142,9 +145,6 @@ public class ObjectHeap
             case String:
                 return f_poolRoot.typeString();
 
-            case Date:
-            case Time:
-            case DateTime:
             case Duration:
             case TimeInterval:
             case Version:
