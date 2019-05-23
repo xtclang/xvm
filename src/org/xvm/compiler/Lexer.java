@@ -1063,6 +1063,12 @@ public class Lexer
                 case R_CURLY:
                     if (--cDepth <= 0)
                         {
+                        if (token.hasTrailingWhitespace())
+                            {
+                            // don't steal the whitespace; we're inside a literal!
+                            m_source.setPosition(token.getEndPosition());
+                            }
+
                         return tokens.toArray(new Token[0]);
                         }
                     break;
