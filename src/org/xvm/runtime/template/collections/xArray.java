@@ -123,16 +123,7 @@ public class xArray
             }
 
         // cache "Iterable.to<Array>()" method
-        ClassStructure clzIterable = f_templates.getClassStructure("Iterable");
-        for (MethodStructure method :
-                ((MultiMethodStructure) clzIterable.getChild("to")).methods())
-            {
-            if (method.getParamCount() == 1)
-                {
-                ITERABLE_TO_ARRAY = method;
-                }
-            }
-        assert ITERABLE_TO_ARRAY != null;
+        ITERABLE_TO_ARRAY = f_templates.getClassStructure("Iterable").findMethod("to", 1);
 
         // cache Mutability template
         MUTABILITY = (xEnum) f_templates.getTemplate("collections.VariablyMutable.Mutability");
