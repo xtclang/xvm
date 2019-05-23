@@ -36,6 +36,62 @@ const TimeZone(Int picos, String? name = null)
         }
 
     /**
+     * Construct a TimeZone from an ISO-8601 timezone indicator string of one of the following
+     * offset formats:
+     *
+     *   ±hh:mm
+     *   ±hhmm
+     *   ±hh 
+     */
+    construct(String tz)
+        {
+        static Int valOf(Char ch)
+            {
+            return ch >= '0' && ch <= '9' ? ch - '0' : -999;
+            }
+
+        static Int parseInt(String s, Int of)
+            {
+            return valOf(s[of]) * 10 + valOf(s[of+1]);
+            }
+
+        if (tz.size >= 3 && (tz[0]=='+' || tz[0]=='-'))
+            {
+            Int hours = -1; // purposefully invalid
+            Int mins  = 0;
+            switch (tz.size)
+                {
+                case 3:
+                    hours = parseInt(tz, 1);
+                    mins  = parseInt(tz, 1);
+                    break;
+
+                case 5:
+                    hours = parseInt(tz, 1);
+                    mins  = parseInt(tz, 3);
+                    break;
+
+                case 6:
+                    if (tz[3]==':')
+                        {
+                        hours = parseInt(tz, 1);
+                        mins  = parseInt(tz, 4);
+                        }
+                    break;
+                }
+
+            if (hours >= 0 && hours <= 16 && mins >= 0 && mins <= 59)
+                {
+                Int offset = (hours * Time.PICOS_PER_HOUR + mins * Time.PICOS_PER_MINUTE);
+                construct TimeZone((tz[0]=='-' ? -1 : +1) * offset);
+                return;
+                }
+            }
+
+        throw new IllegalArgument($"invalid ISO-8601 timezone offset: \"{tz}\"");
+        }
+
+    /**
      * Represents a TimeZone rule that implements the details from the "IANA Time Zone Database".
      */
     static const Rule

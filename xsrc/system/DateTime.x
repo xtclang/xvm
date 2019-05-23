@@ -20,6 +20,49 @@ const DateTime(Int128 epochPicos, TimeZone timezone) // TODO GG "= TimeZone.UTC"
         construct DateTime(picos, timezone);
         }
 
+    /**
+     * Construct a DateTime from an ISO-8601 date and time string with optional timezone.
+     */
+    construct(String dt)
+        {
+        if (Int timeOffset : dt.indexOf('T'))
+            {
+            if (timeOffset >= 8 && timeOffset <= dt.size-5)
+                {
+                TimeZone zone     = TimeZone.NoTZ;
+                Int      tzOffset = dt.size-1;
+                FindTZ: if (dt[tzOffset] == 'Z')
+                    {
+                    zone = TimeZone.UTC;
+                    }
+                else
+                    {
+                    Int tzStop = tzOffset - 5;
+                    while (--tzOffset >= tzStop)
+                        {
+                        switch (dt[tzOffset])
+                            {
+                            case '+':
+                            case '-':
+                                // offset timezone found
+                                zone = new TimeZone(dt.substring(tzOffset));
+                                break FindTZ;
+                            }
+                        }
+
+                    // no timezone found
+                    tzOffset = dt.size;
+                    }
+
+                Date date = new Date(dt[0..timeOffset-1]);
+                Time time = new Time(dt[timeOffset+1..tzOffset-1]);
+                construct DateTime(date, time, zone);
+                }
+            }
+
+        throw new IllegalArgument($"invalid ISO-8601 datetime: \"{dt}\"");
+        }
+
     static DateTime EPOCH = new DateTime(0, TimeZone.UTC);
 
     // ----- accessors -----------------------------------------------------------------------------

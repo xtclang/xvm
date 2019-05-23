@@ -47,35 +47,74 @@ const Time(Int picos)
      */
     construct (String time)
         {
-        Int hour;
-        Int min;
-        Int sec   = 0;
-        Int picos = 0;
-
-        switch (time.size)
+        String   hours;
+        String   mins;
+        String   secs  = "";
+        String[] parts = time.split(':');
+        switch (parts.size)
             {
-            case 0, 1, 2, 3:
-                throw new IllegalArgument($"invalid ISO-8601 time: \"{time}\"");
-
-            case 4: // hhmm
-                hour = new IntLiteral(time[0..1]).to<Int>();
-                min  = new IntLiteral(time[2..3]).to<Int>();
+            case 3:
+                secs  = parts[2];
+                continue;
+            case 2:
+                hours = parts[0];
+                mins  = parts[1];
                 break;
 
-            case 5: // hh:mm
-                assert time[2] == ':';
-                hour = new IntLiteral(time[0..1]).to<Int>();
-                min  = new IntLiteral(time[3..4]).to<Int>();
-                break;
+            case 1:
+                Int len = time.size;
+                if (len >= 4)
+                    {
+                    hours = time[0..1];
+                    mins  = time[2..3];
+                    if (len > 4)
+                        {
+                        secs = time[4..len-1];
+                        }
+                    break;
+                    }
+                continue;
 
-            case 7: // hh:mm:ss
-            case 6: // hhmmss
             default:
-                TODO break;
+                throw new IllegalArgument($"invalid ISO-8601 time: \"{time}\"");
             }
 
-        construct Time(hour, min, sec, picos);
+        Int hour = new IntLiteral(hours).to<Int>();
+        Int min  = new IntLiteral(mins ).to<Int>();
+        Int sec  = 0;
+        Int pico = 0;
+
+        if (secs != "")
+            {
+            if (Int dot : secs.indexOf('.'))
+                {
+                if (dot > 0)
+                    {
+                    sec = new IntLiteral(secs[0..dot-1]).to<Int>();
+                    }
+
+                Int len = secs.size;
+                if (dot < len-1)
+                    {
+                    String picos = secs[dot+1..len-1];
+                    if (picos.size > 12)
+                        {
+                        picos = picos[0..11];
+                        }
+
+                    pico = new IntLiteral(picos).to<Int>() * SCALE_10[picos.size];
+                    }
+                }
+            }
+
+        construct Time(hour, min, sec, pico);
         }
+
+    private static Int[] SCALE_10 = [           1_000_000_000_000,
+            100_000_000_000,    10_000_000_000,     1_000_000_000,
+                100_000_000,        10_000_000,         1_000_000,
+                    100_000,            10_000,             1_000,
+                        100,                10,                 1 ];
 
     /**
      * The hour of the day, in the range 0..23.
@@ -228,7 +267,7 @@ const Time(Int picos)
         if (fraction != 0)
             {
             appender.add('.');
-            Duration.picosFractional(picos).appendTo(appender);
+            Duration.picosFractional(fraction).appendTo(appender);
             }
         }
     }

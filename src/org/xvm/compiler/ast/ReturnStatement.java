@@ -251,7 +251,7 @@ public class ReturnStatement
             // expression REVIEW tuple return, #exprs > 1
             Assignable aLVals[] = ((StatementExpression) container).getAssignables();
             int        cLVals   = aLVals.length;
-            for (int i = 0, cExprs = exprs.size(); i < cExprs; ++i)
+            for (int i = 0, cExprs = exprs == null ? 0 : exprs.size(); i < cExprs; ++i)
                 {
                 if (i < cLVals)
                     {

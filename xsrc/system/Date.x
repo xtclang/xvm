@@ -38,19 +38,28 @@ const Date(Int epochDay)
         Int month;
         Int day;
 
-        if (date.size == 10)
+        String[] parts = date.split('-');
+        switch (parts.size)
             {
-            assert date[4] == '-' && date[7] == '-';
-            year  = new IntLiteral(date[0..3]).to<Int>();
-            month = new IntLiteral(date[5..6]).to<Int>();
-            day   = new IntLiteral(date[8..9]).to<Int>();
-            }
-        else
-            {
-            String[] parts = date.split('-');
-            year  = new IntLiteral(parts[0]).to<Int>();
-            month = new IntLiteral(parts[1]).to<Int>();
-            day   = new IntLiteral(parts[2]).to<Int>();
+            case 3:
+                year  = new IntLiteral(parts[0]).to<Int>();
+                month = new IntLiteral(parts[1]).to<Int>();
+                day   = new IntLiteral(parts[2]).to<Int>();
+                break;
+
+            case 1:
+                Int len = date.size;
+                if (len >= 8)
+                    {
+                    year  = new IntLiteral(date[0    ..len-5]).to<Int>();
+                    month = new IntLiteral(date[len-4..len-3]).to<Int>();
+                    day   = new IntLiteral(date[len-2..len-1]).to<Int>();
+                    break;
+                    }
+                continue;
+
+            default:
+                throw new IllegalArgument($"invalid ISO-8601 date: \"{date}\"");
             }
 
         construct Date(year, month, day);

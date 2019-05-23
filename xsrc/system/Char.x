@@ -87,9 +87,39 @@ const Char
         return codepoint.to<Int>();
         }
 
-    @Op("*") String dup(Int n)
+    @Op("+")
+    Char add(Int n)
         {
-        TODO
+        return new Char(this.to<Int>() + n);
+        }
+
+    @Op("-")
+    Char sub(Int n)
+        {
+        return new Char(this.to<Int>() - n);
+        }
+
+    @Op("-")
+    Int sub(Char ch)
+        {
+        return this.to<Int>() - ch.to<Int>();
+        }
+
+    @Op("*")
+    String dup(Int n)
+        {
+        if (n == 0)
+            {
+            return "";
+            }
+
+        assert n > 0;
+        StringBuffer buf = new StringBuffer(n);
+        for (Int i = 0; i < n; ++i)
+            {
+            buf.add(this);
+            }
+        return buf.to<String>();
         }
 
 

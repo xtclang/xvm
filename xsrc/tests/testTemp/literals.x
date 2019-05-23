@@ -15,6 +15,8 @@ module TestLiterals.xqiz.it
         testHex();
         testDirs();
         testDates();
+        testTimes();
+        testDateTimes();
         }
 
     void testVersions()
@@ -144,15 +146,9 @@ module TestLiterals.xqiz.it
         FileStore fs = /resources/;
         console.println("fs=" + fs);
 
-        StringBuffer sb = new StringBuffer();
-        fs.emitListing(sb);
-        console.println("\n(recursive)");
-        console.println(sb.to<String>());
-
-        StringBuffer sb = new StringBuffer();
-        fs.emitListing(sb, False);
-        console.println("\n(non-recursive)");
-        console.println(sb.to<String>());
+        // TODO BUGBUG CP StatementExpression requires a "return"
+        console.println($"\n(recursive)\n{{fs.emitListing($); return;}}");
+        console.println($"\n(non-recursive)\n{{fs.emitListing($, False); return;}}");
         }
 
     void testDates()
@@ -184,6 +180,29 @@ module TestLiterals.xqiz.it
 
         time = new Time("120123.456");
         console.println($"time={time}");
+        }
+        
+    void testDateTimes()
+        {
+        console.println("\n** testDateTimes()");
+
+        DateTime dt = new DateTime("1999-12-25T12:01:23");
+        console.println($"dt={dt}");
+
+        dt = new DateTime("19991225T120123");
+        console.println($"dt={dt}");
+
+        dt = new DateTime("99999-01-23T12:01:23.456");
+        console.println($"dt={dt}");
+
+        dt = new DateTime("2019-05-22T120123.456Z");
+        console.println($"dt={dt}");
+
+        dt = new DateTime("2019-05-22T120123.456+01:30");
+        console.println($"dt={dt}");
+
+        dt = new DateTime("2019-05-22T120123.456-5:00");
+        console.println($"dt={dt}");
         }
     }
 
