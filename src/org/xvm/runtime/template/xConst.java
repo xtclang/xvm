@@ -6,10 +6,10 @@ import java.util.Iterator;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IntervalConstant;
+import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -47,6 +47,9 @@ public class xConst
     public static MethodStructure FN_ESTIMATE_LENGTH;
     public static MethodStructure FN_APPEND_TO;
     public static MethodStructure INTERVAL_CONSTRUCT;
+    public static MethodStructure DATETIME_CONSTRUCT;
+    public static MethodStructure DATE_CONSTRUCT;
+    public static MethodStructure TIME_CONSTRUCT;
 
     public xConst(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -73,24 +76,20 @@ public class xConst
             // Stringable support
             ClassStructure clzHelper = f_templates.getClassStructure("_native.ConstHelper");
 
-            for (MethodStructure method :
-                    ((MultiMethodStructure) clzHelper.getChild("estimateStringLength")).methods())
-                {
-                FN_ESTIMATE_LENGTH = method;
-                }
-            for (MethodStructure method :
-                    ((MultiMethodStructure) clzHelper.getChild("appendTo")).methods())
-                {
-                FN_APPEND_TO = method;
-                }
+            FN_ESTIMATE_LENGTH = clzHelper.findMethod("estimateStringLength", 2);
+            FN_APPEND_TO       = clzHelper.findMethod("appendTo", 3);
 
             // Interval support
-            ClassStructure clzInterval = f_templates.getClassStructure("Interval");
-            for (MethodStructure idConstruct :
-                    ((MultiMethodStructure) clzInterval.getChild("construct")).methods())
-                {
-                INTERVAL_CONSTRUCT = idConstruct;
-                }
+            INTERVAL_CONSTRUCT = f_templates.getClassStructure("Interval").
+                findMethod("construct", 2);
+
+            // DateTime support
+            DATETIME_CONSTRUCT = f_templates.getClassStructure("DateTime").
+                findMethod("construct", 1, pool().typeString());
+            DATE_CONSTRUCT     = f_templates.getClassStructure("Date").
+                findMethod("construct", 1, pool().typeString());
+            TIME_CONSTRUCT     = f_templates.getClassStructure("Time").
+                findMethod("construct", 1, pool().typeString());
             }
         }
 
@@ -129,6 +128,38 @@ public class xConst
                 }
             return clzInterval.getTemplate().construct(
                 frame, constructor, clzInterval, null, ahArg, Op.A_STACK);
+            }
+
+        Literal:
+        if (constant instanceof LiteralConstant)
+            {
+            ClassComposition clz;
+            MethodStructure  constructor;
+            switch (constant.getFormat())
+                {
+                case DateTime:
+                    clz         = ensureClass(pool().ensureEcstasyTypeConstant("DateTime"));
+                    constructor = DATETIME_CONSTRUCT;
+                    break;
+
+                case Date:
+                    clz         = ensureClass(pool().ensureEcstasyTypeConstant("Date"));
+                    constructor = DATE_CONSTRUCT;
+                    break;
+
+                case Time:
+                    clz         = ensureClass(pool().ensureEcstasyTypeConstant("Time"));
+                    constructor = TIME_CONSTRUCT;
+                    break;
+
+                default:
+                    break Literal;
+                }
+
+            ObjectHandle[] ahArg = new ObjectHandle[constructor.getMaxVars()];
+            ahArg[0] = xString.makeHandle(((LiteralConstant) constant).getValue());
+
+            return construct(frame, constructor, clz, null, ahArg, Op.A_STACK);
             }
 
         return super.createConstHandle(frame, constant);
