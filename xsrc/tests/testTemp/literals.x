@@ -156,7 +156,6 @@ module TestLiterals.xqiz.it
         console.println("\n** testDates()");
 
         Date date = new Date("1999-12-25");
-        // TODO BUGBUG CP template eating space after "}"
         console.println($"date={date} or {Date:1999-12-25}");
 
         date = new Date("19991225");
