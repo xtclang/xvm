@@ -1024,7 +1024,14 @@ public class NameExpression
                     }
 
                 Register regOuter = createRegister(typeOuter, fUsedOnce);
-                code.add(new MoveThis(cSteps, regOuter));
+                if (typeOuter.getAccess() == Access.PUBLIC)
+                    {
+                    code.add(new MoveThis(cSteps, regOuter));
+                    }
+                else
+                    {
+                    code.add(new MoveThis(cSteps, regOuter, typeOuter.getAccess()));
+                    }
                 return regOuter;
                 }
 

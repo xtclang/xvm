@@ -107,6 +107,7 @@
 +MOV_VAR    rvalue-src, lvalue-dest                 ; move ("R"=) Var-to-source to destination
 +MOV_REF    rvalue-src, lvalue-dest                 ; move ("R"=) Ref-to-source to destination (read-only)
 +MOV_THIS   #, lvalue-dest                          ; # (an inline unsigned byte) specifies the count of this-to-outer-this steps (0=this, 1=ImmediatelyOuter.this, etc.)
++MOV_THISA  #, lvalue-dest, A_*                     ; same as above with an additional access modifier (A_TARGET, A_PUBLIC, A_PROTECTED, A_PRIVATE)
 +CAST       rvalue-src, lvalue-dest, TYPE           ; copy source to destination with cast
 
 // ("GP"=) general purpose register/local-property operations:

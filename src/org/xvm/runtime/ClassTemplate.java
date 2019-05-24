@@ -228,12 +228,14 @@ public abstract class ClassTemplate
         assert typeInception.normalizeParameters(pool).equals(typeInception);
         assert typeMask.normalizeParameters(pool).equals(typeMask);
 
-        return m_mapCompositions.computeIfAbsent(typeInception, (typeI) ->
+        ClassComposition clz = m_mapCompositions.computeIfAbsent(typeInception, (typeI) ->
             {
             OpSupport support = typeI.isAnnotated() ? typeI.getOpSupport(f_templates) : this;
 
-            return new ClassComposition(support, typeI, typeMask);
+            return new ClassComposition(support, typeI);
             });
+
+        return typeMask.equals(typeInception) ? clz : clz.maskAs(typeMask);
         }
 
     /**

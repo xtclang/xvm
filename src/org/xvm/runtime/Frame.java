@@ -606,6 +606,9 @@ public class Frame
             TypeConstant typeFrom = hValue.getType();
             if (typeFrom.getPosition() != info.m_nTypeId) // quick check
                 {
+                // TODO: should this check be done by the class itself?
+                typeFrom = hValue.revealOrigin().getType();
+
                 // TODO: how to minimize the probability of getting here?
                 TypeConstant typeTo = info.getType();
 
