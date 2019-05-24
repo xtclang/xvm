@@ -1545,6 +1545,36 @@ public class Lexer
         }
 
     /**
+     * @return the value, or a negative value if there was no number or the number overflowed
+     */
+    protected long eatUnsignedLong()
+        {
+        final Source source    = m_source;
+        final long   lPosStart = source.getPosition();
+
+        long n = 0;
+        if (isNextCharDigit(10))
+            {
+            do
+                {
+                if (n < 0)
+                    {
+                    return n;
+                    }
+
+                n = n * 10 + (nextChar() - '0');
+                }
+            while (isNextCharDigit(10));
+
+            return n;
+            }
+        else
+            {
+            return -1;
+            }
+        }
+
+    /**
      * Eat a literal ISO-8601 date value.
      *
      * @param lInitPos    the location of the start of the literal token
@@ -1752,10 +1782,121 @@ public class Lexer
      */
     protected Token eatDuration(long lInitPos)
         {
-        // TODO PnYnMnDTnHnMnS
-        throw new UnsupportedOperationException();
-        }
+        final Source source = m_source;
+        final long   lStart = source.getPosition();
 
+        // Stages:
+        //   Y, M, D, (T), H, M, S
+        //   1  2  3   4   5  6  7 . 8
+
+        boolean fErr = false;
+        if (expect('P'))
+            {
+            int nPrevStage = match('T') ? 4 : 0;
+            Loop: while (true)
+                {
+                long lPos = source.getPosition();
+                long lVal = eatUnsignedLong();
+                if (lVal < 0)
+                    {
+                    source.setPosition(lPos);
+                    break;
+                    }
+
+                char ch = nextChar();
+                switch (ch)
+                    {
+                    case 'Y':
+                        if (nPrevStage >= 1)
+                            {
+                            fErr = true;
+                            }
+                        nPrevStage = Math.max(1, nPrevStage);
+                        break;
+
+                    case 'M':
+                        if (nPrevStage >= 2)
+                            {
+                            // parse as minute
+                            if (nPrevStage < 4)
+                                {
+                                fErr = true;
+                                }
+                            nPrevStage = Math.max(6, nPrevStage);
+                            }
+                        else
+                            {
+                            // parse as month
+                            nPrevStage = Math.max(2, nPrevStage);
+                            }
+                        break;
+
+                    case 'D':
+                        if (nPrevStage >= 3)
+                            {
+                            fErr = true;
+                            }
+                        nPrevStage = Math.max(3, nPrevStage);
+                        break;
+
+                    case 'H':
+                        if (nPrevStage >= 5)
+                            {
+                            fErr = true;
+                            }
+                        nPrevStage = Math.max(5, nPrevStage);
+                        break;
+
+                    case 'S':
+                        nPrevStage = 8;
+                        break Loop;
+
+                    case '.':
+                        if (nPrevStage >= 7)
+                            {
+                            fErr = true;
+                            }
+                        nPrevStage = Math.max(7, nPrevStage);
+                        break;
+
+                    default:
+                        source.rewind();
+                        fErr = true;
+                        break;
+                    }
+
+                if (match('T'))
+                    {
+                    if (nPrevStage >= 4)
+                        {
+                        fErr = true;
+                        }
+                    else
+                        {
+                        nPrevStage = 4;
+                        }
+                    }
+                }
+            }
+        else
+            {
+            fErr = true;
+            }
+
+        long   lEnd      = source.getPosition();
+        String sDuration = source.toString(lStart, lEnd);
+
+        if (fErr)
+            {
+            log(Severity.ERROR, BAD_DURATION, new Object[] {sDuration}, lStart, lEnd);
+            }
+        else
+            {
+            peekNotIdentifierOrNumber();
+            }
+
+        return new Token(lStart, lEnd, Id.LIT_DURATION, sDuration);
+        }
 
     /**
      * Eat a single line aka end-of-line comment.

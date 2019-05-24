@@ -21,6 +21,11 @@ const Duration(UInt128 picosecondsTotal)
     static Duration HOUR     = new Duration(PICOS_PER_HOUR);
     static Duration DAY      = new Duration(PICOS_PER_DAY);
 
+    construct(String duration)
+        {
+        TODO
+        }
+
     /**
      * Create a Duration of a certain number of days.
      *

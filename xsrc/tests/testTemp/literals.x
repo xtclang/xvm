@@ -17,6 +17,7 @@ module TestLiterals.xqiz.it
         testDates();
         testTimes();
         testDateTimes();
+        testDurations();
         }
 
     void testVersions()
@@ -203,6 +204,23 @@ module TestLiterals.xqiz.it
 
         dt = new DateTime("2019-05-22T120123.456-5:00");
         console.println($"dt={dt} or {DateTime:2019-05-22T120123.456-05:00}");
+        }
+        
+    void testDurations()
+        {
+        console.println("\n** testDurations()");
+        
+        Duration duration = new Duration("P1Y2M3DT4H5M6S");
+        console.println($"duration={duration} or {Duration:P1Y2M3DT4H5M6S}");
+
+        duration = new Duration("P1Y1M1DT1H1M1.23456S");
+        console.println($"duration={duration} or {Duration:P1Y1M1DT1H1M1.23456S}");
+
+        duration = new Duration("PT10S");
+        console.println($"duration={duration} or {Duration:PT10S}");
+
+        duration = new Duration("PT10.5S");
+        console.println($"duration={duration} or {Duration:PT10.5S}");
         }
     }
 
