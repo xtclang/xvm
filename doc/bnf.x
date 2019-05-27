@@ -377,6 +377,7 @@ AssignmentOperator
     "^="                // xor-assign
     "?:="               // elvis-assign (assigns only if the LVal is null)
     ":="                // conditional assign (RVal must be @Conditional; assigns starting with 2nd tuple field iff expression is true)
+    "?="                // assigns only if the RVal is not null (also used in conditional statements e.g. "if" to produce conditional False for Null)
 
 LabeledStatement
     Name ":" Statement

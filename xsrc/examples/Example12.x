@@ -2420,3 +2420,22 @@ Byte[] bytes = #|40A295B440A295B440A295B440A295B440A295B440A295B440A295B4
                 |40A295B440A295B440A295B440A295B440A295B440A295B440A295B4
                 ;
 Byte[] bytes = #./TestMisc.xtc;
+
+--
+
+// calling a conditional, with assignment
+while (String s : iter.next())      // old
+while (String s := iter.next())     // new
+
+if (String s : iter.next())      // old
+if (String s := iter.next())     // new
+
+for (Int i : 0..5)
+for (String s : list)
+for (Iterator<String> iter = list.iterator(); String s := iter.next(); )            // now OK
+
+String? foo() {...}
+if (String s ?= foo())  // basically, this turns type "T?" into "conditional T"
+    {
+    // ...
+    }
