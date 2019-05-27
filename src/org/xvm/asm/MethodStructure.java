@@ -1064,7 +1064,7 @@ public class MethodStructure
 
                         // create a pseudo frame to deal with the wait
                         Frame frameWait = Utils.createWaitFrame(frame, cfResult, Op.A_IGNORE);
-                        frameWait.setContinuation(frameCaller -> frameCaller.call(frameNext));
+                        frameWait.addContinuation(frameCaller -> frameCaller.call(frameNext));
 
                         return frame.call(frameWait);
                         }
@@ -1144,7 +1144,7 @@ public class MethodStructure
                         return Op.R_EXCEPTION;
 
                     case Op.R_CALL:
-                        frame.m_frameNext.setContinuation(frameCaller ->
+                        frame.m_frameNext.addContinuation(frameCaller ->
                             {
                             constSingleton.setHandle(frameCaller.popStack());
                             return ensureInitialized(frameCaller, frameNext);

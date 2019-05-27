@@ -18,8 +18,10 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ConstantHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
+import org.xvm.runtime.ObjectHeap;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
+
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xByteArray;
@@ -104,12 +106,13 @@ public class xCPFileStore
                 {
                 ConstantHandle hNode     = (ConstantHandle) ahArg[0];
                 FSNodeConstant constNode = (FSNodeConstant) hNode.get();
+                ObjectHeap     heap      = frame.f_context.f_heapGlobal;
 
                 ObjectHandle[] ahValue = new ObjectHandle[5];
                 ahValue[0] = xBoolean.makeHandle(constNode.getFormat() == Format.FSDir);
                 ahValue[1] = xString.makeHandle(constNode.getName());
-                ahValue[2] = xString.makeHandle("created");     // TODO GG this needs to be of Ecstasy type DateTime from constNode.m_constCreated
-                ahValue[3] = xString.makeHandle("modified");    // TODO GG this needs to be of Ecstasy type DateTime from constNode.m_constModified
+                ahValue[2] = heap.ensureConstHandle(frame, constNode.getCreatedConstant());
+                ahValue[3] = heap.ensureConstHandle(frame, constNode.getModifiedConstant());
                 ahValue[4] = xInt64.makeHandle(calcSize(constNode));
                 return new Utils.AssignValues(aiReturn, ahValue, null).proceed(frame);
                 }

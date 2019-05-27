@@ -63,7 +63,7 @@ public class IP_PreDec
                 }
 
             case R_CALL:
-                frame.m_frameNext.setContinuation(frameCaller ->
+                frame.m_frameNext.addContinuation(frameCaller ->
                     {
                     ObjectHandle hValueNew = frameCaller.popStack();
                     return frameCaller.assignValues(new int[]{m_nRetValue, m_nTarget},

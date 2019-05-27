@@ -228,12 +228,14 @@ public abstract class ClassTemplate
         assert typeInception.normalizeParameters(pool).equals(typeInception);
         assert typeMask.normalizeParameters(pool).equals(typeMask);
 
-        return m_mapCompositions.computeIfAbsent(typeInception, (typeI) ->
+        ClassComposition clz = m_mapCompositions.computeIfAbsent(typeInception, (typeI) ->
             {
             OpSupport support = typeI.isAnnotated() ? typeI.getOpSupport(f_templates) : this;
 
-            return new ClassComposition(support, typeI, typeMask);
+            return new ClassComposition(support, typeI);
             });
+
+        return typeMask.equals(typeInception) ? clz : clz.maskAs(typeMask);
         }
 
     /**
@@ -441,7 +443,7 @@ public abstract class ClassTemplate
         // we need a non-null anchor (see Frame#chainFinalizer)
         FullyBoundHandle hFD = frameCD.m_hfnFinally = Utils.makeFinalizer(constructor, ahVar);
 
-        frameCD.setContinuation(frameCaller ->
+        frameCD.addContinuation(frameCaller ->
             {
             List<String> listUnassigned;
             if ((listUnassigned = hStruct.validateFields()) != null)
@@ -471,7 +473,7 @@ public abstract class ClassTemplate
 
         Frame frameInit = frame.createFrame1(methodAI, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE);
 
-        frameInit.setContinuation(frameCaller -> frameCaller.callInitialized(frameCD));
+        frameInit.addContinuation(frameCaller -> frameCaller.callInitialized(frameCD));
 
         return frame.callInitialized(frameInit);
         }

@@ -254,7 +254,7 @@ public class xAtomicVar
                         break;
 
                     case Op.R_CALL:
-                        frameCaller.m_frameNext.setContinuation(this);
+                        frameCaller.m_frameNext.addContinuation(this);
                         hExpect = hCurrent;
                         return Op.R_CALL;
 
@@ -344,7 +344,7 @@ public class xAtomicVar
                         break;
 
                     case Op.R_CALL:
-                        frameCaller.m_frameNext.setContinuation(this);
+                        frameCaller.m_frameNext.addContinuation(this);
                         hExpect = hCurrent;
                         return Op.R_CALL;
 

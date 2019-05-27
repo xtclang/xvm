@@ -60,7 +60,7 @@ public class xModule
             ModuleHandle hStruct = new ModuleHandle(clazz.ensureAccess(Access.STRUCT), f_struct.getName());
             Frame        frameID = frame.createFrame1(methodID, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE);
 
-            frameID.setContinuation(frameCaller ->
+            frameID.addContinuation(frameCaller ->
                 frameCaller.assignValue(Op.A_STACK, hStruct.ensureAccess(Access.PUBLIC)));
 
             return frame.callInitialized(frameID);

@@ -50,7 +50,7 @@ public class xVar
     @Override
     protected ClassConstant getInceptionClassConstant()
         {
-        return INCEPTION_CLASS;
+        return this == INSTANCE ? INCEPTION_CLASS : getClassConstant();
         }
 
     @Override

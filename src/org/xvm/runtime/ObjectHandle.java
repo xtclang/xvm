@@ -575,7 +575,7 @@ public abstract class ObjectHandle
             if (f_hException == null)
                 {
                 Frame frameNext = f_frameNext;
-                frameNext.setContinuation(continuation);
+                frameNext.addContinuation(continuation);
                 return frameCaller.call(frameNext);
                 }
 
@@ -587,7 +587,7 @@ public abstract class ObjectHandle
             {
             if (f_hException == null)
                 {
-                f_frameNext.setContinuation(continuation);
+                f_frameNext.addContinuation(continuation);
                 }
             }
 

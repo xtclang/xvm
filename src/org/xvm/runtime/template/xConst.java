@@ -405,7 +405,7 @@ public class xConst
                         break;
 
                     case Op.R_CALL:
-                        frameCaller.m_frameNext.setContinuation(this);
+                        frameCaller.m_frameNext.addContinuation(this);
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:
@@ -485,7 +485,7 @@ public class xConst
                         break;
 
                     case Op.R_CALL:
-                        frameCaller.m_frameNext.setContinuation(this);
+                        frameCaller.m_frameNext.addContinuation(this);
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:
@@ -564,7 +564,7 @@ public class xConst
                         continue;
 
                     case Op.R_CALL:
-                        frameCaller.m_frameNext.setContinuation(this);
+                        frameCaller.m_frameNext.addContinuation(this);
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:
@@ -643,7 +643,7 @@ public class xConst
                         continue;
 
                     case Op.R_CALL:
-                        frameCaller.m_frameNext.setContinuation(this);
+                        frameCaller.m_frameNext.addContinuation(this);
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:

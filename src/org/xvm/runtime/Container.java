@@ -416,7 +416,7 @@ public class Container
 
             case Op.R_CALL:
                 Frame frameNext = frame.m_frameNext;
-                frameNext.setContinuation(frameCaller ->
+                frameNext.addContinuation(frameCaller ->
                     {
                     consumer.accept(frameCaller.peekStack());
                     return Op.R_NEXT;

@@ -53,7 +53,7 @@ public class xRef
     @Override
     protected ClassConstant getInceptionClassConstant()
         {
-        return INCEPTION_CLASS;
+        return this == INSTANCE ? INCEPTION_CLASS : getClassConstant();
         }
 
     @Override
@@ -72,7 +72,7 @@ public class xRef
                             frame.popStack().getType().getTypeHandle());
 
                     case Op.R_CALL:
-                        frame.setContinuation(frameCaller ->
+                        frame.addContinuation(frameCaller ->
                             frameCaller.assignValue(iReturn,
                                 frameCaller.popStack().getType().getTypeHandle()));
                         return Op.R_CALL;
@@ -110,7 +110,7 @@ public class xRef
                             xBoolean.makeHandle(frame.popStack().getComposition().isService()));
 
                     case Op.R_CALL:
-                        frame.setContinuation(frameCaller ->
+                        frame.addContinuation(frameCaller ->
                             frameCaller.assignValue(iReturn,
                                 xBoolean.makeHandle(frame.popStack().getComposition().isService())));
                         return Op.R_CALL;
@@ -133,7 +133,7 @@ public class xRef
                             xBoolean.makeHandle(frame.popStack().getComposition().isConst()));
 
                     case Op.R_CALL:
-                        frame.setContinuation(frameCaller ->
+                        frame.addContinuation(frameCaller ->
                             frameCaller.assignValue(iReturn,
                                 xBoolean.makeHandle(frame.popStack().getComposition().isConst())));
                         return Op.R_CALL;
@@ -156,7 +156,7 @@ public class xRef
                             xBoolean.makeHandle(!frame.popStack().isMutable()));
 
                     case Op.R_CALL:
-                        frame.setContinuation(frameCaller ->
+                        frame.addContinuation(frameCaller ->
                             frameCaller.assignValue(iReturn,
                                 xBoolean.makeHandle(!frame.popStack().isMutable())));
                         return Op.R_CALL;
@@ -210,7 +210,7 @@ public class xRef
                             return frame.assignValues(aiReturn, xBoolean.TRUE, frame.popStack());
 
                         case Op.R_CALL:
-                            frame.setContinuation(frameCaller ->
+                            frame.addContinuation(frameCaller ->
                                 frame.assignValues(aiReturn, xBoolean.TRUE, frame.popStack()));
                             return Op.R_CALL;
 
@@ -496,7 +496,7 @@ public class xRef
             Frame frameID = frame.createFrame1(methodInit,
                     this.ensureAccess(Access.STRUCT), Utils.OBJECTS_NONE, Op.A_IGNORE);
 
-            frameID.setContinuation(frameCaller ->
+            frameID.addContinuation(frameCaller ->
                 {
                 List<String> listUnassigned;
                 return (listUnassigned = this.validateFields()) == null
@@ -691,7 +691,7 @@ public class xRef
                         break;
 
                     case Op.R_CALL:
-                        frameCaller.m_frameNext.setContinuation(this);
+                        frameCaller.m_frameNext.addContinuation(this);
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:

@@ -1162,7 +1162,8 @@ public abstract class Op
             case OP_MOV:         return new Move        (in, aconst);
             case OP_MOV_VAR:     return new MoveVar     (in, aconst);
             case OP_MOV_REF:     return new MoveRef     (in, aconst);
-            case OP_MOV_THIS:    return new MoveThis    (in, aconst);
+            case OP_MOV_THIS:    return new MoveThis    (in, aconst, nOp);
+            case OP_MOV_THIS_A:  return new MoveThis    (in, aconst, nOp);
             case OP_CAST:        return new MoveCast    (in, aconst);
 
             case OP_GP_ADD:      return new GP_Add      (in, aconst);
@@ -1373,6 +1374,7 @@ public abstract class Op
             case OP_MOV_VAR:     return "MOV_VAR";
             case OP_MOV_REF:     return "MOV_REF";
             case OP_MOV_THIS:    return "MOV_THIS";
+            case OP_MOV_THIS_A:  return "MOV_THIS_A";
             case OP_CAST:        return "CAST";
             case OP_GP_ADD:      return "GP_ADD";
             case OP_GP_SUB:      return "GP_SUB";
@@ -1480,8 +1482,6 @@ public abstract class Op
             case OP_CONSTR_1:    return "CONSTR_1";
             case OP_CONSTR_N:    return "CONSTR_N";
             case OP_CONSTR_T:    return "CONSTR_T";
-
-            case OP_X_PRINT:     return "X_PRINT";
 
             default:
                 throw new IllegalStateException("op=" + byteToHexString(nOp));
@@ -1781,7 +1781,7 @@ public abstract class Op
     public static final int OP_CONSTR_N     = 0xE8;
     public static final int OP_CONSTR_T     = 0xE9;
 
-    public static final int OP_X_PRINT      = 0xFF;
+    public static final int OP_MOV_THIS_A   = 0xEA;
 
 
     // ----- pre-defined arguments -----------------------------------------------------------------

@@ -48,11 +48,9 @@ public class ClassComposition
      *  - the only modifying types that are allowed are AnnotatedTypeConstant(s) and
      *    ParameterizedTypeConstant(s)
      *
-     * @param support        the OpSupport implementation for the inception type
-     * @param typeInception  the "origin type"
-     * @param typeRevealed   the type to reveal an ObjectHandle reference to this class as
+     * @param support the OpSupport implementation for the inception type
      */
-    protected ClassComposition(OpSupport support, TypeConstant typeInception, TypeConstant typeRevealed)
+    protected ClassComposition(OpSupport support, TypeConstant typeInception)
         {
         assert typeInception.isSingleDefiningConstant();
         assert typeInception.getAccess() == Access.PUBLIC;
@@ -70,7 +68,7 @@ public class ClassComposition
         f_template = template;
         f_typeInception = pool.ensureAccessTypeConstant(typeInception, Access.PRIVATE);
         f_typeStructure = pool.ensureAccessTypeConstant(typeInception, Access.STRUCT);
-        f_typeRevealed = typeRevealed;
+        f_typeRevealed = typeInception;
         f_mapCompositions = new ConcurrentHashMap<>();
         f_mapMethods = new ConcurrentHashMap<>();
         f_mapGetters = new ConcurrentHashMap<>();
@@ -162,7 +160,10 @@ public class ClassComposition
         {
         assert handle.getComposition() == this;
 
-        return isInception() ? handle : handle.cloneAs(f_clzInception);
+        // retain the access modifier of the revealed type on the origin
+        return isInception()
+            ? handle
+            : handle.cloneAs(f_clzInception).ensureAccess(handle.getType().getAccess());
         }
 
     @Override

@@ -71,7 +71,7 @@ public class xTerminalConsole
                         return PRINT.proceed(frame);
 
                     case Op.R_CALL:
-                        frame.m_frameNext.setContinuation(PRINT);
+                        frame.m_frameNext.addContinuation(PRINT);
                         // fall through
                     case Op.R_EXCEPTION:
                         return iResult;
@@ -87,7 +87,7 @@ public class xTerminalConsole
                         return PRINTLN.proceed(frame);
 
                     case Op.R_CALL:
-                        frame.m_frameNext.setContinuation(PRINTLN);
+                        frame.m_frameNext.addContinuation(PRINTLN);
                         // fall through
                     case Op.R_EXCEPTION:
                         return iResult;
