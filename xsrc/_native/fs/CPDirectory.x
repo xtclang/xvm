@@ -150,10 +150,10 @@ const CPDirectory(CPFileStore:protected store, Object cookie, Path path, DateTim
         for (Int i = 0; i < count; ++i)
             {
             Object cookie = cookies[i];
-            (Boolean isdir, String name, String created, String modified, Int size) = store.loadNode(cookie);
+            (Boolean isdir, String name, DateTime created, DateTime modified, Int size) = store.loadNode(cookie);
             nodes[i] = isdir
-                    ? new CPDirectory(store, cookie, path + name, DateTime.EPOCH, DateTime.EPOCH, size)    // TODO date/times
-                    : new CPFile(store, cookie, path + name, DateTime.EPOCH, DateTime.EPOCH, size);
+                    ? new CPDirectory(store, cookie, path + name, created, modified, size)
+                    : new CPFile(store, cookie, path + name, created, modified, size);
             }
         return new ListMap(names, nodes);
         }
