@@ -11,10 +11,8 @@ import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IntervalConstant;
-import org.xvm.asm.constants.MapConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 

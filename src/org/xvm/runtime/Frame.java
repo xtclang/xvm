@@ -21,6 +21,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.Utils.ContinuationChain;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
@@ -213,6 +214,7 @@ public class Frame
     // a convenience method
     public int call(Frame frameNext)
         {
+        assert frameNext.f_framePrev == this;
         m_frameNext = frameNext;
         return Op.R_CALL;
         }
@@ -1498,8 +1500,13 @@ public class Frame
             }
         }
 
-    // set the specified continuation to be executed *after* any existing ones,
-    // but only if the previous continuations return normally (R_NEXT)
+    /**
+     * Place the specified continuation to be executed when this frame "returns". The specified
+     * continuation will be executed *after* any existing ones (FIFO), but only if all previously
+     * registered continuations return normally (R_NEXT or R_CALL).
+     *
+     * @param continuation  the continuation to add
+     */
     public void setContinuation(Continuation continuation)
         {
         if (m_continuation == null)
@@ -1508,47 +1515,16 @@ public class Frame
             }
         else
             {
-            Continuation[] holder = new Continuation[] {m_continuation};
-
-            // inject the new continuation to be executed after the existing one;
-            // if the previous continuation causes another call (R_CALL) and the callee has
-            // another continuation then we need to make sure to repeat the injection, proceeding
-            // to the provided continuation only when the previous one returns normally (R_NEXT)
-            m_continuation = new Continuation()
+            if (!(m_continuation instanceof ContinuationChain))
                 {
-                public int proceed(Frame frameCaller)
-                    {
-                    switch (holder[0].proceed(frameCaller))
-                        {
-                        case Op.R_NEXT:
-                            return continuation.proceed(frameCaller);
+                m_continuation = new ContinuationChain(m_continuation);
+                }
 
-                        case Op.R_CALL:
-                            Frame frameNext = frameCaller.m_frameNext;
-                            Continuation contNext = frameNext.m_continuation;
-
-                            if (contNext == null)
-                                {
-                                frameNext.m_continuation = continuation;
-                                }
-                            else
-                                {
-                                holder[0] = contNext;
-                                frameNext.m_continuation = this;
-                                }
-                            return Op.R_CALL;
-
-                        case Op.R_EXCEPTION:
-                            assert frameCaller.m_hException != null;
-                            return Op.R_EXCEPTION;
-
-                        default:
-                            throw new IllegalStateException();
-                        }
-                    }
-                };
+            // the new continuation is to be executed after the existing ones (FIFO)
+            ((ContinuationChain) m_continuation).add(continuation);
             }
         }
+
 
     // ----- GenericTypeResolver interface ---------------------------------------------------------
 

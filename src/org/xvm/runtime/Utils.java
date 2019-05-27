@@ -3,6 +3,9 @@ package org.xvm.runtime;
 
 import java.sql.Timestamp;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import java.util.concurrent.CompletableFuture;
 
 import org.xvm.asm.MethodStructure;
@@ -284,6 +287,14 @@ public abstract class Utils
             {
             while (++index < aiReturn.length)
                 {
+                ObjectHandle hValue = ahValue[index];
+                if (hValue instanceof DeferredCallHandle)
+                    {
+                    DeferredCallHandle hDeferred = ((DeferredCallHandle) hValue);
+                    hDeferred.addContinuation(this::updateDeferredValue);
+                    return hDeferred.proceed(frameCaller, this);
+                    }
+
                 switch (frameCaller.assignValue(aiReturn[index], ahValue[index],
                             afDynamic != null && afDynamic[index]))
                     {
@@ -308,6 +319,12 @@ public abstract class Utils
             return fBlock ? Op.R_BLOCK : Op.R_NEXT;
             }
 
+        protected int updateDeferredValue(Frame frameCaller)
+            {
+            ahValue[index--] = frameCaller.popStack();
+            return Op.R_NEXT;
+            }
+
         private final int[] aiReturn;
         private final ObjectHandle[] ahValue;
         private final boolean[] afDynamic;
@@ -315,6 +332,69 @@ public abstract class Utils
         private int index = -1;
         private boolean fBlock;
         }
+
+    static public class ContinuationChain
+            implements Frame.Continuation
+        {
+        public ContinuationChain(Frame.Continuation step0)
+            {
+            f_list = new ArrayList<>();
+            f_list.add(step0);
+            }
+
+        public void add(Frame.Continuation stepNext)
+            {
+            f_list.add(stepNext);
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            while (++index < f_list.size())
+                {
+                int iResult = f_list.get(index).proceed(frameCaller);
+                switch (iResult)
+                    {
+                    case Op.R_NEXT:
+                        continue;
+
+                    case Op.R_CALL:
+                        Frame              frameNext = frameCaller.m_frameNext;
+                        Frame.Continuation contNext  = frameNext.m_continuation;
+
+                        if (contNext != null)
+                            {
+                            // the previous continuation caused another call and the callee has
+                            // its own continuations; in that case we need to execute those
+                            // continuations before continuing with our own chain
+                            // (assuming everyone returns normally)
+                            f_list.set(index--, contNext);
+                            }
+                        frameNext.m_continuation = this;
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        assert frameCaller.m_hException != null;
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        if (iResult >= 0)
+                            {
+                            // only the very last continuation can return a specific op index
+                            // (see OpCondJump)
+                            assert index + 1 == f_list.size();
+                            return iResult;
+                            }
+                        throw new IllegalStateException();
+                    }
+                }
+            return Op.R_NEXT;
+            }
+
+        private final List<Frame.Continuation> f_list;
+        private int index = -1;
+        }
+
 
     // ----- comparison support -----
 
