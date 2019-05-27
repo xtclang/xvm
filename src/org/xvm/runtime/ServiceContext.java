@@ -299,7 +299,7 @@ public class ServiceContext
 
                                 if (fBlockReturn)
                                     {
-                                    frame.setContinuation(frameCaller -> Op.R_BLOCK_RETURN);
+                                    frame.addContinuation(frameCaller -> Op.R_BLOCK_RETURN);
                                     }
                                 aOp = frame.f_aOp;
                                 iPC = 0;
@@ -550,7 +550,7 @@ public class ServiceContext
                         return Op.R_NEXT;
 
                     case Op.R_CALL:
-                        frame.m_frameNext.setContinuation(
+                        frame.m_frameNext.addContinuation(
                             frameCaller ->
                                 {
                                 Utils.log(frameCaller, "\nUnhandled exception: " +
@@ -684,7 +684,7 @@ public class ServiceContext
             Frame frame0 = context.createServiceEntryFrame(this, 1,
                     new Op[]{opConstruct, Return_0.INSTANCE});
 
-            frame0.setContinuation(_null -> sendResponse(f_fiberCaller, frame0, f_future, 1));
+            frame0.addContinuation(_null -> sendResponse(f_fiberCaller, frame0, f_future, 1));
             return frame0;
             }
         }
@@ -728,7 +728,7 @@ public class ServiceContext
             Frame frame0 = context.createServiceEntryFrame(this, 0,
                     new Op[] {opCall, Return_0.INSTANCE});
 
-            frame0.setContinuation(_null ->
+            frame0.addContinuation(_null ->
                 {
                 // "callLater" has returned
                 ExceptionHandle hException = frame0.m_hException;
@@ -790,7 +790,7 @@ public class ServiceContext
             Frame frame0 = context.createServiceEntryFrame(this, f_cReturns,
                     new Op[] {opCall, Return_0.INSTANCE});
 
-            frame0.setContinuation(_null ->
+            frame0.addContinuation(_null ->
                 sendResponse(f_fiberCaller, frame0, f_future, f_cReturns));
 
             return frame0;
@@ -846,7 +846,7 @@ public class ServiceContext
             Frame frame0 = context.createServiceEntryFrame(this, f_cReturns,
                 new Op[] {opCall, Return_0.INSTANCE});
 
-            frame0.setContinuation(_null ->
+            frame0.addContinuation(_null ->
                 sendResponse(f_fiberCaller, frame0, f_future, f_cReturns));
 
             return frame0;
@@ -904,7 +904,7 @@ public class ServiceContext
             Frame frame0 = context.createServiceEntryFrame(this, cReturns,
                     new Op[]{opCall, Return_0.INSTANCE});
 
-            frame0.setContinuation(_null ->
+            frame0.addContinuation(_null ->
                 sendResponse(f_fiberCaller, frame0, f_future, f_cReturns));
 
             return frame0;
@@ -948,7 +948,7 @@ public class ServiceContext
             Frame frame0 = context.createServiceEntryFrame(this, 1,
                     new Op[]{opCall, Return_0.INSTANCE});
 
-            frame0.setContinuation(_null ->
+            frame0.addContinuation(_null ->
                 sendResponse(f_fiberCaller, frame0, f_future, 1));
 
             return frame0;

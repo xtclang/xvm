@@ -96,7 +96,7 @@ public class xString
                 return frame.assignValue(iReturn, add(hThis, (StringHandle) frame.popStack()));
 
             case Op.R_CALL:
-                frame.m_frameNext.setContinuation(frameCaller ->
+                frame.m_frameNext.addContinuation(frameCaller ->
                     frameCaller.assignValue(iReturn, add(hThis, (StringHandle) frame.popStack())));
                 return Op.R_CALL;
 

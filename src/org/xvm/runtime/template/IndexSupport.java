@@ -123,7 +123,7 @@ public interface IndexSupport
                 }
 
             case Op.R_CALL:
-                frame.m_frameNext.setContinuation(frameCaller ->
+                frame.m_frameNext.addContinuation(frameCaller ->
                     {
                     ObjectHandle hValueNew = frameCaller.popStack();
                     return assignArrayValue(frame, hTarget, lIndex, hValueNew) == Op.R_EXCEPTION ?
@@ -174,7 +174,7 @@ public interface IndexSupport
                     Op.R_EXCEPTION : frame.assignValue(iReturn, hValue);
 
             case Op.R_CALL:
-                frame.m_frameNext.setContinuation(frameCaller ->
+                frame.m_frameNext.addContinuation(frameCaller ->
                     assignArrayValue(frame, hTarget, lIndex, frame.popStack()) == Op.R_EXCEPTION ?
                         Op.R_EXCEPTION : frame.assignValue(iReturn, hValue));
                 return Op.R_CALL;
@@ -225,7 +225,7 @@ public interface IndexSupport
                 }
 
             case Op.R_CALL:
-                frame.m_frameNext.setContinuation(frameCaller ->
+                frame.m_frameNext.addContinuation(frameCaller ->
                     {
                     ObjectHandle hValueNew = frameCaller.popStack();
                     return assignArrayValue(frame, hTarget, lIndex, hValueNew) == Op.R_EXCEPTION ?
@@ -276,7 +276,7 @@ public interface IndexSupport
                     Op.R_EXCEPTION : frame.assignValue(iReturn, hValue);
 
             case Op.R_CALL:
-                frame.m_frameNext.setContinuation(frameCaller ->
+                frame.m_frameNext.addContinuation(frameCaller ->
                     assignArrayValue(frame, hTarget, lIndex, frame.popStack()) == Op.R_EXCEPTION ?
                         Op.R_EXCEPTION : frame.assignValue(iReturn, hValue));
                 return Op.R_CALL;

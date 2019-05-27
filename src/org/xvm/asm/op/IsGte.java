@@ -70,7 +70,7 @@ public class IsGte
                         frame.popStack() != xOrdered.LESSER));
 
             case R_CALL:
-                frame.m_frameNext.setContinuation(frameCaller ->
+                frame.m_frameNext.addContinuation(frameCaller ->
                     frameCaller.assignValue(m_nRetValue, xBoolean.makeHandle(
                             frameCaller.popStack() != xOrdered.LESSER)));
                 return R_CALL;

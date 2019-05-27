@@ -188,7 +188,7 @@ public abstract class Utils
                 return frame.assignValues(aiReturn, xBoolean.TRUE, frame.popStack());
 
             case Op.R_CALL:
-                frame.m_frameNext.setContinuation(frameCaller ->
+                frame.m_frameNext.addContinuation(frameCaller ->
                     frameCaller.assignValues(aiReturn, xBoolean.TRUE, frame.popStack()));
                 return Op.R_CALL;
 
@@ -250,7 +250,7 @@ public abstract class Utils
                             break;
 
                         case Op.R_CALL:
-                            frameCaller.m_frameNext.setContinuation(this);
+                            frameCaller.m_frameNext.addContinuation(this);
                             return Op.R_CALL;
 
                         case Op.R_EXCEPTION:
@@ -305,7 +305,7 @@ public abstract class Utils
                         break;
 
                     case Op.R_CALL:
-                        frameCaller.m_frameNext.setContinuation(this);
+                        frameCaller.m_frameNext.addContinuation(this);
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:
@@ -412,7 +412,7 @@ public abstract class Utils
                 return completeEquals(frame, type2, hValue1, hValue2, iReturn);
 
             case Op.R_CALL:
-                frame.m_frameNext.setContinuation(frameCaller ->
+                frame.m_frameNext.addContinuation(frameCaller ->
                     completeEquals(frameCaller, type2, hValue1, hValue2, iReturn));
                 return Op.R_CALL;
 
@@ -447,7 +447,7 @@ public abstract class Utils
                 return completeCompare(frame, type2, hValue1, hValue2, iReturn);
 
             case Op.R_CALL:
-                frame.m_frameNext.setContinuation(frameCaller ->
+                frame.m_frameNext.addContinuation(frameCaller ->
                     completeCompare(frameCaller, type2, hValue1, hValue2, iReturn));
                 return Op.R_CALL;
 
@@ -531,7 +531,7 @@ public abstract class Utils
                         continue;
 
                     case Op.R_CALL:
-                        frameCaller.m_frameNext.setContinuation(this);
+                        frameCaller.m_frameNext.addContinuation(this);
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:
@@ -765,7 +765,7 @@ public abstract class Utils
                         break;
 
                     case Op.R_CALL:
-                        frameCaller.m_frameNext.setContinuation(this);
+                        frameCaller.m_frameNext.addContinuation(this);
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:
@@ -829,7 +829,7 @@ public abstract class Utils
                         break;
 
                     case Op.R_CALL:
-                        frameCaller.m_frameNext.setContinuation(this);
+                        frameCaller.m_frameNext.addContinuation(this);
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:
@@ -903,7 +903,7 @@ public abstract class Utils
                         break;
 
                     case Op.R_CALL:
-                        frameCaller.m_frameNext.setContinuation(this);
+                        frameCaller.m_frameNext.addContinuation(this);
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:
@@ -962,7 +962,7 @@ public abstract class Utils
                         break;
 
                     case Op.R_CALL:
-                        frameCaller.m_frameNext.setContinuation(this);
+                        frameCaller.m_frameNext.addContinuation(this);
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:

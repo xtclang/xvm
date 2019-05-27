@@ -78,7 +78,7 @@ public class IIP_Sub
                 return template.assignArrayValue(frame, hTarget, lIndex, frame.popStack());
 
             case R_CALL:
-                frame.m_frameNext.setContinuation(frameCaller ->
+                frame.m_frameNext.addContinuation(frameCaller ->
                      template.assignArrayValue(frame, hTarget, lIndex, frame.popStack()));
                 return R_CALL;
 

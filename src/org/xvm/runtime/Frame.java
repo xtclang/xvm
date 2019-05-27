@@ -736,7 +736,7 @@ public class Frame
                         return Op.R_BLOCK;
 
                     case Op.R_CALL:
-                        m_frameNext.setContinuation(frameCaller -> Op.R_BLOCK);
+                        m_frameNext.addContinuation(frameCaller -> Op.R_BLOCK);
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:
@@ -751,7 +751,7 @@ public class Frame
                 return assignValue(anVar[1], hValue2, false);
 
             case Op.R_CALL:
-                m_frameNext.setContinuation(
+                m_frameNext.addContinuation(
                     frameCaller -> assignValue(anVar[1], hValue2, false));
                 return Op.R_CALL;
 
@@ -810,7 +810,7 @@ public class Frame
                             break;
 
                         case Op.R_CALL:
-                            m_frameNext.setContinuation(frameCaller ->
+                            m_frameNext.addContinuation(frameCaller ->
                                 frameCaller.returnAsTuple(new ObjectHandle[] {popStack()}));
                             return Op.R_CALL;
 
@@ -850,7 +850,7 @@ public class Frame
                 return Op.R_RETURN;
 
             case Op.R_CALL:
-                m_frameNext.setContinuation(frameCaller -> Op.R_RETURN);
+                m_frameNext.addContinuation(frameCaller -> Op.R_RETURN);
                 return Op.R_CALL;
 
             case Op.R_EXCEPTION:
@@ -1507,7 +1507,7 @@ public class Frame
      *
      * @param continuation  the continuation to add
      */
-    public void setContinuation(Continuation continuation)
+    public void addContinuation(Continuation continuation)
         {
         if (m_continuation == null)
             {

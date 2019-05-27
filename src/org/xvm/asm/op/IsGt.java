@@ -70,7 +70,7 @@ public class IsGt
                         frame.popStack() == xOrdered.GREATER));
 
             case R_CALL:
-                frame.m_frameNext.setContinuation(frameCaller ->
+                frame.m_frameNext.addContinuation(frameCaller ->
                     frameCaller.assignValue(m_nRetValue, xBoolean.makeHandle(
                             frameCaller.popStack() == xOrdered.GREATER)));
                 return R_CALL;

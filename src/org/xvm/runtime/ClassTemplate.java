@@ -443,7 +443,7 @@ public abstract class ClassTemplate
         // we need a non-null anchor (see Frame#chainFinalizer)
         FullyBoundHandle hFD = frameCD.m_hfnFinally = Utils.makeFinalizer(constructor, ahVar);
 
-        frameCD.setContinuation(frameCaller ->
+        frameCD.addContinuation(frameCaller ->
             {
             List<String> listUnassigned;
             if ((listUnassigned = hStruct.validateFields()) != null)
@@ -473,7 +473,7 @@ public abstract class ClassTemplate
 
         Frame frameInit = frame.createFrame1(methodAI, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE);
 
-        frameInit.setContinuation(frameCaller -> frameCaller.callInitialized(frameCD));
+        frameInit.addContinuation(frameCaller -> frameCaller.callInitialized(frameCD));
 
         return frame.callInitialized(frameInit);
         }

@@ -167,7 +167,7 @@ public class xFutureVar
                             return frame.assignValue(iReturn, hThis);
 
                         case Op.R_CALL:
-                            frame.m_frameNext.setContinuation(frameCaller ->
+                            frame.m_frameNext.addContinuation(frameCaller ->
                                 frameCaller.assignValue(iReturn, hThis));
                             return Op.R_CALL;
 
@@ -209,7 +209,7 @@ public class xFutureVar
                             return frame.assignValue(iReturn, hThis);
 
                         case Op.R_CALL:
-                            frame.m_frameNext.setContinuation(frameCaller ->
+                            frame.m_frameNext.addContinuation(frameCaller ->
                                 frameCaller.assignValue(iReturn, hThis));
                             return Op.R_CALL;
 
@@ -249,7 +249,7 @@ public class xFutureVar
                             return frame.assignValue(iReturn, hThis);
 
                         case Op.R_CALL:
-                            frame.m_frameNext.setContinuation(frameCaller ->
+                            frame.m_frameNext.addContinuation(frameCaller ->
                                 frameCaller.assignValue(iReturn, hThis));
                             return Op.R_CALL;
 

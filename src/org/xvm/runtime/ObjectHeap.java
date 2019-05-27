@@ -73,7 +73,7 @@ public class ObjectHeap
 
             case Op.R_CALL:
                 Frame frameNext = frame.m_frameNext;
-                frameNext.setContinuation(frameCaller ->
+                frameNext.addContinuation(frameCaller ->
                     {
                     saveConstHandle(constValue, frameCaller.peekStack());
                     return Op.R_NEXT;

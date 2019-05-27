@@ -59,7 +59,7 @@ public class IP_PostDec
                 return frame.assignValue(m_nRetValue, hTarget);
 
             case R_CALL:
-                frame.m_frameNext.setContinuation(frameCaller ->
+                frame.m_frameNext.addContinuation(frameCaller ->
                     frameCaller.assignValue(m_nRetValue, hTarget));
                 return R_CALL;
 

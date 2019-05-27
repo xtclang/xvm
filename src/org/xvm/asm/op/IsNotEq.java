@@ -72,7 +72,7 @@ public class IsNotEq
                 }
 
             case R_CALL:
-                frame.m_frameNext.setContinuation(frameCaller ->
+                frame.m_frameNext.addContinuation(frameCaller ->
                     frameCaller.assignValue(m_nRetValue,
                         xBoolean.not((BooleanHandle) frameCaller.popStack())));
                 return R_CALL;

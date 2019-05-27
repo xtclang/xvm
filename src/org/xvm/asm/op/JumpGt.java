@@ -70,7 +70,7 @@ public class JumpGt
                     jump(frame, iPC + m_ofJmp, m_cExits) : iPC + 1;
 
             case R_CALL:
-                frame.m_frameNext.setContinuation(frameCaller ->
+                frame.m_frameNext.addContinuation(frameCaller ->
                     frameCaller.popStack() == xOrdered.GREATER ?
                         jump(frame, iPC + m_ofJmp, m_cExits) : iPC + 1);
                 return R_CALL;

@@ -749,7 +749,7 @@ public class xArray
                         break;
 
                     case Op.R_CALL:
-                        frameCaller.m_frameNext.setContinuation(this);
+                        frameCaller.m_frameNext.addContinuation(this);
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:
@@ -814,7 +814,7 @@ public class xArray
                         break;
 
                     case Op.R_CALL:
-                        frameCaller.m_frameNext.setContinuation(this);
+                        frameCaller.m_frameNext.addContinuation(this);
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:
@@ -889,7 +889,7 @@ public class xArray
                         continue;
 
                     case Op.R_CALL:
-                        frameCaller.m_frameNext.setContinuation(this);
+                        frameCaller.m_frameNext.addContinuation(this);
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:
