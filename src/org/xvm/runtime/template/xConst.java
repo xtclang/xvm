@@ -50,6 +50,7 @@ public class xConst
     public static MethodStructure DATETIME_CONSTRUCT;
     public static MethodStructure DATE_CONSTRUCT;
     public static MethodStructure TIME_CONSTRUCT;
+    public static MethodStructure DURATION_CONSTRUCT;
 
     public xConst(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -89,6 +90,8 @@ public class xConst
             DATE_CONSTRUCT     = f_templates.getClassStructure("Date").
                 findMethod("construct", 1, pool().typeString());
             TIME_CONSTRUCT     = f_templates.getClassStructure("Time").
+                findMethod("construct", 1, pool().typeString());
+            DURATION_CONSTRUCT = f_templates.getClassStructure("Duration").
                 findMethod("construct", 1, pool().typeString());
             }
         }
@@ -150,6 +153,11 @@ public class xConst
                 case Time:
                     clz         = ensureClass(pool().typeTime());
                     constructor = TIME_CONSTRUCT;
+                    break;
+
+                case Duration:
+                    clz         = ensureClass(pool().typeDuration());
+                    constructor = DURATION_CONSTRUCT;
                     break;
 
                 default:
