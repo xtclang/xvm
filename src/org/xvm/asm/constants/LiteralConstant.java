@@ -107,10 +107,6 @@ public class LiteralConstant
                 // TODO
                 break;
 
-            case TimeInterval:
-                // TODO
-                break;
-
             case Version:
                 if (!(this instanceof VersionConstant))
                     {
@@ -149,7 +145,6 @@ public class LiteralConstant
             case Time:
             case DateTime:
             case Duration:
-            case TimeInterval:
             case Version:
                 break;
 

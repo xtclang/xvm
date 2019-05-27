@@ -796,7 +796,6 @@ public abstract class Constant
         TimeZone,           // ISO8601 ['Z' | ('+'|'-')hh[:mm]] format
         DateTime,           // ISO8601 date ['T' time] format
         Duration,           // ISO8601 P[n]Y[n]M[n]DT[n]H[n]M[n]S | P[n]W format
-        TimeInterval,       // ISO8601 datetime '/' datetime format
         Version,
         SingletonConst,     // identity constant for a Module, Package, an enum value or a static const
         SingletonService,   // identity constant of a Service class

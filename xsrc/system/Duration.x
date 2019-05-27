@@ -21,11 +21,161 @@ const Duration(UInt128 picosecondsTotal)
     static Duration HOUR     = new Duration(PICOS_PER_HOUR);
     static Duration DAY      = new Duration(PICOS_PER_DAY);
 
+    /**
+     * Construct a time duration from an ISO-8601 format string. Note that this does not include
+     * support for year or month values, since neither a year nor a month has a fixed size.
+     *
+     * @param duration  an ISO-8601 format string of the form "PnDTnHnMnS"
+     */
     construct(String duration)
         {
-        TODO
+        // state machine stages:
+        //     P   nD  T   nH  nM  n.  nS
+        //   0   1   2   3   4   5   6   7
+
+        UInt128 total  = 0;
+        Int     index  = 0;
+        Int     length = duration.size;
+        Int     last   = length -1;
+        Int     stage  = 0;
+        Boolean any    = False;
+
+        Loop: while (index < length)
+            {
+            switch (Char ch = duration[index++])
+                {
+                case 'P':
+                    // while 'P' is required per the ISO-8601 specification, this constructor is
+                    // only used for duration values, so
+                    if (stage >= 1)
+                        {
+                        throw new IllegalArgument("duration must begin with 'P' and must contain"
+                                + $" no other occurrences of 'P': \"{duration}\"");
+                        }
+                    stage = 1;
+                    break;
+
+                case 'T':
+                    if (stage >= 3)
+                        {
+                        throw new IllegalArgument("duration includes 'T' to separate date from time"
+                                +  " components,  and must contain no other occurrences of 'T':"
+                                + $" \"{duration}\"");
+                        }
+                    stage = 3;
+                    break;
+
+                case '0'..'9':
+                    // parse the number as an integer
+                    UInt128 part   = 0;
+                    Int     digits = 0;
+                    do
+                        {
+                        ++digits;
+                        part = part * 10 + (ch - '0');
+                        if (index > last)
+                            {
+                            throw new IllegalArgument("duration is missing a trailing indicator:"
+                                    + $" \"{duration}\"");
+                            }
+
+                        ch = duration[index++];
+                        }
+                    while (ch >= '0' && ch <= '9');
+
+                    Int     stageNew;
+                    UInt128 factor;
+                    switch (ch)
+                        {
+                        case 'D':
+                            stageNew = 2;
+                            factor   = Time.PICOS_PER_DAY;
+                            break;
+
+                        case 'H':
+                            stageNew = 4;
+                            factor   = Time.PICOS_PER_HOUR;
+                            break;
+
+                        case 'M':
+                            stageNew = 5;
+                            factor   = Time.PICOS_PER_MINUTE;
+                            break;
+
+                        case '.':
+                            stageNew = 6;
+                            factor   = Time.PICOS_PER_SECOND;
+                            break;
+
+                        case 'S':
+                            if (stage == 6)
+                                {
+                                // this is a fractional value
+                                while (digits > 12)
+                                    {
+                                    part /= 10;
+                                    --digits;
+                                    }
+
+                                // TODO (GG?) this should be allowed here (since it is a constant)
+                                //private static UInt128[] SCALE_10 = [       1_000_000_000_000,
+                                //        100_000_000_000,    10_000_000_000,     1_000_000_000,
+                                //            100_000_000,        10_000_000,         1_000_000,
+                                //                100_000,            10_000,             1_000,
+                                //                    100,                10,                 1 ];
+
+                                factor = SCALE_10[digits];
+                                }
+                            else
+                                {
+                                factor = Time.PICOS_PER_SECOND;
+                                }
+                            stageNew = 7;
+                            break;
+
+                        default:
+                            throw new IllegalArgument("duration is missing a trailing indicator:"
+                                    + $" \"{duration}\"");
+                        }
+
+                    if (stageNew <= stage)
+                        {
+                        throw new IllegalArgument("duration components are out of order:"
+                                + $" \"{duration}\"");
+                        }
+
+                    total += part * factor;
+                    stage  = stageNew;
+                    any    = True;
+                    break;
+
+                default:
+                    throw new IllegalArgument("duration includes an illegal character or character"
+                            + $" sequence starting with \"{duration[index]}\": \"{duration}\"");
+                }
+            }
+
+        if (stage == 6)
+            {
+            throw new IllegalArgument($"missing fractional second duration: \"{duration}\"");
+            }
+
+        if (any)
+            {
+            construct Duration(total);
+            }
+        else
+            {
+            throw new IllegalArgument($"no duration information provided: \"{duration}\"");
+            }
         }
 
+    private static UInt128[] SCALE_10 = [       1_000_000_000_000,
+            100_000_000_000,    10_000_000_000,     1_000_000_000,
+                100_000_000,        10_000_000,         1_000_000,
+                    100_000,            10_000,             1_000,
+                        100,                10,                 1 ];
+                        
     /**
      * Create a Duration of a certain number of days.
      *

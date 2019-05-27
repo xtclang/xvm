@@ -210,11 +210,11 @@ module TestLiterals.xqiz.it
         {
         console.println("\n** testDurations()");
         
-        Duration duration = new Duration("P1Y2M3DT4H5M6S");
-        console.println($"duration={duration} or {Duration:P1Y2M3DT4H5M6S}");
+        Duration duration = new Duration("P3DT4H5M6S");
+        console.println($"duration={duration} or {Duration:P3DT4H5M6S}");
 
-        duration = new Duration("P1Y1M1DT1H1M1.23456S");
-        console.println($"duration={duration} or {Duration:P1Y1M1DT1H1M1.23456S}");
+        duration = new Duration("1DT1H1M1.23456S");
+        console.println($"duration={duration} or {Duration:P1DT1H1M1.23456S}");
 
         duration = new Duration("PT10S");
         console.println($"duration={duration} or {Duration:PT10S}");

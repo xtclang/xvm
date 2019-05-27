@@ -146,9 +146,10 @@ public class ObjectHeap
                 return f_poolRoot.typeString();
 
             case Duration:
-            case TimeInterval:
+                return f_poolRoot.typeDuration();
+                
             case Version:
-                throw new UnsupportedOperationException("TODO: " + constValue);
+                return f_poolRoot.typeVersion();
 
             case SingletonConst:
                 {
