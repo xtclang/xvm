@@ -6,9 +6,9 @@ import Ecstasy.fs.FileWatcher;
 import Ecstasy.fs.Path;
 
 /**
- * Native OS File implementation.
+ * Native OS FileNode implementation.
  */
-class OSFileNode
+const OSFileNode
         implements FileNode
     {
     @Override
@@ -85,13 +85,35 @@ class OSFileNode
     @Override
     Cancellable watch(FileWatcher watch)
         {
-        TODO
+        return store.watch(this:protected, watch);
         }
 
     @Override
-    String to<String>()
+    Int hash.get()
         {
-        return pathString;
+        return pathString.hash;
+        }
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        return pathString.size;
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        pathString.appendTo(appender);
+        }
+
+    // ----- equality support ----------------------------------------------------------------------
+
+    static <CompileType extends OSFileNode> Boolean equals(CompileType node1, CompileType node2)
+        {
+        return node1.pathString == node2.pathString &&
+               node1.is(OSFile) == node2.is(OSFile);
         }
 
     // ----- internal -----------------------------------------------------------------------------
@@ -105,7 +127,7 @@ class OSFileNode
     @Override
     @Abstract Int size;
 
-    @Abstract private Int           createdMillis;
-    @Abstract private Int           accessedMillis;
-    @Abstract private Int           modifiedMillis;
+    @Abstract private Int createdMillis;
+    @Abstract private Int accessedMillis;
+    @Abstract private Int modifiedMillis;
     }

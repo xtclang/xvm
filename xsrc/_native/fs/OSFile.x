@@ -6,7 +6,7 @@ import Ecstasy.fs.Path;
 /**
  * Native OS File implementation.
  */
-class OSFile
+const OSFile
         extends OSFileNode
         implements File
     {
