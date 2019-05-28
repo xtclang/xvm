@@ -8,7 +8,6 @@ import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 
 import org.xvm.asm.ClassStructure;
-
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -23,6 +22,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xInt64;
 import org.xvm.runtime.template.xNullable;
@@ -33,11 +33,11 @@ import org.xvm.runtime.template.xString;
  * Native base for OSFile and OSDirectory implementations.
  */
 public abstract class OSFileNode
-        extends ClassTemplate
+        extends xConst
     {
     protected OSFileNode(TemplateRegistry templates, ClassStructure structure)
         {
-        super(templates, structure);
+        super(templates, structure, false);
         }
 
     @Override
@@ -154,7 +154,7 @@ public abstract class OSFileNode
         ClassComposition clzStruct   = fDir ? s_clzOSDirStruct : s_clzOSFileStruct;
         MethodStructure  constructor = fDir ? s_constructorDir : s_constructorFile;
 
-        NodeHandle hStruct = new NodeHandle(clzStruct,  path, hOSStore);
+        NodeHandle hStruct = new NodeHandle(clzStruct, path.toAbsolutePath(), hOSStore);
 
         return clzPublic.getTemplate().callConstructor(frame, constructor,
             clzPublic.ensureAutoInitializer(), hStruct, Utils.OBJECTS_NONE, iReturn);
@@ -186,9 +186,6 @@ public abstract class OSFileNode
             f_path = path;
 
             setField("store", hOSStore);
-
-            // NodeHandles need be sent across the service lines; mark as immutable
-            m_fMutable = false;
             }
         }
 
@@ -201,7 +198,4 @@ public abstract class OSFileNode
     static private ClassComposition s_clzOSFile;
     static private ClassComposition s_clzOSFileStruct;
     static private MethodStructure  s_constructorFile;
-
-    // ----- data members --------------------------------------------------------------------------
-
     }

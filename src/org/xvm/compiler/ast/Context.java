@@ -13,7 +13,10 @@ import java.util.TreeSet;
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.Component.SimpleCollector;
+import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
@@ -2153,17 +2156,28 @@ public class Context
         @Override
         protected Argument resolveRegularName(Context ctxFrom, String sName, Token name, ErrorListener errs)
             {
-            Argument arg = super.resolveRegularName(ctxFrom, sName, name, errs);
+            // hold off on logging the errors from the first attempt until the second attempt fails
+            ErrorList errsTemp = new ErrorList(1);
+
+            Argument arg = super.resolveRegularName(ctxFrom, sName, name, errsTemp);
             if (arg != null)
                 {
+                // first attempt succeeded
                 return arg;
                 }
 
-            Component.SimpleCollector collector = new Component.SimpleCollector();
-            return m_typeLeft.resolveContributedName(sName, collector) ==
-                    Component.ResolutionResult.RESOLVED
-                    ? collector.getResolvedConstant()
-                    : null;
+            SimpleCollector collector = new SimpleCollector();
+            if (m_typeLeft.resolveContributedName(sName, collector) == ResolutionResult.RESOLVED)
+                {
+                // second attempt succeeded
+                return collector.getResolvedConstant();
+                }
+
+            if (errsTemp != errs)
+                {
+                errsTemp.logTo(errs);
+                }
+            return null;
             }
 
         @Override

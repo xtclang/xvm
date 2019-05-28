@@ -870,7 +870,13 @@ public class StatementBlock
                                 : typeThis;
                         typeClz  = pool.ensureAccessTypeConstant(typeClz, access);
                         infoPrev = info = typeClz.ensureTypeInfo(errs);
-                        idPrev   = idClz;
+                        if (errs.isAbortDesired())
+                            {
+                            // the info could not be calculated correctly; using it may result
+                            // in confusing error messages
+                            return null;
+                            }
+                        idPrev = idClz;
                         }
 
                     if (id == idClz)

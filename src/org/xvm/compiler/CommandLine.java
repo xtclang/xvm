@@ -795,11 +795,7 @@ public class CommandLine
             else
                 {
                 // figure out where to put the resulting module
-                File file = module.getFile();
-                if (file.isFile())
-                    {
-                    file = file.getParentFile();
-                    }
+                File file = module.getFile().getParentFile();
 
                 // at this point, we either have a directory or a file to put it in; resolve that to
                 // an actual compiled module file name
@@ -911,34 +907,16 @@ public class CommandLine
         {
         for (Compiler compiler : modulesByName.values())
             {
-            ErrorList errs = (ErrorList) compiler.getErrorListener();
+            ErrorList errs = compiler.getErrorListener();
             if (!errs.getErrors().isEmpty() && errs.getSeverity().ordinal() >= opts.badEnoughToPrint().ordinal())
                 {
                 err("xtc: Errors in " + compiler.getModuleStatement().getName());
 
-                boolean fSourceErrs = false;
-                boolean fOtherErrs  = false;
-                for (ErrorList.ErrorInfo err : errs.getErrors())
-                    {
-                    if (err.getSource() == null)
-                        {
-                        fOtherErrs = true;
-                        }
-                    else
-                        {
-                        fSourceErrs = true;
-                        }
-                    }
-                boolean fShowUnsourcedErrs = fOtherErrs && !fSourceErrs;
-
                 int cErrors = 0;
                 for (ErrorList.ErrorInfo err : errs.getErrors())
                     {
-                    if ((err.getSource() == null) == fShowUnsourcedErrs)
-                        {
-                        cErrors++;
-                        err(" [" + cErrors + "] " + err);
-                        }
+                    cErrors++;
+                    err(" [" + cErrors + "] " + err);
                     }
 
                 err("Compiler errors: " + cErrors);
