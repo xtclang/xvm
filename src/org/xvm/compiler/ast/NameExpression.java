@@ -15,6 +15,7 @@ import org.xvm.asm.Component.SimpleCollector;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
@@ -1346,14 +1347,25 @@ public class NameExpression
         String sName = name.getValueText();
         if (left == null)
             {
-            // resolve the initial name; avoid double-reporting by passing the BLACKHOLE errors
-            Argument arg = ctx.resolveName(name, ErrorListener.BLACKHOLE);
+            // resolve the initial name; try to avoid double-reporting
+            ErrorList errsTemp = new ErrorList(1);
+
+            Argument arg = ctx.resolveName(name, errsTemp);
             if (arg == null)
                 {
-                log(errs, Severity.ERROR, Compiler.NAME_MISSING,
-                        sName, ctx.getMethod().getIdentityConstant().getValueString());
+                if (errsTemp.isAbortDesired())
+                    {
+                    errsTemp.logTo(errs);
+                    }
+                else
+                    {
+                    log(errs, Severity.ERROR, Compiler.NAME_MISSING,
+                            sName, ctx.getMethod().getIdentityConstant().getValueString());
+                    }
+                return null;
                 }
-            else if (arg instanceof Register)
+
+            if (arg instanceof Register)
                 {
                 m_arg         = arg;
                 m_fAssignable = ((Register) arg).isWritable();
