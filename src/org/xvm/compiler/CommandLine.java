@@ -795,11 +795,7 @@ public class CommandLine
             else
                 {
                 // figure out where to put the resulting module
-                File file = module.getFile();
-                if (file.isFile())
-                    {
-                    file = file.getParentFile();
-                    }
+                File file = module.getFile().getParentFile();
 
                 // at this point, we either have a directory or a file to put it in; resolve that to
                 // an actual compiled module file name
