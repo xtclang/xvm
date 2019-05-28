@@ -1602,7 +1602,7 @@ public class Parser
                             LVal = new MultipleLValueStatement(init);
                             }
                         AssignmentStatement cond = new AssignmentStatement(
-                                LVal, expect(Id.COLON), parseExpression(), false);  // REVIEW : vs := / ?=
+                                LVal, expect(Id.COLON), parseExpression(), false);
                         expect(Id.R_PAREN);
                         return new ForEachStatement(keyword, cond, parseStatementBlock());
                         }
@@ -1613,6 +1613,7 @@ public class Parser
 
         // parse the second part
         expect(Id.SEMICOLON);
+// REVIEW : vs := / ?= (this is analogous to the "while" condition)
         Expression expr = (peek().getId() == Id.SEMICOLON) ? null : parseExpression();
         expect(Id.SEMICOLON);
 
@@ -1762,6 +1763,7 @@ public class Parser
                 // assuming that we haven't already built a list of declarations, then encountering
                 // an expression followed by a semicolon or right parenthesis means the entire
                 // condition is the expression, and we're done
+// REVIEW should now be parseExpression since this construct no longer claims the ':' operator
                 Expression expr = parseTernaryExpression();
                 if (listLVals == null && (peek().getId() == Id.SEMICOLON || peek().getId() == Id.R_PAREN))
                     {
@@ -1806,7 +1808,8 @@ public class Parser
             }
         while (match(Id.COMMA) != null);
 
-        Token      tokAssign = expect(Id.COLON);  // REVIEW : vs := / ?=
+// REVIEW : vs := / ?=
+        Token      tokAssign = expect(Id.COLON);
         Expression exprRVal  = parseExpression();
 
         // if there is a list, then it's a OptionalDeclarationList; otherwise it's just a single
