@@ -122,6 +122,11 @@ class OSFileStore
         return storage.delete(node.pathString);
         }
 
+    function void () watch(OSFileNode:protected node, FileWatcher watch)
+        {
+        TODO
+        }
+
     // ----- native --------------------------------------------------------------------------------
 
     OSDirectory dirFor(String pathString)

@@ -63,20 +63,18 @@ module TestFiles.xqiz.it
         @Inject Directory curDir;
         console.println($"curDir={curDir} accessed {curDir.accessed}");
 
-        console.println(curDir.name + " content: ");
+        console.println($"{curDir.name} content:");
         for (String name : curDir.names())
             {
             if (File|Directory node : curDir.find(name))
                 {
-                console.print(name);
-
                 if (node.is(File))
                     {
-                    console.println("\t- file " + node.size);
+                    console.println($"\tf {name}\t{node.size}");
                     }
                 else
                     {
-                    console.println("\t- dir");
+                    console.println($"\td {name}");
                     }
                 }
             }
