@@ -52,7 +52,6 @@ Argument
     NamedArgument-opt ArgumentExpression
 
 # note: the "_" argument allows functions to specify arguments that they are NOT binding
-# TODO modify ArgumentExpression from '?' -> '_'
 ArgumentExpression
     "_"
     "<" TypeExpression ">" "_"

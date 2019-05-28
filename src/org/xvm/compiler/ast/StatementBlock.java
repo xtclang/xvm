@@ -1168,7 +1168,7 @@ public class StatementBlock
                 {
                 org.xvm.asm.Parameter param = method.getParam(i);
                 String    sName = param.getName();
-                if (!sName.equals(Id.IGNORED.TEXT))
+                if (!sName.equals(Id.ANY.TEXT))
                     {
                     Register reg = new Register(param.getType(), i);
                     if (param.isTypeParameter())

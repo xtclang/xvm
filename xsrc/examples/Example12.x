@@ -2439,3 +2439,56 @@ if (String s ?= foo())  // basically, this turns type "T?" into "conditional T"
     {
     // ...
     }
+
+-- discussion with Jon
+
+class C
+    {
+    void foo(String x, Int y) {...}
+    }
+
+function void(String) f = c.foo(_, 5);
+
+
+Matrix matrix = new Float16[5,6];
+Float16[?,?] matrix = new Float16[5,6];
+
+assert Int x : foo();       // "conditional Int foo()" returns both a Boolean and (iff True) an Int
+assert Int x := foo();
+
+Int x := foo();
+
+String? foo();
+
+String s = foo()?;
+s ?:=
+
+s = (s == null ? foo() : s);  ==> s ?:= foo();
+
+if (String name := iter.next())
+    {
+    ... // name is assigned here
+    }
+else
+    {
+    // name not assigned here
+    }
+
+if (String? name = foo())
+    {
+    if (name != Null)
+        {
+        ... // name is NOT NULL
+        }
+    }
+
+if (String name = foo()?)
+if (String name ?= foo())
+    {
+    ... // name is NOT NULL
+    }
+
+String? == Nullable | String
+s?.foo() ==> if (s != Null) {s.foo();}
+
+--

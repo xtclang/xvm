@@ -74,7 +74,7 @@ interface Collection<ElementType>
      */
     Boolean containsAll(Iterable<ElementType> values)
         {
-        return values.iterator().whileEach(contains(?));
+        return values.iterator().whileEach(contains(_));
         }
 
     /**

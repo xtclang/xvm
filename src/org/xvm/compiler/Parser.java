@@ -922,8 +922,7 @@ public class Parser
                                     }
                                 else
                                     {
-                                    // TODO log error
-                                    throw new CompilerException("not LValue: " + expr);
+                                    expr.log(m_errorListener, Severity.ERROR, NOT_ASSIGNABLE);
                                     }
                                 }
                             else
@@ -1065,6 +1064,7 @@ public class Parser
             case COND_ASN:
             case COND_AND_ASN:
             case COND_OR_ASN:
+            case COND_NN_ASN:
             case COND_ELSE_ASN:
                 {
                 AssignmentStatement stmt = new AssignmentStatement(expr, current(), parseExpression());
@@ -1601,7 +1601,8 @@ public class Parser
                             // the LValue for the condition is a list of multiple LValues
                             LVal = new MultipleLValueStatement(init);
                             }
-                        AssignmentStatement cond = new AssignmentStatement(LVal, expect(Id.COLON), parseExpression(), false);
+                        AssignmentStatement cond = new AssignmentStatement(
+                                LVal, expect(Id.COLON), parseExpression(), false);  // REVIEW : vs := / ?=
                         expect(Id.R_PAREN);
                         return new ForEachStatement(keyword, cond, parseStatementBlock());
                         }
@@ -1647,6 +1648,7 @@ public class Parser
                 case COND_ASN:
                 case COND_AND_ASN:
                 case COND_OR_ASN:
+                case COND_NN_ASN:
                 case COND_ELSE_ASN:
                     op = peek().getId();
                     // fall through
@@ -1804,7 +1806,7 @@ public class Parser
             }
         while (match(Id.COMMA) != null);
 
-        Token      tokAssign = expect(Id.COLON);
+        Token      tokAssign = expect(Id.COLON);  // REVIEW : vs := / ?=
         Expression exprRVal  = parseExpression();
 
         // if there is a list, then it's a OptionalDeclarationList; otherwise it's just a single
@@ -2189,7 +2191,7 @@ public class Parser
                 Mark mark = mark();
                 long lStart = expect(Id.L_PAREN).getStartPosition();
 
-                Expression expr = peek().getId() == Id.IGNORED
+                Expression expr = peek().getId() == Id.ANY
                         ? new IgnoredNameExpression(current())
                         : parseExpression();
 
@@ -2202,7 +2204,7 @@ public class Parser
                     listTupleValues.add(expr);
                     while (match(Id.COMMA) != null);
                         {
-                        listTupleValues.add(peek().getId() == Id.IGNORED
+                        listTupleValues.add(peek().getId() == Id.ANY
                                 ? new IgnoredNameExpression(current())
                                 : parseExpression());
                         }
@@ -2218,7 +2220,7 @@ public class Parser
                 }
 
             // single SafeCaseExpression
-            listCaseOptions.add(peek().getId() == Id.IGNORED
+            listCaseOptions.add(peek().getId() == Id.ANY
                     ? new IgnoredNameExpression(current())
                     : parseTernaryExpression());
             }
@@ -3085,7 +3087,14 @@ public class Parser
                                 ? type
                                 : parseComplexLiteral(type);
                         }
-                    else if (match(Id.COND) != null)
+                    else if (match(Id.COND) == null)
+                        {
+                        // "someArray[3]"
+                        List<Expression> indexes = parseExpressionList();
+                        expect(Id.R_SQUARE);
+                        expr = new ArrayAccessExpression(expr, indexes, getLastMatch().getEndPosition());
+                        }
+                    else
                         {
                         // "SomeClass[?,?]"
                         int cExplicitDims = 1;
@@ -3100,13 +3109,6 @@ public class Parser
                         expr = match(Id.COLON) == null
                                 ? type
                                 : parseComplexLiteral(type);
-                        }
-                    else
-                        {
-                        // "someArray[3]"
-                        List<Expression> indexes = parseExpressionList();
-                        expect(Id.R_SQUARE);
-                        expr = new ArrayAccessExpression(expr, indexes, getLastMatch().getEndPosition());
                         }
                     break;
                     }
@@ -3153,7 +3155,7 @@ public class Parser
         {
         switch (peek().getId())
             {
-            case IGNORED:
+            case ANY:
                 {
                 IgnoredNameExpression exprIgnore = new IgnoredNameExpression(current());
                 return peek().getId() == Id.LAMBDA
@@ -3813,7 +3815,24 @@ public class Parser
      * Parse a complex literal.
      *
      * <p/><code><pre>
-     *   TODO update doc
+     * TupleLiteral
+     *     "(" ExpressionList "," Expression ")"                    # compile/runtime type is Tuple
+     *     TypeExpression NoWhitespace ":(" ExpressionList-opt ")"  # type must be a Tuple
+     *
+     * CollectionLiteral
+     *     "[" ExpressionList-opt "]"                               # compile/runtime type is Array
+     *     TypeExpression ":[" ExpressionList-opt "]"               # type must be Collection, Sequence, or List
+     *
+     * MapLiteral
+     *     "[" Entries-opt "]"                                      # compile/runtime type is Map
+     *     TypeExpression ":[" Entries-opt "]"                      # type must be Map
+     *
+     * Entries
+     *     Entry
+     *     Entries "," Entry
+     *
+     * Entry
+     *     Expression "=" Expression
      * </pre></code>
      *
      * @return a literal expression
@@ -3920,14 +3939,7 @@ public class Parser
                         getLastMatch().getEndPosition());
                 }
 
-            case "Date":
-            case "Time":
-            case "DateTime":
-            case "TimeZone":
-            case "Duration":
-                // TODO
-                throw new UnsupportedOperationException("parsing " + sType + " literal");
-
+            // TODO move this to Lexer (like Date etc.)
             case "Version":
             case "v":
                 {
@@ -4769,10 +4781,9 @@ public class Parser
                 {
                 switch (peek().getId())
                     {
-                    // TODO
-                    case COND:
+                    case ANY:
                         {
-                        Token tokUnbound = match(Id.COND);
+                        Token tokUnbound = expect(Id.ANY);
                         expr = new NonBindingExpression(tokUnbound.getStartPosition(),
                                 tokUnbound.getEndPosition(), null);
                         }
@@ -4780,10 +4791,10 @@ public class Parser
 
                     case COMP_LT:
                         {
-                        Token          tokOpen    = match(Id.COMP_LT);
+                        Token          tokOpen    = expect(Id.COMP_LT);
                         TypeExpression type       = parseTypeExpression();
-                        Token          tokClose   = match(Id.COMP_GT);
-                        Token          tokUnbound = match(Id.COND);
+                        Token          tokClose   = expect(Id.COMP_GT);
+                        Token          tokUnbound = expect(Id.ANY);
                         expr = new NonBindingExpression(tokOpen.getStartPosition(),
                                 tokUnbound.getEndPosition(), type);
                         }

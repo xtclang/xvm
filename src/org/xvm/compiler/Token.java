@@ -434,7 +434,7 @@ public class Token
         INC          ("++"             ),
         DEC          ("--"             ),
         LAMBDA       ("->"             ),
-        IGNORED      ("_"              ),
+        ANY          ("_"              ),
         ALLOW        ("allow"          , true),
         AS           ("as"             ),
         ASSERT       ("assert"         ),
