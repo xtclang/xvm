@@ -119,12 +119,6 @@ public class PropertyComposition
         }
 
     @Override
-    public boolean isService()
-        {
-        return false;
-        }
-
-    @Override
     public boolean isConst()
         {
         return false;

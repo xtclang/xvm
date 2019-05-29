@@ -26,13 +26,12 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.xFunction.FunctionHandle;
-
 import org.xvm.runtime.template.annotations.xFutureVar;
+import org.xvm.runtime.template.xFunction.FunctionHandle;
 
 
 /**
- * TODO:
+ * Native Service implementation.
  */
 public class xService
         extends ClassTemplate
@@ -61,6 +60,11 @@ public class xService
     protected ClassConstant getInceptionClassConstant()
         {
         return this == INSTANCE ? INCEPTION_CLASS : super.getInceptionClassConstant();
+        }
+
+    public boolean isService()
+        {
+        return true;
         }
 
     public int constructSync(Frame frame, MethodStructure constructor,

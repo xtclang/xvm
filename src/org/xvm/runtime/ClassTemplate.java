@@ -369,6 +369,14 @@ public abstract class ClassTemplate
         }
 
     /**
+     * Specifies whether or not this template represents a service.
+     */
+    public boolean isService()
+        {
+        return false;
+        }
+
+    /**
      * Create an object handle for the specified constant and push it on the frame's local stack.
      *
      * @param frame     the current frame
@@ -533,6 +541,19 @@ public abstract class ClassTemplate
                     }
                 }
             }
+        return null;
+        }
+
+    /**
+     * Create a proxy handle that could be sent over the service boundaries.
+     *
+     * @param ctx      the service context that the mutable object "belongs" to
+     * @param hTarget  the mutable object handle that needs to be proxied
+     *
+     * @return a new ObjectHandle to replace the mutable object with or null
+     */
+    public ObjectHandle createProxyHandle(ServiceContext ctx, ObjectHandle hTarget)
+        {
         return null;
         }
 

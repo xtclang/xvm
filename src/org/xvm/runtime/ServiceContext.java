@@ -20,6 +20,7 @@ import org.xvm.runtime.Fiber.FiberStatus;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.collections.xTuple;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xFunction.NativeFunctionHandle;
 import org.xvm.runtime.template.xService;
@@ -574,7 +575,8 @@ public class ServiceContext
     // ----- helpers ------
 
     // send the specified number of return values back to the caller
-    protected static int sendResponse(Fiber fiberCaller, Frame frame, CompletableFuture future, int cReturns)
+    protected static int sendResponse(Fiber fiberCaller, Frame frame,
+                                      CompletableFuture future, int cReturns)
         {
         switch (cReturns)
             {
@@ -585,21 +587,47 @@ public class ServiceContext
 
             case 1:
                 {
-                ObjectHandle hReturn = frame.f_ahVar[0];
-                // TODO: validate that the argument is immutable or ImmutableAble;
-                //       replace functions with proxies
-                fiberCaller.f_context.respond(
-                        new Response(fiberCaller, hReturn, frame.m_hException, future));
+                ObjectHandle    hReturn    = frame.f_ahVar[0];
+                ExceptionHandle hException = frame.m_hException;
+
+                if (hException == null && hReturn.isMutable() && !hReturn.getTemplate().isService())
+                    {
+                    hReturn = hReturn.getTemplate().createProxyHandle(frame.f_context, hReturn);
+                    if (hReturn == null)
+                        {
+                        hException = xException.mutableObject();
+                        }
+                    }
+                fiberCaller.f_context.respond(new Response(fiberCaller, hReturn, hException, future));
                 break;
                 }
 
             default:
+                {
                 assert cReturns > 1;
-                // TODO: validate that all the arguments are immutable or ImmutableAble;
-                //       replace functions with proxies
-                fiberCaller.f_context.respond(
-                        new Response(fiberCaller, frame.f_ahVar, frame.m_hException, future));
+                ObjectHandle[]  ahReturn   = frame.f_ahVar;
+                ExceptionHandle hException = frame.m_hException;
+                if (hException == null)
+                    {
+                    for (int i = 0, c = ahReturn.length; i < c; i++)
+                        {
+                        ObjectHandle hReturn = ahReturn[i];
+                        if (hReturn.isMutable() && hReturn.getTemplate().isService())
+                            {
+                            hReturn = hReturn.getTemplate().createProxyHandle(frame.f_context, hReturn);
+                            if (hReturn == null)
+                                {
+                                hException = xException.mutableObject();
+                                ahReturn   = null;
+                                break;
+                                }
+                            ahReturn[i] = hReturn;
+                            }
+                        }
+                    }
+                fiberCaller.f_context.respond(new Response(fiberCaller, ahReturn, hException, future));
                 break;
+                }
             }
         return Op.R_NEXT;
         }

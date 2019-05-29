@@ -17,6 +17,7 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
@@ -52,6 +53,12 @@ public class xFunction
     public boolean isGenericHandle()
         {
         return false;
+        }
+
+    @Override
+    public ObjectHandle createProxyHandle(ServiceContext ctx, ObjectHandle hTarget)
+        {
+        return ((FunctionHandle) hTarget).createProxyHandle(ctx);
         }
 
     @Override
@@ -122,12 +129,12 @@ public class xFunction
 
         public int getParamCount()
             {
-            return (f_function == null ? f_chain.getMethod(f_nDepth) : f_function).getParamCount();
+            return getMethod().getParamCount();
             }
 
         public int getVarCount()
             {
-            return (f_function == null ? f_chain.getMethod(f_nDepth) : f_function).getMaxVars();
+            return getMethod().getMaxVars();
             }
 
         // ----- FunctionHandle interface -----
@@ -163,6 +170,43 @@ public class xFunction
             return callNImpl(frame, hTarget, ahVar, aiReturn);
             }
 
+        /**
+         * Bind the target.
+         *
+         * @param hArg  the argument to bind the target to
+         *
+         * @return a bound FunctionHandle
+         */
+        public FunctionHandle bindTarget(ObjectHandle hArg)
+            {
+            return new SingleBoundHandle(m_clazz, this, -1, hArg);
+            }
+
+        /**
+         * Bind the specified argument.
+         *
+         * @param iArg  teh argument's index
+         * @param hArg  the argument to bind the argument to
+         *
+         * @return a bound FunctionHandle
+         */
+        public FunctionHandle bind(int iArg, ObjectHandle hArg)
+            {
+            return new SingleBoundHandle(m_clazz, this, iArg, hArg);
+            }
+
+        /**
+         * Bind all arguments.
+         *
+         * @param ahArg  the argument array to bind the arguments to
+         *
+         * @return a fully bound FunctionHandle
+         */
+        public FullyBoundHandle bindArguments(ObjectHandle[] ahArg)
+            {
+            return new FullyBoundHandle(m_clazz, this, ahArg);
+            }
+
         // ----- internal implementation -----
 
         protected ObjectHandle[] prepareVars(ObjectHandle[] ahArg)
@@ -194,32 +238,42 @@ public class xFunction
                     frame.callN(f_function, hTarget, ahVar, aiReturn);
             }
 
-        // bind a specified argument
-        public FunctionHandle bind(int iArg, ObjectHandle hArg)
-            {
-            return new SingleBoundHandle(m_clazz, this, iArg, hArg);
-            }
-
-        // bind the target
-        public FunctionHandle bindTarget(ObjectHandle hArg)
-            {
-            return new SingleBoundHandle(m_clazz, this, -1, hArg);
-            }
-
-        public FullyBoundHandle bindArguments(ObjectHandle[] ahArg)
-            {
-            return new FullyBoundHandle(m_clazz, this, ahArg);
-            }
-
         protected void addBoundArguments(ObjectHandle[] ahVar)
             {
+            }
+
+        protected FunctionHandle createProxyHandle(ServiceContext ctx)
+            {
+            // we shouldn't get here since a simple FunctionHandle is immutable
+            throw new IllegalStateException();
+            }
+
+        @Override
+        public int hashCode()
+            {
+            return getMethod().hashCode();
+            }
+
+        @Override
+        public boolean equals(Object obj)
+            {
+            if (obj == this)
+                {
+                return true;
+                }
+
+            if (obj instanceof FunctionHandle)
+                {
+                FunctionHandle that = (FunctionHandle) obj;
+                return this.getMethod().equals(that.getMethod());
+                }
+            return false;
             }
 
         @Override
         public String toString()
             {
-            return "Function: " +
-                    (f_function == null ? f_chain.getMethod(f_nDepth) : f_function);
+            return "Function: " + getMethod();
             }
         }
 
@@ -233,6 +287,12 @@ public class xFunction
             super(clazz, hDelegate == null ? null : hDelegate.f_function);
 
             m_hDelegate = hDelegate;
+            }
+
+        @Override
+        public boolean isMutable()
+            {
+            return m_hDelegate.isMutable();
             }
 
         @Override
@@ -275,6 +335,13 @@ public class xFunction
         public int getVarCount()
             {
             return m_hDelegate.getVarCount();
+            }
+
+        @Override
+        public boolean equals(Object obj)
+            {
+            return super.equals(obj) && obj instanceof DelegatingHandle &&
+                m_hDelegate.equals(((DelegatingHandle) obj).m_hDelegate);
             }
 
         @Override
@@ -342,6 +409,12 @@ public class xFunction
 
             m_iArg = iArg;
             m_hArg = hArg;
+            }
+
+        @Override
+        public boolean isMutable()
+            {
+            return m_hArg.isMutable() || super.isMutable();
             }
 
         @Override
@@ -423,6 +496,12 @@ public class xFunction
             }
 
         @Override
+        protected FunctionHandle createProxyHandle(ServiceContext ctx)
+            {
+            return new ProxyHandle(this, ctx);
+            }
+
+        @Override
         protected void addBoundArguments(ObjectHandle[] ahVar)
             {
             super.addBoundArguments(ahVar);
@@ -436,6 +515,20 @@ public class xFunction
                     }
                 ahVar[m_iArg] = m_hArg;
                 }
+            }
+
+        @Override
+        public boolean equals(Object obj)
+            {
+            if (super.equals(obj) && obj instanceof SingleBoundHandle)
+                {
+                ObjectHandle hArgThis = m_hArg;
+                ObjectHandle hArgThat = ((SingleBoundHandle) obj).m_hArg;
+
+                return hArgThis.isNativeEqual() && hArgThat.isNativeEqual() &&
+                    hArgThis.equals(hArgThat);
+                }
+            return false;
             }
         }
 
@@ -451,6 +544,19 @@ public class xFunction
             super(clazz, hDelegate);
 
             f_ahArg = ahArg;
+            }
+
+        @Override
+        public boolean isMutable()
+            {
+            for (ObjectHandle hArg : f_ahArg)
+                {
+                if (hArg.isMutable())
+                    {
+                    return true;
+                    }
+                }
+            return super.isMutable();
             }
 
         @Override
@@ -558,29 +664,7 @@ public class xFunction
             assert method.isNative();
             }
 
-        /**
-         * @return true iff all the arguments are immutable
-         */
-        protected boolean validateImmutable(ObjectHandle[] ahArg)
-            {
-            for (ObjectHandle hArg : ahArg)
-                {
-                if (hArg == null)
-                    {
-                    // arguments tail is always empty
-                    break;
-                    }
-
-                if (hArg.isMutable())
-                    {
-                    // TODO: replace functions with proxies
-                    return false;
-                    }
-                }
-            return true;
-            }
-
-        // ----- FunctionHandle interface -----
+        // ----- FunctionHandle interface ----------------------------------------------------------
 
         @Override
         protected int call1Impl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
@@ -596,7 +680,7 @@ public class xFunction
                     : super.call1Impl(frame, hTarget, ahVar, iReturn);
                 }
 
-            if (!validateImmutable(ahVar))
+            if (!validateImmutable(frame.f_context, ahVar))
                 {
                 return frame.raiseException(xException.mutableObject());
                 }
@@ -622,7 +706,7 @@ public class xFunction
                     : super.callTImpl(frame, hTarget, ahVar, iReturn);
                 }
 
-            if (!validateImmutable(ahVar))
+            if (!validateImmutable(frame.f_context, ahVar))
                 {
                 return frame.raiseException(xException.mutableObject());
                 }
@@ -651,7 +735,7 @@ public class xFunction
                     : super.callNImpl(frame, hTarget, ahVar, aiReturn);
                 }
 
-            if (!validateImmutable(ahVar))
+            if (!validateImmutable(frame.f_context, ahVar))
                 {
                 return frame.raiseException(xException.mutableObject());
                 }
@@ -676,19 +760,153 @@ public class xFunction
 
             return frame.call(Utils.createWaitFrame(frame, cfResult, aiReturn));
             }
+        }
 
-        private int assignResult(Frame frame, int iReturn, CompletableFuture<ObjectHandle> cfResult)
+    public static class ProxyHandle
+            extends DelegatingHandle
+        {
+        // the origin context of the mutable FunctionHandle
+        final private ServiceContext f_ctx;
+
+        protected ProxyHandle(FunctionHandle fn, ServiceContext ctx)
             {
-            if (iReturn >= 0)
+            super(fn.getComposition(), fn);
+
+            f_ctx = ctx;
+            }
+
+        // ----- FunctionHandle interface ----------------------------------------------------------
+
+        @Override
+        protected int call1Impl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+            {
+            // hTarget is the service handle that is of no use for us now
+
+            if (frame.f_context == f_ctx)
                 {
-                return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult), true);
+                return super.call1Impl(frame, null, ahVar, iReturn);
                 }
 
-            // the return value is either a A_LOCAL or a local property;
-            // in either case there is no "VarInfo" to mark as "waiting", so we need to create
-            // a pseudo frame to deal with the wait
-            return frame.call(Utils.createWaitFrame(frame, cfResult, iReturn));
+            if (!validateImmutable(frame.f_context, ahVar))
+                {
+                return frame.raiseException(xException.mutableObject());
+                }
+
+            int cReturns = iReturn == Op.A_IGNORE ? 0 : 1;
+
+            CompletableFuture<ObjectHandle> cfResult = f_ctx.sendInvoke1Request(
+                frame, this, ahVar, cReturns);
+
+            // in the case of zero returns - fire and forget
+            return cReturns == 0 ? Op.R_NEXT : assignResult(frame, iReturn, cfResult);
             }
+
+        @Override
+        protected int callTImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+            {
+            // hTarget is the service handle that is of no use for us now
+
+            if (frame.f_context == f_ctx)
+                {
+                return super.callTImpl(frame, null, ahVar, iReturn);
+                }
+
+            if (!validateImmutable(frame.f_context, ahVar))
+                {
+                return frame.raiseException(xException.mutableObject());
+                }
+
+            if (true)
+                {
+                // TODO: add a "return a Tuple back" flag
+                throw new UnsupportedOperationException();
+                }
+
+            CompletableFuture<ObjectHandle> cfResult = f_ctx.sendInvoke1Request(
+                    frame, this, ahVar, 1);
+
+            return assignResult(frame, iReturn, cfResult);
+            }
+
+        @Override
+        protected int callNImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
+            {
+            // hTarget is the service handle that is of no use for us now
+
+            if (frame.f_context == f_ctx)
+                {
+                return super.callNImpl(frame, null, ahVar, aiReturn);
+                }
+
+            if (!validateImmutable(frame.f_context, ahVar))
+                {
+                return frame.raiseException(xException.mutableObject());
+                }
+
+            int cReturns = aiReturn.length;
+
+            CompletableFuture<ObjectHandle[]> cfResult = f_ctx.sendInvokeNRequest(
+                frame, this, ahVar, cReturns);
+
+            if (cReturns == 0)
+                {
+                // fire and forget
+                return Op.R_NEXT;
+                }
+
+            if (cReturns == 1)
+                {
+                CompletableFuture<ObjectHandle> cfReturn =
+                    cfResult.thenApply(ahResult -> ahResult[0]);
+                return assignResult(frame, aiReturn[0], cfReturn);
+                }
+
+            return frame.call(Utils.createWaitFrame(frame, cfResult, aiReturn));
+            }
+        }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * @return true iff all the arguments are immutable
+     */
+    static private boolean validateImmutable(ServiceContext ctx, ObjectHandle[] ahArg)
+        {
+        // Note: this logic could be moved to ServiceContext.sendInvokeXXX()
+        for (int i = 0, c = ahArg.length; i < c; i++)
+            {
+            ObjectHandle hArg = ahArg[i];
+            if (hArg == null)
+                {
+                // arguments tail is always empty
+                break;
+                }
+
+            if (hArg.isMutable() && !hArg.getTemplate().isService())
+                {
+                hArg = hArg.getTemplate().createProxyHandle(ctx, hArg);
+                if (hArg == null)
+                    {
+                    return false;
+                    }
+                ahArg[i] = hArg;
+                }
+            }
+        return true;
+        }
+
+    static private int assignResult(Frame frame, int iReturn, CompletableFuture<ObjectHandle> cfResult)
+        {
+        if (iReturn >= 0)
+            {
+            return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult), true);
+            }
+
+        // the return value is either a A_LOCAL or a local property;
+        // in either case there is no "VarInfo" to mark as "waiting", so we need to create
+        // a pseudo frame to deal with the wait
+        return frame.call(Utils.createWaitFrame(frame, cfResult, iReturn));
         }
 
     /**

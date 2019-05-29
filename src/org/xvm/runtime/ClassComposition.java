@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
@@ -229,13 +228,6 @@ public class ClassComposition
     public boolean isStruct()
         {
         return f_typeRevealed.getAccess() == Access.STRUCT;
-        }
-
-    @Override
-    public boolean isService()
-        {
-        TypeConstant type = f_typeInception;
-        return type.getSingleUnderlyingClass(false).getComponent().getFormat() == Format.SERVICE;
         }
 
     @Override

@@ -2,11 +2,11 @@ package org.xvm.runtime;
 
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.xvm.asm.MethodStructure;
@@ -215,6 +215,7 @@ public class Fiber
             if (iResult == Op.R_BLOCK)
                 {
                 // there are still some "waiting" registers
+                m_fResponded = false;
                 return Op.R_BLOCK;
                 }
 
@@ -224,6 +225,7 @@ public class Fiber
                 if (iResult == Op.R_BLOCK)
                     {
                     // we still cannot resume
+                    m_fResponded = false;
                     return Op.R_BLOCK;
                     }
                 m_resume = null;
@@ -238,10 +240,10 @@ public class Fiber
 
     public void registerUncapturedRequest(CompletableFuture<?> future)
         {
-        Map<CompletableFuture, ObjectHandle> mapPending =  m_mapPendingFutures;
+        Map<CompletableFuture, ObjectHandle> mapPending = m_mapPendingFutures;
         if (mapPending == null)
             {
-            mapPending = m_mapPendingFutures = new HashMap<>();
+            mapPending = m_mapPendingFutures = new ConcurrentHashMap<>();
             }
 
         mapPending.put(future, m_hAsyncSection);
