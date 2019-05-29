@@ -85,8 +85,7 @@ const Number
      * Division and Modulo: Divide this number by another number, and return both the
      * quotient and the modulo.
      */
-// TODO @Op (Number quotient, Number modulo) divmod(Number n)
-    @Op (Number, Number) divmod(Number n)
+    @Op (Number quotient, Number modulo) divmod(Number n)
         {
         return (this / n, this % n);
         }

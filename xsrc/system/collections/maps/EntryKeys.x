@@ -30,7 +30,7 @@ class EntryKeys<KeyType, ValueType>(Map<KeyType, ValueType> map)
         {
         return new Iterator()
             {
-            Iterator<Map<KeyType, ValueType>.Entry> entryIterator = map.entries.iterator(); // TODO verify this is a private prop
+            Iterator<Map<KeyType, ValueType>.Entry> entryIterator = map.entries.iterator();
 
             @Override
             conditional KeyType next()

@@ -286,8 +286,7 @@ class HashMap<KeyType, ValueType>
         @Unassigned
         private HashEntry hashEntry;
 
-        // TODO fails to find this if it is protected
-        CursorEntry advance(HashEntry hashEntry)
+        protected CursorEntry advance(HashEntry hashEntry)
             {
             this.hashEntry = hashEntry;
             this.exists    = true;

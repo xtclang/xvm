@@ -2,7 +2,7 @@
  * String is a well-known, immutable data type for holding textual information.
  */
 const String
-        implements Sequence<Char> // TODO delegates (Sequence<Char>-Object)(chars)
+        implements Sequence<Char>
         implements Stringable
     {
     /**
