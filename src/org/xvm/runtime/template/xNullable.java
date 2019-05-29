@@ -5,7 +5,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 
-import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.TemplateRegistry;
 
 
@@ -42,8 +42,8 @@ public class xNullable
         }
 
     @Override
-    protected EnumHandle makeEnumHandle(int iOrdinal)
+    protected EnumHandle makeEnumHandle(ClassComposition clz, int iOrdinal)
         {
-        return new EnumHandle(getCanonicalClass(), 0);
+        return new EnumHandle(clz, 0);
         }
     }

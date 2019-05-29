@@ -5,6 +5,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
@@ -46,9 +47,9 @@ public class xBoolean
         }
 
     @Override
-    protected EnumHandle makeEnumHandle(int iOrdinal)
+    protected EnumHandle makeEnumHandle(ClassComposition clz, int iOrdinal)
         {
-        return new BooleanHandle(getCanonicalClass(), iOrdinal != 0);
+        return new BooleanHandle(clz, iOrdinal != 0);
         }
 
     @Override
