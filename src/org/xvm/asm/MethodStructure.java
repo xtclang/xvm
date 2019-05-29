@@ -1515,13 +1515,21 @@ public class MethodStructure
     @Override
     public String getDescription()
         {
-        StringBuilder sb = new StringBuilder();
+        MethodConstant id = getIdentityConstant();
+        StringBuilder  sb = new StringBuilder();
         sb.append("host=\"")
           .append(getParent().getParent().getName())
           .append("\", id=\"")
-          .append(getIdentityConstant().getValueString())
-          .append("\", sig=")
-          .append(getIdentityConstant().isNascent() ? "n/a" : getIdentityConstant().getSignature());
+          .append(id.getValueString());
+
+        if (id.isLambda())
+            {
+            sb.append("\", lambda=")
+              .append(id.getLambdaIndex());
+            }
+
+        sb.append("\", sig=")
+          .append(id.isNascent() ? "n/a" : getIdentityConstant().getSignature());
 
         if (isNative())
             {
