@@ -53,8 +53,7 @@ module TestServices.xqiz.it
             @Future Int result = svc.calcSomethingBig(Duration.ofSeconds(i));
             &result.whenComplete((n, e) ->
                 {
-                console.println("[main] result=" + (n ?: e ?: "???"));
-                // console.println($"{tag()} result={(n ?: e ?: "???")}");
+                console.println($"{tag()} result={(n ?: e ?: "???")}");
                 });
             }
 
