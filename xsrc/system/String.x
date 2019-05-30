@@ -89,7 +89,7 @@ const String
         String[] results = new String[];
 
         Int start = 0;
-        while (Int next : indexOf(separator, start))
+        while (Int next := indexOf(separator, start))
             {
             results += start == next ? "" : this[start..next-1];
             start    = next + 1;
@@ -139,7 +139,7 @@ const String
 
          // otherwise, brute force
          Char first = that[0];
-         NextTry: while (Int next : indexOf(first, startAt))
+         NextTry: while (Int next := indexOf(first, startAt))
              {
              for (Int of = 1; of < thatLen; ++of)
                  {

@@ -132,7 +132,7 @@ class HashMap<KeyType, ValueType>
     @Override
     conditional ValueType get(KeyType key)
         {
-        if (HashEntry entry : find(key))
+        if (HashEntry entry := find(key))
             {
             return True, entry.value;
             }
@@ -329,7 +329,7 @@ class HashMap<KeyType, ValueType>
                 else
                     {
                     this.HashMap.put(key, value);
-                    assert hashEntry : this.HashMap.find(key);
+                    assert hashEntry := this.HashMap.find(key);
                     exists = true;
                     }
                 }

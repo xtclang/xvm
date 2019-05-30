@@ -282,7 +282,7 @@ public class Parser
                 {
                 Token tokIf = expect(Id.IF);
                 expect(Id.L_PAREN);
-                Expression exprIf = parseCondition();
+                Expression exprIf = parseLinkerCondition();
                 expect(Id.R_PAREN);
 
                 // then ...
@@ -580,7 +580,7 @@ public class Parser
                     {
                     Token tokIf = expect(Id.IF);
                     expect(Id.L_PAREN);
-                    Expression exprIf = parseCondition();
+                    Expression exprIf = parseLinkerCondition();
                     expect(Id.R_PAREN);
 
                     // then ...
@@ -1352,21 +1352,6 @@ public class Parser
                         ? new BreakStatement(keyword, name)
                         : new ContinueStatement(keyword, name);
 
-                // optional: "break if (...);"
-                if (peek().getId() == Id.IF)
-                    {
-                    Token keywordIf = expect(Id.IF);
-                    expect(Id.L_PAREN);
-                    AstNode cond = parseIfCondition();
-                    expect(Id.R_PAREN);
-
-                    // turn the "break" or "continue" into the statement block
-                    StatementBlock block = new StatementBlock(Collections.singletonList(stmt));
-                    block.suppressScope();
-
-                    stmt = new IfStatement(keywordIf, cond, block);
-                    }
-
                 expect(Id.SEMICOLON);
                 return stmt;
                 }
@@ -1441,7 +1426,7 @@ public class Parser
      *
      * <p/><code><pre>
      * AssertStatement
-     *     AssertInstruction IfCondition-opt ";"
+     *     AssertInstruction ConditionList-opt ";"
      *
      * AssertInstruction
      *     "assert"
@@ -1457,14 +1442,14 @@ public class Parser
         {
         Token keyword = current();
 
-        AstNode cond = null;
+        List<AstNode> conds = null;
         if (peek().getId() != Id.SEMICOLON)
             {
-            cond = parseIfCondition();
+            conds = parseConditionList();
             }
 
         expect(Id.SEMICOLON);
-        return new AssertStatement(keyword, cond);
+        return new AssertStatement(keyword, conds);
         }
 
     /**
@@ -1472,7 +1457,7 @@ public class Parser
      *
      * <p/><code><pre>
      * DoStatement
-     *     "do" StatementBlock "while" "(" IfCondition ")" ";"
+     *     "do" StatementBlock "while" "(" ConditionList ")" ";"
      * </pre></code>
      *
      * @return a "do" statement
@@ -1483,10 +1468,10 @@ public class Parser
         StatementBlock block = parseStatementBlock();
         expect(Id.WHILE);
         expect(Id.L_PAREN);
-        AstNode cond = parseIfCondition();
+        List<AstNode> conds = parseConditionList();
         long lEndPos = expect(Id.R_PAREN).getEndPosition();
         expect(Id.SEMICOLON);
-        return new WhileStatement(keyword, cond, block, lEndPos);
+        return new WhileStatement(keyword, conds, block, lEndPos);
         }
 
     /**
@@ -1613,8 +1598,7 @@ public class Parser
 
         // parse the second part
         expect(Id.SEMICOLON);
-// REVIEW : vs := / ?= (this is analogous to the "while" condition)
-        Expression expr = (peek().getId() == Id.SEMICOLON) ? null : parseExpression();
+        List<AstNode> conds = (peek().getId() == Id.SEMICOLON) ? null : parseConditionList();
         expect(Id.SEMICOLON);
 
         // parse the third part
@@ -1666,7 +1650,7 @@ public class Parser
             }
 
         expect(Id.R_PAREN);
-        return new ForStatement(keyword, (List<Statement>) (List) init, expr, update, parseStatementBlock());
+        return new ForStatement(keyword, (List<Statement>) (List) init, conds, update, parseStatementBlock());
         }
 
     /**
@@ -1674,7 +1658,7 @@ public class Parser
      *
      * <p/><code><pre>
      * IfStatement
-     *     "if" "(" IfCondition ")" StatementBlock ElseStatement-opt
+     *     "if" "(" ConditionList ")" StatementBlock ElseStatement-opt
      *
      * ElseStatement
      *     "else" IfStatement
@@ -1687,28 +1671,37 @@ public class Parser
         {
         Token keyword = expect(Id.IF);
         expect(Id.L_PAREN);
-        AstNode cond = parseIfCondition();
+        List<AstNode> conds = parseConditionList();
         expect(Id.R_PAREN);
         StatementBlock block = parseStatementBlock();
 
         if (match(Id.ELSE) == null)
             {
-            return new IfStatement(keyword, cond, block);
+            return new IfStatement(keyword, conds, block);
             }
         else
             {
             Statement stmtElse = peek().getId() == Id.IF ? parseIfStatement() : parseStatementBlock();
-            return new IfStatement(keyword, cond, block, stmtElse);
+            return new IfStatement(keyword, conds, block, stmtElse);
             }
         }
 
     /**
-     * Parse the IfCondition, which is used in "assert", "if", "while", and "do" statements.
+     * Parse a ConditionList, which is used in "assert", "if", "for", "while", and "do" statements.
      *
      * <p/><code><pre>
-     * IfCondition
-     *     TernaryExpression
-     *     OptionalDeclarationList ":" Expression
+     * ConditionList
+     *     Condition
+     *     ConditionList, Condition
+     *
+     * Condition
+     *     Expression
+     *     OptionalDeclaration ConditionalAssignmentOp Expression
+     *     ( OptionalDeclarationList, OptionalDeclaration ) ConditionalAssignmentOp Expression
+     *
+     * ConditionalAssignmentOp
+     *     :=
+     *     ?=
      *
      * OptionalDeclarationList
      *     OptionalDeclaration
@@ -1718,6 +1711,8 @@ public class Parser
      *     Assignable
      *     VariableTypeExpression Name
      *
+     * # Assignable turns out to be just an Expression that meets certain requirements, i.e. one
+     * # that ends with a Name or an ArrayIndexes
      * Assignable
      *     Name
      *     TernaryExpression "." Name
@@ -1731,7 +1726,18 @@ public class Parser
      *
      * @return the Expression that provides the condition, or the conditional AssignmentStatement
      */
-    AstNode parseIfCondition()
+    List<AstNode> parseConditionList()
+        {
+        List<AstNode> list = new ArrayList<>(4);
+        list.add(parseCondition());
+        while (match(Id.COMMA) != null)
+            {
+            list.add(parseCondition());
+            }
+        return list;
+        }
+
+    AstNode parseCondition()
         {
         Expression     exprLVal;
         TypeExpression typeDecl;
@@ -1763,8 +1769,7 @@ public class Parser
                 // assuming that we haven't already built a list of declarations, then encountering
                 // an expression followed by a semicolon or right parenthesis means the entire
                 // condition is the expression, and we're done
-// REVIEW should now be parseExpression since this construct no longer claims the ':' operator
-                Expression expr = parseTernaryExpression();
+                Expression expr = parseExpression();
                 if (listLVals == null && (peek().getId() == Id.SEMICOLON || peek().getId() == Id.R_PAREN))
                     {
                     return expr;
@@ -1808,9 +1813,13 @@ public class Parser
             }
         while (match(Id.COMMA) != null);
 
-// REVIEW : vs := / ?=
-        Token      tokAssign = expect(Id.COLON);
-        Expression exprRVal  = parseExpression();
+        Token tokAssign = match(Id.COND_NN_ASN);
+        if (tokAssign == null)
+            {
+            tokAssign = expect(Id.COND_ASN);
+            }
+
+        Expression exprRVal = parseExpression();
 
         // if there is a list, then it's a OptionalDeclarationList; otherwise it's just a single
         // L-Value expression or variable declaration
@@ -2430,7 +2439,7 @@ public class Parser
      *
      * <p/><code><pre>
      * WhileStatement
-     *     "while" "(" IfCondition ")" StatementBlock
+     *     "while" "(" ConditionList ")" StatementBlock
      * </pre></code>
      *
      * @return a "while" statement
@@ -2439,10 +2448,10 @@ public class Parser
         {
         Token keyword = expect(Id.WHILE);
         expect(Id.L_PAREN);
-        AstNode cond = parseIfCondition();
+        List<AstNode> conds = parseConditionList();
         expect(Id.R_PAREN);
         StatementBlock block = parseStatementBlock();
-        return new WhileStatement(keyword, cond, block);
+        return new WhileStatement(keyword, conds, block);
         }
 
     /**
@@ -2548,7 +2557,7 @@ public class Parser
      *
      * @return an expression
      */
-    Expression parseCondition()
+    Expression parseLinkerCondition()
         {
         Expression expr = parseExpression();
         expr.validateCondition(m_errorListener);
@@ -3149,6 +3158,7 @@ public class Parser
      *     "_"
      *     "throw" Expression
      *     "T0D0" TodoFinish-opt
+     *     "assert"
      *     Literal
      * </pre></code>
      *

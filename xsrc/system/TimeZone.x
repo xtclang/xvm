@@ -59,7 +59,7 @@ const TimeZone(Int picos, String? name = null)
             {
             Int hours = -1;
             Int mins  = 0;
-            if (Int colon : tz.indexOf(':'))
+            if (Int colon := tz.indexOf(':'))
                 {
                 if (colon > 1 && colon < tz.size-1)
                     {

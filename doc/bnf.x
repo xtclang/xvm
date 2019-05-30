@@ -423,10 +423,14 @@ ConditionList
     ConditionList, Condition
 
 Condition
-    TernaryExpression
-    OptionalDeclaration ":" Expression
-    ( OptionalDeclarationList, OptionalDeclaration ) ":" Expression
+    Expression
+    OptionalDeclaration ConditionalAssignmentOp Expression
+    ( OptionalDeclarationList, OptionalDeclaration ) ConditionalAssignmentOp Expression
 
+ConditionalAssignmentOp
+    :=
+    ?=
+    
 ElseStatement
     "else" IfStatement
     "else" StatementBlock

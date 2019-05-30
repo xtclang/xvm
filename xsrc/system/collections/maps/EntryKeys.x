@@ -35,7 +35,7 @@ class EntryKeys<KeyType, ValueType>(Map<KeyType, ValueType> map)
             @Override
             conditional KeyType next()
                 {
-                if (Map<KeyType, ValueType>.Entry entry : entryIterator.next())
+                if (Map<KeyType, ValueType>.Entry entry := entryIterator.next())
                     {
                     return True, entry.key;
                     }

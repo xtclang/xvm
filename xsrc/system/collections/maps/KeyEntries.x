@@ -35,7 +35,7 @@ class KeyEntries<KeyType, ValueType>(Map<KeyType, ValueType> map)
             @Override
             conditional Map<KeyType, ValueType>.Entry next()
                 {
-                if (KeyType key : keyIterator.next())
+                if (KeyType key := keyIterator.next())
                     {
                     private CursorEntry<KeyType, ValueType> entry = new CursorEntry(map);
                     return true, entry.advance(key);

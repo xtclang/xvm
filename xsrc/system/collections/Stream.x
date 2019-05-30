@@ -246,7 +246,7 @@ interface Stream<ElementType>
     conditional ElementType min(Comparator<ElementType>? comparator = null)
         {
         Iterator<ElementType> iter = iterator();
-        if (ElementType minValue : iter.next())
+        if (ElementType minValue := iter.next())
             {
             if (comparator == null)
                 {
@@ -288,7 +288,7 @@ interface Stream<ElementType>
     conditional ElementType max(Comparator<ElementType>? comparator = null)
         {
         Iterator<ElementType> iter = iterator();
-        if (ElementType maxValue : iter.next())
+        if (ElementType maxValue := iter.next())
             {
             if (comparator == null)
                 {
@@ -409,7 +409,7 @@ interface Stream<ElementType>
     conditional ElementType reduce(function ElementType accumulate(ElementType, ElementType))
         {
         Iterator<ElementType> iter = iterator();
-        if (ElementType result : iter.next())
+        if (ElementType result := iter.next())
             {
             for (ElementType element : iter)
                 {

@@ -19,6 +19,7 @@ import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.IP_Inc;
 import org.xvm.asm.op.Jump;
+import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Move;
@@ -39,15 +40,15 @@ public class WhileStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public WhileStatement(Token keyword, AstNode cond, StatementBlock block)
+    public WhileStatement(Token keyword, List<AstNode> conds, StatementBlock block)
         {
-        this(keyword, cond, block, block.getEndPosition());
+        this(keyword, conds, block, block.getEndPosition());
         }
 
-    public WhileStatement(Token keyword, AstNode cond, StatementBlock block, long lEndPos)
+    public WhileStatement(Token keyword, List<AstNode> conds, StatementBlock block, long lEndPos)
         {
         this.keyword = keyword;
-        this.cond    = cond;
+        this.conds   = conds;
         this.block   = block;
         this.lEndPos = lEndPos;
         }
@@ -130,6 +131,41 @@ public class WhileStatement
         return n;
         }
 
+    /**
+     * @return the number of conditions
+     */
+    public int getConditionCount()
+        {
+        return conds.size();
+        }
+
+    /**
+     * @param i  a value between 0 and {@link #getConditionCount()}-1
+     *
+     * @return the condition, which is either an Expression or an AssignmentStatement
+     */
+    public AstNode getCondition(int i)
+        {
+        return conds.get(i);
+        }
+
+    /**
+     * @param exprChild  an expression that is a child of this statement
+     *
+     * @return the index of the expression in the list of conditions within this statement, or -1
+     */
+    public int findCondition(Expression exprChild)
+        {
+        for (int i = 0, c = getConditionCount(); i < c; ++i)
+            {
+            if (conds.get(i) == exprChild)
+                {
+                return i;
+                }
+            }
+        return -1;
+        }
+
     @Override
     public long getStartPosition()
         {
@@ -193,6 +229,24 @@ public class WhileStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
+    protected boolean allowsShortCircuit(Expression exprChild)
+        {
+        // only expressions are in the conditions
+        assert findCondition(exprChild) >= 0;
+
+        return true;
+        }
+
+    @Override
+    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
+        {
+        assert findCondition(exprChild) >= 0;
+
+        // TODO snap-shot the assignment-info-delta
+        return getEndLabel();
+        }
+
+    @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
         boolean fValid = true;
@@ -206,42 +260,49 @@ public class WhileStatement
         if (isDoWhile())
             {
             // block comes first for "do..while()"
-            validateBody(ctx, false, errs);
+            fValid &= validateBody(ctx, false, errs);
             }
 
-        // the condition is either a boolean expression or an assignment statement whose R-value is
-        // a multi-value with the first value being a boolean
-        if (cond instanceof AssignmentStatement)
+        for (int i = 0, c = getConditionCount(); i < c; ++i)
             {
-            AssignmentStatement stmtOld = (AssignmentStatement) cond;
-            AssignmentStatement stmtNew = (AssignmentStatement) stmtOld.validate(ctx, errs);
-            if (stmtNew == null)
+            AstNode cond = getCondition(i);
+
+            // the condition is either a boolean expression or an assignment statement whose R-value
+            // is a multi-value with the first value being a boolean
+            if (cond instanceof AssignmentStatement)
                 {
-                fValid = false;
+                AssignmentStatement stmtOld = (AssignmentStatement) cond;
+                AssignmentStatement stmtNew = (AssignmentStatement) stmtOld.validate(ctx, errs);
+                if (stmtNew == null)
+                    {
+                    fValid = false;
+                    }
+                else if (stmtNew != stmtOld)
+                    {
+                    cond = stmtNew;
+                    conds.set(i, cond);
+                    }
                 }
             else
                 {
-                cond = stmtNew;
-                }
-            }
-        else
-            {
-            Expression exprOld = (Expression) cond;
-            Expression exprNew = exprOld.validate(ctx, pool().typeBoolean(), errs);
-            if (exprNew == null)
-                {
-                fValid = false;
-                }
-            else  if (exprNew != exprOld)
-                {
-                cond = exprNew;
+                Expression exprOld = (Expression) cond;
+                Expression exprNew = exprOld.validate(ctx, pool().typeBoolean(), errs);
+                if (exprNew == null)
+                    {
+                    fValid = false;
+                    }
+                else  if (exprNew != exprOld)
+                    {
+                    cond = exprNew;
+                    conds.set(i, cond);
+                    }
                 }
             }
 
         if (!isDoWhile())
             {
             // block comes after for "while()"
-            validateBody(ctx, true, errs);
+            fValid &= validateBody(ctx, true, errs);
             }
 
         // if the condition itself required a scope, then complete that scope
@@ -313,7 +374,34 @@ public class WhileStatement
         Register regCount      = m_regCount;
         boolean  fHasLabelVars = regFirst != null || regCount != null;
 
-        if (cond instanceof Expression && ((Expression) cond).isConstantFalse())
+        // any condition of false results in false (as long as all conditions up to that point are
+        // constant); all condition of true results in true (as long as all conditions are constant)
+        boolean fAlwaysTrue  = true;
+        boolean fAlwaysFalse = true;
+        for (AstNode cond : conds)
+            {
+            if (cond instanceof Expression && ((Expression) cond).isConstant())
+                {
+                if (((Expression) cond).isConstantFalse())
+                    {
+                    fAlwaysTrue = false;
+                    break;
+                    }
+                else
+                    {
+                    assert ((Expression) cond).isConstantTrue();
+                    fAlwaysFalse = false;
+                    }
+                }
+            else
+                {
+                fAlwaysTrue  = false;
+                fAlwaysFalse = false;
+                break;
+                }
+            }
+
+        if (fAlwaysFalse)
             {
             if (!fDoWhile)
                 {
@@ -339,7 +427,7 @@ public class WhileStatement
             return fCompletes;
             }
 
-        if (cond instanceof Expression && ((Expression) cond).isConstantTrue())
+        if (fAlwaysTrue)
             {
             // while(true) {body}
             // do {body} while(true)
@@ -367,7 +455,7 @@ public class WhileStatement
             code.add(getContinueLabel());
             emitLabelVarUpdate(code, regFirst, regCount, labelInit);
             block.suppressScope();
-            fCompletes = block.completes(ctx, fCompletes, code, errs);
+            block.completes(ctx, fCompletes, code, errs);
             code.add(new Jump(getRepeatLabel()));
             code.add(new Exit());
             return false;     // while(true) never completes naturally
@@ -405,18 +493,7 @@ public class WhileStatement
             block.completes(ctx, fCompletes, code, errs);
 
             code.add(getContinueLabel());
-            if (cond instanceof AssignmentStatement)
-                {
-                AssignmentStatement stmtCond = (AssignmentStatement) cond;
-                fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
-                code.add(new JumpTrue(stmtCond.getConditionRegister(), getRepeatLabel()));
-                }
-            else
-                {
-                Expression exprCond = (Expression) cond;
-                exprCond.generateConditionalJump(ctx, code, getRepeatLabel(), true, errs);
-                fCompletes &= exprCond.isCompletable();
-                }
+            fCompletes = emitConditionTest(ctx, fCompletes, code, errs);
             code.add(new Exit());
             return fCompletes;
             }
@@ -438,7 +515,8 @@ public class WhileStatement
         //   JMP_TRUE cond Repeat
         //   EXIT                   ; omitted if no declarations
         //   Break:
-        boolean fHasDecls = cond instanceof AssignmentStatement && ((AssignmentStatement) cond).hasDeclarations();
+        boolean fHasDecls = conds.stream().anyMatch(cond ->
+                cond instanceof AssignmentStatement && ((AssignmentStatement) cond).hasDeclarations());
         boolean fOwnScope = fHasDecls || fHasLabelVars;
         if (fOwnScope)
             {
@@ -447,9 +525,15 @@ public class WhileStatement
         Label labelInit = emitLabelVarCreation(code, regFirst, regCount);
         if (fHasDecls)
             {
-            for (VariableDeclarationStatement stmtDecl : ((AssignmentStatement) cond).takeDeclarations())
+            for (AstNode cond : conds)
                 {
-                fCompletes &= stmtDecl.completes(ctx, fCompletes, code, errs);
+                if (cond instanceof AssignmentStatement)
+                    {
+                    for (VariableDeclarationStatement stmtDecl : ((AssignmentStatement) cond).takeDeclarations())
+                        {
+                        fCompletes &= stmtDecl.completes(ctx, fCompletes, code, errs);
+                        }
+                    }
                 }
             }
         code.add(new Jump(labelInit == null ? getContinueLabel() : labelInit));
@@ -461,18 +545,7 @@ public class WhileStatement
 
         code.add(getContinueLabel());
         emitLabelVarUpdate(code, regFirst, regCount, labelInit);
-        if (cond instanceof AssignmentStatement)
-            {
-            AssignmentStatement stmtCond = (AssignmentStatement) cond;
-            fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
-            code.add(new JumpTrue(stmtCond.getConditionRegister(), getRepeatLabel()));
-            }
-        else
-            {
-            Expression exprCond = (Expression) cond;
-            exprCond.generateConditionalJump(ctx, code, getRepeatLabel(), true, errs);
-            fCompletes &= exprCond.isCompletable();
-            }
+        fCompletes = emitConditionTest(ctx, fCompletes, code, errs);
         if (fOwnScope)
             {
             code.add(new Exit());
@@ -538,6 +611,43 @@ public class WhileStatement
             }
         }
 
+    private boolean emitConditionTest(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+        {
+        boolean fCompletes = fReachable;
+        for (int i = 0, c = getConditionCount(); i < c; ++i)
+            {
+            AstNode cond  = getCondition(i);
+            boolean fLast = i == c-1;
+            if (cond instanceof AssignmentStatement)
+                {
+                AssignmentStatement stmtCond = (AssignmentStatement) cond;
+                fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
+                if (fLast)
+                    {
+                    code.add(new JumpTrue(stmtCond.getConditionRegister(), getRepeatLabel()));
+                    }
+                else
+                    {
+                    code.add(new JumpFalse(stmtCond.getConditionRegister(), getEndLabel()));
+                    }
+                }
+            else
+                {
+                Expression exprCond = (Expression) cond;
+                if (fLast)
+                    {
+                    exprCond.generateConditionalJump(ctx, code, getRepeatLabel(), true, errs);
+                    }
+                else
+                    {
+                    exprCond.generateConditionalJump(ctx, code, getEndLabel(), false, errs);
+                    }
+                fCompletes &= exprCond.isCompletable();
+                }
+            }
+
+        return fCompletes;
+        }
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -549,12 +659,17 @@ public class WhileStatement
         if (keyword.getId() == Token.Id.WHILE || keyword.getId() == Token.Id.FOR)
             {
             sb.append(keyword.getId().TEXT)
-              .append(" (");
+              .append(" (")
+              .append(conds.get(0));
 
-            sb.append(cond)
-              .append(")\n");
+            for (int i = 1, c = conds.size(); i < c; ++i)
+                {
+                sb.append(", ")
+                  .append(conds.get(i));
+                }
 
-            sb.append(indentLines(block.toString(), "    "));
+            sb.append(")\n")
+              .append(indentLines(block.toString(), "    "));
             }
         else
             {
@@ -565,8 +680,13 @@ public class WhileStatement
               .append(indentLines(block.toString(), "    "))
               .append("\nwhile (");
 
-            sb.append(cond)
-                    .append(");");
+            sb.append(conds.get(0));
+            for (int i = 1, c = conds.size(); i < c; ++i)
+                {
+                sb.append(", ")
+                  .append(conds.get(i));
+                }
+            sb.append(");");
             }
 
         return sb.toString();
@@ -582,7 +702,7 @@ public class WhileStatement
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token          keyword;
-    protected AstNode        cond;
+    protected List<AstNode>  conds;
     protected StatementBlock block;
     protected long           lEndPos;
 
@@ -601,5 +721,5 @@ public class WhileStatement
      */
     private transient List<Map<String, Assignment>> m_listContinues;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(WhileStatement.class, "cond", "block");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(WhileStatement.class, "conds", "block");
     }

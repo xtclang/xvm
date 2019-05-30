@@ -66,7 +66,7 @@ const Type<DataType>
         ListMap<String, MultiMethod> map = new ListMap();
         for (Method method : allMethods)
             {
-            if (MultiMethod multi : map.get(method.name))
+            if (MultiMethod multi := map.get(method.name))
                 {
                 map.put(method.name, multi.add(method));
                 }
@@ -134,7 +134,7 @@ const Type<DataType>
         ListMap<String, MultiMethod> map = new ListMap();
         for (Method method : methods)
             {
-            if (MultiMethod multi : map.get(method.name))
+            if (MultiMethod multi := map.get(method.name))
                 {
                 map.put(method.name, multi.add(method));
                 }

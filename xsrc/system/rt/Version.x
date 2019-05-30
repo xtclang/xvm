@@ -128,7 +128,7 @@ const Version
         // check for "+" (start of build string)
         Int     end   = version.size-1;
         String? build = null;
-        if (Int buildStart : version.indexOf('+'))
+        if (Int buildStart := version.indexOf('+'))
             {
             if (buildStart < end)
                 {
@@ -192,8 +192,8 @@ const Version
         if (fAnyChars)
             {
             String name = version[start..end];
-            // if (Form form : Form.byName.get(name))
-            if (Form form : Form_byName_get(name))
+            // TODO GG? if (Form form := Form.byName.get(name))
+            if (Form form := Form_byName_get(name))
                 {
                 construct Version(parent, form, build);
                 }

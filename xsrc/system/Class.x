@@ -416,7 +416,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
         ListMap<String, MultiMethod> map = new ListMap();
         for (Method method : methods)
             {
-            if (MultiMethod multi : map.get(method.name))
+            if (MultiMethod multi := map.get(method.name))
                 {
                 map.put(method.name, multi.add(method));
                 }
@@ -440,7 +440,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
         ListMap<String, MultiFunction> map = new ListMap();
         for (Function function_ : functions)
             {
-            if (MultiFunction multi : map.get(function_.name))
+            if (MultiFunction multi := map.get(function_.name))
                 {
                 map.put(function_.name, multi.add(function_));
                 }

@@ -24,7 +24,7 @@ class OSFileStore
     @Override
     @Lazy Directory root.calc()
         {
-        assert Directory|File dir : find(Path.ROOT);
+        assert Directory|File dir := find(Path.ROOT);
         return dir.as(Directory);
         }
 
