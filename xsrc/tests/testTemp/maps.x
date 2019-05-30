@@ -27,7 +27,7 @@ module TestMaps.xqiz.it
         map.put(1, "Hello from Map");
         map.put(2, "Goodbye from Map");
 
-        if (String s : map.get(1))
+        if (String s := map.get(1))
             {
             console.println(s);
             }

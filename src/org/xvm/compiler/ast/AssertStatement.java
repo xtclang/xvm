@@ -105,13 +105,7 @@ public class AssertStatement
     protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
         {
         assert findCondition(exprChild) >= 0;
-
-        Label label = m_labelAssertFalse;
-        if (label == null)
-            {
-            m_labelAssertFalse = label = new Label("assertFalse");
-            }
-        return label;
+        return getEndLabel();
         }
 
     @Override
@@ -217,13 +211,6 @@ public class AssertStatement
                 }
             }
 
-        if (m_labelAssertFalse != null)
-            {
-            code.add(new Jump(getEndLabel()));
-            code.add(m_labelAssertFalse);
-            code.add(new Assert(pool().valFalse()));
-            }
-
         return fCompletes;
         }
 
@@ -305,12 +292,6 @@ public class AssertStatement
 
     protected Token         keyword;
     protected List<AstNode> conds;
-
-    /**
-     * The grounding label for the assertion expression(s). (A short-circuiting expression results
-     * in an assertion, because the condition evaluates to False.)
-     */
-    private Label m_labelAssertFalse;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AssertStatement.class, "conds");
     }

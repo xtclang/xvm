@@ -386,6 +386,7 @@ public class AssignmentStatement
                     {
                     case Assign:
                     case CondLeft:
+                    case CondRight:
                     case InPlace:
                         // allow the r-value to resolve names based on the l-value type's
                         // contributions
@@ -397,7 +398,6 @@ public class AssignmentStatement
                     case ForCond:      // e.g. "for (a : b) {...}"
                     case IfCond:       // e.g. "if (a := b) {...}" or "a := b;"
                         {
-// TODO
                         int            cLeft     = atypeLeft.length;
                         TypeConstant[] atypeTest = new TypeConstant[cLeft + 1];
                         atypeTest[0] = pool().typeBoolean();
@@ -406,6 +406,9 @@ public class AssignmentStatement
                         fit = rvalue.testFitMulti(ctx, atypeTest);
                         break;
                         }
+
+                    default:
+                        throw new IllegalStateException();
                     }
 
                 if (!fit.isFit())
@@ -473,7 +476,6 @@ public class AssignmentStatement
 
             case ForCond:
             case IfCond:
-// TODO
             case CondRight:
                 {
                 // (LVal : RVal) or (LVal0, LVal1, ..., LValN : RVal)
@@ -489,7 +491,7 @@ public class AssignmentStatement
 
                 // conditional expressions can update the LVal type from the RVal type, but the
                 // initial boolean is discarded
-                if (exprRightNew != null && getCategory() == Category.ForCond)
+                if (exprRightNew != null && isConditional())
                     {
                     TypeConstant[] atypeAll = exprRightNew.getTypes();
                     int            cTypes   = atypeAll.length - 1;
@@ -586,6 +588,7 @@ public class AssignmentStatement
                 }
 
             case ForCond:
+            case IfCond:
                 {
                 Assignable[] LVals    = lvalueExpr.generateAssignables(ctx, code, errs);
                 int          cLVals   = LVals.length;
@@ -635,23 +638,9 @@ public class AssignmentStatement
                 break;
                 }
 
-            case IfCond:
-                {
-                // "a := b" -> "if (a : b) {}" (without separate scope)
-                Assignable[] LVals    = lvalueExpr.generateAssignables(ctx, code, errs);
-                int          cLVals   = LVals.length;
-                int          cAll     = cLVals + 1;
-                Assignable[] LValsAll = new Assignable[cAll];
-                Register     regCond  = new Register(pool().typeBoolean(), Op.A_STACK);
-                LValsAll[0] = lvalueExpr.new Assignable(regCond);
-                System.arraycopy(LVals, 0, LValsAll, 1, cLVals);
-                if (fCompletes &= lvalueExpr.isCompletable())
-                    {
-                    rvalue.generateAssignments(ctx, code, LVals, errs);
-                    fCompletes &= rvalue.isCompletable();
-                    }
-                break;
-                }
+            case CondRight:
+                // TODO
+                throw new UnsupportedOperationException("TODO");
 
             case InPlace:
                 {
@@ -666,6 +655,9 @@ public class AssignmentStatement
                     }
                 break;
                 }
+
+            default:
+                throw new IllegalStateException();
             }
 
         return fCompletes;

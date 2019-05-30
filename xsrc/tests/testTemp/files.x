@@ -66,7 +66,7 @@ module TestFiles.xqiz.it
         console.println($"{curDir.name} content:");
         for (String name : curDir.names())
             {
-            if (File|Directory node : curDir.find(name))
+            if (File|Directory node := curDir.find(name))
                 {
                 if (node.is(File))
                     {

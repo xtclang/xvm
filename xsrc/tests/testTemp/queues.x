@@ -18,7 +18,7 @@ module TestQueues.xqiz.it
         ArrayDeque<String> deque = new ArrayDeque();
         deque.add("hello");
         deque.add("world");
-        while (String s : deque.next())
+        while (String s := deque.next())
             {
             console.println("next()=" + s);
             }
