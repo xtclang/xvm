@@ -17,7 +17,7 @@ interface Iterator<ElementType>
      */
     void forEach(function void (ElementType) process)
         {
-        while (ElementType value : next())
+        while (ElementType value := next())
             {
             process(value);
             }
@@ -36,7 +36,7 @@ interface Iterator<ElementType>
      */
     Boolean whileEach(function Boolean process(ElementType))
         {
-        while (ElementType value : next())
+        while (ElementType value := next())
             {
             if (!process(value))
                 {
@@ -59,7 +59,7 @@ interface Iterator<ElementType>
      */
     Boolean untilAny(function Boolean process(ElementType))
         {
-        while (ElementType value : next())
+        while (ElementType value := next())
             {
             if (process(value))
                 {

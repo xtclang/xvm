@@ -34,7 +34,7 @@ class ReifiedEntry<KeyType, ValueType>
         @Override
         ValueType get()
             {
-            if (ValueType value : map.get(key))
+            if (ValueType value := map.get(key))
                 {
                 return value;
                 }

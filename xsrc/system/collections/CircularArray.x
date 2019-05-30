@@ -288,7 +288,7 @@ class CircularArray<ElementType>
             }
         else if (additional == 1)
             {
-            assert ElementType value : values.iterator().next();
+            assert ElementType value := values.iterator().next();
             return insert(index, value);
             }
 

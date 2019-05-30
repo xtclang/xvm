@@ -335,7 +335,7 @@ public class ForEachStatement
         //   4) map keys   :  L: for (K key            : container.as(Map<K,T>   )) {...}
         //   5) map entries:  L: for ((K key, T value) : container.as(Map<K,T>   )) {...}
         //   6) iterable   :  L: for (T value          : container.as(Iterable<T>)) {...}
-        assert cond.getCategory() == Category.CondExpr;
+        assert cond.getCategory() == Category.ForCond;
 
         // validate the LValue declarations and any LValue sub-expressions
         AstNode condLVal = cond.getLValue();

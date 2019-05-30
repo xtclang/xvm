@@ -29,7 +29,7 @@ class KeyValues<KeyType, ValueType>(Map<KeyType, ValueType> map)
             @Override
             conditional ValueType next()
                 {
-                if (KeyType key : keyIterator.next())
+                if (KeyType key := keyIterator.next())
                     {
                     return map.get(key);
                     }
@@ -46,7 +46,7 @@ class KeyValues<KeyType, ValueType>(Map<KeyType, ValueType> map)
 
         map.keys.iterator().untilAny(key ->
             {
-            if (ValueType test : map.get(key))
+            if (ValueType test := map.get(key))
                 {
                 if (test == value)
                     {
@@ -67,7 +67,7 @@ class KeyValues<KeyType, ValueType>(Map<KeyType, ValueType> map)
 
         (_, Int removed) = map.keys.removeIf(key ->
                 {
-                assert ValueType value : map.get(key);
+                assert ValueType value := map.get(key);
                 return shouldRemove(value);
                 });
         return this, removed;

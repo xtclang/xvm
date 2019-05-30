@@ -55,7 +55,7 @@ const CPFileStore(String path, Object constRoot)
                     assert;
 
                 case Name:
-                    if (Directory|File node : dir.find(segment.name))
+                    if (Directory|File node := dir.find(segment.name))
                         {
                         if (Segments.last)
                             {
@@ -84,7 +84,7 @@ const CPFileStore(String path, Object constRoot)
     @Override
     Directory dirFor(Path path)
         {
-        if (Directory|File node : find(path))
+        if (Directory|File node := find(path))
             {
             if (node.is(Directory))
                 {
@@ -98,7 +98,7 @@ const CPFileStore(String path, Object constRoot)
     @Override
     File fileFor(Path path)
         {
-        if (Directory|File node : find(path))
+        if (Directory|File node := find(path))
             {
             if (node.is(File))
                 {

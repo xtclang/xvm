@@ -86,7 +86,7 @@ const Time(Int picos)
 
         if (secs != "")
             {
-            if (Int dot : secs.indexOf('.'))
+            if (Int dot := secs.indexOf('.'))
                 {
                 if (dot > 0)
                     {

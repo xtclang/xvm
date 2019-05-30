@@ -38,7 +38,7 @@ interface Sequential
     @Op
     Sequential prevValue()
         {
-        if (Sequential value : prev())
+        if (Sequential value := prev())
             {
             return value;
             }
@@ -54,7 +54,7 @@ interface Sequential
     @Op
     Sequential nextValue()
         {
-        if (Sequential value : next())
+        if (Sequential value := next())
             {
             return value;
             }

@@ -213,7 +213,7 @@ public class MultipleLValueStatement
 
         AstNode parent = getParent();
         boolean fCond  = parent instanceof AssignmentStatement
-                && ((AssignmentStatement) parent).getCategory() == Category.CondExpr;
+                && ((AssignmentStatement) parent).getCategory() == Category.ForCond;
         if (!fCond)
             {
             sb.append('(');

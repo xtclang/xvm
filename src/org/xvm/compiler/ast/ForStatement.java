@@ -19,6 +19,7 @@ import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.IP_Inc;
 import org.xvm.asm.op.Jump;
+import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Move;
 import org.xvm.asm.op.Var_IN;
@@ -33,7 +34,6 @@ import static org.xvm.util.Handy.indentLines;
  * The traditional "for" statement.
  * <p/>
  * TODO lots of short-circuit support. for expr condition, it goes to the for statement's exit label. for init & update, the short-circuit just advances to next.
- * TODO add multi condition to bnf
  */
 public class ForStatement
         extends Statement
@@ -41,18 +41,57 @@ public class ForStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public ForStatement(Token keyword, List<Statement> init, Expression expr,
-                        List<Statement> update, StatementBlock block)
+    public ForStatement(
+            Token           keyword,
+            List<Statement> init,
+            List<AstNode>   conds,
+            List<Statement> update,
+            StatementBlock  block)
         {
         this.keyword = keyword;
-        this.init    = init == null ? Collections.EMPTY_LIST : init;
-        this.expr    = expr;
+        this.init    = init   == null ? Collections.EMPTY_LIST : init;
+        this.conds   = conds  == null ? Collections.EMPTY_LIST : conds;
         this.update  = update == null ? Collections.EMPTY_LIST : update;
         this.block   = block;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * @return the number of conditions
+     */
+    public int getConditionCount()
+        {
+        return conds.size();
+        }
+
+    /**
+     * @param i  a value between 0 and {@link #getConditionCount()}-1
+     *
+     * @return the condition, which is either an Expression or an AssignmentStatement
+     */
+    public AstNode getCondition(int i)
+        {
+        return conds.get(i);
+        }
+
+    /**
+     * @param exprChild  an expression that is a child of this statement
+     *
+     * @return the index of the expression in the list of conditions within this statement, or -1
+     */
+    public int findCondition(Expression exprChild)
+        {
+        for (int i = 0, c = getConditionCount(); i < c; ++i)
+            {
+            if (conds.get(i) == exprChild)
+                {
+                return i;
+                }
+            }
+        return -1;
+        }
 
     @Override
     public boolean isNaturalShortCircuitStatementTarget()
@@ -174,6 +213,22 @@ public class ForStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
+    protected boolean allowsShortCircuit(Expression exprChild)
+        {
+        // only short-circuitable expressions are in the conditions
+        return findCondition(exprChild) >= 0;
+        }
+
+    @Override
+    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
+        {
+        assert findCondition(exprChild) >= 0;
+
+        // TODO snap-shot the assignment-info-delta
+        return getEndLabel();
+        }
+
+    @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
         boolean fValid = true;
@@ -205,18 +260,39 @@ public class ForStatement
         // expression evaluates to "false"
         ctx = ctx.enterIf();
 
-        // TODO at some point, this will be changed to a list of AstNodes instead of a single expression
-        Expression exprOld = expr;
-        Expression exprNew = exprOld == null ? null : exprOld.validate(ctx, pool().typeBoolean(), errs);
-        if (exprNew != exprOld)
+        for (int i = 0, c = getConditionCount(); i < c; ++i)
             {
-            if (exprNew == null)
+            AstNode cond = getCondition(i);
+
+            // the condition is either a boolean expression or an assignment statement whose R-value
+            // is a multi-value with the first value being a boolean
+            if (cond instanceof AssignmentStatement)
                 {
-                fValid = false;
+                AssignmentStatement stmtOld = (AssignmentStatement) cond;
+                AssignmentStatement stmtNew = (AssignmentStatement) stmtOld.validate(ctx, errs);
+                if (stmtNew == null)
+                    {
+                    fValid = false;
+                    }
+                else if (stmtNew != stmtOld)
+                    {
+                    cond = stmtNew;
+                    conds.set(i, cond);
+                    }
                 }
             else
                 {
-                expr = exprNew;
+                Expression exprOld = (Expression) cond;
+                Expression exprNew = exprOld.validate(ctx, pool().typeBoolean(), errs);
+                if (exprNew == null)
+                    {
+                    fValid = false;
+                    }
+                else  if (exprNew != exprOld)
+                    {
+                    cond = exprNew;
+                    conds.set(i, cond);
+                    }
                 }
             }
 
@@ -313,13 +389,61 @@ public class ForStatement
         Label labelRepeat = new Label("loop_for_" + getLabelId());
         code.add(labelRepeat);
 
-        if (expr != null)
+        // any condition of false results in false (as long as all conditions up to that point are
+        // constant); all condition of true results in true (as long as all conditions are constant)
+        boolean fAlwaysTrue  = true;
+        boolean fAlwaysFalse = true;
+        for (AstNode cond : conds)
             {
-            expr.generateConditionalJump(ctx, code, getEndLabel(), false, errs);
-            fCompletes &= expr.isCompletable();
+            if (cond instanceof Expression && ((Expression) cond).isConstant())
+                {
+                if (((Expression) cond).isConstantFalse())
+                    {
+                    fAlwaysTrue = false;
+                    break;
+                    }
+                else
+                    {
+                    assert ((Expression) cond).isConstantTrue();
+                    fAlwaysFalse = false;
+                    }
+                }
+            else
+                {
+                fAlwaysTrue  = false;
+                fAlwaysFalse = false;
+                break;
+                }
             }
 
-        fCompletes = block.completes(ctx, fCompletes, code, errs);
+        boolean fBlockReachable = fCompletes;
+        if (fAlwaysFalse)
+            {
+            code.add(new Jump(getEndLabel()));
+            fBlockReachable = false;
+            }
+        else if (!fAlwaysTrue)
+            {
+            for (int i = 0, c = getConditionCount(); i < c; ++i)
+                {
+                AstNode cond = getCondition(i);
+                boolean fLast = i == c-1;
+                if (cond instanceof AssignmentStatement)
+                    {
+                    AssignmentStatement stmtCond = (AssignmentStatement) cond;
+                    fBlockReachable &= stmtCond.completes(ctx, fCompletes, code, errs);
+                    code.add(new JumpFalse(stmtCond.getConditionRegister(), getEndLabel()));
+                    }
+                else
+                    {
+                    Expression exprCond = (Expression) cond;
+                    exprCond.generateConditionalJump(ctx, code, getEndLabel(), false, errs);
+                    fBlockReachable &= exprCond.isCompletable();
+                    }
+                }
+            }
+
+        fCompletes &= block.completes(ctx, fBlockReachable, code, errs) || !fAlwaysTrue;
 
         if (hasContinueLabel())
             {
@@ -330,7 +454,7 @@ public class ForStatement
         int             cUpdate    = listUpdate.size();
         for (int i = 0; i < cUpdate; ++i)
             {
-            fCompletes = listUpdate.get(i).completes(ctx, fCompletes, code, errs);
+            fCompletes &= listUpdate.get(i).completes(ctx, fCompletes, code, errs) || !fAlwaysTrue;
             }
 
         if (regFirst != null)
@@ -379,9 +503,14 @@ public class ForStatement
 
         sb.append("; ");
 
-        if (expr != null)
+        if (conds != null && !conds.isEmpty())
             {
-            sb.append(expr);
+            sb.append(conds.get(0));
+            for (int i = 1, c = conds.size(); i < c; ++i)
+                {
+                sb.append(", ")
+                  .append(conds.get(i));
+                }
             }
 
         sb.append("; ");
@@ -414,13 +543,12 @@ public class ForStatement
 
     protected Token           keyword;
     protected List<Statement> init;
-    protected Expression      expr;
+    protected List<AstNode>   conds;
     protected List<Statement> update;
     protected StatementBlock  block;
 
     private static int s_nLabelCounter;
     private transient int   m_nLabel;
-    private transient Label m_labelRepeat;
     private transient Label m_labelContinue;
 
     private transient Context       m_ctxLabelVars;
@@ -433,5 +561,5 @@ public class ForStatement
      */
     private transient List<Map<String, Assignment>> m_listContinues;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(ForStatement.class, "init", "expr", "update", "block");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(ForStatement.class, "init", "conds", "update", "block");
     }

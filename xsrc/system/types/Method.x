@@ -39,7 +39,7 @@ const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
         {
         if (ReturnTypes.size == 1 && ReturnTypes[0].isA(Ref) && ParamTypes.size == 0)
             {
-            if (MultiMethod getters : ReturnTypes[0].methodsByName.get("get"))
+            if (MultiMethod getters := ReturnTypes[0].methodsByName.get("get"))
                 {
                 for (Method<> getter : getters.methods)
                     {
@@ -75,7 +75,7 @@ const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
         {
         paramLoop: for (Type paramType : ParamTypes)
             {
-            if (String[] names : formalParamNames(paramLoop.count))
+            if (String[] names := formalParamNames(paramLoop.count))
                 {
                 if (!ignoreImmediateProduction && names.contains(typeName))
                     {
@@ -93,7 +93,7 @@ const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
 
         returnLoop: for (Type returnType : ReturnTypes)
             {
-            if (String[] names : formalReturnNames(returnLoop.count))
+            if (String[] names := formalReturnNames(returnLoop.count))
                 {
                 // may produce, but doesn't consume
                 }
@@ -124,7 +124,7 @@ const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
         {
         returnLoop: for (Type returnType : ReturnTypes)
             {
-            if (String[] names : formalReturnNames(returnLoop.count))
+            if (String[] names := formalReturnNames(returnLoop.count))
                 {
                 if (names.contains(typeName))
                     {
@@ -142,7 +142,7 @@ const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
 
         paramLoop: for (Type paramType : ParamTypes)
             {
-            if (String[] names : formalParamNames(paramLoop.count))
+            if (String[] names := formalParamNames(paramLoop.count))
                 {
                 // may produce, but doesn't consume
                 }
@@ -199,7 +199,7 @@ const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
         Iterator<Type> iterR1 = that.ReturnTypes.iterator();
         for (Type typeR2 : this.ReturnTypes)
              {
-             assert Type typeR1 : iterR1.next();
+             assert Type typeR1 := iterR1.next();
              if (!typeR2.isA(typeR1))
                  {
                  return false;
@@ -209,7 +209,7 @@ const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
         Iterator<Type> iterP1 = that.ParamTypes.iterator();
         loop: for (Type typeP2 : this.ParamTypes)
             {
-            assert Type typeP1 : iterP1.next();
+            assert Type typeP1 := iterP1.next();
             if (typeP1.isA(typeP2))
                 {
                 continue;
@@ -222,11 +222,11 @@ const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
 
             // if there is an number of different formal names, then at least one of them must be
             // produced by the type T1
-            if (String[] namesThis : this.formalParamNames(loop.count))
+            if (String[] namesThis := this.formalParamNames(loop.count))
                 {
                 Set<String> setThis = new HashSet(namesThis);
 
-                if (String[] namesThat : that.formalParamNames(loop.count))
+                if (String[] namesThat := that.formalParamNames(loop.count))
                     {
                     Set<String> setThat = new HashSet(namesThat);
 

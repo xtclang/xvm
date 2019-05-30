@@ -44,7 +44,7 @@ const CPDirectory(CPFileStore:protected store, Object cookie, Path path, DateTim
                 {
                 if (iter != null)
                     {
-                    if (FileNode node : iter?.next())
+                    if (FileNode node := iter?.next())
                         {
                         return True, node.as(Directory);
                         }
@@ -67,7 +67,7 @@ const CPDirectory(CPFileStore:protected store, Object cookie, Path path, DateTim
                 {
                 if (iter != null)
                     {
-                    if (FileNode node : iter?.next())
+                    if (FileNode node := iter?.next())
                         {
                         return True, node.as(File);
                         }

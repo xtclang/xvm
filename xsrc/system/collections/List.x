@@ -539,7 +539,7 @@ interface List<ElementType>
     @Op("-")
     List remove(ElementType value)
         {
-        if (Int index : indexOf(value))
+        if (Int index := indexOf(value))
             {
             return delete(index);
             }
@@ -550,7 +550,7 @@ interface List<ElementType>
     @Override
     conditional List removeIfPresent(ElementType value)
         {
-        if (Int index : indexOf(value))
+        if (Int index := indexOf(value))
             {
             return True, delete(index);
             }

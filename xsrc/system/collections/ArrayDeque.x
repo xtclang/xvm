@@ -188,7 +188,7 @@ class ArrayDeque<ElementType>
     @Override
     ArrayDeque add(ElementType v)
         {
-        if (Consumer consume : pendingPipe())
+        if (Consumer consume := pendingPipe())
             {
             consume(v);
             }
@@ -346,7 +346,7 @@ class ArrayDeque<ElementType>
         @Override
         Prepender add(ElementType v)
             {
-            if (Consumer consume : pendingPipe())
+            if (Consumer consume := pendingPipe())
                 {
                 consume(v);
                 }

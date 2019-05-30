@@ -184,7 +184,7 @@ class ListMap<KeyType, ValueType>
     @Override
     conditional ValueType get(KeyType key)
         {
-        if (Int index : indexOf(key))
+        if (Int index := indexOf(key))
             {
             return True, listVals[index];
             }
@@ -212,7 +212,7 @@ class ListMap<KeyType, ValueType>
     @Override
     ListMap put(KeyType key, ValueType value)
         {
-        if (Int index : indexOf(key))
+        if (Int index := indexOf(key))
             {
             listVals[index] = value;
             }
@@ -227,7 +227,7 @@ class ListMap<KeyType, ValueType>
     @Override
     ListMap remove(KeyType key)
         {
-        if (Int index : indexOf(key))
+        if (Int index := indexOf(key))
             {
             deleteEntryAt(index);
             }
@@ -238,7 +238,7 @@ class ListMap<KeyType, ValueType>
     @Override
     conditional ListMap remove(KeyType key, ValueType value)
         {
-        if (Int index : indexOf(key))
+        if (Int index := indexOf(key))
             {
             if (listVals[index] == value)
                 {
@@ -365,7 +365,7 @@ class ListMap<KeyType, ValueType>
             {
             verifyMutable();
 
-            if (Int index : indexOf(key))
+            if (Int index := indexOf(key))
                 {
                 deleteEntryAt(index);
                 }
@@ -438,7 +438,7 @@ class ListMap<KeyType, ValueType>
             }
         finally
             {
-            if (index : indexOf(key))
+            if (index := indexOf(key))
                 {
                 exists = True;
                 }
@@ -632,7 +632,7 @@ class ListMap<KeyType, ValueType>
             {
             verifyMutable();
 
-            if (Int index : indexOf(entry))
+            if (Int index := indexOf(entry))
                 {
                 deleteEntryAt(index);
                 }
@@ -700,7 +700,7 @@ class ListMap<KeyType, ValueType>
             // otherwise, search for the entry by key
             if (!found)
                 {
-                if (index : this.ListMap.indexOf(entry.key))
+                if (index := this.ListMap.indexOf(entry.key))
                     {
                     found = True;
                     }
@@ -775,7 +775,7 @@ class ListMap<KeyType, ValueType>
             {
             verifyMutable();
 
-            if (Int index : listVals.indexOf(value))
+            if (Int index := listVals.indexOf(value))
                 {
                 deleteEntryAt(index);
                 }

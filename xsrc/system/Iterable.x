@@ -37,7 +37,7 @@ interface Iterable<ElementType>
             @Override
             conditional ElementType next()
                 {
-                while (ElementType value : iter.next())
+                while (ElementType value := iter.next())
                     {
                     if (match(value))
                         {
