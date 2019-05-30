@@ -1131,8 +1131,6 @@ public abstract class Expression
      * <p/>
      * If the Expression has more than one value, then this will return the first constant value. If
      * the Expression is <i>void</i>, then this will return null.
-     * <p/>
-     * An exception is thrown if the expression does not produce a compile-time constant.
      *
      * @return the compile-time constant value of the expression, or null if the expression is not
      *         constant
