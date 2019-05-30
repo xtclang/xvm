@@ -25,7 +25,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
      */
     construct(String dt)
         {
-        if (Int timeOffset : dt.indexOf('T'))
+        if (Int timeOffset := dt.indexOf('T'))
             {
             if (timeOffset >= 8 && timeOffset <= dt.size-5)
                 {

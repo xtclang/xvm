@@ -52,7 +52,6 @@ Argument
     NamedArgument-opt ArgumentExpression
 
 # note: the "_" argument allows functions to specify arguments that they are NOT binding
-# TODO modify ArgumentExpression from '?' -> '_'
 ArgumentExpression
     "_"
     "<" TypeExpression ">" "_"
@@ -377,6 +376,7 @@ AssignmentOperator
     "^="                // xor-assign
     "?:="               // elvis-assign (assigns only if the LVal is null)
     ":="                // conditional assign (RVal must be @Conditional; assigns starting with 2nd tuple field iff expression is true)
+    "?="                // assigns only if the RVal is not null (also used in conditional statements e.g. "if" to produce conditional False for Null)
 
 LabeledStatement
     Name ":" Statement
@@ -423,10 +423,14 @@ ConditionList
     ConditionList, Condition
 
 Condition
-    TernaryExpression
-    OptionalDeclaration ":" Expression
-    ( OptionalDeclarationList, OptionalDeclaration ) ":" Expression
+    Expression
+    OptionalDeclaration ConditionalAssignmentOp Expression
+    ( OptionalDeclarationList, OptionalDeclaration ) ConditionalAssignmentOp Expression
 
+ConditionalAssignmentOp
+    :=
+    ?=
+    
 ElseStatement
     "else" IfStatement
     "else" StatementBlock

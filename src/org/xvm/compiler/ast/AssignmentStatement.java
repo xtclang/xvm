@@ -180,6 +180,18 @@ public class AssignmentStatement
         }
 
     /**
+     * @return true iff this assignment statement is an if-condition or for-each-condition
+     */
+    public boolean isConditional()
+        {
+        AstNode parent = getParent();
+        return parent instanceof IfStatement
+            || parent instanceof WhileStatement
+            || parent instanceof ForStatement       // TODO "in the second slot"
+            || parent instanceof AssertStatement;
+        }
+
+    /**
      * @return true iff the assignment statement uses the "=" operator
      */
     public Category getCategory()
@@ -188,9 +200,6 @@ public class AssignmentStatement
             {
             case ASN:
                 return Category.Assign;
-
-            case COLON:
-                return Category.CondExpr;
 
             case ADD_ASN:
             case SUB_ASN:
@@ -211,7 +220,13 @@ public class AssignmentStatement
                 return Category.CondLeft;
 
             case COND_ASN:
-                return Category.CondRight;
+            case COND_NN_ASN:
+                return isConditional()
+                        ? Category.IfCond
+                        : Category.CondRight;
+
+            case COLON:
+                return Category.ForCond;
 
             default:
                 throw new IllegalStateException("op=" + op);
@@ -226,12 +241,15 @@ public class AssignmentStatement
         Register reg = m_regCond;
         if (reg == null)
             {
-            if (getCategory() != Category.CondExpr)
+// TODO isConditional() ???
+            if (getCategory() == Category.IfCond || getCategory() == Category.ForCond)
+                {
+                m_regCond = reg = new Register(pool().typeBoolean(), Op.A_STACK);
+                }
+            else
                 {
                 throw new IllegalStateException("op=\"" + op.getValueText() + '\"');
                 }
-
-            m_regCond = reg = new Register(pool().typeBoolean(), Op.A_STACK);
             }
 
         return reg;
@@ -368,6 +386,7 @@ public class AssignmentStatement
                     {
                     case Assign:
                     case CondLeft:
+                    case CondRight:
                     case InPlace:
                         // allow the r-value to resolve names based on the l-value type's
                         // contributions
@@ -376,8 +395,8 @@ public class AssignmentStatement
                         ctx = ctx.exit();
                         break;
 
-                    case CondExpr:      // e.g. "if (a : b) {...}"
-                    case CondRight:     // e.g. "a := b;"
+                    case ForCond:      // e.g. "for (a : b) {...}"
+                    case IfCond:       // e.g. "if (a := b) {...}" or "a := b;"
                         {
                         int            cLeft     = atypeLeft.length;
                         TypeConstant[] atypeTest = new TypeConstant[cLeft + 1];
@@ -387,6 +406,9 @@ public class AssignmentStatement
                         fit = rvalue.testFitMulti(ctx, atypeTest);
                         break;
                         }
+
+                    default:
+                        throw new IllegalStateException();
                     }
 
                 if (!fit.isFit())
@@ -452,7 +474,8 @@ public class AssignmentStatement
                     }
                 break;
 
-            case CondExpr:
+            case ForCond:
+            case IfCond:
             case CondRight:
                 {
                 // (LVal : RVal) or (LVal0, LVal1, ..., LValN : RVal)
@@ -468,7 +491,7 @@ public class AssignmentStatement
 
                 // conditional expressions can update the LVal type from the RVal type, but the
                 // initial boolean is discarded
-                if (exprRightNew != null && getCategory() == Category.CondExpr)
+                if (exprRightNew != null && isConditional())
                     {
                     TypeConstant[] atypeAll = exprRightNew.getTypes();
                     int            cTypes   = atypeAll.length - 1;
@@ -564,7 +587,8 @@ public class AssignmentStatement
                 break;
                 }
 
-            case CondExpr:
+            case ForCond:
+            case IfCond:
                 {
                 Assignable[] LVals    = lvalueExpr.generateAssignables(ctx, code, errs);
                 int          cLVals   = LVals.length;
@@ -615,22 +639,8 @@ public class AssignmentStatement
                 }
 
             case CondRight:
-                {
-                // "a := b" -> "if (a : b) {}" (without separate scope)
-                Assignable[] LVals    = lvalueExpr.generateAssignables(ctx, code, errs);
-                int          cLVals   = LVals.length;
-                int          cAll     = cLVals + 1;
-                Assignable[] LValsAll = new Assignable[cAll];
-                Register     regCond  = new Register(pool().typeBoolean(), Op.A_STACK);
-                LValsAll[0] = lvalueExpr.new Assignable(regCond);
-                System.arraycopy(LVals, 0, LValsAll, 1, cLVals);
-                if (fCompletes &= lvalueExpr.isCompletable())
-                    {
-                    rvalue.generateAssignments(ctx, code, LVals, errs);
-                    fCompletes &= rvalue.isCompletable();
-                    }
-                break;
-                }
+                // TODO
+                throw new UnsupportedOperationException("TODO");
 
             case InPlace:
                 {
@@ -645,6 +655,9 @@ public class AssignmentStatement
                     }
                 break;
                 }
+
+            default:
+                throw new IllegalStateException();
             }
 
         return fCompletes;
@@ -686,6 +699,7 @@ public class AssignmentStatement
             case ASN:
             case COLON:
             case COND_ASN:
+            case COND_NN_ASN:
             default:
                 throw new IllegalStateException("op=" + opIP.getId().TEXT);
             }
@@ -762,15 +776,19 @@ public class AssignmentStatement
          */
         Assign,
         /**
-         * a : b (only inside of "if" and "while")
+         * for (a : b) ...
          */
-        CondExpr,
+        ForCond,
+        /**
+         * if (a := b), if (a ?= b) ...
+         */
+        IfCond,
         /**
          * a &&= b, a ||= b, a ?:= b
          */
         CondLeft,
         /**
-         * a := b
+         * a := b, a ?= b
          */
         CondRight,
         /**

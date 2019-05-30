@@ -282,7 +282,7 @@ public class Parser
                 {
                 Token tokIf = expect(Id.IF);
                 expect(Id.L_PAREN);
-                Expression exprIf = parseCondition();
+                Expression exprIf = parseLinkerCondition();
                 expect(Id.R_PAREN);
 
                 // then ...
@@ -580,7 +580,7 @@ public class Parser
                     {
                     Token tokIf = expect(Id.IF);
                     expect(Id.L_PAREN);
-                    Expression exprIf = parseCondition();
+                    Expression exprIf = parseLinkerCondition();
                     expect(Id.R_PAREN);
 
                     // then ...
@@ -922,8 +922,7 @@ public class Parser
                                     }
                                 else
                                     {
-                                    // TODO log error
-                                    throw new CompilerException("not LValue: " + expr);
+                                    expr.log(m_errorListener, Severity.ERROR, NOT_ASSIGNABLE);
                                     }
                                 }
                             else
@@ -1065,6 +1064,7 @@ public class Parser
             case COND_ASN:
             case COND_AND_ASN:
             case COND_OR_ASN:
+            case COND_NN_ASN:
             case COND_ELSE_ASN:
                 {
                 AssignmentStatement stmt = new AssignmentStatement(expr, current(), parseExpression());
@@ -1352,21 +1352,6 @@ public class Parser
                         ? new BreakStatement(keyword, name)
                         : new ContinueStatement(keyword, name);
 
-                // optional: "break if (...);"
-                if (peek().getId() == Id.IF)
-                    {
-                    Token keywordIf = expect(Id.IF);
-                    expect(Id.L_PAREN);
-                    AstNode cond = parseIfCondition();
-                    expect(Id.R_PAREN);
-
-                    // turn the "break" or "continue" into the statement block
-                    StatementBlock block = new StatementBlock(Collections.singletonList(stmt));
-                    block.suppressScope();
-
-                    stmt = new IfStatement(keywordIf, cond, block);
-                    }
-
                 expect(Id.SEMICOLON);
                 return stmt;
                 }
@@ -1441,7 +1426,7 @@ public class Parser
      *
      * <p/><code><pre>
      * AssertStatement
-     *     AssertInstruction IfCondition-opt ";"
+     *     AssertInstruction ConditionList-opt ";"
      *
      * AssertInstruction
      *     "assert"
@@ -1457,14 +1442,14 @@ public class Parser
         {
         Token keyword = current();
 
-        AstNode cond = null;
+        List<AstNode> conds = null;
         if (peek().getId() != Id.SEMICOLON)
             {
-            cond = parseIfCondition();
+            conds = parseConditionList();
             }
 
         expect(Id.SEMICOLON);
-        return new AssertStatement(keyword, cond);
+        return new AssertStatement(keyword, conds);
         }
 
     /**
@@ -1472,7 +1457,7 @@ public class Parser
      *
      * <p/><code><pre>
      * DoStatement
-     *     "do" StatementBlock "while" "(" IfCondition ")" ";"
+     *     "do" StatementBlock "while" "(" ConditionList ")" ";"
      * </pre></code>
      *
      * @return a "do" statement
@@ -1483,10 +1468,10 @@ public class Parser
         StatementBlock block = parseStatementBlock();
         expect(Id.WHILE);
         expect(Id.L_PAREN);
-        AstNode cond = parseIfCondition();
+        List<AstNode> conds = parseConditionList();
         long lEndPos = expect(Id.R_PAREN).getEndPosition();
         expect(Id.SEMICOLON);
-        return new WhileStatement(keyword, cond, block, lEndPos);
+        return new WhileStatement(keyword, conds, block, lEndPos);
         }
 
     /**
@@ -1601,7 +1586,8 @@ public class Parser
                             // the LValue for the condition is a list of multiple LValues
                             LVal = new MultipleLValueStatement(init);
                             }
-                        AssignmentStatement cond = new AssignmentStatement(LVal, expect(Id.COLON), parseExpression(), false);
+                        AssignmentStatement cond = new AssignmentStatement(
+                                LVal, expect(Id.COLON), parseExpression(), false);
                         expect(Id.R_PAREN);
                         return new ForEachStatement(keyword, cond, parseStatementBlock());
                         }
@@ -1612,7 +1598,7 @@ public class Parser
 
         // parse the second part
         expect(Id.SEMICOLON);
-        Expression expr = (peek().getId() == Id.SEMICOLON) ? null : parseExpression();
+        List<AstNode> conds = (peek().getId() == Id.SEMICOLON) ? null : parseConditionList();
         expect(Id.SEMICOLON);
 
         // parse the third part
@@ -1647,6 +1633,7 @@ public class Parser
                 case COND_ASN:
                 case COND_AND_ASN:
                 case COND_OR_ASN:
+                case COND_NN_ASN:
                 case COND_ELSE_ASN:
                     op = peek().getId();
                     // fall through
@@ -1663,7 +1650,7 @@ public class Parser
             }
 
         expect(Id.R_PAREN);
-        return new ForStatement(keyword, (List<Statement>) (List) init, expr, update, parseStatementBlock());
+        return new ForStatement(keyword, (List<Statement>) (List) init, conds, update, parseStatementBlock());
         }
 
     /**
@@ -1671,7 +1658,7 @@ public class Parser
      *
      * <p/><code><pre>
      * IfStatement
-     *     "if" "(" IfCondition ")" StatementBlock ElseStatement-opt
+     *     "if" "(" ConditionList ")" StatementBlock ElseStatement-opt
      *
      * ElseStatement
      *     "else" IfStatement
@@ -1684,28 +1671,37 @@ public class Parser
         {
         Token keyword = expect(Id.IF);
         expect(Id.L_PAREN);
-        AstNode cond = parseIfCondition();
+        List<AstNode> conds = parseConditionList();
         expect(Id.R_PAREN);
         StatementBlock block = parseStatementBlock();
 
         if (match(Id.ELSE) == null)
             {
-            return new IfStatement(keyword, cond, block);
+            return new IfStatement(keyword, conds, block);
             }
         else
             {
             Statement stmtElse = peek().getId() == Id.IF ? parseIfStatement() : parseStatementBlock();
-            return new IfStatement(keyword, cond, block, stmtElse);
+            return new IfStatement(keyword, conds, block, stmtElse);
             }
         }
 
     /**
-     * Parse the IfCondition, which is used in "assert", "if", "while", and "do" statements.
+     * Parse a ConditionList, which is used in "assert", "if", "for", "while", and "do" statements.
      *
      * <p/><code><pre>
-     * IfCondition
-     *     TernaryExpression
-     *     OptionalDeclarationList ":" Expression
+     * ConditionList
+     *     Condition
+     *     ConditionList, Condition
+     *
+     * Condition
+     *     Expression
+     *     OptionalDeclaration ConditionalAssignmentOp Expression
+     *     ( OptionalDeclarationList, OptionalDeclaration ) ConditionalAssignmentOp Expression
+     *
+     * ConditionalAssignmentOp
+     *     :=
+     *     ?=
      *
      * OptionalDeclarationList
      *     OptionalDeclaration
@@ -1715,6 +1711,8 @@ public class Parser
      *     Assignable
      *     VariableTypeExpression Name
      *
+     * # Assignable turns out to be just an Expression that meets certain requirements, i.e. one
+     * # that ends with a Name or an ArrayIndexes
      * Assignable
      *     Name
      *     TernaryExpression "." Name
@@ -1728,7 +1726,18 @@ public class Parser
      *
      * @return the Expression that provides the condition, or the conditional AssignmentStatement
      */
-    AstNode parseIfCondition()
+    List<AstNode> parseConditionList()
+        {
+        List<AstNode> list = new ArrayList<>(4);
+        list.add(parseCondition());
+        while (match(Id.COMMA) != null)
+            {
+            list.add(parseCondition());
+            }
+        return list;
+        }
+
+    AstNode parseCondition()
         {
         Expression     exprLVal;
         TypeExpression typeDecl;
@@ -1760,7 +1769,7 @@ public class Parser
                 // assuming that we haven't already built a list of declarations, then encountering
                 // an expression followed by a semicolon or right parenthesis means the entire
                 // condition is the expression, and we're done
-                Expression expr = parseTernaryExpression();
+                Expression expr = parseExpression();
                 if (listLVals == null && (peek().getId() == Id.SEMICOLON || peek().getId() == Id.R_PAREN))
                     {
                     return expr;
@@ -1804,8 +1813,13 @@ public class Parser
             }
         while (match(Id.COMMA) != null);
 
-        Token      tokAssign = expect(Id.COLON);
-        Expression exprRVal  = parseExpression();
+        Token tokAssign = match(Id.COND_NN_ASN);
+        if (tokAssign == null)
+            {
+            tokAssign = expect(Id.COND_ASN);
+            }
+
+        Expression exprRVal = parseExpression();
 
         // if there is a list, then it's a OptionalDeclarationList; otherwise it's just a single
         // L-Value expression or variable declaration
@@ -2189,7 +2203,7 @@ public class Parser
                 Mark mark = mark();
                 long lStart = expect(Id.L_PAREN).getStartPosition();
 
-                Expression expr = peek().getId() == Id.IGNORED
+                Expression expr = peek().getId() == Id.ANY
                         ? new IgnoredNameExpression(current())
                         : parseExpression();
 
@@ -2202,7 +2216,7 @@ public class Parser
                     listTupleValues.add(expr);
                     while (match(Id.COMMA) != null);
                         {
-                        listTupleValues.add(peek().getId() == Id.IGNORED
+                        listTupleValues.add(peek().getId() == Id.ANY
                                 ? new IgnoredNameExpression(current())
                                 : parseExpression());
                         }
@@ -2218,7 +2232,7 @@ public class Parser
                 }
 
             // single SafeCaseExpression
-            listCaseOptions.add(peek().getId() == Id.IGNORED
+            listCaseOptions.add(peek().getId() == Id.ANY
                     ? new IgnoredNameExpression(current())
                     : parseTernaryExpression());
             }
@@ -2425,7 +2439,7 @@ public class Parser
      *
      * <p/><code><pre>
      * WhileStatement
-     *     "while" "(" IfCondition ")" StatementBlock
+     *     "while" "(" ConditionList ")" StatementBlock
      * </pre></code>
      *
      * @return a "while" statement
@@ -2434,10 +2448,10 @@ public class Parser
         {
         Token keyword = expect(Id.WHILE);
         expect(Id.L_PAREN);
-        AstNode cond = parseIfCondition();
+        List<AstNode> conds = parseConditionList();
         expect(Id.R_PAREN);
         StatementBlock block = parseStatementBlock();
-        return new WhileStatement(keyword, cond, block);
+        return new WhileStatement(keyword, conds, block);
         }
 
     /**
@@ -2543,7 +2557,7 @@ public class Parser
      *
      * @return an expression
      */
-    Expression parseCondition()
+    Expression parseLinkerCondition()
         {
         Expression expr = parseExpression();
         expr.validateCondition(m_errorListener);
@@ -3085,7 +3099,14 @@ public class Parser
                                 ? type
                                 : parseComplexLiteral(type);
                         }
-                    else if (match(Id.COND) != null)
+                    else if (match(Id.COND) == null)
+                        {
+                        // "someArray[3]"
+                        List<Expression> indexes = parseExpressionList();
+                        expect(Id.R_SQUARE);
+                        expr = new ArrayAccessExpression(expr, indexes, getLastMatch().getEndPosition());
+                        }
+                    else
                         {
                         // "SomeClass[?,?]"
                         int cExplicitDims = 1;
@@ -3100,13 +3121,6 @@ public class Parser
                         expr = match(Id.COLON) == null
                                 ? type
                                 : parseComplexLiteral(type);
-                        }
-                    else
-                        {
-                        // "someArray[3]"
-                        List<Expression> indexes = parseExpressionList();
-                        expect(Id.R_SQUARE);
-                        expr = new ArrayAccessExpression(expr, indexes, getLastMatch().getEndPosition());
                         }
                     break;
                     }
@@ -3144,6 +3158,7 @@ public class Parser
      *     "_"
      *     "throw" Expression
      *     "T0D0" TodoFinish-opt
+     *     "assert"
      *     Literal
      * </pre></code>
      *
@@ -3153,7 +3168,7 @@ public class Parser
         {
         switch (peek().getId())
             {
-            case IGNORED:
+            case ANY:
                 {
                 IgnoredNameExpression exprIgnore = new IgnoredNameExpression(current());
                 return peek().getId() == Id.LAMBDA
@@ -3813,7 +3828,24 @@ public class Parser
      * Parse a complex literal.
      *
      * <p/><code><pre>
-     *   TODO update doc
+     * TupleLiteral
+     *     "(" ExpressionList "," Expression ")"                    # compile/runtime type is Tuple
+     *     TypeExpression NoWhitespace ":(" ExpressionList-opt ")"  # type must be a Tuple
+     *
+     * CollectionLiteral
+     *     "[" ExpressionList-opt "]"                               # compile/runtime type is Array
+     *     TypeExpression ":[" ExpressionList-opt "]"               # type must be Collection, Sequence, or List
+     *
+     * MapLiteral
+     *     "[" Entries-opt "]"                                      # compile/runtime type is Map
+     *     TypeExpression ":[" Entries-opt "]"                      # type must be Map
+     *
+     * Entries
+     *     Entry
+     *     Entries "," Entry
+     *
+     * Entry
+     *     Expression "=" Expression
      * </pre></code>
      *
      * @return a literal expression
@@ -3920,14 +3952,7 @@ public class Parser
                         getLastMatch().getEndPosition());
                 }
 
-            case "Date":
-            case "Time":
-            case "DateTime":
-            case "TimeZone":
-            case "Duration":
-                // TODO
-                throw new UnsupportedOperationException("parsing " + sType + " literal");
-
+            // TODO move this to Lexer (like Date etc.)
             case "Version":
             case "v":
                 {
@@ -4769,9 +4794,9 @@ public class Parser
                 {
                 switch (peek().getId())
                     {
-                    case COND:
+                    case ANY:
                         {
-                        Token tokUnbound = match(Id.COND);
+                        Token tokUnbound = expect(Id.ANY);
                         expr = new NonBindingExpression(tokUnbound.getStartPosition(),
                                 tokUnbound.getEndPosition(), null);
                         }
@@ -4779,10 +4804,10 @@ public class Parser
 
                     case COMP_LT:
                         {
-                        Token          tokOpen    = match(Id.COMP_LT);
+                        Token          tokOpen    = expect(Id.COMP_LT);
                         TypeExpression type       = parseTypeExpression();
-                        Token          tokClose   = match(Id.COMP_GT);
-                        Token          tokUnbound = match(Id.COND);
+                        Token          tokClose   = expect(Id.COMP_GT);
+                        Token          tokUnbound = expect(Id.ANY);
                         expr = new NonBindingExpression(tokOpen.getStartPosition(),
                                 tokUnbound.getEndPosition(), type);
                         }

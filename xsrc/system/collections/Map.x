@@ -87,7 +87,7 @@ interface Map<KeyType, ValueType>
     @Op("[]")
     ValueType? getOrNull(KeyType key)
         {
-        if (ValueType value : get(key))
+        if (ValueType value := get(key))
             {
             return value;
             }
@@ -108,7 +108,7 @@ interface Map<KeyType, ValueType>
      */
     ValueType getOrDefault(KeyType key, ValueType dftval)
         {
-        if (ValueType value : get(key))
+        if (ValueType value := get(key))
             {
             return value;
             }
@@ -130,7 +130,7 @@ interface Map<KeyType, ValueType>
      */
     ValueType getOrCompute(KeyType key, function ValueType () compute)
         {
-        if (ValueType value : get(key))
+        if (ValueType value := get(key))
             {
             return value;
             }
@@ -260,12 +260,9 @@ interface Map<KeyType, ValueType>
         {
         if (valueOld != valueNew)
             {
-            if (ValueType valueCur : get(key))
+            if (ValueType valueCur := get(key), valueOld == valueCur)
                 {
-                if (valueOld == valueCur)
-                    {
-                    return True, put(key, valueNew);
-                    }
+                return True, put(key, valueNew);
                 }
             }
 
@@ -300,12 +297,9 @@ interface Map<KeyType, ValueType>
      */
     conditional Map remove(KeyType key, ValueType value)
         {
-        if (ValueType valueOld : get(key))
+        if (ValueType valueOld := get(key), value == valueOld)
             {
-            if (value == valueOld)
-                {
-                return True, remove(key);
-                }
+            return True, remove(key);
             }
 
         return False;
@@ -532,12 +526,9 @@ interface Map<KeyType, ValueType>
 
         for (CompileType.KeyType key1, CompileType.ValueType value1 : map1)
             {
-            if (CompileType.ValueType value2 : map2.get(key1))
+            if (CompileType.ValueType value2 := map2.get(key1), value2 == value1)
                 {
-                if (value2 == value1)
-                    {
-                    continue;
-                    }
+                continue;
                 }
             return False;
             }

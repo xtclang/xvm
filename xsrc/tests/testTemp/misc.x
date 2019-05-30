@@ -254,7 +254,10 @@ module TestMisc.xqiz.it
 
             case 4..5:
                 console.println("4");
-                continue if (FOUR == 4);
+                if (FOUR == 4)
+                    {
+                    continue;
+                    }
                 break;
 
             case 7:
@@ -376,7 +379,7 @@ module TestMisc.xqiz.it
         // REVIEW BUGBUG NPE: Iterator<Int> iter = [1].iterator();
         Int[] array = [1];
         Iterator<Int> iter = array.iterator();
-        assert Int i : iter.next();
+        assert Int i := iter.next();
         console.println("i=" + i);
         }
 
@@ -423,12 +426,12 @@ module TestMisc.xqiz.it
     void testConditional()
         {
         console.println("\n** testConditional()");
-        if (String s : checkPositive(17))
+        if (String s := checkPositive(17))
             {
             console.println(s);
             }
 
-        if (String s : checkPositive(-17))
+        if (String s := checkPositive(-17))
             {
             assert;
             }

@@ -629,10 +629,10 @@ public class LambdaExpression
                 Parameter param = params.get(i);
                 String    sName = asParams[i] = param.getName();
 
-                if (!sName.equals(Id.IGNORED.TEXT) && !setNames.add(sName))
+                if (!sName.equals(Id.ANY.TEXT) && !setNames.add(sName))
                     {
                     param.log(errs, Severity.ERROR, Compiler.DUPLICATE_PARAMETER, sName);
-                    asParams[i] = Id.IGNORED.TEXT;
+                    asParams[i] = Id.ANY.TEXT;
                     fValid      = false;
                     }
 
@@ -865,7 +865,7 @@ public class LambdaExpression
                 else
                     {
                     expr.log(errs, Severity.ERROR, Compiler.NAME_REQUIRED);
-                    asParams[i] = Id.IGNORED.TEXT;
+                    asParams[i] = Id.ANY.TEXT;
                     }
                 }
             }
@@ -1229,7 +1229,7 @@ public class LambdaExpression
                 {
                 TypeConstant type  = atypeParams[i];
                 String       sName = asParams[i];
-                if (!sName.equals(Id.IGNORED.TEXT) && type != null)
+                if (!sName.equals(Id.ANY.TEXT) && type != null)
                     {
                     mapByName.put(sName, new Register(type));
 

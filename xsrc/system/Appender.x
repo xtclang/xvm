@@ -42,7 +42,7 @@ interface Appender<ElementType>
      */
     Appender add(Iterator<ElementType> iter)
         {
-        while (ElementType v : iter.next())
+        while (ElementType v := iter.next())
             {
             add(v);
             }

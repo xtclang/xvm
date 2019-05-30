@@ -422,6 +422,7 @@ public class Token
         COND_AND_ASN ("&&="            ),
         COND_OR_ASN  ("||="            ),
         COND_ASN     (":="             ),
+        COND_NN_ASN  ("?="             ),       // NN -> Not Null
         COND_ELSE_ASN("?:="            ),
         COMP_EQ      ("=="             ),
         COMP_NEQ     ("!="             ),
@@ -433,7 +434,7 @@ public class Token
         INC          ("++"             ),
         DEC          ("--"             ),
         LAMBDA       ("->"             ),
-        IGNORED      ("_"              ),
+        ANY          ("_"              ),
         ALLOW        ("allow"          , true),
         AS           ("as"             ),
         ASSERT       ("assert"         ),

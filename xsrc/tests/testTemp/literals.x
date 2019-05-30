@@ -205,11 +205,11 @@ module TestLiterals.xqiz.it
         dt = new DateTime("2019-05-22T120123.456-5:00");
         console.println($"dt={dt} or {DateTime:2019-05-22T120123.456-05:00}");
         }
-        
+
     void testDurations()
         {
         console.println("\n** testDurations()");
-        
+
         Duration duration = new Duration("P3DT4H5M6S");
         console.println($"duration={duration} or {Duration:P3DT4H5M6S}");
 

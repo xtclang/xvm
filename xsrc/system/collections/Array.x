@@ -483,7 +483,7 @@ class Array<ElementType>
                         {
                         return this[i];
                         }
-                    assert ElementType value : iter.next();
+                    assert ElementType value := iter.next();
                     return value;
                     };
                 ElementType[] result = new Array<ElementType>(this.size + values.size, supply);
@@ -628,7 +628,7 @@ class Array<ElementType>
 
         if (values.size == 1)
             {
-            assert ElementType value : values.iterator().next();
+            assert ElementType value := values.iterator().next();
             return insert(index, value);
             }
 
@@ -646,11 +646,11 @@ class Array<ElementType>
             {
             case Mutable:
                 Iterator<ElementType> iter = values.iterator();
-                assert ElementType value : iter.next();
+                assert ElementType value := iter.next();
                 Element  first = new Element(value);
                 Element  last  = first;
                 Element? head  = this.head;
-                while (value : iter.next())
+                while (value := iter.next())
                     {
                     last.next = new Element(value);
                     }
@@ -690,7 +690,7 @@ class Array<ElementType>
                         }
                     else if (i < index + wedge)
                         {
-                        assert ElementType value : iter.next();
+                        assert ElementType value := iter.next();
                         return value;
                         }
                     else

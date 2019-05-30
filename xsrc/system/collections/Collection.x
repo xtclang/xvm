@@ -74,7 +74,7 @@ interface Collection<ElementType>
      */
     Boolean containsAll(Iterable<ElementType> values)
         {
-        return values.iterator().whileEach(contains(?));
+        return values.iterator().whileEach(contains(_));
         }
 
     /**
@@ -331,7 +331,7 @@ interface Collection<ElementType>
             Iterator iter2 = collection2.iterator();
             for (val value1 : iter1)
                 {
-                assert val value2 : iter2.next();
+                assert val value2 := iter2.next();
                 if (value1 != value2)
                     {
                     return False;

@@ -3,9 +3,10 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.List;
+
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-
 
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
@@ -26,15 +27,15 @@ public class IfStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public IfStatement(Token keyword, AstNode cond, StatementBlock block)
+    public IfStatement(Token keyword, List<AstNode> conds, StatementBlock block)
         {
-        this(keyword, cond, block, null);
+        this(keyword, conds, block, null);
         }
 
-    public IfStatement(Token keyword, AstNode cond, StatementBlock stmtThen, Statement stmtElse)
+    public IfStatement(Token keyword, List<AstNode> conds, StatementBlock stmtThen, Statement stmtElse)
         {
         this.keyword  = keyword;
-        this.cond     = cond;
+        this.conds    = conds;
         this.stmtThen = stmtThen;
         this.stmtElse = stmtElse;
         }
@@ -54,10 +55,39 @@ public class IfStatement
         return stmtElse == null ? stmtThen.getEndPosition() : stmtElse.getEndPosition();
         }
 
-    @Override
-    protected Field[] getChildFields()
+    /**
+     * @return the number of conditions
+     */
+    public int getConditionCount()
         {
-        return CHILD_FIELDS;
+        return conds.size();
+        }
+
+    /**
+     * @param i  a value between 0 and {@link #getConditionCount()}-1
+     *
+     * @return the condition, which is either an Expression or an AssignmentStatement
+     */
+    public AstNode getCondition(int i)
+        {
+        return conds.get(i);
+        }
+
+    /**
+     * @param exprChild  an expression that is a child of this statement
+     *
+     * @return the index of the expression in the list of conditions within this statement, or -1
+     */
+    public int findCondition(Expression exprChild)
+        {
+        for (int i = 0, c = getConditionCount(); i < c; ++i)
+            {
+            if (conds.get(i) == exprChild)
+                {
+                return i;
+                }
+            }
+        return -1;
         }
 
     /**
@@ -86,15 +116,25 @@ public class IfStatement
     @Override
     protected boolean allowsShortCircuit(Expression exprChild)
         {
-        // only expression is the condition
+        // only expressions are in the conditions
+        assert findCondition(exprChild) >= 0;
+
         return true;
         }
 
     @Override
     protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
         {
+        assert findCondition(exprChild) >= 0;
+        
         // TODO snap-shot the assignment-info-delta
         return getElseLabel();
+        }
+
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
         }
 
 
@@ -107,35 +147,39 @@ public class IfStatement
 
         ctx = ctx.enterIf();
 
-        // the condition is either a boolean expression or an assignment statement whose R-value is
-        // a multi-value with the first value being a boolean
-        if (cond instanceof AssignmentStatement)
+        for (int i = 0, c = getConditionCount(); i < c; ++i)
             {
-            AssignmentStatement stmtOld = (AssignmentStatement) cond;
-            AssignmentStatement stmtNew = (AssignmentStatement) stmtOld.validate(ctx, errs);
-            if (stmtNew == null)
+            AstNode cond = getCondition(i);
+
+            // the condition is either a boolean expression or an assignment statement whose R-value
+            // is a multi-value with the first value being a boolean
+            if (cond instanceof AssignmentStatement)
                 {
-                fValid = false;
+                AssignmentStatement stmtOld = (AssignmentStatement) cond;
+                AssignmentStatement stmtNew = (AssignmentStatement) stmtOld.validate(ctx, errs);
+                if (stmtNew == null)
+                    {
+                    fValid = false;
+                    }
+                else if (stmtNew != stmtOld)
+                    {
+                    cond = stmtNew;
+                    conds.set(i, cond);
+                    }
                 }
             else
                 {
-                if (stmtNew != stmtOld)
+                Expression exprOld = (Expression) cond;
+                Expression exprNew = exprOld.validate(ctx, pool().typeBoolean(), errs);
+                if (exprNew == null)
                     {
-                    cond = stmtNew;
+                    fValid = false;
                     }
-                }
-            }
-        else
-            {
-            Expression exprOld = (Expression) cond;
-            Expression exprNew = exprOld.validate(ctx, pool().typeBoolean(), errs);
-            if (exprNew == null)
-                {
-                fValid = false;
-                }
-            else  if (exprNew != exprOld)
-                {
-                cond = exprNew;
+                else  if (exprNew != exprOld)
+                    {
+                    cond = exprNew;
+                    conds.set(i, cond);
+                    }
                 }
             }
 
@@ -176,24 +220,38 @@ public class IfStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        if (cond instanceof Expression && ((Expression) cond).isConstant())
+        // any condition of false results in false (as long as all conditions up to that point are
+        // constant); all condition of true results in true (as long as all conditions are constant)
+        boolean fAlwaysTrue = true;
+        for (AstNode cond : conds)
             {
-            // "if (false) {stmtThen}" is optimized out altogether.
-            // "if (false) {stmtThen} else {stmtElse}" is compiled as "{stmtElse}"
-            // "if (true) {stmtThen}" is compiled as "{stmtThen}"
-            // "if (true) {stmtThen} else {stmtElse}" is compiled as "{stmtThen}"
-            if (((Expression) cond).isConstantTrue())
+            if (cond instanceof Expression && ((Expression) cond).isConstant())
                 {
-                return stmtThen.completes(ctx, fReachable, code, errs);
+                if (((Expression) cond).isConstantFalse())
+                    {
+                    // "if (false) {stmtThen}" is optimized out altogether.
+                    // "if (false) {stmtThen} else {stmtElse}" is compiled as "{stmtElse}"
+                    return stmtElse == null
+                            ? fReachable
+                            : stmtElse.completes(ctx, fReachable, code, errs);
+                    }
+
+                assert ((Expression) cond).isConstantTrue();
                 }
             else
                 {
-                assert ((Expression) cond).isConstantFalse();
-                return stmtElse == null
-                        ? fReachable
-                        : stmtElse.completes(ctx, fReachable, code, errs);
+                fAlwaysTrue = false;
+                break;
                 }
             }
+
+        // "if (true) {stmtThen}" is compiled as "{stmtThen}"
+        // "if (true) {stmtThen} else {stmtElse}" is compiled as "{stmtThen}"
+        if (fAlwaysTrue)
+            {
+            return stmtThen.completes(ctx, fReachable, code, errs);
+            }
+
 
         // "if (cond) {stmtThen}" is compiled as:
         //
@@ -219,36 +277,72 @@ public class IfStatement
         Label labelElse = getElseLabel();
         Label labelExit = new Label();
 
-        boolean fScope = cond instanceof AssignmentStatement && ((AssignmentStatement) cond).hasDeclarations();
-        if (fScope)
+        boolean fScope         = false;
+        boolean fCompletesThen = fReachable;
+        boolean fCompletesElse = fReachable;
+        boolean fFirst         = true;
+        for (AstNode cond : conds)
             {
-            code.add(new Enter());
+            if (!fScope && cond instanceof AssignmentStatement && ((AssignmentStatement) cond).hasDeclarations())
+                {
+                code.add(new Enter());
+                fScope = true;
+                }
+
+            boolean fCompletes;
+            if (cond instanceof AssignmentStatement)
+                {
+                AssignmentStatement stmtCond   = (AssignmentStatement) cond;
+                fCompletes = stmtCond.completes(ctx, fReachable, code, errs);
+                code.add(new JumpFalse(stmtCond.getConditionRegister(), labelElse));
+                }
+            else
+                {
+                Expression exprCond = (Expression) cond;
+                if (exprCond.isConstantTrue())
+                    {
+                    // this condition is a no-op (go to the next condition, and if this was the
+                    // first condition, then treat the next condition as the first condition)
+                    continue;
+                    }
+                else if (exprCond.isConstantFalse())
+                    {
+                    // this condition is the last condition, because "false" caps the list of
+                    // conditions, making the rest unreachable
+                    fCompletesThen = false;
+                    code.add(new Jump(labelElse));
+                    break;
+                    }
+                else
+                    {
+                    fCompletes = exprCond.isCompletable();
+                    exprCond.generateConditionalJump(ctx, code, labelElse, false, errs);
+                    }
+                }
+
+            fCompletesThen &= fCompletes;
+            if (fFirst)
+                {
+                fCompletesElse &= fCompletes;
+                }
+
+            fFirst = false;
             }
 
-        boolean fCompletesCond;
-        if (cond instanceof AssignmentStatement)
+        if (fCompletesThen)
             {
-            AssignmentStatement stmtCond = (AssignmentStatement) cond;
-            fCompletesCond = stmtCond.completes(ctx, fReachable, code, errs);
-            code.add(new JumpFalse(stmtCond.getConditionRegister(), labelElse));
-            }
-        else
-            {
-            Expression exprCond = (Expression) cond;
-            fCompletesCond = exprCond.isCompletable();
-            exprCond.generateConditionalJump(ctx, code, labelElse, false, errs);
-            }
-
-        boolean fCompletesThen = stmtThen.completes(ctx, fCompletesCond, code, errs);
-        if (stmtElse != null)
-            {
-            code.add(new Jump(labelExit));
+            fCompletesThen = stmtThen.completes(ctx, fCompletesThen, code, errs);
+            if (stmtElse != null)
+                {
+                code.add(new Jump(labelExit));
+                }
             }
 
         code.add(labelElse);
-        boolean fCompletesElse = stmtElse == null
-                ? fCompletesCond
-                : stmtElse.completes(ctx, fCompletesCond, code, errs);
+        if (fCompletesElse && stmtElse != null)
+            {
+            fCompletesElse = stmtElse.completes(ctx, fCompletesElse, code, errs);
+            }
 
         code.add(labelExit);
         if (fScope)
@@ -268,8 +362,13 @@ public class IfStatement
         StringBuilder sb = new StringBuilder();
 
         sb.append("if (")
-          .append(cond)
-          .append(")\n")
+          .append(conds.get(0));
+        for (int i = 1, c = conds.size(); i < c; ++i)
+            {
+            sb.append(", ")
+              .append(conds.get(i));
+            }
+        sb.append(")\n")
           .append(indentLines(stmtThen.toString(), "    "));
 
         if (stmtElse != null)
@@ -292,14 +391,14 @@ public class IfStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token     keyword;
-    protected AstNode   cond;
-    protected Statement stmtThen;
-    protected Statement stmtElse;
+    protected Token         keyword;
+    protected List<AstNode> conds;
+    protected Statement     stmtThen;
+    protected Statement     stmtElse;
 
     private static int s_nLabelCounter;
     private transient int   m_nLabel;
     private transient Label m_labelElse;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(IfStatement.class, "cond", "stmtThen", "stmtElse");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(IfStatement.class, "conds", "stmtThen", "stmtElse");
     }

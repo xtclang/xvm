@@ -1,6 +1,11 @@
 package org.xvm.compiler.ast;
 
 
+import java.lang.reflect.Field;
+
+import java.util.Collections;
+import java.util.List;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
@@ -9,11 +14,10 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Assert;
+import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Token;
-
-import java.lang.reflect.Field;
 
 
 /**
@@ -24,10 +28,10 @@ public class AssertStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public AssertStatement(Token keyword, AstNode cond)
+    public AssertStatement(Token keyword, List<AstNode> conds)
         {
         this.keyword = keyword;
-        this.cond = cond;
+        this.conds   = conds == null ? Collections.emptyList() : conds;
         }
 
 
@@ -42,7 +46,44 @@ public class AssertStatement
     @Override
     public long getEndPosition()
         {
-        return cond == null ? keyword.getEndPosition() : cond.getEndPosition();
+        return conds.isEmpty()
+                ? keyword.getEndPosition()
+                : conds.get(conds.size()-1).getEndPosition();
+        }
+
+    /**
+     * @return the number of conditions
+     */
+    public int getConditionCount()
+        {
+        return conds.size();
+        }
+
+    /**
+     * @param i  a value between 0 and {@link #getConditionCount()}-1
+     *
+     * @return the condition, which is either an Expression or an AssignmentStatement
+     */
+    public AstNode getCondition(int i)
+        {
+        return conds.get(i);
+        }
+
+    /**
+     * @param exprChild  an expression that is a child of this statement
+     *
+     * @return the index of the expression in the list of conditions within this statement, or -1
+     */
+    public int findCondition(Expression exprChild)
+        {
+        for (int i = 0, c = getConditionCount(); i < c; ++i)
+            {
+            if (conds.get(i) == exprChild)
+                {
+                return i;
+                }
+            }
+        return -1;
         }
 
     @Override
@@ -63,52 +104,68 @@ public class AssertStatement
     @Override
     protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
         {
+        assert findCondition(exprChild) >= 0;
         return getEndLabel();
         }
 
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
-        boolean fValid = true;
+        boolean fValid  = true;
+        boolean fAborts = conds.isEmpty();
 
-        // the condition is either a boolean expression or an assignment statement whose R-value is
-        // a multi-value with the first value being a boolean
-        if (cond instanceof AssignmentStatement)
+        for (int i = 0, c = getConditionCount(); i < c; ++i)
             {
-            AssignmentStatement stmtOld = (AssignmentStatement) cond;
-            AssignmentStatement stmtNew = (AssignmentStatement) stmtOld.validate(ctx, errs);
-            if (stmtNew == null)
+            AstNode cond = getCondition(i);
+            // the condition is either a boolean expression or an assignment statement whose R-value
+            // is a multi-value with the first value being a boolean
+            if (cond instanceof AssignmentStatement)
                 {
-                fValid = false;
-                }
-            else
-                {
-                if (stmtNew != stmtOld)
+                AssignmentStatement stmtOld = (AssignmentStatement) cond;
+                AssignmentStatement stmtNew = (AssignmentStatement) stmtOld.validate(ctx, errs);
+                if (stmtNew == null)
                     {
-                    cond = stmtNew;
+                    fValid = false;
+                    }
+                else
+                    {
+                    if (stmtNew != stmtOld)
+                        {
+                        cond = stmtNew;
+                        conds.set(i, cond);
+                        }
                     }
                 }
-            }
-        else if (cond instanceof Expression)
-            {
-            // if (keyword.getId() == Token.Id.ASSERT_ALL)
-            ctx = new AssertContext(ctx);
-
-            Expression exprOld = (Expression) cond;
-            Expression exprNew = exprOld.validate(ctx, pool().typeBoolean(), errs);
-            if (exprNew == null)
+            else if (cond instanceof Expression)
                 {
-                fValid = false;
-                }
-            else  if (exprNew != exprOld)
-                {
-                cond = exprNew;
-                }
+                // if (keyword.getId() == Token.Id.ASSERT_ALL)
+                ctx = new AssertContext(ctx);
 
-            ctx = ctx.exit();
+                Expression exprOld = (Expression) cond;
+                Expression exprNew = exprOld.validate(ctx, pool().typeBoolean(), errs);
+                if (exprNew == null)
+                    {
+                    fValid = false;
+                    }
+                else
+                    {
+                    if (exprNew != exprOld)
+                        {
+                        cond = exprNew;
+                        conds.set(i, cond);
+                        }
+
+                    if (exprNew.isConstantFalse())
+                        {
+                        fAborts = true;
+                        }
+                    }
+
+                ctx = ctx.exit();
+                }
             }
 
-        if (cond == null || (cond instanceof Expression && ((Expression) cond).isConstantFalse()))
+        if (fAborts)
             {
             ctx.markNonCompleting();
             }
@@ -121,30 +178,39 @@ public class AssertStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        if (cond instanceof Expression && ((Expression) cond).isConstantTrue())
-            {
-            return fReachable;
-            }
-
-        if (cond == null || (cond instanceof Expression && ((Expression) cond).isConstantFalse()))
+        int cConds = getConditionCount();
+        if (cConds == 0)
             {
             code.add(new Assert(pool().valFalse()));
             return false;
             }
 
         boolean fCompletes = fReachable;
-        if (cond instanceof AssignmentStatement)
+        for (int i = 0; i < cConds; ++i)
             {
-            AssignmentStatement stmtCond = (AssignmentStatement) cond;
-            fCompletes = stmtCond.completes(ctx, fCompletes, code, errs);
-            code.add(new Assert(stmtCond.getConditionRegister()));
+            AstNode cond = getCondition(i);
+            if (cond instanceof AssignmentStatement)
+                {
+                AssignmentStatement stmtCond = (AssignmentStatement) cond;
+                fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
+                code.add(new Assert(stmtCond.getConditionRegister()));
+                }
+            else
+                {
+                Expression exprCond = (Expression) cond;
+                if (exprCond.isConstantFalse())
+                    {
+                    code.add(new Assert(pool().valFalse()));
+                    fCompletes = false;
+                    }
+                else if (!exprCond.isConstantTrue())
+                    {
+                    fCompletes &= exprCond.isCompletable();
+                    code.add(new Assert(exprCond.generateArgument(ctx, code, true, true, errs)));
+                    }
+                }
             }
-        else
-            {
-            Expression exprCond = (Expression) cond;
-            fCompletes &= exprCond.isCompletable();
-            code.add(new Assert(exprCond.generateArgument(ctx, code, true, true, errs)));
-            }
+
         return fCompletes;
         }
 
@@ -201,10 +267,15 @@ public class AssertStatement
 
         sb.append(keyword.getId().TEXT);
 
-        if (cond != null)
+        if (conds != null && !conds.isEmpty())
             {
             sb.append(' ')
-              .append(cond);
+              .append(conds.get(0));
+            for (int i = 1, c = conds.size(); i < c; ++i)
+                {
+                sb.append(", ")
+                  .append(conds.get(i));
+                }
             }
 
         return sb.toString();
@@ -219,8 +290,8 @@ public class AssertStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token   keyword;
-    protected AstNode cond;
+    protected Token         keyword;
+    protected List<AstNode> conds;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(AssertStatement.class, "cond");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(AssertStatement.class, "conds");
     }
