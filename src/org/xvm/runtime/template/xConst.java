@@ -109,12 +109,10 @@ public class xConst
             {
             IntervalConstant constInterval = (IntervalConstant) constant;
 
-            Constant     const1 = constInterval.getFirst();
-            Constant     const2 = constInterval.getLast();
-            ObjectHandle h1     = frame.getConstHandle(const1);
-            ObjectHandle h2     = frame.getConstHandle(const2);
+            ObjectHandle h1 = frame.getConstHandle(constInterval.getFirst());
+            ObjectHandle h2 = frame.getConstHandle(constInterval.getLast());
 
-            TypeConstant     typeInterval = frame.f_context.f_heapGlobal.getConstType(constInterval);
+            TypeConstant     typeInterval = constInterval.getType();
             ClassComposition clzInterval  = f_templates.resolveClass(typeInterval);
             MethodStructure  constructor  = INTERVAL_CONSTRUCT;
 

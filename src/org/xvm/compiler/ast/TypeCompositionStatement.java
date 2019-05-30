@@ -1891,7 +1891,14 @@ public class TypeCompositionStatement
                     }
 
                 Expression exprOld = constructorParams.get(i).value;
-                Expression exprNew = exprOld.validate(ctxValidate, param.getType(), errs);
+
+                TypeConstant typeParam = param.getType();
+                ctxValidate = ctxConstruct.enterInferring(typeParam);
+
+                Expression exprNew = exprOld.validate(ctxValidate, typeParam, errs);
+
+                ctxValidate = ctxValidate.exit();
+
                 if (exprNew == null)
                     {
                     fValid = false;

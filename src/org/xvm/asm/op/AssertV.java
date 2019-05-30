@@ -14,11 +14,11 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.ObjectHandle.DeferredPropertyHandle;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.types.xProperty.DeferredPropertyHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -189,7 +189,7 @@ public class AssertV
                 ObjectHandle hValueOrig = ahOrig[i];
                 if (hValueOrig instanceof DeferredPropertyHandle)
                     {
-                    asName[i] = ((DeferredPropertyHandle) hValueOrig).getPropertyId().getName();
+                    asName[i] = ((DeferredPropertyHandle) hValueOrig).getProperty().getName();
                     }
                 else // simply a constant; no label
                     {

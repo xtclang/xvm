@@ -5,18 +5,19 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import java.util.Map;
 
-import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-
 import org.xvm.asm.Op;
+import org.xvm.asm.PropertyStructure;
 
-import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.IntervalConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
+import org.xvm.runtime.ObjectHandle.DeferredPropertyHandle;
+
+import org.xvm.runtime.template.xException;
 
 
 /**
@@ -56,10 +57,21 @@ public class ObjectHeap
         if (constValue instanceof SingletonConstant)
             {
             hValue = ((SingletonConstant) constValue).getHandle();
-            if (hValue != null)
-                {
-                return saveConstHandle(constValue, hValue);
-                }
+            return hValue == null
+                ? new DeferredCallHandle(
+                    xException.makeHandle("Uninitialized singleton: " + constValue))
+                : saveConstHandle(constValue, hValue);
+            }
+
+        // support for the "local property" mode
+        if (constValue instanceof PropertyConstant)
+            {
+            PropertyConstant  idProp = (PropertyConstant) constValue;
+            PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
+
+            assert !prop.isStatic();
+
+            return saveConstHandle(constValue, new DeferredPropertyHandle(idProp));
             }
 
         TypeConstant type = getConstType(constValue);
@@ -135,6 +147,7 @@ public class ObjectHeap
             case Date:
             case Time:
             case DateTime:
+            case Interval:
                 return constValue.getType();
 
             case Char:
@@ -145,26 +158,9 @@ public class ObjectHeap
 
             case Duration:
                 return f_poolRoot.typeDuration();
-                
+
             case Version:
                 return f_poolRoot.typeVersion();
-
-            case SingletonConst:
-                {
-                IdentityConstant constId = ((SingletonConstant) constValue).getValue();
-
-                assert ((ClassStructure) constId.getComponent()).isSingleton();
-
-                return constId.getType();
-                }
-
-            case Interval:
-                {
-                ConstantPool pool    = constValue.getConstantPool();
-                Constant     constEl = ((IntervalConstant) constValue).getFirst();
-                TypeConstant typeEl  = getConstType(constEl);
-                return pool.ensureParameterizedTypeConstant(f_poolRoot.typeInterval(), typeEl);
-                }
 
             case UInt8Array:
                 return f_poolRoot.typeByteArray();
