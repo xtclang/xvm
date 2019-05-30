@@ -655,6 +655,64 @@ public abstract class ObjectHandle
             }
         }
 
+    /**
+     * DeferredPropertyHandle represents a deferred property access, which would place the result
+     * of that action on the corresponding frame's stack.
+     *
+     * Note: this handle cannot be allocated naturally and must be processed in a special way.
+     */
+    public static class DeferredPropertyHandle
+            extends DeferredCallHandle
+        {
+        private final PropertyConstant f_idProp;
+
+        public DeferredPropertyHandle(PropertyConstant idProp)
+            {
+            super((ExceptionHandle) null);
+
+            f_idProp = idProp;
+            }
+
+        @Override
+        public void addContinuation(Frame.Continuation continuation)
+            {
+            throw new UnsupportedOperationException();
+            }
+
+        public PropertyConstant getProperty()
+            {
+            return f_idProp;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller, Frame.Continuation continuation)
+            {
+            ObjectHandle hThis = frameCaller.getThis();
+
+            switch (hThis.getTemplate().getPropertyValue(frameCaller, hThis, f_idProp, Op.A_STACK))
+                {
+                case Op.R_NEXT:
+                    return continuation.proceed(frameCaller);
+
+                case Op.R_CALL:
+                    frameCaller.m_frameNext.addContinuation(continuation);
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+
+        @Override
+        public String toString()
+            {
+            return "Deferred property access: " + f_idProp.getName();
+            }
+        }
+
     // ----- DEFERRED ----
 
     public static long createHandle(int nTypeId, int nIdentityId, boolean fMutable)

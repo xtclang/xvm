@@ -22,9 +22,11 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.Op.ConstantRegistry;
 import org.xvm.asm.Op.Prefix;
 
 import org.xvm.asm.op.Nop;
@@ -1091,18 +1093,17 @@ public class MethodStructure
                         throw new UnsupportedOperationException("not implemented"); // TODO
 
                     case Property:
-                        {
-                        PropertyStructure property = (PropertyStructure) constValue.getComponent();
-                        // use property value or function to initialize
-                        throw new UnsupportedOperationException("not implemented"); // TODO
-                        }
+                        iResult = callPropertyInitializer(frame, (PropertyConstant) constValue);
+                        break;
 
                     case Class:
                         {
-                        ClassConstant constClz = (ClassConstant) constValue;
-                        ClassStructure clz = (ClassStructure) constClz.getComponent();
+                        ClassConstant  idClz = (ClassConstant) constValue;
+                        ClassStructure clz   = (ClassStructure) idClz.getComponent();
 
-                        ClassTemplate template = heap.f_templates.getTemplate(constClz);
+                        assert clz.isSingleton();
+
+                        ClassTemplate template = heap.f_templates.getTemplate(idClz);
 
                         Format format = template.f_struct.getFormat();
                         if (format == Format.ENUMVALUE || format == Format.ENUM)
@@ -1165,6 +1166,36 @@ public class MethodStructure
         return frameNext == null
             ? frame.assignValue(0, xNullable.NULL) // the result is ignored, but has to be assigned
             : frame.call(frameNext);
+        }
+
+    /**
+     * Call the static property initializer.
+     *
+     * @param frame   the caller's frame
+     * @param idProp  the property id
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
+     */
+    private int callPropertyInitializer(Frame frame, PropertyConstant idProp)
+        {
+        PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
+        ObjectHandle      hValue;
+
+        assert prop.isStatic();
+
+        Constant constVal = prop.getInitialValue();
+        if (constVal == null)
+            {
+            // there must be an initializer
+            MethodStructure methodInit = prop.getInitializer();
+            ObjectHandle[]  ahVar      =
+                Utils.ensureSize(Utils.OBJECTS_NONE, methodInit.getMaxVars());
+
+            return frame.call1(methodInit, null, ahVar, Op.A_STACK);
+            }
+        hValue = frame.getConstHandle(constVal);
+        frame.pushStack(hValue);
+        return Op.R_NEXT;
         }
 
     /**
@@ -1592,6 +1623,24 @@ public class MethodStructure
         return aconstDefault;
         }
 
+    /**
+     * As part of the assembly process, register the default parameter values for this method.
+     *
+     * @param registry  the ConstantRegistry to use
+     */
+    protected void registerDefaultArgs(ConstantRegistry registry)
+        {
+        int cDefault = getDefaultParamCount();
+        if (cDefault > 0)
+            {
+            int cAll = getParamCount();
+            for (int i = cAll - cDefault; i < cAll; i++)
+                {
+                getParam(i).getDefaultValue().registerConstants(registry);
+                }
+            }
+        }
+
 
     // ----- inner class: Code ---------------------------------------------------------------------
 
@@ -1933,12 +1982,15 @@ public class MethodStructure
                 }
             }
 
-        protected Op.ConstantRegistry ensureConstantRegistry()
+        protected ConstantRegistry ensureConstantRegistry()
             {
-            Op.ConstantRegistry registry;
+            ConstantRegistry registry;
             if (f_method.m_abOps == null)
                 {
-                f_method.m_registry = registry = new Op.ConstantRegistry(f_method.getConstantPool());
+                f_method.m_registry = registry = new ConstantRegistry(f_method.getConstantPool());
+
+                f_method.registerDefaultArgs(registry);
+
                 Op[] aop = ensureOps();
                 for (Op op : aop)
                     {
@@ -2142,7 +2194,7 @@ public class MethodStructure
                 // each op will already have been stamped with the correct address and scope depth
 
                 // populate the local constant registry
-                Op.ConstantRegistry registry = ensureConstantRegistry();
+                ConstantRegistry registry = ensureConstantRegistry();
 
                 // assemble the ops into bytes
                 ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
@@ -2271,7 +2323,7 @@ public class MethodStructure
     /**
      * The constant registry used while assembling the Ops.
      */
-    transient Op.ConstantRegistry m_registry;
+    transient ConstantRegistry m_registry;
 
     /**
      * The yet-to-be-deserialized ops.

@@ -26,8 +26,6 @@ import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.runtime.template.annotations.xFutureVar;
 
-import org.xvm.runtime.template.types.xProperty.DeferredPropertyHandle;
-
 
 /**
  * Various helpers.
@@ -236,31 +234,7 @@ public abstract class Utils
                     break;
                     }
 
-                if (hArg instanceof DeferredPropertyHandle)
-                    {
-                    ObjectHandle     hThis  = frameCaller.getThis();
-                    PropertyConstant idProp = ((DeferredPropertyHandle) hArg).getPropertyId();
-
-                    switch (hThis.getTemplate().getPropertyValue(
-                            frameCaller, hThis, idProp, Op.A_STACK))
-                        {
-                        case Op.R_NEXT:
-                            // replace the property handle with the value
-                            updateResult(frameCaller);
-                            break;
-
-                        case Op.R_CALL:
-                            frameCaller.m_frameNext.addContinuation(this);
-                            return Op.R_CALL;
-
-                        case Op.R_EXCEPTION:
-                            return Op.R_EXCEPTION;
-
-                        default:
-                            throw new IllegalStateException();
-                        }
-                    }
-                else if (hArg instanceof DeferredCallHandle)
+                if (hArg instanceof DeferredCallHandle)
                     {
                     return ((DeferredCallHandle) hArg).proceed(frameCaller, this);
                     }

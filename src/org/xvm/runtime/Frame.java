@@ -331,7 +331,7 @@ public class Frame
                     ? makeDeferredException("Run-time error: empty stack")
                     : hValue;
 
-                case Op.A_DEFAULT:
+            case Op.A_DEFAULT:
                 return ObjectHandle.DEFAULT;
 
             case Op.A_SUPER:

@@ -688,11 +688,16 @@ public class NameExpression
                         // constant
                         PropertyConstant  id   = (PropertyConstant) argRaw;
                         PropertyStructure prop = (PropertyStructure) id.getComponent();
-                        if (prop.isConstant() && m_plan == Plan.PropertyDeref)
+                        if (prop.isConstant())
                             {
-                            constVal = prop.getInitialValue();
+                            if (m_plan == Plan.Singleton || m_plan == Plan.PropertyDeref)
+                                {
+                                constVal = prop.hasInitialValue()
+                                        ? prop.getInitialValue()
+                                        : pool.ensureSingletonConstConstant(id);
+                                }
                             }
-                        else if (!prop.isConstant() && m_plan == Plan.None)
+                        else if (m_plan == Plan.None)
                             {
                             constVal = id;
                             }
@@ -901,7 +906,7 @@ public class NameExpression
                     PropertyConstant idProp = (PropertyConstant) argRaw;
                     switch (calculatePropertyAccess())
                         {
-                        case Singleton:
+                        case SingletonParent:
                             {
                             IdentityConstant  idParent    = idProp.getParentConstant();
                             SingletonConstant idSingleton = pool().ensureSingletonConstConstant(idParent);
@@ -1080,7 +1085,7 @@ public class NameExpression
                 Register         regTemp = createRegister(getType(), fUsedOnce);
                 switch (calculatePropertyAccess())
                     {
-                    case Singleton:
+                    case SingletonParent:
                         {
                         IdentityConstant  idParent    = idProp.getParentConstant();
                         SingletonConstant idSingleton = pool().ensureSingletonConstConstant(idParent);
@@ -1250,7 +1255,7 @@ public class NameExpression
 
                     switch (m_propAccessPlan)
                         {
-                        case Singleton:
+                        case SingletonParent:
                             {
                             IdentityConstant  idParent    = idProp.getParentConstant();
                             SingletonConstant idSingleton = pool().ensureSingletonConstConstant(idParent);
@@ -1441,11 +1446,11 @@ public class NameExpression
                         if (info.isTopLevel() && info.isStatic() &&
                                 !info.getClassStructure().equals(ctx.getThisClass()))
                             {
-                            m_propAccessPlan = PropertyAccess.Singleton;
+                            m_propAccessPlan = PropertyAccess.SingletonParent;
                             }
                         else if (prop.isConstant() && prop.getInitializer() != null)
                             {
-                            m_propAccessPlan = PropertyAccess.Singleton;
+                            m_propAccessPlan = PropertyAccess.SingletonParent;
                             }
                         else if (target.getStepsOut() == 0)
                             {
@@ -2290,7 +2295,7 @@ public class NameExpression
      * 4) the property is on "left"
      *    (left must be not null)
      */
-    enum PropertyAccess {Singleton, Outer, This, Left}
+    enum PropertyAccess {SingletonParent, Outer, This, Left}
 
     /**
      * The chosen property access plan.
