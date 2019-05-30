@@ -461,6 +461,12 @@ module TestMisc.xqiz.it
         console.println($"s={s}");
         s ?= s2;
         console.println($"s={s}");
+
+        // this will assert
+        // assert s2?.size>=0, False;
+
+        // this will not assert
+        assert s2?.size>=0, True;
         }
 
     private conditional String checkPositive(Int i)

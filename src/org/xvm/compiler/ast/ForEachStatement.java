@@ -314,6 +314,18 @@ public class ForEachStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
+    protected boolean allowsShortCircuit(Expression exprChild)
+        {
+        return true;
+        }
+
+    @Override
+    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
+        {
+        return getEndLabel();
+        }
+
+    @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
         boolean fValid = true;

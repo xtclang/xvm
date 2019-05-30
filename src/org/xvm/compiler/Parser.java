@@ -1739,20 +1739,15 @@ public class Parser
 
     AstNode parseCondition()
         {
-        Expression     exprLVal;
-        TypeExpression typeDecl;
-        Token          tokName;
-        List<AstNode>  listLVals = null;
-        do
-            {
-            typeDecl = null;
-            exprLVal = null;
-            tokName  = null;
+        // it could be an OptionalDeclarationList
+        AstNode LVal = peekMultiVariableInitializer();
 
+        if (LVal == null)
+            {
             Token tokType = matchVarOrVal();
             if (tokType != null)
                 {
-                tokName = match(Id.IDENTIFIER);
+                Token tokName = match(Id.IDENTIFIER);
                 if (tokName == null)
                     {
                     // var and val are not reserved keywords; they are context sensitive types
@@ -1760,76 +1755,46 @@ public class Parser
                     }
                 else
                     {
-                    typeDecl = new VariableTypeExpression(tokType);
+                    LVal = new VariableDeclarationStatement(new VariableTypeExpression(tokType), tokName, false);
                     }
                 }
 
-            if (typeDecl == null)
+            if (LVal == null)
                 {
-                // assuming that we haven't already built a list of declarations, then encountering
-                // an expression followed by a semicolon or right parenthesis means the entire
-                // condition is the expression, and we're done
                 Expression expr = parseExpression();
-                if (listLVals == null && (peek().getId() == Id.SEMICOLON || peek().getId() == Id.R_PAREN))
-                    {
-                    return expr;
-                    }
-
-                // otherwise, that expression could be the type expression or the assignable; if the
-                // next token is a name, then the expression that we parsed must be the type of the
-                // variable declarations
                 if (peek().getId() == Id.IDENTIFIER)
                     {
-                    typeDecl = expr.toTypeExpression();
-                    tokName  = expect(Id.IDENTIFIER);
+                    LVal = new VariableDeclarationStatement(expr.toTypeExpression(), expect(Id.IDENTIFIER), false);
                     }
                 else
                     {
-                    //otherwise, the expression that we parsed must be an Assignable
-                    if (!(expr instanceof NameExpression || expr instanceof ArrayAccessExpression))
+                    switch (peek().getId())
                         {
-                        log(Severity.ERROR, NOT_ASSIGNABLE, expr.getStartPosition(), expr.getEndPosition());
+                        case COND_ASN:
+                        case COND_NN_ASN:
+                            // the expression has to be the L-Value
+                            if (!expr.isLValueSyntax())
+                                {
+                                log(Severity.ERROR, NOT_ASSIGNABLE, expr.getStartPosition(), expr.getEndPosition());
+                                }
+                            LVal = expr;
+                            break;
+
+                        default:
+                            // the condition is just an expression
+                            return expr;
                         }
-                    exprLVal = expr;
                     }
                 }
-
-            // if the next character is a comma, then it's a OptionalDeclarationList
-            if (listLVals == null && peek().getId() == Id.COMMA)
-                {
-                listLVals = new ArrayList<>();
-                }
-
-            // if it's a OptionalDeclarationList, then contribute to the list
-            if (listLVals != null)
-                {
-                listLVals.add(typeDecl == null
-                        ? exprLVal
-                        : new VariableDeclarationStatement(typeDecl, tokName, false));
-                }
-
-            // the next character must be a comma (indicating that there's more coming in the
-            // OptionalDeclarationList), or a colon (indicating the conclusion of the same)
             }
-        while (match(Id.COMMA) != null);
 
-        Token tokAssign = match(Id.COND_NN_ASN);
-        if (tokAssign == null)
+        Token tokAsn = match(Id.COND_NN_ASN);
+        if (tokAsn == null)
             {
-            tokAssign = expect(Id.COND_ASN);
+            tokAsn = expect(Id.COND_ASN);
             }
 
-        Expression exprRVal = parseExpression();
-
-        // if there is a list, then it's a OptionalDeclarationList; otherwise it's just a single
-        // L-Value expression or variable declaration
-        AstNode LVals = listLVals == null
-                ? typeDecl == null
-                        ? exprLVal
-                        : new VariableDeclarationStatement(typeDecl, tokName, false)
-                : new MultipleLValueStatement(listLVals);
-
-        return new AssignmentStatement(LVals, tokAssign, exprRVal, false);
+        return new AssignmentStatement(LVal, tokAsn, parseExpression(), false);
         }
 
     /**

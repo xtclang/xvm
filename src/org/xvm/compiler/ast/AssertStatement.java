@@ -104,8 +104,26 @@ public class AssertStatement
     @Override
     protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
         {
-        assert findCondition(exprChild) >= 0;
-        return getEndLabel();
+        int cConds = getConditionCount();
+        int iCond  = findCondition(exprChild);
+        assert iCond >= 0;
+        if (iCond == cConds - 1)
+            {
+            return getEndLabel();
+            }
+
+        Label[] alabel = m_alabelCond;
+        if (alabel == null)
+            {
+            m_alabelCond = alabel = new Label[cConds];
+            }
+
+        Label label = alabel[iCond+1];
+        if (label == null)
+            {
+            alabel[iCond] = label = new Label("assert[" + iCond + "]");
+            }
+        return label;
         }
 
     @Override
@@ -186,8 +204,18 @@ public class AssertStatement
             }
 
         boolean fCompletes = fReachable;
+        Label[] alabel     = m_alabelCond;
         for (int i = 0; i < cConds; ++i)
             {
+            if (alabel != null)
+                {
+                Label label = alabel[i];
+                if (label != null)
+                    {
+                    code.add(label);
+                    }
+                }
+
             AstNode cond = getCondition(i);
             if (cond instanceof AssignmentStatement)
                 {
@@ -293,5 +321,6 @@ public class AssertStatement
     protected Token         keyword;
     protected List<AstNode> conds;
 
+    private Label[] m_alabelCond;
     private static final Field[] CHILD_FIELDS = fieldsForNames(AssertStatement.class, "conds");
     }
