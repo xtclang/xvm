@@ -37,8 +37,8 @@
  *           }
  *       }
  *
- * The CriticalSection also keeps track of when it began ({@link startTime}), and thus its {@link
- * duration}, as a potential aid to both the developer and the runtime.
+ * The CriticalSection also keeps track of its {@link duration}, as a potential aid to both the
+ * developer and the runtime.
  */
 const CriticalSection
         implements Closeable
@@ -57,9 +57,6 @@ const CriticalSection
 
         // calculate the re-entrancy for the critical section
         this.reentrancy = reentrancy.maxOf(previousReentrancy);
-
-        // keep track of when the critical section began
-        startTime = previousCriticalSection?.startTime : clock.now;
         }
     finally
         {
@@ -68,10 +65,9 @@ const CriticalSection
         }
 
     /**
-     * The clock selected by the runtime to measure CriticalSection duration.
-     * TODO use timer instead of clock
+     * The timer selected by the runtime to measure CriticalSection duration.
      */
-    @Inject Clock clock;
+    @Inject Timer timer;
 
     /**
      * The service {@code Reentrancy} setting that this CriticalSection replaced, if any.
@@ -98,7 +94,7 @@ const CriticalSection
      */
     Duration duration.get()
         {
-        return clock.now - startTime;
+        return timer.elapsed;
         }
 
     /**

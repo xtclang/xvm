@@ -73,11 +73,6 @@ public interface TypeComposition
     boolean isStruct();
 
     /**
-     * @return true iff the inception type represents a service
-     */
-    boolean isService();
-
-    /**
      * @return true iff the inception type represents a const
      */
     boolean isConst();

@@ -34,12 +34,12 @@
  *   @Future Ad   ad2;
  *
  *   // async request for the page body, but don't wait more than 1000ms for it
- *   using (new Timeout(Duration:"1s"))
+ *   using (new Timeout(Duration:1S))
  *       {
  *       body = contentSvc.genBody();
  *
  *       // async request for two advertisements, but don't wait more than 500ms for either
- *       using (new Timeout(Duration:"500ms"))
+ *       using (new Timeout(Duration:.5S"))
  *           {
  *           ad1 = adSvc1.selectAd();
  *           ad2 = adSvc2.selectAd();
@@ -59,7 +59,7 @@
  * If a service needs to begin a long-running task that is independent of the timeout that the
  * service is currently constrained by, construct an _independent_ timeout:
  *
- *   using (new Timeout(Duration:"5h", true))
+ *   using (new Timeout(Duration:5H, true))
  *       {
  *       new LongRunningReports().begin();
  *       }
@@ -69,8 +69,7 @@ const Timeout
     {
     construct(Duration remainingTime, Boolean independent = false)
         {
-        // TODO - this des not parse the "Duration:" as a literal indicator
-        // assert remainingTime > Duration:"0s";
+        assert remainingTime > Duration:PT0S;
 
         // store off the previous timeout; it will be replaced by this timeout, and restored when
         // this timeout is closed
@@ -86,9 +85,6 @@ const Timeout
             // that it is replacing
             duration = duration.minOf(previousTimeout.remainingTime);
             }
-
-        startTime = clock.now;
-        deadline  = startTime + duration;
         }
     finally
         {
@@ -97,9 +93,8 @@ const Timeout
 
     /**
      * The clock selected by the runtime to manage timeouts.
-     * TODO use timer instead of clock
      */
-    @Inject Clock clock;
+    @Inject Timer timer;
 
     /**
      * The {@code Timeout} that this timeout replaced, if any.
@@ -124,17 +119,12 @@ const Timeout
     Duration duration;
 
     /**
-     * The time according to the {@link clock} at which this time timeout is expired.
-     */
-    DateTime deadline;
-
-    /**
      * Determine the amount of remaining time on this timeout. This value decreases until it
      * reaches zero.
      */
     Duration remainingTime.get()
         {
-        return (deadline - clock.now).maxOf(Duration.NONE);
+        return (duration - timer.elapsed).maxOf(Duration.NONE);
         }
 
     /**
@@ -142,7 +132,7 @@ const Timeout
      */
     Boolean expired.get()
         {
-        return clock.now > deadline;
+        return timer.elapsed > duration;
         }
 
     /**

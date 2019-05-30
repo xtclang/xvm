@@ -765,7 +765,15 @@ public class CommandLine
             boolean fDone = true;
             for (Compiler compiler : modulesByName.values())
                 {
-                fDone &= compiler.generateCode();
+                try
+                    {
+                    fDone &= compiler.generateCode();
+                    }
+                catch (RuntimeException e)
+                    {
+                    System.err.println("Failed to generate code for " + compiler);
+                    e.printStackTrace();
+                    }
                 }
             if (fDone)
                 {

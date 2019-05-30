@@ -2,8 +2,9 @@ package org.xvm.runtime.template;
 
 
 import org.xvm.asm.ClassStructure;
-
 import org.xvm.asm.Component;
+
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.TemplateRegistry;
 
 
@@ -36,9 +37,9 @@ public class xOrdered
         }
 
     @Override
-    protected EnumHandle makeEnumHandle(int iOrdinal)
+    protected EnumHandle makeEnumHandle(ClassComposition clz, int iOrdinal)
         {
-        return new EnumHandle(getCanonicalClass(), iOrdinal);
+        return new EnumHandle(clz, iOrdinal);
         }
 
     /**

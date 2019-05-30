@@ -169,39 +169,64 @@ public class ElvisExpression
     public Argument generateArgument(
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        ConstantPool pool = pool();
-
-        if (isConstant() || pool.typeNull().isA(getType()))
+        if (isConstant())
             {
             return super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
             }
 
+        ConstantPool pool     = pool();
         TypeConstant typeTemp = getType().ensureNullable(pool);
         Assignable   var      = createTempVar(code, typeTemp, false, errs);
         generateAssignment(ctx, code, var, errs);
+
+        /*  Alternatively, and particularly if there were a way to ask expr1 if it can provide us an
+            argument at no cost, we could do something like:
+
+            Label labelEnd  = getEndLabel();
+            Label labelElse = new Label("else_?:_" + (++s_nCounter));
+
+            Argument arg1 = expr1.generateArgument(ctx, code, false, false, errs);
+            code.add(new JumpNull(arg1, labelElse));
+            var.assign(arg1, code, errs);
+            code.add(new Jump(labelEnd));
+
+            code.add(labelElse);
+            Argument arg2 = expr2.generateArgument(ctx, code, false, true, errs);
+            var.assign(arg2, code, errs);
+            code.add(labelEnd);
+        */
+
         return var.getRegister();
         }
 
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
-        if (isConstant() || !LVal.isLocalArgument() || !pool().typeNull().isA(LVal.getType()))
+        if (isConstant() || !LVal.isNormalVariable() || !pool().typeNull().isA(LVal.getType()))
             {
             super.generateAssignment(ctx, code, LVal, errs);
             return;
             }
 
-        Label labelEnd = new Label("end_?:_" + m_nLabel);
-
+        Label labelEnd = getEndLabel();
         expr1.generateAssignment(ctx, code, LVal, errs);
         code.add(new JumpNotNull(LVal.getLocalArgument(), labelEnd));
         expr2.generateAssignment(ctx, code, LVal, errs);
         code.add(labelEnd);
         }
 
+    protected Label getEndLabel()
+        {
+        Label labelEnd = m_labelEnd;
+        if (labelEnd == null)
+            {
+            m_labelEnd = labelEnd = new Label("end_?:_" + (++s_nCounter));
+            }
+        return labelEnd;
+        }
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private static    int m_nCounter;
-    private transient int m_nLabel;
+    private static    int s_nCounter;
+    private transient Label m_labelEnd;
     }

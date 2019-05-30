@@ -107,12 +107,12 @@ public class xRef
                     {
                     case Op.R_NEXT:
                         return frame.assignValue(iReturn,
-                            xBoolean.makeHandle(frame.popStack().getComposition().isService()));
+                            xBoolean.makeHandle(frame.popStack().getTemplate().isService()));
 
                     case Op.R_CALL:
                         frame.addContinuation(frameCaller ->
                             frameCaller.assignValue(iReturn,
-                                xBoolean.makeHandle(frame.popStack().getComposition().isService())));
+                                xBoolean.makeHandle(frame.popStack().getTemplate().isService())));
                         return Op.R_CALL;
 
                     case Op.R_BLOCK:

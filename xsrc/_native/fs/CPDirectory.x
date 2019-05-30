@@ -100,13 +100,7 @@ const CPDirectory(CPFileStore:protected store, Object cookie, Path path, DateTim
         Object cookie = contents.get(name);
         assert cookie != Null;
 
-        return True, new CPDirectory(
-                store,
-                cookie,
-                path + name,
-                DateTime.EPOCH, // TODO new DateTime(created, TimeZone.UTC),
-                DateTime.EPOCH, // TODO new DateTime(modified, TimeZone.UTC),
-                1);             // TODO
+        return True, new CPDirectory(store, cookie, path + name, created, modified, 1);
         }
 
     @Override

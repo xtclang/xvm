@@ -65,15 +65,16 @@ public class xEnum
             List<String> listNames = new ArrayList<>(listAll.size());
             List<EnumHandle> listHandles = new ArrayList<>(listAll.size());
 
-            ConstantPool pool = pool();
-            int cValues = 0;
+            ConstantPool pool    = pool();
+            int          cValues = 0;
             for (Component child : listAll)
                 {
                 if (child.getFormat() == Component.Format.ENUMVALUE)
                     {
-                    listNames.add(child.getName());
+                    TypeConstant type   = ((ClassStructure) child).getCanonicalType();
+                    EnumHandle   hValue = makeEnumHandle(ensureClass(type, type), cValues++);
 
-                    EnumHandle hValue = makeEnumHandle(cValues++);
+                    listNames.add(child.getName());
                     listHandles.add(hValue);
 
                     // native enums don't require any initialization
@@ -96,15 +97,17 @@ public class xEnum
     /**
      * Create an EnumHandle for the specified ordinal value.
      *
+     *
+     * @param clz       the enum's class
      * @param iOrdinal  the ordinal value
      *
      * @return the corresponding EnumHandle
      */
-    protected EnumHandle makeEnumHandle(int iOrdinal)
+    protected EnumHandle makeEnumHandle(ClassComposition clz, int iOrdinal)
         {
         // create an un-initialized struct, which will be properly initialized
         // by createConstHandle() below; overridden by native enums
-        return new EnumHandle(getCanonicalClass().ensureAccess(Access.STRUCT), iOrdinal);
+        return new EnumHandle(clz.ensureAccess(Access.STRUCT), iOrdinal);
         }
 
     @Override

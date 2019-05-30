@@ -53,6 +53,6 @@ public class IsService
     protected int completeUnaryOp(Frame frame, ObjectHandle hValue)
         {
         return frame.assignValue(m_nRetValue,
-            xBoolean.makeHandle(hValue.getComposition().isService()));
+            xBoolean.makeHandle(hValue.getTemplate().isService()));
         }
     }
