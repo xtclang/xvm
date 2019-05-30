@@ -274,17 +274,21 @@ public class Lexer
             case '?':
                 if (source.hasNext())
                     {
-                    if (nextChar() == ':')
+                    switch (nextChar())
                         {
-                        if (source.hasNext())
-                            {
-                            if (nextChar() == '=')
+                        case '=':
+                            return new Token(lInitPos, source.getPosition(), Id.COND_NN_ASN);
+
+                        case ':':
+                            if (source.hasNext())
                                 {
-                                return new Token(lInitPos, source.getPosition(), Id.COND_ELSE_ASN);
+                                if (nextChar() == '=')
+                                    {
+                                    return new Token(lInitPos, source.getPosition(), Id.COND_ELSE_ASN);
+                                    }
+                                source.rewind();
                                 }
-                            source.rewind();
-                            }
-                        return new Token(lInitPos, source.getPosition(), Id.COND_ELSE);
+                            return new Token(lInitPos, source.getPosition(), Id.COND_ELSE);
                         }
                     source.rewind();
                     }

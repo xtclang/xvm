@@ -49,7 +49,6 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
-import org.xvm.compiler.ast.AssignmentStatement.Category;
 import org.xvm.compiler.ast.Expression.Assignable;
 
 import org.xvm.util.Severity;
@@ -335,7 +334,7 @@ public class ForEachStatement
         //   4) map keys   :  L: for (K key            : container.as(Map<K,T>   )) {...}
         //   5) map entries:  L: for ((K key, T value) : container.as(Map<K,T>   )) {...}
         //   6) iterable   :  L: for (T value          : container.as(Iterable<T>)) {...}
-        assert cond.getCategory() == Category.ForCond;
+        assert cond.isForEachCondition();
 
         // validate the LValue declarations and any LValue sub-expressions
         AstNode condLVal = cond.getLValue();

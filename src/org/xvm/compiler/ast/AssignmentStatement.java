@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
@@ -15,17 +16,23 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpNotNull;
+import org.xvm.asm.op.JumpNull;
 import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Label;
+import org.xvm.asm.op.Move;
 import org.xvm.asm.op.Var_IN;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.Expression.Assignable;
 import org.xvm.compiler.ast.Expression.TypeFit;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -180,15 +187,34 @@ public class AssignmentStatement
         }
 
     /**
+     * @return true iff this assignment statement is a for-each-condition
+     */
+    public boolean isForEachCondition()
+        {
+        return op.getId() == Id.COLON;
+        }
+
+    /**
      * @return true iff this assignment statement is an if-condition or for-each-condition
      */
     public boolean isConditional()
         {
-        AstNode parent = getParent();
-        return parent instanceof IfStatement
-            || parent instanceof WhileStatement
-            || parent instanceof ForStatement       // TODO "in the second slot"
-            || parent instanceof AssertStatement;
+        switch (op.getId())
+            {
+            case COND_ASN:
+            case COND_NN_ASN:
+                AstNode parent = getParent();
+                return parent instanceof IfStatement
+                    || parent instanceof WhileStatement
+                    || parent instanceof ForStatement && ((ForStatement) parent).findCondition(this) >= 0
+                    || parent instanceof AssertStatement;
+
+            case COLON:
+                return true;
+
+            default:
+                return false;
+            }
         }
 
     /**
@@ -221,12 +247,8 @@ public class AssignmentStatement
 
             case COND_ASN:
             case COND_NN_ASN:
-                return isConditional()
-                        ? Category.IfCond
-                        : Category.CondRight;
-
             case COLON:
-                return Category.ForCond;
+                return Category.CondRight;
 
             default:
                 throw new IllegalStateException("op=" + op);
@@ -241,14 +263,16 @@ public class AssignmentStatement
         Register reg = m_regCond;
         if (reg == null)
             {
-// TODO isConditional() ???
-            if (getCategory() == Category.IfCond || getCategory() == Category.ForCond)
+            switch (op.getId())
                 {
-                m_regCond = reg = new Register(pool().typeBoolean(), Op.A_STACK);
-                }
-            else
-                {
-                throw new IllegalStateException("op=\"" + op.getValueText() + '\"');
+                case COND_ASN:
+                case COND_NN_ASN:
+                case COLON:
+                    m_regCond = reg = new Register(pool().typeBoolean(), Op.A_STACK);
+                    break;
+
+                default:
+                    throw new IllegalStateException("op=\"" + op.getValueText() + '\"');
                 }
             }
 
@@ -329,7 +353,8 @@ public class AssignmentStatement
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
-        boolean fValid = true;
+        boolean      fValid = true;
+        ConstantPool pool   = pool();
 
         AstNode    nodeLeft     = lvalue;
         Expression exprLeftCopy = null;
@@ -379,37 +404,26 @@ public class AssignmentStatement
                 m_fSuppressLValue = false;
                 }
 
-            if (atypeLeft != TypeConstant.NO_TYPES)
+            if (atypeLeft.length > 0)
                 {
-                TypeFit fit = TypeFit.NoFit;
-                switch (getCategory())
+                TypeConstant[] atypeTest = atypeLeft;
+                if (op.getId() == Id.COND_NN_ASN)
                     {
-                    case Assign:
-                    case CondLeft:
-                    case CondRight:
-                    case InPlace:
-                        // allow the r-value to resolve names based on the l-value type's
-                        // contributions
-                        ctx = ctx.enterInferring(atypeLeft[0]);
-                        fit = rvalue.testFitMulti(ctx, atypeLeft);
-                        ctx = ctx.exit();
-                        break;
-
-                    case ForCond:      // e.g. "for (a : b) {...}"
-                    case IfCond:       // e.g. "if (a := b) {...}" or "a := b;"
-                        {
-                        int            cLeft     = atypeLeft.length;
-                        TypeConstant[] atypeTest = new TypeConstant[cLeft + 1];
-                        atypeTest[0] = pool().typeBoolean();
-                        System.arraycopy(atypeLeft, 0, atypeTest, 1, cLeft);
-
-                        fit = rvalue.testFitMulti(ctx, atypeTest);
-                        break;
-                        }
-
-                    default:
-                        throw new IllegalStateException();
+                    atypeTest = new TypeConstant[] {atypeLeft[0].ensureNullable(pool)};
                     }
+                else if (isConditional())
+                    {
+                    int cLeft = atypeLeft.length;
+                    atypeTest = new TypeConstant[cLeft + 1];
+                    atypeTest[0] = pool.typeBoolean();
+                    System.arraycopy(atypeLeft, 0, atypeTest, 1, cLeft);
+                    }
+
+                // allow the r-value to resolve names based on the l-value type's
+                // contributions
+                ctx = ctx.enterInferring(atypeLeft[0]);
+                TypeFit fit = rvalue.testFitMulti(ctx, atypeTest);
+                ctx = ctx.exit();
 
                 if (!fit.isFit())
                     {
@@ -437,7 +451,7 @@ public class AssignmentStatement
 
         Expression     exprRight    = rvalue;
         Expression     exprRightNew = null;
-        TypeConstant[] atypeRight   = null;
+        TypeConstant[] atypeRight   = null;     // used only to update the left type info
         switch (getCategory())
             {
             case Assign:
@@ -474,32 +488,66 @@ public class AssignmentStatement
                     }
                 break;
 
-            case ForCond:
-            case IfCond:
             case CondRight:
                 {
-                // (LVal : RVal) or (LVal0, LVal1, ..., LValN : RVal)
-                // TODO for ":=" the LValues must NOT be declarations!!! (they wouldn't be assigned)
-                TypeConstant[] atypeLVals = exprLeft.getTypes();
-                int            cLVals     = atypeLVals.length;
-                int            cReq       = cLVals + 1;
-                TypeConstant[] atypeReq   = new TypeConstant[cReq];
-                atypeReq[0] = pool().typeBoolean();
-                System.arraycopy(atypeLVals, 0, atypeReq, 1, cLVals);
-                exprRightNew = exprRight.validateMulti(ctx, atypeReq, errs);
-                exprLeft.markAssignment(ctx, true, errs);
-
-                // conditional expressions can update the LVal type from the RVal type, but the
-                // initial boolean is discarded
-                if (exprRightNew != null && isConditional())
+                if (op.getId() == Id.COND_NN_ASN)
                     {
-                    TypeConstant[] atypeAll = exprRightNew.getTypes();
-                    int            cTypes   = atypeAll.length - 1;
-                    if (cTypes >= 1)
+                    // verify only one value, and that it is nullable
+                    if (!exprLeft.isSingle())
                         {
-                        atypeRight = new TypeConstant[cTypes];
-                        System.arraycopy(atypeAll, 1, atypeRight, 0, cTypes);
+                        lvalueExpr.log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, 1, exprLeft.getValueCount());
                         }
+
+                    // the right side is (must be) a nullable form of the type on the left
+                    TypeConstant typeReq = exprLeft.getType();
+                    if (typeReq != null)
+                        {
+                        typeReq = typeReq.ensureNullable(pool);
+                        }
+
+                    exprRightNew = exprRight.validate(ctx, typeReq, errs);
+                    exprLeft.markAssignment(ctx, true, errs);
+
+                    if (exprRightNew != null)
+                        {
+                        atypeRight = exprRightNew.getTypes();
+                        if (atypeRight.length == 1)
+                            {
+                            atypeRight = new TypeConstant[]
+                                    { atypeRight[0].removeNullable(pool) };
+                            }
+                        }
+                    }
+                else
+                    {
+                    // (LVal : RVal) or (LVal0, LVal1, ..., LValN : RVal)
+                    TypeConstant[] atypeLVals = exprLeft.getTypes();
+                    int            cLVals     = atypeLVals.length;
+                    int            cReq       = cLVals + 1;
+                    TypeConstant[] atypeReq   = new TypeConstant[cReq];
+                    atypeReq[0] = pool.typeBoolean();
+                    System.arraycopy(atypeLVals, 0, atypeReq, 1, cLVals);
+                    exprRightNew = exprRight.validateMulti(ctx, atypeReq, errs);
+                    exprLeft.markAssignment(ctx, true, errs);
+
+                    // conditional expressions can update the LVal type from the RVal type, but the
+                    // initial boolean is discarded
+                    if (exprRightNew != null && isConditional())
+                        {
+                        TypeConstant[] atypeAll = exprRightNew.getTypes();
+                        int            cTypes   = atypeAll.length - 1;
+                        if (cTypes >= 1)
+                            {
+                            atypeRight = new TypeConstant[cTypes];
+                            System.arraycopy(atypeAll, 1, atypeRight, 0, cTypes);
+                            }
+                        }
+                    }
+
+                // the LValues must NOT be declarations!!! (they wouldn't be assigned)
+                if (hasDeclarations() && !isConditional())
+                    {
+                    log(errs, Severity.ERROR, Compiler.VAR_DECL_COND_ASN_ILLEGAL);
                     }
                 break;
                 }
@@ -554,7 +602,8 @@ public class AssignmentStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean fCompletes = fReachable;
+        boolean      fCompletes = fReachable;
+        ConstantPool pool       = pool();
 
         switch (getCategory())
             {
@@ -568,7 +617,7 @@ public class AssignmentStatement
                         && !((VariableDeclarationStatement) lvalue).hasRefAnnotations())
                     {
                     VariableDeclarationStatement lvalue = (VariableDeclarationStatement) this.lvalue;
-                    StringConstant               idName = pool().ensureStringConstant(lvalue.getName());
+                    StringConstant               idName = pool.ensureStringConstant(lvalue.getName());
                     code.add(new Var_IN(lvalue.getRegister(), idName, rvalue.toConstant()));
                     break;
                     }
@@ -587,19 +636,49 @@ public class AssignmentStatement
                 break;
                 }
 
-            case ForCond:
-            case IfCond:
+            case CondRight:
                 {
-                Assignable[] LVals    = lvalueExpr.generateAssignables(ctx, code, errs);
-                int          cLVals   = LVals.length;
-                int          cAll     = cLVals + 1;
-                Assignable[] LValsAll = new Assignable[cAll];
-                LValsAll[0] = lvalueExpr.new Assignable(getConditionRegister());
-                System.arraycopy(LVals, 0, LValsAll, 1, cLVals);
-                if (fCompletes &= lvalueExpr.isCompletable())
+                if (op.getId() == Id.COND_NN_ASN)
                     {
-                    rvalue.generateAssignments(ctx, code, LValsAll, errs);
+                    Argument arg = rvalue.generateArgument(ctx, code, false, false, errs);
                     fCompletes &= rvalue.isCompletable();
+
+                    Label labelSkipAssign = new Label("?=Null");
+                    code.add(new JumpNull(arg, labelSkipAssign));
+
+                    Assignable LVal = lvalueExpr.generateAssignable(ctx, code, errs);
+                    LVal.assign(arg, code, errs);
+
+                    Register regCond = isConditional() ? getConditionRegister() : null;
+                    if (regCond != null)
+                        {
+                        // assignment happened, so the conditional register should be True
+                        code.add(new Move(pool.valTrue(), regCond));
+                        code.add(new Jump(getEndLabel()));
+                        }
+
+                    code.add(labelSkipAssign);
+                    if (regCond != null)
+                        {
+                        // assignment did NOT happen, so the conditional register should be False
+                        code.add(new Move(pool.valFalse(), regCond));
+                        }
+                    }
+                else
+                    {
+                    Assignable[] LVals    = lvalueExpr.generateAssignables(ctx, code, errs);
+                    int          cLVals   = LVals.length;
+                    int          cAll     = cLVals + 1;
+                    Assignable[] LValsAll = new Assignable[cAll];
+                    LValsAll[0] = isConditional()
+                            ? lvalueExpr.new Assignable(getConditionRegister())
+                            : lvalueExpr.new Assignable();  // stand-alone assign discards Boolean
+                    System.arraycopy(LVals, 0, LValsAll, 1, cLVals);
+                    if (fCompletes &= lvalueExpr.isCompletable())
+                        {
+                        rvalue.generateAssignments(ctx, code, LValsAll, errs);
+                        fCompletes &= rvalue.isCompletable();
+                        }
                     }
                 break;
                 }
@@ -637,10 +716,6 @@ public class AssignmentStatement
                     }
                 break;
                 }
-
-            case CondRight:
-                // TODO
-                throw new UnsupportedOperationException("TODO");
 
             case InPlace:
                 {
@@ -776,25 +851,19 @@ public class AssignmentStatement
          */
         Assign,
         /**
-         * for (a : b) ...
+         * a += b, a &= b, etc.
          */
-        ForCond,
-        /**
-         * if (a := b), if (a ?= b) ...
-         */
-        IfCond,
+        InPlace,
         /**
          * a &&= b, a ||= b, a ?:= b
          */
         CondLeft,
         /**
          * a := b, a ?= b
+         * if (a := b), if (a ?= b) ...
+         * for (a : b) ...
          */
         CondRight,
-        /**
-         * a += b, a &= b, etc.
-         */
-        InPlace
         }
 
     protected AstNode    lvalue;

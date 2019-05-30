@@ -77,11 +77,11 @@ public class ForStatement
         }
 
     /**
-     * @param exprChild  an expression that is a child of this statement
+     * @param exprChild  an expression (or AssignmentStatement) that is a child of this statement
      *
      * @return the index of the expression in the list of conditions within this statement, or -1
      */
-    public int findCondition(Expression exprChild)
+    public int findCondition(AstNode exprChild)
         {
         for (int i = 0, c = getConditionCount(); i < c; ++i)
             {

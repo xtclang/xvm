@@ -2530,16 +2530,33 @@ public class Parser
         if (type == null)
             {
             Expression expr = parseExpression();
-            if (peek().getId() == Id.ASN)
+            switch (peek().getId())
                 {
-                return new AssignmentStatement(expr, current(), parseExpression(), false);
+                case ASN:
+                case COND_ASN:
+                case COND_NN_ASN:
+                    return new AssignmentStatement(expr, current(), parseExpression(), false);
                 }
 
             type = expr.toTypeExpression();
             }
 
         VariableDeclarationStatement var = new VariableDeclarationStatement(type, expect(Id.IDENTIFIER), false);
-        return new AssignmentStatement(var, expect(Id.ASN), parseExpression());
+
+        Token tokAsn;
+        switch (peek().getId())
+            {
+            case ASN:
+            case COND_ASN:
+            case COND_NN_ASN:
+                tokAsn = current();
+                break;
+            default:
+                tokAsn = expect(Id.ASN);
+                break;
+            }
+
+        return new AssignmentStatement(var, tokAsn, parseExpression());
         }
 
     /**

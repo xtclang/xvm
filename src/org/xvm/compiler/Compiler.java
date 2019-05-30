@@ -866,9 +866,9 @@ public class Compiler
      */
     public static final String ARG_NAME_REQUIRED                  = "COMPILER-60";
     /**
-     * No matching annotation constructor for {0}.
+     * Variable declaration cannot use conditional assignment.
      */
-    public static final String ANNOTATION_DECL_UNRESOLVABLE       = "COMPILER-61";
+    public static final String VAR_DECL_COND_ASN_ILLEGAL          = "COMPILER-61";
     /**
      * No-parameter constructor required for {0}.
      */

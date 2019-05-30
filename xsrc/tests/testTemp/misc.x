@@ -428,13 +428,39 @@ module TestMisc.xqiz.it
         console.println("\n** testConditional()");
         if (String s := checkPositive(17))
             {
-            console.println(s);
+            console.println($"should be positive: {s}");
             }
 
         if (String s := checkPositive(-17))
             {
+            console.println($"should be negative: {s} (but this cannot happen)");
             assert;
             }
+
+        String s = "negative";
+        s := checkPositive(-99);
+        console.println($"-99 => {s}");
+        s := checkPositive(99);
+        console.println($"99 => {s}");
+
+        String? s2 = s;
+        if (String s3 ?= s2)
+            {
+            console.println($"value is not null: {s3}");
+            }
+        else
+            {
+            console.println($"value is null: {s2}");
+            assert;
+            }
+
+        // should be compiler error:
+        // String s3 ?= s2;
+
+        s = "hello world";
+        console.println($"s={s}");
+        s ?= s2;
+        console.println($"s={s}");
         }
 
     private conditional String checkPositive(Int i)
