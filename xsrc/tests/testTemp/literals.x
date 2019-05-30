@@ -217,10 +217,22 @@ module TestLiterals.xqiz.it
         console.println($"duration={duration} or {Duration:P1DT1H1M1.23456S}");
 
         duration = new Duration("PT10S");
-        console.println($"duration={duration} or {Duration:PT10S}");
+        console.println($"PT10S duration={duration} or {Duration:PT10S}");
+
+        duration = new Duration("10S");
+        console.println($"10S duration={duration} or {Duration:10S}");
 
         duration = new Duration("PT10.5S");
-        console.println($"duration={duration} or {Duration:PT10.5S}");
+        console.println($"PT10.5S duration={duration} or {Duration:PT10.5S}");
+
+        duration = new Duration("P10.5S");
+        console.println($"P10.5S duration={duration} or {Duration:P10.5S}");
+
+        duration = new Duration("T10.5S");
+        console.println($"T10.5S duration={duration} or {Duration:T10.5S}");
+
+        duration = new Duration("10.5S");
+        console.println($"10.5S duration={duration} or {Duration:10.5S}");
         }
     }
 

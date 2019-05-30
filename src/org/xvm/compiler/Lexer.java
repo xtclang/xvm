@@ -1794,97 +1794,92 @@ public class Lexer
         //   1  2  3   4   5  6  7 . 8
 
         boolean fErr = false;
-        if (expect('P'))
+        match('P');
+
+        int nPrevStage = match('T') ? 4 : 0;
+        Loop: while (true)
             {
-            int nPrevStage = match('T') ? 4 : 0;
-            Loop: while (true)
+            long lPos = source.getPosition();
+            long lVal = eatUnsignedLong();
+            if (lVal < 0)
                 {
-                long lPos = source.getPosition();
-                long lVal = eatUnsignedLong();
-                if (lVal < 0)
-                    {
-                    source.setPosition(lPos);
-                    break;
-                    }
+                source.setPosition(lPos);
+                break;
+                }
 
-                char ch = nextChar();
-                switch (ch)
-                    {
-                    case 'Y':
-                        if (nPrevStage >= 1)
-                            {
-                            fErr = true;
-                            }
-                        nPrevStage = Math.max(1, nPrevStage);
-                        break;
-
-                    case 'M':
-                        if (nPrevStage >= 2)
-                            {
-                            // parse as minute
-                            if (nPrevStage < 4)
-                                {
-                                fErr = true;
-                                }
-                            nPrevStage = Math.max(6, nPrevStage);
-                            }
-                        else
-                            {
-                            // parse as month
-                            nPrevStage = Math.max(2, nPrevStage);
-                            }
-                        break;
-
-                    case 'D':
-                        if (nPrevStage >= 3)
-                            {
-                            fErr = true;
-                            }
-                        nPrevStage = Math.max(3, nPrevStage);
-                        break;
-
-                    case 'H':
-                        if (nPrevStage >= 5)
-                            {
-                            fErr = true;
-                            }
-                        nPrevStage = Math.max(5, nPrevStage);
-                        break;
-
-                    case 'S':
-                        nPrevStage = 8;
-                        break Loop;
-
-                    case '.':
-                        if (nPrevStage >= 7)
-                            {
-                            fErr = true;
-                            }
-                        nPrevStage = Math.max(7, nPrevStage);
-                        break;
-
-                    default:
-                        source.rewind();
-                        fErr = true;
-                        break;
-                    }
-
-                if (match('T'))
-                    {
-                    if (nPrevStage >= 4)
+            char ch = nextChar();
+            switch (ch)
+                {
+                case 'Y':
+                    if (nPrevStage >= 1)
                         {
                         fErr = true;
+                        }
+                    nPrevStage = Math.max(1, nPrevStage);
+                    break;
+
+                case 'M':
+                    if (nPrevStage >= 2)
+                        {
+                        // parse as minute
+                        if (nPrevStage < 4)
+                            {
+                            fErr = true;
+                            }
+                        nPrevStage = Math.max(6, nPrevStage);
                         }
                     else
                         {
-                        nPrevStage = 4;
+                        // parse as month
+                        nPrevStage = Math.max(2, nPrevStage);
                         }
+                    break;
+
+                case 'D':
+                    if (nPrevStage >= 3)
+                        {
+                        fErr = true;
+                        }
+                    nPrevStage = Math.max(3, nPrevStage);
+                    break;
+
+                case 'H':
+                    if (nPrevStage >= 5)
+                        {
+                        fErr = true;
+                        }
+                    nPrevStage = Math.max(5, nPrevStage);
+                    break;
+
+                case 'S':
+                    nPrevStage = 8;
+                    break Loop;
+
+                case '.':
+                    if (nPrevStage >= 7)
+                        {
+                        fErr = true;
+                        }
+                    nPrevStage = Math.max(7, nPrevStage);
+                    break;
+
+                default:
+                    source.rewind();
+                    fErr = true;
+                    break;
+                }
+
+            if (match('T'))
+                {
+                if (nPrevStage >= 4)
+                    {
+                    fErr = true;
+                    }
+                else
+                    {
+                    nPrevStage = 4;
                     }
                 }
-            }
-        else
-            {
-            fErr = true;
             }
 
         long   lEnd      = source.getPosition();
