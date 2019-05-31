@@ -210,7 +210,8 @@ public class InvocationExpression
         return expr instanceof NameExpression
                 && ((NameExpression) expr).getName().equals("versionMatches")
                 && args.size() == 1
-                && args.get(0) instanceof VersionExpression
+                && args.get(0) instanceof LiteralExpression
+                && ((LiteralExpression) args.get(0)).getLiteral().getId() == Id.LIT_VERSION
                 && ((NameExpression) expr).getLeftExpression() != null
                 && ((NameExpression) expr).isOnlyNames()
                 || super.validateCondition(errs);
@@ -235,7 +236,7 @@ public class InvocationExpression
 
             ConstantPool pool    = pool();
             String       sModule = sb.toString();
-            Version      version = ((VersionExpression) args.get(0)).getVersion();
+            Version      version = ((LiteralExpression) args.get(0)).getVersion();
             return pool.ensureImportVersionCondition(
                     pool.ensureModuleConstant(sModule), pool.ensureVersionConstant(version));
             }

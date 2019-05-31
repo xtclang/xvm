@@ -851,9 +851,9 @@ Entries
 Entry
     Expression "=" Expression
 
-# note: the StringLiteral must contain a VersionString
 VersionLiteral
-    "v:" NoWhitespace StringLiteral
+    "Version:" NoWhitespace VersionString
+    "v:" NoWhitespace VersionString
 
 VersionString
     NonGASuffix
@@ -869,7 +869,7 @@ VersionFinish:
 NonGASuffix
       NonGAPrefix DigitsNoUnderscores-opt
 
-NonGAPrefix:
+NonGAPrefix:        # note: not (!!!) case sensitive
     "dev"           # developer build (default compiler stamp)
     "ci"            # continuous integration build (automated build, automated test)
     "qc"            # build selected for internal Quality Control

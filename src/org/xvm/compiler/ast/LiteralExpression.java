@@ -7,6 +7,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -49,6 +50,15 @@ public class LiteralExpression
     public boolean isTODO()
         {
         return literal.getId() == Id.TODO;
+        }
+
+    /**
+     * @return the version value
+     */
+    public Version getVersion()
+        {
+        assert literal.getId() == Id.LIT_VERSION;
+        return (Version) literal.getValue();
         }
 
     @Override
@@ -103,6 +113,9 @@ public class LiteralExpression
 
             case LIT_DURATION:
                 return pool.typeDuration();
+
+            case LIT_VERSION:
+                return pool.typeVersion();
 
             default:
                 throw new IllegalStateException(literal.getId().name() + "=" + literal.getValue());
@@ -216,6 +229,9 @@ public class LiteralExpression
             case LIT_DURATION:
                 return pool.ensureLiteralConstant(Format.Duration, (String) literal.getValue());
 
+            case LIT_VERSION:
+                return pool.ensureVersionConstant((Version) literal.getValue());
+
             default:
                 throw new IllegalStateException(literal.getId().name() + "=" + literal.getValue());
             }
@@ -257,6 +273,9 @@ public class LiteralExpression
 
             case LIT_DURATION:
                 return "Duration:" + literal.getValue();
+
+            case LIT_VERSION:
+                return "v:" + literal.getValue();
 
             case TODO:
                 return "TODO(" + Handy.quotedString(String.valueOf(literal.getValue())) + ')';

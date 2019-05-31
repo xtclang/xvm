@@ -484,7 +484,7 @@ public class VersionTree<V>
                     parts[i] = node.part;
                     node = node.parent;
                     }
-                version = new Version(parts);
+                version = new Version(parts, null);
                 }
 
             return version;
@@ -754,7 +754,7 @@ public class VersionTree<V>
                 // return this node, if it is present and substitutable for the requested version,
                 // if there is no child that matches, or this node is a GA release
                 return this.isPresent() && (nodeNonGA == null || this.getVersion().isGARelease())
-                    && this.getVersion().isSubstitutableFor(new Version(parts))
+                    && this.getVersion().isSubstitutableFor(new Version(parts, null))
                         ? this
                         : nodeNonGA;
                 }

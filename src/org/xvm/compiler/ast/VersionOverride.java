@@ -9,6 +9,7 @@ import java.util.Map;
 import org.xvm.asm.Version;
 
 import org.xvm.compiler.Token;
+import org.xvm.compiler.Token.Id;
 
 
 /**
@@ -24,7 +25,7 @@ public class VersionOverride
      *
      * @param exprVer  denotes the version required
      */
-    public VersionOverride(VersionExpression exprVer)
+    public VersionOverride(LiteralExpression exprVer)
         {
         this(null, exprVer);
         }
@@ -35,8 +36,9 @@ public class VersionOverride
      * @param verb     the overriding verb ("allow", "avoid", or "prefer")
      * @param exprVer  denotes the version associated with the verb
      */
-    public VersionOverride(Token verb, VersionExpression exprVer)
+    public VersionOverride(Token verb, LiteralExpression exprVer)
         {
+        assert exprVer != null && exprVer.literal.getId() == Id.LIT_VERSION;
         this.verb    = verb;
         this.exprVer = exprVer;
         }
@@ -122,7 +124,7 @@ public class VersionOverride
     /**
      * The version literal expression.
      */
-    protected VersionExpression exprVer;
+    protected LiteralExpression exprVer;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(VersionOverride.class, "exprVer");
     }

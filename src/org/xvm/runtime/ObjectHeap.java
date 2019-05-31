@@ -148,6 +148,7 @@ public class ObjectHeap
             case Time:
             case DateTime:
             case Interval:
+            case Version:
                 return constValue.getType();
 
             case Char:
@@ -158,9 +159,6 @@ public class ObjectHeap
 
             case Duration:
                 return f_poolRoot.typeDuration();
-
-            case Version:
-                return f_poolRoot.typeVersion();
 
             case UInt8Array:
                 return f_poolRoot.typeByteArray();

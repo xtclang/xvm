@@ -25,17 +25,17 @@ module TestLiterals.xqiz.it
         console.println("\n** test Versions()");
 
         Version version = new Version(null, 1);
-        console.println("version=" + version);
+        console.println($"new Version(null, 1)={version}");
 
         version = new Version(version, 0);
         // version = new Version(version, 0, "20130313144700");
-        console.println("version=" + version);
+        console.println($"new Version(version, 0)={version}");
 
         version = new Version(version, Alpha);
-        console.println("version=" + version);
+        console.println($"new Version(version, Alpha)={version}");
 
         version = new Version(version, 2);
-        console.println("version=" + version);
+        console.println($"new Version(version, 2)={version}");
 
         for (Int i : 0..3)
             {
@@ -59,6 +59,31 @@ module TestLiterals.xqiz.it
                 + new Version("1.2-beta3").stepsTo(new Version("1.2-beta")));
         console.println("steps from 1.2-beta3 to 1.2-beta5="
                 + new Version("1.2-beta3").stepsTo(new Version("1.2-beta5")));
+
+
+        version = v:alpha;
+        console.println($"literal v:alpha={version}");
+
+        version = v:1;
+        console.println($"literal v:1={version}");
+
+        version = v:1.0;
+        console.println($"literal v:1.0={version}");
+
+        version = v:beta2;
+        console.println($"literal v:beta2={version}");
+
+        version = v:5.6.7.8-alpha;
+        console.println($"literal v:5.6.7.8-alpha={version}");
+
+        version = v:1.2-beta5;
+        console.println($"literal v:1.2-beta5={version}");
+
+        version = v:1.2beta5;
+        console.println($"literal v:1.2beta5={version}");
+
+        version = v:1.2beta5+123-456.abc;
+        console.println($"literal v:1.2beta5+123-456.abc={version}");
         }
 
     void testIncludes()

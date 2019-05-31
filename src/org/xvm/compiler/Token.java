@@ -519,6 +519,7 @@ public class Token
         LIT_DATETIME (null             ),
         LIT_TIMEZONE (null             ),
         LIT_DURATION (null             ),
+        LIT_VERSION  (null             ),
         TEMPLATE     ("{...}"          ),            // not a real token
         ENUM_VAL     ("enum-value"     );            // not a real token
 

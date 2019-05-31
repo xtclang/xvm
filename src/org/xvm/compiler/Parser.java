@@ -3442,6 +3442,7 @@ public class Parser
             case LIT_DATETIME:
             case LIT_TIMEZONE:
             case LIT_DURATION:
+            case LIT_VERSION:
                 return new LiteralExpression(current());
 
             case TEMPLATE:
@@ -3932,15 +3933,6 @@ public class Parser
                     }
                 return new TupleExpression(type, exprs, type.getStartPosition(),
                         getLastMatch().getEndPosition());
-                }
-
-            // TODO move this to Lexer (like Date etc.)
-            case "Version":
-            case "v":
-                {
-                Token   tokLit = peek();
-                Version ver    = parseVersion(true);
-                return new VersionExpression(tokLit, ver, type.getStartPosition());
                 }
 
             default:
@@ -4877,25 +4869,6 @@ public class Parser
      * Versions
      *     Version
      *     Versions, Version
-     *
-     * # note: the StringLiteral must contain a VersionString
-     * Version
-     *     "v:" NoWhitespace StringLiteral
-     *
-     * VersionString
-     *     VersionFinish
-     *     VersionString . VersionFinish
-     *
-     * VersionFinish:
-     *     NonGAPrefix-opt DigitsNoUnderscores
-     *     NonGAPrefix DigitsNoUnderscores-opt
-     *
-     * NonGAPrefix:
-     *     "dev"
-     *     "ci"
-     *     "alpha"
-     *     "beta"
-     *     "rc"
      * </pre></code>
      *
      * @param required  true if a version requirement must be present next in the stream of tokens
@@ -4905,7 +4878,7 @@ public class Parser
     List<VersionOverride> parseVersionRequirement(boolean required)
         {
         // start with the initial version requirement (no preceding verb)
-        VersionExpression exprVer = parseVersionLiteral(required);
+        LiteralExpression exprVer = parseVersionLiteral(required);
         if (exprVer == null)
             {
             return null;
@@ -4952,100 +4925,37 @@ public class Parser
      * Parse a version literal.
      *
      * <p/><code><pre>
-     * # note: the StringLiteral must contain a VersionString
-     * Version
-     *     "v" ":" StringLiteral
-     *
      * VersionString
-     *     VersionFinish
-     *     VersionString . VersionFinish
+     *     NonGASuffix
+     *     VersionNumbers VersionFinish-opt
+     *
+     * VersionNumbers
+     *     DigitsNoUnderscores
+     *     VersionNumbers "." DigitsNoUnderscores
      *
      * VersionFinish:
-     *     NonGAPrefix-opt DigitsNoUnderscores
-     *     NonGAPrefix DigitsNoUnderscores-opt
+     *      "." NonGASuffix
+     *
+     * NonGASuffix
+     *       NonGAPrefix DigitsNoUnderscores-opt
      *
      * NonGAPrefix:
-     *     "dev"
-     *     "ci"
-     *     "alpha"
-     *     "beta"
-     *     "rc"
+     *     "dev"           # developer build (default compiler stamp)
+     *     "ci"            # continuous integration build (automated build, automated test)
+     *     "qc"            # build selected for internal Quality Control
+     *     "alpha"         # build selected for external alpha test (pre-release)
+     *     "beta"          # build selected for external beta test (pre-release)
+     *     "rc"            # build selected as a release candidate (pre-release; GA pending)
      * </pre></code>
      *
-     * @param required  true if a version requirement must be present next in the stream of tokens
+     * @param fRequired  true if a version requirement must be present next in the stream of tokens
      *
      * @return a VersionExpression
      */
-    VersionExpression parseVersionLiteral(boolean required)
+    LiteralExpression parseVersionLiteral(boolean fRequired)
         {
-        Token tokPrefix = match(Id.IDENTIFIER, required);
-        if (tokPrefix == null)
-            {
-            return null;
-            }
-
-        String sName = (String) tokPrefix.getValue();
-        if ((sName.equals("v") || sName.equals("Version")) && !tokPrefix.hasTrailingWhitespace()
-                && !expect(Id.COLON).hasTrailingWhitespace())
-            {
-            return new VersionExpression(peek(), parseVersion(true), tokPrefix.getStartPosition());
-            }
-        else
-            {
-            log(Severity.ERROR, BAD_VERSION, tokPrefix.getStartPosition(), peek().getEndPosition());
-            throw new CompilerException("version literal");
-            }
-        }
-
-    /**
-     * Parse a single version id.
-     *
-     * <p/><code><pre>
-     * # note: the StringLiteral must contain a VersionString
-     * Version
-     *     StringLiteral
-     *
-     * VersionString
-     *     VersionFinish
-     *     VersionString . VersionFinish
-     *
-     * VersionFinish:
-     *     NonGAPrefix-opt DigitsNoUnderscores
-     *     NonGAPrefix DigitsNoUnderscores-opt
-     *
-     * NonGAPrefix:
-     *     "dev"
-     *     "ci"
-     *     "alpha"
-     *     "beta"
-     *     "rc"
-     * </pre></code>
-     *
-     * @param required true iff the version must appear next in the stream of tokens
-     *
-     * @return a Version
-     */
-    Version parseVersion(boolean required)
-        {
-        Token token = match(Id.LIT_STRING, required);
-        if (token != null)
-            {
-            String[] parts = parseDelimitedString((String) token.getValue(), '.');
-            for (int i = 0, c = parts.length; i < c; ++i)
-                {
-                // each of the parts has to be an integer, except for the last which can start with
-                // a non-GA designator
-                if (!Version.isValidVersionPart(parts[i], i == c-1))
-                    {
-                    log(Severity.ERROR, BAD_VERSION, token.getStartPosition(), token.getEndPosition());
-                    return new Version("0");
-                    }
-                }
-
-            return new Version((String) token.getValue());
-            }
-
-        return null;
+        Token tokVer = match(Id.LIT_VERSION, fRequired);
+        return tokVer == null ? null : new LiteralExpression(tokVer);
         }
 
     /**

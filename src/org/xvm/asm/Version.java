@@ -55,10 +55,14 @@ public class Version
             }
         }
 
-    public Version(String[] parts)
+    public Version(String[] parts, String build)
         {
+        if (parts == null || parts.length == 0)
+            {
+            throw new IllegalArgumentException("illegal empty version");
+            }
+
         StringBuilder sb  = new StringBuilder();
-        boolean       err = parts.length == 0;
         boolean       fGA = true;
         for (int i = 0, c = parts.length; i < c; ++i)
             {
@@ -72,35 +76,49 @@ public class Version
                     {
                     if (!fGA)
                         {
-                        throw new IllegalStateException("illegal version: " + literal
+                        throw new IllegalArgumentException("illegal version: " + literal
                                 + " (only one non-GA specifier allowed)");
                         }
                     fGA = false;
 
                     if (i > 0 && Integer.valueOf(parts[i-1]) == 0)
                         {
-                        throw new IllegalStateException("illegal version: " + literal
+                        throw new IllegalArgumentException("illegal version: " + literal
                                 + " (a non-GA specifier cannot follow a dot-zero version)");
                         }
                     }
                 }
             else
                 {
-                throw new IllegalStateException("illegal version: " + literal);
+                throw new IllegalArgumentException("illegal version: " + literal);
                 }
 
             if (i > 0)
                 {
-                sb.append('.');
+                if (fGA)
+                    {
+                    sb.append('.');
+                    }
+                else if (!isDigit(part.charAt(0)))
+                    {
+                    sb.append('-');
+                    }
                 }
             sb.append(part);
             }
 
+        if (build != null && build.length() > 0)
+            {
+            sb.append('+')
+              .append(build);
+            }
+
         this.literal = sb.toString();
         this.strs    = parts;
+        this.build   = build;
         }
 
-    public Version(int[] parts)
+    public Version(int[] parts, String build)
         {
         assert parts != null;
 
@@ -108,20 +126,21 @@ public class Version
         // between -1 and -5
         StringBuilder sb  = new StringBuilder();
         boolean       err = parts.length == 0;
+        boolean       fGA = true;
         for (int i = 0, c = parts.length; i < c; ++i)
             {
             int part = parts[i];
             if (parts[i] >= 0)
                 {
-                sb.append(part);
-                if (i < c - 1)
+                if (i > 0 && fGA)
                     {
                     sb.append('.');
                     }
+                sb.append(part);
                 }
             else if (part >= -PREFIX.length)
                 {
-                sb.append(PREFIX[part + PREFIX.length]);
+                fGA = false;
                 switch (c - i)
                     {
                     case 1:
@@ -143,18 +162,31 @@ public class Version
                     // previous part must > 0
                     err = true;
                     }
+
+                if (i > 0)
+                    {
+                    sb.append('-');
+                    }
+                sb.append(PREFIX[part + PREFIX.length]);
                 }
             else
                 {
-                sb.append("illegal(")
+                sb.append(".illegal(")
                   .append(i)
                   .append(')');
                 err = true;
                 }
             }
 
+        if (build != null && build.length() > 0)
+            {
+            sb.append('+')
+              .append(build);
+            }
+
         this.literal = sb.toString();
         this.ints    = parts;
+        this.build   = build;
 
         if (err)
             {
@@ -462,7 +494,7 @@ public class Version
 
         int[] partsNew = new int[cParts - cZeros];
         System.arraycopy(parts, 0, partsNew, 0, cParts - cZeros);
-        return new Version(partsNew);
+        return new Version(partsNew, build);
         }
 
 
@@ -675,9 +707,10 @@ public class Version
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private static final String[] PREFIX = {"dev", "ci", "qc", "alpha", "beta", "rc"};
+    private static final String[] PREFIX = {"CI", "Dev", "QC", "alpha", "beta", "rc"};
 
     protected String   literal;
     protected String[] strs;
     protected int[]    ints;
+    protected String   build;
     }

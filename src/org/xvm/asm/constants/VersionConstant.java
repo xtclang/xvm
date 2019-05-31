@@ -59,6 +59,12 @@ public class VersionConstant
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
+    public TypeConstant getType()
+        {
+        return getConstantPool().typeVersion();
+        }
+
+    @Override
     protected int compareDetails(Constant that)
         {
         if (!(that instanceof VersionConstant))
@@ -71,7 +77,7 @@ public class VersionConstant
     @Override
     public String getValueString()
         {
-        return "v:\"" + getValue() + '\"';
+        return "v:" + getValue();
         }
 
 

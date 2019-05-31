@@ -14,6 +14,7 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.asm.Version;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.PackedInteger;
@@ -624,6 +625,7 @@ public class Lexer
                             }
                         else
                             {
+                            // TODO need to support private / protected / public / struct
                             switch (name)
                                 {
                                 case "Date":
@@ -636,8 +638,9 @@ public class Lexer
                                     return eatTimeZone(lInitPos);
                                 case "Duration":
                                     return eatDuration(lInitPos);
-
-                                // TODO "v:" and "Version:"
+                                case "Version":
+                                case "v":
+                                    return eatVersion(lInitPos);
 
                                 default:
                                     source.rewind();
@@ -1706,7 +1709,7 @@ public class Lexer
     protected Token eatDateTime(long lInitPos)
         {
         Token tokDate = eatDate(lInitPos, true);
-        if (!expect('T'))
+        if (!(match('t') || expect('T')))
             {
             log(Severity.ERROR, BAD_DATETIME, new Object[] {tokDate.getValue()},
                     tokDate.getStartPosition(), tokDate.getEndPosition());
@@ -1717,7 +1720,7 @@ public class Lexer
         long  lEndPos = tokTime.getEndPosition();
 
         String sDT = tokDate.getValue() + "T" + tokTime.getValue();
-        if (match('Z') || match('+') || match('-'))
+        if (match('Z') || match('z') || match('+') || match('-'))
             {
             m_source.rewind();
             Token tokZone = eatTimeZone(lInitPos);
@@ -1737,7 +1740,7 @@ public class Lexer
      */
     protected Token eatTimeZone(long lInitPos)
         {
-        if (match('Z'))
+        if (match('Z') || match('z'))
             {
             peekNotIdentifierOrNumber();
             return new Token(lInitPos, m_source.getPosition(), Id.LIT_TIMEZONE, "Z");
@@ -1794,7 +1797,10 @@ public class Lexer
         //   1  2  3   4   5  6  7 . 8
 
         boolean fErr = false;
-        match('P');
+        if (!match('P'))
+            {
+            match('p');
+            }
 
         int nPrevStage = match('T') ? 4 : 0;
         Loop: while (true)
@@ -1811,6 +1817,7 @@ public class Lexer
             switch (ch)
                 {
                 case 'Y':
+                case 'y':
                     if (nPrevStage >= 1)
                         {
                         fErr = true;
@@ -1819,6 +1826,7 @@ public class Lexer
                     break;
 
                 case 'M':
+                case 'm':
                     if (nPrevStage >= 2)
                         {
                         // parse as minute
@@ -1836,6 +1844,7 @@ public class Lexer
                     break;
 
                 case 'D':
+                case 'd':
                     if (nPrevStage >= 3)
                         {
                         fErr = true;
@@ -1844,6 +1853,7 @@ public class Lexer
                     break;
 
                 case 'H':
+                case 'h':
                     if (nPrevStage >= 5)
                         {
                         fErr = true;
@@ -1852,6 +1862,7 @@ public class Lexer
                     break;
 
                 case 'S':
+                case 's':
                     nPrevStage = 8;
                     break Loop;
 
@@ -1869,7 +1880,7 @@ public class Lexer
                     break;
                 }
 
-            if (match('T'))
+            if (match('T') || match('t'))
                 {
                 if (nPrevStage >= 4)
                     {
@@ -1883,7 +1894,7 @@ public class Lexer
             }
 
         long   lEnd      = source.getPosition();
-        String sDuration = source.toString(lStart, lEnd);
+        String sDuration = source.toString(lStart, lEnd).toUpperCase();
 
         if (fErr)
             {
@@ -1895,6 +1906,230 @@ public class Lexer
             }
 
         return new Token(lStart, lEnd, Id.LIT_DURATION, sDuration);
+        }
+
+    /**
+     * Eat a literal version value.
+     *
+     * <p/><code><pre>
+     * VersionString
+     *     NonGASuffix
+     *     VersionNumbers VersionFinish-opt
+     *
+     * VersionNumbers
+     *     DigitsNoUnderscores
+     *     VersionNumbers "." DigitsNoUnderscores
+     *
+     * VersionFinish:
+     *      "." NonGASuffix
+     *
+     * NonGASuffix
+     *       NonGAPrefix DigitsNoUnderscores-opt
+     *
+     * NonGAPrefix:
+     *     "dev"           # developer build (default compiler stamp)
+     *     "ci"            # continuous integration build (automated build, automated test)
+     *     "qc"            # build selected for internal Quality Control
+     *     "alpha"         # build selected for external alpha test (pre-release)
+     *     "beta"          # build selected for external beta test (pre-release)
+     *     "rc"            # build selected as a release candidate (pre-release; GA pending)
+     * </pre></code>
+     *
+     * @param lInitPos  the location of the start of the literal token
+     *
+     * @return the literal as a Token
+     */
+    protected Token eatVersion(long lInitPos)
+        {
+        Source             source    = m_source;
+        long               lVerPos   = source.getPosition();
+        ArrayList<Integer> listParts = new ArrayList<>();
+
+        // eat the VersionNumbers
+        boolean fNeed = true;
+        boolean fErr  = false;
+        while (isNextCharDigit(10))
+            {
+            long lNum = eatUnsignedLong();
+            if (lNum < 0 || lNum > Integer.MAX_VALUE)
+                {
+                if (!fErr)
+                    {
+                    log(Severity.ERROR, Parser.BAD_VERSION, null, lInitPos, getPosition());
+                    fErr = true;
+                    }
+                lNum = 0;
+                }
+
+            listParts.add((int) lNum);
+
+            if (match('.'))
+                {
+                fNeed = true;
+                continue;
+                }
+
+            if (match('-'))
+                {
+                fNeed = true;
+                break;
+                }
+
+            fNeed = false;
+            }
+
+        boolean fNonGA = true;
+        char    ch     = nextChar();
+        source.rewind();
+        switch (ch)
+            {
+            case 'A':
+            case 'a':
+                listParts.add(-3);
+                fErr = !expectCaseInsens("alpha");
+                break;
+
+            case 'B':
+            case 'b':
+                listParts.add(-2);
+                fErr = !expectCaseInsens("beta");
+                break;
+
+            case 'C':
+            case 'c':
+                listParts.add(-6);
+                fErr = !expectCaseInsens("ci");
+                break;
+
+            case 'D':
+            case 'd':
+                listParts.add(-5);
+                fErr = !expectCaseInsens("dev");
+                break;
+
+            case 'Q':
+            case 'q':
+                listParts.add(-4);
+                fErr = !expectCaseInsens("qa");
+                break;
+
+            case 'R':
+            case 'r':
+                listParts.add(-1);
+                fErr = !expectCaseInsens("rc");
+                break;
+
+            default:
+                fNonGA = false;
+                if (fNeed)
+                    {
+                    log(Severity.ERROR, Parser.BAD_VERSION, null, lInitPos, getPosition());
+                    fErr = true;
+                    }
+                break;
+            }
+
+        if (!fErr && fNonGA)
+            {
+            fNeed = match('.') || match('-');
+            if (isNextCharDigit(10))
+                {
+                long lNum = eatUnsignedLong();
+                if (lNum < 0 || lNum > Integer.MAX_VALUE)
+                    {
+                    fErr = true;
+                    lNum = 0;
+                    }
+                listParts.add((int) lNum);
+                }
+            else
+                {
+                fErr = fNeed;
+                }
+            if (fErr)
+                {
+                log(Severity.ERROR, Parser.BAD_VERSION, null, lInitPos, getPosition());
+                }
+            }
+
+        String sBuild = null;
+        if (fErr)
+            {
+            // expurgate the remainder of the version string, whatever it is
+            while (source.hasNext())
+                {
+                ch = nextChar();
+                if (!(     ch >= 'A' && ch <= 'Z'
+                        || ch >= 'a' && ch <= 'z'
+                        || ch >= '0' && ch <= '9'
+                        || ch == '+'
+                        || ch == '-'
+                        || ch == '.'))
+                    {
+                    source.rewind();
+                    break;
+                    }
+                }
+            }
+        else if (match('+'))
+            {
+            long lPosBuild = source.getPosition();
+            // skip over the build metadata
+            while (source.hasNext())
+                {
+                ch = nextChar();
+                if (!(     ch >= 'A' && ch <= 'Z'
+                        || ch >= 'a' && ch <= 'z'
+                        || ch >= '0' && ch <= '9'
+                        || ch == '-'
+                        || ch == '.'))
+                    {
+                    source.rewind();
+                    break;
+                    }
+                }
+            long lPosEnd = source.getPosition();
+            if (lPosBuild == lPosEnd)
+                {
+                log(Severity.ERROR, Parser.BAD_VERSION, null, lInitPos, lPosEnd);
+                }
+            else
+                {
+                sBuild = source.toString(lPosBuild, lPosEnd);
+                }
+            }
+        else
+            {
+            ch = nextChar();
+            source.rewind();
+            if (       ch >= 'A' && ch <= 'Z'
+                    || ch >= 'a' && ch <= 'z'
+                    || ch >= '0' && ch <= '9'
+                    || ch == '-'
+                    || ch == '.')
+                {
+                log(Severity.ERROR, Parser.BAD_VERSION, null, lInitPos, getPosition());
+                fErr = true;
+                }
+            }
+
+        Version ver;
+        if (fErr)
+            {
+            ver = new Version("0");
+            }
+        else
+            {
+            int   c     = listParts.size();
+            int[] parts = new int[c];
+            for (int i = 0; i < c; ++i)
+                {
+                parts[i] = listParts.get(i);
+                }
+            ver = new Version(parts, sBuild);
+            }
+
+        return new Token(lInitPos, getPosition(), Id.LIT_VERSION, ver);
         }
 
     /**
@@ -2097,6 +2332,33 @@ public class Lexer
             return false;
             }
 
+        return true;
+        }
+
+    protected boolean expectCaseInsens(String s)
+        {
+        for (int i = 0, c = s.length(); i < c; ++i)
+            {
+            char ch = s.charAt(i);
+            if (match(ch) || match(Character.toLowerCase(ch)) || match(Character.toUpperCase(ch)))
+                {
+                continue;
+                }
+
+            // this will cause an error to be logged
+            expect(ch);
+            return false;
+            }
+
+        long lNext = getPosition();
+        char ch    = nextChar();
+        if (ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z')
+            {
+            log(Severity.ERROR, UNEXPECTED_CHAR, new Object[]{ch}, lNext, getPosition());
+            return false;
+            }
+
+        m_source.rewind();
         return true;
         }
 

@@ -55,7 +55,9 @@
  * As specified by Semantic Versioning, build metadata is appended to the end of the version string
  * after a plus sign. Build metadata is retained by, but ignored by the Version class. The examples
  * from the Semantic Versioning 2.0.0 specification are all legal Version examples:
- * "1.0.0-alpha+001", "1.0.0+20130313144700", "1.0.0-beta+exp.sha.5114f85".
+ * "1.0.0-alpha+001", "1.0.0+20130313144700", "1.0.0-beta+exp.sha.5114f85". The Semantic Versioning
+ * specification states that only A..Z, a..z, 0..9, and '-' may occur in the build metadata, but the
+ * examples given also include '.', so Ecstasy considers the '.' to be legal in build metadata.
  */
 const Version
         implements Sequence<Version>
@@ -283,6 +285,7 @@ const Version
                 case 'A'..'Z':
                 case 'a'..'z':
                 case '-':
+                case '.':
                     break;
                 default:
                     throw new IllegalArgument("build metadata contains illegal character: " + ch);
@@ -605,9 +608,13 @@ const Version
             appender.add(form.text);
             }
 
-        if (build != null && !suppressBuild)
+DEBUG;
+        if (build != null)
+         { if (!suppressBuild)
+        //if (build != null && !suppressBuild)
             {
             appender.add('+').add(build);
+            }
             }
         }
     }
