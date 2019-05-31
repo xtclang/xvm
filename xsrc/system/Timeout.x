@@ -69,7 +69,7 @@ const Timeout
     {
     construct(Duration remainingTime, Boolean independent = false)
         {
-        assert remainingTime > Duration:PT0S;
+        assert remainingTime > Duration:0S;
 
         // store off the previous timeout; it will be replaced by this timeout, and restored when
         // this timeout is closed
