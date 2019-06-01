@@ -608,12 +608,6 @@ const Version
             appender.add(form.text);
             }
 
-        // TODO GG BUGBUG - if this block isn't here, it blows up
-        if (!&suppressBuild.assigned)
-            {
-            suppressBuild = False;
-            }
-
         if (build != null && !suppressBuild)
             {
             appender.add('+').add(build);

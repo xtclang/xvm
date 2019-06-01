@@ -175,13 +175,11 @@ module TestLiterals.xqiz.it
         console.println($"\n(recursive)\n{{fs.emitListing($); return;}}");
         console.println($"\n(non-recursive)\n{{fs.emitListing($, False); return;}}");
 
-        File file = File:./resources/more/msgs_EN.txt;
-        console.println($"File:./resources/more/msgs_EN.txt={file}");
+//        File file = File:./resources/more/msgs_EN.txt;
+//        console.println($"File:./resources/more/msgs_EN.txt={file}");
 
-        Directory dir = Directory:./resources/;
-        console.println($"Directory:./resources/=(recursive)\n{{dir.emitListing($); return;}}");
-
-
+//        Directory dir = Directory:./resources/;
+//        console.println($"Directory:./resources/=(recursive)\n{{dir.emitListing($); return;}}");
         }
 
     void testDates()

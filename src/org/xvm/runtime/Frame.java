@@ -1136,12 +1136,21 @@ public class Frame
         {
         if (iArg >= 0)
             {
-            VarInfo info = f_aInfo[iArg];
             ObjectHandle hValue = f_ahVar[iArg];
-
             if (hValue == null)
                 {
-                throw xException.makeHandle("Unassigned value").getException();
+                // there is a possibility this method introduced a default value at the sub class
+                // that didn't exist at the base class
+                int cDefault = f_function.getDefaultParamCount();
+                int cAll     = f_function.getParamCount();
+                if (cDefault > 0 && iArg < cAll && iArg >= cAll - cDefault)
+                    {
+                    hValue = ObjectHandle.DEFAULT;
+                    }
+                else
+                    {
+                    throw xException.makeHandle("Unassigned value").getException();
+                    }
                 }
 
             if (hValue == ObjectHandle.DEFAULT)
@@ -1155,6 +1164,7 @@ public class Frame
                 return getConstHandle(constValue);
                 }
 
+            VarInfo info = f_aInfo[iArg];
             if (info != null)
                 {
                 switch (info.getStyle())

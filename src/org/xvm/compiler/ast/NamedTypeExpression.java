@@ -731,10 +731,10 @@ public class NamedTypeExpression
                 break;
             }
 
-        TypeConstant typeTarget = null;
-        if (idTarget != null)
+        TypeConstant   typeTarget = null;
+        ClassStructure clzClass   = getComponent().getContainingClass();
+        if (idTarget != null && clzClass != null)
             {
-            ClassStructure   clzClass  = getComponent().getContainingClass();
             IdentityConstant idClass   = clzClass.getIdentityConstant();
             ClassStructure   clzTarget = (ClassStructure) idTarget.getComponent();
 
