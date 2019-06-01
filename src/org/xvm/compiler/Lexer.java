@@ -582,10 +582,10 @@ public class Lexer
                         }
                     }
 
-                String name = source.toString(lInitPos, source.getPosition());
+                long  lPos  = source.getPosition();
+                String name = source.toString(lInitPos, lPos);
                 if (source.hasNext())
                     {
-                    long lPos   = source.getPosition();
                     char chNext = source.next();
                     if (name.equals(Id.TODO.TEXT))
                         {
@@ -625,25 +625,44 @@ public class Lexer
                             }
                         else
                             {
-                            // TODO need to support private / protected / public / struct
-                            switch (name)
+                            // check for suffix of private / protected / public / struct (etc.)
+                            long lPosSuffix = source.getPosition();
+                            while (source.hasNext())
                                 {
-                                case "Date":
-                                    return eatDate(lInitPos, false);
-                                case "Time":
-                                    return eatTime(lInitPos, false);
-                                case "DateTime":
-                                    return eatDateTime(lInitPos);
-                                case "TimeZone":
-                                    return eatTimeZone(lInitPos);
-                                case "Duration":
-                                    return eatDuration(lInitPos);
-                                case "Version":
-                                case "v":
-                                    return eatVersion(lInitPos);
-
-                                default:
+                                if (!isIdentifierPart(nextChar()))
+                                    {
                                     source.rewind();
+                                    break;
+                                    }
+                                }
+                            String suffix = source.toString(lPosSuffix, source.getPosition());
+                            source.setPosition(lPosSuffix); // back up past the suffix
+
+                            if (Id.valueByText(suffix) == null)
+                                {
+                                switch (name)
+                                    {
+                                    case "Date":
+                                        return eatDate(lInitPos, false);
+                                    case "Time":
+                                        return eatTime(lInitPos, false);
+                                    case "DateTime":
+                                        return eatDateTime(lInitPos);
+                                    case "TimeZone":
+                                        return eatTimeZone(lInitPos);
+                                    case "Duration":
+                                        return eatDuration(lInitPos);
+                                    case "Version":
+                                    case "v":
+                                        return eatVersion(lInitPos);
+
+                                    default:
+                                        source.rewind(); // back up past the ':'
+                                    }
+                                }
+                            else
+                                {
+                                source.rewind(); // back up past the ':'
                                 }
                             }
                         }

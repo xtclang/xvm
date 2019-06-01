@@ -928,11 +928,18 @@ MinutesDuration
 SecondsDuration
     DigitsNoUnderscores "S"                                                 # NoWhitespace
 
+FileLiteral
+    "File:" NoWhitespace Path
+
+DirectoryLiteral
+    "Directory:" NoWhitespace Path NoWhitespace "/"
+
 FileStoreLiteral
     Path NoWhitespace "/"
+    "FileStore:" NoWhitespace Path NoWhitespace "/"
 
 # Dir and File paths are not intended to support all possible directory and file names -- just the
-# ones likely to actually occur in the real world; names in a FileLiteral are NOT permitted to end
+# ones likely to actually occur in the real world; names in a File are NOT permitted to end
 # with a dot, contain 2 dots in a row, contain spaces, etc.
 File
     Dir NoWhitespace PathName

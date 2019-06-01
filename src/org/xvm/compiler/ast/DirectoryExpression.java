@@ -4,6 +4,8 @@ package org.xvm.compiler.ast;
 import java.io.File;
 import java.io.IOException;
 
+import java.lang.reflect.Field;
+
 import java.nio.file.Files;
 
 import java.nio.file.attribute.BasicFileAttributes;
@@ -36,29 +38,56 @@ public class DirectoryExpression
     /**
      * Construct a DirectoryExpression.
      *
-     * @param tokPath  a token that contains the entire path that specifies the directory
-     * @param dir      the resolved directory corresponding to the path for which this expression
-     *                 exists
+     * @param type  one of FileStore, Directory, File, or null (implies FileStore)
+     * @param path  a token that contains the entire path that specifies the directory or file
+     * @param file  the resolved directory or file corresponding to the path for which this
+     *              expression exists
      */
-    public DirectoryExpression(Token tokPath, File dir)
+    public DirectoryExpression(TypeExpression type, Token path, File file)
         {
-        this.m_tokPath = tokPath;
-        this.m_dir = dir;
+        this.type = type;
+        this.path = path;
+        m_file    = file;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return one of "FileStore", "Directory", "File", or null (implies FileStore)
+     */
+    public String getSimpleTypeName()
+        {
+        if (type == null)
+            {
+            return null;
+            }
+
+        String sType = type.toString();
+        int of = sType.indexOf('<');
+        return of < 0
+                ? sType
+                : sType.substring(0, of);
+        }
+
     @Override
     public long getStartPosition()
         {
-        return m_tokPath.getStartPosition();
+        return type == null
+                ? path.getStartPosition()
+                : type.getStartPosition();
         }
 
     @Override
     public long getEndPosition()
         {
-        return m_tokPath.getEndPosition();
+        return path.getEndPosition();
+        }
+
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
         }
 
 
@@ -67,21 +96,60 @@ public class DirectoryExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        return pool().typeFileStore();
+        String s = getSimpleTypeName();
+        switch (s == null ? "FileStore" : s)
+            {
+            case "FileStore":
+                return pool().typeFileStore();
+            case "Directory":
+                return pool().typeDirectory();
+            case "File":
+                return pool().typeFile();
+            default:
+                throw new IllegalStateException("type=" + s);
+            }
         }
 
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         TypeConstant typeActual = getImplicitType(ctx);
-        Constant     constVal;
-        try
+        Constant     constVal   = null;
+        String       sErr       = "???";
+        if (m_file == null)
             {
-            constVal = buildFileStoreConstant();
+            sErr = "no file";
             }
-        catch (IOException e)
+        else
             {
-            log(errs, Severity.ERROR, Compiler.FATAL_ERROR, e.getMessage());
+            try
+                {
+                String s = getSimpleTypeName();
+                switch (s == null ? "FileStore" : s)
+                    {
+                    case "FileStore":
+                        constVal = buildFileStoreConstant();
+                        break;
+                    case "Directory":
+                        constVal = buildDirectoryConstant(pool(), m_file);
+                        break;
+                    case "File":
+                        constVal = buildFileConstant(pool(), m_file);
+                        break;
+                    default:
+                        sErr = "bad type: " + s;
+                        break;
+                    }
+                }
+            catch (IOException e)
+                {
+                sErr = e.getMessage();
+                }
+            }
+
+        if (constVal == null)
+            {
+            log(errs, Severity.ERROR, Compiler.FATAL_ERROR, sErr);
             constVal = buildEmptyConstant();
             }
 
@@ -95,7 +163,12 @@ public class DirectoryExpression
     @Override
     public String toString()
         {
-        return (String) m_tokPath.getValue();
+        String sType = getSimpleTypeName();
+        String sPath = (String) path.getValue();
+
+        return sType == null
+                ? sPath
+                : sType + ':' + sPath;
         }
 
     @Override
@@ -116,21 +189,35 @@ public class DirectoryExpression
             throws IOException
         {
         ConstantPool   pool     = pool();
-        String         sPath    = (String) m_tokPath.getValue();
-        FSNodeConstant constDir = buildDirectoryConstant(pool, m_dir);
+        String         sPath    = (String) path.getValue();
+        FSNodeConstant constDir = buildDirectoryConstant(pool, m_file);
         return pool.ensureFileStoreConstant(sPath, constDir);
         }
 
     /**
      * @return an empty FileStore constant
      */
-    protected FileStoreConstant buildEmptyConstant()
+    protected Constant buildEmptyConstant()
         {
-        ConstantPool   pool     = pool();
-        String         sPath    = (String) m_tokPath.getValue();
-        FSNodeConstant constDir = pool.ensureDirectoryConstant(m_dir.getName(),
-                createdDateTime(pool, m_dir), modifiedDateTime(pool, m_dir), FSNodeConstant.NO_NODES);
-        return pool().ensureFileStoreConstant(sPath, constDir);
+
+        ConstantPool pool  = pool();
+        String       sPath = (String) path.getValue();
+        File         file  = m_file == null ? new File("error") : m_file;
+        String       sType = getSimpleTypeName();
+        switch (sType == null ? "FileStore" : sType)
+            {
+            case "FileStore":
+                return pool().ensureFileStoreConstant(sPath, pool.ensureDirectoryConstant(file.getName(),
+                        createdDateTime(pool, file), modifiedDateTime(pool, file), FSNodeConstant.NO_NODES));
+            case "Directory":
+                return pool.ensureDirectoryConstant(file.getName(),
+                        createdDateTime(pool, file), modifiedDateTime(pool, file), FSNodeConstant.NO_NODES);
+            case "File":
+                return pool.ensureFileConstant(file.getName(),
+                        createdDateTime(pool, file), modifiedDateTime(pool, file), new byte[0]);
+            default:
+                throw new IllegalStateException("type=" + sType);
+            }
         }
 
     /**
@@ -143,7 +230,7 @@ public class DirectoryExpression
      *
      * @throws IOException if some low level issue occurs attempting to vacuum in the directory
      */
-    protected FSNodeConstant buildDirectoryConstant(ConstantPool pool, File dir)
+    public static FSNodeConstant buildDirectoryConstant(ConstantPool pool, File dir)
             throws IOException
         {
         File[] afiles  = dir.listFiles();
@@ -176,7 +263,7 @@ public class DirectoryExpression
      *
      * @throws IOException if some low level issue occurs attempting to vacuum in the file
      */
-    protected FSNodeConstant buildFileConstant(ConstantPool pool, File file)
+    public static FSNodeConstant buildFileConstant(ConstantPool pool, File file)
             throws IOException
         {
         byte[] ab = Handy.readFileBytes(file);
@@ -192,7 +279,7 @@ public class DirectoryExpression
      *
      * @return the FileTime for the date/time that the file was created
      */
-    static public FileTime createdDateTime(ConstantPool pool, File file)
+    public static FileTime createdDateTime(ConstantPool pool, File file)
         {
         try
             {
@@ -213,7 +300,7 @@ public class DirectoryExpression
      *
      * @return the FileTime for the date/time that the file was modified
      */
-    static public FileTime modifiedDateTime(ConstantPool pool, File file)
+    public static FileTime modifiedDateTime(ConstantPool pool, File file)
         {
         try
             {
@@ -230,12 +317,19 @@ public class DirectoryExpression
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * The path string that was the basis for this expression.
+     * The (optional) type for the expression.
      */
-    private Token m_tokPath;
+    protected TypeExpression type;
 
     /**
-     * The File for the directory that the path string was resolved to.
+     * The path string that was the basis for this expression.
      */
-    private File  m_dir;
+    protected Token path;
+
+    /**
+     * The File for the directory or file that the path string was resolved to.
+     */
+    private File m_file;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(DirectoryExpression.class, "type");
     }

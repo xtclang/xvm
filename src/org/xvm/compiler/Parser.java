@@ -3319,19 +3319,12 @@ public class Parser
                                     break;
                                     }
                                 // fall through
-                            case L_CURLY:
+                            case L_SQUARE:
+                            case DIV:
+                            case DIR_CUR:
+                            case DIR_PARENT:
                                 return parseComplexLiteral(new NamedTypeExpression(null,
                                         toList(left, name), access, tokNoNarrow, params, lEndPos));
-
-                            case LIT_STRING:
-                                if (left == null && (name.getValueText().equals("v")
-                                        || name.getValueText().equals("Version")))
-                                    {
-                                    return parseComplexLiteral(new NamedTypeExpression(
-                                            null, Collections.singletonList(name), access,
-                                            tokNoNarrow, params, lEndPos));
-                                    }
-                                break;
                             }
                         }
 
@@ -3521,7 +3514,7 @@ public class Parser
                         }
                     else
                         {
-                        return new DirectoryExpression(tokFile, dir);
+                        return new DirectoryExpression(null, tokFile, dir);
                         }
                     }
 
@@ -3860,22 +3853,11 @@ public class Parser
             case "Sequence":
             case "List":
                 {
-                long     lStartPos;
-                Token.Id idEnd;
-                if (type == null)
-                    {
-                    lStartPos = expect(Id.L_SQUARE).getStartPosition();
-                    idEnd     = Id.R_SQUARE;
-                    }
-                else
-                    {
-                    expect(Id.L_CURLY);
-                    lStartPos = type.getStartPosition();
-                    idEnd     = Id.R_CURLY;
-                    }
+                Token tokOpen   = expect(Id.L_SQUARE);
+                long  lStartPos = type == null ? tokOpen.getStartPosition() : type.getStartPosition();
 
                 List<Expression> exprs = new ArrayList<>();
-                while (match(idEnd) == null)
+                while (match(Id.R_SQUARE) == null)
                     {
                     if (!exprs.isEmpty())
                         {
@@ -3888,10 +3870,10 @@ public class Parser
 
             case "Map":
                 {
-                expect(Id.L_CURLY);
+                expect(Id.L_SQUARE);
                 List<Expression> keys   = null;
                 List<Expression> values = null;
-                while (match(Id.R_CURLY) == null)
+                while (match(Id.R_SQUARE) == null)
                     {
                     if (keys == null)
                         {
@@ -3911,15 +3893,10 @@ public class Parser
 
             case "Tuple":
                 {
-                Token.Id close = Id.R_PAREN;
-                if (match(Id.L_PAREN) == null)
-                    {
-                    expect(Id.L_CURLY);
-                    close = Id.R_CURLY;
-                    }
+                expect(Id.L_PAREN);
 
                 List<Expression> exprs = null;
-                while (match(close) == null)
+                while (match(Id.R_PAREN) == null)
                     {
                     if (exprs == null)
                         {
@@ -3933,6 +3910,31 @@ public class Parser
                     }
                 return new TupleExpression(type, exprs, type.getStartPosition(),
                         getLastMatch().getEndPosition());
+                }
+
+            case "File":
+            case "Directory":
+            case "FileStore":
+                {
+                Token   tokFile = parsePath();
+                String  sFile   = (String) tokFile.getValue();
+                boolean fDir    = !sType.equals("File");
+                File    file    = null;
+                if (fDir == sFile.endsWith("/"))
+                    {
+                    try
+                        {
+                        file = m_source.resolvePath(sFile);
+                        }
+                    catch (IOException e) {}
+                    }
+
+                if (file == null || !file.exists() || file.isDirectory() != fDir)
+                    {
+                    log(Severity.ERROR, INVALID_PATH, type.getStartPosition(), tokFile.getEndPosition(), sFile);
+                    }
+
+                return new DirectoryExpression(type, tokFile, file);
                 }
 
             default:

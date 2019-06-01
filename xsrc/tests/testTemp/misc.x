@@ -478,7 +478,7 @@ module TestMisc.xqiz.it
         {
         console.println("\n** testMap()");
 
-        console.println("Map:{1=one, 2=two}=" + Map:{1="one", 2="two"});
+        console.println("Map:[1=one, 2=two]=" + Map:[1="one", 2="two"]);
         }
 
     void testAssignOps()

@@ -144,6 +144,8 @@ public class ObjectHeap
             case Map:
             case Tuple:
             case FileStore:
+            case FSDir:
+            case FSFile:
             case Date:
             case Time:
             case DateTime:
