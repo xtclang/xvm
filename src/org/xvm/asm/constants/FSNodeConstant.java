@@ -11,6 +11,7 @@ import java.util.function.Consumer;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.util.Handy;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -206,19 +207,43 @@ public class FSNodeConstant
         return (FSNodeConstant) m_constData;
         }
 
-        // ----- ValueConstant methods -----------------------------------------------------------------
+
+    // ----- run-time support  ---------------------------------------------------------------------
+
+    /**
+     * @return an ObjectHandle representing this singleton value
+     */
+    public ObjectHandle getHandle()
+        {
+        return m_handle;
+        }
+
+    /**
+     * Set the handle for this singleton's value.
+     *
+     * @param handle  the corresponding handle
+     */
+    public void setHandle(ObjectHandle handle)
+        {
+        assert handle != null;
+        assert m_handle == null;
+
+        m_handle = handle;
+        }
+
+
+    // ----- ValueConstant methods -----------------------------------------------------------------
 
     @Override
     public TypeConstant getType()
         {
-        ConstantPool pool = getConstantPool();
         switch (m_fmt)
             {
             case FSDir:
-                return pool.typeDirectory();
+                return getConstantPool().ensureEcstasyTypeConstant("_native.fs.CPDirectory");
             case FSFile:
             case FSLink:
-                return pool.typeFile();
+                return getConstantPool().ensureEcstasyTypeConstant("_native.fs.CPFile");
             default:
                 throw new IllegalStateException();
             }
@@ -434,5 +459,10 @@ public class FSNodeConstant
      * Cached hash code.
      */
     private transient int m_nHash;
+
+    /**
+     * The ObjectHandle representing this singleton's value.
+     */
+    private transient ObjectHandle m_handle;
     }
 
