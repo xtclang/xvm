@@ -12,6 +12,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.runtime.ObjectHandle;
+
 import org.xvm.util.Handy;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -237,13 +238,14 @@ public class FSNodeConstant
     @Override
     public TypeConstant getType()
         {
+        ConstantPool pool = getConstantPool();
         switch (m_fmt)
             {
             case FSDir:
-                return getConstantPool().ensureEcstasyTypeConstant("_native.fs.CPDirectory");
+                return pool.ensureEcstasyTypeConstant("_native.fs.CPDirectory");
             case FSFile:
             case FSLink:
-                return getConstantPool().ensureEcstasyTypeConstant("_native.fs.CPFile");
+                return pool.ensureEcstasyTypeConstant("_native.fs.CPFile");
             default:
                 throw new IllegalStateException();
             }
