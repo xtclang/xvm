@@ -39,7 +39,7 @@ public class ClassComposition
         implements TypeComposition
     {
     /**
-     * Construct the ClassComposition for a given "inception" type and a "revealed" type.
+     * Construct the ClassComposition for a given "inception" type.
      *
      * The guarantees for the inception type are:
      *  - it has to be a class (TypeConstant.isClass())
