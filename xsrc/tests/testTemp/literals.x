@@ -9,6 +9,7 @@ module TestLiterals.xqiz.it
         console.println("*** literal tests ***\n");
 
         testVersions();
+        testPaths();
         testIncludes();
         testMultiline();
         testMultilineTemplate();
@@ -85,11 +86,37 @@ module TestLiterals.xqiz.it
         console.println($"literal v:1.2beta5+123-456.abc={version}");
         }
 
+    void testPaths()
+        {
+        console.println("\n** testPaths()");
+
+        Path path = Path:./resources/;
+        console.println($"Path ./resources/={path}");
+
+        path = Path:./resources/more/;
+        console.println($"Path ./resources/more/={path}");
+
+        path = Path:./resources/more/msgs_EN.txt;
+        console.println($"Path ./resources/more/msgs_EN.txt={path}");
+
+        File file = ./resources/more/msgs_EN.txt;
+        console.println($"File ./resources/more/msgs_EN.txt={file}");
+
+        file = File:./resources/more/msgs_EN.txt;
+        console.println($"File ./resources/more/msgs_EN.txt={file}");
+
+        Directory dir = ./resources/;
+        console.println($"Dir ./resources/={dir}");
+
+        dir = Directory:./resources/more/;
+        console.println($"Dir ./resources/more/={dir}");
+        }
+
     void testIncludes()
         {
         console.println("\n** testIncludes()");
 
-        String s = ./resources/more/msgs_EN.txt;
+        String s = String:./resources/more/msgs_EN.txt;
         console.println($"./resources/more/msgs_EN.txt={s}");
         }
 
@@ -168,7 +195,7 @@ module TestLiterals.xqiz.it
         {
         console.println("\n** testDirs()");
 
-        FileStore fs = /resources/;
+        FileStore fs = FileStore:/resources/;
         console.println("fs=" + fs);
 
         // TODO BUGBUG CP StatementExpression requires a "return"

@@ -430,7 +430,7 @@ Condition
 ConditionalAssignmentOp
     :=
     ?=
-    
+
 ElseStatement
     "else" IfStatement
     "else" StatementBlock
@@ -787,10 +787,10 @@ TodoFinish
     NoWhitespace "(" Expression ")"
 
 Literal
-    IntLiteral                                                      # defined in language spec
-    FPDecimalLiteral                                                # defined in language spec
-    FPBinaryLiteral                                                 # defined in language spec
-    CharLiteral                                                     # defined in language spec
+    IntLiteral                                                  # defined in language spec
+    FPDecimalLiteral                                            # defined in language spec
+    FPBinaryLiteral                                             # defined in language spec
+    CharLiteral                                                 # defined in language spec
     StringLiteral
     BinaryLiteral
     TupleLiteral
@@ -806,9 +806,9 @@ Literal
 
 StringLiteral
     "$"-opt NoWhitespace '"' CharacterString-opt '"'
-    "$"-opt NoWhitespace Path
     "`|" FreeformLiteral
     "$|" FreeformLiteral
+    "String:" NoWhitespace File                                 # value is String contents of file
 
 FreeformLiteral
     FreeformChars LineTerminator FreeformLines-opt
@@ -830,7 +830,7 @@ FreeformChar
 BinaryLiteral
     "#" NoWhitespace Hexits                                     # "Hexits" defined in language spec
     "#|" FreeformLiteral                                        # containing only Hexits and whitespace
-    "#" NoWhitespace Path                                       # file to include as binary data
+    "#" NoWhitespace File                                       # file to include as binary data
 
 TupleLiteral
     "(" ExpressionList "," Expression ")"                       # compile/runtime type is Tuple
@@ -887,56 +887,59 @@ Seconds
      ":" Digit Digit SecondsFraction-opt                                    # NoWhitespace
 
 SecondsFraction
-     "." Digits                                                             # NoWhitespace
+     "." NoWhitespace Digits
 
+# with NoWhitespace
 DateTimeLiteral
     "DateTime:" Digit Digit Digit Digit "-" Digit Digit "-" Digit Digit "T" Digit Digit ":" Digit Digit Seconds-opt TimeZone-opt
-                                                                            # NoWhitespace
+
 TimeZoneLiteral
-    "TimeZone:" TimeZone                                                    # NoWhitespace
+    "TimeZone:" NoWhitespace TimeZone
 
 TimeZone
     "Z"
-    "+" Digit Digit MinutesOffset-opt                                       # NoWhitespace
-    "-" Digit Digit MinutesOffset-opt                                       # NoWhitespace
+    "+" NoWhitespace Digit NoWhitespace Digit NoWhitespace MinutesOffset-opt
+    "-" NoWhitespace Digit NoWhitespace Digit NoWhitespace MinutesOffset-opt
 
 MinutesOffset
-    ":" Digit Digit                                                         # NoWhitespace
+    ":" NoWhitespace Digit NoWhitespace Digit
 
-# using ISO 8601 "PnYnMnDTnHnMnS" format
+# using ISO 8601 "PnYnMnDTnHnMnS" format, with NoWhitespace
 DurationLiteral
     "Duration:P" YearsDuration-opt MonthsDuration-opt DaysDuration-opt TimeDuration-opt
-                                                                            # NoWhitespace
+
 TimeDuration
-     "T" HoursDuration-opt MinutesDuration-opt SecondsDuration-opt          # NoWhitespace
+     "T" NoWhitespace HoursDuration-opt NoWhitespace MinutesDuration-opt NoWhitespace SecondsDuration-opt
 
 YearsDuration
-    DigitsNoUnderscores "Y"                                                 # NoWhitespace
+    DigitsNoUnderscores NoWhitespace "Y"
 
 MonthsDuration
-    DigitsNoUnderscores "M"                                                 # NoWhitespace
+    DigitsNoUnderscores NoWhitespace "M"
 
 DaysDuration
-    DigitsNoUnderscores "D"                                                 # NoWhitespace
+    DigitsNoUnderscores NoWhitespace "D"
 
 HoursDuration
-    DigitsNoUnderscores "H"                                                 # NoWhitespace
+    DigitsNoUnderscores NoWhitespace "H"
 
 MinutesDuration
-    DigitsNoUnderscores "M"                                                 # NoWhitespace
+    DigitsNoUnderscores NoWhitespace "M"
 
 SecondsDuration
-    DigitsNoUnderscores "S"                                                 # NoWhitespace
+    DigitsNoUnderscores NoWhitespace "S"
+
+PathLiteral
+    "Path:" NoWhitespace Dir NoWhitespace PathName-opt
 
 FileLiteral
-    "File:" NoWhitespace Path
+    "File:"-opt NoWhitespace File
 
 DirectoryLiteral
-    "Directory:" NoWhitespace Path NoWhitespace "/"
+    "Directory:"-opt NoWhitespace Dir
 
 FileStoreLiteral
-    Path NoWhitespace "/"
-    "FileStore:" NoWhitespace Path NoWhitespace "/"
+    "FileStore:" NoWhitespace Dir NoWhitespace PathName-opt
 
 # Dir and File paths are not intended to support all possible directory and file names -- just the
 # ones likely to actually occur in the real world; names in a File are NOT permitted to end

@@ -139,12 +139,14 @@ public class Invoke_11
 
         checkReturnRegister(frame, hTarget);
 
+        if (method.isNative())
+            {
+            return hTarget.getTemplate().invokeNative1(frame, method, hTarget, hArg, m_nRetValue);
+            }
+
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
         ahVar[0] = hArg;
-
-        return chain.isNative()
-            ? hTarget.getTemplate().invokeNative1(frame, method, hTarget, ahVar[0], m_nRetValue)
-            : hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, m_nRetValue);
+        return hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, m_nRetValue);
         }
 
     @Override

@@ -165,16 +165,15 @@ public class Call_1N
 
     protected int complete(Frame frame, ObjectHandle hArg, MethodStructure function)
         {
-        ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
-        ahVar[0] = hArg;
-
         if (function.isNative())
             {
             ClassTemplate clz = frame.f_context.f_heapGlobal.f_templates.getTemplate(
                     function.getContainingClass().getIdentityConstant());
-            return clz.invokeNativeNN(frame, function, null, ahVar, m_anRetValue);
+            return clz.invokeNativeNN(frame, function, null, new ObjectHandle[] {hArg}, m_anRetValue);
             }
 
+        ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
+        ahVar[0] = hArg;
         return frame.callN(function, null, ahVar, m_anRetValue);
         }
 

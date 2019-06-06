@@ -11,6 +11,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
 import org.xvm.runtime.CallChain;
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -168,8 +169,14 @@ public class Call_TT
             return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
             }
 
-        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, function.getMaxVars());
+        if (function.isNative())
+            {
+            ClassTemplate clz = frame.f_context.f_heapGlobal.f_templates.getTemplate(
+                    function.getContainingClass().getIdentityConstant());
+            return clz.invokeNativeT(frame, function, null, ahArg, m_nRetValue);
+            }
 
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, function.getMaxVars());
         return frame.callT(function, null, ahVar, m_nRetValue);
         }
 

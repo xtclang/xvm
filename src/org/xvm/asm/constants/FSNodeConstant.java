@@ -161,6 +161,16 @@ public class FSNodeConstant
         return getNameConstant().getValue();
         }
 
+    public LiteralConstant getPathConstant()
+        {
+        return m_constPath;
+        }
+
+    public String getPath()
+        {
+        return getPathConstant().getValue();
+        }
+
     public LiteralConstant getCreatedConstant()
         {
         return m_constCreated;
@@ -434,6 +444,11 @@ public class FSNodeConstant
      * The name of the node.
      */
     private StringConstant m_constName;
+
+    /**
+     * The path specified for the node, or null if this node was not specified by path.
+     */
+    private LiteralConstant m_constPath;
 
     /**
      * The date/time that the node was created.

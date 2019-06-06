@@ -8,8 +8,8 @@ import Ecstasy.fs.Path;
 /**
  * Constant Pool File implementation.
  */
-const CPFile(CPFileStore:protected store, Object cookie, Path path, DateTime created, DateTime modified, Int size)
-        extends CPFileNode(store, cookie, path, created, modified, size)
+const CPFile(Object cookie, Path path, DateTime created, DateTime modified, Int size)
+        extends CPFileNode(cookie, path, created, modified, size)
         implements File
     {
     @Override

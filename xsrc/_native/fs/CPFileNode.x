@@ -7,7 +7,7 @@ import Ecstasy.fs.Path;
 /**
  * Constant Pool FileNode implementation.
  */
-const CPFileNode(CPFileStore:protected store, Object cookie, Path path, DateTime created, DateTime modified, Int size)
+const CPFileNode(Object cookie, Path path, DateTime created, DateTime modified, Int size)
         implements FileNode
         implements Stringable
     {
@@ -112,11 +112,6 @@ const CPFileNode(CPFileStore:protected store, Object cookie, Path path, DateTime
 
 
     // ----- native support ------------------------------------------------------------------------
-
-    /**
-     * The ConstantPool FileStore that created this node.
-     */
-    protected CPFileStore:protected store;
 
     /**
      * The native handle for the constant which this node represents.

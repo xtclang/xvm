@@ -129,13 +129,14 @@ public class Invoke_10
     protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
         CallChain chain = getCallChain(frame, hTarget);
+        if (chain.isNative())
+            {
+            return hTarget.getTemplate().invokeNative1(frame, chain.getTop(), hTarget, hArg, A_IGNORE);
+            }
 
         ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
         ahVar[0] = hArg;
-
-        return chain.isNative()
-            ? hTarget.getTemplate().invokeNative1(frame, chain.getTop(), hTarget, ahVar[0], A_IGNORE)
-            : hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, A_IGNORE);
+        return hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, A_IGNORE);
         }
 
     @Override
