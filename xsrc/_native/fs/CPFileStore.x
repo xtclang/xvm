@@ -198,15 +198,24 @@ const CPFileStore(String path, Object constRoot)
     /**
      * Load meta-data for a node.
      */
-    protected (Boolean isdir, String name, DateTime created, DateTime modified, Int size) loadNode(Object constNode);
+    static (Boolean isdir, String name, DateTime created, DateTime modified, Int size) loadNode(Object constNode)
+        {
+        TODO("native");
+        }
 
     /**
      * Load contents for a directory.
      */
-    protected (String[] names, Object[] cookies) loadDirectory(Object constNode);
+    static (String[] names, Object[] cookies) loadDirectory(Object constNode)
+        {
+        TODO("native");
+        }
 
     /**
      * Load contents for a file.
      */
-    protected immutable Byte[] loadFile(Object constNode);
+    static immutable Byte[] loadFile(Object constNode)
+        {
+        TODO("native");
+        }
     }

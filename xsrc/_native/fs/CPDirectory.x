@@ -138,13 +138,13 @@ const CPDirectory(CPFileStore:protected store, Object cookie, Path path, DateTim
 
     @Lazy protected ListMap<String, CPDirectory|CPFile> contents.calc()
         {
-        (String[] names, Object[] cookies) = store.loadDirectory(cookie);
+        (String[] names, Object[] cookies) = CPFileStore.loadDirectory(cookie);
         Int count = names.size;
         var nodes = new Array<CPDirectory|CPFile>(count);
         for (Int i = 0; i < count; ++i)
             {
             Object cookie = cookies[i];
-            (Boolean isdir, String name, DateTime created, DateTime modified, Int size) = store.loadNode(cookie);
+            (Boolean isdir, String name, DateTime created, DateTime modified, Int size) = CPFileStore.loadNode(cookie);
             nodes[i] = isdir
                     ? new CPDirectory(store, cookie, path + name, created, modified, size)
                     : new CPFile(store, cookie, path + name, created, modified, size);

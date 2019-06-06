@@ -20,7 +20,7 @@ const CPFile(CPFileStore:protected store, Object cookie, Path path, DateTime cre
             throw new FileNotFound();
             }
 
-        return store.loadFile(cookie);
+        return CPFileStore.loadFile(cookie);
         }
 
     @Override
