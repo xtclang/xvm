@@ -23,6 +23,7 @@ import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.*;
 
+import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
 
@@ -1335,10 +1336,19 @@ public class Parser
                 return parseStatementBlock();
 
             case ASSERT:
+            case ASSERT_RND:
+            case ASSERT_ARG:
+            case ASSERT_BOUNDS:
+            case ASSERT_TODO:
             case ASSERT_ONCE:
             case ASSERT_TEST:
-            case ASSERT_DBG:
                 return parseAssertStatement();
+            case ASSERT_DBG: // TODO should be an AssertStatement (and support for conditions) as well!
+                {
+                Token keyword = current();
+                expect(Id.SEMICOLON);
+                return new DebugStatement(keyword);
+                }
 
             case BREAK:
             case CONTINUE:
@@ -1351,13 +1361,6 @@ public class Parser
 
                 expect(Id.SEMICOLON);
                 return stmt;
-                }
-
-            case DEBUG:
-                {
-                Token keyword = current();
-                expect(Id.SEMICOLON);
-                return new DebugStatement(keyword);
                 }
 
             case DO:
@@ -1437,15 +1440,36 @@ public class Parser
     Statement parseAssertStatement()
         {
         Token keyword = current();
+        long  lEndPos = keyword.getEndPosition();
+
+        Expression exprRate = null;
+        if (keyword.getId() == Id.ASSERT_RND)
+            {
+            // for readability / clarity, whitespace after the "assert:rnd" and before the "(..)"
+            // is forbidden, because the sample interval "(..)" belongs to the assert, and is not
+            // a condition that follows the assert
+            if (keyword.hasTrailingWhitespace())
+                {
+                long lPos = keyword.getEndPosition();
+                char ch   = m_lexer.charAt(lPos);
+                log(Severity.ERROR, Lexer.EXPECTED_CHAR, lPos, lPos,
+                        "(", Handy.appendChar(new StringBuilder(), ch).toString());
+                }
+
+            expect(Id.L_PAREN);
+            exprRate = parseExpression();
+            lEndPos  = expect(Id.R_PAREN).getEndPosition();
+            }
 
         List<AstNode> conds = null;
         if (peek().getId() != Id.SEMICOLON)
             {
-            conds = parseConditionList();
+            conds   = parseConditionList();
+            lEndPos = conds.get(conds.size()-1).getEndPosition();
             }
 
         expect(Id.SEMICOLON);
-        return new AssertStatement(keyword, conds);
+        return new AssertStatement(keyword, exprRate, conds, lEndPos);
         }
 
     /**

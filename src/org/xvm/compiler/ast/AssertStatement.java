@@ -14,10 +14,9 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Assert;
-import org.xvm.asm.op.Jump;
-import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Token;
+import org.xvm.compiler.Token.Id;
 
 
 /**
@@ -28,10 +27,28 @@ public class AssertStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public AssertStatement(Token keyword, List<AstNode> conds)
+    public AssertStatement(Token keyword, Expression exprInterval, List<AstNode> conds, long lEndPos)
         {
-        this.keyword = keyword;
-        this.conds   = conds == null ? Collections.emptyList() : conds;
+        this.keyword  = keyword;
+        this.interval = exprInterval;
+        this.conds    = conds == null ? Collections.emptyList() : conds;
+        this.lEndPos  = lEndPos;
+
+        switch (keyword.getId())
+            {
+            case ASSERT:
+            case ASSERT_RND:
+            case ASSERT_ARG:
+            case ASSERT_BOUNDS:
+            case ASSERT_TODO:
+            case ASSERT_ONCE:
+            case ASSERT_TEST:
+            case ASSERT_DBG:
+                break;
+
+            default:
+                throw new IllegalArgumentException("keyword=" + keyword);
+            }
         }
 
 
@@ -84,6 +101,47 @@ public class AssertStatement
                 }
             }
         return -1;
+        }
+
+    /**
+     * @return true iff the assertion occurs explicitly within conditional "debug" mode
+     */
+    public boolean isDebugOnly()
+        {
+        return keyword.getId() == Id.ASSERT_DBG;
+        }
+
+    /**
+     * @return true iff the assertion occurs explicitly within conditional "test" mode
+     */
+    public boolean isTestOnly()
+        {
+        return keyword.getId() == Id.ASSERT_TEST;
+        }
+
+    /**
+     * @return true iff the assertion occurs explicitly within a conditional mode
+     */
+    public boolean isLinktimeConditional()
+        {
+        return isDebugOnly() | isTestOnly();
+        }
+
+    /**
+     * @return true iff the assertion does not occur each time the execution reaches it
+     */
+    public boolean isSampling()
+        {
+        return keyword.getId() == Id.ASSERT_RND;
+        }
+
+    /**
+     * @return the inverse rate of assertion evaluation; for example "5" means (on average) 1/5 of
+     *         the time
+     */
+    public Expression getSampleInterval()
+        {
+        return interval;
         }
 
     @Override
@@ -178,18 +236,8 @@ public class AssertStatement
             }
 
         boolean fCompletes = fReachable;
-        Label[] alabel     = m_alabelCond;
         for (int i = 0; i < cConds; ++i)
             {
-            if (alabel != null)
-                {
-                Label label = alabel[i];
-                if (label != null)
-                    {
-                    code.add(label);
-                    }
-                }
-
             AstNode cond = getCondition(i);
             if (cond instanceof AssignmentStatement)
                 {
@@ -268,6 +316,12 @@ public class AssertStatement
         StringBuilder sb = new StringBuilder();
 
         sb.append(keyword.getId().TEXT);
+        if (interval != null)
+            {
+            sb.append('(')
+              .append(interval)
+              .append(')');
+            }
 
         if (conds != null && !conds.isEmpty())
             {
@@ -279,6 +333,8 @@ public class AssertStatement
                   .append(conds.get(i));
                 }
             }
+
+        sb.append(';');
 
         return sb.toString();
         }
@@ -293,8 +349,9 @@ public class AssertStatement
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token         keyword;
+    protected Expression    interval;
     protected List<AstNode> conds;
+    protected long          lEndPos;
 
-    private Label[] m_alabelCond;
-    private static final Field[] CHILD_FIELDS = fieldsForNames(AssertStatement.class, "conds");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(AssertStatement.class, "interval", "conds");
     }

@@ -2279,6 +2279,23 @@ public class Lexer
         }
 
     /**
+     * Obtain the character located at a previously returned position cookie, but the state of the
+     * Lexer after this call must match that from before the call.
+     *
+     * @param lPos  a previously returned position cookie
+     *
+     * @return the character at the specified position
+     */
+    public char charAt(long lPos)
+        {
+        long lPrev = getPosition();
+        setPosition(lPos);
+        char ch = nextChar();
+        setPosition(lPrev);
+        return ch;
+        }
+
+    /**
      * Get the next character of source code, but do some additional checks
      * on the character to make sure it's legal, such as checking for an illegal
      * SUB character.

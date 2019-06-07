@@ -386,7 +386,7 @@ AssertStatement
 
 AssertInstruction                               # (when active, what gets thrown)
     "assert"                                    # runtime, IllegalState
-    "assert:rnd(" DigitsNoUnderscores "%)"      # runtime (sampling), IllegalState
+    "assert:rnd(" Expression ")"                # runtime (sampling), IllegalState
     "assert:arg"                                # runtime, IllegalArgument
     "assert:bounds"                             # runtime, OutOfBounds
     "assert:TODO"                               # runtime, UnsupportedOperation

@@ -438,6 +438,10 @@ public class Token
         ALLOW        ("allow"          , true),
         AS           ("as"             ),
         ASSERT       ("assert"         ),
+        ASSERT_RND   ("assert:rnd"     ),
+        ASSERT_ARG   ("assert:arg"     ),
+        ASSERT_BOUNDS("assert:bounds"  ),
+        ASSERT_TODO  ("assert:TODO"    ),
         ASSERT_ONCE  ("assert:once"    ),
         ASSERT_TEST  ("assert:test"    ),
         ASSERT_DBG   ("assert:debug"   ),
@@ -450,7 +454,6 @@ public class Token
         CONST        ("const"          ),
         CONSTRUCT    ("construct"      ),
         CONTINUE     ("continue"       ),
-        DEBUG        ("DEBUG"          ),            // TODO remove
         DEFAULT      ("default"        ),
         DELEGATES    ("delegates"      , true),
         DO           ("do"             ),
@@ -627,22 +630,26 @@ public class Token
             for (Id id : IDs)
                 {
                 String sText = id.TEXT;
-                if (sText != null)
+                if (sText != null && sText.length() > 0)
                     {
-                    ALL_KEYWORDS.put(sText, id);
-
-                    if (!id.ContextSensitive)
+                    char ch = sText.charAt(0);
+                    if (ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z' || ch == '_')
                         {
-                        KEYWORDS.put(sText, id);
-                        }
+                        ALL_KEYWORDS.put(sText, id);
 
-                    int ofColon = sText.indexOf(':');
-                    if (ofColon >= 0)
-                        {
-                        Id prefix = ALL_KEYWORDS.get(sText.substring(0, ofColon));
-                        if (prefix != null)
+                        if (!id.ContextSensitive)
                             {
-                            PREFIXES.put(prefix.TEXT, prefix);
+                            KEYWORDS.put(sText, id);
+                            }
+
+                        int ofColon = sText.indexOf(':');
+                        if (ofColon > 0)
+                            {
+                            Id prefix = ALL_KEYWORDS.get(sText.substring(0, ofColon));
+                            if (prefix != null)
+                                {
+                                PREFIXES.put(prefix.TEXT, prefix);
+                                }
                             }
                         }
                     }
