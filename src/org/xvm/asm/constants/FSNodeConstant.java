@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.nio.file.attribute.FileTime;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
@@ -163,7 +164,12 @@ public class FSNodeConstant
 
     public LiteralConstant getPathConstant()
         {
-        return m_constPath;
+        LiteralConstant constPath = m_constPath;
+        if (m_constPath == null)
+            {
+            constPath = new LiteralConstant(getConstantPool(), Format.Path, getName(), getName());
+            }
+        return constPath;
         }
 
     public String getPath()

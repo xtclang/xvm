@@ -52,6 +52,7 @@ public class xConst
     public static MethodStructure TIME_CONSTRUCT;
     public static MethodStructure DURATION_CONSTRUCT;
     public static MethodStructure VERSION_CONSTRUCT;
+    public static MethodStructure PATH_CONSTRUCT;
 
     public xConst(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -95,6 +96,9 @@ public class xConst
             DURATION_CONSTRUCT = f_templates.getClassStructure("Duration").
                 findMethod("construct", 1, pool().typeString());
             VERSION_CONSTRUCT = f_templates.getClassStructure("rt.Version").
+                findMethod("construct", 1, pool().typeString());
+
+            PATH_CONSTRUCT = f_templates.getClassStructure("fs.Path").
                 findMethod("construct", 1, pool().typeString());
             }
         }
@@ -164,6 +168,11 @@ public class xConst
                 case Version:
                     clz         = ensureClass(pool().typeVersion());
                     constructor = VERSION_CONSTRUCT;
+                    break;
+
+                case Path:
+                    clz         = ensureClass(pool().typePath());
+                    constructor = PATH_CONSTRUCT;
                     break;
 
                 default:

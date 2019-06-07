@@ -117,6 +117,9 @@ public class LiteralExpression
             case LIT_VERSION:
                 return pool.typeVersion();
 
+            case LIT_PATH:
+                return pool.typePath();
+
             default:
                 throw new IllegalStateException(literal.getId().name() + "=" + literal.getValue());
             }
@@ -232,6 +235,9 @@ public class LiteralExpression
             case LIT_VERSION:
                 return pool.ensureVersionConstant((Version) literal.getValue());
 
+            case LIT_PATH:
+                return pool.ensureLiteralConstant(Format.Path, (String) literal.getValue());
+
             default:
                 throw new IllegalStateException(literal.getId().name() + "=" + literal.getValue());
             }
@@ -276,6 +282,9 @@ public class LiteralExpression
 
             case LIT_VERSION:
                 return "v:" + literal.getValue();
+
+            case LIT_PATH:
+                return "Path:" + literal.getValue();
 
             case TODO:
                 return "TODO(" + Handy.quotedString(String.valueOf(literal.getValue())) + ')';

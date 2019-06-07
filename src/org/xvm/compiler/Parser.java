@@ -25,8 +25,6 @@ import org.xvm.compiler.ast.*;
 
 import org.xvm.util.Severity;
 
-import static org.xvm.util.Handy.parseDelimitedString;
-
 
 /**
  * A recursive descent parser for Ecstasy source code.
@@ -3483,49 +3481,49 @@ public class Parser
 
                 Token   tokFile = parsePath();
                 String  sFile   = (String) tokFile.getValue();
-                long    lEnd    = tokFile.getEndPosition();
                 boolean fDir    = !fBin && sFile.endsWith("/");
-                File    dir     = null;
-                Object  oData   = null;
+                long    lEnd    = tokFile.getEndPosition();
+                File    file    = null;
                 try
                     {
-                    if (fDir)
-                        {
-                        dir = m_source.resolvePath(sFile);
-                        }
-                    else if (fBin)
-                        {
-                        oData = m_source.includeBinary(sFile);
-                        }
-                    else
-                        {
-                        Source source = m_source.includeString(sFile);
-                        oData = source == null ? null : source.toRawString();
-                        }
+                    file = m_source.resolvePath(sFile);
                     }
                 catch (IOException e) {}
 
-                if (fDir)
+                Token   tokData = null;
+                if (file != null && file.exists() && (file.isDirectory() == fDir) && !(fDir && fBin)
+                        && (fDir || file.canRead()))
                     {
-                    if (dir == null || !dir.exists() || !dir.isDirectory())
+                    if (fBin)
                         {
-                        log(Severity.ERROR, INVALID_PATH, lStart, lEnd, sFile);
-                        oData = "";
+                        byte[] abData = null;
+                        try
+                            {
+                            abData = m_source.includeBinary(sFile);
+                            }
+                        catch (IOException e) {}
+                        if (abData != null)
+                            {
+                            tokData = new Token(lStart, lEnd, Id.LIT_BINSTR, abData);
+                            }
                         }
                     else
                         {
-                        return new DirectoryExpression(null, tokFile, dir);
+                        tokData = tokFile;
                         }
                     }
 
-                if (oData == null)
+                if (tokData == null)
                     {
                     log(Severity.ERROR, INVALID_PATH, lStart, lEnd, sFile);
-                    oData = fBin ? new byte[0] : "";
+
+                    // need some viable token so we can pretend to return a real expression
+                    tokData = tokFile;
                     }
 
-                return new LiteralExpression(new Token(lStart, lEnd,
-                        fBin ? Id.LIT_BINSTR : Id.LIT_STRING, oData));
+                return fBin
+                        ? new LiteralExpression(tokData)
+                        : new FileExpression(null, tokFile, file);
                 }
 
             case FUNCTION:
@@ -3549,9 +3547,9 @@ public class Parser
 
     /**
      * Starting with the current token, eat all of the tokens that are part of a potential file
-     * or directory name, and return that file name as a String token.
+     * or directory name, and return that file name as a "literal path" token.
      *
-     * @return  the file or directory name as if it were a literal string token
+     * @return  the file or directory name as a literal path token
      */
     Token parsePath()
         {
@@ -3565,7 +3563,7 @@ public class Parser
             // whitespace after the divider indicates the end of the path
             if (tokDiv.hasTrailingWhitespace())
                 {
-                return new Token(lPos, tokDiv.getEndPosition(), Id.LIT_STRING, sb.toString());
+                return new Token(lPos, tokDiv.getEndPosition(), Id.LIT_PATH, sb.toString());
                 }
 
             // DIV          -> DIR_CUR | DIR_PARENT | DOT | IDENTIFIER
@@ -3591,7 +3589,7 @@ public class Parser
                         sb.append(tokName.getValue());
                         if (tokName.hasTrailingWhitespace())
                             {
-                            return new Token(lPos, tokName.getEndPosition(), Id.LIT_STRING, sb.toString());
+                            return new Token(lPos, tokName.getEndPosition(), Id.LIT_PATH, sb.toString());
                             }
 
                         switch (peek().getId())
@@ -3611,7 +3609,7 @@ public class Parser
                                 break untilDiv;
 
                             default:
-                                return new Token(lPos, tokName.getEndPosition(), Id.LIT_STRING, sb.toString());
+                                return new Token(lPos, tokName.getEndPosition(), Id.LIT_PATH, sb.toString());
                             }
                         }
                     break;
@@ -3622,7 +3620,7 @@ public class Parser
                     break;
 
                 default:
-                    return new Token(lPos, tokDiv.getEndPosition(), Id.LIT_STRING, sb.toString());
+                    return new Token(lPos, tokDiv.getEndPosition(), Id.LIT_PATH, sb.toString());
                 }
             }
         }
@@ -3912,29 +3910,56 @@ public class Parser
                         getLastMatch().getEndPosition());
                 }
 
+            case "Path":
+                return new LiteralExpression(parsePath());
+
+            case "String":
             case "File":
             case "Directory":
             case "FileStore":
                 {
                 Token   tokFile = parsePath();
                 String  sFile   = (String) tokFile.getValue();
-                boolean fDir    = !sType.equals("File");
+                boolean fDir    = sFile.endsWith("/");
+                long    lStart  = type.getStartPosition();
+                long    lEnd    = tokFile.getEndPosition();
                 File    file    = null;
-                if (fDir == sFile.endsWith("/"))
+                try
                     {
+                    file = m_source.resolvePath(sFile);
+                    }
+                catch (IOException e) {}
+
+                String sData = null;
+                if (file != null && file.exists()
+                        && (fDir == file.isDirectory())
+                        && (fDir == (sType.equals("Directory") || sType.equals("FileStore")))
+                        && (fDir || file.canRead()))
+                    {
+                    if (!sType.equals("String"))
+                        {
+                        return new FileExpression(type, tokFile, file);
+                        }
+
                     try
                         {
-                        file = m_source.resolvePath(sFile);
+                        Source source = m_source.includeString(sFile);
+                        sData = source == null ? null : source.toRawString();
                         }
                     catch (IOException e) {}
                     }
 
-                if (file == null || !file.exists() || file.isDirectory() != fDir)
+                if (sData == null)
                     {
-                    log(Severity.ERROR, INVALID_PATH, type.getStartPosition(), tokFile.getEndPosition(), sFile);
+                    log(Severity.ERROR, INVALID_PATH, lStart, lEnd, sFile);
+                    if (!sType.equals("String"))
+                        {
+                        throw new CompilerException("read error: " + sFile);
+                        }
+                    sData = "";
                     }
 
-                return new DirectoryExpression(type, tokFile, file);
+                return new LiteralExpression(new Token(lStart, lEnd, Id.LIT_STRING, sData));
                 }
 
             default:

@@ -25,10 +25,10 @@ import org.xvm.runtime.template.xInt64;
 /**
  * Native OSFileStore implementation.
  */
-public class xCPFile
+public class xCPDirectory
         extends xConst
     {
-    public xCPFile(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xCPDirectory(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
         }
@@ -38,7 +38,7 @@ public class xCPFile
         {
         ConstantPool pool = pool();
 
-        s_clz         = ensureClass(getCanonicalType(), pool.typeFile());
+        s_clz         = ensureClass(getCanonicalType(), pool.typeDirectory());
         s_clzStruct   = s_clz.ensureAccess(Access.STRUCT);
         s_constructor = f_struct.findConstructor(
                 pool.typeObject(),
@@ -51,20 +51,20 @@ public class xCPFile
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof FSNodeConstant && constant.getFormat() == Format.FSFile)
+        if (constant instanceof FSNodeConstant && constant.getFormat() == Format.FSDir)
             {
-            FSNodeConstant constFile = (FSNodeConstant) constant;
+            FSNodeConstant constDir = (FSNodeConstant) constant;
 
             GenericHandle hStruct = new GenericHandle(s_clzStruct);
-// TODO GG - I think this block causes the problem
+
             return callConstructor(frame, s_constructor, s_clz.ensureAutoInitializer(), hStruct,
                     new ObjectHandle[]
                             {
-                            new ConstantHandle(constFile),
-                            frame.f_context.f_heapGlobal.ensureConstHandle(frame, constFile.getPathConstant()),
-                            frame.f_context.f_heapGlobal.ensureConstHandle(frame, constFile.getCreatedConstant()),
-                            frame.f_context.f_heapGlobal.ensureConstHandle(frame, constFile.getModifiedConstant()),
-                            xInt64.makeHandle(constFile.getFileBytes().length)
+                            new ConstantHandle(constDir),
+                            frame.f_context.f_heapGlobal.ensureConstHandle(frame, constDir.getPathConstant()),
+                            frame.f_context.f_heapGlobal.ensureConstHandle(frame, constDir.getCreatedConstant()),
+                            frame.f_context.f_heapGlobal.ensureConstHandle(frame, constDir.getModifiedConstant()),
+                            xInt64.makeHandle(0) // TODO CP
                             },
                     Op.A_STACK);
             }

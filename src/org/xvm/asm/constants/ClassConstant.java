@@ -79,7 +79,8 @@ public class ClassConstant
      */
     public boolean isVirtualChild()
         {
-        return ((ClassStructure) getComponent()).isVirtualChild();
+        ClassStructure clz = (ClassStructure) getComponent();
+        return clz != null && clz.isVirtualChild();
         }
 
     /**

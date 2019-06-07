@@ -143,6 +143,7 @@ public class ObjectHeap
             case Array:
             case Map:
             case Tuple:
+            case Path:
             case FileStore:
             case FSDir:
             case FSFile:

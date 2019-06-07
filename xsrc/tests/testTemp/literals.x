@@ -99,17 +99,18 @@ module TestLiterals.xqiz.it
         path = Path:./resources/more/msgs_EN.txt;
         console.println($"Path ./resources/more/msgs_EN.txt={path}");
 
-        File file = ./resources/more/msgs_EN.txt;
-        console.println($"File ./resources/more/msgs_EN.txt={file}");
+// TODO
+//        File file = ./resources/more/msgs_EN.txt;
+//        console.println($"File ./resources/more/msgs_EN.txt={file}");
+//
+//        file = File:./resources/more/msgs_EN.txt;
+//        console.println($"File ./resources/more/msgs_EN.txt={file}");
 
-        file = File:./resources/more/msgs_EN.txt;
-        console.println($"File ./resources/more/msgs_EN.txt={file}");
-
-        Directory dir = ./resources/;
-        console.println($"Dir ./resources/={dir}");
-
-        dir = Directory:./resources/more/;
-        console.println($"Dir ./resources/more/={dir}");
+//        Directory dir = ./resources/;
+//        console.println($"Dir ./resources/={dir}");
+//
+//        dir = Directory:./resources/more/;
+//        console.println($"Dir ./resources/more/={dir}");
         }
 
     void testIncludes()
