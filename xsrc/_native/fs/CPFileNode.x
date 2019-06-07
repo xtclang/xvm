@@ -11,6 +11,13 @@ const CPFileNode(Object cookie, Path path, DateTime created, DateTime modified, 
         implements FileNode
         implements Stringable
     {
+    construct (Object cookie)
+        {
+        (Boolean isdir, String name, DateTime created, DateTime modified, Int size) =
+                CPFileStore.loadNode(cookie);
+        construct CPFileNode(cookie, new Path(name), created, modified, size);
+        }
+
     @Override
     @RO String name.get()
         {

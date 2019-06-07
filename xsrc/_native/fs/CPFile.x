@@ -12,6 +12,11 @@ const CPFile(Object cookie, Path path, DateTime created, DateTime modified, Int 
         extends CPFileNode(cookie, path, created, modified, size)
         implements File
     {
+    construct (Object cookie)
+        {
+        construct CPFileNode(cookie);
+        }
+
     @Override
     @Lazy immutable Byte[] contents.calc()
         {

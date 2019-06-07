@@ -14,6 +14,11 @@ const CPDirectory(Object cookie, Path path, DateTime created, DateTime modified,
         extends CPFileNode(cookie, path, created, modified, size)
         implements Directory
     {
+    construct (Object cookie)
+        {
+        construct CPFileNode(cookie);
+        }
+
     @Override
     Iterator<String> names()
         {

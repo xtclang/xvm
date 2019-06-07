@@ -19,7 +19,6 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xConst;
-import org.xvm.runtime.template.xInt64;
 
 
 /**
@@ -40,12 +39,7 @@ public class xCPDirectory
 
         s_clz         = ensureClass(getCanonicalType(), pool.typeDirectory());
         s_clzStruct   = s_clz.ensureAccess(Access.STRUCT);
-        s_constructor = f_struct.findConstructor(
-                pool.typeObject(),
-                pool.typePath(),
-                pool.typeDateTime(),
-                pool.typeDateTime(),
-                pool.typeInt());
+        s_constructor = f_struct.findConstructor(pool.typeObject());
         }
 
     @Override
@@ -58,15 +52,7 @@ public class xCPDirectory
             GenericHandle hStruct = new GenericHandle(s_clzStruct);
 
             return callConstructor(frame, s_constructor, s_clz.ensureAutoInitializer(), hStruct,
-                    new ObjectHandle[]
-                            {
-                            new ConstantHandle(constDir),
-                            frame.f_context.f_heapGlobal.ensureConstHandle(frame, constDir.getPathConstant()),
-                            frame.f_context.f_heapGlobal.ensureConstHandle(frame, constDir.getCreatedConstant()),
-                            frame.f_context.f_heapGlobal.ensureConstHandle(frame, constDir.getModifiedConstant()),
-                            xInt64.makeHandle(0) // TODO CP
-                            },
-                    Op.A_STACK);
+                    new ObjectHandle[] {new ConstantHandle(constDir)}, Op.A_STACK);
             }
 
         return super.createConstHandle(frame, constant);

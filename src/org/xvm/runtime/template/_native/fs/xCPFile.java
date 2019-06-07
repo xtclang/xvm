@@ -19,7 +19,6 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xConst;
-import org.xvm.runtime.template.xInt64;
 
 
 /**
@@ -40,12 +39,7 @@ public class xCPFile
 
         s_clz         = ensureClass(getCanonicalType(), pool.typeFile());
         s_clzStruct   = s_clz.ensureAccess(Access.STRUCT);
-        s_constructor = f_struct.findConstructor(
-                pool.typeObject(),
-                pool.typePath(),
-                pool.typeDateTime(),
-                pool.typeDateTime(),
-                pool.typeInt());
+        s_constructor = f_struct.findConstructor(pool.typeObject());
         }
 
     @Override
@@ -56,17 +50,8 @@ public class xCPFile
             FSNodeConstant constFile = (FSNodeConstant) constant;
 
             GenericHandle hStruct = new GenericHandle(s_clzStruct);
-// TODO GG - I think this block causes the problem
             return callConstructor(frame, s_constructor, s_clz.ensureAutoInitializer(), hStruct,
-                    new ObjectHandle[]
-                            {
-                            new ConstantHandle(constFile),
-                            frame.f_context.f_heapGlobal.ensureConstHandle(frame, constFile.getPathConstant()),
-                            frame.f_context.f_heapGlobal.ensureConstHandle(frame, constFile.getCreatedConstant()),
-                            frame.f_context.f_heapGlobal.ensureConstHandle(frame, constFile.getModifiedConstant()),
-                            xInt64.makeHandle(constFile.getFileBytes().length)
-                            },
-                    Op.A_STACK);
+                    new ObjectHandle[] {new ConstantHandle(constFile)}, Op.A_STACK);
             }
 
         return super.createConstHandle(frame, constant);
