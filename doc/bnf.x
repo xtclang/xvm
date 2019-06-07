@@ -808,7 +808,7 @@ StringLiteral
     "$"-opt NoWhitespace '"' CharacterString-opt '"'
     "`|" FreeformLiteral
     "$|" FreeformLiteral
-    "String:" NoWhitespace File                                 # value is String contents of file
+    "$" NoWhitespace File                                       # value is String contents of file
 
 FreeformLiteral
     FreeformChars LineTerminator FreeformLines-opt

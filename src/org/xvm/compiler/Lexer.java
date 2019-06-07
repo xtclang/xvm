@@ -237,6 +237,40 @@ public class Lexer
 
                         case '|':
                             return eatMultilineTemplateLiteral(lInitPos);
+
+                        case '/':
+                            // it is a file name
+                            source.rewind();
+                            return new Token(lInitPos, source.getPosition(), Id.STR_FILE);
+
+                        case '.':
+                            if (source.hasNext())
+                                {
+                                switch (nextChar())
+                                    {
+                                    case '.':
+                                        if (source.hasNext())
+                                            {
+                                            if (nextChar() == '/')
+                                                {
+                                                // it is a file name
+                                                source.rewind();
+                                                return new Token(lInitPos, source.getPosition(), Id.STR_FILE);
+                                                }
+
+                                            source.rewind();
+                                            }
+                                        break;
+
+                                    case '/':
+                                        // it is a file name
+                                        source.rewind();
+                                        return new Token(lInitPos, source.getPosition(), Id.STR_FILE);
+                                    }
+
+                                source.rewind();
+                                }
+                            break;
                         }
 
                     source.rewind();

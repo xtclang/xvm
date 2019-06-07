@@ -3466,14 +3466,17 @@ public class Parser
                 }
 
             case BIN_FILE:
+            case STR_FILE:
             case DIV:
             case DIR_CUR:
             case DIR_PARENT:
                 {
-                Token   tokStart = peek();
-                long    lStart   = tokStart.getStartPosition();
-                boolean fBin     = tokStart.getId() == Id.BIN_FILE;
-                if (fBin)
+                Token   tokStart  = peek();
+                long    lStart    = tokStart.getStartPosition();
+                boolean fBin      = tokStart.getId() == Id.BIN_FILE;
+                boolean fStr      = tokStart.getId() == Id.STR_FILE;
+                boolean fContents = fBin | fStr;
+                if (fContents)
                     {
                     assert !tokStart.hasTrailingWhitespace();
                     next();
@@ -3481,7 +3484,7 @@ public class Parser
 
                 Token   tokFile = parsePath();
                 String  sFile   = (String) tokFile.getValue();
-                boolean fDir    = !fBin && sFile.endsWith("/");
+                boolean fDir    = !fContents && sFile.endsWith("/");
                 long    lEnd    = tokFile.getEndPosition();
                 File    file    = null;
                 try
@@ -3491,7 +3494,9 @@ public class Parser
                 catch (IOException e) {}
 
                 Token   tokData = null;
-                if (file != null && file.exists() && (file.isDirectory() == fDir) && !(fDir && fBin)
+                boolean fErr    = false;
+                if (file != null && file.exists()
+                        && (fDir == file.isDirectory())
                         && (fDir || file.canRead()))
                     {
                     if (fBin)
@@ -3502,26 +3507,45 @@ public class Parser
                             abData = m_source.includeBinary(sFile);
                             }
                         catch (IOException e) {}
-                        if (abData != null)
+                        if (abData == null)
                             {
-                            tokData = new Token(lStart, lEnd, Id.LIT_BINSTR, abData);
+                            abData = new byte[0];
+                            fErr   = true;
                             }
+                        tokData = new Token(lStart, lEnd, Id.LIT_BINSTR, abData);
                         }
-                    else
+                    else if (fStr)
                         {
-                        tokData = tokFile;
+                        String sData = null;
+                        try
+                            {
+                            Source source = m_source.includeString(sFile);
+                            sData = source == null ? null : source.toRawString();
+                            }
+                        catch (IOException e) {}
+                        if (sData == null)
+                            {
+                            sData = "";
+                            fErr  = true;
+                            }
+                        tokData = new Token(lStart, lEnd, Id.LIT_STRING, sData);
                         }
                     }
+                else
+                    {
+                    fErr = true;
+                    }
 
-                if (tokData == null)
+                if (fErr)
                     {
                     log(Severity.ERROR, INVALID_PATH, lStart, lEnd, sFile);
-
-                    // need some viable token so we can pretend to return a real expression
-                    tokData = tokFile;
+                    if (file == null)
+                        {
+                        throw new CompilerException("no such file: " + sFile);
+                        }
                     }
 
-                return fBin
+                return fContents
                         ? new LiteralExpression(tokData)
                         : new FileExpression(null, tokFile, file);
                 }
@@ -3913,7 +3937,6 @@ public class Parser
             case "Path":
                 return new LiteralExpression(parsePath());
 
-            case "String":
             case "File":
             case "Directory":
             case "FileStore":
@@ -3930,36 +3953,18 @@ public class Parser
                     }
                 catch (IOException e) {}
 
-                String sData = null;
-                if (file != null && file.exists()
-                        && (fDir == file.isDirectory())
-                        && (fDir == (sType.equals("Directory") || sType.equals("FileStore")))
-                        && (fDir || file.canRead()))
-                    {
-                    if (!sType.equals("String"))
-                        {
-                        return new FileExpression(type, tokFile, file);
-                        }
-
-                    try
-                        {
-                        Source source = m_source.includeString(sFile);
-                        sData = source == null ? null : source.toRawString();
-                        }
-                    catch (IOException e) {}
-                    }
-
-                if (sData == null)
+                if (file == null || !file.exists()
+                        || (fDir != file.isDirectory())
+                        || (fDir != (sType.equals("Directory") || sType.equals("FileStore")))
+                        || !(fDir || file.canRead()))
                     {
                     log(Severity.ERROR, INVALID_PATH, lStart, lEnd, sFile);
-                    if (!sType.equals("String"))
+                    if (file == null)
                         {
-                        throw new CompilerException("read error: " + sFile);
+                        throw new CompilerException("no such file: " + sFile);
                         }
-                    sData = "";
                     }
-
-                return new LiteralExpression(new Token(lStart, lEnd, Id.LIT_STRING, sData));
+                return new FileExpression(type, tokFile, file);
                 }
 
             default:
