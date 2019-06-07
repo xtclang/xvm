@@ -10,10 +10,15 @@ import Ecstasy.fs.Path;
 /**
  * Constant Pool Directory implementation.
  */
-const CPDirectory(CPFileStore:protected store, Object cookie, Path path, DateTime created, DateTime modified, Int size)
-        extends CPFileNode(store, cookie, path, created, modified, size)
+const CPDirectory(Object cookie, Path path, DateTime created, DateTime modified, Int size)
+        extends CPFileNode(cookie, path, created, modified, size)
         implements Directory
     {
+    construct (Object cookie)
+        {
+        construct CPFileNode(cookie);
+        }
+
     @Override
     Iterator<String> names()
         {
@@ -100,21 +105,21 @@ const CPDirectory(CPFileStore:protected store, Object cookie, Path path, DateTim
         Object cookie = contents.get(name);
         assert cookie != Null;
 
-        return True, new CPDirectory(store, cookie, path + name, created, modified, 1);
+        return True, new CPDirectory(cookie, path + name, created, modified, 1);
         }
 
     @Override
     Directory dirFor(String name)
         {
-        // TODO
-        return store.dirFor(path + name);
+        TODO
+        // TODO not this: return store.dirFor(path + name);
         }
 
     @Override
     File fileFor(String name)
         {
-        // TODO
-        return store.fileFor(path + name);
+        TODO
+        // TODO not this: return store.fileFor(path + name);
         }
 
     @Override
@@ -138,16 +143,16 @@ const CPDirectory(CPFileStore:protected store, Object cookie, Path path, DateTim
 
     @Lazy protected ListMap<String, CPDirectory|CPFile> contents.calc()
         {
-        (String[] names, Object[] cookies) = store.loadDirectory(cookie);
+        (String[] names, Object[] cookies) = CPFileStore.loadDirectory(cookie);
         Int count = names.size;
         var nodes = new Array<CPDirectory|CPFile>(count);
         for (Int i = 0; i < count; ++i)
             {
             Object cookie = cookies[i];
-            (Boolean isdir, String name, DateTime created, DateTime modified, Int size) = store.loadNode(cookie);
+            (Boolean isdir, String name, DateTime created, DateTime modified, Int size) = CPFileStore.loadNode(cookie);
             nodes[i] = isdir
-                    ? new CPDirectory(store, cookie, path + name, created, modified, size)
-                    : new CPFile(store, cookie, path + name, created, modified, size);
+                    ? new CPDirectory(cookie, path + name, created, modified, size)
+                    : new CPFile(cookie, path + name, created, modified, size);
             }
         return new ListMap(names, nodes);
         }

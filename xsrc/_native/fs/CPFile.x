@@ -8,10 +8,15 @@ import Ecstasy.fs.Path;
 /**
  * Constant Pool File implementation.
  */
-const CPFile(CPFileStore:protected store, Object cookie, Path path, DateTime created, DateTime modified, Int size)
-        extends CPFileNode(store, cookie, path, created, modified, size)
+const CPFile(Object cookie, Path path, DateTime created, DateTime modified, Int size)
+        extends CPFileNode(cookie, path, created, modified, size)
         implements File
     {
+    construct (Object cookie)
+        {
+        construct CPFileNode(cookie);
+        }
+
     @Override
     @Lazy immutable Byte[] contents.calc()
         {
@@ -20,7 +25,7 @@ const CPFile(CPFileStore:protected store, Object cookie, Path path, DateTime cre
             throw new FileNotFound();
             }
 
-        return store.loadFile(cookie);
+        return CPFileStore.loadFile(cookie);
         }
 
     @Override

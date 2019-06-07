@@ -27,34 +27,37 @@ import org.xvm.util.Severity;
 
 
 /**
- * A directory expression is an expression that causes an entire directory to be "vacuumed" into a
- * module as a resource, which will be exposed as a FileStore instance to the program.
+ * A file expression is an expression that causes an entire file or directory to be "vacuumed" into
+ * a module as a resource, which will be exposed as a FileStore, Directory, or File object to the
+ * program.
  */
-public class DirectoryExpression
+public class FileExpression
         extends Expression
     {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a DirectoryExpression.
+     * Construct a FileExpression.
      *
-     * @param type  one of FileStore, Directory, File, or null (implies FileStore)
+     * @param type  one of FileStore, Directory, File, or null (implies Directory or File)
      * @param path  a token that contains the entire path that specifies the directory or file
      * @param file  the resolved directory or file corresponding to the path for which this
      *              expression exists
      */
-    public DirectoryExpression(TypeExpression type, Token path, File file)
+    public FileExpression(TypeExpression type, Token path, File file)
         {
         this.type = type;
         this.path = path;
-        m_file    = file;
+
+        assert file != null;
+        m_file = file;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
-     * @return one of "FileStore", "Directory", "File", or null (implies FileStore)
+     * @return one of "FileStore", "Directory", "File", or null (implies Directory or File)
      */
     public String getSimpleTypeName()
         {
@@ -96,17 +99,28 @@ public class DirectoryExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
+        ConstantPool pool = pool();
+
         String s = getSimpleTypeName();
-        switch (s == null ? "FileStore" : s)
+        if (s == null)
             {
-            case "FileStore":
-                return pool().typeFileStore();
-            case "Directory":
-                return pool().typeDirectory();
-            case "File":
-                return pool().typeFile();
-            default:
-                throw new IllegalStateException("type=" + s);
+            return m_file.isDirectory()
+                    ? pool.typeDirectory()
+                    : pool.typeFile();
+            }
+        else
+            {
+            switch (s)
+                {
+                case "FileStore":
+                    return pool.typeFileStore();
+                case "Directory":
+                    return pool.typeDirectory();
+                case "File":
+                    return pool.typeFile();
+                default:
+                    throw new IllegalStateException("type=" + s);
+                }
             }
         }
 
@@ -124,8 +138,8 @@ public class DirectoryExpression
             {
             try
                 {
-                String s = getSimpleTypeName();
-                switch (s == null ? "FileStore" : s)
+                String s = getImplicitType(ctx).getSingleUnderlyingClass(true).getName();
+                switch (s)
                     {
                     case "FileStore":
                         constVal = buildFileStoreConstant();
@@ -150,7 +164,7 @@ public class DirectoryExpression
         if (constVal == null)
             {
             log(errs, Severity.ERROR, Compiler.FATAL_ERROR, sErr);
-            constVal = buildEmptyConstant();
+            constVal = buildEmptyConstant(ctx);
             }
 
         assert constVal != null;
@@ -197,14 +211,14 @@ public class DirectoryExpression
     /**
      * @return an empty FileStore constant
      */
-    protected Constant buildEmptyConstant()
+    protected Constant buildEmptyConstant(Context ctx)
         {
 
         ConstantPool pool  = pool();
         String       sPath = (String) path.getValue();
         File         file  = m_file == null ? new File("error") : m_file;
-        String       sType = getSimpleTypeName();
-        switch (sType == null ? "FileStore" : sType)
+        String       sType = getImplicitType(ctx).getSingleUnderlyingClass(true).getName();
+        switch (sType)
             {
             case "FileStore":
                 return pool().ensureFileStoreConstant(sPath, pool.ensureDirectoryConstant(file.getName(),
@@ -331,5 +345,5 @@ public class DirectoryExpression
      */
     private File m_file;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(DirectoryExpression.class, "type");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(FileExpression.class, "type");
     }

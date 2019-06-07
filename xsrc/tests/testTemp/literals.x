@@ -9,6 +9,7 @@ module TestLiterals.xqiz.it
         console.println("*** literal tests ***\n");
 
         testVersions();
+        testPaths();
         testIncludes();
         testMultiline();
         testMultilineTemplate();
@@ -85,11 +86,37 @@ module TestLiterals.xqiz.it
         console.println($"literal v:1.2beta5+123-456.abc={version}");
         }
 
+    void testPaths()
+        {
+        console.println("\n** testPaths()");
+
+        Path path = Path:./resources/;
+        console.println($"Path ./resources/={path}");
+
+        path = Path:./resources/more/;
+        console.println($"Path ./resources/more/={path}");
+
+        path = Path:./resources/more/msgs_EN.txt;
+        console.println($"Path ./resources/more/msgs_EN.txt={path}");
+
+        File file = ./resources/more/msgs_EN.txt;
+        console.println($"File ./resources/more/msgs_EN.txt={file}");
+
+        file = File:./resources/more/msgs_EN.txt;
+        console.println($"File ./resources/more/msgs_EN.txt={file}");
+
+        Directory dir = ./resources/;
+        console.println($"Dir ./resources/={dir}");
+
+        dir = Directory:./resources/more/;
+        console.println($"Dir ./resources/more/={dir}");
+        }
+
     void testIncludes()
         {
         console.println("\n** testIncludes()");
 
-        String s = ./resources/more/msgs_EN.txt;
+        String s = String:./resources/more/msgs_EN.txt;
         console.println($"./resources/more/msgs_EN.txt={s}");
         }
 
@@ -168,18 +195,19 @@ module TestLiterals.xqiz.it
         {
         console.println("\n** testDirs()");
 
-        FileStore fs = /resources/;
+        FileStore fs = FileStore:/resources/;
         console.println("fs=" + fs);
 
         // TODO BUGBUG CP StatementExpression requires a "return"
         console.println($"\n(recursive)\n{{fs.emitListing($); return;}}");
         console.println($"\n(non-recursive)\n{{fs.emitListing($, False); return;}}");
 
-//        File file = File:./resources/more/msgs_EN.txt;
-//        console.println($"File:./resources/more/msgs_EN.txt={file}");
+        File file = File:./resources/more/msgs_EN.txt;
+        console.println($"File:./resources/more/msgs_EN.txt={file}");
 
-//        Directory dir = Directory:./resources/;
-//        console.println($"Directory:./resources/=(recursive)\n{{dir.emitListing($); return;}}");
+        Directory dir = Directory:./resources/;
+        // TODO BUGBUG CP (??) - output didn't look like it recursed into "./more/"
+        console.println($"Directory:./resources/=(recursive)\n{{dir.emitListing($); return;}}");
         }
 
     void testDates()

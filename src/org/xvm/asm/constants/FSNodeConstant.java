@@ -6,10 +6,13 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.nio.file.attribute.FileTime;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+
+import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.util.Handy;
 
@@ -159,6 +162,21 @@ public class FSNodeConstant
         return getNameConstant().getValue();
         }
 
+    public LiteralConstant getPathConstant()
+        {
+        LiteralConstant constPath = m_constPath;
+        if (m_constPath == null)
+            {
+            constPath = new LiteralConstant(getConstantPool(), Format.Path, getName(), getName());
+            }
+        return constPath;
+        }
+
+    public String getPath()
+        {
+        return getPathConstant().getValue();
+        }
+
     public LiteralConstant getCreatedConstant()
         {
         return m_constCreated;
@@ -206,7 +224,32 @@ public class FSNodeConstant
         return (FSNodeConstant) m_constData;
         }
 
-        // ----- ValueConstant methods -----------------------------------------------------------------
+
+    // ----- run-time support  ---------------------------------------------------------------------
+
+    /**
+     * @return an ObjectHandle representing this singleton value
+     */
+    public ObjectHandle getHandle()
+        {
+        return m_handle;
+        }
+
+    /**
+     * Set the handle for this singleton's value.
+     *
+     * @param handle  the corresponding handle
+     */
+    public void setHandle(ObjectHandle handle)
+        {
+        assert handle != null;
+        assert m_handle == null;
+
+        m_handle = handle;
+        }
+
+
+    // ----- ValueConstant methods -----------------------------------------------------------------
 
     @Override
     public TypeConstant getType()
@@ -409,6 +452,11 @@ public class FSNodeConstant
     private StringConstant m_constName;
 
     /**
+     * The path specified for the node, or null if this node was not specified by path.
+     */
+    private LiteralConstant m_constPath;
+
+    /**
      * The date/time that the node was created.
      */
     private LiteralConstant m_constCreated;
@@ -434,5 +482,10 @@ public class FSNodeConstant
      * Cached hash code.
      */
     private transient int m_nHash;
+
+    /**
+     * The ObjectHandle representing this singleton's value.
+     */
+    private transient ObjectHandle m_handle;
     }
 

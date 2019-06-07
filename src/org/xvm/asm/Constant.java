@@ -807,6 +807,7 @@ public abstract class Constant
         Map,
         Interval,
         Any,
+        Path,
         FileStore,
         FSDir,
         FSFile,

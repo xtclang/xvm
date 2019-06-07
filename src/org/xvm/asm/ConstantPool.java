@@ -298,6 +298,7 @@ public class ConstantPool
             case Time:
             case DateTime:
             case Duration:
+            case Path:
                 LiteralConstant constant = (LiteralConstant) ensureLocatorLookup(format).get(s);
                 if (constant == null)
                     {
@@ -1251,9 +1252,10 @@ public class ConstantPool
                 sClz = sName;
                 break;
 
-            case "FileStore":
-            case "File":
             case "Directory":
+            case "File":
+            case "FileStore":
+            case "Path":
                 sPkg = "fs";
                 sClz = sName;
                 break;
@@ -2043,6 +2045,7 @@ public class ConstantPool
     public ClassConstant     clzTimeZone()      {ClassConstant     c = m_clzTimeZone;     if (c == null) {m_clzTimeZone     = c = (ClassConstant) getImplicitlyImportedIdentity("TimeZone"   );} return c;}
     public ClassConstant     clzDuration()      {ClassConstant     c = m_clzDuration;     if (c == null) {m_clzDuration     = c = (ClassConstant) getImplicitlyImportedIdentity("Duration"   );} return c;}
     public ClassConstant     clzVersion()       {ClassConstant     c = m_clzVersion;      if (c == null) {m_clzVersion      = c = (ClassConstant) getImplicitlyImportedIdentity("Version"    );} return c;}
+    public ClassConstant     clzPath()          {ClassConstant     c = m_clzPath;         if (c == null) {m_clzPath         = c = (ClassConstant) getImplicitlyImportedIdentity("Path"       );} return c;}
     public ClassConstant     clzFileStore()     {ClassConstant     c = m_clzFileStore;    if (c == null) {m_clzFileStore    = c = (ClassConstant) getImplicitlyImportedIdentity("FileStore"  );} return c;}
     public ClassConstant     clzDirectory()     {ClassConstant     c = m_clzDirectory;    if (c == null) {m_clzDirectory    = c = (ClassConstant) getImplicitlyImportedIdentity("Directory"  );} return c;}
     public ClassConstant     clzFile()          {ClassConstant     c = m_clzFile;         if (c == null) {m_clzFile         = c = (ClassConstant) getImplicitlyImportedIdentity("File"       );} return c;}
@@ -2123,6 +2126,7 @@ public class ConstantPool
     public TypeConstant      typeTimeZone()     {TypeConstant      c = m_typeTimeZone;    if (c == null) {m_typeTimeZone    = c = ensureTerminalTypeConstant(clzTimeZone()                   );} return c;}
     public TypeConstant      typeDuration()     {TypeConstant      c = m_typeDuration;    if (c == null) {m_typeDuration    = c = ensureTerminalTypeConstant(clzDuration()                   );} return c;}
     public TypeConstant      typeVersion()      {TypeConstant      c = m_typeVersion;     if (c == null) {m_typeVersion     = c = ensureTerminalTypeConstant(clzVersion()                    );} return c;}
+    public TypeConstant      typePath()         {TypeConstant      c = m_typePath;        if (c == null) {m_typePath        = c = ensureTerminalTypeConstant(clzPath()                       );} return c;}
     public TypeConstant      typeFileStore()    {TypeConstant      c = m_typeFileStore;   if (c == null) {m_typeFileStore   = c = ensureTerminalTypeConstant(clzFileStore()                  );} return c;}
     public TypeConstant      typeDirectory()    {TypeConstant      c = m_typeDirectory;   if (c == null) {m_typeDirectory   = c = ensureTerminalTypeConstant(clzDirectory()                  );} return c;}
     public TypeConstant      typeFile()         {TypeConstant      c = m_typeFile;        if (c == null) {m_typeFile        = c = ensureTerminalTypeConstant(clzFile()                       );} return c;}
@@ -2285,6 +2289,7 @@ public class ConstantPool
                 case Time:
                 case DateTime:
                 case Duration:
+                case Path:
                     constant = new LiteralConstant(this, format, in);
                     break;
 
@@ -2833,6 +2838,7 @@ public class ConstantPool
         m_clzTimeZone     = null;
         m_clzDuration     = null;
         m_clzVersion      = null;
+        m_clzPath         = null;
         m_clzFileStore    = null;
         m_clzDirectory    = null;
         m_clzFile         = null;
@@ -2916,6 +2922,7 @@ public class ConstantPool
         m_typeTimeZone    = null;
         m_typeDuration    = null;
         m_typeVersion     = null;
+        m_typePath        = null;
         m_typeFileStore   = null;
         m_typeDirectory   = null;
         m_typeFile        = null;
@@ -3322,6 +3329,7 @@ public class ConstantPool
     private transient ClassConstant     m_clzTimeZone;
     private transient ClassConstant     m_clzDuration;
     private transient ClassConstant     m_clzVersion;
+    private transient ClassConstant     m_clzPath;
     private transient ClassConstant     m_clzFileStore;
     private transient ClassConstant     m_clzDirectory;
     private transient ClassConstant     m_clzFile;
@@ -3405,6 +3413,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeTimeZone;
     private transient TypeConstant      m_typeDuration;
     private transient TypeConstant      m_typeVersion;
+    private transient TypeConstant      m_typePath;
     private transient TypeConstant      m_typeFileStore;
     private transient TypeConstant      m_typeDirectory;
     private transient TypeConstant      m_typeFile;

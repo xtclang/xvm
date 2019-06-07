@@ -17,7 +17,6 @@ const CPFileStore(String path, Object constRoot)
         (Boolean isdir, String name, DateTime created, DateTime modified, Int size) = loadNode(constRoot);
         assert isdir;
         return new CPDirectory(
-                this:protected,
                 constRoot,
                 Path.ROOT,
                 created,
@@ -92,7 +91,7 @@ const CPFileStore(String path, Object constRoot)
                 }
             }
 
-        return new CPDirectory(this:protected, Null, path, DateTime.EPOCH, DateTime.EPOCH, 0);
+        return new CPDirectory(Null, path, DateTime.EPOCH, DateTime.EPOCH, 0);
         }
 
     @Override
@@ -106,7 +105,7 @@ const CPFileStore(String path, Object constRoot)
                 }
             }
 
-        return new CPFile(this:protected, Null, path, DateTime.EPOCH, DateTime.EPOCH, 0);
+        return new CPFile(Null, path, DateTime.EPOCH, DateTime.EPOCH, 0);
         }
 
     @Override
@@ -198,15 +197,24 @@ const CPFileStore(String path, Object constRoot)
     /**
      * Load meta-data for a node.
      */
-    protected (Boolean isdir, String name, DateTime created, DateTime modified, Int size) loadNode(Object constNode);
+    static (Boolean isdir, String name, DateTime created, DateTime modified, Int size) loadNode(Object constNode)
+        {
+        TODO("native");
+        }
 
     /**
      * Load contents for a directory.
      */
-    protected (String[] names, Object[] cookies) loadDirectory(Object constNode);
+    static (String[] names, Object[] cookies) loadDirectory(Object constNode)
+        {
+        TODO("native");
+        }
 
     /**
      * Load contents for a file.
      */
-    protected immutable Byte[] loadFile(Object constNode);
+    static immutable Byte[] loadFile(Object constNode)
+        {
+        TODO("native");
+        }
     }

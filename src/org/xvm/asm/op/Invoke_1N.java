@@ -163,12 +163,15 @@ public class Invoke_1N
 
         checkReturnRegisters(frame, hTarget);
 
+        if (method.isNative())
+            {
+            return hTarget.getTemplate().invokeNativeNN(frame, method, hTarget,
+                    new ObjectHandle[] {hArg}, m_anRetValue);
+            }
+
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
         ahVar[0] = hArg;
-
-        return chain.isNative()
-            ? hTarget.getTemplate().invokeNativeNN(frame, method, hTarget, ahVar, m_anRetValue)
-            : hTarget.getTemplate().invokeN(frame, chain, hTarget, ahVar, m_anRetValue);
+        return hTarget.getTemplate().invokeN(frame, chain, hTarget, ahVar, m_anRetValue);
         }
 
     @Override

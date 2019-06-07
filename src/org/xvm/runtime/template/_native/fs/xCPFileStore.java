@@ -1,8 +1,6 @@
 package org.xvm.runtime.template._native.fs;
 
 
-import java.io.File;
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
@@ -75,8 +73,6 @@ public class xCPFileStore
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn)
         {
-        ObjectHandle hStore = hTarget;
-
         switch (method.getName())
             {
             // protected immutable Byte[] loadFile(Object constNode);
@@ -97,8 +93,6 @@ public class xCPFileStore
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
             ObjectHandle[] ahArg, int[] aiReturn)
         {
-        ObjectHandle hStore = hTarget;
-
         switch (method.getName())
             {
             // protected (Boolean isdir, String name, String created, String modified, Int size) loadNode(Object constNode)
@@ -177,11 +171,10 @@ public class xCPFileStore
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static final File ROOT = new File("/");
-
     static private ClassComposition s_clz;
     static private ClassComposition s_clzStruct;
     static private MethodStructure  s_constructor;
+
 
     // ----- data members --------------------------------------------------------------------------
     }

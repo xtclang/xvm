@@ -157,12 +157,14 @@ public class Invoke_1T
 
         checkReturnTupleRegister(frame, hTarget);
 
+        if (chain.isNative())
+            {
+            return hTarget.getTemplate().invokeNativeT(frame, method, hTarget, new ObjectHandle[] {hArg}, m_nRetValue);
+            }
+
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
         ahVar[0] = hArg;
-
-        return chain.isNative()
-            ? hTarget.getTemplate().invokeNativeT(frame, method, hTarget, ahVar, m_nRetValue)
-            : hTarget.getTemplate().invokeT(frame, chain, hTarget, ahVar, m_nRetValue);
+        return hTarget.getTemplate().invokeT(frame, chain, hTarget, ahVar, m_nRetValue);
         }
 
     @Override

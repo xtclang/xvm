@@ -114,6 +114,10 @@ public class LiteralConstant
                     }
                 break;
 
+            case Path:
+                // TODO
+                break;
+
             default:
                 throw new IllegalStateException("unsupported format: " + format);
             }
@@ -146,6 +150,7 @@ public class LiteralConstant
             case DateTime:
             case Duration:
             case Version:
+            case Path:
                 break;
 
             default:
@@ -157,6 +162,42 @@ public class LiteralConstant
 
 
     // ----- type-specific functionality -----------------------------------------------------------
+
+
+    @Override
+    public TypeConstant getType()
+        {
+        ConstantPool pool = getConstantPool();
+        switch (m_fmt)
+            {
+            case IntLiteral:
+                return pool.typeIntLiteral();
+
+            case FPLiteral:
+                return pool.typeFPLiteral();
+
+            case Date:
+                return pool.typeDate();
+
+            case Time:
+                return pool.typeTime();
+
+            case DateTime:
+                return pool.typeDateTime();
+
+            case Duration:
+                return pool.typeDuration();
+
+            case Version:
+                return pool.typeVersion();
+
+            case Path:
+                return pool.typePath();
+
+            default:
+                return super.getType();
+            }
+        }
 
     /**
      * {@inheritDoc}
