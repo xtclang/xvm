@@ -1335,7 +1335,6 @@ public class Parser
                 return parseStatementBlock();
 
             case ASSERT:
-            case ASSERT_ALL:
             case ASSERT_ONCE:
             case ASSERT_TEST:
             case ASSERT_DBG:
@@ -1428,7 +1427,6 @@ public class Parser
      *
      * AssertInstruction
      *     "assert"
-     *     "assert:always"
      *     "assert:once"
      *     "assert:test"
      *     "assert:debug"

@@ -389,7 +389,6 @@ AssertInstruction
     "assert:once"
     "assert:test"
     "assert:debug"
-    "assert:always"
 
 ForStatement
     "for" "(" ForCondition ")" StatementBlock

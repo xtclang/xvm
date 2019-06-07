@@ -111,7 +111,6 @@ module MyApp.xqiz.it
             Void move(Int dx, Int dy)
                 {
                 assert dx >= 0;
-                assert:always dx >= 0;
                 assert:once dy >= 0;
                 assert:test dx > 0 && dy >= 0;
                 assert:debug;

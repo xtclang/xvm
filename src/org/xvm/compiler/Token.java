@@ -438,7 +438,6 @@ public class Token
         ALLOW        ("allow"          , true),
         AS           ("as"             ),
         ASSERT       ("assert"         ),
-        ASSERT_ALL   ("assert:always"  ),
         ASSERT_ONCE  ("assert:once"    ),
         ASSERT_TEST  ("assert:test"    ),
         ASSERT_DBG   ("assert:debug"   ),

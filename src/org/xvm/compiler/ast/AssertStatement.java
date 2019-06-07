@@ -102,31 +102,6 @@ public class AssertStatement
         }
 
     @Override
-    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
-        {
-        int cConds = getConditionCount();
-        int iCond  = findCondition(exprChild);
-        assert iCond >= 0;
-        if (iCond == cConds - 1)
-            {
-            return getEndLabel();
-            }
-
-        Label[] alabel = m_alabelCond;
-        if (alabel == null)
-            {
-            m_alabelCond = alabel = new Label[cConds];
-            }
-
-        Label label = alabel[iCond+1];
-        if (label == null)
-            {
-            alabel[iCond] = label = new Label("assert[" + iCond + "]");
-            }
-        return label;
-        }
-
-    @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
         boolean fValid  = true;
@@ -156,7 +131,6 @@ public class AssertStatement
                 }
             else if (cond instanceof Expression)
                 {
-                // if (keyword.getId() == Token.Id.ASSERT_ALL)
                 ctx = new AssertContext(ctx);
 
                 Expression exprOld = (Expression) cond;

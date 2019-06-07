@@ -462,7 +462,7 @@ module TestMisc.xqiz.it
         s ?= s2;
         console.println($"s={s}");
 
-        // this will assert
+        // this will assert (unless s2 is null)
         // assert s2?.size>=0, False;
 
         // this will not assert
