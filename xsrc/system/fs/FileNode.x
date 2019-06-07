@@ -4,12 +4,12 @@
 interface FileNode
     {
     /**
-     * The Path of this file-node.
+     * The Path of this file-node as it is identified within its FileStore.
      */
     @RO Path path;
 
     /**
-     * The name of this file-node.
+     * The name of this file-node within its directory. (The root directory name may be blank.)
      */
     @RO String name;
 

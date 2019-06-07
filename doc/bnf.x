@@ -801,6 +801,9 @@ Literal
     DateTimeLiteral
     TimeZoneLiteral
     DurationLiteral
+    PathLiteral
+    FileLiteral
+    DirectoryLiteral
     FileStoreLiteral
 
 StringLiteral
