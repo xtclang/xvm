@@ -11,7 +11,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
 import org.xvm.runtime.CallChain;
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -150,9 +149,8 @@ public class Call_10
         {
         if (function.isNative())
             {
-            ClassTemplate clz = frame.f_context.f_heapGlobal.f_templates.getTemplate(
-                    function.getContainingClass().getIdentityConstant());
-            return clz.invokeNative1(frame, function, null, hArg, A_IGNORE);
+            return getClassTemplate(frame, function).
+                invokeNative1(frame, function, null, hArg, A_IGNORE);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];

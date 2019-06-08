@@ -13,6 +13,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ClassComposition;
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -233,7 +234,9 @@ public abstract class OpCallable extends Op
 
     // ----- helper methods -----
 
-    // get the structure for the function constant
+    /**
+     * @return the method structure for this op-code
+     */
     protected MethodStructure getMethodStructure(Frame frame)
         {
         // there is no need to cache the id, since it's a constant for a given op-code
@@ -245,6 +248,15 @@ public abstract class OpCallable extends Op
         MethodConstant constFunction = (MethodConstant) frame.getConstant(m_nFunctionId);
 
         return m_function = (MethodStructure) constFunction.getComponent();
+        }
+
+    /**
+     * @return the ClassTemplate that defines a native implementation for the specified function
+     */
+    protected ClassTemplate getClassTemplate(Frame frame, MethodStructure function)
+        {
+        return frame.f_context.f_templates.
+                getTemplate(function.getContainingClass().getIdentityConstant());
         }
 
     protected int constructChild(Frame frame, MethodStructure constructor,
