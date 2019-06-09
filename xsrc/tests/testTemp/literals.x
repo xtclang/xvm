@@ -116,7 +116,7 @@ module TestLiterals.xqiz.it
         {
         console.println("\n** testIncludes()");
 
-        String s = String:./resources/more/msgs_EN.txt;
+        String s = $./resources/more/msgs_EN.txt;
         console.println($"./resources/more/msgs_EN.txt={s}");
         }
 

@@ -49,7 +49,6 @@ public class FileExpression
         this.type = type;
         this.path = path;
 
-        assert file != null;
         m_file = file;
         }
 
@@ -99,10 +98,11 @@ public class FileExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        ConstantPool pool = pool();
+        assert m_file != null && m_file.exists();
 
-        String s = getSimpleTypeName();
-        if (s == null)
+        ConstantPool pool  = pool();
+        String       sType = getSimpleTypeName();
+        if (sType == null)
             {
             return m_file.isDirectory()
                     ? pool.typeDirectory()
@@ -110,7 +110,7 @@ public class FileExpression
             }
         else
             {
-            switch (s)
+            switch (sType)
                 {
                 case "FileStore":
                     return pool.typeFileStore();
@@ -119,7 +119,7 @@ public class FileExpression
                 case "File":
                     return pool.typeFile();
                 default:
-                    throw new IllegalStateException("type=" + s);
+                    throw new IllegalStateException("type=" + sType);
                 }
             }
         }

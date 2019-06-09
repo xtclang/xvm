@@ -237,6 +237,40 @@ public class Lexer
 
                         case '|':
                             return eatMultilineTemplateLiteral(lInitPos);
+
+                        case '/':
+                            // it is a file name
+                            source.rewind();
+                            return new Token(lInitPos, source.getPosition(), Id.STR_FILE);
+
+                        case '.':
+                            if (source.hasNext())
+                                {
+                                switch (nextChar())
+                                    {
+                                    case '.':
+                                        if (source.hasNext())
+                                            {
+                                            if (nextChar() == '/')
+                                                {
+                                                // it is a file name
+                                                source.rewind();
+                                                return new Token(lInitPos, source.getPosition(), Id.STR_FILE);
+                                                }
+
+                                            source.rewind();
+                                            }
+                                        break;
+
+                                    case '/':
+                                        // it is a file name
+                                        source.rewind();
+                                        return new Token(lInitPos, source.getPosition(), Id.STR_FILE);
+                                    }
+
+                                source.rewind();
+                                }
+                            break;
                         }
 
                     source.rewind();
@@ -2242,6 +2276,23 @@ public class Lexer
         {
         m_fWhitespace = (lPos & (1L << 63)) != 0L;
         m_source.setPosition(lPos & ~(1L << 63));
+        }
+
+    /**
+     * Obtain the character located at a previously returned position cookie, but the state of the
+     * Lexer after this call must match that from before the call.
+     *
+     * @param lPos  a previously returned position cookie
+     *
+     * @return the character at the specified position
+     */
+    public char charAt(long lPos)
+        {
+        long lPrev = getPosition();
+        setPosition(lPos);
+        char ch = nextChar();
+        setPosition(lPrev);
+        return ch;
         }
 
     /**
