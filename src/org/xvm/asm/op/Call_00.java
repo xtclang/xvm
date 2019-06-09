@@ -66,7 +66,7 @@ public class Call_00
             return chain.callSuperNN(frame, Utils.OBJECTS_NONE, Utils.ARGS_NONE);
             }
 
-        if (m_nFunctionId < 0)
+        if (m_nFunctionId < CONSTANT_OFFSET)
             {
             MethodStructure function = getMethodStructure(frame);
             if (function.isNative())

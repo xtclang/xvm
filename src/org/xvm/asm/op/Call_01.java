@@ -104,7 +104,7 @@ public class Call_01
             return chain.callSuper01(frame, m_nRetValue);
             }
 
-        if (m_nFunctionId < 0)
+        if (m_nFunctionId < CONSTANT_OFFSET)
             {
             MethodStructure function = getMethodStructure(frame);
 

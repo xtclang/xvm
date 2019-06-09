@@ -108,7 +108,7 @@ public class Call_0T
                 }
             }
 
-        if (m_nFunctionId < 0)
+        if (m_nFunctionId < CONSTANT_OFFSET)
             {
             MethodStructure function = getMethodStructure(frame);
 

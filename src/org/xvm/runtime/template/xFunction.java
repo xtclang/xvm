@@ -433,25 +433,25 @@ public class xFunction
                     TypeConstant typeP = type.getParamTypesArray()[0];
                     TypeConstant typeR = type.getParamTypesArray()[1];
 
-                    int cParams = typeP.getParamsCount();
-                    assert typeP.isTuple() && iArg <= cParams;
+                    int cParamsNew = typeP.getParamsCount() - 1;
+                    assert typeP.isTuple() && iArg <= cParamsNew;
 
                     TypeConstant[] atypeParams = typeP.getParamTypesArray();
-                    if (cParams == 1)
+                    if (cParamsNew == 0)
                         {
                         // canonical Tuple represents Void
                         typeP = pool.ensureParameterizedTypeConstant(pool.typeTuple());
                         }
                     else
                         {
-                        TypeConstant[] atypeNew = new TypeConstant[--cParams];
+                        TypeConstant[] atypeNew = new TypeConstant[cParamsNew];
                         if (iArg > 0)
                             {
                             System.arraycopy(atypeParams, 0, atypeNew, 0, iArg);
                             }
-                        if (iArg < cParams)
+                        if (iArg < cParamsNew)
                             {
-                            System.arraycopy(atypeParams, iArg + 1, atypeNew, iArg, cParams - iArg);
+                            System.arraycopy(atypeParams, iArg + 1, atypeNew, iArg, cParamsNew - iArg);
                             }
                         typeP = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeNew);
                         }
@@ -504,8 +504,6 @@ public class xFunction
         @Override
         protected void addBoundArguments(ObjectHandle[] ahVar)
             {
-            super.addBoundArguments(ahVar);
-
             if (m_iArg >= 0)
                 {
                 int cMove = getVarCount() - (m_iArg + 1); // number of args to move to the right
@@ -515,6 +513,8 @@ public class xFunction
                     }
                 ahVar[m_iArg] = m_hArg;
                 }
+
+            super.addBoundArguments(ahVar);
             }
 
         @Override
