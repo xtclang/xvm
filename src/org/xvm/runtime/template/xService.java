@@ -106,6 +106,14 @@ public class xService
         }
 
     @Override
+    public int invokeT(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+        {
+        return frame.f_context == ((ServiceHandle) hTarget).m_context ?
+            super.invokeT(frame, chain, hTarget, ahVar, iReturn) :
+            xFunction.makeAsyncHandle(chain).callT(frame, hTarget, ahVar, iReturn);
+        }
+
+    @Override
     public int invokeN(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
         return frame.f_context == ((ServiceHandle) hTarget).m_context ?
