@@ -11,7 +11,7 @@ import org.xvm.runtime.TemplateRegistry;
 
 
 /**
- * TODO:
+ * Native Object functionality implementation.
  */
 public class xObject
         extends ClassTemplate
@@ -27,6 +27,8 @@ public class xObject
             {
             INSTANCE = this;
             CLASS = getCanonicalClass();
+
+            new InterfaceProxy(templates); // this initializes the INSTANCE reference
             }
         }
 
@@ -36,7 +38,7 @@ public class xObject
         if (this == INSTANCE)
             {
             markNativeMethod("to", VOID, STRING);
-            getCanonicalType().ensureTypeInfo().findEqualsFunction().setNative(true);
+            markNativeMethod("equals", null, null);
             }
         }
 

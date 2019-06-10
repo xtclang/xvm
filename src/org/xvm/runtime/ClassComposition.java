@@ -25,6 +25,7 @@ import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
+import org.xvm.runtime.template.InterfaceProxy;
 import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xString.StringHandle;
 
@@ -69,6 +70,7 @@ public class ClassComposition
         f_typeStructure = pool.ensureAccessTypeConstant(typeInception, Access.STRUCT);
         f_typeRevealed = typeInception;
         f_mapCompositions = new ConcurrentHashMap<>();
+        f_mapProxies = new ConcurrentHashMap<>();
         f_mapMethods = new ConcurrentHashMap<>();
         f_mapGetters = new ConcurrentHashMap<>();
         f_mapSetters = new ConcurrentHashMap<>();
@@ -87,6 +89,7 @@ public class ClassComposition
         f_typeStructure = clzInception.f_typeStructure;
         f_typeRevealed = typeRevealed;
         f_mapCompositions = f_clzInception.f_mapCompositions;
+        f_mapProxies = f_clzInception.f_mapProxies;
         f_mapMethods = f_clzInception.f_mapMethods;
         f_mapGetters = f_clzInception.f_mapGetters;
         f_mapSetters = f_clzInception.f_mapSetters;
@@ -101,6 +104,17 @@ public class ClassComposition
         {
         return f_template.f_struct.isInstanceChild();
         }
+
+    /**
+     * @return a ProxyComposition for the specified proxying type
+     */
+    public ProxyComposition ensureProxyComposition(TypeConstant typeProxy)
+        {
+        return f_mapProxies.computeIfAbsent(typeProxy, (type) -> new ProxyComposition(this, type));
+        }
+
+
+    // ----- TypeComposition interface -------------------------------------------------------------
 
     @Override
     public OpSupport getSupport()
@@ -581,6 +595,11 @@ public class ClassComposition
      * A cache of derivative TypeCompositions keyed by the "revealed type".
      */
     private final Map<TypeConstant, ClassComposition> f_mapCompositions;
+
+    /**
+     * A cache of derivative ProxyCompositions keyed by the "proxy type".
+     */
+    private final Map<TypeConstant, ProxyComposition> f_mapProxies;
 
     // cached method call chain by nid (the top-most method first)
     private final Map<Object, CallChain> f_mapMethods;
