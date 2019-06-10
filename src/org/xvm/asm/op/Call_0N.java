@@ -95,7 +95,7 @@ public class Call_0N
             return chain.callSuperNN(frame, Utils.OBJECTS_NONE, m_anRetValue);
             }
 
-        if (m_nFunctionId < 0)
+        if (m_nFunctionId < CONSTANT_OFFSET)
             {
             MethodStructure function = getMethodStructure(frame);
 
@@ -103,9 +103,8 @@ public class Call_0N
 
             if (function.isNative())
                 {
-                ClassTemplate clz = frame.f_context.f_heapGlobal.f_templates.getTemplate(
-                        function.getContainingClass().getIdentityConstant());
-                return clz.invokeNativeNN(frame, function, null, Utils.OBJECTS_NONE, m_anRetValue);
+                return getClassTemplate(frame, function).
+                    invokeNativeNN(frame, function, null, Utils.OBJECTS_NONE, m_anRetValue);
                 }
 
             ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];

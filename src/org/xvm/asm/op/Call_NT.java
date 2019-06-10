@@ -11,7 +11,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
 import org.xvm.runtime.CallChain;
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -113,7 +112,7 @@ public class Call_NT
                 return chain.callSuperN1(frame, ahVar, m_nRetValue, true);
                 }
 
-            if (m_nFunctionId < 0)
+            if (m_nFunctionId < CONSTANT_OFFSET)
                 {
                 MethodStructure function = getMethodStructure(frame);
 
@@ -135,9 +134,8 @@ public class Call_NT
 
                 if (function.isNative())
                     {
-                    ClassTemplate clz = frame.f_context.f_heapGlobal.f_templates.getTemplate(
-                            function.getContainingClass().getIdentityConstant());
-                    return clz.invokeNativeT(frame, function, null, ahVar, m_nRetValue);
+                    return getClassTemplate(frame, function).
+                        invokeNativeT(frame, function, null, ahVar, m_nRetValue);
                     }
 
                 return frame.callT(function, null, ahVar, m_nRetValue);

@@ -11,7 +11,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
 import org.xvm.runtime.CallChain;
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -124,7 +123,7 @@ public class Call_TN
                 return chain.callSuperNN(frame, ((TupleHandle) hArg).m_ahValue, m_anRetValue);
                 }
 
-            if (m_nFunctionId < 0)
+            if (m_nFunctionId < CONSTANT_OFFSET)
                 {
                 MethodStructure function = getMethodStructure(frame);
 
@@ -177,9 +176,8 @@ public class Call_TN
 
         if (function.isNative())
             {
-            ClassTemplate clz = frame.f_context.f_heapGlobal.f_templates.getTemplate(
-                    function.getContainingClass().getIdentityConstant());
-            return clz.invokeNativeNN(frame, function, null, ahArg, m_anRetValue);
+            return getClassTemplate(frame, function).
+                invokeNativeNN(frame, function, null, ahArg, m_anRetValue);
             }
 
         ObjectHandle[] ahVar = Utils.ensureSize(ahArg, function.getMaxVars());

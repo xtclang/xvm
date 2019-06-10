@@ -115,7 +115,7 @@ public class FBind
                     }
                 hFunction = xFunction.makeHandle(chain, frame.m_nDepth + 1);
                 }
-            else if (m_nFunctionId < 0)
+            else if (m_nFunctionId < CONSTANT_OFFSET)
                 {
                 hFunction = xFunction.makeHandle(getMethodStructure(frame));
                 }
@@ -165,7 +165,9 @@ public class FBind
         // we assume that the indexes are sorted in the ascending order
         for (int i = 0, c = m_anParamIx.length; i < c; i++)
             {
-            hFunction = hFunction.bind(m_anParamIx[i], ahParam[i]);
+            // after every step, the resulting function accepts one less
+            // parameter, so it needs to compensate the absolute position
+            hFunction = hFunction.bind(m_anParamIx[i] - i, ahParam[i]);
             }
 
         return frame.assignValue(m_nRetValue, hFunction);
