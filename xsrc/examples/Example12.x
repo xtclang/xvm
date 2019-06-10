@@ -2496,3 +2496,36 @@ s?.foo() ==> if (s != Null) {s.foo();}
 assert a && b;      // same as:  assert a; assert b;
 assert a || b;      // same as:  if (!a) assert a; assert b;
 assert !(a || b);   // same as:  assert !a && !b;  ==> assert !a; assert !b;
+
+// old
+if (i < 0 || i > MAX)
+    {
+    throw new IllegalArgumentException("i must be betwee 0 and " + MAX);
+    }
+// new
+assert:arg i >= 0 && i < MAX;
+
+assert:once foo() > 5;
+// compiles as:
+JMP_NFIRST end
+NVOK_01 foo() -> nextvar
+IS_GT nextvar 5 A_STACK
+ASSERT A_STACK, construct Assertion(String), "foo() > 5, foo()={0}", 1:(nextvar)
+end:
+
+assert:bounds i >= 0 && i < size;
+// compiles as:
+IS_GTE i 0 A_STACK
+ASSERT A_STACK, construct OutOfBounds(String), "i >= 0 && i < size, i={0}", 1:(i)
+LGET size, hold_size
+IS_LT i hold_size A_STACK
+ASSERT A_STACK, construct OutOfBounds(String), "i >= 0 && i < size, i={0}, size={1}", 2:(i, hold_size)
+
+assert:rnd(100) !map.values.contains(n);
+// compiles as:
+JMP_NSAMPL 100, end
+NVOK_01 foo() -> nextvar
+IS_GT nextvar 5 A_STACK
+ASSERT A_STACK, construct Assertion(String), "foo() > 5, foo()={0}", 1:(nextvar)
+end:
+
