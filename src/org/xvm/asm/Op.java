@@ -1124,6 +1124,8 @@ public abstract class Op
             case OP_JMP_GTE:     return new JumpGte     (in, aconst);
             case OP_JMP_TYPE:    return new JumpType    (in, aconst);
             case OP_JMP_NTYPE:   return new JumpNType   (in, aconst);
+            case OP_JMP_COND:    return new JumpCond    (in, aconst);
+            case OP_JMP_NCOND:   return new JumpNCond   (in, aconst);
             case OP_JMP_INT:     return new JumpInt     (in, aconst);
             case OP_JMP_VAL:     return new JumpVal     (in, aconst);
             case OP_JMP_VAL_N:   return new JumpVal_N   (in, aconst);

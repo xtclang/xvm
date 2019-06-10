@@ -82,6 +82,7 @@ public abstract class ConditionalConstant
      * Evaluate this condition for inclusion in a container whose context is provided.
      *
      * @param ctx the context of the container being created
+     *
      * @return true whether this condition is met in the container
      */
     public abstract boolean evaluate(LinkerContext ctx);
@@ -90,6 +91,7 @@ public abstract class ConditionalConstant
      * Used to brute-force evaluate every possible condition without using a LinkerContext.
      *
      * @param n the test number
+     *
      * @return the result for this condition
      */
     public boolean testEvaluate(long n)

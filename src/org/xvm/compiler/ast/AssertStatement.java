@@ -14,6 +14,8 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Assert;
+import org.xvm.asm.op.Break;
+import org.xvm.asm.op.JumpNCond;
 
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
@@ -228,10 +230,18 @@ public class AssertStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
+        if (isLinktimeConditional())
+            {
+            // for "assert:debug", the assertion only is evaluated if the "debug" named condition
+            // exists; similarly, for "assert:test", it is evaluated only if "test" is defined
+            code.add(new JumpNCond(pool().ensureNamedCondition(isDebugOnly() ? "debug" : "test"),
+                    getEndLabel()));
+            }
+
         int cConds = getConditionCount();
         if (cConds == 0)
             {
-            code.add(new Assert(pool().valFalse()));
+            code.add(isDebugOnly() ? new Break() : new Assert(pool().valFalse()));
             return false;
             }
 
@@ -250,7 +260,7 @@ public class AssertStatement
                 Expression exprCond = (Expression) cond;
                 if (exprCond.isConstantFalse())
                     {
-                    code.add(new Assert(pool().valFalse()));
+                    code.add(isDebugOnly() ? new Break() : new Assert(pool().valFalse()));
                     fCompletes = false;
                     }
                 else if (!exprCond.isConstantTrue())

@@ -2492,3 +2492,7 @@ String? == Nullable | String
 s?.foo() ==> if (s != Null) {s.foo();}
 
 --
+
+assert a && b;      // same as:  assert a; assert b;
+assert a || b;      // same as:  if (!a) assert a; assert b;
+assert !(a || b);   // same as:  assert !a && !b;  ==> assert !a; assert !b;

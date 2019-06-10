@@ -12,16 +12,19 @@ import java.util.function.Function;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
+import org.xvm.asm.LinkerContext;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.VersionConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -42,6 +45,7 @@ import static org.xvm.asm.Op.A_STACK;
  *      container (e.g. one that could replace, hide, or add any number of injections)
  */
 public class Container
+        implements LinkerContext
     {
     public Container(Runtime runtime, String sAppName, ModuleRepository repository,
                      TemplateRegistry templates, ObjectHeap heapGlobal)
@@ -51,13 +55,13 @@ public class Container
 
         f_moduleRoot = repository.loadModule(Constants.ECSTASY_MODULE);
 
-        ModuleStructure module = repository.loadModule(sAppName);
-        if (module == null)
+        f_moduleApp = repository.loadModule(sAppName);
+        if (f_moduleApp == null)
             {
             throw new IllegalStateException("Unable to load module \"" + sAppName + "\"");
             }
 
-        f_idModule   = module.getIdentityConstant();
+        f_idModule   = f_moduleApp.getIdentityConstant();
         f_templates  = templates;
         f_heapGlobal = heapGlobal;
         }
@@ -494,7 +498,60 @@ public class Container
         {
         return "Container: " + f_idModule.getName();
         }
+    
 
+    // ----- LinkerContext interface ---------------------------------------------------------------
+
+    @Override
+    public boolean isSpecified(String sName)
+        {
+        switch (sName)
+            {
+            case "debug":
+            case "test":
+                return true;
+            }
+
+        // TODO
+        return false;
+        }
+
+    @Override
+    public boolean isPresent(IdentityConstant constId)
+        {
+        if (constId.getModuleConstant().equals(f_moduleRoot.getIdentityConstant()))
+            {
+            // part of the Ecstasy module
+            // TODO
+            return true;
+            }
+
+        if (constId.getModuleConstant().equals(f_idModule))
+            {
+            // part of the app module
+            // TODO
+            return true;
+            }
+
+        return false;
+        }
+
+    @Override
+    public boolean isVersionMatch(ModuleConstant constModule, VersionConstant constVer)
+        {
+        // TODO
+        return true;
+        }
+
+    @Override
+    public boolean isVersion(VersionConstant constVer)
+        {
+        // TODO
+        return true;
+        }
+
+
+    // ----- inner class: InjectionKey -------------------------------------------------------------
     public static class InjectionKey
         {
         public final String f_sName;
@@ -543,6 +600,7 @@ public class Container
     public final ObjectHeap       f_heapGlobal;
 
     protected final ModuleStructure f_moduleRoot;
+    protected final ModuleStructure f_moduleApp;
     protected final ModuleConstant  f_idModule;
 
     // service context map (concurrent set)
