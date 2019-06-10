@@ -86,8 +86,7 @@ public abstract class OpJump
     @Override
     public boolean advances()
         {
-        // of the various OpJump sub-classes, only GuardAll naturally advances to the next op
-        return getOpCode() == Op.OP_GUARD_ALL;
+        return false;
         }
 
     /**
