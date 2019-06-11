@@ -206,7 +206,7 @@ public class TemplateExpression
         //   $.append("...");
         //   {...}                          // for a void expression
         //   $.append("...");
-        //   yield $.to<String>();
+        //   yield $.toString();
         int          cchMin   = 0;
         ConstantPool pool     = pool();
         for (Expression expr : exprs)

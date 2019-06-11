@@ -1814,7 +1814,7 @@ public abstract class ClassTemplate
         }
 
 
-    // ----- to<String>() support ------------------------------------------------------------------
+    // ----- toString() support --------------------------------------------------------------------
 
     /**
      * Build a String handle for a human readable representation of the target handle.

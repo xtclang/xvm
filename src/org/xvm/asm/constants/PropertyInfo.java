@@ -1359,7 +1359,7 @@ public class PropertyInfo
     /**
      * The property rank represents a relative order of property's appearance in the containing
      * class. It's used only to preserve a natural (in the order of introduction) enumeration of
-     * fields by auto-generated code, such as Const.to<String>() and reflection API.
+     * fields by auto-generated code, such as Const.toString() and reflection API.
      */
     private final int m_nRank;
 
