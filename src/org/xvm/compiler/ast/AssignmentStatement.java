@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ConstantPool;
@@ -597,6 +598,13 @@ public class AssignmentStatement
             }
 
         return fValid ? this : null;
+        }
+
+    @Override
+    protected void selectTraceableExpressions(Map<String, Expression> mapExprs)
+        {
+        assert op.getId() == Id.COND_ASN || op.getId() == Id.COND_NN_ASN;
+        rvalue.selectTraceableExpressions(mapExprs);
         }
 
     @Override

@@ -992,6 +992,36 @@ public abstract class Expression
     // TODO need an "isConditionalResult()" method
 
     /**
+     * Query the expression to determine if it would be a good candidate for tracing.
+     *
+     * @return true iff the expression claims that it is worthy to be a candidate for debug tracing
+     */
+    public boolean isTraceworthy()
+        {
+        assert isValidated();
+        return false;
+        }
+
+    /**
+     * Create a TraceExpression for this expression.
+     *
+     * @return a TraceExpression that has already inserted itself as the parent of this expression
+     *         and the child of the previous parent
+     */
+    public TraceExpression requireTrace()
+        {
+        if (!isValidated() || !isTraceworthy())
+            {
+            throw new IllegalStateException("expr=" + this);
+            }
+
+        TraceExpression exprTrace = new TraceExpression(this);
+        exprTrace.setParent(this.getParent());
+        this.setParent(exprTrace);
+        return exprTrace;
+        }
+
+    /**
      * (Post-validation) Determine if the expression represents an L-Value, which means that this
      * expression can be assigned to.
      * <p/>

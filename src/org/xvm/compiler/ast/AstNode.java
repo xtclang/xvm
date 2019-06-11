@@ -492,6 +492,17 @@ public abstract class AstNode
         }
 
     /**
+     * Collect all of the expressions that should be included in tracing debug output. This is used
+     * by "assert", for example, to display information relevant to the assertion.
+     *
+     * @param mapExprs  the expressions collected thus far, keyed by their source code
+     *                  representations
+     */
+    protected void selectTraceableExpressions(Map<String, Expression> mapExprs)
+        {
+        }
+
+    /**
      * (Post-validation) Determine if the statement or expression is able to complete normally.
      * <p/>
      * This method must be overridden by any statement or expression that may not complete, either
