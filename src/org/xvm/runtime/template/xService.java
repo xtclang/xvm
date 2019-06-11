@@ -48,6 +48,8 @@ public class xService
             INSTANCE = this;
             INCEPTION_CLASS = new NativeRebaseConstant(
                 (ClassConstant) structure.getIdentityConstant());
+
+            new InterfaceProxy(templates); // this initializes the InterfaceProxy.INSTANCE reference
             }
         }
 

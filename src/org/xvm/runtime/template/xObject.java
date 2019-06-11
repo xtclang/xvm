@@ -27,8 +27,6 @@ public class xObject
             {
             INSTANCE = this;
             CLASS = getCanonicalClass();
-
-            new InterfaceProxy(templates); // this initializes the INSTANCE reference
             }
         }
 
