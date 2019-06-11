@@ -76,6 +76,12 @@ public class GuardAll
         m_nNextVar = scope.getCurVars();
         }
 
+    @Override
+    public boolean advances()
+        {
+        return true;
+        }
+
     private int m_nNextVar;
 
     private transient AllGuard m_guard; // cached struct
