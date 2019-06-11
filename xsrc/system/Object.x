@@ -28,10 +28,10 @@ class Object
      *
      * This is intended primarily for debugging, log messages, and other diagnostic features.
      */
-    String to<String>()
+    String toString()
         {
         // the Object's rudimentary to<String> shows class information only
-        return meta.class_.to<String>();
+        return meta.class_.toString();
         }
 
     /**
@@ -47,4 +47,3 @@ class Object
         return this.as(immutable Object);
         }
     }
-

@@ -89,7 +89,7 @@ interface Directory
 //        appender.add("  ");
 //        modified.append(appender);
 //        appender.add("  ");
-//        String bytes = size.to<String>()
+//        String bytes = size.toString()
 
         if (recursive || !root)
             {

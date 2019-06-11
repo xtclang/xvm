@@ -28,7 +28,7 @@ module TestInnerOuter.xqiz.it
             }
 
         @Override
-        String to<String>()
+        String toString()
             {
             return text;
             }

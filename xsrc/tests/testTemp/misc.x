@@ -581,7 +581,7 @@ module TestMisc.xqiz.it
         DateTime date = clock.now;
 
         @Override
-        String to<String>()
+        String toString()
             {
             return id;
             }
@@ -594,9 +594,9 @@ module TestMisc.xqiz.it
         class OrderLine(Int lineNumber, String descr)
             {
             @Override
-            String to<String>()
+            String toString()
                 {
-                return this.Order.to<String>() + ": " + descr;
+                return this.Order.toString() + ": " + descr;
                 }
             }
         }
@@ -608,9 +608,9 @@ module TestMisc.xqiz.it
         class OrderLine(Int lineNumber, String descr)
             {
             @Override
-            String to<String>()
+            String toString()
                 {
-                return this.EnhancedOrder.to<String>() +
+                return this.EnhancedOrder.toString() +
                     ": " + lineNumber + ") " + descr + " @ " + date;
                 }
             }

@@ -260,8 +260,8 @@ public class TemplateExpression
                 }
             }
 
-        // yield $.to<String>();
-        MethodConstant idToString = infoBuf.findCallable("to", true, false,
+        // yield $.toString();
+        MethodConstant idToString = infoBuf.findCallable("toString", true, false,
                 new TypeConstant[] {pool.typeString()}, null, null);
         code.add(new Invoke_01(m_reg$, idToString, LVal.getLocalArgument()));
 

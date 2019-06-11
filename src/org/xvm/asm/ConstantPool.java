@@ -2148,7 +2148,7 @@ public class ConstantPool
     public SingletonConstant valGreater()       {SingletonConstant c = m_valGreater;      if (c == null) {m_valGreater      = c = ensureSingletonConstConstant(clzGreater())                  ;} return c;}
     public SingletonConstant valNull()          {SingletonConstant c = m_valNull;         if (c == null) {m_valNull         = c = ensureSingletonConstConstant(clzNull())                     ;} return c;}
 
-    public SignatureConstant sigToString()      {SignatureConstant c = m_sigToString;     if (c == null) {m_sigToString     = c = ensureSignatureConstant("to", NO_TYPES, new TypeConstant[]{typeString()});} return c;}
+    public SignatureConstant sigToString()      {SignatureConstant c = m_sigToString;     if (c == null) {m_sigToString     = c = ensureSignatureConstant("toString", NO_TYPES, new TypeConstant[]{typeString()});} return c;}
     public SignatureConstant sigConstruct()     {SignatureConstant c = m_sigConstruct;    if (c == null) {m_sigConstruct    = c = ensureSignatureConstant("construct", NO_TYPES, NO_TYPES)    ;} return c;}
 
     public SingletonConstant valOf(boolean f)

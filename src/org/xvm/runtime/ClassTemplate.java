@@ -705,7 +705,7 @@ public abstract class ClassTemplate
         switch (ahArg.length)
             {
             case 0:
-                if (method.getName().equals("to"))
+                if (method.getName().equals("toString"))
                     {
                     if (method.getReturnCount() == 1 &&
                         method.getReturn(0).getType().equals(pool().typeString()))

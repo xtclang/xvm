@@ -97,9 +97,9 @@ const CPFileNode(Object cookie, Path path, DateTime created, DateTime modified, 
         }
 
     @Override
-    String to<String>()
+    String toString()
         {
-        return path.to<String>();
+        return path.toString();
         }
 
 

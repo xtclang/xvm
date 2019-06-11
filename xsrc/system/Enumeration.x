@@ -38,8 +38,8 @@ import collections.ListMap;
  *   from its location in the list of declared Enum values for the Enumeration.
  * * The Enum values (and their classes, if they override the base Enumeration class) are contained
  *   within (i.e. are children of) the base Enumeration class. As such, the names of the Enum values
- *   must not collide with any of the other names in the same namespace, such as "meta" or "to" from
- *   {@link Object}.
+ *   must not collide with any of the other names in the same namespace, such as "meta" or "toString"
+ *   from {@link Object}.
  * * The Enum values do _not_ implement (are not instances of, nor castable to) Enumeration; the
  *   Enum values do implement the {@link Enum} interface.
  * * The class of Enumeration values (such as {@code Ordered} in the examples above) is not

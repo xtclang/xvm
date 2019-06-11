@@ -27,7 +27,7 @@
  *       // possible and likely, allowing code to execute after the call is made, but before the
  *       // call is complete. what the future allows is for the "what to do when the calculation is
  *       // completed" to be expressed in a series of simple steps.
- *       &fs.handle(e -> e.to<String>())
+ *       &fs.handle(e -> e.toString())
  *          .passTo(s -> console.print(s));
  *       }
  *

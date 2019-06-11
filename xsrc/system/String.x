@@ -156,7 +156,7 @@ const String
          }
 
     @Override
-    String! to<String!>()
+    String! toString()
         {
         return this;
         }
@@ -205,7 +205,7 @@ const String
                         return new StringBuffer(length)
                             .add(this)
                             .add(fill * append)
-                            .to<String>();
+                            .toString();
                     }
             }
         }
@@ -246,7 +246,7 @@ const String
                         return new StringBuffer(length)
                             .add(fill * append)
                             .add(this)
-                            .to<String>();
+                            .toString();
                     }
             }
         }
@@ -273,7 +273,7 @@ const String
             {
             appendTo(buf);
             }
-        return buf.to<String>();
+        return buf.toString();
         }
 
     /**
@@ -288,7 +288,7 @@ const String
         {
         Int          add = o.is(Stringable) ? o.estimateStringLength() : 0x0F;
         StringBuffer buf = new StringBuffer(size + add);
-        return (buf + this + o).to<String>();
+        return (buf + this + o).toString();
         }
 
 

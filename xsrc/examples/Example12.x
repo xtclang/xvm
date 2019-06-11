@@ -828,7 +828,7 @@ class C extends B
         Function fCon5 =   &construct Q(<Int>?);    // OK
         Function fCon6 =   &construct Q<Int>(<Int>?);    // OK
         Function fCon7 =  Q<Int>.&construct Q(5);    // not wrong but ugly
-        Method   mToStr=  Q.&to<String>();
+        Method   mToStr=  Q.&toString();
 
         ... = &bar(?).conditionalResult);           // type of "&bar(?)" is Function, which has a "conditionalResult" property
         ... = bar().maxvalue;                       // bar returns an Int64, and Int64 has a static constant "maxvalue"

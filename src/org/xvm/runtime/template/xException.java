@@ -42,7 +42,7 @@ public class xException
         s_clzIllegalState    = f_templates.getTemplate("IllegalState").getCanonicalClass();
         s_clzPathException   = f_templates.getTemplate("fs.PathException").getCanonicalClass();
 
-        markNativeMethod("to", VOID, STRING);
+        markNativeMethod("toString", VOID, STRING);
         }
 
     @Override

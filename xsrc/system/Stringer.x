@@ -5,10 +5,10 @@ mixin Stringer
         into Stringable
     {
     @Override
-    String to<String>()
+    String toString()
         {
         StringBuffer buffer = new StringBuffer(estimateStringLength());
         appendTo(buffer);
-        return buffer.to<String>();
+        return buffer.toString();
         }
     }

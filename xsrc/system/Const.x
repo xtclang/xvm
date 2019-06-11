@@ -22,11 +22,11 @@ interface Const
         }
 
     @Override
-    String to<String>()
+    String toString()
         {
         StringBuffer buf = new StringBuffer(estimateStringLength());
         appendTo(buf);
-        return buf.to<String>();
+        return buf.toString();
         }
 
     @Override

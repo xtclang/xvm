@@ -23,7 +23,7 @@ const Exception
     Iterable<StackFrame> stackTrace;
 
     @Override
-    String to<String>()
+    String toString()
         {
         return formatExceptionString(null);
         }

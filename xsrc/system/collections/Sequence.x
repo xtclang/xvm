@@ -245,7 +245,7 @@ interface Sequence<ElementType>
                     }
                 else
                     {
-                    v.to<String>().appendTo(appender);
+                    v.toString().appendTo(appender);
                     }
                 }
             }

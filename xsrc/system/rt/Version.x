@@ -123,7 +123,7 @@ const Version
     /**
      * Construct a Version from a String representation.
      *
-     * @param version  a legal version string, such as one emitted by `Version.to<String>()`
+     * @param version  a legal version string, such as one emitted by `Version.toString()`
      */
     construct(String version)
         {
@@ -454,11 +454,11 @@ const Version
         {
         if (index < 0)
             {
-            throw new OutOfBounds(index.to<String>() + " < 0");
+            throw new OutOfBounds(index.toString() + " < 0");
             }
         if (index >= size)
             {
-            throw new OutOfBounds(index.to<String>() + " >= " + size);
+            throw new OutOfBounds(index.toString() + " >= " + size);
             }
 
         Version version = this;
@@ -478,11 +478,11 @@ const Version
         Int upper = range.upperBound;
         if (lower < 0)
             {
-            throw new OutOfBounds(lower.to<String>() + " < 0");
+            throw new OutOfBounds(lower.toString() + " < 0");
             }
         if (upper >= size)
             {
-            throw new OutOfBounds(upper.to<String>() + " >= " + size);
+            throw new OutOfBounds(upper.toString() + " >= " + size);
             }
         assert lower <= upper;
         assert !range.reversed;

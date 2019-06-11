@@ -479,7 +479,7 @@ const IntLiteral(String text)
      */
     @Op("+") IntLiteral add(IntLiteral n)
         {
-        return new IntLiteral((this.to<VarInt>() + n.to<VarInt>()).to<String>());
+        return new IntLiteral((this.to<VarInt>() + n.to<VarInt>()).toString());
         }
 
     /**
@@ -487,7 +487,7 @@ const IntLiteral(String text)
      */
     @Op("-") IntLiteral sub(IntLiteral n)
         {
-        return new IntLiteral((this.to<VarInt>() - n.to<VarInt>()).to<String>());
+        return new IntLiteral((this.to<VarInt>() - n.to<VarInt>()).toString());
         }
 
     /**
@@ -495,7 +495,7 @@ const IntLiteral(String text)
      */
     @Op("*") IntLiteral mul(IntLiteral n)
         {
-        return new IntLiteral((this.to<VarInt>() * n.to<VarInt>()).to<String>());
+        return new IntLiteral((this.to<VarInt>() * n.to<VarInt>()).toString());
         }
 
     /**
@@ -503,7 +503,7 @@ const IntLiteral(String text)
      */
     @Op("/") IntLiteral div(IntLiteral n)
         {
-        return new IntLiteral((this.to<VarInt>() / n.to<VarInt>()).to<String>());
+        return new IntLiteral((this.to<VarInt>() / n.to<VarInt>()).toString());
         }
 
     /**
@@ -511,7 +511,7 @@ const IntLiteral(String text)
      */
     @Op("%") IntLiteral mod(IntLiteral n)
         {
-        return new IntLiteral((this.to<VarInt>() % n.to<VarInt>()).to<String>());
+        return new IntLiteral((this.to<VarInt>() % n.to<VarInt>()).toString());
         }
 
     // ----- other Number-like operations ----------------------------------------------------------
@@ -586,7 +586,7 @@ const IntLiteral(String text)
         }
 
     @Override
-    String to<String>()
+    String toString()
         {
         return text;
         }

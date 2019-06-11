@@ -953,7 +953,7 @@ class Array<ElementType>
                     }
                 else
                     {
-                    v.to<String>().appendTo(appender);
+                    v.toString().appendTo(appender);
                     }
                 }
             }

@@ -35,7 +35,7 @@ public class xObject
         {
         if (this == INSTANCE)
             {
-            markNativeMethod("to", VOID, STRING);
+            markNativeMethod("toString", VOID, STRING);
             markNativeMethod("equals", null, null);
             }
         }

@@ -39,7 +39,7 @@ module TestProps.xqiz.it
 
     @Lazy Int lazy.calc()
         {
-        console.println(" - in lazy.calc() " + to<String>());
+        console.println(" - in lazy.calc() " + toString());
         return 42;
         }
     }
