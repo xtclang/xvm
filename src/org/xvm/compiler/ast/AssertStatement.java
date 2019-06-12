@@ -331,7 +331,7 @@ public class AssertStatement
         if (cConds == 0)
             {
             code.add(new Assert(pool.valFalse(), constructException));
-            return false;
+            return isNotAlways() || isLinktimeConditional();
             }
 
         boolean fCompletes = fReachable;
