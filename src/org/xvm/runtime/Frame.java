@@ -1361,7 +1361,7 @@ public class Frame
 
         if (nVarFrom >= 0)
             {
-            VarInfo infoFrom = f_aInfo[nVarFrom];
+            VarInfo infoFrom = getVarInfo(nVarFrom);
 
             f_aInfo[nVar] = infoFrom.m_type == null
                 ? new VarInfo(infoFrom.m_nTypeId, 0, VAR_STANDARD)
@@ -1965,7 +1965,7 @@ public class Frame
             TypeConstant typeArray;
             if (nTargetReg >= 0)
                 {
-                VarInfo infoArray = frame.f_aInfo[nTargetReg];
+                VarInfo infoArray = frame.getVarInfo(nTargetReg);
                 typeArray = infoArray.getType();
                 }
             else
