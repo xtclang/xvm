@@ -3215,6 +3215,47 @@ public class ConstantPool
         return null;
         }
 
+    /**
+     * Create a new function type by binding the specified parameter of the passed in function type.
+     *
+     * @param typeFn  the function type
+     * @param iParam  the parameter index
+     *
+     * @return a new function type that skips the specified parameter
+     */
+    public TypeConstant bindFunctionParam(TypeConstant typeFn, int iParam)
+        {
+        assert typeFn.isA(typeFunction()) && typeFn.getParamsCount() > 0;
+
+        TypeConstant typeP = typeFn.getParamTypesArray()[0];
+        TypeConstant typeR = typeFn.getParamTypesArray()[1];
+
+        int cParamsNew = typeP.getParamsCount() - 1;
+        assert typeP.isTuple() && iParam <= cParamsNew;
+
+        TypeConstant[] atypeParams = typeP.getParamTypesArray();
+        if (cParamsNew == 0)
+            {
+            // canonical Tuple represents Void
+            typeP = ensureParameterizedTypeConstant(typeTuple());
+            }
+        else
+            {
+            TypeConstant[] atypeNew = new TypeConstant[cParamsNew];
+            if (iParam > 0)
+                {
+                System.arraycopy(atypeParams, 0, atypeNew, 0, iParam);
+                }
+            if (iParam < cParamsNew)
+                {
+                System.arraycopy(atypeParams, iParam + 1, atypeNew, iParam, cParamsNew - iParam);
+                }
+            typeP = ensureParameterizedTypeConstant(typeTuple(), atypeNew);
+            }
+
+        return ensureParameterizedTypeConstant(typeFunction(), typeP, typeR);
+        }
+
 
     // ----- out-of-context helpers  ---------------------------------------------------------------
 
