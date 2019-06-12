@@ -1342,13 +1342,8 @@ public class Parser
             case ASSERT_TODO:
             case ASSERT_ONCE:
             case ASSERT_TEST:
+            case ASSERT_DBG:
                 return parseAssertStatement();
-            case ASSERT_DBG: // TODO should be an AssertStatement (and support for conditions) as well!
-                {
-                Token keyword = current();
-                expect(Id.SEMICOLON);
-                return new DebugStatement(keyword);
-                }
 
             case BREAK:
             case CONTINUE:

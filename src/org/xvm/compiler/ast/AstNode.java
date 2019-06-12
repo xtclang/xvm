@@ -500,6 +500,23 @@ public abstract class AstNode
      */
     protected void selectTraceableExpressions(Map<String, Expression> mapExprs)
         {
+        for (AstNode node : children())
+            {
+            if (node instanceof Expression)
+                {
+                Expression expr = (Expression) node;
+                if (expr.isTraceworthy())
+                    {
+                    String sExpr = expr.toString();
+                    if (!mapExprs.containsKey(sExpr))
+                        {
+                        mapExprs.put(sExpr, expr);
+                        }
+                    }
+                }
+
+            node.selectTraceableExpressions(mapExprs);
+            }
         }
 
     /**
