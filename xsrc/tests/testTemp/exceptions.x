@@ -74,6 +74,11 @@ module TestTry.xqiz.it
             console.println("expected throw in testAssert2(): " + e);
             }
 
+        testAssertOnce(True);
+        testAssertOnce(False);
+
+        testAssertSample();
+
         console.println("\nException tests: finished!");
         }
 
@@ -191,5 +196,48 @@ module TestTry.xqiz.it
 
         Int x = 4;
         assert ++x <= 4;
+        }
+
+    void testAssertOnce(Boolean firstTime)
+        {
+        console.println("\n** testAssertOnce()");
+
+        Int x = 42;
+        try
+            {
+            assert:once x < size();
+
+            // the assertion passed, which it shouldn't do, unless this is the second time through
+            console.println(firstTime ? "[1st] ERR: should have asserted" : "[2nd] OK: skipped");
+            }
+        catch (Exception e)
+            {
+            console.println(firstTime ? "[1st] OK: assert" : "[2nd] ERR: should have skipped");
+            console.println(e.text);
+            }
+        }
+
+    void testAssertSample()
+        {
+        console.println("\n** testAssertSample()");
+
+        Int x   = 99;
+        Int ok  = 0;
+        Int err = 0;
+        for (Int i : 1..1000)
+            {
+            try
+                {
+                assert:rnd(100) x < size();
+                ++ok;
+                }
+            catch (Exception e)
+                {
+                ++err;
+                }
+            ++x;
+            }
+
+        console.println($"results: ok={ok}, errs={err} (should be ~10)");
         }
     }

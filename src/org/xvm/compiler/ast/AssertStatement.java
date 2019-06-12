@@ -22,13 +22,16 @@ import org.xvm.asm.op.Assert;
 import org.xvm.asm.op.AssertM;
 import org.xvm.asm.op.AssertV;
 import org.xvm.asm.op.JumpNCond;
+import org.xvm.asm.op.JumpNFirst;
 import org.xvm.asm.op.JumpNSample;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
+import org.xvm.util.Severity;
 
 
 /**
@@ -140,11 +143,27 @@ public class AssertStatement
         }
 
     /**
-     * @return true iff the assertion does not occur each time the execution reaches it
+     * @return true iff the assertion is executed only the first time that the execution reaches it
+     */
+    public boolean isOnlyOnce()
+        {
+        return keyword.getId() == Id.ASSERT_ONCE;
+        }
+
+    /**
+     * @return true iff the assertion is executed as if it were statistically sampling
      */
     public boolean isSampling()
         {
         return keyword.getId() == Id.ASSERT_RND;
+        }
+
+    /**
+     * @return true iff the assertion does not occur each time the execution reaches it
+     */
+    public boolean isNotAlways()
+        {
+        return isOnlyOnce() | isSampling();
         }
 
     /**
@@ -179,6 +198,23 @@ public class AssertStatement
 
         // break apart complex conditions if possible
         demorgan();
+
+        if (interval != null)
+            {
+            Expression exprNew = interval.validate(ctx, pool().typeInt(), errs);
+            if (exprNew == null)
+                {
+                fValid = false;
+                }
+            else
+                {
+                interval = exprNew;
+                if (!interval.isRuntimeConstant())
+                    {
+                    interval.log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+                    }
+                }
+            }
 
         for (int i = 0, c = getConditionCount(); i < c; ++i)
             {
@@ -249,8 +285,15 @@ public class AssertStatement
             {
             // for "assert:debug", the assertion only is evaluated if the "debug" named condition
             // exists; similarly, for "assert:test", it is evaluated only if "test" is defined
-            code.add(new JumpNCond(pool.ensureNamedCondition(isDebugOnly() ? "debug" : "test"),
-                    getEndLabel()));
+            String sCond = isDebugOnly() ? "debug" : "test";
+            code.add(new JumpNCond(pool.ensureNamedCondition(sCond), getEndLabel()));
+            }
+
+        if (isNotAlways())
+            {
+            code.add(isOnlyOnce()
+                    ? new JumpNFirst(getEndLabel())
+                    : new JumpNSample(interval.generateArgument(ctx, code, true, true, errs), getEndLabel()));
             }
 
         MethodConstant constructException;
