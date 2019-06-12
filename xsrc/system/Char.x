@@ -119,7 +119,7 @@ const Char
             {
             buf.add(this);
             }
-        return buf.to<String>();
+        return buf.toString();
         }
 
 

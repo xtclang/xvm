@@ -610,7 +610,7 @@ interface Map<KeyType, ValueType>
                     }
                 else
                     {
-                    appender.add(key.to<String>());
+                    appender.add(key.toString());
                     }
 
                 appender.add('=');
@@ -622,7 +622,7 @@ interface Map<KeyType, ValueType>
                     }
                 else
                     {
-                    appender.add(value.to<String>());
+                    appender.add(value.toString());
                     }
                 }
             }

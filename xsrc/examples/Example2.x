@@ -539,7 +539,7 @@ assert new T1().type == new T2().type; // success!
 
 // -- 6 example --
 
-String s = 6.to<String>();
+String s = 6.toString();
 int sum = 6 + 5;
 // same as:
 int sum = 6.add(5);

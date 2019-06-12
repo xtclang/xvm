@@ -47,7 +47,7 @@ module TestGenerics.xqiz.it
         class Child
             {
             @Override
-            String to<String>()
+            String toString()
                 {
                 return super() + " outer = " + this.Base;
                 }
@@ -56,7 +56,7 @@ module TestGenerics.xqiz.it
         class Child2<ChildType>
             {
             @Override
-            String to<String>()
+            String toString()
                 {
                 return super() + " outer = " + this.Base + " type=" + ChildType;
                 }

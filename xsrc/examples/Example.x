@@ -1779,7 +1779,7 @@ Void printPi(Console console)
     // potentially async call to the Pi calculation service
     @future String fs = pi.withTimeout(...).calc(99999);
     fs.onResult(value -> console.print(value));
-    fs.onThrown(e -> console.print(e.to<String>()));
+    fs.onThrown(e -> console.print(e.toString()));
     fs.onExpiry(() -> console.print("it took too long!"));
     fs.onFinish(() -> console.print("done"));
     }
@@ -2400,13 +2400,6 @@ switch (a <=> b)
     case Greater:
     case Equal:
     }
-
-// --- to()
-
-String s = o.to<String>();  // could use inference
-
-o.to();                     // compiler error
-o.to<String>();             // the <String> is used by the compiler and then thrown away
 
 Int i = 0;
 Int j = new IntLiteral("123454");

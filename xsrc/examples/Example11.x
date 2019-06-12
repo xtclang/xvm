@@ -93,7 +93,7 @@ class Object
     {
     protected Meta<Object:public, Object:protected, Object:private> meta.get()
     static Boolean equals(Object o1, Object o2)
-    String to<String>()
+    String toString()
     Object[] to<Object[]>()
     Tuple<Object> to<Tuple<Object>>()
     @Auto function Object() to<function Object()>()
@@ -107,7 +107,7 @@ class Simple
     // on top of Object's
     protected Meta<Simple:public, Simple:protected, Simple:private> meta.get()
     static Boolean equals(Object o1, Object o2) // function is located on Object
-    String to<String>()
+    String toString()
     Simple[] to<Simple[]>()
     Tuple<Simple> to<Tuple<Simple>>()
     @Auto function Simple() to<function Simple()>()

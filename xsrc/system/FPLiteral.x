@@ -83,7 +83,7 @@ const FPLiteral(String text)
         }
 
     @Override
-    String to<String>()
+    String toString()
         {
         return text;
         }

@@ -22,7 +22,7 @@ class ConstHelper
             else
                 {
                 // this should never happen
-                length += field.to<String>().size;
+                length += field.toString().size;
                 }
             }
         return length;
@@ -53,7 +53,7 @@ class ConstHelper
             else
                 {
                 // this should never happen
-                appender.add(field.to<String>());
+                appender.add(field.toString());
                 }
             }
         appender.add(')');

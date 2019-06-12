@@ -48,6 +48,8 @@ public class xService
             INSTANCE = this;
             INCEPTION_CLASS = new NativeRebaseConstant(
                 (ClassConstant) structure.getIdentityConstant());
+
+            new InterfaceProxy(templates); // this initializes the InterfaceProxy.INSTANCE reference
             }
         }
 
@@ -103,6 +105,14 @@ public class xService
         return frame.f_context == ((ServiceHandle) hTarget).m_context ?
             super.invoke1(frame, chain, hTarget, ahVar, iReturn) :
             xFunction.makeAsyncHandle(chain).call1(frame, hTarget, ahVar, iReturn);
+        }
+
+    @Override
+    public int invokeT(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+        {
+        return frame.f_context == ((ServiceHandle) hTarget).m_context ?
+            super.invokeT(frame, chain, hTarget, ahVar, iReturn) :
+            xFunction.makeAsyncHandle(chain).callT(frame, hTarget, ahVar, iReturn);
         }
 
     @Override

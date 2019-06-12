@@ -33,7 +33,7 @@ module TestSimple.xqiz.it
         @Inject X.io.Console console;
         @Inject X.Clock clock;
 
-        console.println(clock.now.to<String>() + $": Hello {s}");
+        console.println(clock.now.toString() + $": Hello {s}");
         }
 
     void testIn()

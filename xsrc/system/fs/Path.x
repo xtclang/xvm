@@ -19,7 +19,7 @@ const Path
     /**
      * Construct a Path from a String representation.
      *
-     * @param pathString  a legal path string, such as one emitted by `Path.to<String>()`
+     * @param pathString  a legal path string, such as one emitted by `Path.toString()`
      */
     construct(String pathString)
         {
@@ -308,11 +308,11 @@ const Path
         {
         if (index < 0)
             {
-            throw new OutOfBounds(index.to<String>() + " < 0");
+            throw new OutOfBounds(index.toString() + " < 0");
             }
         if (index >= size)
             {
-            throw new OutOfBounds(index.to<String>() + " >= " + size);
+            throw new OutOfBounds(index.toString() + " >= " + size);
             }
 
         Path path  = this;
@@ -332,11 +332,11 @@ const Path
         Int upper = range.upperBound;
         if (lower < 0)
             {
-            throw new OutOfBounds(lower.to<String>() + " < 0");
+            throw new OutOfBounds(lower.toString() + " < 0");
             }
         if (upper >= size)
             {
-            throw new OutOfBounds(upper.to<String>() + " >= " + size);
+            throw new OutOfBounds(upper.toString() + " >= " + size);
             }
         assert lower <= upper;
 

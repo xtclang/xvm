@@ -206,7 +206,7 @@ public class TemplateExpression
         //   $.append("...");
         //   {...}                          // for a void expression
         //   $.append("...");
-        //   yield $.to<String>();
+        //   yield $.toString();
         int          cchMin   = 0;
         ConstantPool pool     = pool();
         for (Expression expr : exprs)
@@ -260,8 +260,8 @@ public class TemplateExpression
                 }
             }
 
-        // yield $.to<String>();
-        MethodConstant idToString = infoBuf.findCallable("to", true, false,
+        // yield $.toString();
+        MethodConstant idToString = infoBuf.findCallable("toString", true, false,
                 new TypeConstant[] {pool.typeString()}, null, null);
         code.add(new Invoke_01(m_reg$, idToString, LVal.getLocalArgument()));
 

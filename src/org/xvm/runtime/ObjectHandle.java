@@ -177,6 +177,14 @@ public abstract class ObjectHandle
         }
 
     /**
+     * @return true iff the handle represents a service
+     */
+    public boolean isService()
+        {
+        return getTemplate().isService();
+        }
+
+    /**
      * @return true iff the handle represents a struct
      */
     public boolean isStruct()

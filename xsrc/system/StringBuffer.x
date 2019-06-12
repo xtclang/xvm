@@ -39,14 +39,14 @@ class StringBuffer
             }
         else
             {
-            add(o.to<String>());
+            add(o.toString());
             }
 
         return this;
         }
 
     @Override
-    String to<String>()
+    String toString()
         {
         return new String(chars);
         }

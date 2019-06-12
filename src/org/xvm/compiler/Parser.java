@@ -3353,7 +3353,7 @@ public class Parser
 
                 // note to future self: the reason that we have NameExpression with <params>
                 // (which seems almost self-evident to ALWAYS be a type and not a name) is because
-                // we have the ability to do this: "String s = o.to<String>();" (redundant return)
+                // we have the ability to do this: "Int32 i = lit.to<Int32>();" (redundant return)
                 return access == null && tokNoNarrow == null
                         ? new NameExpression(left, null, name, params, lEndPos)
                         : new NamedTypeExpression(null, toList(left, name), access, tokNoNarrow, params, lEndPos);

@@ -11,9 +11,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Composition;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -24,7 +24,9 @@ import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
@@ -41,6 +43,7 @@ import org.xvm.runtime.Utils.InPlacePropertyBinary;
 import org.xvm.runtime.Utils.InPlacePropertyUnary;
 import org.xvm.runtime.Utils.UnaryAction;
 
+import org.xvm.runtime.template.InterfaceProxy;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction.FullyBoundHandle;
@@ -497,9 +500,9 @@ public abstract class ClassTemplate
     protected ObjectHandle createStruct(Frame frame, ClassComposition clazz)
         {
         assert clazz.getTemplate() == this &&
-             (f_struct.getFormat() == Component.Format.CLASS ||
-              f_struct.getFormat() == Component.Format.CONST ||
-              f_struct.getFormat() == Component.Format.ENUMVALUE);
+             (f_struct.getFormat() == Format.CLASS ||
+              f_struct.getFormat() == Format.CONST ||
+              f_struct.getFormat() == Format.ENUMVALUE);
 
         clazz = clazz.ensureAccess(Access.STRUCT);
 
@@ -547,14 +550,71 @@ public abstract class ClassTemplate
     /**
      * Create a proxy handle that could be sent over the service boundaries.
      *
-     * @param ctx      the service context that the mutable object "belongs" to
-     * @param hTarget  the mutable object handle that needs to be proxied
+     * @param ctx        the service context that the mutable object "belongs" to
+     * @param hTarget    the mutable object handle that needs to be proxied
+     * @param typeProxy  the [revealed] type of the proxy handle
      *
      * @return a new ObjectHandle to replace the mutable object with or null
      */
-    public ObjectHandle createProxyHandle(ServiceContext ctx, ObjectHandle hTarget)
+    public ObjectHandle createProxyHandle(ServiceContext ctx, ObjectHandle hTarget,
+                                          TypeConstant typeProxy)
         {
+        if (typeProxy != null && typeProxy.isInterfaceType())
+            {
+            assert hTarget.getType().isA(typeProxy);
+
+            TypeInfo info = typeProxy.ensureTypeInfo();
+
+            // ensure the methods only use constants, services or proxy-able interfaces
+            for (Map.Entry<MethodConstant, MethodInfo> entry : info.getMethods().entrySet())
+                {
+                MethodConstant idMethod   = entry.getKey();
+                MethodInfo     infoMethod = entry.getValue();
+                if (idMethod.getNestedDepth() == 2 && infoMethod.isVirtual())
+                    {
+                    MethodBody      body   = infoMethod.getHead();
+                    MethodStructure method = body.getMethodStructure();
+                    for (int i = 0, c = method.getParamCount(); i < c; i++)
+                        {
+                        TypeConstant typeParam = method.getParam(i).getType();
+                        if (!isProxyable(typeParam))
+                            {
+                            return null;
+                            }
+                        }
+                    }
+                }
+
+            for (Map.Entry<PropertyConstant, PropertyInfo> entry : info.getProperties().entrySet())
+                {
+                PropertyConstant idProp   = entry.getKey();
+                PropertyInfo     infoProp = entry.getValue();
+                if (idProp.getNestedDepth() == 1 && infoProp.isVirtual())
+                    {
+                    if (!isProxyable(infoProp.getType()))
+                        {
+                        return null;
+                        }
+                    }
+                }
+
+            ClassComposition clzTarget = (ClassComposition) hTarget.getComposition();
+            ProxyComposition clzProxy  = clzTarget.ensureProxyComposition(typeProxy);
+
+            return InterfaceProxy.makeHandle(clzProxy, ctx, hTarget);
+            }
         return null;
+        }
+
+    /**
+     * @return true iff objects of the specified type could be proxied across the service boundary
+     */
+    protected boolean isProxyable(TypeConstant type)
+        {
+        return type.isConstant()
+            || type.isInterfaceType()
+            || (type.isSingleUnderlyingClass(false)
+             && type.getSingleUnderlyingClass(false).getComponent().getFormat() == Format.SERVICE);
         }
 
 
@@ -645,7 +705,7 @@ public abstract class ClassTemplate
         switch (ahArg.length)
             {
             case 0:
-                if (method.getName().equals("to"))
+                if (method.getName().equals("toString"))
                     {
                     if (method.getReturnCount() == 1 &&
                         method.getReturn(0).getType().equals(pool().typeString()))
@@ -1754,7 +1814,7 @@ public abstract class ClassTemplate
         }
 
 
-    // ----- to<String>() support ------------------------------------------------------------------
+    // ----- toString() support --------------------------------------------------------------------
 
     /**
      * Build a String handle for a human readable representation of the target handle.

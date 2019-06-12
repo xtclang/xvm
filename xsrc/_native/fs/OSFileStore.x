@@ -31,19 +31,19 @@ class OSFileStore
     @Override
     conditional Directory|File find(Path path)
         {
-        return storage.find(this, path.to<String>());
+        return storage.find(this, path.toString());
         }
 
     @Override
     Directory dirFor(Path path)
         {
-        return dirFor(path.to<String>());
+        return dirFor(path.toString());
         }
 
     @Override
     File fileFor(Path path)
         {
-        return fileFor(path.to<String>());
+        return fileFor(path.toString());
         }
 
     @Override

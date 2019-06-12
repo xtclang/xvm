@@ -56,8 +56,11 @@ public class xFunction
         }
 
     @Override
-    public ObjectHandle createProxyHandle(ServiceContext ctx, ObjectHandle hTarget)
+    public ObjectHandle createProxyHandle(ServiceContext ctx, ObjectHandle hTarget,
+                                          TypeConstant typeProxy)
         {
+        assert typeProxy == null || typeProxy.isA(pool().typeFunction());
+
         return ((FunctionHandle) hTarget).createProxyHandle(ctx);
         }
 
@@ -498,7 +501,7 @@ public class xFunction
         @Override
         protected FunctionHandle createProxyHandle(ServiceContext ctx)
             {
-            return new ProxyHandle(this, ctx);
+            return new FunctionProxyHandle(this, ctx);
             }
 
         @Override
@@ -680,7 +683,7 @@ public class xFunction
                     : super.call1Impl(frame, hTarget, ahVar, iReturn);
                 }
 
-            if (!validateImmutable(frame.f_context, ahVar))
+            if (!validateImmutable(frame.f_context, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject());
                 }
@@ -706,7 +709,7 @@ public class xFunction
                     : super.callTImpl(frame, hTarget, ahVar, iReturn);
                 }
 
-            if (!validateImmutable(frame.f_context, ahVar))
+            if (!validateImmutable(frame.f_context, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject());
                 }
@@ -735,7 +738,7 @@ public class xFunction
                     : super.callNImpl(frame, hTarget, ahVar, aiReturn);
                 }
 
-            if (!validateImmutable(frame.f_context, ahVar))
+            if (!validateImmutable(frame.f_context, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject());
                 }
@@ -762,32 +765,38 @@ public class xFunction
             }
         }
 
-    public static class ProxyHandle
+    public static class FunctionProxyHandle
             extends DelegatingHandle
         {
         // the origin context of the mutable FunctionHandle
         final private ServiceContext f_ctx;
 
-        protected ProxyHandle(FunctionHandle fn, ServiceContext ctx)
+        protected FunctionProxyHandle(FunctionHandle fn, ServiceContext ctx)
             {
             super(fn.getComposition(), fn);
 
             f_ctx = ctx;
             }
 
+        @Override
+        public TypeConstant getType()
+            {
+            return m_hDelegate.getType();
+            }
+
         // ----- FunctionHandle interface ----------------------------------------------------------
 
         @Override
-        protected int call1Impl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+        public int call1(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
             {
             // hTarget is the service handle that is of no use for us now
 
             if (frame.f_context == f_ctx)
                 {
-                return super.call1Impl(frame, null, ahVar, iReturn);
+                return super.call1(frame, null, ahVar, iReturn);
                 }
 
-            if (!validateImmutable(frame.f_context, ahVar))
+            if (!validateImmutable(frame.f_context, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject());
                 }
@@ -802,16 +811,16 @@ public class xFunction
             }
 
         @Override
-        protected int callTImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+        public int callT(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
             {
             // hTarget is the service handle that is of no use for us now
 
             if (frame.f_context == f_ctx)
                 {
-                return super.callTImpl(frame, null, ahVar, iReturn);
+                return super.callT(frame, null, ahVar, iReturn);
                 }
 
-            if (!validateImmutable(frame.f_context, ahVar))
+            if (!validateImmutable(frame.f_context, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject());
                 }
@@ -829,16 +838,16 @@ public class xFunction
             }
 
         @Override
-        protected int callNImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
+        public int callN(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
             {
             // hTarget is the service handle that is of no use for us now
 
             if (frame.f_context == f_ctx)
                 {
-                return super.callNImpl(frame, null, ahVar, aiReturn);
+                return super.callN(frame, null, ahVar, aiReturn);
                 }
 
-            if (!validateImmutable(frame.f_context, ahVar))
+            if (!validateImmutable(frame.f_context, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject());
                 }
@@ -871,7 +880,8 @@ public class xFunction
     /**
      * @return true iff all the arguments are immutable
      */
-    static private boolean validateImmutable(ServiceContext ctx, ObjectHandle[] ahArg)
+    static private boolean validateImmutable(ServiceContext ctx, MethodStructure method,
+                                             ObjectHandle[] ahArg)
         {
         // Note: this logic could be moved to ServiceContext.sendInvokeXXX()
         for (int i = 0, c = ahArg.length; i < c; i++)
@@ -883,9 +893,9 @@ public class xFunction
                 break;
                 }
 
-            if (hArg.isMutable() && !hArg.getTemplate().isService())
+            if (hArg.isMutable() && !hArg.isService())
                 {
-                hArg = hArg.getTemplate().createProxyHandle(ctx, hArg);
+                hArg = hArg.getTemplate().createProxyHandle(ctx, hArg, method.getParamTypes()[i]);
                 if (hArg == null)
                     {
                     return false;

@@ -46,7 +46,7 @@ public class xIntLiteral
         {
         markNativeMethod("construct", STRING, VOID);
 
-        markNativeMethod("to", VOID, STRING);
+        markNativeMethod("toString", VOID, STRING);
 
         markNativeMethod("to", VOID, new String[]{"Int128"});
         markNativeMethod("to", VOID, new String[]{"Int64"});
