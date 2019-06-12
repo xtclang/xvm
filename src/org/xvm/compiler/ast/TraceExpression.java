@@ -2,22 +2,12 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.asm.Argument;
-import org.xvm.asm.Constant;
-import org.xvm.asm.Constant.Format;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.Register;
+
 import org.xvm.asm.constants.TypeConstant;
-
-import org.xvm.asm.op.GP_Sub;
-import org.xvm.asm.op.Invoke_01;
-import org.xvm.asm.op.P_Get;
-
-import org.xvm.util.PackedInteger;
 
 
 /**
@@ -40,21 +30,25 @@ public class TraceExpression
 
         assert expr.isValidated();
 
-        Constant val = null;
-        if (expr.isConstant())
-            {
-            // TODO
-            }
-
-        finishValidation(null, expr.pool().typeInt(), expr.getTypeFit().addConversion(), val, errs);
+        finishValidations(null, expr.getTypes(), expr.getTypeFit(), expr.toConstants(),
+                ErrorListener.BLACKHOLE);
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return the traceable arguments resulting from this expression, available after the code has
+     *         been emitted for the underlying expression
+     */
+    public Argument[] getArguments()
+        {
+        assert m_aArgs != null;
+        return m_aArgs;
+        }
+    
 
     // ----- Expression compilation ----------------------------------------------------------------
-
 
     @Override
     protected boolean hasSingleValueImpl()
@@ -95,51 +89,66 @@ public class TraceExpression
     @Override
     public void generateVoid(Context ctx, Code code, ErrorListener errs)
         {
-        expr.generateVoid(ctx, code, errs);
+        genCode(ctx, code, errs);
         }
 
     @Override
     public Argument generateArgument(
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        return !isConstant() &&
-                ? expr.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs)
-                : super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
+        genCode(ctx, code, errs);
+        return m_aArgs[0];
         }
 
     @Override
     public Argument[] generateArguments(Context ctx, Code code, boolean fLocalPropOk,
             boolean fUsedOnce, ErrorListener errs)
         {
-        if (hasMultiValueImpl())
-            {
-            // TODO
-            }
-
-        return super.generateArguments(ctx, code, fLocalPropOk, fUsedOnce, errs);
+        genCode(ctx, code, errs);
+        return m_aArgs;
         }
 
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
+        genCode(ctx, code, errs);
+        LVal.assign(m_aArgs[0], code, errs);
+        }
+
+    @Override
+    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
+        {
+        genCode(ctx, code, errs);
+        for (int i = 0, c = aLVal.length; i < c; ++i)
+            {
+            aLVal[i].assign(m_aArgs[i], code, errs);
+            }
+        }
+
+    void genCode(Context ctx, Code code, ErrorListener errs)
+        {
         if (isConstant())
             {
-            super.generateAssignment(ctx, code, LVal, errs);
+            m_aArgs = toConstants();
             }
-
-        // TODO extract the value from the underlying expression
-        Argument argExtracted = expr.generateArgument(ctx, code, false, true, errs);
-        if (idExtract != null)
+        else
             {
-            Argument   argExtractFrom = argExtracted;
-            Assignable LValExtractTo  = createTempVar(code, getType(), true, errs);
-            argExtracted = LValExtractTo.getLocalArgument();
-            code.add(idExtract instanceof PropertyConstant
-                    ? new P_Get((PropertyConstant) idExtract, argExtractFrom, argExtracted)
-                    : new Invoke_01(argExtractFrom, (MethodConstant) idExtract, argExtracted));
-            }
+            TypeConstant[] aTypes = getTypes();
+            int            cTypes = aTypes.length;
+            Assignable[]   aLVals = new Assignable[cTypes];
+            Register[]     aRegs  = new Register[cTypes];
+            for (int i = 0; i < cTypes; ++i)
+                {
+                TypeConstant type = aTypes[i];
+                Assignable   LVal = createTempVar(code, type, false, errs);
 
-        LVal.assign(argAdjusted, code, errs);
+                aLVals[i] = LVal;
+                aRegs [i] = LVal.getRegister();
+                }
+
+            m_aArgs = aRegs;
+            expr.generateAssignments(ctx, code, aLVals, errs);
+            }
         }
 
 
@@ -155,7 +164,7 @@ public class TraceExpression
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * The arguments generated by the underlying expression.
+     * The traceable arguments resulting from this expression.
      */
-    private Argument[] m_args;
+    private Argument[] m_aArgs;
     }

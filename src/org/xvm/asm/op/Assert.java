@@ -9,6 +9,8 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.MethodConstant;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -30,11 +32,13 @@ public class Assert
     /**
      * Construct an ASSERT op based on the specified arguments.
      *
-     * @param argTest  the test Argument
+     * @param argTest      the test Argument
+     * @param constructor  the exception constructor
      */
-    public Assert(Argument argTest)
+    public Assert(Argument argTest, MethodConstant constructor)
         {
-        m_argTest = argTest;
+        m_argTest     = argTest;
+        m_constructor = constructor;
         }
 
     /**
@@ -46,7 +50,8 @@ public class Assert
     public Assert(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nTest = readPackedInt(in);
+        m_nTest        = readPackedInt(in);
+        m_nConstructor = readPackedInt(in);
         }
 
     @Override
@@ -59,8 +64,13 @@ public class Assert
             {
             m_nTest = encodeArgument(m_argTest, registry);
             }
+        if (m_constructor != null)
+            {
+            m_nConstructor = encodeArgument(m_argTest, registry);
+            }
 
         writePackedLong(out, m_nTest);
+        writePackedLong(out, m_nConstructor);
         }
 
     @Override
@@ -104,7 +114,31 @@ public class Assert
             return iPC + 1;
             }
 
-        return frame.raiseException(xException.makeHandle("Assertion failed"));
+        String sMsg;
+        try
+            {
+            sMsg = buildMessage(frame);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return frame.raiseException(e);
+            }
+
+        if (m_nConstructor == A_IGNORE)
+            {
+            // debugger break-point
+            return iPC + 1;
+            }
+
+        // TODO GG use m_nConstructor to create the specific exception
+        ExceptionHandle hThrow = xException.makeHandle(sMsg);
+        return frame.raiseException(hThrow);
+        }
+
+    protected String buildMessage(Frame frame)
+            throws ExceptionHandle.WrapperException
+        {
+        return "Assertion failed";
         }
 
     @Override
@@ -129,6 +163,8 @@ public class Assert
         }
 
     private int m_nTest;
+    private int m_nConstructor = A_IGNORE;
 
-    private Argument m_argTest;
+    private Argument       m_argTest;
+    private MethodConstant m_constructor;
     }

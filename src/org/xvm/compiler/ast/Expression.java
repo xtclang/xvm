@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.util.Arrays;
 
+import java.util.Map;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -1015,8 +1016,9 @@ public abstract class Expression
             throw new IllegalStateException("expr=" + this);
             }
 
+        AstNode         parent    = getParent();
         TraceExpression exprTrace = new TraceExpression(this);
-        exprTrace.setParent(this.getParent());
+        parent.replaceChild(this, exprTrace);
         this.setParent(exprTrace);
         return exprTrace;
         }

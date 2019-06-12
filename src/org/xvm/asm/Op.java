@@ -1085,7 +1085,6 @@ public abstract class Op
             case OP_LINE_2:      return new Nop         (2);
             case OP_LINE_3:      return new Nop         (3);
             case OP_LINE_N:      return new Nop         (in, aconst);
-            case OP_BREAK:       return new Break       ();
             case OP_ENTER:       return new Enter       ();
             case OP_EXIT:        return new Exit        ();
             case OP_GUARD:       return new GuardStart  (in, aconst);
@@ -1307,7 +1306,6 @@ public abstract class Op
             case OP_LINE_2:      return "LINE_2";
             case OP_LINE_3:      return "LINE_3";
             case OP_LINE_N:      return "LINE_N";
-            case OP_BREAK:       return "BREAK";
             case OP_ENTER:       return "ENTER";
             case OP_EXIT:        return "EXIT";
             case OP_GUARD:       return "GUARD";
@@ -1546,17 +1544,18 @@ public abstract class Op
     public static final int OP_LINE_2       = 0x02;
     public static final int OP_LINE_3       = 0x03;
     public static final int OP_LINE_N       = 0x04;
-    public static final int OP_BREAK        = 0x05;
-    public static final int OP_ENTER        = 0x06;
-    public static final int OP_EXIT         = 0x07;
-    public static final int OP_GUARD        = 0x08;
-    public static final int OP_GUARD_END    = 0x09;
-    public static final int OP_CATCH        = 0x0A;
-    public static final int OP_CATCH_END    = 0x0B;
-    public static final int OP_GUARD_ALL    = 0x0C;
-    public static final int OP_FINALLY      = 0x0D;
-    public static final int OP_FINALLY_END  = 0x0E;
-    public static final int OP_THROW        = 0x0F;
+    public static final int OP_ENTER        = 0x05;
+    public static final int OP_EXIT         = 0x06;
+    public static final int OP_GUARD        = 0x07;
+    public static final int OP_GUARD_END    = 0x08;
+    public static final int OP_CATCH        = 0x09;
+    public static final int OP_CATCH_END    = 0x0A;
+    public static final int OP_GUARD_ALL    = 0x0B;
+    public static final int OP_FINALLY      = 0x0C;
+    public static final int OP_FINALLY_END  = 0x0D;
+    public static final int OP_THROW        = 0x0E;
+
+    public static final int OP_RSVD_0F      = 0x0F;
 
     public static final int OP_ASSERT       = 0x10;
     public static final int OP_ASSERT_M     = 0x11;

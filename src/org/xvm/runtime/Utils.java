@@ -522,9 +522,9 @@ public abstract class Utils
             return nextStep.proceed(frameCaller);
             }
 
-        final private StringBuilder sb;
-        final private ObjectHandle[] ahValue;
-        final private String[] asLabel;
+        final private StringBuilder      sb;
+        final private ObjectHandle[]     ahValue;
+        final private String[]           asLabel;
         final private Frame.Continuation nextStep;
 
         private int index = -1;
