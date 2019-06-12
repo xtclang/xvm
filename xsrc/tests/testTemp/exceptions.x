@@ -165,18 +165,10 @@ module TestTry.xqiz.it
 
     /**
      * ** testAssert(-1)
-     * assertion: Ecstasy:OutOfBounds{stackTrace=
-     *   - Frame: testAssert(Ecstasy:Int64) (line=188, op=Var)
-     *   - Frame: run() (line=39, op=Invoke_10)
-     *   - Frame: <TestTry.xqiz.it> (iPC=0, op=)
-     * , text=i >= 0 && i < size(), i=-1, cause=Null}
+     * OutOfBounds: i >= 0 && i < size(), i=-1
      *
      * ** testAssert(17)
-     * assertion: Ecstasy:OutOfBounds{stackTrace=
-     *   - Frame: testAssert(Ecstasy:Int64) (line=188, op=Return_0)
-     *   - Frame: run() (line=49, op=Invoke_10)
-     *   - Frame: <TestTry.xqiz.it> (iPC=0, op=)
-     * , text=i >= 0 && i < size(), i=17, size()=6, cause=Null}
+     * OutOfBounds: i >= 0 && i < size(), i=17, size()=6
      *
      * ** testAssert(3)
      * (no assertion)
