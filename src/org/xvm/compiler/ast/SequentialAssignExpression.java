@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.Map;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -128,6 +130,18 @@ public class SequentialAssignExpression
         {
         Assignable LValTarget = ensureTarget(ctx, code, errs);
         LValTarget.assignSequential(getSeq(), LVal, false, code, errs);
+        }
+
+    @Override
+    public boolean isTraceworthy()
+        {
+        return true;
+        }
+
+    @Override
+    protected void selectTraceableExpressions(Map<String, Expression> mapExprs)
+        {
+        // do not go inside of this expression (it's the result of this expression that matters)
         }
 
 

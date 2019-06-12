@@ -27,11 +27,54 @@ module TestTry.xqiz.it
         try
             {
             testFinally();
+            console.println("TEST ERROR!!!");
             }
         catch (Exception e)
             {
             console.println("expected throw in testFinally(): " + e);
             }
+
+        try
+            {
+            testAssert(-1);
+            console.println("TEST ERROR!!!");
+            }
+        catch (Exception e)
+            {
+            console.println("expected throw in testAssert(): " + e);
+            }
+
+        try
+            {
+            testAssert(17);
+            console.println("TEST ERROR!!!");
+            }
+        catch (Exception e)
+            {
+            console.println("expected throw in testAssert(): " + e);
+            }
+
+        try
+            {
+            testAssert(3);
+            console.println("(expected non-throw in testAssert())");
+            }
+        catch (Exception e)
+            {
+            console.println("TEST ERROR!!!  UNexpected throw in testAssert(): " + e);
+            }
+
+        try
+            {
+            testAssert2();
+            console.println("TEST ERROR!!!");
+            }
+        catch (Exception e)
+            {
+            console.println("expected throw in testAssert2(): " + e);
+            }
+
+        console.println("\nException tests: finished!");
         }
 
     void testThrow()
@@ -118,5 +161,43 @@ module TestTry.xqiz.it
             }
 
         console.println("done testFinally() - which shouldn't happen!");
+        }
+
+    /**
+     * ** testAssert(-1)
+     * assertion: Ecstasy:OutOfBounds{stackTrace=
+     *   - Frame: testAssert(Ecstasy:Int64) (line=188, op=Var)
+     *   - Frame: run() (line=39, op=Invoke_10)
+     *   - Frame: <TestTry.xqiz.it> (iPC=0, op=)
+     * , text=i >= 0 && i < size(), i=-1, cause=Null}
+     *
+     * ** testAssert(17)
+     * assertion: Ecstasy:OutOfBounds{stackTrace=
+     *   - Frame: testAssert(Ecstasy:Int64) (line=188, op=Return_0)
+     *   - Frame: run() (line=49, op=Invoke_10)
+     *   - Frame: <TestTry.xqiz.it> (iPC=0, op=)
+     * , text=i >= 0 && i < size(), i=17, size()=6, cause=Null}
+     *
+     * ** testAssert(3)
+     * (no assertion)
+     */
+    void testAssert(Int i)
+        {
+        console.println($"\n** testAssert({i})");
+
+        assert:bounds i >= 0 && i < size();
+        }
+
+    Int size()
+        {
+        return 6;
+        }
+
+    void testAssert2()
+        {
+        console.println("\n** testAssert2()");
+
+        Int x = 4;
+        assert ++x <= 4;
         }
     }

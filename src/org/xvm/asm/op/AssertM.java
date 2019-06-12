@@ -12,7 +12,6 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -72,7 +71,6 @@ public class AssertM
 
     @Override
     protected String buildMessage(Frame frame)
-            throws ExceptionHandle.WrapperException
         {
         return frame.getString(m_nMsgConstId);
         }

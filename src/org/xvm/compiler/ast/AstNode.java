@@ -505,7 +505,7 @@ public abstract class AstNode
             if (node instanceof Expression)
                 {
                 Expression expr = (Expression) node;
-                if (expr.isTraceworthy())
+                if (expr.isValidated() && expr.isTraceworthy())
                     {
                     String sExpr = expr.toString();
                     if (!mapExprs.containsKey(sExpr))
@@ -1782,7 +1782,7 @@ public abstract class AstNode
                         List list = (List) next;
                         if (!list.isEmpty())
                             {
-                            value = list.iterator();
+                            value = list.listIterator();
                             return true;
                             }
                         }

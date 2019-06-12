@@ -829,6 +829,12 @@ public class InvocationExpression
         }
 
     @Override
+    public boolean isTraceworthy()
+        {
+        return m_fCall;
+        }
+
+    @Override
     public boolean isCompletable()
         {
         for (Expression arg : args)

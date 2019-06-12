@@ -14,8 +14,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.Op;
-import org.xvm.asm.Register;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -57,53 +55,6 @@ public class AssertStatement
 
             default:
                 throw new IllegalArgumentException("keyword=" + keyword);
-            }
-
-        if (conds != null && !conds.isEmpty())
-            {
-            List<AstNode> listNewConds = new ArrayList<>();
-            m_listTexts = new ArrayList<>(conds.size());
-            for (AstNode cond : conds)
-                {
-                String sCond = Handy.appendString(new StringBuilder(),
-                        cond.getSource().toString(cond.getStartPosition(), cond.getEndPosition()))
-                        .toString();
-
-                Expression exprRemainder = null;
-                do
-                    {
-                    if (cond instanceof UnaryComplementExpression)
-                        {
-                        // demorgan
-                        UnaryComplementExpression exprNot = (UnaryComplementExpression) cond;
-                        Expression                exprSub = exprNot.expr;
-                        if (exprSub instanceof BiExpression
-                                && ((BiExpression) exprSub).operator.getId() == Id.COND_OR)
-                            {
-                            BiExpression exprOr = (BiExpression) exprSub;
-
-                            exprRemainder = (UnaryComplementExpression) exprNot.clone();
-                            ((UnaryComplementExpression) exprRemainder).expr = exprOr.expr2;
-
-                            exprNot.expr = exprOr.expr1;
-                            }
-                        }
-                    else if (cond instanceof BiExpression
-                            && ((BiExpression) cond).operator.getId() == Id.COND_AND)
-                        {
-                        BiExpression exprAnd = (BiExpression) cond;
-                        cond          = exprAnd.expr1;
-                        exprRemainder = exprAnd.expr2;
-                        }
-
-                    listNewConds.add(cond);
-                    m_listTexts.add(sCond);
-
-                    cond = exprRemainder;
-                    }
-                while (cond != null);
-                }
-            conds = listNewConds;
             }
 
         this.keyword  = keyword;
@@ -225,6 +176,9 @@ public class AssertStatement
         {
         boolean fValid  = true;
         boolean fAborts = conds.isEmpty();
+
+        // break apart complex conditions if possible
+        demorgan();
 
         for (int i = 0, c = getConditionCount(); i < c; ++i)
             {
@@ -441,11 +395,76 @@ public class AssertStatement
         return fCompletes;
         }
 
-    MethodConstant findExceptionConstructor(ConstantPool pool, String sName, ErrorListener errs)
+    /**
+     * Obtain the "takes one parameter, a String message" constructor for the specified Ecstasy
+     * exception class.
+     *
+     * @param pool   the ConstantPool
+     * @param sName  the name of the Exception class
+     * @param errs   the ErrorListener to log to
+     *
+     * @return the desired constructor MethodConstant
+     */
+    public static MethodConstant findExceptionConstructor(ConstantPool pool, String sName, ErrorListener errs)
         {
         return pool.ensureEcstasyTypeConstant(sName)
                 .ensureTypeInfo(errs)
                 .findConstructor(null, null);
+        }
+
+    /**
+     * Re-arrange the conditions, if possible, to splijt them into smaller chunks by applying the
+     * rules of De Morgan.
+     */
+    protected void demorgan()
+        {
+        if (conds != null && !conds.isEmpty())
+            {
+            List<AstNode> listNewConds = new ArrayList<>();
+            m_listTexts = new ArrayList<>(conds.size());
+            for (AstNode cond : conds)
+                {
+                String sCond = Handy.appendString(new StringBuilder(),
+                        cond.getSource().toString(cond.getStartPosition(), cond.getEndPosition()))
+                        .toString();
+
+                Expression exprRemainder = null;
+                do
+                    {
+                    if (cond instanceof UnaryComplementExpression)
+                        {
+                        // demorgan
+                        UnaryComplementExpression exprNot = (UnaryComplementExpression) cond;
+                        Expression                exprSub = exprNot.expr;
+                        if (exprSub instanceof BiExpression
+                                && ((BiExpression) exprSub).operator.getId() == Id.COND_OR)
+                            {
+                            BiExpression exprOr = (BiExpression) exprSub;
+
+                            exprRemainder = (UnaryComplementExpression) exprNot.clone();
+                            ((UnaryComplementExpression) exprRemainder).expr = exprOr.expr2;
+
+                            exprNot.expr = exprOr.expr1;
+                            }
+                        }
+                    else if (cond instanceof BiExpression
+                            && ((BiExpression) cond).operator.getId() == Id.COND_AND)
+                        {
+                        BiExpression exprAnd = (BiExpression) cond;
+                        cond          = exprAnd.expr1;
+                        exprRemainder = exprAnd.expr2;
+                        }
+
+                    listNewConds.add(cond);
+                    m_listTexts.add(sCond);
+
+                    cond          = exprRemainder;
+                    exprRemainder = null;
+                    }
+                while (cond != null);
+                }
+            conds = listNewConds;
+            }
         }
 
     /**

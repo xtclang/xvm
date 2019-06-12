@@ -7,7 +7,6 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -17,6 +16,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
+import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xString.StringHandle;
 
 
@@ -74,9 +74,15 @@ public class AssertV
         }
 
     @Override
-    protected String buildMessage(Frame frame)
-            throws ExceptionHandle.WrapperException
+    protected int evaluate(Frame frame, int iPC, BooleanHandle hTest)
         {
+        if (hTest.get())
+            {
+            return iPC + 1;
+            }
+
+        // first, get the unformatted String from the constant pool and split it up into its
+        // pieces
         if (m_asParts == null)
             {
             String sMsg  = frame.getString(m_nMsgConstId);
@@ -88,132 +94,67 @@ public class AssertV
                 int of = sMsg.indexOf(sReplace);
                 if (of > 0)
                     {
-                    m_asParts[cVals] = sMsg.substring(0, of);
+                    m_asParts[i] = sMsg.substring(0, of);
                     sMsg = sMsg.substring(of + sReplace.length());
                     }
                 else
                     {
-                    m_asParts[cVals] = "";
+                    m_asParts[i] = "";
                     }
                 }
             m_asParts[cVals] = sMsg;
             }
 
-        // since these are all local vars or constants, this shouldn't be complicated (no retry
-        // or deferral should be necessary)
-        ObjectHandle[] ahValue = frame.getArguments(m_anValue, m_anValue.length);
-        assert ahValue != null;
-        assert !anyDeferred(ahValue);
+        // get the trace variable and constant values to display
+        ObjectHandle[] ahArg;
+        try
+            {
+            ahArg = frame.getArguments(m_anValue, m_anValue.length);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return frame.raiseException(e);
+            }
 
-        StringBuilder sb = new StringBuilder();
-        for ()
-
-        return sb.toString();
+        // build the assertion message and finish by throwing it
+        StringBuilder      sb         = new StringBuilder(m_asParts[0]);
+        Frame.Continuation doComplete = (frameCaller) -> complete(frameCaller, iPC, sb.toString());
+        return new MessageToString(sb, ahArg, m_asParts, doComplete).doNext(frame);
         }
 
-    public static class ArrayToString
-            implements Frame.Continuation
+    private static class MessageToString
+            extends Utils.ArrayToString
         {
-        public ArrayToString(StringBuilder sb, ObjectHandle[] ahValue,
-                String[] asLabel, Frame.Continuation nextStep)
+        public MessageToString(
+                StringBuilder      sb,
+                ObjectHandle[]     ahValue,
+                String[]           asLabel,
+                Frame.Continuation nextStep)
             {
-            this.sb = sb;
-            this.ahValue = ahValue;
-            this.asLabel = asLabel;
-            this.nextStep = nextStep;
+            super(sb, ahValue, asLabel, nextStep);
             }
 
         @Override
-        public int proceed(Frame frameCaller)
-            {
-            if (updateResult(frameCaller))
-                {
-                return doNext(frameCaller);
-                }
-
-            // too much text; enough for an output...
-            return nextStep.proceed(frameCaller);
-            }
-
-        // return false if the buffer is full
         protected boolean updateResult(Frame frameCaller)
             {
-            StringHandle hString = (StringHandle) frameCaller.popStack();
-            String sLabel = asLabel == null ? null : asLabel[index];
-
-            if (sLabel != null)
+            char[] ach = ((StringHandle) frameCaller.popStack()).getValue();
+            if (sb.length() + ach.length > MAX_LEN)
                 {
-                sb.append(sLabel).append('=');
-                }
-            sb.append(hString.getValue());
-
-            if (sb.length() < 1024*32)
-                {
-                sb.append(", ");
-                return true;
+                sb.append(ach, 0, Math.min(ach.length, Math.max(20, MAX_LEN - sb.length())))
+                  .append("...");
+                return false;
                 }
 
-            sb.append("...");
-            return false;
+            sb.append(ach)
+              .append(asLabel[index+1]);
+            return true;
             }
 
-        public int doNext(Frame frameCaller)
+        @Override
+        protected void finishResult()
             {
-            while (++index < ahValue.length)
-                {
-                switch (callToString(frameCaller, ahValue[index]))
-                    {
-                    case Op.R_NEXT:
-                        updateResult(frameCaller);
-                        continue;
-
-                    case Op.R_CALL:
-                        frameCaller.m_frameNext.addContinuation(this);
-                        return Op.R_CALL;
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-                }
-
-            sb.setLength(sb.length() - 2); // remove the trailing ", "
-            sb.append(')');
-
-            return nextStep.proceed(frameCaller);
             }
-
-        final private StringBuilder      sb;
-        final private ObjectHandle[]     ahValue;
-        final private String[]           asLabel;
-        final private Frame.Continuation nextStep;
-
-        private int index = -1;
         }
-//        if (anyDeferred(ahValue))
-//            {
-//            int cValues = ahValue.length;
-//
-//            ObjectHandle[] ahResolved = new ObjectHandle[cValues];
-//            System.arraycopy(ahValue, 0, ahResolved, 0, cValues);
-//
-//            // ahValue still holds original PropertyHandles
-//            Frame.Continuation stepNext = frameCaller ->
-//                raiseException(frameCaller, ahResolved, ahValue);
-//
-//            return new Utils.GetArguments(ahResolved, stepNext).doNext(frame);
-//            }
-//
-//        return raiseException(frame, ahValue, ahValue);
-//        }
-//
-//        Frame.Continuation stepNext = frameCaller ->
-//            frameCaller.raiseException(xException.makeHandle(sb.toString()));
-//
-//        return new Utils.ArrayToString(sb, ahResolved, asName, stepNext).doNext(frame);
-//        }
 
     @Override
     public void registerConstants(ConstantRegistry registry)

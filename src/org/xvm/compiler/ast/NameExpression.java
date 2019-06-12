@@ -760,6 +760,31 @@ public class NameExpression
         }
 
     @Override
+    public boolean isTraceworthy()
+        {
+        if (!isCompletable())
+            {
+            return false;
+            }
+
+        switch (getMeaning())
+            {
+            case Variable:
+            case Property:
+                return true;
+
+            case Reserved: // TODO - some of these are traceworthy, right?
+            default:
+            case Unknown:
+            case Method:
+            case Class:
+            case Typedef:
+            case Label:
+                return false;
+            }
+        }
+
+    @Override
     public boolean isAssignable()
         {
         if (m_fAssignable)
