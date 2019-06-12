@@ -392,7 +392,7 @@ AssertInstruction                               # (when active, what gets thrown
     "assert:once"                               # runtime, Assertion (only tested "the first time")
     "assert:rnd(" Expression ")"                # runtime (sampling), IllegalState
     "assert:test"                               # test mode (e.g. CI/QC), Assertion
-    "assert:debug"                              # debug mode, BREAK op
+    "assert:debug"                              # debug mode, breakpoint-only (i.e. no throw)
 
 ForStatement
     "for" "(" ForCondition ")" StatementBlock

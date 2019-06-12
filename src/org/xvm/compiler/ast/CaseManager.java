@@ -1022,7 +1022,8 @@ public class CaseManager<CookieType>
             {
             // default is an assertion
             code.add(labelDefault);
-            code.add(new Assert(pool().valFalse()));
+            code.add(new Assert(pool().valFalse(),
+                    AssertStatement.findExceptionConstructor(pool(), "IllegalArgument", errs)));
             }
         }
 

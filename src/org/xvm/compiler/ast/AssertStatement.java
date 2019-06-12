@@ -3,22 +3,35 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Assert;
-import org.xvm.asm.op.Break;
+import org.xvm.asm.op.AssertM;
+import org.xvm.asm.op.AssertV;
 import org.xvm.asm.op.JumpNCond;
+import org.xvm.asm.op.JumpNFirst;
+import org.xvm.asm.op.JumpNSample;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
+
+import org.xvm.util.Handy;
+import org.xvm.util.ListMap;
+import org.xvm.util.Severity;
 
 
 /**
@@ -31,11 +44,6 @@ public class AssertStatement
 
     public AssertStatement(Token keyword, Expression exprInterval, List<AstNode> conds, long lEndPos)
         {
-        this.keyword  = keyword;
-        this.interval = exprInterval;
-        this.conds    = conds == null ? Collections.emptyList() : conds;
-        this.lEndPos  = lEndPos;
-
         switch (keyword.getId())
             {
             case ASSERT:
@@ -51,6 +59,11 @@ public class AssertStatement
             default:
                 throw new IllegalArgumentException("keyword=" + keyword);
             }
+
+        this.keyword  = keyword;
+        this.interval = exprInterval;
+        this.conds    = conds == null ? Collections.emptyList() : conds;
+        this.lEndPos  = lEndPos;
         }
 
 
@@ -130,11 +143,27 @@ public class AssertStatement
         }
 
     /**
-     * @return true iff the assertion does not occur each time the execution reaches it
+     * @return true iff the assertion is executed only the first time that the execution reaches it
+     */
+    public boolean isOnlyOnce()
+        {
+        return keyword.getId() == Id.ASSERT_ONCE;
+        }
+
+    /**
+     * @return true iff the assertion is executed as if it were statistically sampling
      */
     public boolean isSampling()
         {
         return keyword.getId() == Id.ASSERT_RND;
+        }
+
+    /**
+     * @return true iff the assertion does not occur each time the execution reaches it
+     */
+    public boolean isNotAlways()
+        {
+        return isOnlyOnce() | isSampling();
         }
 
     /**
@@ -166,6 +195,26 @@ public class AssertStatement
         {
         boolean fValid  = true;
         boolean fAborts = conds.isEmpty();
+
+        // break apart complex conditions if possible
+        demorgan();
+
+        if (interval != null)
+            {
+            Expression exprNew = interval.validate(ctx, pool().typeInt(), errs);
+            if (exprNew == null)
+                {
+                fValid = false;
+                }
+            else
+                {
+                interval = exprNew;
+                if (!interval.isRuntimeConstant())
+                    {
+                    interval.log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+                    }
+                }
+            }
 
         for (int i = 0, c = getConditionCount(); i < c; ++i)
             {
@@ -230,48 +279,235 @@ public class AssertStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
+        ConstantPool pool = pool();
+
         if (isLinktimeConditional())
             {
             // for "assert:debug", the assertion only is evaluated if the "debug" named condition
             // exists; similarly, for "assert:test", it is evaluated only if "test" is defined
-            code.add(new JumpNCond(pool().ensureNamedCondition(isDebugOnly() ? "debug" : "test"),
-                    getEndLabel()));
+            String sCond = isDebugOnly() ? "debug" : "test";
+            code.add(new JumpNCond(pool.ensureNamedCondition(sCond), getEndLabel()));
+            }
+
+        if (isNotAlways())
+            {
+            code.add(isOnlyOnce()
+                    ? new JumpNFirst(getEndLabel())
+                    : new JumpNSample(interval.generateArgument(ctx, code, true, true, errs), getEndLabel()));
+            }
+
+        MethodConstant constructException;
+        switch (keyword.getId())
+            {
+            default:
+            case ASSERT:
+                constructException = findExceptionConstructor(pool, "IllegalState", errs);
+                break;
+
+            case ASSERT_ARG:
+                constructException = findExceptionConstructor(pool, "IllegalArgument", errs);
+                break;
+
+            case ASSERT_BOUNDS:
+                constructException = findExceptionConstructor(pool, "OutOfBounds", errs);
+                break;
+
+            case ASSERT_TODO:
+                constructException = findExceptionConstructor(pool, "UnsupportedOperation", errs);
+                break;
+
+            case ASSERT_ONCE:
+            case ASSERT_RND:
+            case ASSERT_TEST:
+                constructException = findExceptionConstructor(pool, "Assertion", errs);
+                break;
+
+            case ASSERT_DBG:
+                constructException = null;
+                break;
             }
 
         int cConds = getConditionCount();
         if (cConds == 0)
             {
-            code.add(isDebugOnly() ? new Break() : new Assert(pool().valFalse()));
+            code.add(new Assert(pool.valFalse(), constructException));
             return false;
             }
 
         boolean fCompletes = fReachable;
         for (int i = 0; i < cConds; ++i)
             {
-            AstNode cond = getCondition(i);
+            AstNode cond   = getCondition(i);
+            String  sCond  = m_listTexts.get(i);
+            int     cTrace = 0;
+
+            // add traces (if anything is interesting to trace)
+            Map<String, Expression> mapTrace = new ListMap<>();
+            getCondition(i).selectTraceableExpressions(mapTrace);
+            if (!mapTrace.isEmpty())
+                {
+                StringBuilder sb = new StringBuilder(sCond);
+                for (Map.Entry<String, Expression> entry : mapTrace.entrySet())
+                    {
+                    Expression expr = entry.getValue();
+                    expr.requireTrace();
+
+                    sb.append(", ")
+                      .append(entry.getKey())
+                      .append('=');
+
+                    TypeConstant[] aTypes = expr.getTypes();
+                    int            cTypes = aTypes.length;
+                    if (cTypes != 1)
+                        {
+                        sb.append('(');
+                        }
+
+                    for (int iType = 0; iType < cTypes; ++iType)
+                        {
+                        if (iType > 0)
+                            {
+                            sb.append(", ");
+                            }
+
+                        sb.append('{')
+                          .append(cTrace++)
+                          .append('}');
+                        }
+
+                    if (cTypes != 1)
+                        {
+                        sb.append(')');
+                        }
+                    }
+                sCond = sb.toString();
+                }
+            StringConstant constText = pool.ensureStringConstant(sCond);
+
+            // it is possible that the condition was modified by the addition of traces
+            cond = getCondition(i);
+
+            Argument argCond;
             if (cond instanceof AssignmentStatement)
                 {
                 AssignmentStatement stmtCond = (AssignmentStatement) cond;
                 fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
-                code.add(new Assert(stmtCond.getConditionRegister()));
+                argCond = stmtCond.getConditionRegister();
                 }
             else
                 {
                 Expression exprCond = (Expression) cond;
+
+                // "assert False" always asserts
                 if (exprCond.isConstantFalse())
                     {
-                    code.add(isDebugOnly() ? new Break() : new Assert(pool().valFalse()));
+                    code.add(new Assert(pool.valFalse(), constructException));
                     fCompletes = false;
+                    continue;
                     }
-                else if (!exprCond.isConstantTrue())
+
+                // "assert True" is a no-op
+                if (exprCond.isConstantTrue())
                     {
-                    fCompletes &= exprCond.isCompletable();
-                    code.add(new Assert(exprCond.generateArgument(ctx, code, true, true, errs)));
+                    continue;
                     }
+
+                fCompletes &= exprCond.isCompletable();
+                argCond = exprCond.generateArgument(ctx, code, true, true, errs);
+                }
+
+            if (mapTrace.isEmpty())
+                {
+                code.add(new AssertM(argCond, constructException, constText));
+                }
+            else
+                {
+                List<Argument> argV = new ArrayList<>();
+                for (Expression expr : mapTrace.values())
+                    {
+                    Argument[] aArgs = ((TraceExpression) expr.getParent()).getArguments();
+                    for (Argument arg : aArgs)
+                        {
+                        argV.add(arg);
+                        }
+                    }
+                code.add(new AssertV(argCond, constructException, constText, argV.toArray(new Argument[0])));
                 }
             }
 
         return fCompletes;
+        }
+
+    /**
+     * Obtain the "takes one parameter, a String message" constructor for the specified Ecstasy
+     * exception class.
+     *
+     * @param pool   the ConstantPool
+     * @param sName  the name of the Exception class
+     * @param errs   the ErrorListener to log to
+     *
+     * @return the desired constructor MethodConstant
+     */
+    public static MethodConstant findExceptionConstructor(ConstantPool pool, String sName, ErrorListener errs)
+        {
+        return pool.ensureEcstasyTypeConstant(sName)
+                .ensureTypeInfo(errs)
+                .findConstructor(null, null);
+        }
+
+    /**
+     * Re-arrange the conditions, if possible, to splijt them into smaller chunks by applying the
+     * rules of De Morgan.
+     */
+    protected void demorgan()
+        {
+        if (conds != null && !conds.isEmpty())
+            {
+            List<AstNode> listNewConds = new ArrayList<>();
+            m_listTexts = new ArrayList<>(conds.size());
+            for (AstNode cond : conds)
+                {
+                String sCond = Handy.appendString(new StringBuilder(),
+                        cond.getSource().toString(cond.getStartPosition(), cond.getEndPosition()))
+                        .toString();
+
+                Expression exprRemainder = null;
+                do
+                    {
+                    if (cond instanceof UnaryComplementExpression)
+                        {
+                        // demorgan
+                        UnaryComplementExpression exprNot = (UnaryComplementExpression) cond;
+                        Expression                exprSub = exprNot.expr;
+                        if (exprSub instanceof BiExpression
+                                && ((BiExpression) exprSub).operator.getId() == Id.COND_OR)
+                            {
+                            BiExpression exprOr = (BiExpression) exprSub;
+
+                            exprRemainder = (UnaryComplementExpression) exprNot.clone();
+                            ((UnaryComplementExpression) exprRemainder).expr = exprOr.expr2;
+
+                            exprNot.expr = exprOr.expr1;
+                            }
+                        }
+                    else if (cond instanceof BiExpression
+                            && ((BiExpression) cond).operator.getId() == Id.COND_AND)
+                        {
+                        BiExpression exprAnd = (BiExpression) cond;
+                        cond          = exprAnd.expr1;
+                        exprRemainder = exprAnd.expr2;
+                        }
+
+                    listNewConds.add(cond);
+                    m_listTexts.add(sCond);
+
+                    cond          = exprRemainder;
+                    exprRemainder = null;
+                    }
+                while (cond != null);
+                }
+            conds = listNewConds;
+            }
         }
 
     /**
@@ -362,6 +598,8 @@ public class AssertStatement
     protected Expression    interval;
     protected List<AstNode> conds;
     protected long          lEndPos;
+
+    private List<String> m_listTexts;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AssertStatement.class, "interval", "conds");
     }

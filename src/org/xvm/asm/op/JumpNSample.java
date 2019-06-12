@@ -62,10 +62,8 @@ public class JumpNSample
         if (nEvery == 0)
             {
             long lEvery = ((JavaLong) hValue).getValue();
-            if (lEvery <= 0)
-                {
-                System.err.println("illegal sample rate indicator: " + lEvery + " (must be >= 0)");
-                }
+
+            // ignore illegal values (assume that the verifier will eventually flag those)
             m_nEvery = nEvery = Math.max(1, Math.min(Integer.MAX_VALUE, (int) lEvery));
             }
 

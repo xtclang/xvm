@@ -460,6 +460,38 @@ public abstract class Utils
             this.nextStep = nextStep;
             }
 
+        public int doNext(Frame frameCaller)
+            {
+            loop: while (++index < ahValue.length)
+                {
+                switch (callToString(frameCaller, ahValue[index]))
+                    {
+                    case Op.R_NEXT:
+                        if (updateResult(frameCaller))
+                            {
+                            continue loop;
+                            }
+                        else
+                            {
+                            break loop;
+                            }
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.addContinuation(this);
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+
+            finishResult();
+            return nextStep.proceed(frameCaller);
+            }
+
         @Override
         public int proceed(Frame frameCaller)
             {
@@ -484,7 +516,7 @@ public abstract class Utils
                 }
             sb.append(hString.getValue());
 
-            if (sb.length() < 1024*32)
+            if (sb.length() < MAX_LEN)
                 {
                 sb.append(", ");
                 return true;
@@ -494,40 +526,23 @@ public abstract class Utils
             return false;
             }
 
-        public int doNext(Frame frameCaller)
+        protected void finishResult()
             {
-            while (++index < ahValue.length)
+            if (sb.length() >= 2 && sb.charAt(sb.length() - 2) == ',')
                 {
-                switch (callToString(frameCaller, ahValue[index]))
-                    {
-                    case Op.R_NEXT:
-                        updateResult(frameCaller);
-                        continue;
-
-                    case Op.R_CALL:
-                        frameCaller.m_frameNext.addContinuation(this);
-                        return Op.R_CALL;
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
+                sb.setLength(sb.length() - 2); // remove the trailing ", "
+                sb.append(')');
                 }
-
-            sb.setLength(sb.length() - 2); // remove the trailing ", "
-            sb.append(')');
-
-            return nextStep.proceed(frameCaller);
             }
 
-        final private StringBuilder sb;
-        final private ObjectHandle[] ahValue;
-        final private String[] asLabel;
-        final private Frame.Continuation nextStep;
+        protected static final int MAX_LEN = 16*1024;
 
-        private int index = -1;
+        protected final StringBuilder      sb;
+        protected final ObjectHandle[]     ahValue;
+        protected final String[]           asLabel;
+        protected final Frame.Continuation nextStep;
+
+        protected int index = -1;
         }
 
     // ----- various run-time support -----

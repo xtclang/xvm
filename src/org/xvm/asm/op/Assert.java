@@ -7,15 +7,22 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.MethodConstant;
+
+import org.xvm.runtime.ClassComposition;
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
-import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xString;
+import org.xvm.runtime.template.xString.StringHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -30,11 +37,13 @@ public class Assert
     /**
      * Construct an ASSERT op based on the specified arguments.
      *
-     * @param argTest  the test Argument
+     * @param argTest      the test Argument
+     * @param idConstruct  the exception constructor
      */
-    public Assert(Argument argTest)
+    public Assert(Argument argTest, MethodConstant idConstruct)
         {
-        m_argTest = argTest;
+        m_argTest     = argTest;
+        m_idConstruct = idConstruct;
         }
 
     /**
@@ -46,7 +55,8 @@ public class Assert
     public Assert(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nTest = readPackedInt(in);
+        m_nTest        = readPackedInt(in);
+        m_nConstructor = readPackedInt(in);
         }
 
     @Override
@@ -59,8 +69,13 @@ public class Assert
             {
             m_nTest = encodeArgument(m_argTest, registry);
             }
+        if (m_idConstruct != null)
+            {
+            m_nConstructor = encodeArgument(m_idConstruct, registry);
+            }
 
         writePackedLong(out, m_nTest);
+        writePackedLong(out, m_nConstructor);
         }
 
     @Override
@@ -84,12 +99,12 @@ public class Assert
                 {
                 ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
                 Frame.Continuation stepNext = frameCaller ->
-                    complete(frameCaller, iPC, (BooleanHandle) ahValue[0]);
+                        evaluate(frameCaller, iPC, (BooleanHandle) ahValue[0]);
 
                 return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
                 }
 
-            return complete(frame, iPC, (BooleanHandle) hValue);
+            return evaluate(frame, iPC, (BooleanHandle) hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -97,14 +112,55 @@ public class Assert
             }
         }
 
-    protected int complete(Frame frame, int iPC, BooleanHandle hTest)
+    protected int evaluate(Frame frame, int iPC, BooleanHandle hTest)
         {
         if (hTest.get())
             {
             return iPC + 1;
             }
 
-        return frame.raiseException(xException.makeHandle("Assertion failed"));
+        String sMsg = buildMessage(frame);
+        return complete(frame, iPC, sMsg);
+        }
+
+    protected int complete(Frame frame, int iPC, String sMsg)
+        {
+        if (m_nConstructor == A_IGNORE)
+            {
+            // debugger break-point
+            return iPC + 1;
+            }
+
+        MethodConstant   idConstruct = (MethodConstant) frame.getConstant(m_nConstructor);
+        MethodStructure  construct   = (MethodStructure) idConstruct.getComponent();
+        ClassConstant    constClz    = (ClassConstant) idConstruct.getNamespace();
+        ClassTemplate    template    = frame.ensureTemplate(constClz);
+        ClassComposition clzTarget   = template.getCanonicalClass();
+        StringHandle     hMsg        = xString.makeHandle(sMsg);
+        ObjectHandle[]   ahArg       = new ObjectHandle[construct.getMaxVars()];
+
+        ahArg[0] = hMsg;
+        switch (template.construct(frame, construct, clzTarget, null, ahArg, A_STACK))
+            {
+            case Op.R_NEXT:
+                return frame.raiseException((ExceptionHandle) frame.popStack());
+
+            case Op.R_CALL:
+                frame.m_frameNext.addContinuation(frameCaller ->
+                        frameCaller.raiseException((ExceptionHandle) frameCaller.popStack()));
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    protected String buildMessage(Frame frame)
+        {
+        return "Assertion failed";
         }
 
     @Override
@@ -119,7 +175,8 @@ public class Assert
         {
         super.registerConstants(registry);
 
-        m_argTest = registerArgument(m_argTest, registry);
+        m_argTest     = registerArgument(m_argTest, registry);
+        m_idConstruct = (MethodConstant) registerArgument(m_idConstruct, registry);
         }
 
     @Override
@@ -129,6 +186,8 @@ public class Assert
         }
 
     private int m_nTest;
+    private int m_nConstructor = A_IGNORE;
 
-    private Argument m_argTest;
+    private Argument       m_argTest;
+    private MethodConstant m_idConstruct;
     }

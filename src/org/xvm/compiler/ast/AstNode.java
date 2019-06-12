@@ -492,6 +492,34 @@ public abstract class AstNode
         }
 
     /**
+     * Collect all of the expressions that should be included in tracing debug output. This is used
+     * by "assert", for example, to display information relevant to the assertion.
+     *
+     * @param mapExprs  the expressions collected thus far, keyed by their source code
+     *                  representations
+     */
+    protected void selectTraceableExpressions(Map<String, Expression> mapExprs)
+        {
+        for (AstNode node : children())
+            {
+            if (node instanceof Expression)
+                {
+                Expression expr = (Expression) node;
+                if (expr.isValidated() && expr.isTraceworthy())
+                    {
+                    String sExpr = expr.toString();
+                    if (!mapExprs.containsKey(sExpr))
+                        {
+                        mapExprs.put(sExpr, expr);
+                        }
+                    }
+                }
+
+            node.selectTraceableExpressions(mapExprs);
+            }
+        }
+
+    /**
      * (Post-validation) Determine if the statement or expression is able to complete normally.
      * <p/>
      * This method must be overridden by any statement or expression that may not complete, either
@@ -1754,7 +1782,7 @@ public abstract class AstNode
                         List list = (List) next;
                         if (!list.isEmpty())
                             {
-                            value = list.iterator();
+                            value = list.listIterator();
                             return true;
                             }
                         }

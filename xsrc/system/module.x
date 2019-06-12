@@ -66,12 +66,6 @@ module Ecstasy.xtclang.org
             extends Exception(text, cause);
 
     /**
-     * An Assertion exception is raised when an assert fails.
-     */
-    const Assertion(String? text = null, Exception? cause = null)
-            extends Exception(text, cause);
-
-    /**
      * An IllegalArgument exception is raised when an invalid argument is passed to a method or a
      * function.
      */
@@ -84,6 +78,12 @@ module Ecstasy.xtclang.org
      */
     const IllegalState(String? text = null, Exception? cause = null)
             extends Exception(text, cause);
+
+    /**
+     * An Assertion exception is raised when an assert fails.
+     */
+    const Assertion(String? text = null, Exception? cause = null)
+            extends IllegalState(text, cause);
 
     /**
      * An UnsupportedOperation exception is raised when an attempt is made to invoke functionality

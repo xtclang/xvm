@@ -172,6 +172,12 @@ public class PrefixExpression
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
+    public boolean isTraceworthy()
+        {
+        return false;
+        }
+
+    @Override
     public boolean isCompletable()
         {
         return expr.isCompletable();

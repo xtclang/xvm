@@ -56,7 +56,7 @@ public class JumpNCond
         // TODO remove after ConstantRegistry is implemented
         if (m_cond == null)
             {
-            m_cond = (ConditionalConstant) frame.poolCode().getConstant(m_nArg);
+            m_cond = (ConditionalConstant) frame.getConstant(m_nArg);
             }
 
         LinkerContext ctx = frame.f_context.f_container;
