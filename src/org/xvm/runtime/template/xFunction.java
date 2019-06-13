@@ -220,25 +220,41 @@ public class xFunction
         // invoke with zero or one return to be placed into the specified register;
         protected int call1Impl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
             {
-            return f_function == null ?
-                    frame.invoke1(f_chain, f_nDepth, hTarget, ahVar, iReturn) :
-                    frame.call1(f_function, hTarget, ahVar, iReturn);
+            return f_function == null
+                ? f_chain.isNative()
+                    ? ahVar.length == 1
+                        ? hTarget.getTemplate().invokeNative1(frame, f_chain.getTop(), hTarget, ahVar[0], iReturn)
+                        : hTarget.getTemplate().invokeNativeN(frame, f_chain.getTop(), hTarget, ahVar, iReturn)
+                    : frame.invoke1(f_chain, f_nDepth, hTarget, ahVar, iReturn)
+                : f_function.isNative()
+                    ? ahVar.length == 1
+                        ? hTarget.getTemplate().invokeNative1(frame, f_function, hTarget, ahVar[0], iReturn)
+                        : hTarget.getTemplate().invokeNativeN(frame, f_function, hTarget, ahVar, iReturn)
+                    : frame.call1(f_function, hTarget, ahVar, iReturn);
             }
 
         // invoke with one return Tuple value to be placed into the specified register;
         protected int callTImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
             {
-            return f_function == null ?
-                    frame.invokeT(f_chain, f_nDepth, hTarget, ahVar, iReturn) :
-                    frame.callT(f_function, hTarget, ahVar, iReturn);
+            return f_function == null
+                ? f_chain.isNative()
+                    ? hTarget.getTemplate().invokeNativeT(frame, f_chain.getTop(), hTarget, ahVar, iReturn)
+                    : frame.invokeT(f_chain, f_nDepth, hTarget, ahVar, iReturn)
+                : f_function.isNative()
+                    ? hTarget.getTemplate().invokeNativeT(frame, f_function, hTarget, ahVar, iReturn)
+                    : frame.callT(f_function, hTarget, ahVar, iReturn);
             }
 
         // invoke with multiple return values;
         protected int callNImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
             {
-            return f_function == null ?
-                    frame.invokeN(f_chain, f_nDepth, hTarget, ahVar, aiReturn) :
-                    frame.callN(f_function, hTarget, ahVar, aiReturn);
+            return f_function == null
+                ? f_chain.isNative()
+                    ? hTarget.getTemplate().invokeNativeNN(frame, f_chain.getTop(), hTarget, ahVar, aiReturn)
+                    : frame.invokeN(f_chain, f_nDepth, hTarget, ahVar, aiReturn)
+                : f_function.isNative()
+                    ? hTarget.getTemplate().invokeNativeNN(frame, f_function, hTarget, ahVar, aiReturn)
+                    : frame.callN(f_function, hTarget, ahVar, aiReturn);
             }
 
         protected void addBoundArguments(ObjectHandle[] ahVar)
@@ -431,34 +447,7 @@ public class xFunction
                 int iArg = m_iArg;
                 if (iArg >= 0)
                     {
-                    ConstantPool pool = ConstantPool.getCurrentPool();
-
-                    TypeConstant typeP = type.getParamTypesArray()[0];
-                    TypeConstant typeR = type.getParamTypesArray()[1];
-
-                    int cParamsNew = typeP.getParamsCount() - 1;
-                    assert typeP.isTuple() && iArg <= cParamsNew;
-
-                    TypeConstant[] atypeParams = typeP.getParamTypesArray();
-                    if (cParamsNew == 0)
-                        {
-                        // canonical Tuple represents Void
-                        typeP = pool.ensureParameterizedTypeConstant(pool.typeTuple());
-                        }
-                    else
-                        {
-                        TypeConstant[] atypeNew = new TypeConstant[cParamsNew];
-                        if (iArg > 0)
-                            {
-                            System.arraycopy(atypeParams, 0, atypeNew, 0, iArg);
-                            }
-                        if (iArg < cParamsNew)
-                            {
-                            System.arraycopy(atypeParams, iArg + 1, atypeNew, iArg, cParamsNew - iArg);
-                            }
-                        typeP = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeNew);
-                        }
-                    type = pool.ensureParameterizedTypeConstant(pool.typeFunction(), typeP, typeR);
+                    type = ConstantPool.getCurrentPool().bindFunctionParam(type, iArg);
                     }
                 m_type = type;
                 }
@@ -676,11 +665,7 @@ public class xFunction
 
             if (frame.f_context == hService.m_context)
                 {
-                return f_function != null && f_function.isNative()
-                    ? ahVar.length == 1
-                        ? hService.getTemplate().invokeNative1(frame, f_function, hTarget, ahVar[0], iReturn)
-                        : hService.getTemplate().invokeNativeN(frame, f_function, hTarget, ahVar, iReturn)
-                    : super.call1Impl(frame, hTarget, ahVar, iReturn);
+                return super.call1Impl(frame, hTarget, ahVar, iReturn);
                 }
 
             if (!validateImmutable(frame.f_context, getMethod(), ahVar))
@@ -704,9 +689,7 @@ public class xFunction
 
             if (frame.f_context == hService.m_context)
                 {
-                return f_function != null && f_function.isNative()
-                    ? hService.getTemplate().invokeNativeT(frame, f_function, hTarget, ahVar, iReturn)
-                    : super.callTImpl(frame, hTarget, ahVar, iReturn);
+                return super.callTImpl(frame, hTarget, ahVar, iReturn);
                 }
 
             if (!validateImmutable(frame.f_context, getMethod(), ahVar))
@@ -733,9 +716,7 @@ public class xFunction
 
             if (frame.f_context == hService.m_context)
                 {
-                return f_function != null && f_function.isNative()
-                    ? hService.getTemplate().invokeNativeNN(frame, f_function, hTarget, ahVar, aiReturn)
-                    : super.callNImpl(frame, hTarget, ahVar, aiReturn);
+                return super.callNImpl(frame, hTarget, ahVar, aiReturn);
                 }
 
             if (!validateImmutable(frame.f_context, getMethod(), ahVar))

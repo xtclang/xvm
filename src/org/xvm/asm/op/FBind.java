@@ -170,6 +170,12 @@ public class FBind
             hFunction = hFunction.bind(m_anParamIx[i] - i, ahParam[i]);
             }
 
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            // do we need a precise type?
+            frame.introduceResolvedVar(m_nRetValue, frame.poolContext().typeFunction());
+            }
+
         return frame.assignValue(m_nRetValue, hFunction);
         }
 

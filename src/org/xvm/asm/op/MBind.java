@@ -108,6 +108,12 @@ public class MBind
         {
         CallChain chain = getCallChain(frame, hTarget);
 
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            // do we need a precise type?
+            frame.introduceResolvedVar(m_nRetValue, frame.poolContext().typeFunction());
+            }
+
         return frame.assignValue(m_nRetValue, hTarget.getTemplate().isService() ?
                 xFunction.makeAsyncHandle(chain).bindTarget(hTarget) :
                 xFunction.makeHandle(chain, 0).bindTarget(hTarget));

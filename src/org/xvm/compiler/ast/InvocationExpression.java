@@ -374,10 +374,19 @@ public class InvocationExpression
                 // its "returns", and the returns is a tuple type parameterized by the types of the
                 // return values from the function
                 TypeConstant[] atypeConvRets = m_idConvert.getRawReturns();
-                return m_fCall
-                        ? atypeConvRets[0].getParamTypesArray()[F_RETS].getParamTypesArray()
-                        : atypeConvRets;
-                // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
+                TypeConstant   typeFn        = atypeConvRets[0];
+
+                assert typeFn.isA(pool.typeFunction());
+                if (m_fCall)
+                    {
+                    return typeFn.getParamTypesArray()[F_RETS].getParamTypesArray();
+                    }
+
+                if (m_fBindParams)
+                    {
+                    typeFn = bindFunctionParameters(typeFn);
+                    }
+                return new TypeConstant[]{typeFn};
                 }
 
             // handle method or function
@@ -410,22 +419,18 @@ public class InvocationExpression
                             idMethod.resolveAutoNarrowing(pool, typeLeft).getRawReturns());
                     }
 
-                if (m_fBindTarget)
-                    {
-                    TypeConstant typeFn = idMethod.getType();
-                    if (resolver != null)
-                        {
-                        typeFn = typeFn.resolveGenerics(pool, resolver);
-                        }
-                    return new TypeConstant[]{typeFn};
-                    }
+                TypeConstant typeFn = m_fBindTarget
+                    ? idMethod.getType()
+                    : idMethod.getRefType(typeLeft);
 
-                // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
-
-                TypeConstant typeFn = idMethod.getRefType(typeLeft);
                 if (resolver != null)
                     {
                     typeFn = typeFn.resolveGenerics(pool, resolver);
+                    }
+
+                if (m_fBindParams)
+                    {
+                    typeFn = bindFunctionParameters(typeFn);
                     }
                 return new TypeConstant[]{typeFn};
                 }
@@ -625,10 +630,23 @@ public class InvocationExpression
                         // its "returns", and the returns is a tuple type parameterized by the types of the
                         // return values from the function
                         TypeConstant[] atypeConvRets = m_idConvert.getRawReturns();
-                        TypeConstant[] atypeResult   = m_fCall
-                                ? atypeConvRets[0].getParamTypesArray()[F_RETS].getParamTypesArray()
-                                : atypeConvRets;
-                        // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
+                        TypeConstant   typeFn        = atypeConvRets[0];
+
+                        assert typeFn.isA(pool.typeFunction());
+
+                        TypeConstant[] atypeResult;
+                        if (m_fCall)
+                            {
+                            atypeResult = typeFn.getParamTypesArray()[F_RETS].getParamTypesArray();
+                            }
+                        else
+                            {
+                            if (m_fBindParams)
+                                {
+                                typeFn = bindFunctionParameters(typeFn);
+                                }
+                            atypeResult = new TypeConstant[]{typeFn};
+                            }
                         return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);
                         }
 
@@ -728,21 +746,20 @@ public class InvocationExpression
                                     }
                                 atypeResult = sigRet.getRawReturns();
                                 }
-                            else if (m_fBindTarget)
+                            else
                                 {
-                                TypeConstant typeFn = idMethod.getType();
+                                TypeConstant typeFn = m_fBindTarget
+                                    ? idMethod.getType()
+                                    : idMethod.getRefType(typeLeft);
+
                                 if (!mapTypeParams.isEmpty())
                                     {
                                     typeFn = typeFn.resolveGenerics(pool, mapTypeParams::get);
                                     }
-                                atypeResult = new TypeConstant[] {typeFn};
-                                }
-                            else
-                                {
-                                TypeConstant typeFn = idMethod.getRefType(typeLeft);
-                                if (!mapTypeParams.isEmpty())
+
+                                if (m_fBindParams)
                                     {
-                                    typeFn = typeFn.resolveGenerics(pool, mapTypeParams::get);
+                                    typeFn = bindFunctionParameters(typeFn);
                                     }
                                 atypeResult = new TypeConstant[] {typeFn};
                                 }
@@ -1310,16 +1327,19 @@ public class InvocationExpression
                 {
                 aiArg[iNext] = i;
                 aArg [iNext] = aargTypeParams[i];
+                iNext++;
                 }
             else if (i >= ofDefault)
                 {
                 aiArg[iNext] = i;
                 aArg [iNext] = Register.DEFAULT;
+                iNext++;
                 }
             else if (!args.get(i).isNonBinding())
                 {
                 aiArg[iNext] = i;
                 aArg [iNext] = args.get(i).generateArgument(ctx, code, false, true, errs);
+                iNext++;
                 }
             }
 
@@ -1870,8 +1890,7 @@ public class InvocationExpression
 
             if (m_fBindParams)
                 {
-                // TODO calculate resulting function type by partially (or completely) binding the method/function as specified by "args"
-                throw notImplemented();
+                typeFn = bindFunctionParameters(typeFn);
                 }
 
             return new TypeConstant[] {typeFn};
@@ -1890,11 +1909,12 @@ public class InvocationExpression
             atypeReturn = pool().extractFunctionReturns(typeFn);
             return atypeReturn == null ? TypeConstant.NO_TYPES : atypeReturn;
             }
-        else
+
+        if (m_fBindParams)
             {
-            return new TypeConstant[] {typeFn};
+            typeFn = bindFunctionParameters(typeFn);
             }
-        // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
+        return new TypeConstant[] {typeFn};
         }
 
     /**
@@ -1945,6 +1965,28 @@ public class InvocationExpression
                 }
             }
         return atypeResolved;
+        }
+
+    /**
+     * Create a new function type by binding all bounded expressions.
+     *
+     * @param typeFn  the original function type
+     *
+     * @return a new function type that skips all bound parameters
+     */
+    private TypeConstant bindFunctionParameters(TypeConstant typeFn)
+        {
+        ConstantPool     pool     = pool();
+        List<Expression> listArgs = args;
+        for (int i = listArgs.size() - 1; i >= 0; --i)
+            {
+            Expression expr = listArgs.get(i);
+            if (!expr.isNonBinding())
+                {
+                typeFn = pool.bindFunctionParam(typeFn, i);
+                }
+            }
+        return typeFn;
         }
 
 
