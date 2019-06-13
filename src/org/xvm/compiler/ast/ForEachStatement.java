@@ -76,7 +76,7 @@ public class ForEachStatement
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public boolean isNaturalShortCircuitStatementTarget()
+    public boolean isNaturalGotoStatementTarget()
         {
         return true;
         }

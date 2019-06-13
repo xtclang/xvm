@@ -94,7 +94,7 @@ public class ForStatement
         }
 
     @Override
-    public boolean isNaturalShortCircuitStatementTarget()
+    public boolean isNaturalGotoStatementTarget()
         {
         return true;
         }

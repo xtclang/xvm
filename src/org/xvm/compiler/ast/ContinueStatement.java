@@ -5,7 +5,6 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.op.Jump;
-import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
@@ -17,7 +16,7 @@ import org.xvm.util.Severity;
  * A break statement represents the "continue" keyword.
  */
 public class ContinueStatement
-        extends ShortCircuitStatement
+        extends GotoStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -45,7 +44,7 @@ public class ContinueStatement
                 }
             return null;
             }
-        else if (!stmtTarget.isNaturalShortCircuitStatementTarget())
+        else if (!stmtTarget.isNaturalGotoStatementTarget())
             {
             log(errs, Severity.ERROR, Compiler.ILLEGAL_CONTINUE_TARGET);
             return null;
