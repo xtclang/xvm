@@ -120,7 +120,7 @@ public class xAtomicIntNumber
 
         if (atomic == null)
             {
-            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            return frame.raiseException(xException.unassignedReference());
             }
 
         return frame.assignValue(iReturn, xInt64.makeHandle(atomic.incrementAndGet()));
@@ -133,7 +133,7 @@ public class xAtomicIntNumber
 
         if (atomic == null)
             {
-            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            return frame.raiseException(xException.unassignedReference());
             }
 
         return frame.assignValue(iReturn, xInt64.makeHandle(atomic.getAndIncrement()));
@@ -146,7 +146,7 @@ public class xAtomicIntNumber
 
         if (atomic == null)
             {
-            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            return frame.raiseException(xException.unassignedReference());
             }
 
         return frame.assignValue(iReturn, xInt64.makeHandle(atomic.decrementAndGet()));
@@ -159,7 +159,7 @@ public class xAtomicIntNumber
 
         if (atomic == null)
             {
-            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            return frame.raiseException(xException.unassignedReference());
             }
 
         return frame.assignValue(iReturn, xInt64.makeHandle(atomic.getAndDecrement()));
@@ -173,7 +173,7 @@ public class xAtomicIntNumber
 
         if (atomic == null)
             {
-            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            return frame.raiseException(xException.unassignedReference());
             }
 
         atomic.addAndGet(lArg);
@@ -188,7 +188,7 @@ public class xAtomicIntNumber
 
         if (atomic == null)
             {
-            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            return frame.raiseException(xException.unassignedReference());
             }
 
         atomic.addAndGet(-lArg);
@@ -203,7 +203,7 @@ public class xAtomicIntNumber
 
         if (atomic == null)
             {
-            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            return frame.raiseException(xException.unassignedReference());
             }
 
         atomic.updateAndGet(lVal -> lVal * lArg);
@@ -218,7 +218,7 @@ public class xAtomicIntNumber
 
         if (atomic == null)
             {
-            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            return frame.raiseException(xException.unassignedReference());
             }
 
         if (lArg == 0)
@@ -238,7 +238,7 @@ public class xAtomicIntNumber
 
         if (atomic == null)
             {
-            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            return frame.raiseException(xException.unassignedReference());
             }
 
         atomic.updateAndGet(lVal -> lVal % lArg);
@@ -253,7 +253,7 @@ public class xAtomicIntNumber
 
         if (atomic == null)
             {
-            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            return frame.raiseException(xException.unassignedReference());
             }
 
         atomic.updateAndGet(lVal -> lVal << lArg);
@@ -268,7 +268,7 @@ public class xAtomicIntNumber
 
         if (atomic == null)
             {
-            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            return frame.raiseException(xException.unassignedReference());
             }
 
         atomic.updateAndGet(lVal -> lVal >> lArg);
@@ -283,7 +283,7 @@ public class xAtomicIntNumber
 
         if (atomic == null)
             {
-            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            return frame.raiseException(xException.unassignedReference());
             }
 
         atomic.updateAndGet(lVal -> lVal >>> lArg);
@@ -298,7 +298,7 @@ public class xAtomicIntNumber
 
         if (atomic == null)
             {
-            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            return frame.raiseException(xException.unassignedReference());
             }
 
         atomic.updateAndGet(lVal -> lVal & lArg);
@@ -313,7 +313,7 @@ public class xAtomicIntNumber
 
         if (atomic == null)
             {
-            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            return frame.raiseException(xException.unassignedReference());
             }
 
         atomic.updateAndGet(lVal -> lVal | lArg);
@@ -328,7 +328,7 @@ public class xAtomicIntNumber
 
         if (atomic == null)
             {
-            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            return frame.raiseException(xException.unassignedReference());
             }
 
         atomic.updateAndGet(lVal -> lVal ^ lArg);
@@ -342,7 +342,7 @@ public class xAtomicIntNumber
         AtomicLong atomicValue = hAtomic.m_atomicValue;
 
         return atomicValue == null
-            ? frame.raiseException(xException.makeHandle("Unassigned reference"))
+            ? frame.raiseException(xException.unassignedReference())
             : frame.assignValue(iReturn, xInt64.makeHandle(atomicValue.get()));
         }
 
