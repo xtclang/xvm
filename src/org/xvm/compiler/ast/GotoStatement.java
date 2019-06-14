@@ -7,14 +7,23 @@ import org.xvm.compiler.Token;
 
 
 /**
- * A short-cirtuit statement represents "break" and "continue" statements.
+ * A "goto" statement is any statement that impacts the control flow of the program by jumping
+ * from the point of the "goto" statement. Thanks to Dijkstra, the term "goto" is now verboten,
+ * and its use is considered to be harmful; as a result, languages must use terms like "break"
+ * and "continue", and allow the use of such terms in a far more limited and predictable manner.
  */
-public abstract class ShortCircuitStatement
+public abstract class GotoStatement
         extends Statement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public ShortCircuitStatement(Token keyword, Token name)
+    /**
+     * Construct a GotoStatement.
+     *
+     * @param keyword  the keyword (either "break" or "continue")
+     * @param name     the name specified, or null
+     */
+    public GotoStatement(Token keyword, Token name)
         {
         this.keyword = keyword;
         this.name    = name;
@@ -36,7 +45,7 @@ public abstract class ShortCircuitStatement
         }
 
     /**
-     * @return true iff the short-circuit statement specifies the name of a label
+     * @return true iff the "goto" statement specifies the name of a label
      */
     public boolean isLabeled()
         {
@@ -54,7 +63,7 @@ public abstract class ShortCircuitStatement
         }
 
     /**
-     * @return the label to jump to
+     * @return the label that this statement will jump to
      */
     public Label getJumpLabel()
         {
@@ -62,17 +71,19 @@ public abstract class ShortCircuitStatement
         }
 
     /**
-     * From within the validate() stage (i.e. before the emit() stage), specify the label to use.
+     * Specify the label to use. This must occur from within the validate() stage, i.e. before the
+     * emit() stage.
      *
-     * @param label  the "long jump" label that the statement short-circuits to
+     * @param label  the label that the statement jumps to
      */
     protected void setJumpLabel(Label label)
         {
+        assert m_label == null;
         m_label = label;
         }
 
     /**
-     * @return the statement that this short-circuiting statement refers to
+     * @return the statement that this "goto" statement refers to
      */
     protected Statement getTargetStatement()
         {
@@ -105,7 +116,7 @@ public abstract class ShortCircuitStatement
             if (node instanceof Statement)
                 {
                 Statement stmt = (Statement) node;
-                if (stmt.isNaturalShortCircuitStatementTarget())
+                if (stmt.isNaturalGotoStatementTarget())
                     {
                     return stmt;
                     }

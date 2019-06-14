@@ -16,7 +16,7 @@ import org.xvm.util.Severity;
  * A break statement represents the "break" keyword.
  */
 public class BreakStatement
-        extends ShortCircuitStatement
+        extends GotoStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 

@@ -42,7 +42,7 @@ public class SwitchStatement
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public boolean isNaturalShortCircuitStatementTarget()
+    public boolean isNaturalGotoStatementTarget()
         {
         return true;
         }

@@ -35,20 +35,6 @@ public abstract class Statement
         }
 
     /**
-     * @return the label corresponding to the beginning of the Statement
-     */
-    public Label getBeginLabel()
-        {
-        Label label = m_labelBegin;
-        if (label == null)
-            {
-            assert !m_fEmitted;
-            m_labelBegin = label = new Label();
-            }
-        return label;
-        }
-
-    /**
      * @return the label corresponding to the ending of the Statement
      */
     public Label getEndLabel()
@@ -63,9 +49,9 @@ public abstract class Statement
         }
 
     /**
-     * @return true iff a "continue" statement can apply to this statement
+     * @return true iff a GotoStatement can "naturally" (without a label) refer to this statement
      */
-    public boolean isNaturalShortCircuitStatementTarget()
+    public boolean isNaturalGotoStatementTarget()
         {
         return false;
         }
@@ -204,17 +190,7 @@ public abstract class Statement
             code = code.blackhole();
             }
 
-        boolean fBeginLabel = m_labelBegin != null;
-        if (fBeginLabel)
-            {
-            code.add(m_labelBegin);
-            }
-
         boolean fCompletes = fReachable & emit(ctx, fReachable, code, errs);
-
-        // a begin label should not have been requested during the emit stage unless it had been
-        // requested previously (since it's too late to add it now!)
-        assert fBeginLabel == (m_labelBegin != null);
 
         if (m_labelEnd != null)
             {
@@ -243,7 +219,6 @@ public abstract class Statement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private Label   m_labelBegin;
     private Label   m_labelEnd;
     private boolean m_fEmitted;
 

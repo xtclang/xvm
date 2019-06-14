@@ -65,7 +65,7 @@ public class WhileStatement
         }
 
     @Override
-    public boolean isNaturalShortCircuitStatementTarget()
+    public boolean isNaturalGotoStatementTarget()
         {
         return true;
         }
