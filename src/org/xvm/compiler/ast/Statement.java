@@ -49,7 +49,7 @@ public abstract class Statement
         }
 
     /**
-     * @return true iff a "continue" statement can apply to this statement
+     * @return true iff a GotoStatement can "naturally" (without a label) refer to this statement
      */
     public boolean isNaturalGotoStatementTarget()
         {
