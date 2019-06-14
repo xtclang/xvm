@@ -62,8 +62,7 @@ public interface IndexSupport
      * @param lIndex   the element index
      * @param iReturn  the register id to place the extracted element into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     default int makeRef(Frame frame, ObjectHandle hTarget, long lIndex, boolean fReadOnly, int iReturn)
         {
@@ -77,7 +76,7 @@ public interface IndexSupport
 
             IndexedRefHandle hRef = new IndexedRefHandle(clzRef, hTarget, lIndex);
 
-            return frame.assignValue(iReturn, hRef, false);
+            return frame.assignValue(iReturn, hRef);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -93,8 +92,7 @@ public interface IndexSupport
      * @param lIndex   the element index
      * @param iReturn  the register id to place the extracted element into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     default int invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
@@ -147,8 +145,7 @@ public interface IndexSupport
      * @param lIndex   the element index
      * @param iReturn  the register id to place the extracted element into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     default int invokePostInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
@@ -195,8 +192,7 @@ public interface IndexSupport
      * @param lIndex   the element index
      * @param iReturn  the register id to place the extracted element into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     default int invokePreDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
@@ -249,8 +245,7 @@ public interface IndexSupport
      * @param lIndex   the element index
      * @param iReturn  the register id to place the extracted element into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     default int invokePostDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {

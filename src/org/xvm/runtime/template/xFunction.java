@@ -23,7 +23,6 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xService.ServiceHandle;
-import org.xvm.runtime.template.annotations.xFutureVar;
 
 
 /**
@@ -679,7 +678,7 @@ public class xFunction
                 frame, this, ahVar, cReturns);
 
             // in the case of zero returns - fire and forget
-            return cReturns == 0 ? Op.R_NEXT : assignResult(frame, iReturn, cfResult);
+            return cReturns == 0 ? Op.R_NEXT : frame.assignFutureResult(iReturn, cfResult);
             }
 
         @Override
@@ -706,7 +705,7 @@ public class xFunction
             CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendInvoke1Request(
                     frame, this, ahVar, 1);
 
-            return assignResult(frame, iReturn, cfResult);
+            return frame.assignFutureResult(iReturn, cfResult);
             }
 
         @Override
@@ -739,9 +738,10 @@ public class xFunction
                 {
                 CompletableFuture<ObjectHandle> cfReturn =
                     cfResult.thenApply(ahResult -> ahResult[0]);
-                return assignResult(frame, aiReturn[0], cfReturn);
+                return frame.assignFutureResult(aiReturn[0], cfReturn);
                 }
 
+            // TODO replace with: assignFutureResults()
             return frame.call(Utils.createWaitFrame(frame, cfResult, aiReturn));
             }
         }
@@ -788,7 +788,7 @@ public class xFunction
                 frame, this, ahVar, cReturns);
 
             // in the case of zero returns - fire and forget
-            return cReturns == 0 ? Op.R_NEXT : assignResult(frame, iReturn, cfResult);
+            return cReturns == 0 ? Op.R_NEXT : frame.assignFutureResult(iReturn, cfResult);
             }
 
         @Override
@@ -815,7 +815,7 @@ public class xFunction
             CompletableFuture<ObjectHandle> cfResult = f_ctx.sendInvoke1Request(
                     frame, this, ahVar, 1);
 
-            return assignResult(frame, iReturn, cfResult);
+            return frame.assignFutureResult(iReturn, cfResult);
             }
 
         @Override
@@ -848,9 +848,10 @@ public class xFunction
                 {
                 CompletableFuture<ObjectHandle> cfReturn =
                     cfResult.thenApply(ahResult -> ahResult[0]);
-                return assignResult(frame, aiReturn[0], cfReturn);
+                return frame.assignFutureResult(aiReturn[0], cfReturn);
                 }
 
+            // TODO replace with: assignFutureResults()
             return frame.call(Utils.createWaitFrame(frame, cfResult, aiReturn));
             }
         }
@@ -885,19 +886,6 @@ public class xFunction
                 }
             }
         return true;
-        }
-
-    static private int assignResult(Frame frame, int iReturn, CompletableFuture<ObjectHandle> cfResult)
-        {
-        if (iReturn >= 0)
-            {
-            return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult), true);
-            }
-
-        // the return value is either a A_LOCAL or a local property;
-        // in either case there is no "VarInfo" to mark as "waiting", so we need to create
-        // a pseudo frame to deal with the wait
-        return frame.call(Utils.createWaitFrame(frame, cfResult, iReturn));
         }
 
     /**

@@ -37,8 +37,8 @@ public interface VarSupport
      * @param hTarget  the target Var or Ref handle
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION};
+     *         if the target represents a dynamic future, this can amy return {@link Op#R_BLOCK}
      */
     int get(Frame frame, RefHandle hTarget, int iReturn);
 
@@ -49,8 +49,7 @@ public interface VarSupport
      * @param hTarget  the target Var handle
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeVarPreInc(Frame frame, RefHandle hTarget, int iReturn);
 
@@ -61,8 +60,7 @@ public interface VarSupport
      * @param hTarget  the target Var handle
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeVarPostInc(Frame frame, RefHandle hTarget, int iReturn);
 
@@ -73,8 +71,7 @@ public interface VarSupport
      * @param hTarget  the target Var handle
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeVarPreDec(Frame frame, RefHandle hTarget, int iReturn);
 
@@ -85,8 +82,7 @@ public interface VarSupport
      * @param hTarget  the target Var handle
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeVarPostDec(Frame frame, RefHandle hTarget, int iReturn);
 
@@ -100,8 +96,7 @@ public interface VarSupport
      * @param hTarget  the target Var handle
      * @param hValue   the new value
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int set(Frame frame, RefHandle hTarget, ObjectHandle hValue);
 
@@ -111,8 +106,7 @@ public interface VarSupport
      * @param frame    the current frame
      * @param hTarget  the target Var handle
      * @param hArg     the argument handle
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeVarAdd(Frame frame, RefHandle hTarget, ObjectHandle hArg);
 
@@ -122,8 +116,7 @@ public interface VarSupport
      * @param frame    the current frame
      * @param hTarget  the target Var handle
      * @param hArg     the argument handle
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeVarSub(Frame frame, RefHandle hTarget, ObjectHandle hArg);
 
@@ -134,8 +127,7 @@ public interface VarSupport
      * @param hTarget  the target Var handle
      * @param hArg     the argument handle
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeVarMul(Frame frame, RefHandle hTarget, ObjectHandle hArg);
 
@@ -146,8 +138,7 @@ public interface VarSupport
      * @param hTarget  the target Var handle
      * @param hArg     the argument handle
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeVarDiv(Frame frame, RefHandle hTarget, ObjectHandle hArg);
 
@@ -158,8 +149,7 @@ public interface VarSupport
      * @param hTarget  the target Var handle
      * @param hArg     the argument handle
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeVarMod(Frame frame, RefHandle hTarget, ObjectHandle hArg);
 
@@ -170,8 +160,7 @@ public interface VarSupport
      * @param hTarget  the target Var handle
      * @param hArg     the argument handle
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeVarShl(Frame frame, RefHandle hTarget, ObjectHandle hArg);
 
@@ -182,8 +171,7 @@ public interface VarSupport
      * @param hTarget  the target Var handle
      * @param hArg     the argument handle
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeVarShr(Frame frame, RefHandle hTarget, ObjectHandle hArg);
 
@@ -194,8 +182,7 @@ public interface VarSupport
      * @param hTarget  the target Var handle
      * @param hArg     the argument handle
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeVarShrAll(Frame frame, RefHandle hTarget, ObjectHandle hArg);
 
@@ -206,8 +193,7 @@ public interface VarSupport
      * @param hTarget  the target Var handle
      * @param hArg     the argument handle
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeVarAnd(Frame frame, RefHandle hTarget, ObjectHandle hArg);
 
@@ -218,8 +204,7 @@ public interface VarSupport
      * @param hTarget  the target Var handle
      * @param hArg     the argument handle
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeVarOr(Frame frame, RefHandle hTarget, ObjectHandle hArg);
 
@@ -230,8 +215,7 @@ public interface VarSupport
      * @param hTarget  the target Var handle
      * @param hArg     the argument handle
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeVarXor(Frame frame, RefHandle hTarget, ObjectHandle hArg);
     }

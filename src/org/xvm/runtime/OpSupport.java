@@ -31,8 +31,7 @@ public interface OpSupport
      * @param hArg     the argument handle
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
@@ -44,8 +43,7 @@ public interface OpSupport
      * @param hArg     the argument handle
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
@@ -57,8 +55,7 @@ public interface OpSupport
      * @param hArg     the argument handle
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
@@ -70,8 +67,7 @@ public interface OpSupport
      * @param hArg     the argument handle
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
@@ -83,8 +79,7 @@ public interface OpSupport
      * @param hArg     the argument handle
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
@@ -96,8 +91,7 @@ public interface OpSupport
      * @param hArg     the argument handle
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
@@ -109,8 +103,7 @@ public interface OpSupport
      * @param hArg     the argument handle
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
@@ -122,8 +115,7 @@ public interface OpSupport
      * @param hArg     the argument handle
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeShrAll(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
@@ -135,8 +127,7 @@ public interface OpSupport
      * @param hArg     the argument handle
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
@@ -148,8 +139,7 @@ public interface OpSupport
      * @param hArg     the argument handle
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
@@ -161,8 +151,7 @@ public interface OpSupport
      * @param hArg     the argument handle
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
@@ -174,8 +163,7 @@ public interface OpSupport
      * @param hArg     the argument handle
      * @param aiReturn the two register ids to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeDivMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn);
 
@@ -187,8 +175,7 @@ public interface OpSupport
      * @param hArg     the argument handle
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeDotDot(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
@@ -202,8 +189,7 @@ public interface OpSupport
      * @param hTarget  the target handle
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn);
 
@@ -214,8 +200,7 @@ public interface OpSupport
      * @param hTarget  the target handle
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn);
 
@@ -226,8 +211,7 @@ public interface OpSupport
      * @param hTarget  the target handle
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn);
 
@@ -238,8 +222,7 @@ public interface OpSupport
      * @param hTarget  the target handle
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn);
     }

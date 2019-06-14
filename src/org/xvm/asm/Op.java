@@ -1900,22 +1900,21 @@ public abstract class Op
     public static final int R_CALL = -5;
 
     /**
+     * Result from process() method: call the frame placed in frame.f_framePrev.m_frameNext.
+     */
+    public static final int R_RETURN_CALL = -6;
+
+    /**
      * Result from process() method: some registers are not ready for a read; yield and repeat the
      * same op-code.
      */
-    public static final int R_REPEAT = -6;
+    public static final int R_REPEAT = -7;
 
     /**
      * Result from process() method: some assignments were deferred; yield and check the "waiting"
      * registers before executing the next op-code.
      */
-    public static final int R_BLOCK = -7;
-
-    /**
-     * Result from process() method: some assignments were deferred; yield and check the "waiting"
-     * registers before returning.
-     */
-    public static final int R_BLOCK_RETURN = -8;
+    public static final int R_BLOCK = -8;
 
     /**
      * Result from process() method: yield before executing the next op-code.

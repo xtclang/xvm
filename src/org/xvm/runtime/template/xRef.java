@@ -22,9 +22,11 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 import org.xvm.runtime.VarSupport;
 
+import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
+
 
 /**
- * TODO:
+ * Native Ref implementation.
  */
 public class xRef
         extends ClassTemplate
@@ -78,7 +80,7 @@ public class xRef
                         return Op.R_CALL;
 
                     case Op.R_BLOCK:
-                        return frame.raiseException(xException.makeHandle("Unassigned reference"));
+                        return frame.raiseException(xException.unassignedReference());
 
                     case Op.R_EXCEPTION:
                         return Op.R_EXCEPTION;
@@ -116,7 +118,7 @@ public class xRef
                         return Op.R_CALL;
 
                     case Op.R_BLOCK:
-                        return frame.raiseException(xException.makeHandle("Unassigned reference"));
+                        return frame.raiseException(xException.unassignedReference());
 
                     case Op.R_EXCEPTION:
                         return Op.R_EXCEPTION;
@@ -139,7 +141,7 @@ public class xRef
                         return Op.R_CALL;
 
                     case Op.R_BLOCK:
-                        return frame.raiseException(xException.makeHandle("Unassigned reference"));
+                        return frame.raiseException(xException.unassignedReference());
 
                     case Op.R_EXCEPTION:
                         return Op.R_EXCEPTION;
@@ -162,7 +164,7 @@ public class xRef
                         return Op.R_CALL;
 
                     case Op.R_BLOCK:
-                        return frame.raiseException(xException.makeHandle("Unassigned reference"));
+                        return frame.raiseException(xException.unassignedReference());
 
                     case Op.R_EXCEPTION:
                         return Op.R_EXCEPTION;
@@ -296,6 +298,9 @@ public class xRef
             }
         }
 
+    /**
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
+     */
     protected int getInternal(Frame frame, RefHandle hRef, int iReturn)
         {
         ObjectHandle hValue = hRef.getValue();
@@ -696,6 +701,10 @@ public class xRef
 
                     case Op.R_EXCEPTION:
                         return Op.R_EXCEPTION;
+
+                    case Op.R_BLOCK:
+                        return ((FutureHandle) hRef).makeDeferredHandle(frameCaller).
+                            proceed(frameCaller, this);
 
                     default:
                         throw new IllegalStateException();

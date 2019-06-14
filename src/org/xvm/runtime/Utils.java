@@ -155,7 +155,7 @@ public abstract class Utils
         }
 
     /**
-     * Helper method for the "to<String>" method invocation that pushes the result onto the frame's
+     * Helper method for the "toString()" method invocation that pushes the result onto the frame's
      * stack.
      *
      * @param frame   the current frame
@@ -169,7 +169,7 @@ public abstract class Utils
         }
 
     /**
-     * A trivial adapter method that assigns the result of a natural execution to a calling frame
+     * An adapter method that assigns the result of a natural execution to a calling frame
      * that expects a conditional return.
      *
      * @param frame     the frame that expects a conditional return value
@@ -250,7 +250,60 @@ public abstract class Utils
     static public class AssignValues
             implements Frame.Continuation
         {
-        public AssignValues(int[] aiReturn, ObjectHandle[] ahValue, boolean[] afDynamic)
+        public AssignValues(int[] aiReturn, ObjectHandle[] ahValue)
+            {
+            this.aiReturn  = aiReturn;
+            this.ahValue   = ahValue;
+            }
+
+        public int proceed(Frame frameCaller)
+            {
+            while (++index < aiReturn.length)
+                {
+                ObjectHandle hValue = ahValue[index];
+                if (hValue instanceof DeferredCallHandle)
+                    {
+                    DeferredCallHandle hDeferred = ((DeferredCallHandle) hValue);
+                    hDeferred.addContinuation(this::updateDeferredValue);
+                    return hDeferred.proceed(frameCaller, this);
+                    }
+
+                switch (frameCaller.assignValue(aiReturn[index], ahValue[index]))
+                    {
+                    case Op.R_NEXT:
+                        break;
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.addContinuation(this);
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+
+            return Op.R_NEXT;
+            }
+
+        protected int updateDeferredValue(Frame frameCaller)
+            {
+            ahValue[index--] = frameCaller.popStack();
+            return Op.R_NEXT;
+            }
+
+        private final int[] aiReturn;
+        private final ObjectHandle[] ahValue;
+
+        private int index = -1;
+        }
+
+    static public class ReturnValues
+            implements Frame.Continuation
+        {
+        public ReturnValues(int[] aiReturn, ObjectHandle[] ahValue, boolean[] afDynamic)
             {
             this.aiReturn  = aiReturn;
             this.ahValue   = ahValue;
@@ -269,28 +322,25 @@ public abstract class Utils
                     return hDeferred.proceed(frameCaller, this);
                     }
 
-                switch (frameCaller.assignValue(aiReturn[index], ahValue[index],
-                            afDynamic != null && afDynamic[index]))
+                switch (frameCaller.returnValue(aiReturn[index], ahValue[index],
+                        afDynamic != null && afDynamic[index]))
                     {
-                    case Op.R_BLOCK:
-                        fBlock = true;
-                        // fall through
-                    case Op.R_NEXT:
+                    case Op.R_RETURN:
                         break;
 
                     case Op.R_CALL:
                         frameCaller.m_frameNext.addContinuation(this);
                         return Op.R_CALL;
 
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
+                    case Op.R_RETURN_EXCEPTION:
+                        return Op.R_RETURN_EXCEPTION;
 
                     default:
                         throw new IllegalStateException();
                     }
                 }
 
-            return fBlock ? Op.R_BLOCK : Op.R_NEXT;
+            return Op.R_RETURN;
             }
 
         protected int updateDeferredValue(Frame frameCaller)
@@ -304,7 +354,6 @@ public abstract class Utils
         private final boolean[] afDynamic;
 
         private int index = -1;
-        private boolean fBlock;
         }
 
     static public class ContinuationChain
@@ -580,8 +629,7 @@ public abstract class Utils
     public static Frame createWaitFrame(Frame frame,
                                         CompletableFuture<ObjectHandle[]> cfResult, int[] aiReturn)
         {
-        int cReturns = aiReturn.length;
-
+        int            cReturns = aiReturn.length;
         ObjectHandle[] ahFuture = new ObjectHandle[cReturns];
         Frame frameNext = frame.createNativeFrame(GET_AND_RETURN, ahFuture, Op.A_MULTI, aiReturn);
 

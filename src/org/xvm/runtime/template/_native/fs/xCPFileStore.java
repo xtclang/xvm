@@ -108,7 +108,7 @@ public class xCPFileStore
                 ahValue[2] = heap.ensureConstHandle(frame, constNode.getCreatedConstant());
                 ahValue[3] = heap.ensureConstHandle(frame, constNode.getModifiedConstant());
                 ahValue[4] = xInt64.makeHandle(calcSize(constNode));
-                return new Utils.AssignValues(aiReturn, ahValue, null).proceed(frame);
+                return new Utils.AssignValues(aiReturn, ahValue).proceed(frame);
                 }
 
             // protected (String[] names, Object[] cookies) loadDirectory(Object constNode);
