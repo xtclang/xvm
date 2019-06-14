@@ -352,7 +352,7 @@ public class xArray
         }
 
     @Override
-    protected int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         ArrayHandle hArray = (ArrayHandle) hTarget;
 
@@ -370,7 +370,7 @@ public class xArray
         }
 
     @Override
-    protected int invokeNativeSet(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
+    public int invokeNativeSet(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
         {
         ArrayHandle hArray = (ArrayHandle) hTarget;
 
