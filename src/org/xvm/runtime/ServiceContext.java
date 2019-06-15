@@ -461,11 +461,11 @@ public class ServiceContext
 
     // send and asynchronous "invoke" message with zero or one return value
     public CompletableFuture<ObjectHandle> sendInvoke1Request(Frame frameCaller,
-                FunctionHandle hFunction, ObjectHandle[] ahArg, int cReturns)
+                FunctionHandle hFunction, ServiceHandle hService, ObjectHandle[] ahArg, int cReturns)
         {
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
-        addRequest(new Invoke1Request(frameCaller, hFunction, ahArg, cReturns, future));
+        addRequest(new Invoke1Request(frameCaller, hFunction, hService, ahArg, cReturns, future));
 
         if (cReturns == 0)
             {
@@ -477,11 +477,11 @@ public class ServiceContext
 
     // send and asynchronous "invoke" message with multiple return values
     public CompletableFuture<ObjectHandle[]> sendInvokeNRequest(Frame frameCaller,
-                FunctionHandle hFunction, ObjectHandle[] ahArg, int cReturns)
+                FunctionHandle hFunction, ServiceHandle hService, ObjectHandle[] ahArg, int cReturns)
         {
         CompletableFuture<ObjectHandle[]> future = new CompletableFuture<>();
 
-        addRequest(new InvokeNRequest(frameCaller, hFunction, ahArg, cReturns, future));
+        addRequest(new InvokeNRequest(frameCaller, hFunction, hService, ahArg, cReturns, future));
 
         if (cReturns == 0)
             {
@@ -630,26 +630,26 @@ public class ServiceContext
 
     public abstract static class Message
         {
-        public final Fiber f_fiberCaller;
+        public final Fiber           f_fiberCaller;
         public final MethodStructure f_fnCaller;
-        public final int f_iCallerId; // the FrameId of the caller
-        public final int f_iCallerPC; // the PC of the caller
+        public final int             f_iCallerId; // the FrameId of the caller
+        public final int             f_iCallerPC; // the PC of the caller
 
         protected Message(Frame frameCaller)
             {
             if (frameCaller == null)
                 {
                 f_fiberCaller = null;
-                f_fnCaller = null;
-                f_iCallerId = 0;
-                f_iCallerPC = -1;
+                f_fnCaller    = null;
+                f_iCallerId   = 0;
+                f_iCallerPC   = -1;
                 }
             else
                 {
                 f_fiberCaller = frameCaller.f_fiber;
-                f_fnCaller = frameCaller.f_function;
-                f_iCallerId = frameCaller.f_iId;
-                f_iCallerPC = frameCaller.m_iPC;
+                f_fnCaller    = frameCaller.f_function;
+                f_iCallerId   = frameCaller.f_iId;
+                f_iCallerPC   = frameCaller.m_iPC;
                 }
             }
 
@@ -662,9 +662,9 @@ public class ServiceContext
     public static class ConstructRequest
             extends Message
         {
-        private final MethodStructure f_constructor;
-        private final ClassComposition f_clazz;
-        private final ObjectHandle[] f_ahArg;
+        private final MethodStructure                  f_constructor;
+        private final ClassComposition                 f_clazz;
+        private final ObjectHandle[]                   f_ahArg;
         private final CompletableFuture<ServiceHandle> f_future;
 
         public ConstructRequest(Frame frameCaller, MethodStructure constructor, ClassComposition clazz,
@@ -673,9 +673,9 @@ public class ServiceContext
             super(frameCaller);
 
             f_constructor = constructor;
-            f_clazz = clazz;
-            f_ahArg = ahArg;
-            f_future = future;
+            f_clazz       = clazz;
+            f_ahArg       = ahArg;
+            f_future      = future;
             }
 
         @Override
@@ -711,8 +711,8 @@ public class ServiceContext
     public static class CallLaterRequest
             extends Message
         {
-        private final FunctionHandle f_hFunction;
-        private final ObjectHandle[] f_ahArg;
+        private final FunctionHandle                  f_hFunction;
+        private final ObjectHandle[]                  f_ahArg;
         private final CompletableFuture<ObjectHandle> f_future;
 
         public CallLaterRequest(FunctionHandle hFunction, ObjectHandle[] ahArg,
@@ -721,8 +721,8 @@ public class ServiceContext
             super(null);
 
             f_hFunction = hFunction;
-            f_ahArg = ahArg;
-            f_future = future;
+            f_ahArg     = ahArg;
+            f_future    = future;
             }
 
         @Override
@@ -769,21 +769,23 @@ public class ServiceContext
     public static class Invoke1Request
             extends Message
         {
-        private final FunctionHandle f_hFunction;
-        private final ObjectHandle[] f_ahArg;
-        private final int f_cReturns;
+        private final FunctionHandle                  f_hFunction;
+        private final ServiceHandle                   f_hService;
+        private final ObjectHandle[]                  f_ahArg;
+        private final int                             f_cReturns;
         private final CompletableFuture<ObjectHandle> f_future;
 
         public Invoke1Request(Frame frameCaller, FunctionHandle hFunction,
-                              ObjectHandle[] ahArg, int cReturns,
+                              ServiceHandle hService, ObjectHandle[] ahArg, int cReturns,
                               CompletableFuture<ObjectHandle> future)
             {
             super(frameCaller);
 
             f_hFunction = hFunction;
-            f_ahArg = ahArg;
-            f_cReturns = cReturns;
-            f_future = future;
+            f_hService  = hService;
+            f_ahArg     = ahArg;
+            f_cReturns  = cReturns;
+            f_future    = future;
             }
 
         @Override
@@ -793,7 +795,8 @@ public class ServiceContext
                 {
                 public int process(Frame frame, int iPC)
                     {
-                    return f_hFunction.call1(frame, context.getService(),
+                    return f_hFunction.call1(frame,
+                        f_hService == null ? context.getService() : f_hService,
                         f_ahArg, f_cReturns == 1 ? 0 : A_IGNORE);
                     }
 
@@ -819,21 +822,23 @@ public class ServiceContext
     public static class InvokeNRequest
             extends Message
         {
-        private final FunctionHandle f_hFunction;
-        private final ObjectHandle[] f_ahArg;
-        private final int f_cReturns;
+        private final FunctionHandle                    f_hFunction;
+        private final ObjectHandle                      f_hService;
+        private final ObjectHandle[]                    f_ahArg;
+        private final int                               f_cReturns;
         private final CompletableFuture<ObjectHandle[]> f_future;
 
         public InvokeNRequest(Frame frameCaller, FunctionHandle hFunction,
-                             ObjectHandle[] ahArg, int cReturns,
-                             CompletableFuture<ObjectHandle[]> future)
+                              ServiceHandle hService, ObjectHandle[] ahArg, int cReturns,
+                              CompletableFuture<ObjectHandle[]> future)
             {
             super(frameCaller);
 
             f_hFunction = hFunction;
-            f_ahArg = ahArg;
-            f_cReturns = cReturns;
-            f_future = future;
+            f_hService  = hService;
+            f_ahArg     = ahArg;
+            f_cReturns  = cReturns;
+            f_future    = future;
             }
 
         @Override
@@ -850,7 +855,9 @@ public class ServiceContext
                 {
                 public int process(Frame frame, int iPC)
                     {
-                    return f_hFunction.callN(frame, context.getService(), f_ahArg, aiReturn);
+                    return f_hFunction.callN(frame,
+                        f_hService == null ? context.getService() : f_hService,
+                        f_ahArg, aiReturn);
                     }
 
                 public String toString()
@@ -876,11 +883,11 @@ public class ServiceContext
     public static class PropertyOpRequest
             extends Message
         {
-        private final PropertyConstant f_idProp;
-        private final ObjectHandle f_hValue;
-        private final int f_cReturns;
+        private final PropertyConstant                f_idProp;
+        private final ObjectHandle                    f_hValue;
+        private final int                             f_cReturns;
         private final CompletableFuture<ObjectHandle> f_future;
-        private final PropertyOperation f_op;
+        private final PropertyOperation               f_op;
 
         public PropertyOpRequest(Frame frameCaller, PropertyConstant idProp,
                                  ObjectHandle hValue, int cReturns,
@@ -888,11 +895,11 @@ public class ServiceContext
             {
             super(frameCaller);
 
-            f_idProp = idProp;
-            f_hValue = hValue;
+            f_idProp   = idProp;
+            f_hValue   = hValue;
             f_cReturns = cReturns;
-            f_future = future;
-            f_op = op;
+            f_future   = future;
+            f_op       = op;
             }
 
         @Override
@@ -933,7 +940,7 @@ public class ServiceContext
     public static class ConstantInitializationRequest
             extends Message
         {
-        private final MethodStructure f_method;
+        private final MethodStructure                 f_method;
         private final CompletableFuture<ObjectHandle> f_future;
 
         public ConstantInitializationRequest(Frame frameCaller, MethodStructure method,
@@ -977,9 +984,9 @@ public class ServiceContext
     public static class Response<T>
             implements Runnable
         {
-        private final Fiber f_fiberCaller;
-        private final T f_return;
-        private final ExceptionHandle f_hException;
+        private final Fiber                f_fiberCaller;
+        private final T                    f_return;
+        private final ExceptionHandle      f_hException;
         private final CompletableFuture<T> f_future;
 
         public Response(Fiber fiberCaller, T returnValue, ExceptionHandle hException,
@@ -988,9 +995,9 @@ public class ServiceContext
             assert returnValue != null || hException != null;
 
             f_fiberCaller = fiberCaller;
-            f_hException = hException;
-            f_return = returnValue;
-            f_future = future;
+            f_hException  = hException;
+            f_return      = returnValue;
+            f_future      = future;
             }
 
         @Override

@@ -675,7 +675,7 @@ public class xFunction
             int cReturns = iReturn == Op.A_IGNORE ? 0 : 1;
 
             CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendInvoke1Request(
-                frame, this, ahVar, cReturns);
+                frame, this, hService, ahVar, cReturns);
 
             // in the case of zero returns - fire and forget
             return cReturns == 0 ? Op.R_NEXT : frame.assignFutureResult(iReturn, cfResult);
@@ -703,7 +703,7 @@ public class xFunction
                 }
 
             CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendInvoke1Request(
-                    frame, this, ahVar, 1);
+                    frame, this, hService, ahVar, 1);
 
             return frame.assignFutureResult(iReturn, cfResult);
             }
@@ -726,7 +726,7 @@ public class xFunction
             int cReturns = aiReturn.length;
 
             CompletableFuture<ObjectHandle[]> cfResult = hService.m_context.sendInvokeNRequest(
-                frame, this, ahVar, cReturns);
+                frame, this, hService, ahVar, cReturns);
 
             if (cReturns == 0)
                 {
@@ -785,7 +785,7 @@ public class xFunction
             int cReturns = iReturn == Op.A_IGNORE ? 0 : 1;
 
             CompletableFuture<ObjectHandle> cfResult = f_ctx.sendInvoke1Request(
-                frame, this, ahVar, cReturns);
+                frame, this, null, ahVar, cReturns);
 
             // in the case of zero returns - fire and forget
             return cReturns == 0 ? Op.R_NEXT : frame.assignFutureResult(iReturn, cfResult);
@@ -813,7 +813,7 @@ public class xFunction
                 }
 
             CompletableFuture<ObjectHandle> cfResult = f_ctx.sendInvoke1Request(
-                    frame, this, ahVar, 1);
+                    frame, this, null, ahVar, 1);
 
             return frame.assignFutureResult(iReturn, cfResult);
             }
@@ -836,7 +836,7 @@ public class xFunction
             int cReturns = aiReturn.length;
 
             CompletableFuture<ObjectHandle[]> cfResult = f_ctx.sendInvokeNRequest(
-                frame, this, ahVar, cReturns);
+                frame, this, null, ahVar, cReturns);
 
             if (cReturns == 0)
                 {

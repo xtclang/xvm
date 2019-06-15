@@ -11,7 +11,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassComposition;
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -20,20 +19,19 @@ import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
-import org.xvm.runtime.template.xService.ServiceHandle;
 
 
 /**
  * Template for proxy-able interfaces.
  */
 public class InterfaceProxy
-        extends ClassTemplate
+        extends xService
     {
     static public InterfaceProxy INSTANCE;
 
     public InterfaceProxy(TemplateRegistry templates)
         {
-        super(templates, xObject.INSTANCE.f_struct);
+        super(templates, xObject.INSTANCE.f_struct, false);
 
         INSTANCE = this;
         }
