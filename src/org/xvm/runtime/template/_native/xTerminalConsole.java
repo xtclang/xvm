@@ -11,7 +11,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
@@ -19,6 +18,7 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
+import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xString.StringHandle;
 
@@ -27,7 +27,7 @@ import org.xvm.runtime.template.xString.StringHandle;
  * The injectable "Console" that prints to the screen / terminal.
  */
 public class xTerminalConsole
-        extends ClassTemplate
+        extends xService
     {
     private static final Console        CONSOLE     = System.console();
     private static final BufferedReader CONSOLE_IN;
@@ -44,7 +44,7 @@ public class xTerminalConsole
 
     public xTerminalConsole(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(templates, structure, false);
         }
 
     @Override

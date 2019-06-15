@@ -355,16 +355,25 @@ public class xService
         return frame.assignValue(iReturn, xString.makeHandle(hService.m_context.toString()));
         }
 
-
-    // ----- ObjectHandle -----
-
-    public static ServiceHandle makeHandle(ServiceContext context,
-                                           TypeComposition clz, TypeConstant type)
+    /**
+     * Create a service handle.
+     *
+     * @param context   the service context
+     * @param clz       the original class composition
+     * @param typeMask  the type to mask the service as
+     *
+     * @return  the service handle
+     */
+    public ServiceHandle createServiceHandle(ServiceContext context,
+                                             ClassComposition clz, TypeConstant typeMask)
         {
-        ServiceHandle hService = new ServiceHandle(clz.maskAs(type), context);
+        ServiceHandle hService = new ServiceHandle(clz.maskAs(typeMask), context);
         context.setService(hService);
         return hService;
         }
+
+
+    // ----- ObjectHandle --------------------------------------------------------------------------
 
     public static class ServiceHandle
             extends GenericHandle
@@ -376,6 +385,14 @@ public class xService
             super(clazz);
 
             m_context = context;
+            }
+
+        /**
+         * @return true iff this service has some outstanding asynchronous requests
+         */
+        public boolean isIdle()
+            {
+            return true;
             }
         }
 

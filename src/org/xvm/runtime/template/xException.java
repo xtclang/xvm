@@ -129,7 +129,8 @@ public class xException
 
         Frame frame = ServiceContext.getCurrentContext().getCurrentFrame();
 
-        hException.setField("stackTrace", xString.makeHandle(frame.getStackTrace()));
+        hException.setField("stackTrace", xString.makeHandle(
+                frame == null ? "" : frame.getStackTrace()));
 
         return hException;
         }

@@ -8,7 +8,9 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.runtime.ClassTemplate;
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -21,6 +23,7 @@ import org.xvm.runtime.template.LongLong;
 import org.xvm.runtime.template.xBaseInt128.LongLongHandle;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xFunction.NativeFunctionHandle;
+import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xUInt128;
 
 import org.xvm.util.ListSet;
@@ -31,18 +34,14 @@ import org.xvm.util.ListSet;
  * clock.
  */
 public class xNanosTimer
-        extends ClassTemplate
+        extends xService
     {
     // -----  constructors -------------------------------------------------------------------------
 
     public xNanosTimer(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
-        m_cNanosStart = System.nanoTime();
+        super(templates, structure, false);
         }
-
-
-    // -----  ClassTemplate implementation ---------------------------------------------------------
 
     @Override
     public void initDeclared()
@@ -52,54 +51,46 @@ public class xNanosTimer
         markNativeMethod("stop"    , new String[0], null);
         markNativeMethod("reset"   , new String[0], null);
         markNativeMethod("schedule", new String[]{"Duration", "Timer.Alarm"}, null);
+
+        s_clzDuration = f_templates.getTemplate("Duration").getCanonicalClass();
         }
 
     @Override
-    protected int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
+        TimerHandle hTimer = (TimerHandle) hTarget;
         switch (sPropName)
             {
             case "elapsed":
-                return frame.assignValue(iReturn, elapsedDuration());
+                return frame.assignValue(iReturn, hTimer.elapsedDuration());
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
-
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
         {
+        TimerHandle hTimer = (TimerHandle) hTarget;
         switch (method.getName())
             {
             case "start":
-                start();
+                hTimer.start();
                 return Op.R_NEXT;
 
             case "stop":
-                stop();
+                hTimer.stop();
                 return Op.R_NEXT;
 
             case "reset":
-                reset();
+                hTimer.reset();
                 return Op.R_NEXT;
 
             case "schedule": // duration, alarm
                 {
                 GenericHandle  hDuration = (GenericHandle ) ahArg[0];
                 FunctionHandle hAlarm    = (FunctionHandle) ahArg[1];
-
-                // note: the Java Timer uses millisecond scheduling, but we're given scheduling
-                // instructions in picoseconds
-                LongLongHandle  llPicos = (LongLongHandle) hDuration.getField("picosecondsTotal");
-                long            cNanos  = Math.max(0, llPicos.getValue().divUnsigned(PICOS_PER_NANO).getLowValue());
-                Alarm           alarm   = schedule(cNanos, frame.f_context, hAlarm);
-
-                FunctionHandle hCancel = new NativeFunctionHandle((_frame, _ah, _iReturn) ->
-                    {
-                    alarm.cancel();
-                    return Op.R_NEXT;
-                    });
+                FunctionHandle hCancel   = hTimer.schedule(hDuration, hAlarm);
                 return frame.assignValue(iReturn, hCancel);
                 }
             }
@@ -107,345 +98,395 @@ public class xNanosTimer
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
-
-    // -----  Timer implementation -----------------------------------------------------------------
-
-    /**
-     * Start the timer, which also starts all alarms.
-     */
-    public synchronized void start()
+    @Override
+    public ServiceHandle createServiceHandle(ServiceContext context, ClassComposition clz, TypeConstant typeMask)
         {
-        if (m_cNanosStart == 0)
+        TimerHandle hTimer = new TimerHandle(clz.maskAs(typeMask), context);
+        context.setService(hTimer);
+        return hTimer;
+        }
+
+
+    // ----- ObjectHandle --------------------------------------------------------------------------
+
+    public static class TimerHandle
+            extends xService.ServiceHandle
+        {
+        public TimerHandle(TypeComposition clazz, ServiceContext context)
             {
+            super(clazz, context);
+
             m_cNanosStart = System.nanoTime();
             }
 
-        synchronized (f_setAlarms)
+        @Override
+        public boolean isIdle()
             {
-            for (Alarm alarm : f_setAlarms)
+            if (isRunning())
                 {
-                alarm.start();
+                synchronized (f_setAlarms)
+                    {
+                    for (Alarm alarm : f_setAlarms)
+                        {
+                        if (!alarm.m_fDead)
+                            {
+                            return false;
+                            }
+                        }
+                    }
                 }
+            return true;
             }
-        }
 
-    /**
-     * @return true if the timer is running (the last call to "start" has not been follwed by a call
-     *         to "stop")
-     */
-    public boolean isRunning()
-        {
-        return m_cNanosStart != 0;
-        }
+        // -----  Timer implementation -------------------------------------------------------------
 
-    /**
-     * @return the elapsed time, in nano-seconds
-     */
-    public synchronized long elapsed()
-        {
-        long cNanosTotal = m_cNanosPrevSum;
-        if (m_cNanosStart != 0)
+        /**
+         * Start the timer, which also starts all alarms.
+         */
+        public synchronized void start()
             {
-            long cAdd = System.nanoTime() - m_cNanosStart;
-            if (cAdd > 0)
+            if (m_cNanosStart == 0)
                 {
-                cNanosTotal += cAdd;
+                m_cNanosStart = System.nanoTime();
                 }
-            }
-        return cNanosTotal;
-        }
-
-    /**
-     * Create and schedule an alarm to go off if a specified number of nanoseconds.
-     *
-     * @param cNanosDelay  the delay before triggering the alarm
-     * @param context      the runtime service context to use when the alarm triggers
-     * @param hFunction    the runtime function to call when the alarm triggers
-     *
-     * @return the new Alarm
-     */
-    public Alarm schedule(long cNanosDelay, ServiceContext context, FunctionHandle hFunction)
-        {
-        return new Alarm(++s_cAlarms, cNanosDelay, context, hFunction);
-        }
-
-    /**
-     * Stop the timer, which also stops all alarms.
-     */
-    public synchronized void stop()
-        {
-        if (m_cNanosStart != 0)
-            {
-            long cAdd = System.nanoTime() - m_cNanosStart;
-            if (cAdd > 0)
-                {
-                m_cNanosPrevSum += cAdd;
-                }
-
-            m_cNanosStart = 0;
 
             synchronized (f_setAlarms)
                 {
                 for (Alarm alarm : f_setAlarms)
                     {
-                    alarm.stop();
+                    alarm.start();
                     }
                 }
             }
-        }
 
-    /**
-     * Reset the timer, which resets the elapsed time and all alarms.
-     */
-    public synchronized void reset()
-        {
-        m_cNanosPrevSum = 0;
-        if (m_cNanosStart != 0)
-            {
-            m_cNanosStart = System.nanoTime();
-            }
-
-        synchronized (f_setAlarms)
-            {
-            for (Alarm alarm : f_setAlarms)
-                {
-                alarm.reset();
-                }
-            }
-        }
-
-    /**
-     * @return the elapsed time, as an Ecstasy Duration object
-     */
-    public GenericHandle elapsedDuration()
-        {
-        LongLong      llPicos   = new LongLong(elapsed()).mul(PICOS_PER_NANO_LL);
-        GenericHandle hDuration = new GenericHandle(ensureDurationClass());
-        hDuration.setField("picosecondsTotal", xUInt128.INSTANCE.makeLongLong(llPicos));
-
-        return hDuration;
-        }
-
-    /**
-     * @return the Duration class
-     */
-    public TypeComposition ensureDurationClass()
-        {
-        TypeComposition clz = m_clzDuration;
-        if (clz == null)
-            {
-            clz = m_clzDuration = f_templates.getTemplate("Duration").getCanonicalClass();
-            }
-        return clz;
-        }
-
-
-    // ----- inner class: Alarm --------------------------------------------------------------------
-
-    /**
-     * Represents a pending alarm.
-     */
-    protected class Alarm
-        {
         /**
-         * Construct and register an alarm, and start it if the timer is running.
+         * @return true if the timer is running (the last call to "start" has not been followed by a call
+         *         to "stop")
+         */
+        public boolean isRunning()
+            {
+            return m_cNanosStart != 0;
+            }
+
+        /**
+         * @return the elapsed time, in nano-seconds
+         */
+        public synchronized long elapsed()
+            {
+            long cNanosTotal = m_cNanosPrevSum;
+            if (m_cNanosStart != 0)
+                {
+                long cAdd = System.nanoTime() - m_cNanosStart;
+                if (cAdd > 0)
+                    {
+                    cNanosTotal += cAdd;
+                    }
+                }
+            return cNanosTotal;
+            }
+
+        /**
+         * Create and schedule an alarm to go off if a specified number of nanoseconds.
          *
-         * @param id           a unique id for the alarm
-         * @param cNanosDelay  the delay before triggering the alarm
-         * @param context      the runtime service context to use when the alarm triggers
-         * @param hFunction    the runtime function to call when the alarm triggers
+         * @param hDuration  the duration before triggering the alarm
+         * @param hAlarm     the runtime function to call when the alarm triggers
+         *
+         * @return the new Alarm
          */
-        public Alarm(int id, long cNanosDelay, ServiceContext context, FunctionHandle hFunction)
+        public FunctionHandle schedule(GenericHandle hDuration, FunctionHandle hAlarm)
             {
-            f_id          = id;
-            f_cNanosDelay = cNanosDelay;
-            f_context     = context;
-            f_hFunction   = hFunction;
+            // note: the Java Timer uses millisecond scheduling, but we're given scheduling
+            // instructions in picoseconds
+            LongLongHandle llPicos = (LongLongHandle) hDuration.getField("picosecondsTotal");
+            long            cNanos  = Math.max(0, llPicos.getValue().divUnsigned(PICOS_PER_NANO).getLowValue());
+            Alarm           alarm   = new Alarm(++s_cAlarms, cNanos, hAlarm);
 
-            xNanosTimer timer = xNanosTimer.this;
-            timer.register(this);
-            if (timer.isRunning())
+            return new NativeFunctionHandle((_frame, _ah, _iReturn) ->
                 {
-                start();
-                }
+                alarm.cancel();
+                return Op.R_NEXT;
+                });
             }
 
         /**
-         * Start the alarm maturing on a running timer.
-         */
-        public synchronized void start()
-            {
-            if (m_fDead || m_trigger != null)
-                {
-                return;
-                }
-
-            m_cNanosStart = System.nanoTime();
-            m_trigger     = new Trigger();
-            try
-                {
-                TIMER.schedule(m_trigger, Math.max(1, (f_cNanosDelay - m_cNanosBurnt) / NANOS_PER_MILLI));
-                }
-            catch (Exception e)
-                {
-                System.err.println("Exception in xNanosTimer.Alarm.start(): " + e);
-                }
-            }
-
-        /**
-         * Stop the alarm from maturing.
+         * Stop the timer, which also stops all alarms.
          */
         public synchronized void stop()
             {
-            if (m_fDead)
+            if (m_cNanosStart != 0)
                 {
-                return;
-                }
-
-            if (m_trigger != null)
-                {
-                m_trigger.cancel();
-                m_trigger = null;
-
-                long cNanosAdd = System.nanoTime() - m_cNanosStart;
-                if (cNanosAdd > 0)
+                long cAdd = System.nanoTime() - m_cNanosStart;
+                if (cAdd > 0)
                     {
-                    m_cNanosBurnt += cNanosAdd;
+                    m_cNanosPrevSum += cAdd;
                     }
+
                 m_cNanosStart = 0;
+
+                synchronized (f_setAlarms)
+                    {
+                    for (Alarm alarm : f_setAlarms)
+                        {
+                        alarm.stop();
+                        }
+                    }
                 }
             }
 
         /**
-         * Reset the alarm maturity back to its initial state.
+         * Reset the timer, which resets the elapsed time and all alarms.
          */
         public synchronized void reset()
             {
-            if (m_fDead)
+            m_cNanosPrevSum = 0;
+            if (m_cNanosStart != 0)
                 {
-                return;
+                m_cNanosStart = System.nanoTime();
                 }
 
-            if (m_trigger != null)
+            synchronized (f_setAlarms)
                 {
-                m_trigger.cancel();
-                m_trigger = null;
+                for (Alarm alarm : f_setAlarms)
+                    {
+                    alarm.reset();
+                    }
+                }
+            }
 
-                m_cNanosStart = 0;
-                m_cNanosBurnt = 0;
+        /**
+         * @return the elapsed time, as an Ecstasy Duration object
+         */
+        public GenericHandle elapsedDuration()
+            {
+            GenericHandle hDuration = new GenericHandle(s_clzDuration);
 
-                if (xNanosTimer.this.isRunning())
+            LongLong llPicos   = new LongLong(elapsed()).mul(PICOS_PER_NANO_LL);
+            hDuration.setField("picosecondsTotal", xUInt128.INSTANCE.makeLongLong(llPicos));
+            hDuration.makeImmutable();
+
+            return hDuration;
+            }
+
+        public void register(Alarm alarm)
+            {
+            boolean fRegistered;
+            synchronized (f_setAlarms)
+                {
+                fRegistered = f_setAlarms.add(alarm);
+                }
+            assert fRegistered;
+            }
+
+        public void unregister(Alarm alarm)
+            {
+            boolean fUnregistered;
+            synchronized (f_setAlarms)
+                {
+                fUnregistered = f_setAlarms.remove(alarm);
+                }
+            assert fUnregistered;
+            }
+
+        // ----- inner class: Alarm --------------------------------------------------------------------
+
+        /**
+         * Represents a pending alarm.
+         */
+        protected class Alarm
+            {
+            /**
+             * Construct and register an alarm, and start it if the timer is running.
+             *
+             * @param id           a unique id for the alarm
+             * @param cNanosDelay  the delay before triggering the alarm
+             * @param hFunction    the runtime function to call when the alarm triggers
+             */
+            public Alarm(int id, long cNanosDelay, FunctionHandle hFunction)
+                {
+                f_id          = id;
+                f_cNanosDelay = cNanosDelay;
+                f_hFunction   = hFunction;
+
+                TimerHandle timer = TimerHandle.this;
+                timer.register(this);
+                if (timer.isRunning())
                     {
                     start();
                     }
                 }
-            }
 
-        /**
-         * Called when the alarm is triggered.
-         */
-        public void run()
-            {
-            synchronized (this)
+            /**
+             * Start the alarm maturing on a running timer.
+             */
+            public synchronized void start()
                 {
-                if (m_fDead)
+                if (m_fDead || m_trigger != null)
                     {
                     return;
                     }
-                m_fDead   = true;
-                m_trigger = null;
+
+                m_cNanosStart = System.nanoTime();
+                m_trigger     = new Trigger();
+                try
+                    {
+                    TIMER.schedule(m_trigger, Math.max(1, (f_cNanosDelay - m_cNanosBurnt) / NANOS_PER_MILLI));
+                    }
+                catch (Exception e)
+                    {
+                    System.err.println("Exception in xNanosTimer.Alarm.start(): " + e);
+                    }
                 }
 
-            xNanosTimer.this.unregister(this);
-            f_context.callLater(f_hFunction, Utils.OBJECTS_NONE);
-            }
-
-        /**
-         * Called when the alarm is canceled.
-         */
-        public void cancel()
-            {
-            synchronized (this)
+            /**
+             * Stop the alarm from maturing.
+             */
+            public synchronized void stop()
                 {
                 if (m_fDead)
                     {
                     return;
                     }
-                m_fDead = true;
 
-                Trigger trigger = m_trigger;
-                if (trigger != null)
+                if (m_trigger != null)
                     {
+                    m_trigger.cancel();
                     m_trigger = null;
-                    try
+
+                    long cNanosAdd = System.nanoTime() - m_cNanosStart;
+                    if (cNanosAdd > 0)
                         {
-                        trigger.cancel();
+                        m_cNanosBurnt += cNanosAdd;
                         }
-                    catch (Exception e)
+                    m_cNanosStart = 0;
+                    }
+                }
+
+            /**
+             * Reset the alarm maturity back to its initial state.
+             */
+            public synchronized void reset()
+                {
+                if (m_fDead)
+                    {
+                    return;
+                    }
+
+                if (m_trigger != null)
+                    {
+                    m_trigger.cancel();
+                    m_trigger = null;
+
+                    m_cNanosStart = 0;
+                    m_cNanosBurnt = 0;
+
+                    if (TimerHandle.this.isRunning())
                         {
-                        System.err.println("Exception in xNanosTimer.Alarm.cancel(): " + e);
+                        start();
                         }
                     }
                 }
 
-            xNanosTimer.this.unregister(this);
-            }
-
-        @Override
-        public int hashCode()
-            {
-            return f_id;
-            }
-
-        @Override
-        public boolean equals(Object obj)
-            {
-            return this == obj;
-            }
-
-        /**
-         * A TimerTask that is scheduled on the Java timer and used to trigger the alarm.
-         */
-        protected class Trigger
-                extends TimerTask
-            {
-            @Override
+            /**
+             * Called when the alarm is triggered.
+             */
             public void run()
                 {
-                Alarm.this.run();
+                synchronized (this)
+                    {
+                    if (m_fDead)
+                        {
+                        return;
+                        }
+                    m_fDead   = true;
+                    m_trigger = null;
+                    }
+
+                TimerHandle.this.unregister(this);
+                TimerHandle.this.m_context.callLater(f_hFunction, Utils.OBJECTS_NONE);
                 }
+
+            /**
+             * Called when the alarm is canceled.
+             */
+            public void cancel()
+                {
+                synchronized (this)
+                    {
+                    if (m_fDead)
+                        {
+                        return;
+                        }
+                    m_fDead = true;
+
+                    Trigger trigger = m_trigger;
+                    if (trigger != null)
+                        {
+                        m_trigger = null;
+                        try
+                            {
+                            trigger.cancel();
+                            }
+                        catch (Exception e)
+                            {
+                            System.err.println("Exception in xNanosTimer.Alarm.cancel(): " + e);
+                            }
+                        }
+                    }
+
+                TimerHandle.this.unregister(this);
+                }
+
+            @Override
+            public int hashCode()
+                {
+                return f_id;
+                }
+
+            @Override
+            public boolean equals(Object obj)
+                {
+                return this == obj;
+                }
+
+            /**
+             * A TimerTask that is scheduled on the Java timer and used to trigger the alarm.
+             */
+            protected class Trigger
+                    extends TimerTask
+                {
+                @Override
+                public void run()
+                    {
+                    Alarm.this.run();
+                    }
+                }
+
+            private final    FunctionHandle f_hFunction;
+            private final    int            f_id;
+            private final    long           f_cNanosDelay;
+            private          long           m_cNanosStart;
+            private          long           m_cNanosBurnt;
+            private volatile boolean        m_fDead;
+            private volatile Trigger        m_trigger;
             }
 
-        private final    ServiceContext f_context;
-        private final    FunctionHandle f_hFunction;
-        private final    int            f_id;
-        private final    long           f_cNanosDelay;
-        private          long           m_cNanosStart;
-        private          long           m_cNanosBurnt;
-        private volatile boolean        m_fDead;
-        private volatile Trigger        m_trigger;
-        }
+        // ----- data fields ---------------------------------------------------------------------
 
-    void register(Alarm alarm)
-        {
-        boolean fRegistered;
-        synchronized (f_setAlarms)
-            {
-            fRegistered = f_setAlarms.add(alarm);
-            }
-        assert fRegistered;
-        }
+        /**
+         * The number of nanoseconds previously accumulated before the timer was paused.
+         */
+        private long m_cNanosPrevSum;
 
-    void unregister(Alarm alarm)
-        {
-        boolean fUnregistered;
-        synchronized (f_setAlarms)
-            {
-            fUnregistered = f_setAlarms.remove(alarm);
-            }
-        assert fUnregistered;
-        }
+        /**
+         * The value (in nanos) when the timer was started, or 0 if the timer is paused.
+         */
+        private volatile long m_cNanosStart;
 
+        /**
+         * The registered alarms.
+         */
+        private ListSet<Alarm> f_setAlarms = new ListSet<>();
+        }
 
     // ----- constants -----------------------------------------------------------------------------
 
@@ -465,20 +506,5 @@ public class xNanosTimer
     /**
      * Cached Duration class.
      */
-    private TypeComposition m_clzDuration;
-
-    /**
-     * The number of nanoseconds previously accumulated before the timer was paused.
-     */
-    private long m_cNanosPrevSum;
-
-    /**
-     * The value (in nanos) when the timer was started, or 0 if the timer is paused.
-     */
-    private volatile long m_cNanosStart;
-
-    /**
-     * The registered alarms.
-     */
-    private ListSet<Alarm> f_setAlarms = new ListSet<>();
+    private static TypeComposition s_clzDuration;
     }

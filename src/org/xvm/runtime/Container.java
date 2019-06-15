@@ -28,7 +28,12 @@ import org.xvm.asm.constants.VersionConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
+import org.xvm.runtime.template._native.xLocalClock;
+import org.xvm.runtime.template._native.xNanosTimer;
+import org.xvm.runtime.template._native.xTerminalConsole;
+
 import org.xvm.runtime.template.xService;
+import org.xvm.runtime.template.xService.ServiceHandle;
 import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xFunction.NativeFunctionHandle;
@@ -76,7 +81,7 @@ public class Container
         m_templateModule = f_templates.getTemplate(f_idModule);
 
         m_contextMain = createServiceContext(f_sAppName, structModule);
-        xService.makeHandle(m_contextMain,
+        xService.INSTANCE.createServiceHandle(m_contextMain,
             xService.INSTANCE.getCanonicalClass(),
             xService.INSTANCE.getCanonicalType());
 
@@ -155,58 +160,48 @@ public class Container
     protected void initResources()
         {
         // +++ LocalClock
-        ClassTemplate templateClock = f_templates.getTemplate("Clock");
-        if (templateClock != null)
-            {
-            TypeConstant typeClock = templateClock.getCanonicalType();
+        TypeConstant typeClock = f_templates.getTemplate("Clock").getCanonicalType();
 
-            f_mapResources.put(new InjectionKey("clock"     , typeClock), this::ensureDefaultClock);
-            f_mapResources.put(new InjectionKey("localClock", typeClock), this::ensureLocalClock);
-            f_mapResources.put(new InjectionKey("utcClock"  , typeClock), this::ensureUTCClock);
-            }
+        f_mapResources.put(new InjectionKey("clock"     , typeClock), this::ensureDefaultClock);
+        f_mapResources.put(new InjectionKey("localClock", typeClock), this::ensureLocalClock);
+        f_mapResources.put(new InjectionKey("utcClock"  , typeClock), this::ensureUTCClock);
 
         // +++ NanosTimer
-        ClassTemplate templateTimer = f_templates.getTemplate("Timer");
-        if (templateTimer != null)
+        xNanosTimer templateRTTimer = (xNanosTimer) f_templates.getTemplate("_native.NanosTimer");
+        if (templateRTTimer != null)
             {
-            TypeConstant typeTimer = templateTimer.getCanonicalType();
+            TypeConstant typeTimer = f_templates.getTemplate("Timer").getCanonicalType();
 
-            ClassTemplate templateRealTimeTimer = f_templates.getTemplate("_native.NanosTimer");
             Function<Frame, ObjectHandle> supplierTimer = (frame) ->
-                xService.makeHandle(createServiceContext("Timer", f_moduleRoot),
-                        templateRealTimeTimer.getCanonicalClass(), typeTimer);
+                templateRTTimer.createServiceHandle(
+                    createServiceContext("Timer", f_moduleRoot),
+                    templateRTTimer.getCanonicalClass(), typeTimer);
             f_mapResources.put(new InjectionKey("timer", typeTimer), supplierTimer);
             }
 
         // +++ Console
-        ClassTemplate templateConsole = f_templates.getTemplate("io.Console");
-        if (templateConsole != null)
+        xTerminalConsole templateRTConsole = (xTerminalConsole) f_templates.getTemplate("_native.TerminalConsole");
+        if (templateRTConsole != null)
             {
-            TypeConstant typeConsole = templateConsole.getCanonicalType();
-
-            ClassTemplate templateRTConsole = f_templates.getTemplate("_native.TerminalConsole");
+            TypeConstant typeConsole = f_templates.getTemplate("io.Console").getCanonicalType();
 
             Function<Frame, ObjectHandle> supplierConsole = (frame) ->
-                xService.makeHandle(createServiceContext("Console", f_moduleRoot),
+                templateRTConsole.createServiceHandle(
+                    createServiceContext("Console", f_moduleRoot),
                     templateRTConsole.getCanonicalClass(), typeConsole);
 
             f_mapResources.put(new InjectionKey("console", typeConsole), supplierConsole);
             }
 
-        // +++ OSFileStore
-        ClassTemplate templateFileStore = f_templates.getTemplate("fs.FileStore");
-        ClassTemplate templateDirectory = f_templates.getTemplate("fs.Directory");
-        if (templateFileStore != null && templateDirectory != null)
-            {
-            TypeConstant typeFileStore = templateFileStore.getCanonicalType();
-            TypeConstant typeDirectory = templateDirectory.getCanonicalType();
+        // +++ OSFileStore etc.
+        TypeConstant typeFileStore = f_templates.getTemplate("fs.FileStore").getCanonicalType();
+        TypeConstant typeDirectory = f_templates.getTemplate("fs.Directory").getCanonicalType();
 
-            f_mapResources.put(new InjectionKey("storage", typeFileStore), this::ensureFileStore);
-            f_mapResources.put(new InjectionKey("rootDir", typeDirectory), this::ensureRootDir);
-            f_mapResources.put(new InjectionKey("homeDir", typeDirectory), this::ensureHomeDir);
-            f_mapResources.put(new InjectionKey("curDir" , typeDirectory), this::ensureCurDir);
-            f_mapResources.put(new InjectionKey("tmpDir" , typeDirectory), this::ensureTmpDir);
-            }
+        f_mapResources.put(new InjectionKey("storage", typeFileStore), this::ensureFileStore);
+        f_mapResources.put(new InjectionKey("rootDir", typeDirectory), this::ensureRootDir);
+        f_mapResources.put(new InjectionKey("homeDir", typeDirectory), this::ensureHomeDir);
+        f_mapResources.put(new InjectionKey("curDir" , typeDirectory), this::ensureCurDir);
+        f_mapResources.put(new InjectionKey("tmpDir" , typeDirectory), this::ensureTmpDir);
         }
 
     protected ObjectHandle ensureDefaultClock(Frame frame)
@@ -220,14 +215,13 @@ public class Container
         ObjectHandle hClock = m_hLocalClock;
         if (hClock == null)
             {
-            ClassTemplate templateClock = f_templates.getTemplate("Clock");
-            if (templateClock != null)
+            xLocalClock templateRTClock = (xLocalClock) f_templates.getTemplate("_native.LocalClock");
+            if (templateRTClock != null)
                 {
-                TypeConstant typeClock = templateClock.getCanonicalType();
-                ClassTemplate templateRealTimeClock = f_templates.getTemplate("_native.LocalClock");
-                m_hLocalClock = hClock = xService.makeHandle(createServiceContext("LocalClock",
-                        f_moduleRoot), templateRealTimeClock.getCanonicalClass(), typeClock);
-
+                TypeConstant typeClock = f_templates.getTemplate("Clock").getCanonicalType();
+                m_hLocalClock = hClock = templateRTClock.createServiceHandle(
+                    createServiceContext("LocalClock", f_moduleRoot),
+                    templateRTClock.getCanonicalClass(), typeClock);
                 }
             }
 
@@ -480,6 +474,12 @@ public class Container
         for (ServiceContext context : f_mapServices.keySet())
             {
             if (context.isContended())
+                {
+                return false;
+                }
+
+            ServiceHandle hService = context.getService();
+            if (hService != null && !hService.isIdle())
                 {
                 return false;
                 }

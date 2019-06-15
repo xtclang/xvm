@@ -11,7 +11,6 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -27,6 +26,7 @@ import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xFunction.NativeFunctionHandle;
 import org.xvm.runtime.template.xInt64;
 import org.xvm.runtime.template.xNullable;
+import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xUInt128;
 
 
@@ -34,13 +34,13 @@ import org.xvm.runtime.template.xUInt128;
  * Native implementation of a simple wall clock using Java's millisecond-resolution "System" clock.
  */
 public class xLocalClock
-        extends ClassTemplate
+        extends xService
     {
     public static Timer TIMER = new Timer("Ecstasy:LocalClock", true);
 
     public xLocalClock(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(templates, structure, false);
         }
 
     @Override
@@ -52,7 +52,7 @@ public class xLocalClock
         }
 
     @Override
-    protected int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         switch (sPropName)
             {
@@ -107,6 +107,7 @@ public class xLocalClock
         LongLong llNow = new LongLong(System.currentTimeMillis()).mul(PICOS_PER_MILLI_LL);
         hDateTime.setField("epochPicos", xUInt128.INSTANCE.makeLongLong(llNow));
         hDateTime.setField("timezone", timezone());
+        hDateTime.makeImmutable();
 
         return hDateTime;
         }
@@ -132,6 +133,7 @@ public class xLocalClock
             hTimeZone.setField("picos", xInt64.makeHandle(lOffset));
             hTimeZone.setField("name", xNullable.NULL);
             hTimeZone.setField("rules", new GenericArrayHandle(clzRuleArray, Utils.OBJECTS_NONE, xArray.Mutability.Mutable));
+            hTimeZone.makeImmutable();
             }
 
         return hTimeZone;
