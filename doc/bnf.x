@@ -1009,7 +1009,6 @@ NonBiTypeExpression
     NonBiTypeExpression ArrayDims
     NonBiTypeExpression ArrayIndexes             # ArrayIndexes is not consumed by this construction
     NonBiTypeExpression "..."
-    "conditional" NonBiTypeExpression
     "immutable" NonBiTypeExpression
 
 AnnotatedTypeExpression
