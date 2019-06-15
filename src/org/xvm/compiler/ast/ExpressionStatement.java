@@ -93,15 +93,15 @@ public class ExpressionStatement
         }
 
     @Override
-    protected boolean allowsShortCircuit(Expression exprChild)
+    protected boolean allowsShortCircuit(AstNode nodeChild)
         {
-        return exprChild == expr;
+        return nodeChild == expr;
         }
 
     @Override
-    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
+    protected Label getShortCircuitLabel(Context ctx, AstNode nodeChild)
         {
-        assert exprChild == expr;
+        assert nodeChild == expr;
         return getEndLabel();
         }
 

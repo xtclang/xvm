@@ -23,7 +23,7 @@ import static org.xvm.util.Handy.indentLines;
  * An "if" statement.
  */
 public class IfStatement
-        extends Statement
+        extends ConditionalStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -34,8 +34,7 @@ public class IfStatement
 
     public IfStatement(Token keyword, List<AstNode> conds, StatementBlock stmtThen, Statement stmtElse)
         {
-        this.keyword  = keyword;
-        this.conds    = conds;
+        super(keyword, conds);
         this.stmtThen = stmtThen;
         this.stmtElse = stmtElse;
         }
@@ -44,50 +43,9 @@ public class IfStatement
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public long getStartPosition()
-        {
-        return keyword.getStartPosition();
-        }
-
-    @Override
     public long getEndPosition()
         {
         return stmtElse == null ? stmtThen.getEndPosition() : stmtElse.getEndPosition();
-        }
-
-    /**
-     * @return the number of conditions
-     */
-    public int getConditionCount()
-        {
-        return conds.size();
-        }
-
-    /**
-     * @param i  a value between 0 and {@link #getConditionCount()}-1
-     *
-     * @return the condition, which is either an Expression or an AssignmentStatement
-     */
-    public AstNode getCondition(int i)
-        {
-        return conds.get(i);
-        }
-
-    /**
-     * @param exprChild  an expression that is a child of this statement
-     *
-     * @return the index of the expression in the list of conditions within this statement, or -1
-     */
-    public int findCondition(Expression exprChild)
-        {
-        for (int i = 0, c = getConditionCount(); i < c; ++i)
-            {
-            if (conds.get(i) == exprChild)
-                {
-                return i;
-                }
-            }
-        return -1;
         }
 
     /**
@@ -103,30 +61,9 @@ public class IfStatement
         return label;
         }
 
-    private int getLabelId()
-        {
-        int n = m_nLabel;
-        if (n == 0)
-            {
-            m_nLabel = n = ++s_nLabelCounter;
-            }
-        return n;
-        }
-
     @Override
-    protected boolean allowsShortCircuit(Expression exprChild)
+    protected Label getShortCircuitLabel(Context ctx, AstNode nodeChild)
         {
-        // only expressions are in the conditions
-        assert findCondition(exprChild) >= 0;
-
-        return true;
-        }
-
-    @Override
-    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
-        {
-        assert findCondition(exprChild) >= 0;
-        
         // TODO snap-shot the assignment-info-delta
         return getElseLabel();
         }
@@ -391,13 +328,9 @@ public class IfStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token         keyword;
-    protected List<AstNode> conds;
     protected Statement     stmtThen;
     protected Statement     stmtElse;
 
-    private static int s_nLabelCounter;
-    private transient int   m_nLabel;
     private transient Label m_labelElse;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(IfStatement.class, "conds", "stmtThen", "stmtElse");

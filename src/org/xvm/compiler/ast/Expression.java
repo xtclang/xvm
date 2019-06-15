@@ -3,7 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.util.Arrays;
 
-import java.util.Map;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -1093,13 +1092,13 @@ public abstract class Expression
         }
 
     @Override
-    protected boolean allowsShortCircuit(Expression exprChild)
+    protected boolean allowsShortCircuit(AstNode nodeChild)
         {
         return getParent().allowsShortCircuit(this);
         }
 
     @Override
-    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
+    protected Label getShortCircuitLabel(Context ctx, AstNode nodeChild)
         {
         // by default, the expression passes the request to its parent AST node
         return getParent().getShortCircuitLabel(ctx, this);

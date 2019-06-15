@@ -305,11 +305,28 @@ public class AssignmentStatement
         }
 
     @Override
-    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
+    protected boolean allowsShortCircuit(AstNode nodeChild)
         {
-        return getParent() instanceof ForEachStatement // TODO
-                ? getParent().getShortCircuitLabel(ctx, exprChild)
-                : super.getShortCircuitLabel(ctx, exprChild);
+        // there are a few reasons to disallow short-circuiting, such as when we have a declaration
+        // with an assignment outside of a conditional
+        // if (String s := a?.b())  // ok, conditional inside short-able statement
+        // s = a?.b();              // ok, assignment with no declaration
+        // String s = a?.b();       // error: pointless, thus unlikely what the dev wanted
+        AstNode parent = getParent();
+        if (parent instanceof ConditionalStatement)
+            {
+            return parent.allowsShortCircuit(this);
+            }
+
+        return !hasDeclarations();
+        }
+
+    @Override
+    protected Label getShortCircuitLabel(Context ctx, AstNode nodeChild)
+        {
+        return getParent() instanceof ConditionalStatement
+                ? getParent().getShortCircuitLabel(ctx, this)
+                : super.getShortCircuitLabel(ctx, nodeChild);
         }
 
     @Override

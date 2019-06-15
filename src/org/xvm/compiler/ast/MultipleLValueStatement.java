@@ -88,19 +88,19 @@ public class MultipleLValueStatement
         }
 
     @Override
-    protected boolean allowsShortCircuit(Expression exprChild)
+    protected boolean allowsShortCircuit(AstNode nodeChild)
         {
-        assert findChild(exprChild) >= 0;
+        assert findChild(nodeChild) >= 0;
         return true;
         }
 
     @Override
-    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
+    protected Label getShortCircuitLabel(Context ctx, AstNode nodeChild)
         {
-        int iPos = findChild(exprChild);
+        int iPos = findChild(nodeChild);
         if (iPos < 0)
             {
-            throw new IllegalStateException("unknown child: " + exprChild);
+            throw new IllegalStateException("unknown child: " + nodeChild);
             }
 
         return ensureShortCircuitLabel(iPos);
@@ -502,23 +502,18 @@ public class MultipleLValueStatement
             }
 
         @Override
-        protected boolean allowsShortCircuit(Expression exprChild)
+        protected boolean allowsShortCircuit(AstNode nodeChild)
             {
-            if (findChild(exprChild) < 0)
-                {
-                throw new IllegalStateException("unknown child: " + exprChild);
-                }
-
-            return true;
+            return nodeChild instanceof Expression && findChild((Expression) nodeChild) >= 0;
             }
 
         @Override
-        protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
+        protected Label getShortCircuitLabel(Context ctx, AstNode nodeChild)
             {
-            int iPos = findChild(exprChild);
+            int iPos = nodeChild instanceof Expression ? findChild((Expression) nodeChild) : -1;
             if (iPos < 0)
                 {
-                throw new IllegalStateException("unknown child: " + exprChild);
+                throw new IllegalStateException("unknown child: " + nodeChild);
                 }
 
             return MultipleLValueStatement.this.ensureShortCircuitLabel(iPos);
