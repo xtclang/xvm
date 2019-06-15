@@ -468,11 +468,11 @@ public abstract class AstNode
     /**
      * Test if the specified child is allowed to short-circuit.
      *
-     * @param exprChild  an expression that is a child of this node
+     * @param nodeChild  an AstNode (typically, an expression) that is a child of this node
      *
      * @return true iff the child is allowed to short-circuit
      */
-    protected boolean allowsShortCircuit(Expression exprChild)
+    protected boolean allowsShortCircuit(AstNode nodeChild)
         {
         return false;
         }
@@ -482,13 +482,13 @@ public abstract class AstNode
      * called during validation by a child that needs a ground.
      *
      * @param ctx        the validating context
-     * @param exprChild  the child that is requesting the label
+     * @param nodeChild  the child that is requesting the label
      *
      * @return the label to jump to when the expression short-circuits.
      */
-    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
+    protected Label getShortCircuitLabel(Context ctx, AstNode nodeChild)
         {
-        throw new IllegalStateException(this.getClass().getName());
+        throw new IllegalStateException("no short circuit label for: " + this.getClass().getSimpleName());
         }
 
     /**

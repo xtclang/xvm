@@ -36,7 +36,7 @@ import static org.xvm.util.Handy.indentLines;
  * TODO lots of short-circuit support. for expr condition, it goes to the for statement's exit label. for init & update, the short-circuit just advances to next.
  */
 public class ForStatement
-        extends Statement
+        extends ConditionalStatement
         implements LabelAble
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -48,50 +48,14 @@ public class ForStatement
             List<Statement> update,
             StatementBlock  block)
         {
-        this.keyword = keyword;
-        this.init    = init   == null ? Collections.EMPTY_LIST : init;
-        this.conds   = conds  == null ? Collections.EMPTY_LIST : conds;
-        this.update  = update == null ? Collections.EMPTY_LIST : update;
+        super(keyword, conds);
+        this.init    = init   == null ? Collections.emptyList() : init;
+        this.update  = update == null ? Collections.emptyList() : update;
         this.block   = block;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
-
-    /**
-     * @return the number of conditions
-     */
-    public int getConditionCount()
-        {
-        return conds.size();
-        }
-
-    /**
-     * @param i  a value between 0 and {@link #getConditionCount()}-1
-     *
-     * @return the condition, which is either an Expression or an AssignmentStatement
-     */
-    public AstNode getCondition(int i)
-        {
-        return conds.get(i);
-        }
-
-    /**
-     * @param exprChild  an expression (or AssignmentStatement) that is a child of this statement
-     *
-     * @return the index of the expression in the list of conditions within this statement, or -1
-     */
-    public int findCondition(AstNode exprChild)
-        {
-        for (int i = 0, c = getConditionCount(); i < c; ++i)
-            {
-            if (conds.get(i) == exprChild)
-                {
-                return i;
-                }
-            }
-        return -1;
-        }
 
     @Override
     public boolean isNaturalGotoStatementTarget()
@@ -105,10 +69,10 @@ public class ForStatement
         Context ctxDest = getValidationContext();
         assert ctxDest != null;
 
-        // generate a delta of assignment information for the long-jump
+        // generate a delta of assignment information for the jump
         Map<String, Assignment> mapAsn = ctxOrigin.prepareJump(ctxDest);
 
-        // record the long-jump that landed on this statement by recording its assignment impact
+        // record the jump that landed on this statement by recording its assignment impact
         if (m_listContinues == null)
             {
             m_listContinues = new ArrayList<>();
@@ -138,22 +102,6 @@ public class ForStatement
             m_labelContinue = label = new Label("continue_for_" + getLabelId());
             }
         return label;
-        }
-
-    private int getLabelId()
-        {
-        int n = m_nLabel;
-        if (n == 0)
-            {
-            m_nLabel = n = ++s_nLabelCounter;
-            }
-        return n;
-        }
-
-    @Override
-    public long getStartPosition()
-        {
-        return keyword.getStartPosition();
         }
 
     @Override
@@ -211,22 +159,6 @@ public class ForStatement
 
 
     // ----- compilation ---------------------------------------------------------------------------
-
-    @Override
-    protected boolean allowsShortCircuit(Expression exprChild)
-        {
-        // only short-circuitable expressions are in the conditions
-        return findCondition(exprChild) >= 0;
-        }
-
-    @Override
-    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
-        {
-        assert findCondition(exprChild) >= 0;
-
-        // TODO snap-shot the assignment-info-delta
-        return getEndLabel();
-        }
 
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
@@ -541,14 +473,10 @@ public class ForStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token           keyword;
     protected List<Statement> init;
-    protected List<AstNode>   conds;
     protected List<Statement> update;
     protected StatementBlock  block;
 
-    private static int s_nLabelCounter;
-    private transient int   m_nLabel;
     private transient Label m_labelContinue;
 
     private transient Context       m_ctxLabelVars;
@@ -557,7 +485,7 @@ public class ForStatement
     private transient Register      m_regCount;
 
     /**
-     * Generally null, unless there is a "continue" that long-jumps to this statement.
+     * Generally null, unless there is a "continue" that jumps to this statement.
      */
     private transient List<Map<String, Assignment>> m_listContinues;
 

@@ -83,6 +83,13 @@ public class ReturnStatement
 
     // ----- compilation ---------------------------------------------------------------------------
 
+
+    @Override
+    protected boolean allowsShortCircuit(AstNode nodeChild)
+        {
+        return true;
+        }
+
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {

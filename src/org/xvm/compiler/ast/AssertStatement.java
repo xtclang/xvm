@@ -185,7 +185,7 @@ public class AssertStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean allowsShortCircuit(Expression exprChild)
+    protected boolean allowsShortCircuit(AstNode nodeChild)
         {
         return true;
         }

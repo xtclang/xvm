@@ -35,7 +35,7 @@ import static org.xvm.util.Handy.indentLines;
  * A "while" or "do while" statement.
  */
 public class WhileStatement
-        extends Statement
+        extends ConditionalStatement
         implements LabelAble
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -47,8 +47,7 @@ public class WhileStatement
 
     public WhileStatement(Token keyword, List<AstNode> conds, StatementBlock block, long lEndPos)
         {
-        this.keyword = keyword;
-        this.conds   = conds;
+        super(keyword, conds);
         this.block   = block;
         this.lEndPos = lEndPos;
         }
@@ -76,10 +75,10 @@ public class WhileStatement
         Context ctxDest = getValidationContext();
         assert ctxDest != null;
 
-        // generate a delta of assignment information for the long-jump
+        // generate a delta of assignment information for the jump
         Map<String, Assignment> mapAsn = ctxOrigin.prepareJump(ctxDest);
 
-        // record the long-jump that landed on this statement by recording its assignment impact
+        // record the jump that landed on this statement by recording its assignment impact
         if (m_listContinues == null)
             {
             m_listContinues = new ArrayList<>();
@@ -87,15 +86,6 @@ public class WhileStatement
         m_listContinues.add(mapAsn);
 
         return getContinueLabel();
-        }
-
-    /**
-     * @return true iff there is a continue label for this statement, which indicates that it has
-     *         already been requested at least one time
-     */
-    public boolean hasContinueLabel()
-        {
-        return m_labelContinue != null;
         }
 
     /**
@@ -119,57 +109,6 @@ public class WhileStatement
             m_labelRepeat = label = new Label("repeat_while_" + getLabelId());
             }
         return label;
-        }
-
-    private int getLabelId()
-        {
-        int n = m_nLabel;
-        if (n == 0)
-            {
-            m_nLabel = n = ++s_nLabelCounter;
-            }
-        return n;
-        }
-
-    /**
-     * @return the number of conditions
-     */
-    public int getConditionCount()
-        {
-        return conds.size();
-        }
-
-    /**
-     * @param i  a value between 0 and {@link #getConditionCount()}-1
-     *
-     * @return the condition, which is either an Expression or an AssignmentStatement
-     */
-    public AstNode getCondition(int i)
-        {
-        return conds.get(i);
-        }
-
-    /**
-     * @param exprChild  an expression that is a child of this statement
-     *
-     * @return the index of the expression in the list of conditions within this statement, or -1
-     */
-    public int findCondition(Expression exprChild)
-        {
-        for (int i = 0, c = getConditionCount(); i < c; ++i)
-            {
-            if (conds.get(i) == exprChild)
-                {
-                return i;
-                }
-            }
-        return -1;
-        }
-
-    @Override
-    public long getStartPosition()
-        {
-        return keyword.getStartPosition();
         }
 
     @Override
@@ -227,24 +166,6 @@ public class WhileStatement
 
 
     // ----- compilation ---------------------------------------------------------------------------
-
-    @Override
-    protected boolean allowsShortCircuit(Expression exprChild)
-        {
-        // only expressions are in the conditions
-        assert findCondition(exprChild) >= 0;
-
-        return true;
-        }
-
-    @Override
-    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
-        {
-        assert findCondition(exprChild) >= 0;
-
-        // TODO snap-shot the assignment-info-delta
-        return getEndLabel();
-        }
 
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
@@ -701,13 +622,9 @@ public class WhileStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token          keyword;
-    protected List<AstNode>  conds;
     protected StatementBlock block;
     protected long           lEndPos;
 
-    private static    int   s_nLabelCounter;
-    private transient int   m_nLabel;
     private transient Label m_labelContinue;
     private transient Label m_labelRepeat;
 
@@ -717,7 +634,7 @@ public class WhileStatement
     private transient Register      m_regCount;
 
     /**
-     * Generally null, unless there is a "continue" that long-jumps to this statement.
+     * Generally null, unless there is a "continue" that jumps to this statement.
      */
     private transient List<Map<String, Assignment>> m_listContinues;
 

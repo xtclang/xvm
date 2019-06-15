@@ -872,11 +872,9 @@ public class InvocationExpression
         }
 
     @Override
-    protected boolean allowsShortCircuit(Expression exprChild)
+    protected boolean allowsShortCircuit(AstNode nodeChild)
         {
-        // invocation does not allow the arguments to short circuit
-        // REVIEW with GG - rationale for allowing arguments to short-circuit (???)
-        return exprChild == expr || args.contains(exprChild);
+        return nodeChild == expr || args.contains(nodeChild);
         }
 
     @Override

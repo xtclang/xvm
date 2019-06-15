@@ -68,10 +68,10 @@ public abstract class Statement
         Context ctxDest = getValidationContext();
         assert ctxDest != null;
 
-        // generate a delta of assignment information for the long-jump
+        // generate a delta of assignment information for the jump
         Map<String, Assignment> mapAsn = ctxOrigin.prepareJump(ctxDest);
 
-        // record the long-jump that landed on this statement by recording its assignment impact
+        // record the jump that landed on this statement by recording its assignment impact
         if (m_listBreaks == null)
             {
             m_listBreaks = new ArrayList<>();
@@ -93,19 +93,16 @@ public abstract class Statement
         throw new IllegalStateException();
         }
 
-    // REVIEW need to think through "any statement allows expression to short circuit by default" decision
-    // TODO how to clean up the stack (A_STACK register) when short-circuit occurs?
-
     @Override
-    protected boolean allowsShortCircuit(Expression exprChild)
+    protected Label getShortCircuitLabel(Context ctx, AstNode nodeChild)
         {
-        return true;
-        }
+        assert allowsShortCircuit(nodeChild);
 
-    @Override
-    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
-        {
-        assert allowsShortCircuit(exprChild);
+        // save off the definite assignment contributions from the point of the short circuit
+        // TODO
+
+        // TODO how to clean up the stack (A_STACK register) when short-circuit occurs?
+
         return getEndLabel();
         }
 
@@ -227,7 +224,7 @@ public abstract class Statement
      */
     private transient Context m_ctx;
     /**
-     * Generally null, unless there is a break that long-jumps to this statement's exit label.
+     * Generally null, unless there is a break that jumps to this statement's exit label.
      */
     private transient List<Map<String, Assignment>> m_listBreaks;
     }

@@ -27,14 +27,13 @@ import static org.xvm.util.Handy.indentLines;
  * A "switch" statement.
  */
 public class SwitchStatement
-        extends Statement
+        extends ConditionalStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public SwitchStatement(Token keyword, List<AstNode> cond, StatementBlock block)
+    public SwitchStatement(Token keyword, List<AstNode> conds, StatementBlock block)
         {
-        this.keyword = keyword;
-        this.cond    = cond;
+        super(keyword, conds);
         this.block   = block;
         }
 
@@ -64,18 +63,12 @@ public class SwitchStatement
             m_listContinues = new ArrayList<>();
             }
 
-        // record the long-jump that will either fall-through to the next case group or (if this is
+        // record the jump that will either fall-through to the next case group or (if this is
         // the last case group) break out of this switch statement by recording its assignment
         // impact (a delta of assignment information)
         m_listContinues.add(ctxOrigin.prepareJump(ctxDest));
 
         return m_labelContinue;
-        }
-
-    @Override
-    public long getStartPosition()
-        {
-        return keyword.getStartPosition();
         }
 
     @Override
@@ -90,20 +83,6 @@ public class SwitchStatement
         return CHILD_FIELDS;
         }
 
-    @Override
-    protected boolean allowsShortCircuit(Expression exprChild)
-        {
-        // the expressions are in the condition portion
-        return true;
-        }
-
-    @Override
-    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
-        {
-        // REVIEW definite assignment implications
-        return getEndLabel();
-        }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -115,7 +94,7 @@ public class SwitchStatement
 
         // validate the switch condition
         m_casemgr = new CaseManager<CaseGroup>(this);
-        fValid   &= m_casemgr.validateCondition(ctx, cond, errs);
+        fValid   &= m_casemgr.validateCondition(ctx, conds, errs);
 
         // the case manager enters a new context if the switch condition declares variables
         Context ctxCond = m_casemgr.getSwitchContext();
@@ -375,13 +354,13 @@ public class SwitchStatement
         StringBuilder sb = new StringBuilder();
         sb.append("switch (");
 
-        if (cond != null)
+        if (conds != null)
             {
-            sb.append(cond.get(0));
-            for (int i = 1, c = cond.size(); i < c; ++i)
+            sb.append(conds.get(0));
+            for (int i = 1, c = conds.size(); i < c; ++i)
                 {
                 sb.append(", ")
-                  .append(cond.get(i));
+                  .append(conds.get(i));
                 }
             }
 
@@ -424,8 +403,6 @@ public class SwitchStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token          keyword;
-    protected List<AstNode>  cond;
     protected StatementBlock block;
 
     /**
@@ -440,14 +417,17 @@ public class SwitchStatement
     private transient List<CaseGroup> m_listGroups = new ArrayList<>();
 
     /**
-     * A list of continuation labels, corresponding to the case groups from the CaseManager.
+     * For a given case group, this is the label that each "continue" statement within that group
+     * will jump to; it's null until the first continue statement is encountered in the group.
      */
     private transient Label m_labelContinue;
 
     /**
-     * A list of continuation labels, corresponding to the case groups from the CaseManager.
+     * For a given case group, this collects the assignment information that comes from each
+     * "continue" statement within that group; it's null until the first continue statement is
+     * encountered in the group.
      */
     private transient List<Map<String, Assignment>> m_listContinues;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchStatement.class, "cond", "block");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchStatement.class, "conds", "block");
     }

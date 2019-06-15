@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -60,20 +61,24 @@ import static org.xvm.util.Handy.indentLines;
  * An "Iterable"-based "for" statement.
  */
 public class ForEachStatement
-        extends Statement
+        extends ConditionalStatement
         implements LabelAble
     {
     // ----- constructors --------------------------------------------------------------------------
 
     public ForEachStatement(Token keyword, AssignmentStatement cond, StatementBlock block)
         {
-        this.keyword = keyword;
-        this.cond    = cond;
-        this.block   = block;
+        super(keyword, new ArrayList<>(Collections.singletonList(cond)));
+        this.block = block;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    public AssignmentStatement getCondition()
+        {
+        return (AssignmentStatement) conds.get(0);
+        }
 
     @Override
     public boolean isNaturalGotoStatementTarget()
@@ -87,10 +92,10 @@ public class ForEachStatement
         Context ctxDest = getValidationContext();
         assert ctxDest != null;
 
-        // generate a delta of assignment information for the long-jump
+        // generate a delta of assignment information for the jump
         Map<String, Assignment> mapAsn = ctxOrigin.prepareJump(ctxDest);
 
-        // record the long-jump that landed on this statement by recording its assignment impact
+        // record the jump that landed on this statement by recording its assignment impact
         if (m_listContinues == null)
             {
             m_listContinues = new ArrayList<>();
@@ -120,16 +125,6 @@ public class ForEachStatement
             m_labelContinue = label = new Label("continue_foreach_" + getLabelId());
             }
         return label;
-        }
-
-    private int getLabelId()
-        {
-        int n = m_nLabel;
-        if (n == 0)
-            {
-            m_nLabel = n = ++s_nLabelCounter;
-            }
-        return n;
         }
 
     /**
@@ -206,12 +201,6 @@ public class ForEachStatement
     private StringConstant toConst(String s)
         {
         return pool().ensureStringConstant(s);
-        }
-
-    @Override
-    public long getStartPosition()
-        {
-        return keyword.getStartPosition();
         }
 
     @Override
@@ -314,18 +303,6 @@ public class ForEachStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean allowsShortCircuit(Expression exprChild)
-        {
-        return true;
-        }
-
-    @Override
-    protected Label getShortCircuitLabel(Context ctx, Expression exprChild)
-        {
-        return getEndLabel();
-        }
-
-    @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
         boolean fValid = true;
@@ -346,6 +323,7 @@ public class ForEachStatement
         //   4) map keys   :  L: for (K key            : container.as(Map<K,T>   )) {...}
         //   5) map entries:  L: for ((K key, T value) : container.as(Map<K,T>   )) {...}
         //   6) iterable   :  L: for (T value          : container.as(Iterable<T>)) {...}
+        AssignmentStatement cond = getCondition();
         assert cond.isForEachCondition();
 
         // validate the LValue declarations and any LValue sub-expressions
@@ -526,7 +504,7 @@ public class ForEachStatement
         code.add(new Enter());
 
         // strip any declarations off of the LValues (we'll handle them separately)
-        for (VariableDeclarationStatement stmt : cond.takeDeclarations())
+        for (VariableDeclarationStatement stmt : getCondition().takeDeclarations())
             {
             fCompletes = stmt.completes(ctx, fCompletes, code, errs);
             }
@@ -1073,7 +1051,7 @@ public class ForEachStatement
 
         sb.append(keyword.getId().TEXT)
           .append(" (")
-          .append(cond)
+          .append(getCondition())
           .append(")\n")
           .append(indentLines(block.toString(), "    "));
 
@@ -1111,12 +1089,8 @@ public class ForEachStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token               keyword;
-    protected AssignmentStatement cond;
-    protected StatementBlock      block;
+    protected StatementBlock        block;
 
-    private static    int           s_nLabelCounter;
-    private transient int           m_nLabel;
     private transient Label         m_labelContinue;
 
     private transient Expression    m_exprLValue;
@@ -1133,9 +1107,9 @@ public class ForEachStatement
     private transient Register      m_regValType;
 
     /**
-     * Generally null, unless there is a "continue" that long-jumps to this statement.
+     * Generally null, unless there is a "continue" that jumps to this statement.
      */
     private transient List<Map<String, Assignment>> m_listContinues;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(ForEachStatement.class, "cond", "block");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(ForEachStatement.class, "conds", "block");
     }
