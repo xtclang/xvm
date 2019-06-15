@@ -136,27 +136,6 @@ interface FileStore
     typedef function void () Cancellable;
 
     /**
-     * Watch a specified path within this FileStore, and report events related to that path.
-     *
-     * @param path   the Path to watch
-     * @param watch  the FileWatcher to invoke when the specified path has a watchable event
-     *
-     * @return a Cancellable object that allows the caller to cancel the watch
-     */
-    Cancellable watch(Path path, FileWatcher watch);
-
-    /**
-     * Watch a specified path and everything under it within this FileStore, and report events
-     * related to that path.
-     *
-     * @param path   the Path to watch
-     * @param watch  the FileWatcher to invoke when the specified path has a watchable event
-     *
-     * @return a Cancellable object that allows the caller to cancel the watch
-     */
-    Cancellable watchRecursively(Path path, FileWatcher watch);
-
-    /**
      * Specifies whether this FileStorage is known to be explicitly read-only.
      */
     @RO Boolean readOnly;

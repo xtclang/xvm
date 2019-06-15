@@ -1,11 +1,21 @@
 package org.xvm.runtime.template._native.fs;
 
 
+import com.sun.nio.file.SensitivityWatchEventModifier;
+
 import java.io.IOException;
 
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
@@ -21,6 +31,8 @@ import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction;
+import org.xvm.runtime.template.xFunction.FunctionHandle;
+import org.xvm.runtime.template.xInt64;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xString;
@@ -50,6 +62,10 @@ public class xOSStorage
         markNativeMethod("createDir", STRING, BOOLEAN);
         markNativeMethod("createFile", STRING, BOOLEAN);
         markNativeMethod("delete", STRING, BOOLEAN);
+        markNativeMethod("watch", STRING, VOID);
+        markNativeMethod("unwatch", STRING, VOID);
+
+        s_methodOnEvent = findMethod("onEvent", null, null);
         }
 
     @Override
@@ -169,6 +185,22 @@ public class xOSStorage
                 return frame.assignValue(iReturn,
                     xBoolean.makeHandle(path.toFile().delete()));
                 }
+
+            case "watch":  // (pathStringDir)
+                {
+                StringHandle hPathStringDir = (StringHandle) hArg;
+
+                Path pathDir = Paths.get(hPathStringDir.getStringValue());
+                try
+                    {
+                    ensureWatchDaemon().register(pathDir, hStorage);
+                    return Op.R_NEXT;
+                    }
+                catch (IOException e)
+                    {
+                    return raisePathException(frame, e, pathDir.toString());
+                    }
+                }
             }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
@@ -227,18 +259,157 @@ public class xOSStorage
 
     // ----- helper methods ------------------------------------------------------------------------
 
+    protected static synchronized WatchServiceDaemon ensureWatchDaemon()
+        {
+        WatchServiceDaemon daemonWatch = s_daemonWatch;
+        if (daemonWatch == null)
+            {
+            try
+                {
+                daemonWatch = s_daemonWatch = new WatchServiceDaemon();
+                daemonWatch.start();
+                }
+            catch (IOException e)
+                {
+                return null;
+                }
+            }
+        return daemonWatch;
+        }
+
     protected int raisePathException(Frame frame, IOException e, String sPath)
         {
         // TODO: how to get the natural Path efficiently from sPath?
         return frame.raiseException(xException.pathException(e.getMessage(), xNullable.NULL));
         }
 
+    protected static class WatchServiceDaemon
+            extends Thread
+        {
+        public WatchServiceDaemon()
+                throws IOException
+            {
+            super("WatchServiceDaemon");
 
+            setDaemon(true);
+
+            f_service    = FileSystems.getDefault().newWatchService();
+            f_mapWatches = new ConcurrentHashMap<>();
+            }
+
+        public void register(Path pathDir, ServiceHandle hStorage)
+                throws IOException
+            {
+            WatchKey key = pathDir.register(
+                f_service,
+                new WatchEvent.Kind[]
+                    {
+                    StandardWatchEventKinds.ENTRY_CREATE,
+                    StandardWatchEventKinds.ENTRY_DELETE,
+                    StandardWatchEventKinds.ENTRY_MODIFY,
+                    },
+                SensitivityWatchEventModifier.HIGH
+                );
+
+            f_mapWatches.put(key, new WatchContext(pathDir, hStorage));
+            }
+
+        @Override
+        public void run()
+            {
+            try
+                {
+                while (true)
+                    {
+                    processKey(f_service.take());
+                    }
+                }
+            catch (InterruptedException e)
+                {
+                // TODO ?
+                }
+            }
+
+        protected void processKey(WatchKey key)
+            {
+            if (key == null)
+                {
+                return;
+                }
+
+            for (WatchEvent event : key.pollEvents())
+                {
+                int iKind = getKindId(event.kind());
+                if (iKind < 0)
+                    {
+                    continue;
+                    }
+
+                WatchContext context = f_mapWatches.get(key);
+
+                Path pathDir      = context.pathDir;
+                Path pathRelative = (Path) event.context();
+                Path pathAbsolute = pathDir.resolve(pathRelative);
+
+                FunctionHandle hfnOnEvent = xFunction.makeHandle(s_methodOnEvent);
+                hfnOnEvent = hfnOnEvent.bind(-1, context.hStorage);
+
+                StringHandle hPathDir  = xString.makeHandle(pathDir.toString());
+                StringHandle hPathNode = xString.makeHandle(pathAbsolute.toString());
+
+                context.hStorage.m_context.callLater(hfnOnEvent, new ObjectHandle[]
+                    {
+                    hPathDir, hPathNode, xBoolean.TRUE, xInt64.makeHandle(iKind)
+                    });
+                }
+            key.reset();
+            }
+
+        /**
+         * @return 0 - for CREATE, 1 - for MODIFY, 2 - for DELETE, -1 for OVERFLOW;
+         *        -2 for anything else
+         */
+        private int getKindId(WatchEvent.Kind kind)
+            {
+            if (kind == StandardWatchEventKinds.ENTRY_CREATE)
+                {
+                return 0;
+                }
+            if (kind == StandardWatchEventKinds.ENTRY_MODIFY)
+                {
+                return 1;
+                }
+            if (kind == StandardWatchEventKinds.ENTRY_DELETE)
+                {
+                return 2;
+                }
+            if (kind == StandardWatchEventKinds.OVERFLOW)
+                {
+                return -1;
+                }
+            return -2;
+            }
+
+        // ----- WatchContext class --------------------------------------------------------------
+
+        private static class WatchContext
+            {
+            public WatchContext(Path pathDir, ServiceHandle hStorage)
+                {
+                this.pathDir  = pathDir;
+                this.hStorage = hStorage;
+                }
+            public final Path          pathDir;
+            public final ServiceHandle hStorage;
+            }
+
+        private final Map<WatchKey, WatchContext> f_mapWatches;
+        private final WatchService                f_service;
+        }
 
     // ----- constants -----------------------------------------------------------------------------
 
+    private static MethodStructure s_methodOnEvent;
 
-
-    // ----- data members --------------------------------------------------------------------------
-
+    private static WatchServiceDaemon s_daemonWatch;
     }

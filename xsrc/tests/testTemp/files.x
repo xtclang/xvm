@@ -2,6 +2,7 @@ module TestFiles.xqiz.it
     {
     import X.fs.Directory;
     import X.fs.File;
+    import X.fs.FileWatcher;
     import X.fs.Path;
     import X.fs.FileStore;
 
@@ -87,15 +88,51 @@ module TestFiles.xqiz.it
         @Inject Directory tmpDir;
         console.println($"tmpDir={tmpDir} modified {tmpDir.modified}");
 
-        File file = tmpDir.fileFor("test.dat");
-        assert !file.exists;
+        @Inject Timer timer;
 
+        FileWatcher watcher = new FileWatcher()
+            {
+            @Override
+            Boolean onEvent(Event event, Directory dir)
+                {
+                console.println($|[{this:service}]: Directory event: \"{event}\" {dir.name}
+                              + $| after {timer.elapsed.secondsTotal} sec
+                                 );
+                return False;
+                }
+
+            @Override
+            Boolean onEvent(Event event, File file)
+                {
+                console.println($|[{this:service}]: File event: \"{event}\" {file.name}
+                              + $| after {timer.elapsed.secondsTotal} sec
+                                 );
+                return False;
+                }
+            };
+
+        File file = tmpDir.fileFor("test.dat");
+
+        function void () cancel = file.watch(watcher);
+
+        console.println($"[{this:service}]: Creating {file.name}");
         file.create();
         assert file.exists;
 
-        file.delete();
-        assert !file.exists;
+        timer.schedule(Duration.ofSeconds(2), () ->
+            {
+            console.println($|[{this:service}]: deleting {file.name}
+                          + $| after {timer.elapsed.secondsTotal} sec
+                             );
 
-        console.println($"tmpDir={tmpDir} modified {tmpDir.modified}");
+            file.delete();
+            assert !file.exists;
+
+            timer.schedule(Duration.ofSeconds(2), () ->
+                {
+                console.println($"[{this:service}]: tmpDir={tmpDir} modified {tmpDir.modified}");
+                cancel();
+                });
+            });
         }
     }

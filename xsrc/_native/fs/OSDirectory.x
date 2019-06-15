@@ -47,5 +47,11 @@ const OSDirectory
     Boolean deleteRecursively();
 
     @Override
-    Cancellable watchRecursively(FileWatcher watch);
+    Cancellable watch(FileWatcher watcher)
+        {
+        return store.watchDir(this, watcher);
+        }
+
+    @Override
+    Cancellable watchRecursively(FileWatcher watcher);
     }

@@ -121,18 +121,6 @@ const CPFileStore(String path, Object constRoot)
         }
 
     @Override
-    Cancellable watch(Path path, FileWatcher watch)
-        {
-        return () -> {};
-        }
-
-    @Override
-    Cancellable watchRecursively(Path path, FileWatcher watch)
-        {
-        return () -> {};
-        }
-
-    @Override
     @RO Boolean readOnly.get()
         {
         return True;

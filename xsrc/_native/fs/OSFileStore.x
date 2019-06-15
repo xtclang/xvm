@@ -59,18 +59,6 @@ class OSFileStore
         }
 
     @Override
-    Cancellable watch(Path path, FileWatcher watch)
-        {
-        TODO
-        }
-
-    @Override
-    Cancellable watchRecursively(Path path, FileWatcher watch)
-        {
-        TODO
-        }
-
-    @Override
     FileStore ensureReadOnly()
         {
         if (readOnly)
@@ -122,9 +110,14 @@ class OSFileStore
         return storage.delete(node.pathString);
         }
 
-    function void () watch(OSFileNode:protected node, FileWatcher watch)
+    Cancellable watchFile(OSFile file, FileWatcher watcher)
         {
-        TODO
+        return storage.watchFile(file.path, watcher);
+        }
+
+    Cancellable watchDir(OSDirectory dir, FileWatcher watcher)
+        {
+        return storage.watchDir(dir.path, watcher);
         }
 
     // ----- native --------------------------------------------------------------------------------

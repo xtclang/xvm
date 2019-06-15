@@ -69,7 +69,7 @@ interface FileWatcher
         }
 
     /**
-     * Invoked when a file even has been detected.
+     * Invoked when a file event has been detected.
      *
      * @param file   the file that was created, modified, or deleted
      * @param event  Created, Modified, or Deleted

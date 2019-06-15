@@ -73,12 +73,12 @@ interface Directory
      * Watch this directory and everything nested under directories under this directory, and report
      * any events related to any such directory.
      *
-     * @param watch  the FileWatcher to invoke when anything in or under this directory has a
-     *               watchable event
+     * @param watcher  the FileWatcher to invoke when anything in or under this directory has a
+     *                 watchable event
      *
      * @return a Cancellable object that allows the caller to cancel the watch
      */
-    Cancellable watchRecursively(FileWatcher watch);
+    Cancellable watchRecursively(FileWatcher watcher);
 
     @Override
     void emitListing(Appender<Char> appender, Boolean recursive = False, String indent = "")

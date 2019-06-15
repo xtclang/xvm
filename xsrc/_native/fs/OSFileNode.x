@@ -83,12 +83,6 @@ const OSFileNode
     conditional FileNode renameTo(String name);
 
     @Override
-    Cancellable watch(FileWatcher watch)
-        {
-        return store.watch(this:protected, watch);
-        }
-
-    @Override
     Int hash.get()
         {
         return pathString.hash;

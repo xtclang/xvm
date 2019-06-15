@@ -1,6 +1,9 @@
+import Ecstasy.fs.Directory;
 import Ecstasy.fs.File;
 import Ecstasy.fs.FileChannel;
+import Ecstasy.fs.FileNotFound;
 import Ecstasy.fs.FileStore;
+import Ecstasy.fs.FileWatcher;
 import Ecstasy.fs.Path;
 
 /**
@@ -20,7 +23,28 @@ const OSFile
         }
 
     @Override
+    Cancellable watch(FileWatcher watcher)
+        {
+        if (!parentDir.exists)
+            {
+            throw new FileNotFound(path, "No parent directory");
+            }
+        return store.watchFile(this, watcher);
+        }
+
+    @Override
     FileChannel open(ReadOption read=Read, WriteOption... write=[Write]);
+
+    /**
+     * The parent directory.
+     */
+    Directory parentDir.get()
+        {
+        assert Path parentPath ?= path.parent;
+        assert File|Directory dir := store.find(parentPath);
+        assert dir.is(Directory);
+        return dir;
+        }
 
     // ----- native --------------------------------------------------------------------------------
 

@@ -120,11 +120,11 @@ interface FileNode
     /**
      * Watch this file-node, and report any events related to it.
      *
-     * @param watch  the FileWatcher to invoke when this file-node has a watchable event
+     * @param watcher  the FileWatcher to invoke when this file-node has a watchable event
      *
      * @return a Cancellable object that allows the caller to cancel the watch
      */
-    Cancellable watch(FileWatcher watch);
+    Cancellable watch(FileWatcher watcher);
 
     /**
      * Emit a directory-style hierarchical listing to the specified appender.
