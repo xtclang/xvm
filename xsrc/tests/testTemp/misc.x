@@ -40,6 +40,8 @@ module TestMisc.xqiz.it
         testConstants();
         testImport();
         testChild();
+
+        countdown();
         }
 
     void testInts()
@@ -614,5 +616,15 @@ module TestMisc.xqiz.it
                     ": " + lineNumber + ") " + descr + " @ " + date;
                 }
             }
+        }
+
+    void countdown()
+        {
+        console.println("Countdown!");
+        for (Int i : 10..1)
+            {
+            console.println($"{i} ...");
+            }
+        console.println("We have lift-off!");
         }
     }
