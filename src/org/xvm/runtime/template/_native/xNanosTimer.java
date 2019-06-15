@@ -55,7 +55,7 @@ public class xNanosTimer
         }
 
     @Override
-    protected int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         switch (sPropName)
             {
