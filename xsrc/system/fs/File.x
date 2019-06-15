@@ -48,7 +48,7 @@ interface File
          *
          * Incompatible with all other read options.
          */
-        None,
+        NoRead,
 
         /**
          * Allow read access.
@@ -71,7 +71,7 @@ interface File
          *
          * Incompatible with all other write options.
          */
-        None,
+        NoWrite,
 
         /**
          * Allow write access.
