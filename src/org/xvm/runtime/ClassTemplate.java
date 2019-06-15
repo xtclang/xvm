@@ -43,6 +43,8 @@ import org.xvm.runtime.Utils.InPlacePropertyBinary;
 import org.xvm.runtime.Utils.InPlacePropertyUnary;
 import org.xvm.runtime.Utils.UnaryAction;
 
+import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
+
 import org.xvm.runtime.template.InterfaceProxy;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
@@ -412,8 +414,7 @@ public abstract class ClassTemplate
      * @param ahVar        the construction parameters
      * @param iReturn      the register id to place the created handle into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int construct(Frame frame, MethodStructure constructor, ClassComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
@@ -629,7 +630,7 @@ public abstract class ClassTemplate
      * @param ahVar    the invocation parameters
      * @param iReturn  the register id to place the result of invocation into
      *
-     * @return one of the {@link Op#R_CALL}, {@link Op#R_EXCEPTION}, or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invoke1(Frame frame, CallChain chain, ObjectHandle hTarget,
                         ObjectHandle[] ahVar, int iReturn)
@@ -646,7 +647,7 @@ public abstract class ClassTemplate
      * @param ahVar    the invocation parameters
      * @param iReturn  the register id to place the result of invocation into
      *
-     * @return one of the {@link Op#R_CALL}, {@link Op#R_EXCEPTION}, or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokeT(Frame frame, CallChain chain, ObjectHandle hTarget,
                         ObjectHandle[] ahVar, int iReturn)
@@ -663,7 +664,7 @@ public abstract class ClassTemplate
      * @param ahVar     the invocation parameters
      * @param aiReturn  the array of register ids to place the results of invocation into
      *
-     * @return one of the {@link Op#R_CALL}, {@link Op#R_EXCEPTION}, or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokeN(Frame frame, CallChain chain, ObjectHandle hTarget,
                         ObjectHandle[] ahVar, int[] aiReturn)
@@ -680,7 +681,8 @@ public abstract class ClassTemplate
      * @param hArg     the invocation arguments
      * @param iReturn  the register id to place the result of invocation into
      *
-     * @return one of the {@link Op#R_CALL}, {@link Op#R_EXCEPTION}, or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
      */
     public int invokeNative1(Frame frame, MethodStructure method,
                              ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
@@ -697,7 +699,8 @@ public abstract class ClassTemplate
      * @param ahArg    the invocation arguments
      * @param iReturn  the register id to place the result of invocation into
      *
-     * @return one of the {@link Op#R_CALL}, {@link Op#R_EXCEPTION}, or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
      */
     public int invokeNativeN(Frame frame, MethodStructure method,
                              ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
@@ -728,7 +731,8 @@ public abstract class ClassTemplate
      * @param ahArg    the invocation arguments
      * @param iReturn  the register id to place the resulting Tuple into
      *
-     * @return one of the {@link Op#R_CALL}, {@link Op#R_EXCEPTION}, or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
      */
     public int invokeNativeT(Frame frame, MethodStructure method,
                              ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
@@ -816,7 +820,8 @@ public abstract class ClassTemplate
      * @param ahArg     the invocation arguments
      * @param aiReturn  the array of register ids to place the results of invocation into
      *
-     * @return one of the {@link Op#R_CALL}, {@link Op#R_EXCEPTION}, or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
      */
     public int invokeNativeNN(Frame frame, MethodStructure method,
                               ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
@@ -835,8 +840,7 @@ public abstract class ClassTemplate
      * @param idProp   the property id
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
@@ -877,8 +881,7 @@ public abstract class ClassTemplate
      * @param idProp   the property id
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
@@ -930,6 +933,7 @@ public abstract class ClassTemplate
         if (hTarget.isInflated(idProp))
             {
             RefHandle hRef = (RefHandle) hValue;
+            assert !(hRef instanceof FutureHandle);
             return ((xRef) hRef.getTemplate()).get(frame, hRef, iReturn);
             }
 
@@ -944,8 +948,7 @@ public abstract class ClassTemplate
      * @param idProp   the property id
      * @param hValue   the new value
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int setPropertyValue(Frame frame, ObjectHandle hTarget,
                                 PropertyConstant idProp, ObjectHandle hValue)
@@ -997,8 +1000,7 @@ public abstract class ClassTemplate
      * @param idProp   the property name
      * @param hValue   the new value
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int setFieldValue(Frame frame, ObjectHandle hTarget,
                              PropertyConstant idProp, ObjectHandle hValue)
@@ -1032,10 +1034,9 @@ public abstract class ClassTemplate
      * @param hTarget   the target handle
      * @param iReturn   the register id to place the result of invocation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    protected int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         if (hTarget.getType().containsGenericParam(sPropName))
             {
@@ -1055,10 +1056,9 @@ public abstract class ClassTemplate
      * @param hTarget   the target handle
      * @param hValue    the new property value
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    protected int invokeNativeSet(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
+    public int invokeNativeSet(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
         {
         throw new IllegalStateException("Unknown property: " + sPropName + " on " + this);
         }
@@ -1071,8 +1071,7 @@ public abstract class ClassTemplate
      * @param idProp  the property name
      * @param iReturn    the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePreInc(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
@@ -1094,8 +1093,7 @@ public abstract class ClassTemplate
      * @param idProp  the property name
      * @param iReturn    the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePostInc(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
@@ -1117,8 +1115,7 @@ public abstract class ClassTemplate
      * @param idProp  the property name
      * @param iReturn    the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePreDec(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
@@ -1140,8 +1137,7 @@ public abstract class ClassTemplate
      * @param idProp  the property name
      * @param iReturn    the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePostDec(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
@@ -1163,8 +1159,7 @@ public abstract class ClassTemplate
      * @param idProp  the property name
      * @param hArg       the argument handle
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePropertyAdd(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
@@ -1187,8 +1182,7 @@ public abstract class ClassTemplate
      * @param idProp  the property name
      * @param hArg       the argument handle
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePropertySub(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
@@ -1211,8 +1205,7 @@ public abstract class ClassTemplate
      * @param idProp  the property name
      * @param hArg       the argument handle
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePropertyMul(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
@@ -1235,8 +1228,7 @@ public abstract class ClassTemplate
      * @param idProp  the property name
      * @param hArg       the argument handle
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePropertyDiv(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
@@ -1259,8 +1251,7 @@ public abstract class ClassTemplate
      * @param idProp  the property name
      * @param hArg       the argument handle
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePropertyMod(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
@@ -1283,8 +1274,7 @@ public abstract class ClassTemplate
      * @param idProp  the property name
      * @param hArg       the argument handle
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePropertyShl(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
@@ -1307,8 +1297,7 @@ public abstract class ClassTemplate
      * @param idProp  the property name
      * @param hArg       the argument handle
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePropertyShr(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
@@ -1331,8 +1320,7 @@ public abstract class ClassTemplate
      * @param idProp  the property name
      * @param hArg       the argument handle
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePropertyShrAll(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
@@ -1355,8 +1343,7 @@ public abstract class ClassTemplate
      * @param idProp  the property name
      * @param hArg       the argument handle
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePropertyAnd(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
@@ -1379,8 +1366,7 @@ public abstract class ClassTemplate
      * @param idProp  the property name
      * @param hArg       the argument handle
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePropertyOr(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
@@ -1403,8 +1389,7 @@ public abstract class ClassTemplate
      * @param idProp  the property name
      * @param hArg       the argument handle
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePropertyXor(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg)
         {
@@ -1431,7 +1416,7 @@ public abstract class ClassTemplate
      * @param fRO        true iff a Ref is required; Var otherwise
      * @param iReturn    the register to place the result in
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int createPropertyRef(Frame frame, ObjectHandle hTarget,
                                  PropertyConstant idProp, boolean fRO, int iReturn)
@@ -1446,7 +1431,7 @@ public abstract class ClassTemplate
         if (hTarget.isInflated(idProp))
             {
             RefHandle hRef = (RefHandle) hThis.getField(idProp);
-            return frame.assignValue(iReturn, hRef, false);
+            return frame.assignValue(iReturn, hRef);
             }
 
         ConstantPool pool         = frame.poolContext();
@@ -1457,7 +1442,7 @@ public abstract class ClassTemplate
             : xVar.INSTANCE.ensureParameterizedClass(pool, typeReferent);
 
         RefHandle hRef = new RefHandle(clzRef, hThis, idProp);
-        return frame.assignValue(iReturn, hRef, false);
+        return frame.assignValue(iReturn, hRef);
         }
 
     // ----- support for equality and comparison ---------------------------------------------------
@@ -1471,8 +1456,7 @@ public abstract class ClassTemplate
      * @param hValue2  the second value
      * @param iReturn  the register id to place a Boolean result into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int callEquals(Frame frame, ClassComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
@@ -1516,8 +1500,7 @@ public abstract class ClassTemplate
      * @param hValue2  the second value
      * @param iReturn  the register id to place an Ordered result into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int callCompare(Frame frame, ClassComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
@@ -1823,8 +1806,7 @@ public abstract class ClassTemplate
      * @param hTarget  the target
      * @param iReturn  the register id to place a String result into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {

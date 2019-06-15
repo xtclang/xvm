@@ -27,9 +27,6 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.VersionConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
-import org.xvm.runtime.ObjectHandle.GenericHandle;
-
-import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xFunction;
@@ -262,15 +259,21 @@ public class Container
                 case Op.R_EXCEPTION:
                     break;
 
+                case Op.R_CALL:
+                    {
+                    Frame frameNext = frame.m_frameNext;
+                    frameNext.addContinuation(frameCaller ->
+                        {
+                        m_hOSStorage = frameCaller.peekStack();
+                        return Op.R_NEXT;
+                        });
+                    return new DeferredCallHandle(frameNext);
+                    }
+
                 default:
                     throw new IllegalStateException();
                 }
             m_hOSStorage = hStorage;
-            }
-        else if (hStorage instanceof FutureHandle &&
-                ((FutureHandle) hStorage).isCompletedNormally())
-            {
-            m_hOSStorage = hStorage = ((FutureHandle) hStorage).getValue();
             }
 
         return hStorage;
@@ -282,20 +285,13 @@ public class Container
         if (hStore == null)
             {
             ObjectHandle hOSStorage = ensureOSStorage(frame);
-            if (hOSStorage instanceof FutureHandle)
+            if (hOSStorage != null)
                 {
-                DeferredCallHandle hDeferred = ((FutureHandle) hOSStorage).
-                    makeDeferredGetField(frame, "fileStore");
-                hDeferred.addContinuation(frameCaller ->
-                    {
-                    m_hFileStore = frameCaller.peekStack();
-                    return Op.R_NEXT;
-                    });
-                hStore = hDeferred;
-                }
-            else if (hOSStorage != null)
-                {
-                m_hFileStore = hStore = ((GenericHandle) hOSStorage).getField("fileStore");
+                ClassTemplate    template = f_templates.getTemplate("_native.fs.OSStorage");
+                PropertyConstant idProp   = template.getCanonicalType().
+                        ensureTypeInfo().findProperty("fileStore").getIdentity();
+
+                return getProperty(frame, hOSStorage, idProp, h -> m_hFileStore = h);
                 }
             }
 
@@ -314,8 +310,7 @@ public class Container
                 PropertyConstant idProp   = template.getCanonicalType().
                         ensureTypeInfo().findProperty("rootDir").getIdentity();
 
-                m_hRootDir = hDir =
-                    getProperty(frame, hOSStorage, idProp, h -> m_hRootDir = h);
+                return getProperty(frame, hOSStorage, idProp, h -> m_hRootDir = h);
                 }
             }
 
@@ -334,8 +329,7 @@ public class Container
                 PropertyConstant idProp   = template.getCanonicalType().
                         ensureTypeInfo().findProperty("homeDir").getIdentity();
 
-                m_hHomeDir = hDir =
-                    getProperty(frame, hOSStorage, idProp, h -> m_hHomeDir = h);
+                return getProperty(frame, hOSStorage, idProp, h -> m_hHomeDir = h);
                 }
             }
 
@@ -354,8 +348,7 @@ public class Container
                 PropertyConstant idProp   = template.getCanonicalType().
                         ensureTypeInfo().findProperty("curDir").getIdentity();
 
-                m_hCurDir = hDir =
-                    getProperty(frame, hOSStorage, idProp, h -> m_hCurDir = h);
+                return getProperty(frame, hOSStorage, idProp, h -> m_hCurDir = h);
                 }
             }
 
@@ -374,8 +367,7 @@ public class Container
                 PropertyConstant idProp   = template.getCanonicalType().
                         ensureTypeInfo().findProperty("tmpDir").getIdentity();
 
-                m_hTmpDir = hDir =
-                    getProperty(frame, hOSStorage, idProp, h -> m_hTmpDir = h);
+                return getProperty(frame, hOSStorage, idProp, h -> m_hTmpDir = h);
                 }
             }
 
@@ -383,40 +375,46 @@ public class Container
         }
 
     /**
-     * Helper method to get a property.
+     * Helper method to get a property on the specified target.
      */
     private ObjectHandle getProperty(Frame frame, ObjectHandle hTarget, PropertyConstant idProp,
                                      Consumer<ObjectHandle> consumer)
         {
-        if (hTarget instanceof FutureHandle)
-            {
-            DeferredCallHandle hDeferred =
-                ((FutureHandle) hTarget).makeDeferredGetProperty(frame, idProp);
-            hDeferred.addContinuation(frameCaller ->
-                {
-                consumer.accept(frameCaller.peekStack());
-                return Op.R_NEXT;
-                });
-            return hDeferred;
-            }
-
         if (hTarget instanceof DeferredCallHandle)
             {
-            DeferredCallHandle hDeferred =
-                ((DeferredCallHandle) hTarget).makeDeferredGetProperty(frame, idProp);
-            hDeferred.addContinuation(frameCaller ->
+            ((DeferredCallHandle) hTarget).addContinuation(frameCaller ->
                 {
-                consumer.accept(frameCaller.peekStack());
-                return Op.R_NEXT;
+                ObjectHandle hTargetReal = frameCaller.peekStack();
+                int          iResult     = hTargetReal.getTemplate().getPropertyValue(
+                                                frameCaller, hTargetReal, idProp, A_STACK);
+                switch (iResult)
+                    {
+                    case Op.R_NEXT:
+                        consumer.accept(frameCaller.peekStack());
+                        break;
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.addContinuation(frameCaller1 ->
+                            {
+                            consumer.accept(frameCaller1.peekStack());
+                            return Op.R_NEXT;
+                            });
+                        break;
+                    }
+                return iResult;
                 });
-            return hDeferred;
+            return hTarget;
             }
 
         ClassTemplate template = hTarget.getTemplate();
         switch (template.getPropertyValue(frame, hTarget, idProp, A_STACK))
             {
             case Op.R_NEXT:
-                return frame.popStack();
+                {
+                ObjectHandle h = frame.popStack();
+                consumer.accept(h);
+                return h;
+                }
 
             case Op.R_CALL:
                 Frame frameNext = frame.m_frameNext;
@@ -466,13 +464,10 @@ public class Container
      */
     public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type)
         {
-        InjectionKey key = new InjectionKey(sName, type);
-        Function<Frame, ObjectHandle> fnResource = f_mapResources.get(key);
+        Function<Frame, ObjectHandle> fnResource =
+            f_mapResources.get(new InjectionKey(sName, type));
 
-        ObjectHandle hValue = fnResource == null ? null : fnResource.apply(frame);
-        return hValue instanceof FutureHandle
-            ? ((FutureHandle) hValue).makeDeferredHandle(frame)
-            : hValue;
+        return fnResource == null ? null : fnResource.apply(frame);
         }
 
     public ServiceContext getMainContext()
@@ -498,7 +493,7 @@ public class Container
         {
         return "Container: " + f_idModule.getName();
         }
-    
+
 
     // ----- LinkerContext interface ---------------------------------------------------------------
 

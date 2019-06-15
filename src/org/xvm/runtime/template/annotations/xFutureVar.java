@@ -364,11 +364,9 @@ public class xFutureVar
                 throw new UnsupportedOperationException("Unexpected exception", eOrig);
                 }
             }
-        else
-            {
-            // wait for the completion; the service is responsible for timing out
-            return Op.R_BLOCK;
-            }
+
+        // wait for the assignment/completion; the service is responsible for timing out
+        return Op.R_BLOCK;
         }
 
     @Override
@@ -446,6 +444,9 @@ public class xFutureVar
                 }
             }
 
+        /**
+         * @return true iff the future represented by this handle completed normally
+         */
         public boolean isCompletedNormally()
             {
             return m_future != null && m_future.isDone() && !m_future.isCompletedExceptionally();
@@ -461,94 +462,34 @@ public class xFutureVar
             }
 
         /**
-         * @return a DeferredCallHandle for getting a field from the future object represented by
-         *         this handle
+         * Wait for the future completion and assign the specified register to the result.
+         *
+         * @param frame    the current frame
+         * @param iResult  the register id
+         *
+         * @return R_NEXT, R_CALL, R_EXCEPTION
          */
-        public DeferredCallHandle makeDeferredGetField(Frame frame, String sName)
+        public int waitAndAssign(Frame frame, int iResult)
             {
-            assert m_future != null;
-
-            Op[] aopGetProperty = new Op[]
+            if (isAssigned())
                 {
-                new Op()
-                    {
-                    public int process(Frame frame, int iPC)
-                        {
-                        return frame.call(Utils.createWaitFrame(frame, m_future, A_STACK));
-                        }
-                    public String toString()
-                        {
-                        return "waitFutureHandle -> this:stack";
-                        }
-                    },
-                new Op()
-                    {
-                    public int process(Frame frame, int iPC)
-                        {
-                        GenericHandle hTarget = (GenericHandle) frame.popStack();
-                        return frame.returnValue(hTarget.getField(sName), false);
-                        }
-                    public String toString()
-                        {
-                        return "return getField " + sName;
-                        }
-                    },
-                };
+                return frame.assignValue(iResult, getValue());
+                }
 
-            Frame frameGetProperty = frame.createNativeFrame(
-                aopGetProperty, Utils.OBJECTS_NONE, Op.A_STACK, null);
-            return new DeferredCallHandle(frameGetProperty);
-            }
-
-        /**
-         * @return a DeferredCallHandle for getting a property from the future object represented by
-         *         this handle
-         */
-        public DeferredCallHandle makeDeferredGetProperty(Frame frame, PropertyConstant idProp)
-            {
-            assert m_future != null;
-
-            Op[] aopGetProperty = new Op[]
+            // add a notification and wait for the assignment/completion;
+            // the service is responsible for timing out
+            CompletableFuture<ObjectHandle> cf = m_future;
+            if (cf == null)
                 {
-                new Op()
-                    {
-                    public int process(Frame frame, int iPC)
-                        {
-                        return frame.call(Utils.createWaitFrame(frame, m_future, A_STACK));
-                        }
-                    public String toString()
-                        {
-                        return "waitFutureHandle -> this:stack";
-                        }
-                    },
-                new Op()
-                    {
-                    public int process(Frame frame, int iPC)
-                        {
-                        ObjectHandle hTarget = frame.popStack();
-                        return hTarget.getTemplate().getPropertyValue(frame, hTarget, idProp, A_STACK);
-                        }
-                    public String toString()
-                        {
-                        return "getProperty -> this:stack";
-                        }
-                    },
-                new Op()
-                    {
-                    public int process(Frame frame, int iPC)
-                        {
-                        return frame.returnValue(frame.popStack(), false);
-                        }
-                    public String toString()
-                        {
-                        return "return this:stack";
-                        }
-                    },
-                };
-
-            Frame frameGetProperty = frame.createNativeFrame(
-                aopGetProperty, Utils.OBJECTS_NONE, Op.A_STACK, null);
-            return new DeferredCallHandle(frameGetProperty);
+                // since this ref can only be changed by this service,
+                // we can safely add a completable future now
+                cf = m_future = new CompletableFuture();
+                }
+            cf.whenComplete
+                (
+                (r, x) -> frame.f_fiber.m_fResponded = true
+                );
+            return frame.call(Utils.createWaitFrame(frame, cf, iResult));
             }
 
         @Override

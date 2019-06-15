@@ -251,9 +251,13 @@ public class ServiceContext
                     }
                 }
 
-            boolean fBlockReturn = false;
             switch (iPC)
                 {
+                case Op.R_RETURN_CALL:
+                    frame   = frame.f_framePrev;
+                    iPCLast = frame.m_iPC - 1;
+                    // fall-through
+
                 case Op.R_CALL:
                     m_frameCurrent = frame.m_frameNext;
                     frame.m_iPC = iPCLast + 1;
@@ -264,9 +268,6 @@ public class ServiceContext
                     iPC = frame.m_hException == null ? 0 : Op.R_EXCEPTION;
                     break;
 
-                case Op.R_BLOCK_RETURN:
-                    fBlockReturn = true;
-                    // fall through
                 case Op.R_RETURN:
                     {
                     Frame.Continuation continuation = frame.m_continuation;
@@ -298,17 +299,9 @@ public class ServiceContext
                                 frame.m_frameNext = null;
                                 frame = m_frameCurrent;
 
-                                if (fBlockReturn)
-                                    {
-                                    frame.addContinuation(frameCaller -> Op.R_BLOCK_RETURN);
-                                    }
                                 aOp = frame.f_aOp;
                                 iPC = 0;
                                 continue nextOp;
-
-                            case Op.R_BLOCK_RETURN:
-                                iPC = Op.R_BLOCK_RETURN;
-                                break;
 
                             default:
                                 if (iResult < 0)
@@ -327,11 +320,6 @@ public class ServiceContext
                         return null;
                         }
 
-                    if (fBlockReturn)
-                        {
-                        fiber.setStatus(FiberStatus.Waiting);
-                        return frame;
-                        }
                     aOp = frame.f_aOp;
                     break;
                     }

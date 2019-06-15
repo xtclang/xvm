@@ -3,6 +3,7 @@ package org.xvm.runtime;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+
 import java.util.concurrent.CompletableFuture;
 
 import org.xvm.asm.Constant;
@@ -23,6 +24,7 @@ import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils.ContinuationChain;
 
+import org.xvm.runtime.template.annotations.xFutureVar;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction;
@@ -546,24 +548,9 @@ public class Frame
      * @param nVar    the register id
      * @param hValue  the value to assign
      *
-     * @return R_NEXT, R_CALL, R_EXCEPTION or R_BLOCK (only if hValue is a FutureHandle)
+     * @return R_NEXT, R_CALL, R_EXCEPTION
      */
     public int assignValue(int nVar, ObjectHandle hValue)
-        {
-        return assignValue(nVar, hValue, false);
-        }
-
-    /**
-     * Assign a specified register on this frame.
-     *
-     * @param nVar      the register id
-     * @param hValue    the value to assign
-     * @param fDynamic  if true, the value is a RefHandle that may need to be de-referenced unless
-     *                  the receiver is a dynamic register itself
-     *
-     * @return R_NEXT, R_CALL, R_EXCEPTION or R_BLOCK (only if hValue is a FutureHandle)
-     */
-    public int assignValue(int nVar, ObjectHandle hValue, boolean fDynamic)
         {
         if (hValue == null)
             {
@@ -573,7 +560,7 @@ public class Frame
             //        return bar();
             //        }
             assert nVar >= 0;
-            f_ahVar[nVar] = hValue;
+            f_ahVar[nVar] = null;
             return Op.R_NEXT;
             }
 
@@ -584,10 +571,6 @@ public class Frame
             switch (info.getStyle())
                 {
                 case VAR_STANDARD:
-                    if (fDynamic)
-                        {
-                        return assignFromDynamic(nVar, info, (RefHandle) hValue);
-                        }
                     break;
 
                 case VAR_DYNAMIC_REF:
@@ -670,47 +653,15 @@ public class Frame
         }
 
     /**
-     * Assign a register to a content of the specified dynamic reference.
-     *
-     * @param nVar  the register id
-     * @param info  the VarInfo for the register
-     * @param hRef  the RefHandle that contains the value
-     *
-     * @return R_NEXT, R_CALL, R_EXCEPTION or R_BLOCK (only if hValue is a FutureHandle)
-     */
-    private int assignFromDynamic(int nVar, VarInfo info, RefHandle hRef)
-        {
-        if (hRef instanceof FutureHandle && !hRef.isAssigned())
-            {
-            // mark the register as "waiting for a result",
-            // blocking the next op-code from being executed
-            // and add a notification
-            FutureHandle hFuture = (FutureHandle) hRef;
-            CompletableFuture<ObjectHandle> cf = hFuture.m_future;
-            if (cf == null)
-                {
-                // since this ref can only be changed by this service,
-                // we can safely add a completable future now
-                cf = hFuture.m_future = new CompletableFuture();
-                }
-            cf.whenComplete((r, x) -> f_fiber.m_fResponded = true);
-
-            info.markWaiting();
-            f_ahVar[nVar] = hFuture;
-            return Op.R_BLOCK;
-            }
-
-        return hRef.getVarSupport().get(this, hRef, nVar);
-        }
-
-    /**
      * Specialization of assignValue() that takes two return values.
      *
      * @param anVar     the array of two register ids
      * @param hValue1   the first value to assign
      * @param hValue2   the second value to assign
      *
-     * @return R_NEXT, R_CALL, R_EXCEPTION or R_BLOCK (only if any of the values is a FutureHandle)
+     * @return R_NEXT, R_CALL, R_EXCEPTION
+     *
+     * @see {@link Utils.AssignValues}
      */
     public int assignValues(int[] anVar, ObjectHandle hValue1, ObjectHandle hValue2)
         {
@@ -722,37 +673,17 @@ public class Frame
 
         if (c == 1 || hValue2 == null)
             {
-            return assignValue(anVar[0], hValue1, false);
+            return assignValue(anVar[0], hValue1);
             }
 
-        switch (assignValue(anVar[0], hValue1, false))
+        switch (assignValue(anVar[0], hValue1))
             {
-            case Op.R_BLOCK:
-                {
-                switch (assignValue(anVar[1], hValue2, false))
-                    {
-                    case Op.R_NEXT:
-                    case Op.R_BLOCK:
-                        return Op.R_BLOCK;
-
-                    case Op.R_CALL:
-                        m_frameNext.addContinuation(frameCaller -> Op.R_BLOCK);
-                        return Op.R_CALL;
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-                }
-
             case Op.R_NEXT:
-                return assignValue(anVar[1], hValue2, false);
+                return assignValue(anVar[1], hValue2);
 
             case Op.R_CALL:
                 m_frameNext.addContinuation(
-                    frameCaller -> assignValue(anVar[1], hValue2, false));
+                    frameCaller -> assignValue(anVar[1], hValue2));
                 return Op.R_CALL;
 
             case Op.R_EXCEPTION:
@@ -775,7 +706,38 @@ public class Frame
         {
         ClassComposition clazz = ensureClass(getVarInfo(nVar).getType());
 
-        return assignValue(nVar, xTuple.makeHandle(clazz, ahValue), false);
+        return assignValue(nVar, xTuple.makeHandle(clazz, ahValue));
+        }
+
+    /**
+     * Assign a future result to the specified register on this frame.
+     *
+     * @param iReturn   the result of the previous execution
+     * @param cfResult  the future to assign
+     *
+     * @return one of R_NEXT, R_CALL or R_EXCEPTION values
+     */
+    public int assignFutureResult(int iReturn, CompletableFuture<ObjectHandle> cfResult)
+        {
+        if (cfResult.isDone() && !cfResult.isCompletedExceptionally())
+            {
+            try
+                {
+                return assignValue(iReturn, cfResult.get());
+                }
+            catch (Throwable e)
+                {
+                assert true; // must not happen
+                };
+            }
+
+        if (isDynamicVar(iReturn))
+            {
+            return assignValue(iReturn, xFutureVar.makeHandle(cfResult));
+            }
+
+        // the wait frame will deal with exceptions
+        return call(Utils.createWaitFrame(this, cfResult, iReturn));
         }
 
     /**
@@ -785,7 +747,7 @@ public class Frame
      * @param fDynamic  if true, the value is a RefHandle that may need to be de-referenced unless
      *                  the receiver is a dynamic register itself
      *
-     * @return R_RETURN, R_CALL, R_RETURN_EXCEPTION or R_BLOCK_RETURN
+     * @return R_RETURN, R_CALL, R_RETURN_EXCEPTION
      */
     public int returnValue(ObjectHandle hValue, boolean fDynamic)
         {
@@ -801,27 +763,39 @@ public class Frame
             case Op.A_TUPLE:
                 if (fDynamic)
                     {
-                    RefHandle hRef = (RefHandle) hValue;
+                    Frame framePrev = f_framePrev;
+                    int   iReturn   = f_aiReturn[0];
 
-                    switch (hRef.getVarSupport().get(this, hRef, Op.A_STACK))
+                    if (framePrev.isDynamicVar(iReturn))
                         {
-                        case Op.R_NEXT:
-                            hValue = popStack();
-                            break;
+                        // TODO: dynamic -> dynamic Tuple, e.g. @Future Tuple<T> t = f();
+                        throw new UnsupportedOperationException();
+                        }
+                    else
+                        {
+                        // dynamic -> regular
+                        RefHandle hRef    = (RefHandle) hValue;
+                        int       iResult = hRef instanceof FutureHandle
+                            ? ((FutureHandle) hRef).waitAndAssign(framePrev, Op.A_STACK)
+                            : hRef.getVarSupport().get(framePrev, hRef, Op.A_STACK);
 
-                        case Op.R_CALL:
-                            m_frameNext.addContinuation(frameCaller ->
-                                frameCaller.returnAsTuple(new ObjectHandle[] {popStack()}));
-                            return Op.R_CALL;
+                        switch (iResult)
+                            {
+                            case Op.R_NEXT:
+                                hValue = popStack();
+                                break;
 
-                        case Op.R_EXCEPTION:
-                            return Op.R_RETURN_EXCEPTION;
+                            case Op.R_CALL:
+                                m_frameNext.addContinuation(frameCaller ->
+                                    frameCaller.returnAsTuple(new ObjectHandle[] {popStack()}));
+                                return Op.R_CALL;
 
-                        case Op.R_BLOCK:
-                            return Op.R_BLOCK_RETURN;
+                            case Op.R_EXCEPTION:
+                                return Op.R_RETURN_EXCEPTION;
 
-                        default:
-                            throw new IllegalArgumentException();
+                            default:
+                                throw new IllegalStateException();
+                            }
                         }
                     }
                 return returnAsTuple(new ObjectHandle[]{hValue});
@@ -839,25 +813,52 @@ public class Frame
      * @param fDynamic  if true, the value is a RefHandle that may need to be de-referenced unless
      *                  the receiver is a dynamic register itself
      *
-     * @return R_RETURN, R_CALL, R_RETURN_EXCEPTION or R_BLOCK_RETURN
+     * @return R_RETURN, R_CALL, R_RETURN_EXCEPTION
      */
-    private int returnValue(int iReturn, ObjectHandle hValue, boolean fDynamic)
+    public int returnValue(int iReturn, ObjectHandle hValue, boolean fDynamic)
         {
-        int iResult = f_framePrev.assignValue(iReturn, hValue, fDynamic);
+        Frame framePrev = f_framePrev;
+
+        int iResult;
+        if (fDynamic)
+            {
+            if (framePrev.isDynamicVar(iReturn))
+                {
+                // dynamic -> dynamic
+                RefHandle hVar = (RefHandle) framePrev.f_ahVar[iReturn];
+                iResult = hVar.getVarSupport().set(framePrev, hVar, hValue);
+                }
+            else
+                {
+                // dynamic -> regular
+                RefHandle hRef = (RefHandle) hValue;
+
+                iResult = hRef instanceof FutureHandle
+                        ? ((FutureHandle) hRef).waitAndAssign(framePrev, iReturn)
+                        : hRef.getVarSupport().get(framePrev, hRef, iReturn);
+                }
+            }
+        else
+            {
+            // regular -> any
+            iResult = framePrev.assignValue(iReturn, hValue);
+            }
+
         switch (iResult)
             {
             case Op.R_NEXT:
                 return Op.R_RETURN;
 
             case Op.R_CALL:
-                m_frameNext.addContinuation(frameCaller -> Op.R_RETURN);
-                return Op.R_CALL;
+                if (m_continuation != null)
+                    {
+                    // transfer the continuation
+                    framePrev.m_frameNext.addContinuation(m_continuation);
+                    }
+                return Op.R_RETURN_CALL;
 
             case Op.R_EXCEPTION:
                 return Op.R_RETURN_EXCEPTION;
-
-            case Op.R_BLOCK:
-                return Op.R_BLOCK_RETURN;
 
             default:
                 throw new IllegalArgumentException("iResult=" + iResult);
@@ -883,7 +884,7 @@ public class Frame
      * @param afDynamic  if not null, indicates witch values are RefHandle(s) that may need to be
      *                   de-referenced unless the receiver is a dynamic register itself
      *
-     * @return R_RETURN, R_CALL, R_RETURN_EXCEPTION or R_BLOCK_RETURN
+     * @return R_RETURN, R_CALL or R_RETURN_EXCEPTION
      */
     public int returnValues(ObjectHandle[] ahValue, boolean[] afDynamic)
         {
@@ -893,22 +894,14 @@ public class Frame
                 return Op.R_RETURN;
 
             case Op.A_MULTI:
-                switch (new Utils.AssignValues(f_aiReturn, ahValue, afDynamic).proceed(f_framePrev))
-                    {
-                    case Op.R_NEXT:
-                        return Op.R_RETURN;
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_RETURN_EXCEPTION;
-
-                    case Op.R_BLOCK:
-                        return Op.R_BLOCK_RETURN;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
+                return new Utils.ReturnValues(f_aiReturn, ahValue, afDynamic).proceed(this);
 
             case Op.A_TUPLE:
+                if (afDynamic != null)
+                    {
+                    // TODO: dynamic -> tuple
+                    throw new UnsupportedOperationException();
+                    }
                 return returnAsTuple(ahValue);
 
             default:
@@ -916,7 +909,11 @@ public class Frame
             }
         }
 
-    // return R_RETURN, R_CALL, R_RETURN_EXCEPTION or R_BLOCK_RETURN
+    /**
+     * Assign the return tuple on the caller's frame.
+     *
+     * @return R_RETURN, R_CALL or R_RETURN_EXCEPTION
+     */
     public int returnTuple(TupleHandle hTuple)
         {
         switch (f_iReturn)
@@ -987,6 +984,10 @@ public class Frame
         return poolCode().getConstant(Op.CONSTANT_OFFSET - iArg);
         }
 
+    /**
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION} or
+     *         or {@link Op#R_BLOCK} values
+     */
     public int checkWaitingRegisters()
         {
         VarInfo[] aInfo = f_aInfo;
@@ -1184,6 +1185,7 @@ public class Frame
                                 return new DeferredCallHandle(m_frameNext);
 
                             case Op.R_BLOCK:
+                                // mark the register as "waiting for a result"
                                 info.markWaiting();
                                 restoreStack(iArg, hValue);
                                 return null;
@@ -1361,7 +1363,7 @@ public class Frame
 
         if (nVarFrom >= 0)
             {
-            VarInfo infoFrom = f_aInfo[nVarFrom];
+            VarInfo infoFrom = getVarInfo(nVarFrom);
 
             f_aInfo[nVar] = infoFrom.m_type == null
                 ? new VarInfo(infoFrom.m_nTypeId, 0, VAR_STANDARD)
@@ -1641,7 +1643,11 @@ public class Frame
                 }
             else
                 {
-                sb.append("proxy for ").append(framePrev);
+                sb.append("synthetic call by ").append(framePrev);
+                if (iPC >- 0)
+                    {
+                    sb.append(" at iPC=").append(iPC);
+                    }
                 }
             }
         else
@@ -1965,7 +1971,7 @@ public class Frame
             TypeConstant typeArray;
             if (nTargetReg >= 0)
                 {
-                VarInfo infoArray = frame.f_aInfo[nTargetReg];
+                VarInfo infoArray = frame.getVarInfo(nTargetReg);
                 typeArray = infoArray.getType();
                 }
             else

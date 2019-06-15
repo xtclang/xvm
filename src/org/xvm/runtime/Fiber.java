@@ -198,8 +198,12 @@ public class Fiber
         return m_ldtTimeout > 0 && System.currentTimeMillis() > m_ldtTimeout;
         }
 
-    // check whether we can proceed with the frame execution
-    // return Op.R_NEXT, Op.R_BLOCK or Op.R_EXCEPTION
+    /**
+     * Check whether we can proceed with the frame execution.
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION} or
+     *         or {@link Op#R_BLOCK} values
+     */
     public int prepareRun(Frame frame)
         {
         int iResult = Op.R_NEXT;
@@ -283,7 +287,10 @@ public class Fiber
             }
         }
 
-    // return R_NEXT, R_CALL or R_BLOCK
+    /**
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION} or
+     *         or {@link Op#R_BLOCK} values
+     */
     public int registerAsyncSection(Frame frame, ObjectHandle hSectionNew)
         {
         ObjectHandle hSectionOld = m_hAsyncSection;

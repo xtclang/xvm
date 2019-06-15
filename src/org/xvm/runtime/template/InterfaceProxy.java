@@ -20,7 +20,6 @@ import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
-import org.xvm.runtime.template.annotations.xFutureVar;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
 
@@ -118,7 +117,7 @@ public class InterfaceProxy
         CompletableFuture<ObjectHandle> cfResult = hProxy.m_context.sendProperty01Request(
                 frame, idProp, this::getPropertyValue);
 
-        return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult), true);
+        return frame.assignFutureResult(iReturn, cfResult);
         }
 
     @Override

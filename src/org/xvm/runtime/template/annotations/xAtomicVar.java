@@ -166,7 +166,7 @@ public class xAtomicVar
         AtomicHandle hAtomic = (AtomicHandle) hTarget;
         ObjectHandle hValue = hAtomic.f_atomic.get();
         return hValue == null
-            ? frame.raiseException(xException.makeHandle("Unassigned reference"))
+            ? frame.raiseException(xException.unassignedReference())
             : frame.assignValue(iReturn, hValue);
         }
 
