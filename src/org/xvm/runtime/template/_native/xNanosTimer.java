@@ -21,6 +21,7 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.LongLong;
 import org.xvm.runtime.template.xBaseInt128.LongLongHandle;
+import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xFunction.NativeFunctionHandle;
 import org.xvm.runtime.template.xService;
@@ -69,7 +70,8 @@ public class xNanosTimer
         }
 
     @Override
-    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
         {
         TimerHandle hTimer = (TimerHandle) hTarget;
         switch (method.getName())
@@ -88,6 +90,12 @@ public class xNanosTimer
 
             case "schedule": // duration, alarm
                 {
+                if (frame.f_context != hTimer.m_context)
+                    {
+                    return xFunction.makeAsyncNativeHandle(method).
+                        call1(frame, hTarget, ahArg, iReturn);
+                    }
+
                 GenericHandle  hDuration = (GenericHandle ) ahArg[0];
                 FunctionHandle hAlarm    = (FunctionHandle) ahArg[1];
                 FunctionHandle hCancel   = hTimer.schedule(hDuration, hAlarm);
@@ -110,7 +118,7 @@ public class xNanosTimer
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     public static class TimerHandle
-            extends xService.ServiceHandle
+            extends ServiceHandle
         {
         public TimerHandle(TypeComposition clazz, ServiceContext context)
             {

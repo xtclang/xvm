@@ -673,20 +673,23 @@ public class MethodInfo
                         : (MethodBody[]) listNew.toArray(new MethodBody[c]);
                 }
 
-            // when the method is a property accessor, we need to use the PropertyInfo
-            // to get the optimized chain (to include a potential field access body)
-            MethodStructure method    = bodyHead.getMethodStructure();
-            Component       container = method.getParent().getParent();
-            if (container instanceof PropertyStructure)
+            if (!bodyHead.isNative())
                 {
-                PropertyStructure property     = (PropertyStructure) container;
-                MethodStructure   methodGetter = property.getGetter();
-                MethodStructure   methodSetter = property.getSetter();
-                if (method == methodGetter || method == methodSetter)
+                // when the method is a property accessor, we need to use the PropertyInfo
+                // to get the optimized chain (to include a potential field access body)
+                MethodStructure method    = bodyHead.getMethodStructure();
+                Component       container = method.getParent().getParent();
+                if (container instanceof PropertyStructure)
                     {
-                    PropertyInfo infoProp = infoType.findProperty(property.getIdentityConstant());
-                    return m_aBodyResolved =
-                        infoProp.augmentPropertyChain(chain, infoType, method.getIdentityConstant());
+                    PropertyStructure property     = (PropertyStructure) container;
+                    MethodStructure   methodGetter = property.getGetter();
+                    MethodStructure   methodSetter = property.getSetter();
+                    if (method == methodGetter || method == methodSetter)
+                        {
+                        PropertyInfo infoProp = infoType.findProperty(property.getIdentityConstant());
+                        return m_aBodyResolved =
+                            infoProp.augmentPropertyChain(chain, infoType, method.getIdentityConstant());
+                        }
                     }
                 }
 
