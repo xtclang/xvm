@@ -15,7 +15,8 @@
 
 - a new VAR_D like op-code to provide additional parameters (e.g. injection name)
 
-- introduce stock exception (Bounds, IllegalState, etc.)
+- introduce stock exception (Bounds, IllegalState, etc.) and use current frame to
+  create exceptions
 
 - Type: by-method comparison
 
@@ -43,12 +44,9 @@
 
 - finish nesting call chain support
 
-- AnnotationTypeConstant method layers processing should be similar to properties
-
 - heap.getType() vs. Constant.getType()
 
-- get rid of the native knowledge about LazyVar; limit it to Unassigned only and make LazyVar to
-  mixin into UnassignedVar
+- Lazy property on an immutable object must not produce a mutable value
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
