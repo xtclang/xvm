@@ -88,10 +88,6 @@ public class xEnum
             m_listNames = listNames;
             m_listHandles = listHandles;
             }
-        else // (f_struct.getFormat() == Component.Format.ENUMVALUE)
-            {
-            getSuper(); // this will initialize all handles
-            }
         }
 
     /**
