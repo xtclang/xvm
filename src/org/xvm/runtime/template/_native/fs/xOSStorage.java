@@ -21,6 +21,8 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.PropertyConstant;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -72,6 +74,19 @@ public class xOSStorage
     protected ExceptionHandle makeImmutable(ObjectHandle hTarget)
         {
         return null;
+        }
+
+    @Override
+    public int getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
+        {
+        if (idProp.getName().equals("fileStore"))
+            {
+            // optimize out the cross-service call
+            return frame.assignValue(iReturn,
+                ((ServiceHandle) hTarget).getField("fileStore"));
+            }
+
+        return super.getPropertyValue(frame, hTarget, idProp, iReturn);
         }
 
     @Override
