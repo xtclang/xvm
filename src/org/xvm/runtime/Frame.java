@@ -1644,9 +1644,9 @@ public class Frame
             else
                 {
                 sb.append("synthetic call by ").append(framePrev);
-                if (iPC >- 0)
+                if (framePrev.m_iPC >= 0)
                     {
-                    sb.append(" at iPC=").append(iPC);
+                    sb.append(" at [").append(framePrev.m_iPC).append(']');
                     }
                 }
             }
