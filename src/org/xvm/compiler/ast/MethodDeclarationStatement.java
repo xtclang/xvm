@@ -297,7 +297,13 @@ public class MethodDeclarationStatement
 
             // create a structure for this type
             Component container = getParent().getComponent();
-            String    sName     = getName();
+            if (container == null)
+                {
+                // something went wrong; there must have already been an error
+                return;
+                }
+
+            String sName = getName();
             if (container.isMethodContainer())
                 {
                 boolean      fConstructor = isConstructor();
@@ -439,7 +445,7 @@ public class MethodDeclarationStatement
                                     }
                                 }
                             }
-                        
+
                         for (Parameter param : params)
                             {
                             TypeConstant type = param.getType().getTypeConstant();
