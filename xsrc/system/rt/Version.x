@@ -30,7 +30,7 @@
  *
  * * In the previous example, to use only one of the versions that begins with "1.2", the
  *   requested version `v<sub>R</sub>` should be specified as "1.2.0"; versions "1.2",
- *   "1.2.1", and "1.2.1.7" are subsitutes for 1.2.0, but versions "1.3", "2.0", and "2.1" are
+ *   "1.2.1", and "1.2.1.7" are substitutes for 1.2.0, but versions "1.3", "2.0", and "2.1" are
  *   not.
  *
  * * Pre-release version numbers are encoded specially. The version "1.2beta3" is encoded as

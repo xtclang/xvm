@@ -148,12 +148,12 @@ const Date(Int epochDay)
 
     @Op("+") Date add(Duration duration)
         {
-        return new Date(this.epochDay + duration.daysTotal);
+        return new Date(this.epochDay + duration.days);
         }
 
     @Op("-") Date sub(Duration duration)
         {
-        return new Date(this.epochDay - duration.daysTotal);
+        return new Date(this.epochDay - duration.days);
         }
 
     @Op("-") Duration sub(Date date)

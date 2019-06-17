@@ -281,13 +281,13 @@ const TimeZone(Int picos, String? name = null)
     @Op("+") TimeZone add(Duration duration)
         {
         assert resolved && !isNoTZ;
-        return new TimeZone(normalize(this.picos.to<Int128>() + duration.picosecondsTotal.to<Int128>()));
+        return new TimeZone(normalize(this.picos.to<Int128>() + duration.picoseconds.to<Int128>()));
         }
 
     @Op("-") TimeZone sub(Duration duration)
         {
         assert resolved && !isNoTZ;
-        return new TimeZone(normalize(this.picos.to<Int128>() - duration.picosecondsTotal.to<Int128>()));
+        return new TimeZone(normalize(this.picos.to<Int128>() - duration.picoseconds.to<Int128>()));
         }
 
     /**

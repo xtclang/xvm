@@ -62,7 +62,7 @@ module TestMaps.xqiz.it
             run();
             }
         Duration time = timer.elapsed;
-        console.println("Elapsed " + time.millisecondsTotal +" ms");
+        console.println("Elapsed " + time.milliseconds +" ms");
         console.println("Latency " + (time / iterations).milliseconds + " ms");
         }
 

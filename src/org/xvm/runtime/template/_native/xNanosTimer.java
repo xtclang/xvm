@@ -205,7 +205,7 @@ public class xNanosTimer
             {
             // note: the Java Timer uses millisecond scheduling, but we're given scheduling
             // instructions in picoseconds
-            LongLongHandle llPicos = (LongLongHandle) hDuration.getField("picosecondsTotal");
+            LongLongHandle llPicos = (LongLongHandle) hDuration.getField("picoseconds");
             long            cNanos  = Math.max(0, llPicos.getValue().divUnsigned(PICOS_PER_NANO).getLowValue());
             Alarm           alarm   = new Alarm(++s_cAlarms, cNanos, hAlarm);
 
@@ -269,7 +269,7 @@ public class xNanosTimer
             GenericHandle hDuration = new GenericHandle(s_clzDuration);
 
             LongLong llPicos   = new LongLong(elapsed()).mul(PICOS_PER_NANO_LL);
-            hDuration.setField("picosecondsTotal", xUInt128.INSTANCE.makeLongLong(llPicos));
+            hDuration.setField("picoseconds", xUInt128.INSTANCE.makeLongLong(llPicos));
             hDuration.makeImmutable();
 
             return hDuration;

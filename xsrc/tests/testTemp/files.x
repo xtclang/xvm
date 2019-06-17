@@ -96,7 +96,7 @@ module TestFiles.xqiz.it
             Boolean onEvent(Event event, Directory dir)
                 {
                 console.println($|[{this:service}]: Directory event: \"{event}\" {dir.name}
-                              + $| after {timer.elapsed.secondsTotal} sec
+                              + $| after {timer.elapsed.seconds} sec
                                  );
                 return False;
                 }
@@ -105,7 +105,7 @@ module TestFiles.xqiz.it
             Boolean onEvent(Event event, File file)
                 {
                 console.println($|[{this:service}]: File event: \"{event}\" {file.name}
-                              + $| after {timer.elapsed.secondsTotal} sec
+                              + $| after {timer.elapsed.seconds} sec
                                  );
                 return False;
                 }
@@ -122,7 +122,7 @@ module TestFiles.xqiz.it
         timer.schedule(Duration.ofSeconds(2), () ->
             {
             console.println($|[{this:service}]: deleting {file.name}
-                          + $| after {timer.elapsed.secondsTotal} sec
+                          + $| after {timer.elapsed.seconds} sec
                              );
 
             file.delete();

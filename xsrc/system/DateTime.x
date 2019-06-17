@@ -118,7 +118,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
      */
     @Op("+") DateTime add(Duration duration)
         {
-        return new DateTime(epochPicos + duration.picosecondsTotal.to<Int128>(), timezone);
+        return new DateTime(epochPicos + duration.picoseconds.to<Int128>(), timezone);
         }
 
     /**
@@ -126,7 +126,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
      */
     @Op("-") DateTime sub(Duration duration)
         {
-        return new DateTime(epochPicos - duration.picosecondsTotal.to<Int128>(), timezone);
+        return new DateTime(epochPicos - duration.picoseconds.to<Int128>(), timezone);
         }
 
     /**

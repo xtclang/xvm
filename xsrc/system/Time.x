@@ -189,7 +189,7 @@ const Time(Int picos)
 
     @Op("+") Time add(Duration duration)
         {
-        UInt128 period = duration.picosecondsTotal;
+        UInt128 period = duration.picoseconds;
         if (period == 0)
             {
             return this;
@@ -201,7 +201,7 @@ const Time(Int picos)
     @Op("-") Time sub(Duration duration)
         {
         Int minuend    = this.picos;
-        Int subtrahend = (duration.picosecondsTotal % PICOS_PER_DAY).to<Int>();
+        Int subtrahend = (duration.picoseconds % PICOS_PER_DAY).to<Int>();
         if (subtrahend > minuend)
             {
             minuend += PICOS_PER_DAY;
