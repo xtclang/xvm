@@ -1130,6 +1130,14 @@ public class Compiler
      */
     public static final String NAME_RESERVED                      = "COMPILER-124";
     /**
+     * Function is not allowed: {0}.
+     */
+    public static final String FUNCTION_NOT_ALLOWED              = "COMPILER-125";
+    /**
+     * Function cannot be abstract: {0}.
+     */
+    public static final String FUNCTION_BODY_MISSING             = "COMPILER-126";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

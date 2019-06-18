@@ -13,8 +13,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.ErrorList;
-import org.xvm.asm.ErrorList.ErrorInfo;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
@@ -323,8 +321,8 @@ public class MethodDeclarationStatement
                         {
                         if (fFunction)
                             {
-                            // TODO: error - function is not allowed
-                            throw new UnsupportedOperationException("function is not allowed");
+                            log(errs, Severity.ERROR, Compiler.FUNCTION_NOT_ALLOWED, sName);
+                            return;
                             }
                         // it's a "short hand" property method; stop right here
                         // will continue resolution in resolveNames() below
@@ -380,6 +378,13 @@ public class MethodDeclarationStatement
                     }
                 else
                     {
+                    if (fFunction && body == null &&
+                            container.getFormat() != Component.Format.INTERFACE)
+                        {
+                        log(errs, Severity.ERROR, Compiler.FUNCTION_BODY_MISSING, sName);
+                        return;
+                        }
+
                     method = container.createMethod(fFunction, access, aAnnotations,
                             aReturns, sName, aParams, body != null, fUsesSuper);
 
@@ -401,7 +406,7 @@ public class MethodDeclarationStatement
             else
                 {
                 log(errs, Severity.ERROR, Compiler.METHOD_UNEXPECTED, sName, container);
-                throw new UnsupportedOperationException("not a method container: " + container);
+                return;
                 }
             }
 

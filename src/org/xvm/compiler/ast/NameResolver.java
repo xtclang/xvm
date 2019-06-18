@@ -332,12 +332,21 @@ public class NameResolver
                         if (typeParam.isSingleDefiningConstant())
                             {
                             Constant  id        = typeParam.getDefiningConstant();
-                            Component component = id instanceof IdentityConstant ? ((IdentityConstant) id).getComponent() : null;
-                            switch (component.resolveName(m_sName, Access.PRIVATE, this))
+                            Component component = id instanceof IdentityConstant
+                                    ? ((IdentityConstant) id).getComponent()
+                                    : id instanceof PseudoConstant
+                                            ? ((PseudoConstant) id).getDeclarationLevelClass().getComponent()
+                                            : null;
+                            ResolutionResult result = component == null
+                                    ? ResolutionResult.UNKNOWN
+                                    : component.resolveName(m_sName, Access.PRIVATE, this);
+                            switch (result)
                                 {
                                 case UNKNOWN:
                                     // the component didn't know the name
                                     m_node.log(errs, Severity.ERROR, Compiler.NAME_MISSING, m_sName, m_constant);
+                                    // break through
+                                case ERROR:
                                     m_stage = Stage.ERROR;
                                     return Result.ERROR;
 
@@ -345,10 +354,6 @@ public class NameResolver
                                     // the component resolved the name; advance to the next one
                                     m_sName = m_iter.hasNext() ? m_iter.next() : null;
                                     break;
-
-                                case ERROR:
-                                    m_stage = Stage.ERROR;
-                                    return Result.ERROR;
 
                                 case DEFERRED:
                                     return Result.DEFERRED;
