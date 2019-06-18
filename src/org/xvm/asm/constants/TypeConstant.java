@@ -83,11 +83,8 @@ public abstract class TypeConstant
      * @param pool    the ConstantPool that will contain this Constant
      * @param format  the format of the Constant in the stream
      * @param in      the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
      */
     protected TypeConstant(ConstantPool pool, Constant.Format format, DataInput in)
-            throws IOException
         {
         super(pool);
         }
@@ -2885,39 +2882,34 @@ public abstract class TypeConstant
         Map<Object, Set<Object>> mapNarrowedNids = null;
         for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
             {
-            MethodConstant    idContrib     = entry.getKey();
-            MethodInfo        methodContrib = entry.getValue();
-            SignatureConstant sigContrib    = methodContrib.getSignature();
-            Object            nidContrib    = idContrib.resolveNestedIdentity(pool, this);
+            MethodConstant idContrib     = entry.getKey();
+            MethodInfo     methodContrib = entry.getValue();
 
             // the method is not virtual if it is a function, if it is private, or if it is
-            // contained inside a method or some other structure (such as a property) that is
-            // non-virtual
-            if (!methodContrib.isVirtual())
+            // contained inside a method or property that is non-virtual;
+            // however, the processing for property accessors is the same as for virtual methods
+            if (!methodContrib.isVirtual() && !methodContrib.isPotentialPropertyOverlay())
                 {
                 // TODO check for collision, because a function could theoretically replace a virtual method
                 // TODO (e.g. 2 modules, 1 introduces a virtual method in a new version that collides with a function in the other)
                 // TODO we'll also have to check similar conditions below
 
-                // skip super constructors
-                if (fSelf || !sigContrib.getName().equals("construct"))
+                // collect constructors only for ourselves and not "super" contributions
+                if (fSelf || !methodContrib.isConstructor())
                     {
-                    mapMethods.put((MethodConstant)
-                            constId.appendNestedIdentity(pool, nidContrib), methodContrib);
+                    // unlike the virtual methods, we don't re-resolve nested identity
+                    // (via constId.appendNestedIdentity(pool, nidContrib)
+                    // and instead keep all functions keyed by their "original" id
+                    mapMethods.put(idContrib, methodContrib);
                     }
-
-                // don't skip the rest of the processing for property accessors
-                if (!methodContrib.isPotentialPropertyOverlay())
-                    {
-                    // TODO CP - what if the method is virtual, but “locally” so, like a method
-                    //           inside a class inside a method
-                    continue;
-                    }
+                continue;
                 }
 
             // look for a method of the same signature (using its nested identity); only
             // virtual methods are registered using their nested identities
-            MethodInfo methodResult = methodContrib;
+            SignatureConstant sigContrib   = methodContrib.getSignature();
+            Object            nidContrib   = idContrib.resolveNestedIdentity(pool, this);
+            MethodInfo        methodResult = methodContrib;
 
             if (methodContrib.getTail().isOverride())
                 {
