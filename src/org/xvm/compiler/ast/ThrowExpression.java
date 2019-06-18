@@ -23,8 +23,11 @@ import org.xvm.compiler.Token;
 /**
  * A "throw expression" is a non-completing expression that throws an exception.
  *
- * TODO serious issues with types, because the expression cannot complete, yet it factors into type analysis.
- *      for example, "if (x?.y : assert)" does not evaluate to Boolean
+ * <p/>TODO serious issues with types, because the expression cannot complete, yet it factors into
+ *          type analysis. for example, "if (x?.y : assert)" does not evaluate to Boolean
+ *      -> parent expression should always check isCompleteable() before factoring in type info?
+ *      -> need to create a "subtype of all types" pseudo-type for compile-time that non-completing
+ *         expressions can report as their type (that has an isA() implementation that returns true)
  */
 public class ThrowExpression
         extends Expression
@@ -113,11 +116,29 @@ public class ThrowExpression
     @Override
     protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
-        boolean fValid = validateThrow(ctx, errs);
-        TypeFit fit    = fValid ? TypeFit.Fit : TypeFit.NoFit;
-        return finishValidations(atypeRequired, atypeRequired, fit, null, errs);
+        boolean        fValid      = validateThrow(ctx, errs);
+        TypeConstant[] atypeActual = atypeRequired == null ? TypeConstant.NO_TYPES : atypeRequired;
+        TypeFit        fit         = fValid ? TypeFit.Fit : TypeFit.NoFit;
+        return finishValidations(atypeRequired, atypeActual, fit, null, errs);
         }
 
+    @Override
+    public boolean isAssignableTo(TypeConstant typeThat)
+        {
+        // sure, this expression can be one of those, whatever that is
+        return true;
+        }
+
+    @Override
+    public boolean isTypeBoolean()
+        {
+        // sure, whatever you want
+        return true;
+        }
+
+    /**
+     * @return true iff validation is successful
+     */
     protected boolean validateThrow(Context ctx, ErrorListener errs)
         {
         if (expr != null)
@@ -139,6 +160,8 @@ public class ThrowExpression
     @Override
     public boolean isRuntimeConstant()
         {
+        // sure, you can use this where a constant is required, although it does NOT have a compile
+        // time constant available (i.e. the expression still requires code generation)
         return true;
         }
 
@@ -193,6 +216,10 @@ public class ThrowExpression
 
     /**
      * Generate the actual code for the throw.
+     *
+     * @param ctx   the statement context
+     * @param code  the code block
+     * @param errs  the error list to log any errors to
      */
     protected void generateThrow(Context ctx, Code code, ErrorListener errs)
         {
