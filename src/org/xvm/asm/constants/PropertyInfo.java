@@ -85,33 +85,11 @@ public class PropertyInfo
         PropertyConstant constId = getIdentity();
         assert constId.getName().equals(that.getName());
 
-        if (this.isTypeParam() || that.isTypeParam())
+        if (this.isTypeParam() ^ that.isTypeParam())
             {
-            if (this.isTypeParam() ^ that.isTypeParam())
-                {
-                constId.log(errs, Severity.ERROR, VE_PROPERTY_ILLEGAL,
-                        constId.getValueString());
-                return this;
-                }
-
-            if (this.getType().isA(that.getType()))
-                {
-                return this;
-                }
-            else if (that.getType().isA(this.getType()))
-                {
-                return that;
-                }
-            else
-                {
-                // right now, this is treated as an error; theoretically, we could "merge" or union
-                // the types
-                constId.log(errs, Severity.ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
-                        constId.getValueString(),
-                        this.getType().getValueString(),
-                        that.getType().getValueString());
-                return this;
-                }
+            constId.log(errs, Severity.ERROR, VE_PROPERTY_ILLEGAL,
+                    constId.getValueString());
+            return this;
             }
 
         // it is illegal to combine anything with a constant
@@ -119,6 +97,7 @@ public class PropertyInfo
             {
             constId.log(errs, Severity.ERROR, VE_CONST_INCOMPATIBLE,
                     constId.getValueString());
+            return this;
             }
 
         // types must match (but it is possible that an annotation is wider than the specific type
@@ -185,8 +164,8 @@ public class PropertyInfo
         Collections.addAll(listMerge, aBase);
         PropertyBody[] aResult = listMerge.toArray(new PropertyBody[0]);
 
-        // check @Override
-        if (fSelf)
+        // check @Override (type parameters are naturally exempt)
+        if (fSelf && !isTypeParam())
             {
             // should only have one layer (or zero layers, in which case we wouldn't have been
             // called) of property body for the "self" layer
