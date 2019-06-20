@@ -2414,9 +2414,15 @@ public abstract class TypeConstant
                     continue;
                     }
 
-                if (composition == Composition.Into)
+                switch (composition)
                     {
-                    infoContrib = infoContrib.asInto();
+                    case Into:
+                        infoContrib = infoContrib.asInto();
+                        break;
+
+                    case Delegates:
+                        infoContrib = infoContrib.asDelegates();
+                        break;
                     }
 
                 mapContribProps   = infoContrib.getProperties();
@@ -3309,9 +3315,9 @@ public abstract class TypeConstant
             SignatureConstant sig          = id.getSignature().resolveGenericTypes(pool,
                                                     method.isFunction() ? null : this);
             MethodBody        body         = new MethodBody(id, sig,
+                    fRebase & fHasNoCode | fNative ? Implementation.Native   :
                     fInterface && fHasNoCode       ? Implementation.Declared :
                     fInterface                     ? Implementation.Default  :
-                    fRebase & fHasNoCode | fNative ? Implementation.Native   :
                     fHasAbstract                   ? Implementation.Abstract :
                     fHasNoCode                     ? Implementation.SansCode :
                                                      Implementation.Explicit  );

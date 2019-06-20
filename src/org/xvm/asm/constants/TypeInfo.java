@@ -310,6 +310,63 @@ public class TypeInfo
         }
 
     /**
+     * @return the "delegates" version of this TypeInfo
+     */
+    public TypeInfo asDelegates()
+        {
+        TypeInfo info = m_delegates;
+        if (info == null)
+            {
+            ConstantPool                        pool         = pool();
+            Map<PropertyConstant, PropertyInfo> mapProps     = new HashMap<>();
+            Map<Object          , PropertyInfo> mapVirtProps = new HashMap<>();
+            for (Entry<PropertyConstant, PropertyInfo> entry : f_mapProps.entrySet())
+                {
+                PropertyConstant id   = entry.getKey();
+                PropertyInfo     prop = entry.getValue();
+
+                // skip non-virtual properties
+                if (prop.isVirtual())
+                    {
+                    mapProps.put(id, prop);
+                    mapVirtProps.put(id.resolveNestedIdentity(pool, null), prop);
+                    }
+                }
+
+            Map<MethodConstant, MethodInfo> mapMethods     = new HashMap<>();
+            Map<Object        , MethodInfo> mapVirtMethods = new HashMap<>();
+            for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet())
+                {
+                MethodConstant id     = entry.getKey();
+                MethodInfo     method = entry.getValue();
+
+                // skip non-virtual methods
+                if (method.isVirtual())
+                    {
+                    mapMethods.put(id, method);
+                    mapVirtMethods.put(id.resolveNestedIdentity(pool, null), method);
+                    }
+                }
+
+            info = new TypeInfo(f_type, f_cInvalidations, f_struct, f_cDepth, true,
+                    f_mapTypeParams, f_aannoClass,
+                    f_typeExtends, f_typeRebases, f_typeInto,
+                    f_listProcess, f_listmapClassChain, f_listmapDefaultChain,
+                    mapProps, mapMethods, mapVirtProps, mapVirtMethods, f_progress);
+
+            if (f_progress == Progress.Complete)
+                {
+                // cache the result
+                m_delegates = info;
+
+                // cache the result on the result itself, so it doesn't have to build its own "into"
+                info.m_delegates = info;
+                }
+            }
+        return info;
+        }
+
+    /**
      * Given a specified level of access, would the specified identity still be reachable?
      *
      * @param id        a property or method identity
@@ -1524,7 +1581,7 @@ public class TypeInfo
 
             if (isComparePattern(pool, constMethod.getRawParams(), f_type))
                 {
-                MethodStructure function = entry.getValue().getHead().getMethodStructure();
+                MethodStructure function = entry.getValue().getTopmostMethodStructure(this);
 
                 if (function.isFunction())
                     {
@@ -2443,6 +2500,7 @@ public class TypeInfo
     private final Map<Object, MethodInfo>         f_cacheByNid;
 
     private transient TypeInfo                         m_into;
+    private transient TypeInfo                         m_delegates;
     private transient Set<MethodInfo>                  m_setAuto;
     private transient Set<MethodInfo>                  m_setOps;
     private transient TypeConstant                     m_typeAuto;
