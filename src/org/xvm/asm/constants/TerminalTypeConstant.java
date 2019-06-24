@@ -608,15 +608,17 @@ public class TerminalTypeConstant
             {
             case TypeParameter:
                 {
-                TypeParameterConstant constTypeParam = (TypeParameterConstant) constant;
-                MethodConstant        constMethod    = constTypeParam.getMethod();
-                MethodStructure       method         = (MethodStructure) constMethod.getComponent();
+                TypeParameterConstant idTypeParam = (TypeParameterConstant) constant;
+                MethodConstant        idMethod    = idTypeParam.getMethod();
+                MethodStructure       method      = (MethodStructure) idMethod.getComponent();
                 if (method != null)
                     {
-                    Parameter param = method.getParam(constTypeParam.getRegister());
+                    Parameter param = method.getParam(idTypeParam.getRegister());
                     if (param.getName().equals(sFormalName))
                         {
-                        return typeActual;
+                        return typeActual.isA(idTypeParam.getConstraintType())
+                                ? typeActual
+                                : null;
                         }
                     }
                 break;
@@ -627,7 +629,9 @@ public class TerminalTypeConstant
                 PropertyConstant idProp = (PropertyConstant) constant;
                 if (idProp.getName().equals(sFormalName))
                     {
-                    return typeActual;
+                    return typeActual.isA(idProp.getConstraintType())
+                            ? typeActual
+                            : null;
                     }
                 break;
                 }

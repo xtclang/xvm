@@ -141,10 +141,7 @@ public class Parameter
      */
     public TypeConstant asTypeParameterType(MethodConstant constMethod)
         {
-        assert isTypeParameter();
-        ConstantPool pool = getConstantPool();
-        return pool.ensureTerminalTypeConstant(
-                    pool.ensureRegisterConstant(constMethod, m_iParam, getName()));
+        return getConstantPool().ensureTerminalTypeConstant(asTypeParameterConstant(constMethod));
         }
 
     /**

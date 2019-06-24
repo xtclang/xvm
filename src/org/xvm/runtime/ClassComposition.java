@@ -531,6 +531,15 @@ public class ClassComposition
         return mapFields.isEmpty() ? null : mapFields;
         }
 
+    /**
+     * @return the compile-time type for a given property name
+     */
+    public TypeConstant getFieldType(String sProp)
+        {
+        PropertyInfo info = getInceptionType().ensureTypeInfo().findProperty(sProp);
+        return info == null ? null : info.getType();
+        }
+
     @Override
     public int hashCode()
         {
