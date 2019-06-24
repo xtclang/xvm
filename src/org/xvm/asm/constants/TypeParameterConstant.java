@@ -14,9 +14,9 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Parameter;
 
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.readPackedLong;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -24,7 +24,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Represent a type parameter constant, which specifies a particular virtual machine register.
  */
 public class TypeParameterConstant
-        extends    PseudoConstant
+        extends    NamedConstant
         implements FormalConstant
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -41,33 +41,28 @@ public class TypeParameterConstant
     public TypeParameterConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
-        super(pool);
-        m_iMethod = readMagnitude(in);
-        m_iReg    = readMagnitude(in);
+        super(pool, format, in);
+
+        m_iReg = readMagnitude(in);
         }
 
     /**
-     * Construct a constant whose value is a register identifier.
+     * Construct a constant whose value is a type parameter identifier.
      *
-     * @param pool  the ConstantPool that will contain this Constant
-     * @param iReg  the register number
+     * @param pool   the ConstantPool that will contain this Constant
+     * @param sName  the type parameter name
+     * @param iReg   the register number
      */
-    public TypeParameterConstant(ConstantPool pool, MethodConstant constMethod, int iReg)
+    public TypeParameterConstant(ConstantPool pool, MethodConstant constMethod, String sName, int iReg)
         {
-        super(pool);
-
-        if (constMethod == null)
-            {
-            throw new IllegalArgumentException("method required");
-            }
+        super(pool, constMethod, sName);
 
         if (iReg < 0 || iReg > 0xFF)    // arbitrary limit; basically just a sanity assertion
             {
             throw new IllegalArgumentException("register (" + iReg + ") out of range");
             }
 
-        m_constMethod = constMethod;
-        m_iReg        = iReg;
+        m_iReg = iReg;
         }
 
 
@@ -78,7 +73,7 @@ public class TypeParameterConstant
      */
     public MethodConstant getMethod()
         {
-        return m_constMethod;
+        return (MethodConstant) getParentConstant();
         }
 
     /**
@@ -86,10 +81,7 @@ public class TypeParameterConstant
      */
     public void bindMethod(MethodConstant method)
         {
-        assert !method.containsUnresolved();
-        assert m_constMethod.equals(method) && method.equals(m_constMethod);
-
-        m_constMethod = method;
+        replaceParent(method);
         }
 
     /**
@@ -141,12 +133,19 @@ public class TypeParameterConstant
     public TypeConstant resolve(GenericTypeResolver resolver)
         {
         MethodStructure method = (MethodStructure) getMethod().getComponent();
-        if (method != null)
-            {
-            Parameter param = method.getParam(getRegister());
-            return resolver.resolveGenericType(param.getName());
-            }
-        return null;
+        return method == null
+                ? null
+                : resolver.resolveGenericType(getName());
+        }
+
+
+    // ----- IdentityConstant methods --------------------------------------------------------------
+
+    @Override
+    public IdentityConstant appendTrailingSegmentTo(IdentityConstant that)
+        {
+        return that.getConstantPool().ensureRegisterConstant(
+                (MethodConstant) that, getRegister(), getName());
         }
 
 
@@ -176,7 +175,7 @@ public class TypeParameterConstant
         fReEntry = true;
         try
             {
-            return !(fResolved = !m_constMethod.containsUnresolved());
+            return !(fResolved = !getMethod().containsUnresolved());
             }
         finally
             {
@@ -189,7 +188,7 @@ public class TypeParameterConstant
         {
         // as soon as the containing MethodConstant knows where it exists in the universe, then we
         // can safely resolve names
-        return m_constMethod.getParentConstant().canResolve();
+        return getParentConstant().getParentConstant().canResolve();
         }
 
     @Override
@@ -216,7 +215,7 @@ public class TypeParameterConstant
     protected Object getLocator()
         {
         return m_iReg == 0
-                ? m_constMethod
+                ? getMethod()
                 : null;
         }
 
@@ -238,21 +237,12 @@ public class TypeParameterConstant
         fReEntry = true;
         try
             {
-            return m_constMethod.compareTo(regThat.m_constMethod);
+            return getParentConstant().compareTo(regThat.getParentConstant());
             }
         finally
             {
             fReEntry = false;
             }
-        }
-
-    @Override
-    public String getValueString()
-        {
-        MethodStructure method = (MethodStructure) m_constMethod.getComponent();
-        return method == null
-                ? m_constMethod.getName() + "<#" + m_iReg + ">"
-                : m_constMethod.getName() + "." + method.getParam(m_iReg).getName();
         }
 
 
@@ -262,28 +252,24 @@ public class TypeParameterConstant
     protected void disassemble(DataInput in)
             throws IOException
         {
-        m_constMethod = (MethodConstant) getConstantPool().getConstant(m_iMethod);
-        }
+        super.disassemble(in);
 
-    @Override
-    protected void registerConstants(ConstantPool pool)
-        {
-        m_constMethod = (MethodConstant) pool.register(m_constMethod);
+        m_iReg = (int) readPackedLong(in);
         }
 
     @Override
     protected void assemble(DataOutput out)
             throws IOException
         {
-        out.writeByte(getFormat().ordinal());
-        writePackedLong(out, m_constMethod.getPosition());
+        super.assemble(out);
+
         writePackedLong(out, m_iReg);
         }
 
     @Override
     public String getDescription()
         {
-        return "method=" + m_constMethod.getName() + ", register=" + m_iReg;
+        return "method=" + getMethod().getName() + ", register=" + m_iReg;
         }
 
 
@@ -300,7 +286,7 @@ public class TypeParameterConstant
         fReEntry = true;
         try
             {
-            return m_constMethod.hashCode() + m_iReg;
+            return getName().hashCode() + m_iReg;
             }
         finally
             {
@@ -310,16 +296,6 @@ public class TypeParameterConstant
 
 
     // ----- fields --------------------------------------------------------------------------------
-
-    /**
-     * The index of the MethodConstant while the TypeParameterConstant is being deserialized.
-     */
-    private transient int m_iMethod;
-
-    /**
-     * The MethodConstant for the method containing the register.
-     */
-    private MethodConstant m_constMethod;
 
     /**
      * The register index.

@@ -609,7 +609,8 @@ public class NameResolver
                         if (m_typeMode == TypeMode.FORMAL_TYPE)
                             {
                             m_component = null;
-                            m_constant  = getPool().ensureFormalTypeChildConstant(m_constant, m_sName);
+                            m_constant  = getPool().ensureFormalTypeChildConstant(
+                                    (IdentityConstant) m_constant, m_sName);
                             return ResolutionResult.RESOLVED;
                             }
 

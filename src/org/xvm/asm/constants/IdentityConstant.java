@@ -658,8 +658,10 @@ public abstract class IdentityConstant
             case Package:
             case Class:
             case Typedef:
-            case Property:
             case NativeClass:
+            case Property:
+            case TypeParameter:
+            case FormalTypeChild:
                 return getConstantPool().ensureTerminalTypeConstant(this);
 
             default:

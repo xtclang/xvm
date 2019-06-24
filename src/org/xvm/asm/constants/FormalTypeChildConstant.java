@@ -2,24 +2,18 @@ package org.xvm.asm.constants;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
-
-import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
-
-import static org.xvm.util.Handy.readMagnitude;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
  * Represent a formal child of a generic property, type parameter or formal child constant.
  */
 public class FormalTypeChildConstant
-        extends    PseudoConstant
+        extends    NamedConstant
         implements FormalConstant
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -36,9 +30,7 @@ public class FormalTypeChildConstant
     public FormalTypeChildConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
-        super(pool);
-        m_iParent = readMagnitude(in);
-        m_iName   = readMagnitude(in);
+        super(pool, format, in);
         }
 
     /**
@@ -49,14 +41,9 @@ public class FormalTypeChildConstant
      * @param constParent  the parent constant, which must be a FormalConstant
      * @param sName        the formal child name
      */
-    public FormalTypeChildConstant(ConstantPool pool, Constant constParent, String sName)
+    public FormalTypeChildConstant(ConstantPool pool, IdentityConstant constParent, String sName)
         {
-        super(pool);
-
-        if (constParent == null)
-            {
-            throw new IllegalArgumentException("parent required");
-            }
+        super(pool, constParent, sName);
 
         switch (constParent.getFormat())
             {
@@ -74,14 +61,22 @@ public class FormalTypeChildConstant
                 throw new IllegalArgumentException(
                     "parent does not represent a formal constant: " + constParent);
             }
+        }
 
-        if (sName == null)
+
+    // ----- type-specific functionality -----------------------------------------------------------
+
+    /**
+     * @return the top formal parent of this formal child
+     */
+    public Constant getTopParent()
+        {
+        Constant constParent = getParentConstant();
+        while (constParent.getFormat() == Format.FormalTypeChild)
             {
-            throw new IllegalArgumentException("name required");
+            constParent = ((FormalTypeChildConstant) constParent).getParentConstant();
             }
-
-        m_constParent = constParent;
-        m_constName   = pool.ensureStringConstant(sName);
+        return constParent;
         }
 
 
@@ -96,7 +91,7 @@ public class FormalTypeChildConstant
     @Override
     public TypeConstant getConstraintType()
         {
-        FormalConstant constParent    = (FormalConstant) m_constParent;
+        FormalConstant constParent    = (FormalConstant) getParentConstant();
         TypeConstant   typeConstraint = constParent.getConstraintType();
 
         assert typeConstraint.containsGenericParam(getName());
@@ -112,7 +107,7 @@ public class FormalTypeChildConstant
     @Override
     public TypeConstant resolve(GenericTypeResolver resolver)
         {
-        FormalConstant constParent  = (FormalConstant) m_constParent;
+        FormalConstant constParent  = (FormalConstant) getParentConstant();
         TypeConstant   typeResolved = constParent.resolve(resolver);
 
         return typeResolved == null
@@ -121,36 +116,14 @@ public class FormalTypeChildConstant
         }
 
 
-    // ----- type-specific functionality -----------------------------------------------------------
+    // ----- IdentityConstant methods --------------------------------------------------------------
 
-    /**
-     * @return the parent of this formal child
-     */
-    public Constant getParent()
+    @Override
+    public IdentityConstant appendTrailingSegmentTo(IdentityConstant that)
         {
-        return m_constParent;
+        return that.getConstantPool().ensureFormalTypeChildConstant(that, getName());
         }
 
-    /**
-     * @return the name of the child class
-     */
-    public String getName()
-        {
-        return m_constName.getValue();
-        }
-
-    /**
-     * @return the top formal parent of this formal child
-     */
-    public Constant getTopParent()
-        {
-        Constant constParent = m_constParent;
-        while (constParent.getFormat() == Format.FormalTypeChild)
-            {
-            constParent = ((FormalTypeChildConstant) constParent).getParent();
-            }
-        return constParent;
-        }
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -158,12 +131,6 @@ public class FormalTypeChildConstant
     public Format getFormat()
         {
         return Format.FormalTypeChild;
-        }
-
-    @Override
-    public TypeConstant getType()
-        {
-        return getConstantPool().ensureTerminalTypeConstant(this);
         }
 
     @Override
@@ -178,89 +145,12 @@ public class FormalTypeChildConstant
         return false;
         }
 
-    @Override
-    public void forEachUnderlying(Consumer<Constant> visitor)
-        {
-        visitor.accept(m_constParent);
-        visitor.accept(m_constName);
-        }
-
-    @Override
-    protected int compareDetails(Constant that)
-        {
-        if (!(that instanceof FormalTypeChildConstant))
-            {
-            return -1;
-            }
-        int nResult = m_constParent.compareTo(((FormalTypeChildConstant) that).m_constParent);
-        if (nResult == 0)
-            {
-            nResult = m_constName.compareTo(((FormalTypeChildConstant) that).m_constName);
-            }
-        return nResult;
-        }
-
-    @Override
-    public String getValueString()
-        {
-        return m_constParent.getValueString() + '.' + getName();
-        }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        m_constParent = getConstantPool().getConstant(m_iParent);
-        m_constName   = (StringConstant) getConstantPool().getConstant(m_iName);
-        }
-
-    @Override
-    protected void registerConstants(ConstantPool pool)
-        {
-        m_constParent = pool.register(m_constParent);
-        m_constName   = (StringConstant) pool.register(m_constName);
-        }
-
-    @Override
-    protected void assemble(DataOutput out)
-            throws IOException
-        {
-        out.writeByte(getFormat().ordinal());
-        writePackedLong(out, m_constParent.getPosition());
-        writePackedLong(out, m_constName.getPosition());
-        }
-
-    @Override
     public String getDescription()
         {
-        return "parent=" + m_constParent + ", child=" + getName();
+        return "parent=" + getParentConstant() + ", child=" + getName();
         }
-
-
-    // ----- fields --------------------------------------------------------------------------------
-
-    /**
-     * During disassembly, this holds the index of the constant that specifies the parent of the
-     * auto-narrowing child. (The parent must itself be auto-narrowing.)
-     */
-    private int m_iParent;
-
-    /**
-     * During disassembly, this holds the index of the constant that specifies the name of the
-     * child.
-     */
-    private int m_iName;
-
-    /**
-     * The constant that identifies the parent formal property, type parameter or formal child.
-     */
-    private Constant m_constParent;
-
-    /**
-     * The constant that holds the name of the child identified by this constant.
-     */
-    private StringConstant m_constName;
     }

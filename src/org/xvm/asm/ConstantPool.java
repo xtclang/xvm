@@ -1385,6 +1385,8 @@ public class ConstantPool
             case Class:
             case Method:
             case Property:
+            case TypeParameter:
+            case FormalTypeChild:
                 constMultiMethod = ensureMultiMethodConstant(constParent, sName);
                 break;
 
@@ -1423,6 +1425,8 @@ public class ConstantPool
             case NativeClass:
             case Method:
             case Property:
+            case TypeParameter:
+            case FormalTypeChild:
                 constMultiMethod = ensureMultiMethodConstant(constParent, constSig.getName());
                 break;
 
@@ -1811,10 +1815,11 @@ public class ConstantPool
      *
      * @param constMethod  the containing method
      * @param iReg         the register number
+     * @param sName        the type parameter name
      *
      * @return the RegisterTypeConstant for the specified register number
      */
-    public TypeParameterConstant ensureRegisterConstant(MethodConstant constMethod, int iReg)
+    public TypeParameterConstant ensureRegisterConstant(MethodConstant constMethod, int iReg, String sName)
         {
         TypeParameterConstant constReg = null;
         if (iReg == 0)
@@ -1823,7 +1828,8 @@ public class ConstantPool
             }
         if (constReg == null)
             {
-            constReg = (TypeParameterConstant) register(new TypeParameterConstant(this, constMethod, iReg));
+            constReg = (TypeParameterConstant) register(
+                            new TypeParameterConstant(this, constMethod, sName, iReg));
             }
         return constReg;
         }
@@ -1837,7 +1843,7 @@ public class ConstantPool
      *
      * @return the FormalTypeChildConstant corresponding to the specified parent and name
      */
-    public FormalTypeChildConstant ensureFormalTypeChildConstant(Constant constFormal, String sName)
+    public FormalTypeChildConstant ensureFormalTypeChildConstant(IdentityConstant constFormal, String sName)
         {
         return (FormalTypeChildConstant) register(new FormalTypeChildConstant(this, constFormal, sName));
         }

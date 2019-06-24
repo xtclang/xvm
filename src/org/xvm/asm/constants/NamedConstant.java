@@ -36,6 +36,7 @@ public abstract class NamedConstant
             throws IOException
         {
         super(pool);
+
         m_iParent = readMagnitude(in);
         m_iName   = readMagnitude(in);
         }
@@ -64,6 +65,20 @@ public abstract class NamedConstant
 
         m_constParent = constParent;
         m_constName   = pool.ensureStringConstant(sName);
+        }
+
+
+    // ----- type-specific functionality -----------------------------------------------------------
+
+    /**
+     * Replace the parent constant with an equivalent resolved constant.
+     */
+    protected void replaceParent(IdentityConstant constParent)
+        {
+        assert !constParent.containsUnresolved();
+        assert m_constParent.equals(constParent) && constParent.equals(m_constParent);
+
+        m_constParent = constParent;
         }
 
 
@@ -150,6 +165,12 @@ public abstract class NamedConstant
                 chSep   = '#';
                 break;
 
+            case TypeParameter:
+            case FormalTypeChild:
+                sParent = ((NamedConstant) constParent).getName();
+                chSep   = '.';
+                break;
+
             default:
                 throw new IllegalStateException("parent=" + constParent);
             }
@@ -164,7 +185,7 @@ public abstract class NamedConstant
     protected void disassemble(DataInput in)
             throws IOException
         {
-        final ConstantPool pool = getConstantPool();
+        ConstantPool pool = getConstantPool();
         m_constParent = (IdentityConstant) pool.getConstant(m_iParent);
         m_constName   = (StringConstant)   pool.getConstant(m_iName);
         }

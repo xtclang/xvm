@@ -50,14 +50,18 @@ public class PropertyConstant
         {
         super(pool, constParent, sName);
 
-        if (    !( constParent.getFormat() == Format.Module
-                || constParent.getFormat() == Format.Package
-                || constParent.getFormat() == Format.Class
-                || constParent.getFormat() == Format.NativeClass
-                || constParent.getFormat() == Format.Property
-                || constParent.getFormat() == Format.Method ))
+        switch (constParent.getFormat())
             {
-            throw new IllegalArgumentException("parent module, package, class, or method required");
+            case Module:
+            case Package:
+            case Class:
+            case NativeClass:
+            case Property:
+            case Method:
+                break;
+
+            default:
+                throw new IllegalArgumentException("invalid parent: " + constParent.getFormat());
             }
         }
 
