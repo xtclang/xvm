@@ -1197,15 +1197,18 @@ public class TypeInfo
 
         mapBySig = ensureMethodsBySignature();
 
-        for (MethodInfo methodTest : f_mapMethods.values())
+        for (Map.Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet())
             {
+            MethodConstant idTest     = entry.getKey();
+            MethodInfo     methodTest = entry.getValue();
+
             if (!methodTest.getSignature().getName().equals(sig.getName()))
                 {
                 continue;
                 }
 
             // only include non-nested methods
-            if (methodTest.getIdentity().getNestedDepth() != f_cDepth + 2)
+            if (idTest.getNestedDepth() != f_cDepth + 2)
                 {
                 continue;
                 }
