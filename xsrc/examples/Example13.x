@@ -107,3 +107,53 @@ const Point(Int x, Int y) {}
 
 // alternatively, it's just names i.e. there is a property x, a property y
 // (so reflection is easy enough)
+
+
+// ----- funky -----
+
+interface Hashable
+    {
+    static Boolean equals(...);
+    static Int hash(...);
+    }
+
+class B1
+    {
+    static Boolean equals(...) {..}
+    static Int hash(...) {..}
+    }
+
+class B2 extends B1
+    {
+    static Boolean equals(...) {..}              // this COULD be a compiler error! (COULD -> SHOULD)
+    }
+
+class D1 extends B1
+    {
+    }
+
+class D2 extends B2
+    {
+    }
+
+class HashSet<ET extends Hashable>
+        implements Set<ET>
+    {
+    // ...
+    add(ET el)
+        {
+        Int i = ET.hash(el);        // this should work, but ...
+        Int i = el.hash();          // Stroustrup strikes again (we choose to NEVER ALLOW THIS SHIT)
+        }
+    }
+
+foo()
+    {
+    HashSet s1 = new HashSet<D1>();     // obvious and simple and correct, right?
+    // what equals does it use? B1.equals()
+    // what hash does it use? B1.hash()
+
+    HashSet s2 = new HashSet<D2>();     // NOT AT ALL OBVIOUS AND SIMPLE AND CORRECT!!!!!!! FUCK FUCK FUCK
+    // what equals does it use? B1.equals() (NOT B2.equals, because B2 does NOT "implement" Hashable)
+    // what hash does it use? B1.hash() is all we have ...
+    }
