@@ -149,7 +149,7 @@ public class Call_10
         {
         if (function.isNative())
             {
-            return getClassTemplate(frame, function).
+            return getNativeTemplate(frame, function).
                 invokeNative1(frame, function, null, hArg, A_IGNORE);
             }
 

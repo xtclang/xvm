@@ -60,7 +60,7 @@ mixin ListMapIndex<KeyType extends Hashable, ValueType>
                 }
             }
 
-        Int    keyhash = key.hash;
+        Int    keyhash = KeyType.hashCode(key);
         Bucket bucket  = buckets[keyhash % buckets.size];
         if (bucket == null)
             {
@@ -132,7 +132,7 @@ mixin ListMapIndex<KeyType extends Hashable, ValueType>
             else
                 {
                 // update the index
-                Int keyhash  = listKeys[index].hash;
+                Int keyhash  = KeyType.hashCode(listKeys[index]);
                 Int bucketid = keyhash % buckets.size;
                 buckets[bucketid] = removeKeyFrom(buckets[bucketid], keyhash, index);
 
@@ -157,7 +157,7 @@ mixin ListMapIndex<KeyType extends Hashable, ValueType>
         if (buckets != null)
             {
             // update the index
-            Int keyhash  = key.hash;
+            Int keyhash  = KeyType.hashCode(key);
             Int bucketid = keyhash % buckets.size;
             buckets[bucketid] = addKeyTo(buckets[bucketid], keyhash, listKeys.size-1);
 
@@ -185,7 +185,7 @@ mixin ListMapIndex<KeyType extends Hashable, ValueType>
         Bucket[] buckets = new Bucket[bucketCount];
         loop: for (KeyType key : listKeys)
             {
-            Int keyhash  = key.hash;
+            Int keyhash  = KeyType.hashCode(key);
             Int bucketid = keyhash % bucketCount;
             buckets[bucketid] = addKeyTo(buckets[bucketid], keyhash, loop.count);
             }
@@ -205,7 +205,7 @@ mixin ListMapIndex<KeyType extends Hashable, ValueType>
         Int index = indexes.is(Int)
                 ? indexes
                 : indexes[0];
-        return listKeys[index].hash;
+        return KeyType.hashCode(listKeys[index]);
         }
 
     /**

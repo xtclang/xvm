@@ -6,6 +6,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.FormalConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.SignatureConstant;
@@ -235,28 +237,87 @@ public abstract class OpCallable extends Op
     // ----- helper methods -----
 
     /**
-     * @return the method structure for this op-code
+     * Retrieve the method structure for this op-code and cache the parent's type
+     * to be used by {@link #getNativeTemplate}
      */
     protected MethodStructure getMethodStructure(Frame frame)
         {
-        // there is no need to cache the id, since it's a constant for a given op-code
-        if (m_function != null)
+        MethodConstant   idFunction = (MethodConstant) frame.getConstant(m_nFunctionId);
+        MethodStructure  function   = m_function;
+        IdentityConstant idParent   = idFunction.getNamespace();
+
+        switch (idParent.getFormat())
             {
-            return m_function;
+            case Module:
+            case Package:
+            case Class:
+                {
+                if (function == null)
+                    {
+                    ConstantPool        pool     = frame.poolContext();
+                    GenericTypeResolver resolver = frame.getGenericsResolver();
+
+                    TypeConstant typeParent = idParent.getType().resolveGenerics(pool, resolver);
+                    m_function = function = (MethodStructure) idFunction.getComponent();
+                    if (function == null)
+                        {
+                        TypeInfo          infoParent = typeParent.ensureTypeInfo();
+                        SignatureConstant sig        = idFunction.getSignature().
+                                resolveGenericTypes(pool, resolver);
+
+                        m_function = function = infoParent.getMethodBySignature(sig).
+                                getTopmostMethodStructure(infoParent);
+                        }
+                    m_typeParent = typeParent;
+                    }
+                break;
+                }
+
+            case Property:
+            case TypeParameter:
+            case FormalTypeChild:
+                {
+                GenericTypeResolver resolver   = frame.getGenericsResolver();
+                TypeConstant        typeParent = ((FormalConstant) idParent).resolve(resolver);
+                if (function == null || !typeParent.equals(m_typeParent))
+                    {
+                    TypeInfo          infoParent = typeParent.ensureTypeInfo();
+                    SignatureConstant sig        = idFunction.getSignature().
+                            resolveGenericTypes(frame.poolContext(), resolver);
+
+                    m_function = function = infoParent.getMethodBySignature(sig).
+                            getTopmostMethodStructure(infoParent);
+                    m_typeParent = typeParent;
+                    }
+                break;
+                }
+
+            case Method:
+                {
+                if (function == null)
+                    {
+                    m_function = function = (MethodStructure) idFunction.getComponent();
+                    assert !function.isNative();
+                    // since the function is never native, no need to se the parent type
+                    }
+                break;
+                }
+
+            default:
+                throw new IllegalStateException();
             }
 
-        MethodConstant constFunction = (MethodConstant) frame.getConstant(m_nFunctionId);
-
-        return m_function = (MethodStructure) constFunction.getComponent();
+        return function;
         }
 
     /**
      * @return the ClassTemplate that defines a native implementation for the specified function
+     *         using the information collected by {@link #getMethodStructure}
      */
-    protected ClassTemplate getClassTemplate(Frame frame, MethodStructure function)
+    protected ClassTemplate getNativeTemplate(Frame frame, MethodStructure function)
         {
-        return frame.f_context.f_templates.
-                getTemplate(function.getContainingClass().getIdentityConstant());
+        assert function == m_function;
+        return frame.f_context.f_templates.getTemplate(m_typeParent);
         }
 
     protected int constructChild(Frame frame, MethodStructure constructor,
@@ -326,6 +387,7 @@ public abstract class OpCallable extends Op
     protected Argument   m_argReturn;  // optional
     protected Argument[] m_aArgReturn; // optional
 
+    private TypeConstant    m_typeParent; // the parent type for the cached function
     private MethodStructure m_function;   // cached function
 
     private ClassConstant   m_idParent;    // the parent's class id for the cached constructor

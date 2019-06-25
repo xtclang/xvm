@@ -116,7 +116,7 @@ public class Call_0T
 
             if (function.isNative())
                 {
-                return getClassTemplate(frame, function).
+                return getNativeTemplate(frame, function).
                     invokeNativeT(frame, function, null, Utils.OBJECTS_NONE, m_nRetValue);
                 }
 

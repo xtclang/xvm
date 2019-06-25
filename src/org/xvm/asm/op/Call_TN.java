@@ -176,7 +176,7 @@ public class Call_TN
 
         if (function.isNative())
             {
-            return getClassTemplate(frame, function).
+            return getNativeTemplate(frame, function).
                 invokeNativeNN(frame, function, null, ahArg, m_anRetValue);
             }
 

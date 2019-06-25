@@ -58,7 +58,7 @@ public class MethodInfo
      *
      * @return a capped version of this method chain
      */
-    MethodInfo cappedBy(MethodInfo that)
+    MethodInfo capWith(MethodInfo that)
         {
         // both method chains must be virtual, and neither can already be capped
         assert this.isOverridable();
@@ -90,6 +90,29 @@ public class MethodInfo
 
         aNew[0] = new MethodBody(idCap, sigThis, Implementation.Capped, idThat.getNestedIdentity());
         System.arraycopy(aOld, 0, aNew, 1, cOld);
+
+        return new MethodInfo(aNew);
+        }
+
+    /**
+     * Cap this function info with a redirection to another implementation function.
+     * Error checking is the responsibility of the caller.
+     *
+     * @param that  the function info to redirect to, which is the narrowed form of this MethodInfo
+     *
+     * @return a capped version of this method chain
+     */
+    MethodInfo coverWith(MethodInfo that)
+        {
+        assert this.isFunction() && this.m_aBody.length == 1;
+        assert that.isFunction() && that.m_aBody.length == 1;
+
+        MethodConstant idThis = this.getIdentity();
+        MethodConstant idThat = that.getIdentity();
+
+        MethodBody[] aNew = new MethodBody[2];
+        aNew[0] = new MethodBody(idThis, that.getSignature(), Implementation.Capped, idThat);
+        aNew[1] = this.m_aBody[0];
 
         return new MethodInfo(aNew);
         }
@@ -382,7 +405,9 @@ public class MethodInfo
             if (body.getImplementation() == Implementation.Capped)
                 {
                 Object nid = body.getNarrowingNestedIdentity();
-                return infoType.getMethodByNestedId(nid).getTopmostMethodStructure(infoType);
+                return nid instanceof MethodConstant
+                        ? (MethodStructure) ((MethodConstant) nid).getComponent()
+                        : infoType.getMethodByNestedId(nid).getTopmostMethodStructure(infoType);
                 }
 
             MethodStructure method = body.getMethodStructure();
@@ -420,11 +445,11 @@ public class MethodInfo
      */
     public boolean isAbstract()
         {
-        MethodBody[] abody = m_aBody;
+        MethodBody[] aBody = m_aBody;
         boolean fIgnoreAbstract = false;
-        for (int i = 0, c = abody.length; i < c; ++i)
+        for (int i = 0, c = aBody.length; i < c; ++i)
             {
-            MethodBody body = abody[i];
+            MethodBody body = aBody[i];
             switch (body.getImplementation())
                 {
                 case Implicit:
@@ -460,7 +485,8 @@ public class MethodInfo
      */
     public boolean isFunction()
         {
-        return getHead().isFunction();
+        MethodBody head = isCapped() ? m_aBody[1] : m_aBody[0];
+        return head.isFunction();
         }
 
     /**
@@ -495,6 +521,15 @@ public class MethodInfo
             }
 
         return true;
+        }
+
+    /**
+     * @return true iff this is an abstract function (declared on an interface)
+     */
+    public boolean isAbstractFunction()
+        {
+        MethodBody head = isCapped() ? m_aBody[1] : m_aBody[0];
+        return head.isFunction() && head.getImplementation() == Implementation.Declared;
         }
 
     /**

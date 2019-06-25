@@ -12,12 +12,12 @@ const NaturalHasher<ValueType extends Hashable>
     @Override
     Int hashOf(ValueType value)
         {
-        return value.hash;
+        return ValueType.hashCode(value);
         }
 
     @Override
     Boolean areEqual(ValueType value1, ValueType value2)
         {
-        return value1 == value2;
+        return ValueType.equals(value1, value2);
         }
     }

@@ -82,12 +82,6 @@ const OSFileNode
     @Override
     conditional FileNode renameTo(String name);
 
-    @Override
-    Int hash.get()
-        {
-        return pathString.hash;
-        }
-
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
@@ -103,6 +97,11 @@ const OSFileNode
         }
 
     // ----- equality support ----------------------------------------------------------------------
+
+    static <CompileType extends OSFileNode> Int hashCode(CompileType value)
+        {
+        return String.hashCode(value.pathString);
+        }
 
     static <CompileType extends OSFileNode> Boolean equals(CompileType node1, CompileType node2)
         {

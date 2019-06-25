@@ -279,8 +279,7 @@ const Type<DataType>
 
     // ----- const contract ------------------------------------------------------------------------
 
-    @Override
-    @Lazy Int hash.calc()
+    static <CompileType extends Type> Int hashCode(CompileType value)
         {
         TODO hash
         }

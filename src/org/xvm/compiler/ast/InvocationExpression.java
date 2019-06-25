@@ -22,6 +22,7 @@ import org.xvm.asm.Register;
 import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -32,6 +33,7 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodType;
+import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.asm.op.*;
 
@@ -405,7 +407,7 @@ public class InvocationExpression
 
                 if (m_fCall)
                     {
-                    if (m_method.isFunction() || m_method.isConstructor())
+                    if (method.isFunction() || method.isConstructor())
                         {
                         return resolveTypes(resolver, idMethod.getSignature().getRawReturns());
                         }
@@ -737,7 +739,7 @@ public class InvocationExpression
                             TypeConstant[] atypeResult;
                             if (m_fCall)
                                 {
-                                SignatureConstant sigRet = m_method.isFunction() || m_method.isConstructor()
+                                SignatureConstant sigRet = method.isFunction() || method.isConstructor()
                                         ? idMethod.getSignature()
                                         : idMethod.resolveAutoNarrowing(pool, typeLeft);
                                 if (!mapTypeParams.isEmpty())
@@ -936,9 +938,20 @@ public class InvocationExpression
                 if (m_method.isFunction() || m_method.isConstructor())
                     {
                     // use the function identity as the argument & drop through to the function handling
-                    assert !m_fBindTarget && (exprLeft == null || !exprLeft.hasSideEffects() || m_fBjarne);
-                    argFn      = idMethod;
-                    fConstruct = m_method.isConstructor();
+                    assert !m_fBindTarget && (exprLeft == null || !exprLeft.hasSideEffects() ||
+                                              m_fBjarne || m_idFormal != null);
+                    if (m_idFormal == null)
+                        {
+                        argFn      = idMethod;
+                        fConstruct = m_method.isConstructor();
+                        }
+                    else
+                        {
+                        // create a synthetic method constant for the formal type (for a funky
+                        // interface type)
+                        argFn      = pool().ensureMethodConstant((IdentityConstant) m_idFormal, idMethod.getSignature());
+                        fConstruct = false;
+                        }
                     }
                 else
                     {
@@ -1646,6 +1659,62 @@ public class InvocationExpression
                         return arg;
                         }
                     }
+
+                switch (nameLeft.getMeaning())
+                    {
+                    case Property:
+                        {
+                        PropertyConstant idProp = (PropertyConstant) nameLeft.getIdentity(ctx);
+                        if (idProp.isTypeParameter())
+                            {
+                            ErrorList errsTemp = new ErrorList(1);
+                            TypeInfo  infoType = idProp.getFormalType().ensureTypeInfo(errs);
+
+                            Argument arg = findCallable(ctx, infoType, sName, MethodType.Function, false,
+                                                atypeReturn, errsTemp);
+                            if (arg != null)
+                                {
+                                m_argMethod   = arg;
+                                m_method      = getMethod(infoType, arg);
+                                m_fBindTarget = false;
+                                m_idFormal    = idProp;
+                                errsTemp.logTo(errs);
+                                return arg;
+                                }
+                            }
+                        break;
+                        }
+
+                    case Variable:
+                        {
+                        Register reg = (Register) nameLeft.resolveRawArgument(ctx, false, errs);
+                        if (!reg.isUnknown())
+                            {
+                            int             iReg   = reg.getIndex();
+                            MethodStructure method = ctx.getMethod();
+                            if (iReg < method.getTypeParamCount())
+                                {
+                                // the register points to a formal type parameter
+                                TypeParameterConstant idParam = method.getParam(iReg).
+                                        asTypeParameterConstant(method.getIdentityConstant());
+
+                                TypeInfo  infoLeft = idParam.getType().ensureTypeInfo(errs);
+                                ErrorList errsTemp = new ErrorList(1);
+                                Argument  arg      = findCallable(ctx, infoLeft, sName, MethodType.Function, false,
+                                                        atypeReturn, errsTemp);
+                                if (arg != null)
+                                    {
+                                    m_argMethod   = arg;
+                                    m_method      = getMethod(infoLeft, arg);
+                                    m_fBindTarget = false;
+                                    m_idFormal    = idParam;
+                                    errsTemp.logTo(errs);
+                                    return arg;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
             // use the type of the left expression to get the TypeInfo that must contain the
@@ -1653,7 +1722,7 @@ public class InvocationExpression
             // - methods are included because there is a left and it is NOT identity-mode
             // - functions are NOT included because the left is NOT identity-mode
             TypeInfo  infoLeft = typeLeft.ensureTypeInfo(errs);
-            ErrorList errsTemp = new ErrorList(10);
+            ErrorList errsTemp = new ErrorList(1);
 
             Argument arg = findCallable(ctx, infoLeft, sName, MethodType.Method, false,
                                 atypeReturn, errsTemp);
@@ -1673,7 +1742,7 @@ public class InvocationExpression
                 List<Expression> listArgs = new ArrayList<>(args);
                 listArgs.add(0, exprLeft);
 
-                ErrorList errsTempB = new ErrorList(10);
+                ErrorList errsTempB = new ErrorList(1);
                 arg = findMethod(ctx, infoLeft, sName, listArgs, MethodType.Function, false,
                             atypeReturn, errsTempB);
                 if (arg != null)
@@ -2075,6 +2144,9 @@ public class InvocationExpression
                                                          // this holds the corresponding structure
     private transient boolean         m_fBjarne;         // indicates that the invocation expression
                                                          // was Bjarne-transformed from x.f() to X.f(x)
+    private transient FormalConstant  m_idFormal;        // if not null, indicates that the invocation
+                                                         // expression applies to a function on a formal
+                                                         // type (e.g. ValueType.hashCode(value))
     private transient Argument[]      m_aargTypeParams;  // "hidden" type parameters
     private transient int             m_cDefaults;       // number of default arguments
     private transient MethodConstant  m_idConvert;       // conversion method

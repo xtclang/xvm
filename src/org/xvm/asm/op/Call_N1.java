@@ -134,7 +134,7 @@ public class Call_N1
 
                 if (function.isNative())
                     {
-                    return getClassTemplate(frame, function).
+                    return getNativeTemplate(frame, function).
                         invokeNativeN(frame, function, null, ahVar, m_nRetValue);
                     }
 

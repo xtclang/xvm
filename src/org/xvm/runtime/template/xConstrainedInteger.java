@@ -129,9 +129,6 @@ public abstract class xConstrainedInteger
         {
         switch (sPropName)
             {
-            case "hash":
-                return buildHashCode(frame, hTarget, iReturn);
-
             case "magnitude":
                 {
                 if (f_fSigned)

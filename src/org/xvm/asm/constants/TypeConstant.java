@@ -2888,8 +2888,9 @@ public abstract class TypeConstant
         Map<Object, Set<Object>> mapNarrowedNids = null;
         for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
             {
-            MethodConstant idContrib     = entry.getKey();
-            MethodInfo     methodContrib = entry.getValue();
+            MethodConstant    idContrib     = entry.getKey();
+            MethodInfo        methodContrib = entry.getValue();
+            SignatureConstant sigContrib    = methodContrib.getSignature();
 
             // the method is not virtual if it is a function, if it is private, or if it is
             // contained inside a method or property that is non-virtual;
@@ -2900,8 +2901,46 @@ public abstract class TypeConstant
                 // TODO (e.g. 2 modules, 1 introduces a virtual method in a new version that collides with a function in the other)
                 // TODO we'll also have to check similar conditions below
 
-                // collect constructors only for ourselves and not "super" contributions
-                if (fSelf || !methodContrib.isConstructor())
+                boolean fKeep = true;
+                if (methodContrib.isConstructor())
+                    {
+                    // keep constructors only for ourselves and not "super" contributions
+                    fKeep = fSelf;
+                    }
+                else if (!methodContrib.isCapped())
+                    {
+                    if (idContrib.getNestedDepth() == 2)
+                        {
+                        List<MethodConstant> listMatches =
+                                collectCoveredFunctions(sigContrib, mapMethods);
+                        for (MethodConstant idMethod : listMatches)
+                            {
+                            MethodInfo method = mapMethods.get(idMethod);
+
+                            if (method.containsBody(idContrib) && methodContrib.isAbstract())
+                                {
+                                // the contribution is abstract and already in a chain; skip it
+                                fKeep = false;
+                                break;
+                                }
+
+                            if (method.isCapped())
+                                {
+                                continue;
+                                }
+
+                            // the contribution "hides" the corresponding function on the base
+                            mapMethods.put(idMethod, method.coverWith(methodContrib));
+                            }
+                        }
+                    else
+                        {
+                        // don't collect any abstract functions on nested structures
+                        fKeep = !methodContrib.isAbstract();
+                        }
+                    }
+
+                if (fKeep)
                     {
                     // unlike the virtual methods, we don't re-resolve nested identity
                     // (via constId.appendNestedIdentity(pool, nidContrib)
@@ -2913,9 +2952,8 @@ public abstract class TypeConstant
 
             // look for a method of the same signature (using its nested identity); only
             // virtual methods are registered using their nested identities
-            SignatureConstant sigContrib   = methodContrib.getSignature();
-            Object            nidContrib   = idContrib.resolveNestedIdentity(pool, this);
-            MethodInfo        methodResult = methodContrib;
+            Object      nidContrib   = idContrib.resolveNestedIdentity(pool, this);
+            MethodInfo  methodResult = methodContrib;
 
             if (methodContrib.getTail().isOverride())
                 {
@@ -3086,7 +3124,7 @@ public abstract class TypeConstant
                     Object     nidNarrowing  = setNarrowing.iterator().next();
                     MethodInfo infoNarrowing = mapVirtMods.get(nidNarrowing);
                     MethodInfo infoNarrowed  = mapVirtMethods.get(nidNarrowed);
-                    mapVirtMods.put(nidNarrowed, infoNarrowed.cappedBy(infoNarrowing));
+                    mapVirtMods.put(nidNarrowed, infoNarrowed.capWith(infoNarrowing));
                     }
                 else
                     {
@@ -3113,6 +3151,37 @@ public abstract class TypeConstant
             mapMethods.put(id, info);
             mapVirtMethods.put(nid, info);
             }
+        }
+
+    /**
+     * Collect all functions from the base that would be "hidden" by the specified function.
+     *
+     * @param sigSub   the signature of the function that can "hide" base functions
+     * @param mapBase  the map of all base methods to select from
+     *
+     * @return a list of all matching function identities
+     */
+    protected List<MethodConstant> collectCoveredFunctions(
+            SignatureConstant               sigSub,
+            Map<MethodConstant, MethodInfo> mapBase)
+
+        {
+        List<MethodConstant> listMatch = new ArrayList<>();
+        for (Entry<MethodConstant, MethodInfo> entry : mapBase.entrySet())
+            {
+            MethodConstant id   = entry.getKey();
+            MethodInfo     info = entry.getValue();
+
+            if (info.isFunction()
+                    && id.getName().equals(sigSub.getName()) && id.getNestedDepth() == 2)
+                {
+                if (sigSub.isSubstitutableFor(id.getSignature(), this))
+                    {
+                    listMatch.add(id);
+                    }
+                }
+            }
+        return listMatch;
         }
 
     /**

@@ -502,17 +502,16 @@ const Version
         }
 
 
-    // ----- Hashable ------------------------------------------------------------------------------
+    // ----- Hashable and Comparable ---------------------------------------------------------------
 
-    @Override
-    @RO Int hash.get()
+    static <CompileType extends Version> Int hashCode(CompileType version)
         {
-        return (parent?.hash.rotateLeft(1) : 0) ^ number;
+        Version? parent = version.parent;
+        return parent == null
+                ? version.number
+                : Version.hashCode(parent.as(Version)).rotateLeft(1) ^ version.number;
         }
 
-    /**
-     * Two entries are equal iff they contain equal keys and equal values.
-     */
     static <CompileType extends Version> Boolean equals(CompileType version1, CompileType version2)
         {
         switch (version1.size <=> version2.size)

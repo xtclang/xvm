@@ -710,12 +710,17 @@ public abstract class ClassTemplate
             case 0:
                 if (method.getName().equals("toString"))
                     {
-                    if (method.getReturnCount() == 1 &&
-                        method.getReturn(0).getType().equals(pool().typeString()))
-                        {
-                        return buildStringValue(frame, hTarget, iReturn);
-                        }
+                    return buildStringValue(frame, hTarget, iReturn);
                     }
+                break;
+
+            case 3:
+                if (method.getName().equals("equals"))
+                    {
+                    return frame.assignValue(iReturn,
+                            xBoolean.makeHandle(ahArg[1] == ahArg[2]));
+                    }
+                break;
             }
 
         throw new IllegalStateException("Compilation failed for method: " + f_sName + "#"

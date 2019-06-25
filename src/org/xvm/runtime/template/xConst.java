@@ -10,9 +10,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IntervalConstant;
 import org.xvm.asm.constants.LiteralConstant;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
@@ -29,6 +27,7 @@ import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xString.StringHandle;
+import org.xvm.runtime.template.xType.TypeHandle;
 
 
 /**
@@ -39,20 +38,6 @@ public class xConst
         extends ClassTemplate
     {
     public static xConst INSTANCE;
-
-    // name of the synthetic property for cached hash value
-    public static final String PROP_HASH = "@hash";
-
-    public static PropertyConstant ID_HASH;
-    public static MethodStructure FN_ESTIMATE_LENGTH;
-    public static MethodStructure FN_APPEND_TO;
-    public static MethodStructure INTERVAL_CONSTRUCT;
-    public static MethodStructure DATETIME_CONSTRUCT;
-    public static MethodStructure DATE_CONSTRUCT;
-    public static MethodStructure TIME_CONSTRUCT;
-    public static MethodStructure DURATION_CONSTRUCT;
-    public static MethodStructure VERSION_CONSTRUCT;
-    public static MethodStructure PATH_CONSTRUCT;
 
     public xConst(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -69,12 +54,10 @@ public class xConst
         {
         if (this == INSTANCE)
             {
-            TypeInfo infoConst = getCanonicalType().ensureTypeInfo();
-
-            infoConst.findEqualsFunction().setNative(true);
-            infoConst.findCompareFunction().setNative(true);
-
-            ID_HASH = infoConst.findProperty("hash").getIdentity();
+            // equals and Comparable support
+            f_struct.findMethod("equals",   3).setNative(true);
+            f_struct.findMethod("compare",  3).setNative(true);
+            f_struct.findMethod("hashCode", 2).setNative(true);
 
             // Stringable support
             ClassStructure clzHelper = f_templates.getClassStructure("_native.ConstHelper");
@@ -189,19 +172,6 @@ public class xConst
         }
 
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName,
-                               ObjectHandle hTarget, int iReturn)
-        {
-        switch (sPropName)
-            {
-            case "hash":
-                return buildHashCode(frame, hTarget, iReturn);
-            }
-
-        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
-
-    @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn)
         {
@@ -222,10 +192,23 @@ public class xConst
         {
         switch (method.getName())
             {
-            case "estimateStringLength":
+            case "compare":
                 {
-                return callEstimateLength(frame, hTarget, iReturn);
+                TypeHandle hType = (TypeHandle) ahArg[0];
+                return hType.getDataType().callCompare(frame, ahArg[1], ahArg[2], iReturn);
                 }
+
+            case "estimateStringLength":
+                return callEstimateLength(frame, hTarget, iReturn);
+
+            case "equals":
+                {
+                TypeHandle hType = (TypeHandle) ahArg[0];
+                return hType.getDataType().callEquals(frame, ahArg[1], ahArg[2], iReturn);
+                }
+
+            case "hashCode":
+                return buildHashCode(frame, ahArg[1], iReturn);
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -414,8 +397,15 @@ public class xConst
                             xException.makeHandle("Unassigned property \"" + sProp +'"'));
                     }
 
-                TypeConstant typeProp = findProperty(sProp).getType().
+                TypeConstant typeProp = clz.getFieldType(sProp).
                     resolveGenerics(frameCaller.poolContext(), frameCaller.getGenericsResolver());
+
+                MethodStructure methodEq = typeProp.ensureTypeInfo().findEqualsFunction();
+                if (methodEq == null)
+                    {
+                    return frameCaller.raiseException(
+                            xException.makeHandle("Property \"" + sProp + " is not Comparable"));
+                    }
 
                 switch (typeProp.callEquals(frameCaller, h1, h2, Op.A_STACK))
                     {
@@ -494,8 +484,15 @@ public class xConst
                             xException.makeHandle("Unassigned property \"" + sProp +'"'));
                     }
 
-                TypeConstant typeProp = findProperty(sProp).getType().
+                TypeConstant typeProp = clz.getFieldType(sProp).
                     resolveGenerics(frameCaller.poolContext(), frameCaller.getGenericsResolver());
+
+                MethodStructure methodCmp = typeProp.ensureTypeInfo().findCompareFunction();
+                if (methodCmp == null)
+                    {
+                    return frameCaller.raiseException(
+                            xException.makeHandle("Property \"" + sProp + " is not Orderable"));
+                    }
 
                 switch (typeProp.callCompare(frameCaller, h1, h2, Op.A_STACK))
                     {
@@ -614,17 +611,17 @@ public class xConst
     protected static class HashCode
             implements Frame.Continuation
         {
-        final private GenericHandle hConst;
-        final private long[] holder;
+        final private GenericHandle    hConst;
+        final private long[]           holder;
         final private Iterator<String> iterFields;
-        final private int iReturn;
+        final private int              iReturn;
 
         public HashCode(GenericHandle hConst, long[] holder, int iReturn)
             {
-            this.hConst = hConst;
+            this.hConst     = hConst;
             this.iterFields = hConst.getComposition().getFieldNames().iterator();
-            this.holder = holder;
-            this.iReturn = iReturn;
+            this.holder     = holder;
+            this.iReturn    = iReturn;
             }
 
         @Override
@@ -659,7 +656,31 @@ public class xConst
                             xException.makeHandle("Unassigned property: \"" + sProp + '"'));
                     }
 
-                switch (Utils.callGetProperty(frameCaller, hProp, ID_HASH))
+                TypeConstant typeProp = clz.getFieldType(sProp).
+                    resolveGenerics(frameCaller.poolContext(), frameCaller.getGenericsResolver());
+
+                MethodStructure methodEq = typeProp.ensureTypeInfo().findEqualsFunction();
+                if (methodEq == null)
+                    {
+                    // ignore this field
+                    continue;
+                    }
+
+                int iResult;
+                if (methodEq.isNative())
+                    {
+                    iResult = hProp.getTemplate().invokeNativeN(frameCaller, methodEq, null,
+                        new ObjectHandle[] {typeProp.getTypeHandle(), hProp}, Op.A_STACK);
+                    }
+                else
+                    {
+                    ObjectHandle[] ahVar = new ObjectHandle[methodEq.getMaxVars()];
+                    ahVar[0] = typeProp.getTypeHandle();
+                    ahVar[1] = hProp;
+                    iResult = frameCaller.call1(methodEq, null, ahVar, Op.A_STACK);
+                    }
+
+                switch (iResult)
                     {
                     case Op.R_NEXT:
                         updateResult(frameCaller);
@@ -683,4 +704,20 @@ public class xConst
             return frameCaller.assignValue(iReturn, hHash);
             }
         }
+
+    // ----- constants -----------------------------------------------------------------------------
+
+    // name of the synthetic property for cached hash value
+    private static final String PROP_HASH = "@hash";
+
+    private static MethodStructure FN_ESTIMATE_LENGTH;
+    private static MethodStructure FN_APPEND_TO;
+    private static MethodStructure INTERVAL_CONSTRUCT;
+    private static MethodStructure DATETIME_CONSTRUCT;
+    private static MethodStructure DATE_CONSTRUCT;
+    private static MethodStructure TIME_CONSTRUCT;
+    private static MethodStructure DURATION_CONSTRUCT;
+    private static MethodStructure VERSION_CONSTRUCT;
+    private static MethodStructure PATH_CONSTRUCT;
+
     }

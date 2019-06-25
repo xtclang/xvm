@@ -1340,7 +1340,33 @@ public class MethodStructure
     @Override
     public boolean isAutoNarrowingAllowed()
         {
-        return !isFunction() && !isConstructor() && getParent().isAutoNarrowingAllowed();
+        if (isFunction())
+            {
+            Component container = getParent().getParent();
+            if (!(container instanceof ClassStructure))
+                {
+                return false;
+                }
+
+            // abstract (no code) functions on interfaces allow auto-narrowing as an exception from
+            // the rules as well as the "equals" method on Object
+            ClassStructure   structClz = (ClassStructure) container;
+            IdentityConstant idClz     = structClz.getIdentityConstant();
+            if (getName().equals("equals") && idClz.equals(idClz.getConstantPool().clzObject()))
+                {
+                return true;
+                }
+            if (hasCode() || structClz.getFormat() != Format.INTERFACE)
+                {
+                return false;
+                }
+            }
+        else if (isConstructor())
+            {
+            return false;
+            }
+
+        return getParent().isAutoNarrowingAllowed();
         }
 
     @Override

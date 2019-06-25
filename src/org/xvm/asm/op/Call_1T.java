@@ -163,7 +163,7 @@ public class Call_1T
         {
         if (function.isNative())
             {
-            return getClassTemplate(frame, function).
+            return getNativeTemplate(frame, function).
                 invokeNativeT(frame, function, null, new ObjectHandle[] {hArg}, m_nRetValue);
             }
 

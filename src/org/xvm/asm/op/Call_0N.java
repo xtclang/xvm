@@ -11,7 +11,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
 import org.xvm.runtime.CallChain;
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -103,7 +102,7 @@ public class Call_0N
 
             if (function.isNative())
                 {
-                return getClassTemplate(frame, function).
+                return getNativeTemplate(frame, function).
                     invokeNativeNN(frame, function, null, Utils.OBJECTS_NONE, m_anRetValue);
                 }
 

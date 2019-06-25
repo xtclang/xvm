@@ -31,11 +31,20 @@ interface Orderable
         }
 
     /**
-     * The existence of a real implementation of comparison for Orderable instances will be checked
-     * by the run-time.
+     * Compare two objects of the same type for purposes of ordering.
+     *
+     * Note: this function must yield "Equal" *if an only if* the result of `equals` function is
+     *       "True".
      */
-    static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2)
-        {
-        return value1 <=> value2;
-        }
+    static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
+
+    /**
+     * Compare two objects of the same Orderable type for equality.
+     *
+     * Note: this function must yield "True" *if and only if* the result of `compare` function is
+     *       "Equal".
+     *
+     * @return true iff the objects are equivalent
+     */
+    static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
     }

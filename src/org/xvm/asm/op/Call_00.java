@@ -71,7 +71,7 @@ public class Call_00
             MethodStructure function = getMethodStructure(frame);
             if (function.isNative())
                 {
-                return getClassTemplate(frame, function).
+                return getNativeTemplate(frame, function).
                     invokeNativeN(frame, function, null, Utils.OBJECTS_NONE, A_IGNORE);
                 }
 

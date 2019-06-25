@@ -101,22 +101,6 @@ interface Ref<RefType>
     @RO Type actualType;
 
     /**
-     * REVIEW: should we move this function to the Referent interface?
-     *
-     * Reference equality is used to determine if two references are referring to the same referent
-     * _identity_. Specifically, two references are equal iff they reference the same runtime
-     * object, or the two objects that they reference are both immutable and structurally identical.
-     *
-     * Because the reference identity is impossible to represent in Ecstasy, the actual
-     * implementation of this function is also impossible to represent in Ecstasy, hence the
-     * implementation may appear to be infinitely recursive.
-     */
-    static <CompileType extends Ref> Boolean equals(CompileType value1, CompileType value2)
-        {
-        return value1 == value2;
-        }
-
-    /**
      * The optional name of the reference. References are used for arguments, local variables,
      * object properties, constant pool values, array elements, fields of structures, elements of
      * tuples, and many other purposes; in some of these uses, it is common for a reference to be
@@ -138,4 +122,11 @@ interface Ref<RefType>
      * embedded within the reference itself.
      */
     @RO Boolean selfContained;
+
+    /**
+     * Reference equality is used to determine if two references are referring to the same referent
+     * _identity_. Specifically, two references are equal iff they reference the same runtime
+     * object, or the two objects that they reference are both immutable and structurally identical.
+     */
+    static <CompileType extends Ref> Boolean equals(CompileType value1, CompileType value2);
     }

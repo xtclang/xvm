@@ -170,7 +170,7 @@ public class Call_TT
 
         if (function.isNative())
             {
-            return getClassTemplate(frame, function).
+            return getNativeTemplate(frame, function).
                 invokeNativeT(frame, function, null, ahArg, m_nRetValue);
             }
 
