@@ -62,8 +62,8 @@ module TestMaps.xqiz.it
             run();
             }
         Duration time = timer.elapsed;
-        console.println("Elapsed " + time.milliseconds +" ms");
-        console.println("Latency " + (time / iterations).milliseconds + " ms");
+        console.println($"Elapsed {time.milliseconds} ms");
+        console.println($"Latency {(time / iterations).milliseconds} ms");
         }
 
     void testListMap()
@@ -74,7 +74,7 @@ module TestMaps.xqiz.it
         console.println($"empty map={map}");
 
         console.println("adding entries...");
-        map.put("k1", "v2");
+        map.put("k1", "v1");
         map.put("k2", "v2");
 
         console.println($"map.size={map.size}, map.empty={map.empty}");
@@ -86,8 +86,7 @@ module TestMaps.xqiz.it
         console.println("keys:");
         loop: for (String key : map.keys)
             {
-            console.println("[" + loop.count + "]=" + key);
-            // or: console.println($"[{loop.count}]={key}");
+            console.println($"[{loop.count}]:{key}");
             }
         // TODO CP "loop" should cease to exist in the context at this point
 
@@ -99,13 +98,13 @@ module TestMaps.xqiz.it
         console.println("values:");
         loop2: for (String value : map.values)
             {
-            console.println("[" + loop2.count + "]=" + value);
+            console.println($"[{loop2.count}]:{value}");
             }
 
         console.println("entries:");
         loop3: for (Map<String,String>.Entry entry : map.entries)
             {
-            console.println("[" + loop3.count + "]=" + entry.key + "=" + entry.value);
+            console.println($"[{loop3.count}]:{entry.key}={entry.value}");
             }
         }
     }
