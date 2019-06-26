@@ -8,6 +8,7 @@ import java.io.IOException;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 import org.xvm.asm.Register;
 
@@ -117,7 +118,12 @@ public class FBind
                 }
             else if (m_nFunctionId < CONSTANT_OFFSET)
                 {
-                hFunction = xFunction.makeHandle(getMethodStructure(frame));
+                MethodStructure function = getMethodStructure(frame);
+                if (function == null)
+                    {
+                    return R_EXCEPTION;
+                    }
+                hFunction = xFunction.makeHandle(function);
                 }
             else
                 {

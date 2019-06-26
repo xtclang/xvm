@@ -267,6 +267,11 @@ public abstract class OpCallable extends Op
 
                         m_function = function = infoParent.getMethodBySignature(sig).
                                 getTopmostMethodStructure(infoParent);
+                        if (function == null)
+                            {
+                            frame.raiseException(xException.makeHandle(
+                                "unresolvable function " + idFunction.getValueString()));
+                            }
                         }
                     m_typeParent = typeParent;
                     }
@@ -287,6 +292,11 @@ public abstract class OpCallable extends Op
 
                     m_function = function = infoParent.getMethodBySignature(sig).
                             getTopmostMethodStructure(infoParent);
+                    if (function == null)
+                        {
+                        frame.raiseException(xException.makeHandle(
+                            "unresolvable function " + idFunction.getValueString()));
+                        }
                     m_typeParent = typeParent;
                     }
                 break;

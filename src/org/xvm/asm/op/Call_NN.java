@@ -118,6 +118,10 @@ public class Call_NN
             if (m_nFunctionId < CONSTANT_OFFSET)
                 {
                 MethodStructure function = getMethodStructure(frame);
+                if (function == null)
+                    {
+                    return R_EXCEPTION;
+                    }
 
                 ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, function.getMaxVars());
                 if (ahVar == null)

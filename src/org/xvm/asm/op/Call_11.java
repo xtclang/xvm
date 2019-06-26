@@ -116,6 +116,10 @@ public class Call_11
             if (m_nFunctionId < CONSTANT_OFFSET)
                 {
                 MethodStructure function = getMethodStructure(frame);
+                if (function == null)
+                    {
+                    return R_EXCEPTION;
+                    }
 
                 checkReturnRegister(frame, function);
 

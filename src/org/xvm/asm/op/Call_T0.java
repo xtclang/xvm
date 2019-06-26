@@ -113,6 +113,10 @@ public class Call_T0
             if (m_nFunctionId < CONSTANT_OFFSET)
                 {
                 MethodStructure function = getMethodStructure(frame);
+                if (function == null)
+                    {
+                    return R_EXCEPTION;
+                    }
 
                 if (isDeferred(hArg))
                     {

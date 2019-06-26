@@ -119,6 +119,10 @@ public class Call_1T
             if (m_nFunctionId < CONSTANT_OFFSET)
                 {
                 MethodStructure function = getMethodStructure(frame);
+                if (function == null)
+                    {
+                    return R_EXCEPTION;
+                    }
 
                 checkReturnTupleRegister(frame, function);
 
