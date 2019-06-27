@@ -51,11 +51,27 @@ interface Enum
         }
 
     /**
-     * Compare two enumerated values that belong to the same enumeration.
+     * Calculate a hash code for the specified Enum value.
+     */
+    static <CompileType extends Enum> Int hashCode(CompileType value)
+        {
+        return value.ordinal;
+        }
+
+    /**
+     * Compare two enumerated values that belong to the same enumeration purposes of ordering.
      */
     static <CompileType extends Enum> Ordered compare(CompileType value1, CompileType value2)
         {
         return value1.ordinal <=> value2.ordinal;
+        }
+
+    /**
+     * Compare two enumerated values that belong to the same enumeration for equality.
+     */
+    static <CompileType extends Enum> Boolean equals(CompileType value1, CompileType value2)
+        {
+        return value1.ordinal == value2.ordinal;
         }
 
     // ----- Stringable methods --------------------------------------------------------------------
