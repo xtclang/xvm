@@ -1,8 +1,6 @@
 package org.xvm.runtime.template._native.fs;
 
 
-import com.sun.nio.file.SensitivityWatchEventModifier;
-
 import java.io.IOException;
 
 import java.nio.file.FileSystems;
@@ -317,14 +315,11 @@ public class xOSStorage
             {
             WatchKey key = pathDir.register(
                 f_service,
-                new WatchEvent.Kind[]
-                    {
-                    StandardWatchEventKinds.ENTRY_CREATE,
-                    StandardWatchEventKinds.ENTRY_DELETE,
-                    StandardWatchEventKinds.ENTRY_MODIFY,
-                    },
-                SensitivityWatchEventModifier.HIGH
+                StandardWatchEventKinds.ENTRY_CREATE,
+                StandardWatchEventKinds.ENTRY_DELETE,
+                StandardWatchEventKinds.ENTRY_MODIFY
                 );
+            // TODO GG SensitivityWatchEventModifier.HIGH (doesn't work on JDK 11 or later)
 
             f_mapWatches.put(key, new WatchContext(pathDir, hStorage));
             }
