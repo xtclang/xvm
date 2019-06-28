@@ -249,6 +249,9 @@ public class TypeCompositionStatement
                     case METHOD:
                         return Zone.InMethod;
 
+                    case PROPERTY:
+                        return Zone.InProperty;
+
                     default:
                         throw new IllegalStateException("this=" + structThis.getFormat()
                                 + ", parent=" + structParent.getFormat());
@@ -357,46 +360,26 @@ public class TypeCompositionStatement
 
                     default:
                         IdentityConstant idParent = container.getIdentityConstant();
-                        ProveVirtChild: while (true)
+                        switch (idParent.getFormat())
                             {
-                            switch (idParent.getFormat())
-                                {
-                                case Module:
-                                case Package:
-                                    // not a virtual child (it's nested under a module or package)
-                                    break ProveVirtChild;
+                            case Module:
+                            case Package:
+                                // not a virtual child (it's nested under a module or package)
+                                break;
 
-                                case Method:
-                                    // it's inside a method, so it is an inner class, but it's not
-                                    // a virtual child
-                                    fInner = true;
-                                    break ProveVirtChild;
+                            case Method:
+                            case Property:
+                            case Class:
+                                fInner = true;
+                                break;
 
-                                case Property:
-                                    // it's inside a property, so it is an inner class, but keep
-                                    // going up
-                                    fInner   = true;
-                                    idParent = idParent.getParentConstant();
-                                    break;
-
-                                case Class:
-                                    // it is a virtual child because the class was contained within
-                                    // a class, with no method barrier interposed
-                                    fInner       = true;
-                                    m_fVirtChild = true;
-                                    break ProveVirtChild;
-
-                                default:
-                                    throw new IllegalStateException("idParent=" + idParent);
-                                }
+                            default:
+                                throw new IllegalStateException("idParent=" + idParent);
                             }
                         break;
                     }
                 }
             }
-
-        // anonymous inner classes must evaluate to inner but never virtual
-        assert !m_fAnon || fInner && !m_fVirtChild;
 
         // create the structure for this module, package, or class (etc.)
         ClassStructure component = null;
@@ -582,7 +565,8 @@ public class TypeCompositionStatement
         // const                                            x
         // enum                                             (implicit)
         // mixin
-        int nAllowed = 0;
+        Zone zone     = getDeclarationZone();
+        int  nAllowed = 0;
         switch (component.getFormat())
             {
             case SERVICE:
@@ -590,7 +574,7 @@ public class TypeCompositionStatement
             case CLASS:
                 // class is not allowed to be declared static if it is top-level, otherwise all of
                 // these can always be declared static
-                if (!(component.getFormat() == Format.CLASS && getDeclarationZone() == Zone.TopLevel))
+                if (!(component.getFormat() == Format.CLASS && zone == Zone.TopLevel))
                     {
                     nAllowed |= Component.STATIC_BIT;
                     }
@@ -602,7 +586,7 @@ public class TypeCompositionStatement
                 {
                 // these are all allowed to be declared public/private/protected, except when they
                 // appear inside a method body
-                if (getDeclarationZone() != Zone.InMethod)
+                if (zone != Zone.InMethod)
                     {
                     nAllowed |= Component.ACCESS_MASK;
                     }
@@ -618,7 +602,7 @@ public class TypeCompositionStatement
             boolean fExplicitlyProtected = false;
             boolean fExplicitlyPrivate   = false;
 
-            NextModifier: for (int i = 0, c = modifiers.size(); i < c; ++i)
+            for (int i = 0, c = modifiers.size(); i < c; ++i)
                 {
                 Token token = modifiers.get(i);
                 int     nBits;
@@ -679,30 +663,42 @@ public class TypeCompositionStatement
                 }
             }
 
-        // inner const/service classes must be declared static if the parent is not const/service
-        if (!fExplicitlyStatic && getDeclarationZone() == Zone.InClass)
+        if (zone == Zone.InProperty)
             {
-            if (component.getFormat() == Format.CONST)
+            log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED, "Class within a property");
+            }
+
+        // inner const/service classes must be declared static if the parent is not const/service
+        if (!fExplicitlyStatic && zone == Zone.InClass)
+            {
+            switch (component.getFormat())
                 {
-                // parent MUST be a const (because parent will be automatically captured, and a
-                // const can't capture a non-const)
-                if (container.getFormat() != Format.CONST)
-                    {
-                    log(errs, Severity.ERROR, Compiler.INNER_CONST_NOT_STATIC);
-                    fExplicitlyStatic = true;
-                    }
-                }
-            else if (component.getFormat() == Format.SERVICE)
-                {
-                // parent MUST be a const or a service (because parent is automatically captured,
-                // and a service can't capture an object that isn't either a const or a service)
-                if (container.getFormat() != Format.CONST && container.getFormat() != Format.SERVICE)
-                    {
-                    log(errs, Severity.ERROR, Compiler.INNER_SERVICE_NOT_STATIC);
-                    fExplicitlyStatic = true;
-                    }
+                case CONST:
+                    // parent MUST be a const (because parent will be automatically captured, and a
+                    // const can't capture a non-const)
+                    if (container.getFormat() != Format.CONST)
+                        {
+                        log(errs, Severity.ERROR, Compiler.INNER_CONST_NOT_STATIC);
+                        fExplicitlyStatic = true;
+                        }
+                    break;
+
+                case SERVICE:
+                    // parent MUST be a const or a service (because parent is automatically captured,
+                    // and a service can't capture an object that isn't either a const or a service)
+                    if (container.getFormat() != Format.CONST && container.getFormat() != Format.SERVICE)
+                        {
+                        log(errs, Severity.ERROR, Compiler.INNER_SERVICE_NOT_STATIC);
+                        fExplicitlyStatic = true;
+                        }
+                    break;
                 }
             }
+
+        m_fVirtChild = zone == Zone.InClass && fInner && !fExplicitlyStatic;
+
+        // anonymous inner classes must evaluate to inner but never virtual
+        assert !m_fAnon || fInner && !m_fVirtChild;
 
         // configure the static bit on the component
         if (fExplicitlyStatic || component.getFormat().isImplicitlyStatic() ||
@@ -713,7 +709,6 @@ public class TypeCompositionStatement
 
         // validate that type parameters are allowed, and register them (the actual validation of
         // the type parameters themselves happens in a later phase)
-        final ClassConstant OBJECT_CLASS = pool.clzObject();
         boolean fSingleton = false;
         switch (component.getFormat())
             {
@@ -744,7 +739,7 @@ public class TypeCompositionStatement
                 // these compositions are new-able, and thus can usually declare type parameters;
                 // the exception is when the composition is not new-able, which is the case for
                 // singleton compositions
-                if (fExplicitlyStatic && getDeclarationZone() == Zone.TopLevel)
+                if (fExplicitlyStatic && zone == Zone.TopLevel)
                     {
                     fSingleton = true;
                     disallowTypeParams(errs);
@@ -853,17 +848,18 @@ public class TypeCompositionStatement
             }
         else
             {
+            ClassConstant clzObject = pool.clzObject();
             switch (component.getFormat())
                 {
                 default:
-                    constDefaultSuper = OBJECT_CLASS;
+                    constDefaultSuper = clzObject;
                     break;
 
                 case CLASS:
                     // Object has no super
-                    constDefaultSuper = component.getIdentityConstant().equals(OBJECT_CLASS)
+                    constDefaultSuper = component.getIdentityConstant().equals(clzObject)
                             ? null
-                            : OBJECT_CLASS;
+                            : clzObject;
                     break;
 
                 case INTERFACE:
@@ -880,7 +876,7 @@ public class TypeCompositionStatement
                 case MIXIN:
                     // mixins apply to ("mix into") any Object by default
                     constDefaultSuper = null;
-                    constDefaultInto  = OBJECT_CLASS;
+                    constDefaultInto  = clzObject;
                     break;
                 }
             }
@@ -2457,11 +2453,12 @@ public class TypeCompositionStatement
      * <li><b>{@code TopLevel}</b> - the module itself, or declared within a module or package;</li>
      * <li><b>{@code InClass}</b> - declared within a class, e.g. an inner class;</li>
      * <li><b>{@code InMethod}</b> - declared within the body of a method.</li>
+     * <li><b>{@code InProperty}</b> - declared within the body of a property.</li>
      * </ul>
      */
     public enum Zone
         {
-        TopLevel, InClass, InMethod;
+        TopLevel, InClass, InMethod, InProperty;
 
         /**
          * Look up a DeclZone enum by its ordinal.

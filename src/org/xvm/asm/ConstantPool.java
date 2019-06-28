@@ -927,10 +927,10 @@ public class ConstantPool
      * Given the specified class name and the context (module, package, class, method) within which
      * it exists, obtain a ClassConstant that represents it.
      *
-     * @param constParent
-     * @param sClass
+     * @param constParent  the parent's identity
+     * @param sClass       the class name
      *
-     * @return
+     * @return the specified class constant
      */
     public ClassConstant ensureClassConstant(IdentityConstant constParent, String sClass)
         {
@@ -940,11 +940,12 @@ public class ConstantPool
             case Package:
             case Class:
             case Method:
+            case Property:
                 return (ClassConstant) register(new ClassConstant(this, constParent, sClass));
 
             default:
                 throw new IllegalArgumentException("constant " + constParent.getFormat()
-                        + " is not a Module, Package, Class, or Method");
+                        + " is not a valid parent");
             }
         }
 

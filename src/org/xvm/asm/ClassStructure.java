@@ -166,9 +166,9 @@ public class ClassStructure
             case CONST:
             case SERVICE:
                 {
-                if (isSynthetic())
+                if (isSynthetic() || isStatic())
                     {
-                    // anonymous classes are not virtual
+                    // anonymous and static child classes are not virtual
                     return false;
                     }
 

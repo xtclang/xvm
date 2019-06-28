@@ -43,12 +43,17 @@ public class ClassConstant
         {
         super(pool, constParent, sName);
 
-        if (    !( constParent.getFormat() == Format.Module
-                || constParent.getFormat() == Format.Package
-                || constParent.getFormat() == Format.Class
-                || constParent.getFormat() == Format.Method ))
+        switch (constParent.getFormat())
             {
-            throw new IllegalArgumentException("parent module, package, class, or method required");
+            case Module:
+            case Package:
+            case Class:
+            case Method:
+            case Property:
+                break;
+
+            default:
+                throw new IllegalArgumentException("invalid parent format: " + constParent);
             }
         }
 
