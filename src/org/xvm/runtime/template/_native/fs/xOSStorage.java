@@ -313,13 +313,14 @@ public class xOSStorage
         public void register(Path pathDir, ServiceHandle hStorage)
                 throws IOException
             {
+            // on Mac OS the WatchService implementation simply polls every 10 seconds;
+            // for Java 9 and above there is no way to configure that
             WatchKey key = pathDir.register(
                 f_service,
                 StandardWatchEventKinds.ENTRY_CREATE,
                 StandardWatchEventKinds.ENTRY_DELETE,
                 StandardWatchEventKinds.ENTRY_MODIFY
                 );
-            // TODO GG SensitivityWatchEventModifier.HIGH (doesn't work on JDK 11 or later)
 
             f_mapWatches.put(key, new WatchContext(pathDir, hStorage));
             }

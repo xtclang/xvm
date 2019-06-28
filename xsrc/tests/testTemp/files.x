@@ -119,7 +119,10 @@ module TestFiles.xqiz.it
         file.create();
         assert file.exists;
 
-        timer.schedule(Duration.ofSeconds(2), () ->
+        // on Mac OS the WatchService implementation simply polls every 10 seconds;
+        // increase the "wait" value to see the events
+        Int wait = 1;
+        timer.schedule(Duration.ofSeconds(wait), () ->
             {
             console.println($|[{this:service}]: deleting {file.name}
                           + $| after {timer.elapsed.seconds} sec
@@ -128,7 +131,7 @@ module TestFiles.xqiz.it
             file.delete();
             assert !file.exists;
 
-            timer.schedule(Duration.ofSeconds(2), () ->
+            timer.schedule(Duration.ofSeconds(wait), () ->
                 {
                 console.println($"[{this:service}]: tmpDir={tmpDir} modified {tmpDir.modified}");
                 cancel();
