@@ -33,7 +33,7 @@ interface Orderable
     /**
      * Compare two objects of the same type for purposes of ordering.
      *
-     * Note: this function must yield "Equal" *if an only if* the result of `equals` function is
+     * Note: this function must yield "Equal" *if and only if* the result of `equals` function is
      *       "True".
      */
     static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
