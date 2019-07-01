@@ -2907,37 +2907,19 @@ public abstract class TypeConstant
                     // keep constructors only for ourselves and not "super" contributions
                     fKeep = fSelf;
                     }
-                else if (!methodContrib.isCapped())
+                else if (idContrib.getNestedDepth() == 2)
                     {
-                    if (idContrib.getNestedDepth() == 2)
+                    List<MethodConstant> listMatches =
+                            collectCoveredFunctions(sigContrib, mapMethods);
+                    for (MethodConstant idMethod : listMatches)
                         {
-                        List<MethodConstant> listMatches =
-                                collectCoveredFunctions(sigContrib, mapMethods);
-                        for (MethodConstant idMethod : listMatches)
-                            {
-                            MethodInfo method = mapMethods.get(idMethod);
-
-                            if (method.containsBody(idContrib) && methodContrib.isAbstract())
-                                {
-                                // the contribution is abstract and already in a chain; skip it
-                                fKeep = false;
-                                break;
-                                }
-
-                            if (method.isCapped())
-                                {
-                                continue;
-                                }
-
-                            // the contribution "hides" the corresponding function on the base
-                            mapMethods.put(idMethod, method.coverWith(methodContrib));
-                            }
+                        methodContrib = methodContrib.subsumeFunction(mapMethods.remove(idMethod));
                         }
-                    else
-                        {
-                        // don't collect any abstract functions on nested structures
-                        fKeep = !methodContrib.isAbstract();
-                        }
+                    }
+                else
+                    {
+                    // don't collect any abstract functions on nested structures
+                    fKeep = fSelf && !methodContrib.isAbstract();
                     }
 
                 if (fKeep)
@@ -4113,7 +4095,7 @@ public abstract class TypeConstant
      * @param mapMethods      methods already collected from the base
      * @param mapVirtMethods  virtual methods already collected from the base
      * @param idMixinMethod   the identity of the method at the mixin
-     * @param infoMethod      the method info from the mixin
+     * @param methodMixin     the method info from the mixin
      * @param errs            the error listener
      */
     private void layerOnMixinMethod(
@@ -4122,22 +4104,29 @@ public abstract class TypeConstant
             Map<MethodConstant, MethodInfo> mapMethods,
             Map<Object, MethodInfo>         mapVirtMethods,
             MethodConstant                  idMixinMethod,
-            MethodInfo                      infoMethod,
+            MethodInfo                      methodMixin,
             ErrorListener                   errs)
         {
-        if (!infoMethod.isVirtual())
+        if (!methodMixin.isVirtual() && !methodMixin.isPotentialPropertyOverlay())
             {
-            // skip the mixin's constructors
-            if (!infoMethod.isConstructor())
+            // skip the mixin's constructors and nested functions
+            if (!methodMixin.isConstructor() && idMixinMethod.getNestedDepth() == 2)
                 {
-                mapMethods.put(idMixinMethod, infoMethod);
+                List<MethodConstant> listMatches =
+                        collectCoveredFunctions(idMixinMethod.getSignature(), mapMethods);
+                for (MethodConstant idMethod : listMatches)
+                    {
+                    methodMixin = methodMixin.subsumeFunction(mapMethods.remove(idMethod));
+                    }
+
+                mapMethods.put(idMixinMethod, methodMixin);
                 }
             return;
             }
 
         Object     nidContrib = idMixinMethod.resolveNestedIdentity(pool, this);
         MethodInfo methodBase = mapVirtMethods.get(nidContrib);
-        if (methodBase != null && methodBase.getIdentity().equals(infoMethod.getIdentity()))
+        if (methodBase != null && methodBase.getIdentity().equals(methodMixin.getIdentity()))
             {
             // keep whatever the base has got
             return;
@@ -4146,26 +4135,26 @@ public abstract class TypeConstant
         MethodInfo methodResult;
         if (methodBase == null)
             {
-            methodResult = infoMethod;
+            methodResult = methodMixin;
             }
         else
             {
             // it's possible that the base has a narrower method signature then the mixin,
             // in which case, the mixin's info should be ignored/replaced
             SignatureConstant sigBase  = methodBase.getSignature();
-            SignatureConstant sigMixin = infoMethod.getSignature();
+            SignatureConstant sigMixin = methodMixin.getSignature();
             if (!sigBase.equals(sigMixin) && sigBase.isSubstitutableFor(sigMixin, this))
                 {
                 methodResult = methodBase;
                 }
             else
                 {
-                methodResult = methodBase.layerOn(infoMethod, false, errs);
+                methodResult = methodBase.layerOn(methodMixin, false, errs);
                 }
             }
 
         MethodConstant    idResult   = (MethodConstant) idBaseClass.appendNestedIdentity(pool, nidContrib);
-        SignatureConstant sigContrib = infoMethod.getSignature();
+        SignatureConstant sigContrib = methodMixin.getSignature();
 
         mapMethods.put(idResult, methodResult);
         mapVirtMethods.put(sigContrib, methodResult);

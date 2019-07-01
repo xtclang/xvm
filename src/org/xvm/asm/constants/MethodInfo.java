@@ -95,29 +95,6 @@ public class MethodInfo
         }
 
     /**
-     * Cap this function info with a redirection to another implementation function.
-     * Error checking is the responsibility of the caller.
-     *
-     * @param that  the function info to redirect to, which is the narrowed form of this MethodInfo
-     *
-     * @return a capped version of this method chain
-     */
-    MethodInfo coverWith(MethodInfo that)
-        {
-        assert this.isFunction() && this.m_aBody.length == 1;
-        assert that.isFunction() && that.m_aBody.length == 1;
-
-        MethodConstant idThis = this.getIdentity();
-        MethodConstant idThat = that.getIdentity();
-
-        MethodBody[] aNew = new MethodBody[2];
-        aNew[0] = new MethodBody(idThis, that.getSignature(), Implementation.Capped, idThat);
-        aNew[1] = this.m_aBody[0];
-
-        return new MethodInfo(aNew);
-        }
-
-    /**
      * In terms of the "glass planes" metaphor, the glass planes from "that" are to be layered on to
      * the glass planes of "this", with the resulting combination of glass planes returned as a
      * MethodInfo.
@@ -202,6 +179,60 @@ public class MethodInfo
                         id.getNamespace().getValueString());
                 }
             return this;
+            }
+
+        Collections.addAll(listMerge, aBase);
+        return new MethodInfo(listMerge.toArray(MethodBody.NO_BODIES));
+        }
+
+    /**
+     * In terms of the "glass planes" metaphor, the glass plane from "this" (contribution) is to
+     * replace the glass plane of "that" (base), with the resulting combination of glass planes
+     * returned as a MethodInfo.
+     *
+     * Note, that unlike the virtual method scenario above, the contribution is going to
+     * completely replace the base, collecting the replaced information only in order to handle
+     * (ignore) repetitive contributions.
+     *
+     * @param that  the "base" MethodInfo to layer this "contribution" MethodInfo onto
+     *
+     * @return the resulting MethodInfo
+     */
+    public MethodInfo subsumeFunction(MethodInfo that)
+        {
+        assert this.isFunction();
+        assert that.isFunction();
+
+        MethodBody[] aBase = that.m_aBody;
+        MethodBody[] aAdd  = this.m_aBody;
+        int          cBase = aBase.length;
+        int          cAdd  = aAdd.length;
+
+        ArrayList<MethodBody> listMerge = null;
+        NextLayer: for (int iAdd = 0; iAdd < cAdd; ++iAdd)
+            {
+            MethodBody bodyAdd = aAdd[iAdd];
+
+            for (int iBase = 0; iBase < cBase; ++iBase)
+                {
+                // discard duplicates
+                if (bodyAdd.equals(aBase[iBase]))
+                    {
+                    continue NextLayer;
+                    }
+                }
+
+            if (listMerge == null)
+                {
+                listMerge = new ArrayList<>();
+                }
+            listMerge.add(bodyAdd);
+            }
+
+        if (listMerge == null)
+            {
+            // all the bodies in "this" were duplicates of bodies in "base"
+            return that;
             }
 
         Collections.addAll(listMerge, aBase);
@@ -351,7 +382,7 @@ public class MethodInfo
         {
         // basically, if the method is a function, it stays as-is; otherwise, it needs to be
         // "flattened" into a single implicit entry with the right signature
-        return isFunction() || isConstructor()
+        return (isFunction() || isConstructor()) && !getIdentity().getNamespace().equals(pool().clzObject())
                 ? this
                 : new MethodInfo(new MethodBody(getIdentity(), getSignature(), Implementation.Implicit));
         }
@@ -405,9 +436,7 @@ public class MethodInfo
             if (body.getImplementation() == Implementation.Capped)
                 {
                 Object nid = body.getNarrowingNestedIdentity();
-                return nid instanceof MethodConstant
-                        ? (MethodStructure) ((MethodConstant) nid).getComponent()
-                        : infoType.getMethodByNestedId(nid).getTopmostMethodStructure(infoType);
+                return infoType.getMethodByNestedId(nid).getTopmostMethodStructure(infoType);
                 }
 
             MethodStructure method = body.getMethodStructure();
@@ -485,8 +514,7 @@ public class MethodInfo
      */
     public boolean isFunction()
         {
-        MethodBody head = isCapped() ? m_aBody[1] : m_aBody[0];
-        return head.isFunction();
+        return getHead().isFunction();
         }
 
     /**
@@ -528,7 +556,7 @@ public class MethodInfo
      */
     public boolean isAbstractFunction()
         {
-        MethodBody head = isCapped() ? m_aBody[1] : m_aBody[0];
+        MethodBody head = getHead();
         return head.isFunction() && head.getImplementation() == Implementation.Declared;
         }
 

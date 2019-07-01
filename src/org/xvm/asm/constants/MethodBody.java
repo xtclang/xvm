@@ -54,7 +54,6 @@ public class MethodBody
             {
             case Capped:
                 assert target instanceof SignatureConstant
-                    || target instanceof MethodConstant
                     || target instanceof IdentityConstant.NestedIdentity;
                 break;
             case Delegating:
