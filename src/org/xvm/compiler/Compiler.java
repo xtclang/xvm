@@ -1142,6 +1142,10 @@ public class Compiler
      */
     public static final String ILLEGAL_WHILE_CONDITION           = "COMPILER-127";
     /**
+     * The target type {0} must be parameterized to call method {1}.
+     */
+    public static final String ILLEGAL_NAKED_TYPE_INVOCATION     = "COMPILER-128";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

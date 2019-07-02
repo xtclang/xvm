@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -30,6 +31,7 @@ import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodType;
@@ -653,13 +655,35 @@ public class InvocationExpression
                         }
 
                     // handle method or function
+                    ValidateMethod:
                     if (argMethod instanceof MethodConstant)
                         {
-                        MethodConstant  idMethod    = (MethodConstant) argMethod;
-                        MethodStructure method      = m_method;
-                        TypeConstant[]  atypeArgs   = idMethod.getRawParams();
-                        int             cTypeParams = method.getTypeParamCount();
-                        int             cArgs       = args.size();
+                        MethodConstant  idMethod = (MethodConstant) argMethod;
+                        MethodStructure method   = m_method;
+
+                        if (typeLeft != null && !typeLeft.isFormalType() && typeLeft.getParamsCount() == 0 &&
+                                !method.isFunction() && !method.isConstructor())
+                            {
+                            // prevent a naked type to be used for consuming methods
+                            ClassStructure clz = (ClassStructure) idMethod.getNamespace().getComponent();
+                            if (clz.getTypeParamCount() > 0)
+                                {
+                                for (StringConstant constName : clz.getTypeParams().keySet())
+                                    {
+                                    if (method.consumesFormalType(constName.getValue()))
+                                        {
+                                        log(errs, Severity.ERROR, Compiler.ILLEGAL_NAKED_TYPE_INVOCATION,
+                                            typeLeft.getValueString(),
+                                            method.getIdentityConstant().getValueString());
+                                        break ValidateMethod;
+                                        }
+                                    }
+                                }
+                            }
+
+                        TypeConstant[] atypeArgs   = idMethod.getRawParams();
+                        int            cTypeParams = method.getTypeParamCount();
+                        int            cArgs       = args.size();
 
                         if (cTypeParams > 0)
                             {
@@ -709,7 +733,6 @@ public class InvocationExpression
                                     : m_targetinfo.getTargetType();
                             }
 
-                        ValidArgs:
                         if (atypeArgs != null)
                             {
                             Map<String, TypeConstant> mapTypeParams = Collections.EMPTY_MAP;
@@ -722,7 +745,7 @@ public class InvocationExpression
                                     {
                                     // TODO: need a better error
                                     log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
-                                    break ValidArgs;
+                                    break ValidateMethod;
                                     }
 
                                 Argument[] aargTypeParam = new Argument[mapTypeParams.size()];
