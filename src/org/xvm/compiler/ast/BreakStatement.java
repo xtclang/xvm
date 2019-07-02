@@ -36,16 +36,19 @@ public class BreakStatement
             {
             if (isLabeled())
                 {
-                log(errs, Severity.ERROR, Compiler.MISSING_GROUND_LABEL, getLabeledName());
+                log(errs, Severity.ERROR, Compiler.MISSING_GOTO_LABEL, getLabeledName());
                 }
             else
                 {
-                log(errs, Severity.ERROR, Compiler.MISSING_GROUND_STATEMENT);
+                log(errs, Severity.ERROR, Compiler.MISSING_GOTO_TARGET);
                 }
             return null;
             }
 
-        setJumpLabel(stmtTarget.ensureBreakLabel(ctx));
+        setJumpLabel(stmtTarget.ensureBreakLabel(this, ctx));
+
+        // a break statement never advances
+        ctx.setReachable(false);
 
         return this;
         }

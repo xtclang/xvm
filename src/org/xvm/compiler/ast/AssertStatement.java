@@ -258,7 +258,7 @@ public class AssertStatement
 
                     if (exprNew.isConstantFalse())
                         {
-                        fAborts = true;
+                        fAborts = true;  // TODO CP only if no previous condition has short-circuited
                         }
                     }
 
@@ -268,7 +268,7 @@ public class AssertStatement
 
         if (fAborts)
             {
-            ctx.markNonCompleting();
+            ctx.setReachable(false);
             }
 
         return fValid
@@ -482,12 +482,13 @@ public class AssertStatement
                         if (exprSub instanceof BiExpression
                                 && ((BiExpression) exprSub).operator.getId() == Id.COND_OR)
                             {
-                            BiExpression exprOr = (BiExpression) exprSub;
+                            BiExpression              exprOr   = (BiExpression) exprSub;
+                            UnaryComplementExpression exprNot2 = (UnaryComplementExpression) exprNot.clone();
 
-                            exprRemainder = (UnaryComplementExpression) exprNot.clone();
-                            ((UnaryComplementExpression) exprRemainder).expr = exprOr.expr2;
-
-                            exprNot.expr = exprOr.expr1;
+                            exprNot.expr  = exprOr.expr1;
+                            exprNot2.expr = exprOr.expr2;
+                            exprRemainder = exprNot2;
+                            exprOr.discard(false);
                             }
                         }
                     else if (cond instanceof BiExpression
@@ -496,6 +497,7 @@ public class AssertStatement
                         BiExpression exprAnd = (BiExpression) cond;
                         cond          = exprAnd.expr1;
                         exprRemainder = exprAnd.expr2;
+                        exprAnd.discard(false);
                         }
 
                     listNewConds.add(cond);

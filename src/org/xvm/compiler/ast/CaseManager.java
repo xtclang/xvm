@@ -116,6 +116,15 @@ public class CaseManager<CookieType>
         }
 
     /**
+     * @return true iff the switch can fall through without going through a case group because there
+     *         is no default and not all of the possible cases are covered
+     */
+    public boolean isCompletable()
+        {
+        return m_fCompletes;
+        }
+
+    /**
      * @return true iff any of the case expressions use an interval or range value match
      */
     public boolean usesNonExactMatching()
@@ -612,6 +621,7 @@ public class CaseManager<CookieType>
         else if (m_labelDefault == null
                 && (!isCardinal() || m_listsetCase.size() < m_typeCase.getIntCardinality()))
             {
+            m_fCompletes = true;
             if (m_nodeSwitch instanceof Expression)
                 {
                 // this means that the switch expression would "short circuit" (not result in a value),
@@ -1089,6 +1099,12 @@ public class CaseManager<CookieType>
      * Set to true iff the condition is determined to abort.
      */
     private boolean m_fCondAborts;
+
+    /**
+     * Set to true if the switch can fall through without going through a case group because there
+     * is no default and not all of the possible cases are covered.
+     */
+    private boolean m_fCompletes;
 
     /**
      * The type of each condition expression / tuple field of case statements.

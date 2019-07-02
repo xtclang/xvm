@@ -2529,3 +2529,119 @@ IS_GT nextvar 5 A_STACK
 ASSERT A_STACK, construct Assertion(String), "foo() > 5, foo()={0}", 1:(nextvar)
 end:
 
+// ----- non-Ecstasy equals() problem
+
+class Person
+    {
+    String first;
+    String last;
+    Date   dob;
+
+    Boolean equals(Person that)
+        {
+        return this.first == that.first
+            && this.last  == that.last
+            && this.dob   == that.dob;
+        }
+    }
+
+class Employee
+        extends Person
+    {
+    String title;
+    Date   hired;
+    Dec    salary;
+
+    Boolean equals(Employee that)
+        {
+        return this.title == that.title
+            && this.hired == that.hired
+            && this.dob   == that.dob
+            && super.equals(that);
+        }
+    }
+
+Collection<Person> c1 = new HashSet<>();
+c1.add(new Person(...));
+Collection<Person> c2 = new ArrayList<>();
+c2.add(new Employee(...));
+if (c1.equals(c2))
+// or conversely:
+// if (c2.equals(c1))
+    {
+    // ...
+    }
+
+// ----- assumptions
+
+// 1) this and outer this's (assumption-safe) : "this", "this.outer", "this.outer.outer", etc.
+// 2) constants (assumption-safe) : ClassName+"."+ConstantName
+// 3) local variables : VariableName
+//    a) captured read/write (Var) or annotated variable (+checked-assumptions)
+//       - the act of capture is assumption-invalidating
+//    b) assigned once (assumption-safe)
+//    c) assigned more than once (temporally assumption-safe)
+// 3) property of X : X+"."+PropertyName (+checked-assumptions)
+// 4) indexed element N of X : X+"["+N+"]" (+checked-assumptions)
+//    -> NOTE: NOT GOING TO SUPPORT THIS (unless "lifting" values becomes a supported feature)
+
+Use a Map?
+|----------------------------|
+| String key | Assumption(s) |
+|----------------------------|
+|            |               |
+|----------------------------|
+
+or a Tree
+
+Node
+- Node   parent
+- String name
+- Assumption(s)
+- children
+  |--------------------|
+  | String name | Node |
+  |--------------------|
+  |             |      |
+  |--------------------|
+
+
+// so:
+// - every AST node could generate one or more assumptions (identity / assumption pairs)
+// - every AST node could invalidate one or more assumption identities
+
+// assumptions today are all type related:
+// - formal parameter has an associated type (also, when true/when false)
+// - variable can be "shadowed" (a narrowed type register)
+
+// what invalidates assumptions?
+// - for any assignable expression o, any assignment to o invalidates all assumptions for o, and
+//   then adds any assumptions that are present from the right hand side of the assignment
+// - for any method m() on reference o of non-immutable type T, o.m() invalidates all assumptions for o
+
+// invalidations have to be "sticky"
+// - create an Assumption for an invalided identity that says "this was invalidated"
+// - without a sticky invalidation, you can't "percolate up" the fact that an invalidation occurred
+// - there has to be a set of invalidations accumulated within the context, in addition to the
+//   assumptions that have survived (or been registered since) those invalidations
+
+invalidate(String id, Branch branch);
+assume(String id, TypeConstant type); // or Argument (TargetInfo | ShadowRegister)
+
+// invalidations only need to stick if there are any assumptions for the same (or dependent) identity
+// - a dependent identity is one that starts with the identity+'.'
+// e.g.
+static boolean isDependent(String sDepId, String sId)
+    {
+    return sDepId.startsWith(sId) && (sDepId.length() == sId.length() || sDepId.charAt(sId.length()) == '.');
+    }
+
+
+// so every expression (or maybe AST node):
+// - with respect to assumptions:
+//   - may invalidate all assumptions for an identity
+//   - may produce an assumption for an identity
+// - with respect to completion
+//   - may short circuit
+//   - may abruptly non-complete (break, return, throw, etc.)
+//     - with or without an error, e.g. the T0D0 expression should *silently* non-complete

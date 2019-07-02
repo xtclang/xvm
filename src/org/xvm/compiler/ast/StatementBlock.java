@@ -400,6 +400,7 @@ public class StatementBlock
                     // this statement is the first statement that cannot be reached;
                     // the only thing that is allowed is an inner class definition
                     fReachable = false;
+                    // TODO && !wasAToDoExpressionThatCausedIt()
                     if (!(stmt instanceof TypeCompositionStatement ||
                           stmt instanceof MethodDeclarationStatement))
                         {
@@ -511,7 +512,7 @@ public class StatementBlock
         {
         public RootContext(MethodStructure method)
             {
-            super(null, false, true);
+            super(null, false);
             m_method = method;
             }
 

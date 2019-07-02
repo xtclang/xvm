@@ -100,9 +100,10 @@ public abstract class GotoStatement
                     return (Statement) node;
                     }
 
-                if (nodeParent.isComponentNode())
+                if (nodeParent.isComponentNode() || nodeParent instanceof StatementExpression)
                     {
-                    // cannot pass a component boundary
+                    // cannot pass a component boundary (and StatementExpression is a "pretend"
+                    // component boundary, because it's supposed to act like a lambda)
                     return null;
                     }
 

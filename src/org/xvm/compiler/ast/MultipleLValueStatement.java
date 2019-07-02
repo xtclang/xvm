@@ -90,20 +90,21 @@ public class MultipleLValueStatement
     @Override
     protected boolean allowsShortCircuit(AstNode nodeChild)
         {
-        assert findChild(nodeChild) >= 0;
+        assert indexOfChild(nodeChild) >= 0;
         return true;
         }
 
     @Override
-    protected Label getShortCircuitLabel(Context ctx, AstNode nodeChild)
+    protected Label ensureShortCircuitLabel(AstNode nodeOrigin, Context ctxOrigin)
         {
-        int iPos = findChild(nodeChild);
+        AstNode nodeChild = findChild(nodeOrigin);
+        int     iPos      = indexOfChild(nodeChild);
         if (iPos < 0)
             {
             throw new IllegalStateException("unknown child: " + nodeChild);
             }
 
-        return ensureShortCircuitLabel(iPos);
+        return ensureShortCircuitLabel(iPos); // TODO CP need to pass origin info!!!
         }
 
     /**
@@ -113,8 +114,10 @@ public class MultipleLValueStatement
      *
      * @return the position in the list of the child, or -1 if the child could not be found
      */
-    int findChild(AstNode node)
+    int indexOfChild(AstNode node)
         {
+        assert node != null;
+
         List<AstNode> list = LVals;
         for (int i = 0, cNodes = list.size(); i < cNodes; ++i)
             {
@@ -504,13 +507,14 @@ public class MultipleLValueStatement
         @Override
         protected boolean allowsShortCircuit(AstNode nodeChild)
             {
-            return nodeChild instanceof Expression && findChild((Expression) nodeChild) >= 0;
+            return nodeChild instanceof Expression && indexOfChild((Expression) nodeChild) >= 0;
             }
 
         @Override
-        protected Label getShortCircuitLabel(Context ctx, AstNode nodeChild)
+        protected Label ensureShortCircuitLabel(AstNode nodeOrigin, Context ctxOrigin)
             {
-            int iPos = nodeChild instanceof Expression ? findChild((Expression) nodeChild) : -1;
+            AstNode nodeChild = findChild(nodeOrigin);
+            int     iPos      = nodeChild instanceof Expression ? indexOfChild((Expression) nodeChild) : -1;
             if (iPos < 0)
                 {
                 throw new IllegalStateException("unknown child: " + nodeChild);
@@ -552,8 +556,10 @@ public class MultipleLValueStatement
          *
          * @return the position in the array of the child, or -1 if the child could not be found
          */
-        int findChild(Expression expr)
+        int indexOfChild(Expression expr)
             {
+            assert expr != null;
+
             Expression[] aExprs = ensureExpressions();
             int          cExprs = aExprs.length;
             for (int i = 0; i < cExprs; ++i)

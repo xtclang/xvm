@@ -87,10 +87,9 @@ public class ForEachStatement
         }
 
     @Override
-    public Label ensureContinueLabel(Context ctxOrigin)
+    public Label ensureContinueLabel(AstNode nodeOrigin, Context ctxOrigin)
         {
-        Context ctxDest = getValidationContext();
-        assert ctxDest != null;
+        Context ctxDest = ensureValidationContext();
 
         // generate a delta of assignment information for the jump
         Map<String, Assignment> mapAsn = ctxOrigin.prepareJump(ctxDest);

@@ -36,11 +36,11 @@ public class ContinueStatement
             {
             if (isLabeled())
                 {
-                log(errs, Severity.ERROR, org.xvm.compiler.Compiler.MISSING_GROUND_LABEL, getLabeledName());
+                log(errs, Severity.ERROR, org.xvm.compiler.Compiler.MISSING_GOTO_LABEL, getLabeledName());
                 }
             else
                 {
-                log(errs, Severity.ERROR, Compiler.MISSING_GROUND_STATEMENT);
+                log(errs, Severity.ERROR, Compiler.MISSING_GOTO_TARGET);
                 }
             return null;
             }
@@ -50,7 +50,11 @@ public class ContinueStatement
             return null;
             }
 
-        setJumpLabel(stmtTarget.ensureContinueLabel(ctx));
+        setJumpLabel(stmtTarget.ensureContinueLabel(this, ctx));
+
+        // a continue statement never advances; while it may _appear_ to do so in a switch
+        // statement, that is actually a jump to the next case group
+        ctx.setReachable(false);
 
         return this;
         }

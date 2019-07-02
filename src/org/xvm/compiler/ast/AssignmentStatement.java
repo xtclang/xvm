@@ -322,11 +322,11 @@ public class AssignmentStatement
         }
 
     @Override
-    protected Label getShortCircuitLabel(Context ctx, AstNode nodeChild)
+    protected Label ensureShortCircuitLabel(AstNode nodeOrigin, Context ctxOrigin)
         {
         return getParent() instanceof ConditionalStatement
-                ? getParent().getShortCircuitLabel(ctx, this)
-                : super.getShortCircuitLabel(ctx, nodeChild);
+                ? getParent().ensureShortCircuitLabel(nodeOrigin, ctxOrigin)
+                : super.ensureShortCircuitLabel(nodeOrigin, ctxOrigin);
         }
 
     @Override
@@ -596,6 +596,7 @@ public class AssignmentStatement
                     ctx = ctx.exit();
                     }
 
+                exprLeft.markAssignment(ctx, false, errs);
                 break;
                 }
             }

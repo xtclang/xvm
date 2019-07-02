@@ -113,7 +113,7 @@ public class NotNullExpression
 
             if (getParent().allowsShortCircuit(this))
                 {
-                m_labelShort = getParent().getShortCircuitLabel(ctx, this);
+                m_labelShort = getParent().ensureShortCircuitLabel(this, ctx);
                 }
             else
                 {

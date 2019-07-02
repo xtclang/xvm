@@ -100,7 +100,6 @@ public class CatchStatement
         boolean fValid = true;
 
         ctx = ctx.enter();
-        ctx.markNonCompleting();
 
         // validate the catch clause
         VariableDeclarationStatement targetNew = (VariableDeclarationStatement) target.validate(ctx, errs);
@@ -131,11 +130,6 @@ public class CatchStatement
                 {
                 block = blockNew;
                 }
-
-            // contribute the variable assignment information from the catch back to the try statement,
-            // since the normal completion of a try combined with the normal completion of all of its
-            // catch clauses combines to provide the assignment impact of the try/catch
-            // TODO
             }
 
         ctx.exit();

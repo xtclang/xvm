@@ -3,12 +3,16 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
@@ -25,8 +29,11 @@ import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Move;
 import org.xvm.asm.op.Var_IN;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
+
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -70,20 +77,22 @@ public class WhileStatement
         }
 
     @Override
-    public Label ensureContinueLabel(Context ctxOrigin)
+    public Label ensureContinueLabel(AstNode nodeOrigin, Context ctxOrigin)
         {
-        Context ctxDest = getValidationContext();
-        assert ctxDest != null;
+        Context ctxDest = ensureValidationContext();
 
-        // generate a delta of assignment information for the jump
-        Map<String, Assignment> mapAsn = ctxOrigin.prepareJump(ctxDest);
-
-        // record the jump that landed on this statement by recording its assignment impact
-        if (m_listContinues == null)
+        if (ctxOrigin.isReachable())
             {
-            m_listContinues = new ArrayList<>();
+            // generate a delta of assignment information for the jump
+            Map<String, Assignment> mapAsn = ctxOrigin.prepareJump(ctxDest);
+
+            // record the jump that landed on this statement by recording its assignment impact
+            if (m_listContinues == null)
+                {
+                m_listContinues = new ArrayList<>();
+                }
+            m_listContinues.add(new SimpleEntry<>(nodeOrigin, mapAsn));
             }
-        m_listContinues.add(mapAsn);
 
         return getContinueLabel();
         }
@@ -170,120 +179,265 @@ public class WhileStatement
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
-        boolean fValid = true;
+        // there are a set of assumptions coming in:
+        // - the loop is actually going to loop, as in "it is able to execute more than once"
+        //   -> while(False) obviously does not result in any execution of the body whatsoever (the
+        //      value False, or any other expression that validates to compile time False)
+        //   -> do..while(False) will execute once, but won't loop (the value False, or any other
+        //      expression that validates to compile time False)
+        //   -> a loop without a reachable "continue" and has an unavoidable "break" / "return" /
+        //      "throw" / etc. will not loop
+        //   -> variable assignment with respect to "assigned once" inside a loop that doesn't
+        //      actually loop is different than variable assignment in a loop that does loop
+        // - the loop condition is a non-constant that can evaluate to either True or False
+        //   -> if we prove that the condition is a constant, we can make a different set of
+        //      assumptions
+        //   -> in the case of do..while(cond), the "cond" can't be evaluated until after the body,
+        //      so the assumptions used to evaluate the body may have all been wrong
+        // - there may be type assumptions coming in that are affected by the execution of the loop
+        //   body
+        //    | Object o = foo();
+        //    | if (o.is(String))
+        //    |     {
+        //    |     while (True)
+        //    |         {
+        //    |         Int i = o.size; // sure, we still assume that o is a String
+        //    |         o = bar();      // this means that we can't assume that o is still a String
+        //    |         }
+        //    |     }
+        //   -> any assumption that we rely on in the loop that changes by the point that the loop
+        //      reaches the point that the loop will begin again needs to invalidate the previous
+        //      assumption, and the entire loop needs to then be re-evaluated (so a clone of the
+        //      AST is required)
+        //   -> obviously, this is not a concern if the loop does not actually end up looping (in
+        //      the various ways described above)
 
-        ctx = ctx.enterLoop();
+        boolean fDoWhile = isDoWhile();
 
-        // save off the current context and errors, in case we have to lazily create some loop vars
-        m_ctxLabelVars  = ctx;
-        m_errsLabelVars = errs;
+        // each attempt to validate the loop will log errors into a temporary error list; whichever
+        // run is the "keeper" will have its temporary errors moved over (relogged) into the
+        // original error listener
+        ErrorListener  errsOrig = errs;
 
-        if (isDoWhile())
+        // by holding on to the original context, we can determine the impact on the incoming
+        // context that would occur by the beginning of the second iteration of the loop, and
+        // use that information to correctly provide forward-looking assignment information to
+        // AST nodes nested further down the tree, including e.g. lambdas that may make different
+        // capture decisions based on that data
+        Context                 ctxOrig    = ctx;
+        Map<String, Assignment> mapLoopAsn = ctxOrig.prepareJump(ctxOrig);
+
+        // the validated conditions will end up in this temporary array; each will be a clone of the
+        // original in "conds"
+        int           cConds    = getConditionCount();
+        List<AstNode> condsOrig = conds;
+
+        // the body of the loop will not have its own scope; scope is provided by the loop; this
+        // allows the variables in the body to be utilized in the conditions of a do..while() loop
+        block.suppressScope();
+        StatementBlock blockOrig = block;
+
+        // assume that the while or do..while statement actually loops (we may find out otherwise)
+        boolean fLoops = true;
+
+        // don't let this repeat ad nauseum
+        int cTries = 0;
+
+        while (true)
             {
-            // block comes first for "do..while()"
-            fValid &= validateBody(ctx, false, errs);
-            }
+            boolean fValid  = true;
+            boolean fRepeat = false;
 
-        for (int i = 0, c = getConditionCount(); i < c; ++i)
-            {
-            AstNode cond = getCondition(i);
-
-            // the condition is either a boolean expression or an assignment statement whose R-value
-            // is a multi-value with the first value being a boolean
-            if (cond instanceof AssignmentStatement)
+            // clone the condition(s) and the body
+            conds = new ArrayList<>(cConds);
+            for (AstNode cond : condsOrig)
                 {
-                AssignmentStatement stmtOld = (AssignmentStatement) cond;
-                AssignmentStatement stmtNew = (AssignmentStatement) stmtOld.validate(ctx, errs);
-                if (stmtNew == null)
+                conds.add(cond.clone());
+                }
+            block = (StatementBlock) blockOrig.clone();
+
+            // create a temporary error list
+            errs = new ErrorList(1);
+
+            // we use a potentially unnecessary context here as a place to jam in any assumptions
+            // that we learned on a previous trial run through the loop
+            ctx = ctxOrig.enter();
+            ctx.merge(mapLoopAsn);
+            int cExits  = 1;
+
+            // the current context and error list are required by getLabelVar() if, in the process
+            // of validation, one of the nested AST nodes requires a loop variable
+            m_ctxLabelVars  = ctx;
+            m_errsLabelVars = errs;
+            m_listContinues = null;
+
+            // either enter normal or loop, depending on the assumption
+            if (fLoops)
+                {
+                ctx = ctx.enterLoop();
+                ++cExits;
+                }
+
+            // we have two parts to validate, the conditions and the block. unfortunately, these
+            // come in two different orders, either the conditions first (for a while loop) followed
+            // by the block, or the block first (for a do..while) followed by the conditions.
+            for (int iPart = 1; iPart <= 2; ++iPart)
+                {
+                if ((iPart == 2) == fDoWhile)
                     {
-                    fValid = false;
+                    // validate the condition(s)
+                    for (int i = 0; i < cConds; ++i)
+                        {
+                        // the node must be cloned, because we may end up repeating this
+                        // validation process with a different set of assumptions
+                        AstNode condOld = conds.get(i);
+
+                        // the condition is either a boolean expression or an assignment
+                        // statement whose R-value is a multi-value with the first value
+                        // being a boolean
+                        AstNode condNew = condOld instanceof AssignmentStatement
+                                ? ((AssignmentStatement) condOld).validate(ctx, errs)
+                                : ((Expression) condOld).validate(ctx, pool().typeBoolean(), errs);
+
+                        if (condNew == null)
+                            {
+                            fValid    = false;
+                            }
+                        else
+                            {
+                            conds.set(i, condNew);
+
+                            if (condNew instanceof Expression && ((Expression) condNew).isConstantFalse())
+                                {
+                                if (fDoWhile)
+                                    {
+                                    // do..while(False) does not loop
+                                    if (fLoops)
+                                        {
+                                        // need to repeat the entire validation, now that we
+                                        // know that the loop doesn't loop
+                                        fLoops  = false;
+                                        fRepeat = true;
+                                        }
+                                    }
+                                else
+                                    {
+                                    // while(False) is illegal because it cannot ever execute
+                                    condNew.log(errs, Severity.ERROR, Compiler.ILLEGAL_WHILE_CONDITION);
+                                    fValid = false;
+                                    }
+                                }
+                            }
+                        }
                     }
-                else if (stmtNew != stmtOld)
+                else // validate the block
                     {
-                    cond = stmtNew;
-                    conds.set(i, cond);
+                    // remember whether the block was even reachable
+                    boolean fReachable = ctx.isReachable();
+
+                    // a "while(cond) {...}" loop only transfers the "when true" branch of
+                    // assignment from the condition to the body of the loop
+                    if (!fDoWhile)
+                        {
+                        ctx = ctx.enterFork(true);
+                        }
+
+                    // validate the block
+                    StatementBlock blockNew = (StatementBlock) block.validate(ctx, errs);
+                    if (blockNew == null)
+                        {
+                        fValid = false;
+                        }
+                    else
+                        {
+                        block = blockNew;
+                        }
+
+                    if (!fDoWhile)
+                        {
+                        ctx = ctx.exit();
+                        }
+
+                    // apply the assignment contributions from the various continue statements, if any
+                    boolean fContinues = false;
+                    if (m_listContinues != null)
+                        {
+                        for (Iterator<Entry<AstNode, Map<String, Assignment>>> iter = m_listContinues.iterator();
+                                iter.hasNext(); )
+                            {
+                            Entry<AstNode, Map<String, Assignment>> entry = iter.next();
+                            if (entry.getKey().isDiscarded())
+                                {
+                                iter.remove();
+                                }
+                            else
+                                {
+                                fContinues = true;
+                                ctx.merge(entry.getValue());
+                                }
+                            }
+                        }
+
+                    // if the block was reachable but it didn't complete, and there are no
+                    // "continue" statements, then this loop doesn't actually loop
+                    if (fLoops && fReachable && !ctx.isReachable() && !fContinues)
+                        {
+                        // need to re-validate the whole thing, with the knowledge that it does
+                        // not loop
+                        fLoops  = false;
+                        fRepeat = true;
+                        }
                     }
+                }
+
+            // see if there are any assignments that would change our starting assumptions
+            Map<String, Assignment> mapAfter = ctx.prepareJump(ctxOrig);
+            if (!mapAfter.equals(mapLoopAsn))
+                {
+                mapLoopAsn = mapAfter;
+                fRepeat    = true;
+                }
+
+            // don't let this repeat forever
+            if (++cTries > 10 && fRepeat)
+                {
+                log(errs, Severity.ERROR, Compiler.FATAL_ERROR);
+                fValid  = false;
+                fRepeat = false;
+                }
+
+            if (fRepeat)
+                {
+                // discard the clones created in this pass
+                for (AstNode cond : conds)
+                    {
+                    cond.discard(true);
+                    }
+                block.discard(true);
                 }
             else
                 {
-                Expression exprOld = (Expression) cond;
-                Expression exprNew = exprOld.validate(ctx, pool().typeBoolean(), errs);
-                if (exprNew == null)
+                // discard the original nodes (we cloned them already)
+                for (AstNode cond : condsOrig)
                     {
-                    fValid = false;
+                    cond.discard(true);
                     }
-                else  if (exprNew != exprOld)
+                blockOrig.discard(true);
+
+                // lazily created loop vars are only created inside the validation of this statement
+                m_ctxLabelVars  = null;
+                m_errsLabelVars = null;
+
+                // unwind any local contexts
+                while (cExits-- > 0)
                     {
-                    cond = exprNew;
-                    conds.set(i, cond);
+                    ctx = ctx.exit();
                     }
+
+                ((ErrorList) errs).logTo(errsOrig);
+                return fValid ? this : null;
                 }
             }
-
-        if (!isDoWhile())
-            {
-            // block comes after for "while()"
-            fValid &= validateBody(ctx, true, errs);
-            }
-
-        // if the condition itself required a scope, then complete that scope
-        ctx = ctx.exit();
-
-        // lazily created loop vars are only created inside the validation of this statement
-        m_ctxLabelVars  = null;
-        m_errsLabelVars = null;
-
-        return fValid
-                ? this
-                : null;
-        }
-
-    /**
-     * Validate the "body" portion of the while() or do..while() statement.
-     *
-     * @param ctx     the validation context
-     * @param fScope  true if the body gets its own scope
-     * @param errs    the error list to log any errors to
-     *
-     * @return true if the body validated without an error that should cause the validation to abort
-     */
-    protected boolean validateBody(Context ctx, boolean fScope, ErrorListener errs)
-        {
-        boolean fValid = true;
-        if (fScope)
-            {
-            ctx = ctx.enterFork(true);
-            }
-        else
-            {
-            block.suppressScope();
-            }
-
-        Statement blockNew = block.validate(ctx, errs);
-        if (blockNew == null)
-            {
-            fValid = false;
-            }
-        else
-            {
-            block = (StatementBlock) blockNew;
-            }
-
-        if (fScope)
-            {
-            ctx = ctx.exit();
-            }
-
-        List<Map<String, Assignment>> listContinues = m_listContinues;
-        if (listContinues != null)
-            {
-            for (Map<String, Assignment> mapAsn : listContinues)
-                {
-                ctx.merge(mapAsn);
-                }
-            }
-
-        return fValid;
         }
 
     @Override
@@ -636,7 +790,7 @@ public class WhileStatement
     /**
      * Generally null, unless there is a "continue" that jumps to this statement.
      */
-    private transient List<Map<String, Assignment>> m_listContinues;
+    private transient List<Entry<AstNode, Map<String, Assignment>>> m_listContinues;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(WhileStatement.class, "conds", "block");
     }

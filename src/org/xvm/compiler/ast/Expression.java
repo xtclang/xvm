@@ -435,8 +435,6 @@ public abstract class Expression
         return fitOut;
         }
 
-    // TODO need a helper for tuple stuff
-
     /**
      * Given the specified required type for the expression, resolve names, values, verify definite
      * assignment, etc.
@@ -884,24 +882,6 @@ public abstract class Expression
         return getValueCount() == 1;
         }
 
-    // REVIEW who needs this method?
-//    /**
-//     * (Post-validation) Determine if the expression represents a {@code conditional} result. A
-//     * conditional result is one in which there are multiple results, the first of which is a
-//     * boolean, and the remainder of which cannot be safely accessed if the runtime value of that
-//     * first boolean is {@code false}.
-//     * <p/>
-//     * This method must be overridden by any expression that represents or could represent a
-//     * conditional result, including as the result of composition of other expressions that could
-//     * represent a conditional result.
-//     *
-//     * @return true iff the Expression represents a conditional value
-//     */
-//    public boolean isConditional()
-//        {
-//        return false;
-//        }
-
     /**
      * @return the TypeFit that was determined during validation
      */
@@ -988,8 +968,6 @@ public abstract class Expression
 
         return (TypeConstant[]) m_oType;
         }
-
-    // TODO need an "isConditionalResult()" method
 
     /**
      * Query the expression to determine if it would be a good candidate for tracing.
@@ -1098,10 +1076,10 @@ public abstract class Expression
         }
 
     @Override
-    protected Label getShortCircuitLabel(Context ctx, AstNode nodeChild)
+    protected Label ensureShortCircuitLabel(AstNode nodeOrigin, Context ctxOrigin)
         {
         // by default, the expression passes the request to its parent AST node
-        return getParent().getShortCircuitLabel(ctx, this);
+        return getParent().ensureShortCircuitLabel(nodeOrigin, ctxOrigin);
         }
 
     /**

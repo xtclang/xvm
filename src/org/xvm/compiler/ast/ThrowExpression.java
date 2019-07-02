@@ -110,6 +110,7 @@ public class ThrowExpression
 
         // it doesn't really matter what type we choose here, but finishValidation() requires one
         TypeConstant typeActual = typeRequired == null ? pool().typeException() : typeRequired;
+        ctx.setReachable(false);
         return finishValidation(typeRequired, typeActual, fit, null, errs);
         }
 
@@ -119,6 +120,7 @@ public class ThrowExpression
         boolean        fValid      = validateThrow(ctx, errs);
         TypeConstant[] atypeActual = atypeRequired == null ? TypeConstant.NO_TYPES : atypeRequired;
         TypeFit        fit         = fValid ? TypeFit.Fit : TypeFit.NoFit;
+        ctx.setReachable(false);
         return finishValidations(atypeRequired, atypeActual, fit, null, errs);
         }
 

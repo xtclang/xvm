@@ -949,6 +949,7 @@ public class NewExpression
         {
         if (anon != null && m_purposeCurrent != AnonPurpose.Actual)
             {
+            // discard any temporary inner class structure
             ClassStructure clzTemp = (ClassStructure) anon.getComponent();
             if (clzTemp != null)
                 {
@@ -966,12 +967,13 @@ public class NewExpression
                     }
                 }
 
-            if (m_anonActualBackup == null)
-                {
-                anon             = null;
-                m_purposeCurrent = AnonPurpose.None;
-                }
-            else
+            // discard the temporary AST
+            anon.discard(true);
+            anon             = null;
+            m_purposeCurrent = AnonPurpose.None;
+
+            // restore the real AST, if the actual one exists
+            if (m_anonActualBackup != null)
                 {
                 anon               = m_anonActualBackup;
                 m_anonActualBackup = null;

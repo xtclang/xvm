@@ -976,11 +976,11 @@ public class Compiler
     /**
      * Could not find the specified label "{0}".
      */
-    public static final String MISSING_GROUND_LABEL               = "COMPILER-88";
+    public static final String MISSING_GOTO_LABEL                 = "COMPILER-88";
     /**
      * Could not find an enclosing "for", "do", "while", or "switch" statement.
      */
-    public static final String MISSING_GROUND_STATEMENT           = "COMPILER-89";
+    public static final String MISSING_GOTO_TARGET                = "COMPILER-89";
     /**
      * A "continue" statement can only be applied to a "for", "do", "while", or "switch" statement.
      */
@@ -1137,6 +1137,10 @@ public class Compiler
      * Function cannot be abstract: {0}.
      */
     public static final String FUNCTION_BODY_MISSING             = "COMPILER-126";
+    /**
+     * The condition for a "while" loop must not evaluate to a constant "False".
+     */
+    public static final String ILLEGAL_WHILE_CONDITION           = "COMPILER-127";
     /**
      * {0} is not yet implemented.
      */

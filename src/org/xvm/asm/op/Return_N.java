@@ -9,6 +9,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.Register;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
@@ -129,14 +130,15 @@ public class Return_N
         sb.append(super.toString())
           .append(" (");
 
-        int cArgs = m_anArg.length;
+        int cArgs = m_anArg == null ? m_aArg.length : m_anArg.length;
         for (int i = 0; i < cArgs; i++)
             {
             if (i > 0)
                 {
                 sb.append(", ");
                 }
-            sb.append(Argument.toIdString(m_aArg[i], m_anArg[i]));
+            sb.append(Argument.toIdString(m_aArg  == null ? null             : m_aArg [i],
+                                          m_anArg == null ? Register.UNKNOWN : m_anArg[i]));
             }
 
         sb.append(')');

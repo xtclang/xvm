@@ -147,11 +147,13 @@ public class ElseExpression
         }
 
     @Override
-    protected Label getShortCircuitLabel(Context ctx, AstNode nodeChild)
+    protected Label ensureShortCircuitLabel(AstNode nodeOrigin, Context ctxOrigin)
         {
+        AstNode nodeChild = findChild(nodeOrigin);
         if (nodeChild != expr1)
             {
-            return super.getShortCircuitLabel(ctx, nodeChild);
+            assert nodeChild == expr2;
+            return super.ensureShortCircuitLabel(nodeOrigin, ctxOrigin);
             }
 
         // generate a "grounding" target label for the "left side child expression"

@@ -62,7 +62,7 @@ public class IfStatement
         }
 
     @Override
-    protected Label getShortCircuitLabel(Context ctx, AstNode nodeChild)
+    protected Label ensureShortCircuitLabel(AstNode nodeOrigin, Context ctxOrigin)
         {
         // TODO snap-shot the assignment-info-delta
         return getElseLabel();

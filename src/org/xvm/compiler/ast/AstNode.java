@@ -73,6 +73,7 @@ public abstract class AstNode
      */
     protected void setParent(AstNode parent)
         {
+        assert parent == null || !this.isDiscarded() && !parent.isDiscarded();
         this.m_parent = parent;
         }
 
@@ -152,6 +153,58 @@ public abstract class AstNode
                 }
             }
         throw new IllegalStateException("no such child \"" + nodeOld + "\" on \"" + this + '\"');
+        }
+
+    /**
+     * For a node contained somewhere in the AST tree under this node, find the immediate child of
+     * this node that is or contains the specified node.
+     *
+     * @param node  the node that is a descendant of this node
+     *
+     * @return the child that is an immediate child of this node under which the node occurs, or
+     *         null
+     */
+    public AstNode findChild(AstNode node)
+        {
+        AstNode child  = node;
+        do
+            {
+            AstNode parent = child.getParent();
+            if (parent == this)
+                {
+                return child;
+                }
+
+            child = parent;
+            }
+        while (child != null);
+
+        return null;
+        }
+
+    /**
+     * Mark the node as being discarded.
+     *
+     * @param fRecurse  pass true to discard the entire tree from this node down
+     */
+    void discard(boolean fRecurse)
+        {
+        m_stage = Stage.Discarded;
+        if (fRecurse)
+            {
+            for (AstNode node : children())
+                {
+                node.discard(true);
+                }
+            }
+        }
+
+    /**
+     * @return true iff the node has been discarded
+     */
+    boolean isDiscarded()
+        {
+        return m_stage == Stage.Discarded;
         }
 
     /**
@@ -481,12 +534,12 @@ public abstract class AstNode
      * This must be overridden by any AST node that supports short circuiting children. This is
      * called during validation by a child that needs a ground.
      *
-     * @param ctx        the validating context
-     * @param nodeChild  the child that is requesting the label
+     * @param nodeOrigin  the node which is the origin of the short circuit
+     * @param ctxOrigin   the validating context from the point of the short circuit
      *
      * @return the label to jump to when the expression short-circuits.
      */
-    protected Label getShortCircuitLabel(Context ctx, AstNode nodeChild)
+    protected Label ensureShortCircuitLabel(AstNode nodeOrigin, Context ctxOrigin)
         {
         throw new IllegalStateException("no short circuit label for: " + this.getClass().getSimpleName());
         }

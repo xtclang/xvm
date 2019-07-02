@@ -3,10 +3,12 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import java.util.Map.Entry;
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -47,10 +49,9 @@ public class SwitchStatement
         }
 
     @Override
-    public Label ensureContinueLabel(Context ctxOrigin)
+    public Label ensureContinueLabel(AstNode nodeOrigin, Context ctxOrigin)
         {
-        Context ctxDest = getValidationContext();
-        assert ctxDest != null;
+        Context ctxDest = ensureValidationContext();
 
         if (m_labelContinue == null)
             {
@@ -63,10 +64,13 @@ public class SwitchStatement
             m_listContinues = new ArrayList<>();
             }
 
-        // record the jump that will either fall-through to the next case group or (if this is
-        // the last case group) break out of this switch statement by recording its assignment
-        // impact (a delta of assignment information)
-        m_listContinues.add(ctxOrigin.prepareJump(ctxDest));
+        if (ctxOrigin.isReachable())
+            {
+            // record the jump that will either fall-through to the next case group or (if this is
+            // the last case group) break out of this switch statement by recording its assignment
+            // impact (a delta of assignment information)
+            m_listContinues.add(new SimpleEntry<>(nodeOrigin, ctxOrigin.prepareJump(ctxDest)));
+            }
 
         return m_labelContinue;
         }
@@ -93,8 +97,9 @@ public class SwitchStatement
         Context ctxOrig = ctx;
 
         // validate the switch condition
-        m_casemgr = new CaseManager<CaseGroup>(this);
-        fValid   &= m_casemgr.validateCondition(ctx, conds, errs);
+        m_listGroups = new ArrayList<>();
+        m_casemgr    = new CaseManager<CaseGroup>(this);
+        fValid      &= m_casemgr.validateCondition(ctx, conds, errs);
 
         // the case manager enters a new context if the switch condition declares variables
         Context ctxCond = m_casemgr.getSwitchContext();
@@ -103,13 +108,13 @@ public class SwitchStatement
             ctx = ctxCond;
             }
 
+        // TODO this is probably all wrong now; needs REVIEW CP
         if (m_casemgr.usesIfLadder())
             {
             // a switch that uses an "if ladder" may have side-effects of the various case
             // statements that effect assignment, so treat the context containing the case
             // statements as one big branch whose completion represents one possible path
             ctx = ctx.enter();
-            ctx.markNonCompleting();
             }
 
         List<Statement> listStmts = block.stmts;
@@ -129,7 +134,11 @@ public class SwitchStatement
                     group.labelContinueTo = m_labelContinue;
                     group = null;
 
-                    ctxBlock.exit();
+                    // while not immediately apparent, a case block never completes normally; it
+                    // must break, continue (fall through), or otherwise fail to complete (e.g.
+                    // throw or return), otherwise an error occurs (detected during emit); instead
+                    // of exiting the context, it is simply discarded at this point
+                    ctxBlock.discard();
                     ctxBlock = null;
                     }
 
@@ -158,20 +167,15 @@ public class SwitchStatement
                     assert ctxBlock == null;
                     ctxBlock = ctx.enter();
 
-                    // while not immediately apparent, a case block never completes normally; it
-                    // must break, continue (fall through), or otherwise fail to complete (e.g.
-                    // throw or return), otherwise an error occurs (detected during emit); by
-                    // marking the context as non-completing, we prevent the incorrect leaking of
-                    // assignment information from inside the block if the block does not break
-                    // unconditionally at its termination
-                    ctxBlock.markNonCompleting();
-
                     // associate any previous "fall through" with this pseudo statement block
                     if (m_labelContinue != null)
                         {
-                        for (Map<String, Assignment> mapAsn : m_listContinues)
+                        for (Entry<AstNode, Map<String, Assignment>> entry : m_listContinues)
                             {
-                            ctxBlock.merge(mapAsn);
+                            if (!entry.getKey().isDiscarded())
+                                {
+                                ctxBlock.merge(entry.getValue());
+                                }
                             }
 
                         m_labelContinue = null;
@@ -207,10 +211,19 @@ public class SwitchStatement
             group.fScope          = ctxBlock.isAnyVarDeclaredInThisScope();
             group.labelContinueTo = m_labelContinue;
 
-            ctxBlock.exit();
+            if (ctxBlock.isReachable())
+                {
+                errs.log(Severity.ERROR, Compiler.SWITCH_BREAK_OR_CONTINUE_EXPECTED, null,
+                        getSource(), getEndPosition(), getEndPosition());
+                fValid = false;
+                }
+
+            ctxBlock.discard();
+            ctxBlock = null;
             }
 
         // close the context used for an "if ladder"
+        // REVIEW (see corresponding section above)
         if (m_casemgr.usesIfLadder())
             {
             ctx = ctx.exit();
@@ -219,13 +232,24 @@ public class SwitchStatement
         // notify the case manager that we're finished collecting everything
         fValid &= m_casemgr.validateEnd(ctx, errs);
 
+        // if a switch statement covers all of the possible values, or has a default label, then the
+        // switch statement does not complete normally
+        if (!m_casemgr.isCompletable())
+            {
+            ctxOrig.setReachable(false);
+            }
+
         if (m_listContinues != null)
             {
-            // the last "continue" donates asn deltas in roughtly the same way that a "break" would
-            for (Map<String, Assignment> mapAsn : m_listContinues)
+            // the last "continue" is translated as a "break"
+            for (Entry<AstNode, Map<String, Assignment>> entry : m_listContinues)
                 {
-                ctxOrig.merge(mapAsn);
+                if (!entry.getKey().isDiscarded())
+                    {
+                    addBreak(entry.getKey(), entry.getValue());
+                    }
                 }
+            m_listContinues = null;
             }
 
         return fValid ? this : null;
@@ -285,7 +309,7 @@ public class SwitchStatement
             code.add(m_labelContinue);
             }
 
-        return false;
+        return m_casemgr.isCompletable();
         }
 
     private void emitCaseGroup(Context ctx, boolean fReachable, Code code, int iGroup, ErrorListener errs)
@@ -414,7 +438,7 @@ public class SwitchStatement
      * Information about each group that begins with one or more CaseStatements and is followed by
      * other statements.
      */
-    private transient List<CaseGroup> m_listGroups = new ArrayList<>();
+    private transient List<CaseGroup> m_listGroups;
 
     /**
      * For a given case group, this is the label that each "continue" statement within that group
@@ -427,7 +451,7 @@ public class SwitchStatement
      * "continue" statement within that group; it's null until the first continue statement is
      * encountered in the group.
      */
-    private transient List<Map<String, Assignment>> m_listContinues;
+    private transient List<Map.Entry<AstNode, Map<String, Assignment>>> m_listContinues;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchStatement.class, "conds", "block");
     }

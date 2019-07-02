@@ -1,15 +1,20 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.op.Label;
+
+import org.xvm.compiler.Compiler.Stage;
 
 
 /**
@@ -42,7 +47,6 @@ public abstract class Statement
         Label label = m_labelEnd;
         if (label == null)
             {
-            assert !m_fEmitted;
             m_labelEnd = label = new Label();
             }
         return label;
@@ -59,51 +63,56 @@ public abstract class Statement
     /**
      * Obtain the label to "break" to.
      *
-     * @param ctxOrigin  the context from the point under this statement of the "break"
+     * @param nodeOrigin  the "break" node (the node requesting the label)
+     * @param ctxOrigin   the context from the point under this statement of the "break"
      *
      * @return the label to jump to when a "break" occurs within (or for) this statement
      */
-    public Label ensureBreakLabel(Context ctxOrigin)
+    public Label ensureBreakLabel(AstNode nodeOrigin, Context ctxOrigin)
         {
-        Context ctxDest = getValidationContext();
-        assert ctxDest != null;
+        Context ctxDest = ensureValidationContext();
+        if (ctxOrigin.isReachable())
+            {
+            // generate a delta of assignment information for the jump
+            addBreak(nodeOrigin, ctxOrigin.prepareJump(ctxDest));
+            }
 
-        // generate a delta of assignment information for the jump
-        Map<String, Assignment> mapAsn = ctxOrigin.prepareJump(ctxDest);
+        return getEndLabel();
+        }
 
+    protected void addBreak(AstNode nodeOrigin, Map<String, Assignment> mapAsn)
+        {
         // record the jump that landed on this statement by recording its assignment impact
         if (m_listBreaks == null)
             {
             m_listBreaks = new ArrayList<>();
             }
-        m_listBreaks.add(mapAsn);
-
-        return getEndLabel();
+        m_listBreaks.add(new SimpleEntry<>(nodeOrigin, mapAsn));
         }
 
     /**
      * Obtain the label to "continue" to.
      *
-     * @param ctxOrigin  the context from the point under this statement of the "continue"
+     * @param nodeOrigin  the "continue" node (the node requesting the label)
+     * @param ctxOrigin   the context from the point under this statement of the "continue"
      *
      * @return the label to jump to when a "continue" occurs within (or for) this statement
      */
-    public Label ensureContinueLabel(Context ctxOrigin)
+    public Label ensureContinueLabel(AstNode nodeOrigin, Context ctxOrigin)
         {
+        assert isNaturalGotoStatementTarget();
         throw new IllegalStateException();
         }
 
     @Override
-    protected Label getShortCircuitLabel(Context ctx, AstNode nodeChild)
+    protected Label ensureShortCircuitLabel(AstNode nodeOrigin, Context ctxOrigin)
         {
+        AstNode nodeChild = findChild(nodeOrigin);
+        assert nodeChild != null;
         assert allowsShortCircuit(nodeChild);
 
-        // save off the definite assignment contributions from the point of the short circuit
-        // TODO
-
-        // TODO how to clean up the stack (A_STACK register) when short-circuit occurs?
-
-        return getEndLabel();
+        // this needs to be overridden by any statement that doesn't short-circuit to the end label
+        return ensureBreakLabel(nodeOrigin, ctxOrigin);
         }
 
 
@@ -124,19 +133,27 @@ public abstract class Statement
             {
             return null;
             }
-        
+
         // before validating the nested code, associate this statement with the context so that any
         // "break" or "continue" can find the context to apply assignment data to
         m_ctx = ctx;
         Statement stmt = validateImpl(ctx, errs);
         m_ctx = null;
 
-        List<Map<String, Assignment>> listBreaks = m_listBreaks;
-        if (listBreaks != null)
+        if (m_listBreaks != null)
             {
-            for (Map<String, Assignment> mapAsn : listBreaks)
+            for (Iterator<Entry<AstNode, Map<String, Assignment>>> iter = m_listBreaks.iterator();
+                    iter.hasNext(); )
                 {
-                ctx.merge(mapAsn);
+                Map.Entry<AstNode, Map<String, Assignment>> entry = iter.next();
+                if (entry.getKey().isDiscarded())
+                    {
+                    iter.remove();
+                    }
+                else
+                    {
+                    ctx.merge(entry.getValue());
+                    }
                 }
             }
 
@@ -146,9 +163,16 @@ public abstract class Statement
     /**
      * @return the Context being used for validation of this statement, if this statement is
      *         currently being validated
+     *
+     * @throws IllegalStateException  if thist statement is not currently being validated
      */
-    protected Context getValidationContext()
+    protected Context ensureValidationContext()
         {
+        if (m_ctx == null)
+            {
+            throw new IllegalStateException();
+            }
+
         return m_ctx;
         }
 
@@ -161,10 +185,7 @@ public abstract class Statement
      *
      * @return true iff the compilation can proceed
      */
-    protected Statement validateImpl(Context ctx, ErrorListener errs) // TODO make abstract
-        {
-        throw notImplemented();
-        }
+    protected abstract Statement validateImpl(Context ctx, ErrorListener errs);
 
     /**
      * Generate the generic assembly code that wraps the contents of any statement.
@@ -194,8 +215,7 @@ public abstract class Statement
             code.add(m_labelEnd);
             }
 
-        m_fEmitted = true;
-        return fCompletes || fReachable && m_listBreaks != null;
+        return fCompletes || fReachable && m_listBreaks != null && !m_listBreaks.isEmpty();
         }
 
     /**
@@ -208,23 +228,23 @@ public abstract class Statement
      *
      * @return true iff the statement completes
      */
-    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) // TODO make abstract
-        {
-        throw notImplemented();
-        }
+    protected abstract boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs);
 
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private Label   m_labelEnd;
-    private boolean m_fEmitted;
+    /**
+     * The label representing the end of the statement, or null if it has not been requested.
+     */
+    private Label m_labelEnd;
 
     /**
-     * The Context that contains this statement as it validates.
+     * The Context that contains this statement temporarily during validation.
      */
     private transient Context m_ctx;
+
     /**
      * Generally null, unless there is a break that jumps to this statement's exit label.
      */
-    private transient List<Map<String, Assignment>> m_listBreaks;
+    private transient List<Map.Entry<AstNode, Map<String, Assignment>>> m_listBreaks;
     }

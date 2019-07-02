@@ -501,6 +501,7 @@ public class LambdaExpression
         StatementBlock blockTemp = (StatementBlock) body.clone();
         if (!new StageMgr(blockTemp, Stage.Validated, errs).fastForward(20))
             {
+            blockTemp.discard(true);
             return finishValidation(typeRequired, null, TypeFit.NoFit, null, errs);
             }
 
@@ -508,6 +509,7 @@ public class LambdaExpression
         StatementBlock blockNew  = (StatementBlock) blockTemp.validate(ctxLambda, errs);
         if (blockNew == null)
             {
+            blockTemp.discard(true);
             fit = TypeFit.NoFit;
             }
         else
@@ -679,6 +681,7 @@ public class LambdaExpression
 
         if (!new StageMgr(blockTemp, Stage.Validated, ErrorListener.BLACKHOLE).fastForward(20))
             {
+            blockTemp.discard(true);
             return null;
             }
 
@@ -707,6 +710,11 @@ public class LambdaExpression
         finally
             {
             m_collector = null;
+
+            if (blockTemp != null)
+                {
+                blockTemp.discard(true);
+                }
             }
         }
 

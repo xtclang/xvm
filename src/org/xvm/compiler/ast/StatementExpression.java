@@ -124,21 +124,24 @@ public class StatementExpression
             }
 
         // clone the body (to avoid damaging the original) and validate it to calculate its type
-        StatementBlock blockTemp = (StatementBlock) body.clone();
+        StatementBlock blockTempOld = (StatementBlock) body.clone();
 
         // the resulting returned types come back in the type collector
-        ctx = enterCapture(ctx, blockTemp);
-        blockTemp = (StatementBlock) blockTemp.validate(ctx, ErrorListener.BLACKHOLE);
-        ctx       = ctx.exit();
+        ctx = enterCapture(ctx, blockTempOld);
+        StatementBlock blockTempNew = (StatementBlock) blockTempOld.validate(ctx, ErrorListener.BLACKHOLE);
+        ctx = ctx.exit();
 
-        if (blockTemp == null || m_collector == null)
+        // extract the type information (if everything validated ok)
+        TypeConstant[] aTypes = null;
+        if (blockTempNew != null && m_collector != null)
             {
-            m_collector = null;
-            return null;
+            aTypes = m_collector.inferMulti(null); // TODO isConditional
             }
 
-        TypeConstant[] aTypes = m_collector.inferMulti(null); // TODO isConditional
+        // clean up temporary stuff
         m_collector = null;
+        blockTempOld.discard(true);
+
         return aTypes;
         }
 
@@ -171,24 +174,27 @@ public class StatementExpression
             }
 
         // clone the body and validate it using the requested type to test if that type will work
-        m_atypeRequired = atypeRequired;
-        ctx = enterCapture(ctx, body);
-        ((StatementBlock) body.clone()).validate(ctx, ErrorListener.BLACKHOLE);
-        ctx = ctx.exit();
-        m_atypeRequired = null;
+        StatementBlock blockTempOld = (StatementBlock) body.clone();
+        ctx = enterCapture(ctx, blockTempOld);
 
-        // the resulting returned types come back in m_listRetTypes
-        if (m_collector == null)
-            {
-            return TypeFit.NoFit;
-            }
-        else
+        m_atypeRequired = atypeRequired;
+        StatementBlock blockTempNew = (StatementBlock) blockTempOld.validate(ctx, ErrorListener.BLACKHOLE);
+        ctx = ctx.exit();
+
+        TypeFit fit = TypeFit.NoFit;
+        if (blockTempNew != null && m_collector != null)
             {
             // calculate the resulting type
             TypeConstant[] aActualTypes = m_collector.inferMulti(atypeRequired);  // TODO isConditional
-            m_collector = null;
-            return calcFitMulti(ctx, aActualTypes, atypeRequired);
+            fit = calcFitMulti(ctx, aActualTypes, atypeRequired);
             }
+
+        // clean up temprary stuff
+        m_atypeRequired = null;
+        m_collector     = null;
+        blockTempOld.discard(true);
+
+        return fit;
         }
 
     @Override

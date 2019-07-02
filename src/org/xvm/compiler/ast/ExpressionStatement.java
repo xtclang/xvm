@@ -98,13 +98,6 @@ public class ExpressionStatement
         return nodeChild == expr;
         }
 
-    @Override
-    protected Label getShortCircuitLabel(Context ctx, AstNode nodeChild)
-        {
-        assert nodeChild == expr;
-        return getEndLabel();
-        }
-
 
     // ----- debugging assistance ------------------------------------------------------------------
 

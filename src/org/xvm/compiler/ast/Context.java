@@ -49,29 +49,16 @@ import org.xvm.util.Severity;
 public class Context
     {
     /**
-     * Construct a Context that doesn't block promotion of non-complete state.
+     * Construct a Context.
      *
      * @param ctxOuter      the context that this Context is nested within
      * @param fDemuxOnExit  true if this context should demux the assignment information
      */
     protected Context(Context ctxOuter, boolean fDemuxOnExit)
         {
-        this(ctxOuter, fDemuxOnExit, false);
-        }
-
-    /**
-     * Construct a Context.
-     *
-     * @param ctxOuter           the context that this Context is nested within
-     * @param ctxOuter           the context that this Context is nested within
-     * @param fDemuxOnExit       true if this context should demux the assignment information
-     * @param fBlockNonComplete  true if this context should block promotion of non-complete state
-     */
-    protected Context(Context ctxOuter, boolean fDemuxOnExit, boolean fBlockNonComplete)
-        {
-        m_ctxOuter          = ctxOuter;
-        m_fDemuxOnExit      = fDemuxOnExit;
-        m_fBlockNonComplete = fBlockNonComplete;
+        m_ctxOuter     = ctxOuter;
+        m_fDemuxOnExit = fDemuxOnExit;
+        m_fReachable   = ctxOuter == null || ctxOuter.isReachable();
         }
 
     /**
@@ -194,6 +181,9 @@ public class Context
         {
         return getOuterContext().pool();
         }
+
+
+    // ----- nested context creation ---------------------------------------------------------------
 
     /**
      * Used in the validation phase to track scopes.
@@ -342,21 +332,22 @@ public class Context
         }
 
     /**
-     * Mark the Context as being non-completing from this point forward. This means that the code
-     * for which the context exists has completed abruptly.
+     * @return true iff the code for which the context exists is considered reachable
      */
-    public void markNonCompleting()
+    public boolean isReachable()
         {
-        m_fNonCompleting = true;
+        return m_fReachable;
         }
 
     /**
-     * @return true iff the context has transitioned into an "unreachable" mode due to a
-     *         non-completing or abruptly completing statement or expression
+     * This method allows the code for which the Context exists to be marked as reachable vs
+     * unreachable, for the current point in the code.
+     *
+     * @param fReachable  true iff the current point in the code can be reached
      */
-    public boolean isCompleting()
+    public void setReachable(boolean fReachable)
         {
-        return !m_fNonCompleting;
+        m_fReachable = fReachable;
         }
 
     /**
@@ -367,9 +358,9 @@ public class Context
      */
     public Context exit()
         {
-        Context ctxOuter    = getOuterContext();
-        boolean fCompleting = isCompleting();
-        boolean fDemuxing   = isDemuxing();
+        Context ctxOuter   = getOuterContext();
+        boolean fCompletes = isReachable();
+        boolean fDemuxing  = isDemuxing();
 
         // copy variable assignment information from this scope to outer scope
         for (Entry<String, Assignment> entry : getDefiniteAssignments().entrySet())
@@ -388,6 +379,7 @@ public class Context
                     }
                 }
             else
+                // TODO if fCompletes || this is lambda???
                 // REVIEW CP this prevents "return" statement in lambda to promote the assignments
                 // if (fCompleting)
                 {
@@ -400,7 +392,7 @@ public class Context
                 }
             }
 
-        if (fCompleting)
+        if (fCompletes)
             {
             for (Entry<String, Argument> entry : getNameMap().entrySet())
                 {
@@ -428,12 +420,21 @@ public class Context
                 promoteNarrowedFormalType(entry.getKey(), entry.getValue(), Branch.WhenFalse);
                 }
             }
-        else if (!m_fBlockNonComplete)
+        else
             {
             ctxOuter.promoteNonCompleting(this);
             }
 
         return ctxOuter;
+        }
+
+    /**
+     * Discard the context without promoting its contents.
+     */
+    public void discard()
+        {
+        m_fReachable = false;
+        m_ctxOuter   = null;
         }
 
     /**
@@ -447,15 +448,19 @@ public class Context
      */
     public Map<String, Assignment> prepareJump(Context ctxDest)
         {
+        // don't pollute a reachable destination with assignments from an unreachable point in code
+        if (!this.isReachable() && ctxDest.isReachable())
+            {
+            return Collections.emptyMap();
+            }
+
         // begin with a snap-shot of the current modifications
-        Map<String, Assignment> mapMods = new HashMap<>(getDefiniteAssignments());
+        Map<String, Assignment> mapMods = new HashMap<>();
         boolean                 fDemux  = false;
 
         Context ctxInner = this;
         while (ctxInner != ctxDest)
             {
-            Context ctxOuter = ctxInner.getOuterContext();
-
             // calculate impact of the already-accumulated assignment deltas across this context
             // boundary
             for (Iterator<String> iter = mapMods.keySet().iterator(); iter.hasNext(); )
@@ -468,17 +473,18 @@ public class Context
                     }
                 }
 
-            // collect all of the other pending modifications from the outer context
-            for (String sName : ctxOuter.getDefiniteAssignments().keySet())
+            // collect all of the other pending modifications that will be promoted to the outer
+            // context
+            for (String sName : ctxInner.getDefiniteAssignments().keySet())
                 {
-                if (!mapMods.containsKey(sName))
+                if (!mapMods.containsKey(sName) && !ctxInner.isVarDeclaredInThisScope(sName))
                     {
-                    mapMods.putIfAbsent(sName, getVarAssignment(sName));
+                    mapMods.put(sName, getVarAssignment(sName));
                     }
                 }
 
             fDemux  |= ctxInner.isDemuxing();
-            ctxInner = ctxOuter;
+            ctxInner = ctxInner.getOuterContext();
             }
 
         if (fDemux)
@@ -500,12 +506,20 @@ public class Context
     public void merge(Map<String, Assignment> mapAdd)
         {
         Map<String, Assignment> mapAsn = ensureDefiniteAssignments();
-        for (Entry<String, Assignment> entry : mapAdd.entrySet())
+        if (isReachable())
             {
-            String     sName  = entry.getKey();
-            Assignment asnNew = entry.getValue();
-            Assignment asnOld = getVarAssignment(sName);
-            mapAsn.put(sName, asnOld.join(asnNew));
+            for (Entry<String, Assignment> entry : mapAdd.entrySet())
+                {
+                String     sName  = entry.getKey();
+                Assignment asnNew = entry.getValue();
+                Assignment asnOld = getVarAssignment(sName);
+                mapAsn.put(sName, asnOld.join(asnNew));
+                }
+            }
+        else
+            {
+            mapAsn.putAll(mapAdd);
+            setReachable(true);
             }
         }
 
@@ -562,7 +576,7 @@ public class Context
      */
     protected void promoteNonCompleting(Context ctxInner)
         {
-        markNonCompleting();
+        setReachable(false);
         }
 
     /**
@@ -1650,7 +1664,7 @@ public class Context
          */
         public BlackholeContext(Context ctxOuter)
             {
-            super(ctxOuter, false, true);
+            super(ctxOuter, false);
             }
 
         @Override
@@ -1688,10 +1702,11 @@ public class Context
             }
 
         @Override
-        public boolean isCompleting()
+        public boolean isReachable()
             {
-            return m_ctxWhenTrue  == null || m_ctxWhenTrue .isCompleting()
-                || m_ctxWhenFalse == null || m_ctxWhenFalse.isCompleting();
+            return m_ctxWhenTrue  != null && m_ctxWhenTrue .m_fReachable
+                || m_ctxWhenFalse != null && m_ctxWhenFalse.m_fReachable
+                || super.isReachable();
             }
 
         @Override
@@ -1868,7 +1883,7 @@ public class Context
         {
         public AndContext(Context ctxOuter)
             {
-            super(ctxOuter, false, true);
+            super(ctxOuter, false);
             }
 
         @Override
@@ -1943,7 +1958,7 @@ public class Context
         {
         public OrContext(Context ctxOuter)
             {
-            super(ctxOuter, false, true);
+            super(ctxOuter, false);
             }
 
         @Override
@@ -2018,7 +2033,7 @@ public class Context
         {
         public NotContext(Context ctxOuter)
             {
-            super(ctxOuter, false, true);
+            super(ctxOuter, false);
             }
 
         @Override
@@ -2089,7 +2104,7 @@ public class Context
         {
         public LoopingContext(Context ctxOuter)
             {
-            super(ctxOuter, true, true);
+            super(ctxOuter, true);
             }
 
         @Override
@@ -2206,7 +2221,7 @@ public class Context
          */
         public CaptureContext(Context ctxOuter)
             {
-            super(ctxOuter, true, true);
+            super(ctxOuter, true);
             }
 
         @Override
@@ -2389,17 +2404,9 @@ public class Context
     private boolean m_fDemuxOnExit;
 
     /**
-     * Set to true when the context has passed the point of completion, i.e. passed any "reachable"
-     * code. This could be caused by a "throw", "return", "break" or other abruptly completing
-     * construct.
+     * True iff the code for which the context exists is considered reachable at this point.
      */
-    private boolean m_fNonCompleting;
-
-    /**
-     * Set to true when the context doesn't promote the "non-completing" state to the outside
-     * context upon exit.
-     */
-    private boolean m_fBlockNonComplete;
+    boolean m_fReachable;
 
     /**
      * Each variable declared within this context is registered in this map, along with the
@@ -2438,8 +2445,8 @@ public class Context
     private Map<String, TypeConstant> m_mapFormalWhenFalse;
 
     /**
-     * Each variable assigned within this context is registered in this map. The boolean value
-     * represents multiple assignments.
+     * Each variable assigned within this context is registered in this map. The corresponding value
+     * represents the assignments that may have occurred by this point.
      */
     private Map<String, Assignment> m_mapAssigned;
     }

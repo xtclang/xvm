@@ -235,9 +235,9 @@ public class ReturnStatement
                 }
             }
 
+        ctx.setReachable(false);
         if (fValid)
             {
-            ctx.markNonCompleting();
             container.collectReturnTypes(atypeActual);
             return this;
             }

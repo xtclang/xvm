@@ -3,7 +3,11 @@ package org.xvm.compiler.ast;
 
 import java.util.List;
 
+import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure.Code;
+
 import org.xvm.asm.op.Label;
+
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
@@ -77,6 +81,23 @@ public class CaseStatement
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    protected Statement validateImpl(Context ctx, ErrorListener errs)
+        {
+        // the case statement is a marker; it's just data, not an actual compilable AST node
+        throw new IllegalStateException();
+        }
+
+    @Override
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+        {
+        // the case statement is a marker; it's just data, not an actual compilable AST node
+        throw new IllegalStateException();
         }
 
 
