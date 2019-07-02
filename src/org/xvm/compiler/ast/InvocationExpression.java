@@ -752,7 +752,16 @@ public class InvocationExpression
                                 int ix = 0;
                                 for (TypeConstant type : mapTypeParams.values())
                                     {
-                                    aargTypeParam[ix++] = type.getTypeArgument();
+                                    TypeConstant typeArgType    = type.getType();
+                                    TypeConstant typeMethodType = idMethod.getRawParams()[ix];
+                                    if (!typeArgType.isA(typeMethodType))
+                                        {
+                                        log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                                                typeMethodType.getValueString(),
+                                                typeArgType.getValueString());
+                                        break ValidateMethod;
+                                        }
+                                    aargTypeParam[ix++] = typeArgType;
                                     }
                                 m_aargTypeParams = aargTypeParam;
                                 }
@@ -1677,9 +1686,26 @@ public class InvocationExpression
                                                 false, atypeReturn, errs);
                     if (arg != null)
                         {
-                        m_argMethod = arg;
-                        m_method    = getMethod(infoLeft, arg);
-                        return arg;
+                        MethodConstant idMethod   = (MethodConstant) arg;
+                        MethodInfo     infoMethod = infoLeft.getMethodById(idMethod);
+                        assert infoMethod != null;
+
+                        if (infoMethod.isAbstractFunction())
+                            {
+                            log(errs, Severity.ERROR, Compiler.ILLEGAL_FUNKY_CALL,
+                                    idMethod.getValueString());
+                            return null;
+                            }
+
+                        if (!idMethod.getNamespace().equals(idLeft))
+                            {
+                            // preserve the origin information on the function's MethodConstant
+                            idMethod = pool.ensureMethodConstant(idLeft, idMethod.getSignature());
+                            }
+
+                        m_argMethod = idMethod;
+                        m_method    = infoMethod.getTopmostMethodStructure(infoLeft);
+                        return idMethod;
                         }
                     }
 
