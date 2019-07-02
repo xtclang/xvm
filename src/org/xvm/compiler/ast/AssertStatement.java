@@ -193,8 +193,13 @@ public class AssertStatement
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
+        if (keyword.getId() == Id.ASSERT && conds.isEmpty())
+            {
+            ctx.setReachable(false);
+            return this;
+            }
+
         boolean fValid  = true;
-        boolean fAborts = conds.isEmpty();
 
         // break apart complex conditions if possible
         demorgan();
@@ -258,17 +263,12 @@ public class AssertStatement
 
                     if (exprNew.isConstantFalse())
                         {
-                        fAborts = true;  // TODO CP only if no previous condition has short-circuited
+                        ctx.setReachable(false);
                         }
                     }
 
                 ctx = ctx.exit();
                 }
-            }
-
-        if (fAborts)
-            {
-            ctx.setReachable(false);
             }
 
         return fValid
@@ -461,7 +461,7 @@ public class AssertStatement
      */
     protected void demorgan()
         {
-        if (conds != null && !conds.isEmpty())
+        if (!conds.isEmpty())
             {
             List<AstNode> listNewConds = new ArrayList<>();
             m_listTexts = new ArrayList<>(conds.size());
@@ -571,7 +571,7 @@ public class AssertStatement
               .append(')');
             }
 
-        if (conds != null && !conds.isEmpty())
+        if (!conds.isEmpty())
             {
             sb.append(' ')
               .append(conds.get(0));

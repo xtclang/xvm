@@ -49,6 +49,9 @@ public class TodoExpression
                     }
                 }
             }
+
+        ctx.setReachable(false);
+
         return fValid;
         }
 
