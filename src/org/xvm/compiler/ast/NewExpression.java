@@ -359,7 +359,7 @@ public class NewExpression
                     ClassStructure clzAnon = (ClassStructure) anon.getComponent();
 
                     typeResult = pool.ensureAnonymousClassTypeConstant(ctx.getThisType(),
-                        (ClassConstant) clzAnon.getIdentityConstant());
+                            (ClassConstant) clzAnon.getIdentityConstant());
                     typeResult = typeResult.adoptParameters(pool, clzAnon.getFormalType());
                     typeResult = typeResult.resolveGenerics(pool, typeTarget);
                     typeTarget = pool.ensureAccessTypeConstant(typeResult, Access.PRIVATE);
