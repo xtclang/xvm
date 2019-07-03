@@ -240,6 +240,12 @@ public class DifferenceTypeConstant
         return m_constType1.callCompare(frame, hValue1, hValue2, iReturn);
         }
 
+    @Override
+    public MethodInfo findFunctionInfo(SignatureConstant sig)
+        {
+        return m_constType1.findFunctionInfo(sig);
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

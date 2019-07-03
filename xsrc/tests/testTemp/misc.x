@@ -520,16 +520,34 @@ module TestMisc.xqiz.it
 
     void testConstants()
         {
+        import Ecstasy.collections.Hasher;
+        import Ecstasy.collections.NaturalHasher;
+
         console.println("\n** testConstants()");
 
         IntLiteral lit = 42;
         console.println("lit=" + lit);
 
-        Point point = new Point(0, 1);
-        console.println("point=" + point);
+        Point point1 = new Point(0, 2);
+        console.println($"point1={point1}");
 
-        Point point2 = new NamedPoint("top-left", 1, 3);
-        console.println("point2=" + point2);
+        NamedPoint point2 = new NamedPoint("top-left", 1, 0);
+        console.println($"point2={point2}");
+
+        Hasher<Point>      hasherP = new NaturalHasher<Point>();
+        Hasher<NamedPoint> hasherN = new NaturalHasher<NamedPoint>();
+
+        assert Point.hashCode(point1)      == Point.hashCode(point2);
+        assert Point.hashCode(point1)      == hasherP.hashOf(point1);
+        assert Point.hashCode(point2)      == hasherP.hashOf(point2);
+        assert NamedPoint.hashCode(point2) == hasherN.hashOf(point2);
+
+        Point point3 = point2;
+
+        assert point1 == point3;
+        assert Point.equals(point1, point3);
+        assert point1 <=> point3 == Equal;
+        assert Point.compare(point1, point3) == Equal;
         }
 
     const Point(Int x, Int y);

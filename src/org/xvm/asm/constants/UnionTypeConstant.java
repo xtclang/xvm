@@ -524,6 +524,19 @@ public class UnionTypeConstant
             m_constType1, m_constType2, hValue1, hValue2, iReturn);
         }
 
+    @Override
+    public MethodInfo findFunctionInfo(SignatureConstant sig)
+        {
+        MethodInfo info1 = m_constType1.findFunctionInfo(sig);
+        MethodInfo info2 = m_constType2.findFunctionInfo(sig);
+
+        return info1 == null ? info2 :
+               info2 == null ? info1 :
+               info1.getIdentity().equals(info2.getIdentity())
+                        ? info1
+                        : null; // ambiguous
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

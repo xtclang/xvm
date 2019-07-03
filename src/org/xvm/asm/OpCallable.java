@@ -237,8 +237,11 @@ public abstract class OpCallable extends Op
     // ----- helper methods -----
 
     /**
-     * Retrieve the method structure for this op-code and cache the parent's type
-     * to be used by {@link #getNativeTemplate}
+     * Retrieve the method structure for this op-code and cache the parent's template
+     * to be used by {@link #getNativeTemplate}.
+     *
+     * @return the method structure or null if cannot be found, in which case an exception
+     *         has been raised on the frame
      */
     protected MethodStructure getMethodStructure(Frame frame)
         {
@@ -261,19 +264,17 @@ public abstract class OpCallable extends Op
                     m_function = function = (MethodStructure) idFunction.getComponent();
                     if (function == null)
                         {
-                        TypeInfo          infoParent = typeParent.ensureTypeInfo();
-                        SignatureConstant sig        = idFunction.getSignature().
-                                resolveGenericTypes(pool, resolver);
-
-                        m_function = function = infoParent.getMethodBySignature(sig).
-                                getTopmostMethodStructure(infoParent);
+                        m_function = function = typeParent.findCallable(
+                                idFunction.getSignature().resolveGenericTypes(pool, resolver));
                         if (function == null)
                             {
                             frame.raiseException(xException.makeHandle(
-                                "unresolvable function " + idFunction.getValueString()));
+                                "unresolvable or ambiguous function \"" + idFunction.getValueString() +
+                                 "\" for " + typeParent.getValueString()));
                             }
                         }
                     m_typeParent = typeParent;
+                    m_template   = frame.f_context.f_templates.getTemplate(typeParent);
                     }
                 break;
                 }
@@ -286,18 +287,16 @@ public abstract class OpCallable extends Op
                 TypeConstant        typeParent = ((FormalConstant) idParent).resolve(resolver);
                 if (function == null || !typeParent.equals(m_typeParent))
                     {
-                    TypeInfo          infoParent = typeParent.ensureTypeInfo();
-                    SignatureConstant sig        = idFunction.getSignature().
-                            resolveGenericTypes(frame.poolContext(), resolver);
-
-                    m_function = function = infoParent.getMethodBySignature(sig).
-                            getTopmostMethodStructure(infoParent);
+                    m_function = function = typeParent.findCallable(
+                            idFunction.getSignature().resolveGenericTypes(frame.poolContext(), resolver));
                     if (function == null)
                         {
                         frame.raiseException(xException.makeHandle(
-                            "unresolvable function " + idFunction.getValueString()));
+                            "unresolvable or ambiguous function \"" + idFunction.getValueString() +
+                             "\" for " + typeParent.getValueString()));
                         }
                     m_typeParent = typeParent;
+                    m_template   = frame.f_context.f_templates.getTemplate(typeParent);
                     }
                 break;
                 }
@@ -308,7 +307,7 @@ public abstract class OpCallable extends Op
                     {
                     m_function = function = (MethodStructure) idFunction.getComponent();
                     assert !function.isNative();
-                    // since the function is never native, no need to se the parent type
+                    // since the function is never native, no need to save the template
                     }
                 break;
                 }
@@ -327,7 +326,7 @@ public abstract class OpCallable extends Op
     protected ClassTemplate getNativeTemplate(Frame frame, MethodStructure function)
         {
         assert function == m_function;
-        return frame.f_context.f_templates.getTemplate(m_typeParent);
+        return m_template;
         }
 
     protected int constructChild(Frame frame, MethodStructure constructor,
@@ -399,6 +398,7 @@ public abstract class OpCallable extends Op
 
     private TypeConstant    m_typeParent; // the parent type for the cached function
     private MethodStructure m_function;   // cached function
+    private ClassTemplate   m_template;   // cached template
 
     private ClassConstant   m_idParent;    // the parent's class id for the cached constructor
     private MethodStructure m_constructor; // cached constructor

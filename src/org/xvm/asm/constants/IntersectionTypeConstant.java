@@ -25,6 +25,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
@@ -574,6 +575,7 @@ public class IntersectionTypeConstant
             return type.callEquals(frame, hValue1, hValue2, iReturn);
             }
 
+        assert !typeV1.equals(typeV2);
         return frame.assignValue(iReturn, xBoolean.FALSE);
         }
 
@@ -595,8 +597,22 @@ public class IntersectionTypeConstant
             return type.callCompare(frame, hValue1, hValue2, iReturn);
             }
 
-        return frame.assignValue(iReturn, xBoolean.FALSE);
+        assert !typeV1.equals(typeV2);
+        return frame.assignValue(iReturn, xOrdered.makeHandle(typeV1.compareTo(typeV2)));
         }
+
+    @Override
+    public MethodInfo findFunctionInfo(SignatureConstant sig)
+        {
+        MethodInfo info1 = m_constType1.findFunctionInfo(sig);
+        MethodInfo info2 = m_constType2.findFunctionInfo(sig);
+
+        return info1 == null || info2 == null ||
+                    !info1.getIdentity().equals(info2.getIdentity()) // ambiguous?
+                ? null
+                : info1;
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

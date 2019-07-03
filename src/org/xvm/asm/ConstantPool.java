@@ -2155,8 +2155,10 @@ public class ConstantPool
     public SingletonConstant valGreater()       {SingletonConstant c = m_valGreater;      if (c == null) {m_valGreater      = c = ensureSingletonConstConstant(clzGreater())                  ;} return c;}
     public SingletonConstant valNull()          {SingletonConstant c = m_valNull;         if (c == null) {m_valNull         = c = ensureSingletonConstConstant(clzNull())                     ;} return c;}
 
-    public SignatureConstant sigToString()      {SignatureConstant c = m_sigToString;     if (c == null) {m_sigToString     = c = ensureSignatureConstant("toString", NO_TYPES, new TypeConstant[]{typeString()});} return c;}
-    public SignatureConstant sigConstruct()     {SignatureConstant c = m_sigConstruct;    if (c == null) {m_sigConstruct    = c = ensureSignatureConstant("construct", NO_TYPES, NO_TYPES)    ;} return c;}
+    public SignatureConstant sigToString()      {SignatureConstant c = m_sigToString;     if (c == null) {m_sigToString     = c = getSignature("Object",    "toString",  0)                   ;} return c;}
+    public SignatureConstant sigConstruct()     {SignatureConstant c = m_sigConstruct;    if (c == null) {m_sigConstruct    = c = getSignature("Object",    "construct", 0)                   ;} return c;}
+    public SignatureConstant sigEquals()        {SignatureConstant c = m_sigEquals;       if (c == null) {m_sigEquals       = c = getSignature("Object",    "equals",    3)                   ;} return c;}
+    public SignatureConstant sigCompare()       {SignatureConstant c = m_sigCompare;      if (c == null) {m_sigCompare      = c = getSignature("Orderable", "compare",   3)                   ;} return c;}
 
     public SingletonConstant valOf(boolean f)
         {
@@ -2182,6 +2184,12 @@ public class ConstantPool
     private TypeConstant makeNativeRebase(ClassConstant constClass)
         {
         return new NativeRebaseConstant(constClass).getType();
+        }
+
+    private SignatureConstant getSignature(String sClass, String sMethod, int cParams)
+        {
+        return ((ClassStructure) getImplicitlyImportedComponent(sClass)).
+                findMethod(sMethod, cParams).getIdentityConstant().getSignature();
         }
 
 
@@ -2943,6 +2951,10 @@ public class ConstantPool
         m_valEqual        = null;
         m_valGreater      = null;
         m_valNull         = null;
+        m_sigToString     = null;
+        m_sigConstruct    = null;
+        m_sigEquals       = null;
+        m_sigCompare      = null;
 
         // sort the Constants by how often they are referred to within the FileStructure, with the
         // most frequently referred-to Constants appearing first
@@ -3477,6 +3489,8 @@ public class ConstantPool
     private transient SingletonConstant m_valNull;
     private transient SignatureConstant m_sigToString;
     private transient SignatureConstant m_sigConstruct;
+    private transient SignatureConstant m_sigEquals;
+    private transient SignatureConstant m_sigCompare;
 
     /**
      * A special TypeInfo that acts as a place-holder for "this TypeInfo is currently being built".

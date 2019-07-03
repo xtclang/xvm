@@ -50,6 +50,7 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction.FullyBoundHandle;
 import org.xvm.runtime.template.xObject;
+import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xRef;
 import org.xvm.runtime.template.xRef.RefHandle;
 import org.xvm.runtime.template.xService.ServiceHandle;
@@ -69,8 +70,8 @@ public abstract class ClassTemplate
     public ClassTemplate(TemplateRegistry templates, ClassStructure structClass)
         {
         f_templates = templates;
-        f_struct = structClass;
-        f_sName = structClass.getIdentityConstant().getPathString();
+        f_struct    = structClass;
+        f_sName     = structClass.getIdentityConstant().getPathString();
 
         // calculate the parents (inheritance and "native")
         ClassStructure structSuper = null;
@@ -1473,15 +1474,15 @@ public abstract class ClassTemplate
 
         // if there is an "equals" function that is not native (on the Object itself),
         // we need to call it
-        TypeConstant    type           = clazz.getType();
-        MethodStructure functionEquals = type.ensureTypeInfo().findEqualsFunction();
-        if (functionEquals != null && !functionEquals.isNative())
+        TypeConstant    type       = clazz.getType();
+        MethodStructure functionEq = type.findCallable(frame.poolContext().sigEquals());
+        if (functionEq != null && !functionEq.isNative())
             {
-            ObjectHandle[] ahVars = new ObjectHandle[functionEquals.getMaxVars()];
+            ObjectHandle[] ahVars = new ObjectHandle[functionEq.getMaxVars()];
             ahVars[0] = type.getTypeHandle();
             ahVars[1] = hValue1;
             ahVars[2] = hValue2;
-            return frame.call1(functionEquals, null, ahVars, iReturn);
+            return frame.call1(functionEq, null, ahVars, iReturn);
             }
 
         return callEqualsImpl(frame, clazz, hValue1, hValue2, iReturn);
@@ -1510,16 +1511,21 @@ public abstract class ClassTemplate
     public int callCompare(Frame frame, ClassComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        // if there is an "compare" function, we need to call it
-        TypeConstant    type            = clazz.getType();
-        MethodStructure functionCompare = type.ensureTypeInfo().findCompareFunction();
-        if (functionCompare != null && !functionCompare.isNative())
+        if (hValue1 == hValue2)
             {
-            ObjectHandle[] ahVars = new ObjectHandle[functionCompare.getMaxVars()];
+            return frame.assignValue(iReturn, xOrdered.EQUAL);
+            }
+
+        // if there is an "compare" function, we need to call it
+        TypeConstant    type        = clazz.getType();
+        MethodStructure functionCmp = type.findCallable(frame.poolContext().sigCompare());
+        if (functionCmp != null && !functionCmp.isNative())
+            {
+            ObjectHandle[] ahVars = new ObjectHandle[functionCmp.getMaxVars()];
             ahVars[0] = type.getTypeHandle();
             ahVars[1] = hValue1;
             ahVars[2] = hValue2;
-            return frame.call1(functionCompare, null, ahVars, iReturn);
+            return frame.call1(functionCmp, null, ahVars, iReturn);
             }
 
         return callCompareImpl(frame, clazz, hValue1, hValue2, iReturn);

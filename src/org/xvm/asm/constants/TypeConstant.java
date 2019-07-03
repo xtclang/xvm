@@ -907,7 +907,7 @@ public abstract class TypeConstant
 
         if (typeThis.equals(typeThat) || fThatIsConstant && typeThat.isA(typeThis))
             {
-            return ensureTypeInfo(ErrorListener.BLACKHOLE).findCompareFunction() != null;
+            return findFunctionInfo(pool.sigCompare()) != null;
             }
 
         return false;
@@ -5223,6 +5223,33 @@ public abstract class TypeConstant
 
         ClassComposition clz = frame.ensureClass(this);
         return clz.getTemplate().callCompare(frame, clz, hValue1, hValue2, iReturn);
+        }
+
+    /**
+     * Find a callable function with the specified signature.
+     *
+     * @param sig  the function signature
+     *
+     * @return the method structure for the function or null if none was found
+     */
+    public MethodStructure findCallable(SignatureConstant sig)
+        {
+        MethodInfo infoFn = findFunctionInfo(sig);
+        return infoFn == null || infoFn.isAbstract()
+                ? null
+                : infoFn.getTopmostMethodStructure(ensureTypeInfo());
+        }
+
+    /**
+     * Find a MethodInfo for a function with the specified signature.
+     *
+     * @param sig  the function signature
+     *
+     * @return the MethodInfo for the function or null if none was found
+     */
+    public MethodInfo findFunctionInfo(SignatureConstant sig)
+        {
+        return ensureTypeInfo().getMethodBySignature(sig);
         }
 
 

@@ -51,8 +51,6 @@ import org.xvm.util.Severity;
  * <li><tt>COMP_ORD:   "<=><tt>"</tt> - </li>
  * </ul>
  *
- * @see TypeInfo#findEqualsFunction
- * @see TypeInfo#findCompareFunction
  * @see TypeConstant#supportsEquals
  * @see TypeConstant#supportsCompare
  * @see TypeConstant#callEquals

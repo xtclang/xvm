@@ -567,7 +567,7 @@ public abstract class xConstrainedInteger
         }
 
     @Override
-    public int buildHashCode(Frame frame, ObjectHandle hTarget, int iReturn)
+    public int buildHashCode(Frame frame, ClassComposition clazz, ObjectHandle hTarget, int iReturn)
         {
         long l = ((JavaLong) hTarget).getValue();
 

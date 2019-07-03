@@ -50,6 +50,7 @@ public class xRef
     @Override
     public void initDeclared()
         {
+        markNativeMethod("equals", null, BOOLEAN);
         }
 
     @Override
@@ -190,6 +191,16 @@ public class xRef
                     case "get":
                         return get(frame, hRef, iReturn);
                     }
+                break;
+
+            case 3:
+                if (method.getName().equals("equals"))
+                    {
+                    RefHandle hRef1 = (RefHandle) ahArg[1];
+                    RefHandle hRef2 = (RefHandle) ahArg[2];
+                    return new CompareReferents(hRef1, hRef2, this, iReturn).doNext(frame);
+                    }
+                break;
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);

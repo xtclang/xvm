@@ -455,6 +455,20 @@ public class AnnotatedTypeConstant
             m_annotation.getAnnotationType(), m_constType, hValue1, hValue2, iReturn);
         }
 
+    @Override
+    public MethodInfo findFunctionInfo(SignatureConstant sig)
+        {
+        // identical to UnionTypeConstant implementation
+        MethodInfo info1 = m_annotation.getAnnotationType().findFunctionInfo(sig);
+        MethodInfo info2 = m_constType.findFunctionInfo(sig);
+
+        return info1 == null ? info2 :
+               info2 == null ? info1 :
+               info1.getIdentity().equals(info2.getIdentity())
+                        ? info1
+                        : null; // ambiguous
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

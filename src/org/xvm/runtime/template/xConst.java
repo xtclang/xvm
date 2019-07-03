@@ -5,11 +5,13 @@ import java.util.Iterator;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IntervalConstant;
 import org.xvm.asm.constants.LiteralConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
@@ -27,7 +29,6 @@ import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xString.StringHandle;
-import org.xvm.runtime.template.xType.TypeHandle;
 
 
 /**
@@ -83,6 +84,9 @@ public class xConst
 
             PATH_CONSTRUCT = f_templates.getClassStructure("fs.Path").
                 findMethod("construct", 1, pool().typeString());
+
+            HASH_SIG = f_templates.getClassStructure("collections.Hashable").
+                findMethod("hashCode", 2).getIdentityConstant().getSignature();
             }
         }
 
@@ -193,22 +197,16 @@ public class xConst
         switch (method.getName())
             {
             case "compare":
-                {
-                TypeHandle hType = (TypeHandle) ahArg[0];
-                return hType.getDataType().callCompare(frame, ahArg[1], ahArg[2], iReturn);
-                }
+                return callCompare(frame, getCanonicalClass(), ahArg[1], ahArg[2], iReturn);
 
             case "estimateStringLength":
                 return callEstimateLength(frame, hTarget, iReturn);
 
             case "equals":
-                {
-                TypeHandle hType = (TypeHandle) ahArg[0];
-                return hType.getDataType().callEquals(frame, ahArg[1], ahArg[2], iReturn);
-                }
+                return callEquals(frame, getCanonicalClass(), ahArg[1], ahArg[2], iReturn);
 
             case "hashCode":
-                return buildHashCode(frame, ahArg[1], iReturn);
+                return buildHashCode(frame, getCanonicalClass(), ahArg[1], iReturn);
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -218,28 +216,16 @@ public class xConst
     protected int callEqualsImpl(Frame frame,  ClassComposition clazz,
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        // default "equals" implementation takes the actual type into the account
-        if (!hValue1.getType().equals(hValue2.getType()))
-            {
-            return frame.assignValue(iReturn, xBoolean.FALSE);
-            }
-
+        // Note: the actual types could be subclasses of the specified class
         return new Equals((GenericHandle) hValue1, (GenericHandle) hValue2,
             clazz.getFieldNames().iterator(), iReturn).doNext(frame);
         }
 
     @Override
     protected int callCompareImpl(Frame frame, ClassComposition clazz,
-                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        // default "equals" implementation takes the actual type into the account
-        if (!hValue1.getType().equals(hValue2.getType()))
-            {
-            // use the string comparison for consistency
-            return frame.assignValue(iReturn, xOrdered.makeHandle(
-                hValue1.getType().getValueString().compareTo(hValue2.getType().getValueString())));
-            }
-
+        // Note: the actual types could be subclasses of the specified class
         return new Compare((GenericHandle) hValue1, (GenericHandle) hValue2,
             clazz.getFieldNames().iterator(), iReturn).doNext(frame);
         }
@@ -258,17 +244,22 @@ public class xConst
 
     // build the hashValue and assign it to the specified register
     // returns R_NEXT, R_CALL or R_EXCEPTION
-    protected int buildHashCode(Frame frame, ObjectHandle hTarget, int iReturn)
+    protected int buildHashCode(Frame frame, ClassComposition clazz, ObjectHandle hTarget, int iReturn)
         {
         GenericHandle hConst = (GenericHandle) hTarget;
 
-        JavaLong hHash = (JavaLong) hConst.getField(PROP_HASH);
-        if (hHash != null)
+        // allow caching the hash only if the targeting class is the actual object's class
+        boolean fCache = hConst.getComposition().equals(clazz);
+        if (fCache)
             {
-            return frame.assignValue(iReturn, hHash);
+            JavaLong hHash = (JavaLong) hConst.getField(PROP_HASH);
+            if (hHash != null)
+                {
+                return frame.assignValue(iReturn, hHash);
+                }
             }
 
-        return new HashCode(hConst, new long[1], iReturn).doNext(frame);
+        return new HashCode(hConst, clazz.getFieldNames().iterator(), fCache, iReturn).doNext(frame);
         }
 
     /**
@@ -400,13 +391,6 @@ public class xConst
                 TypeConstant typeProp = clz.getFieldType(sProp).
                     resolveGenerics(frameCaller.poolContext(), frameCaller.getGenericsResolver());
 
-                MethodStructure methodEq = typeProp.ensureTypeInfo().findEqualsFunction();
-                if (methodEq == null)
-                    {
-                    return frameCaller.raiseException(
-                            xException.makeHandle("Property \"" + sProp + " is not Comparable"));
-                    }
-
                 switch (typeProp.callEquals(frameCaller, h1, h2, Op.A_STACK))
                     {
                     case Op.R_NEXT:
@@ -465,7 +449,8 @@ public class xConst
 
         public int doNext(Frame frameCaller)
             {
-            ClassComposition clz = (ClassComposition) hValue1.getComposition();
+            ConstantPool     pool = frameCaller.poolContext();
+            ClassComposition clz  = (ClassComposition) hValue1.getComposition();
             while (iterFields.hasNext())
                 {
                 String sProp = iterFields.next();
@@ -485,10 +470,10 @@ public class xConst
                     }
 
                 TypeConstant typeProp = clz.getFieldType(sProp).
-                    resolveGenerics(frameCaller.poolContext(), frameCaller.getGenericsResolver());
+                    resolveGenerics(pool, frameCaller.getGenericsResolver());
 
-                MethodStructure methodCmp = typeProp.ensureTypeInfo().findCompareFunction();
-                if (methodCmp == null)
+                // this check is only to provide a better exception description
+                if (typeProp.findCallable(pool.sigCompare()) == null)
                     {
                     return frameCaller.raiseException(
                             xException.makeHandle("Property \"" + sProp + " is not Orderable"));
@@ -612,15 +597,16 @@ public class xConst
             implements Frame.Continuation
         {
         final private GenericHandle    hConst;
-        final private long[]           holder;
         final private Iterator<String> iterFields;
+        final private boolean          fCache;
         final private int              iReturn;
+        private       long             lResult;
 
-        public HashCode(GenericHandle hConst, long[] holder, int iReturn)
+        public HashCode(GenericHandle hConst, Iterator<String> iterFields, boolean fCache, int iReturn)
             {
             this.hConst     = hConst;
-            this.iterFields = hConst.getComposition().getFieldNames().iterator();
-            this.holder     = holder;
+            this.iterFields = iterFields;
+            this.fCache     = fCache;
             this.iReturn    = iReturn;
             }
 
@@ -634,7 +620,7 @@ public class xConst
 
         protected void updateResult(Frame frameCaller)
             {
-            holder[0] = 37 * holder[0] + ((JavaLong) frameCaller.popStack()).getValue();
+            lResult = 37 * lResult + ((JavaLong) frameCaller.popStack()).getValue();
             }
 
         protected int doNext(Frame frameCaller)
@@ -659,25 +645,25 @@ public class xConst
                 TypeConstant typeProp = clz.getFieldType(sProp).
                     resolveGenerics(frameCaller.poolContext(), frameCaller.getGenericsResolver());
 
-                MethodStructure methodEq = typeProp.ensureTypeInfo().findEqualsFunction();
-                if (methodEq == null)
+                MethodStructure methodHash = typeProp.findCallable(HASH_SIG);
+                if (methodHash == null)
                     {
                     // ignore this field
                     continue;
                     }
 
                 int iResult;
-                if (methodEq.isNative())
+                if (methodHash.isNative())
                     {
-                    iResult = hProp.getTemplate().invokeNativeN(frameCaller, methodEq, null,
+                    iResult = hProp.getTemplate().invokeNativeN(frameCaller, methodHash, null,
                         new ObjectHandle[] {typeProp.getTypeHandle(), hProp}, Op.A_STACK);
                     }
                 else
                     {
-                    ObjectHandle[] ahVar = new ObjectHandle[methodEq.getMaxVars()];
+                    ObjectHandle[] ahVar = new ObjectHandle[methodHash.getMaxVars()];
                     ahVar[0] = typeProp.getTypeHandle();
                     ahVar[1] = hProp;
-                    iResult = frameCaller.call1(methodEq, null, ahVar, Op.A_STACK);
+                    iResult = frameCaller.call1(methodHash, null, ahVar, Op.A_STACK);
                     }
 
                 switch (iResult)
@@ -698,8 +684,11 @@ public class xConst
                     }
                 }
 
-            JavaLong hHash = xInt64.makeHandle(holder[0]);
-            hConst.setField(PROP_HASH, hHash);
+            JavaLong hHash = xInt64.makeHandle(lResult);
+            if (fCache)
+                {
+                hConst.setField(PROP_HASH, hHash);
+                }
 
             return frameCaller.assignValue(iReturn, hHash);
             }
@@ -720,4 +709,5 @@ public class xConst
     private static MethodStructure VERSION_CONSTRUCT;
     private static MethodStructure PATH_CONSTRUCT;
 
+    private static SignatureConstant HASH_SIG;
     }

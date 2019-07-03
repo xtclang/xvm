@@ -481,6 +481,12 @@ public abstract class RelationalTypeConstant
         throw new UnsupportedOperationException();
         }
 
+    @Override
+    public MethodInfo findFunctionInfo(SignatureConstant sig)
+        {
+        throw new UnsupportedOperationException();
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 
