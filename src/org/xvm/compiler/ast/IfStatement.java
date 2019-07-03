@@ -3,8 +3,13 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.AbstractMap.SimpleEntry;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
+import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -64,7 +69,26 @@ public class IfStatement
     @Override
     protected Label ensureShortCircuitLabel(AstNode nodeOrigin, Context ctxOrigin)
         {
-        // TODO snap-shot the assignment-info-delta
+        if (stmtElse == null)
+            {
+            return ensureBreakLabel(nodeOrigin, ctxOrigin);
+            }
+
+        AstNode nodeChild = findChild(nodeOrigin);
+        assert nodeChild != null;
+        assert allowsShortCircuit(nodeChild);
+
+        Context ctxDest = ensureValidationContext();
+        if (ctxOrigin.isReachable())
+            {
+            // generate a delta of assignment information for the jump
+            if (m_listShorts == null)
+                {
+                m_listShorts = new ArrayList<>();
+                }
+            m_listShorts.add(new SimpleEntry<>(nodeOrigin, ctxOrigin.prepareJump(ctxDest)));
+            }
+
         return getElseLabel();
         }
 
@@ -135,6 +159,22 @@ public class IfStatement
         if (stmtElse != null)
             {
             ctx = ctx.enterFork(false);
+
+            // short circuits land here
+            // REVIEW CP if something was unassigned in the validation context, still unassigned
+            //           at the point of the short, and assigned by the point that the condition
+            //           was fully evaluated, it should be unassigned here, right?
+            if (m_listShorts != null)
+                {
+                for (Entry<AstNode, Map<String, Assignment>> entry : m_listShorts)
+                    {
+                    if (!entry.getKey().isDiscarded())
+                        {
+                        ctx.merge(entry.getValue());
+                        }
+                    }
+                }
+
             Statement stmtElseNew = stmtElse.validate(ctx, errs);
             ctx = ctx.exit();
             if (stmtElseNew == null)
@@ -328,10 +368,18 @@ public class IfStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Statement     stmtThen;
-    protected Statement     stmtElse;
+    protected Statement stmtThen;
+    protected Statement stmtElse;
 
+    /**
+     * The "else" label.
+     */
     private transient Label m_labelElse;
+
+    /**
+     * Generally null, unless there is a short that jumps to this statement's else label.
+     */
+    private transient List<Map.Entry<AstNode, Map<String, Assignment>>> m_listShorts;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(IfStatement.class, "conds", "stmtThen", "stmtElse");
     }
