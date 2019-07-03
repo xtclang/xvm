@@ -448,7 +448,7 @@ public class NamedTypeExpression
                 }
             }
 
-        ErrorList    errsTemp = new ErrorList(100);
+        ErrorList    errsTemp = new ErrorList(1);
         NameResolver resolver = getNameResolver();
         switch (resolver.resolve(errsTemp))
             {
@@ -504,7 +504,6 @@ public class NamedTypeExpression
 
                 // cannot proceed
                 errsTemp.logTo(errs);
-                mgr.deferChildren();
                 break;
             }
         }
