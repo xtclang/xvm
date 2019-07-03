@@ -101,25 +101,25 @@ public class NotNullExpression
             {
             expr = exprNew;
             type = exprNew.getType();
-            if (pool.typeNull().isA(type))  // Nullable or Object or ...
-                {
-                type = type.removeNullable(pool);
-                }
-            else
+            if (!pool.typeNull().isA(type))  // Nullable or Object or ...
                 {
                 exprNew.log(errs, Severity.ERROR, Compiler.ELVIS_NOT_NULLABLE);
-                return replaceThisWith(exprNew); // REVIEW
+                return replaceThisWith(exprNew);
                 }
 
-            if (getParent().allowsShortCircuit(this))
-                {
-                m_labelShort = getParent().ensureShortCircuitLabel(this, ctx);
-                }
-            else
+            if (!getParent().allowsShortCircuit(this))
                 {
                 exprNew.log(errs, Severity.ERROR, Compiler.SHORT_CIRCUIT_ILLEGAL);
                 return null;
                 }
+
+            if (exprNew.isConstantNull())
+                {
+                exprNew.log(errs, Severity.ERROR, Compiler.SHORT_CIRCUIT_ALWAYS_NULL);
+                }
+
+            type         = type.removeNullable(pool);
+            m_labelShort = getParent().ensureShortCircuitLabel(this, ctx);
             }
 
         return finishValidation(typeRequired, type, fit, null, errs);

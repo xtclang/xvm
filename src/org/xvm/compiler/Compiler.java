@@ -1132,23 +1132,27 @@ public class Compiler
     /**
      * Function is not allowed: {0}.
      */
-    public static final String FUNCTION_NOT_ALLOWED              = "COMPILER-125";
+    public static final String FUNCTION_NOT_ALLOWED               = "COMPILER-125";
     /**
      * Function cannot be abstract: {0}.
      */
-    public static final String FUNCTION_BODY_MISSING             = "COMPILER-126";
+    public static final String FUNCTION_BODY_MISSING              = "COMPILER-126";
     /**
      * Abstract function cannot be called directly: {0}.
      */
-    public static final String ILLEGAL_FUNKY_CALL                = "COMPILER-127";
+    public static final String ILLEGAL_FUNKY_CALL                 = "COMPILER-127";
     /**
      * The condition for a "while" loop must not evaluate to a constant "False".
      */
-    public static final String ILLEGAL_WHILE_CONDITION           = "COMPILER-128";
+    public static final String ILLEGAL_WHILE_CONDITION            = "COMPILER-128";
     /**
      * The target type {0} must be parameterized to call method {1}.
      */
-    public static final String ILLEGAL_NAKED_TYPE_INVOCATION     = "COMPILER-129";
+    public static final String ILLEGAL_NAKED_TYPE_INVOCATION      = "COMPILER-129";
+    /**
+     * The short-circuited expression is always "Null".
+     */
+    public static final String SHORT_CIRCUIT_ALWAYS_NULL          = "COMPILER-130";
     /**
      * {0} is not yet implemented.
      */
