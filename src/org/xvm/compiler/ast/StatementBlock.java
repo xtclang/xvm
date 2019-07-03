@@ -1302,8 +1302,21 @@ public class StatementBlock
             Context ctx = m_ctxValidating;
             if (ctx != null)
                 {
-                m_ctxValidating.exit();
+                ctx.exit();
                 m_ctxValidating = null;
+
+                // check any variables whose scope is in this root context for "effectively final"
+                for (Map.Entry<String, Assignment> entry : getDefiniteAssignments().entrySet())
+                    {
+                    if (entry.getValue().isEffectivelyFinal())
+                        {
+                        Argument arg = ensureNameMap().get(entry.getKey());
+                        if (arg instanceof Register)
+                            {
+                            ((Register) arg).markEffectivelyFinal();
+                            }
+                        }
+                    }
 
                 if (m_mapCaptureContexts != null)
                     {
