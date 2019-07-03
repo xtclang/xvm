@@ -727,7 +727,7 @@ public class Frame
                 }
             catch (Throwable e)
                 {
-                assert true; // must not happen
+                assert false; // must not happen
                 };
             }
 
@@ -1429,23 +1429,6 @@ public class Frame
         }
 
     /**
-     * Introduce a new standard variable of the Ref&lt;ElementType&gt; for the specified array
-     * variable.
-     *
-     * Note: this method increments the "nextVar" index.
-     *
-     * @param nArrayReg  if positive, the register number holding an array handle;
-     *                   otherwise a constant id pointing to an array type
-     * @param nIndex     an element's index (for Tuples)
-     */
-    public void introduceElementRef(int nArrayReg, int nIndex)
-        {
-        int nVar = f_anNextVar[m_iScope]++;
-
-        f_aInfo[nVar] = new VarInfo(nArrayReg, nIndex, ARRAY_ELEMENT_REF_RESOLVER);
-        }
-
-    /**
      * Introduce a new standard variable of the "RefType" type for the specified dynamic var.
      *
      * Note: this method increments the "nextVar" index.
@@ -1987,21 +1970,6 @@ public class Frame
                     : typeArray.getParamTypesArray()[0];
                 }
             return frame.poolCode().typeObject();
-            }
-        };
-
-    protected static final VarTypeResolver ARRAY_ELEMENT_REF_RESOLVER = new VarTypeResolver()
-        {
-        /**
-         * @param nTargetReg  the register or property holding an array
-         * @param iAuxId      the array element index
-         */
-        @Override
-        public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
-            {
-            TypeConstant typeEl = ARRAY_ELEMENT_RESOLVER.resolve(frame, nTargetReg, iAuxId);
-            ConstantPool pool = frame.poolContext();
-            return pool.ensureParameterizedTypeConstant(pool.typeRef(), typeEl);
             }
         };
 

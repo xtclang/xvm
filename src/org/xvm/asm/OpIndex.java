@@ -120,12 +120,12 @@ public abstract class OpIndex
             if (anyDeferred(ahArg))
                 {
                 Frame.Continuation stepNext = frameCaller ->
-                    processArgs(frameCaller, ahArg[0], (JavaLong) ahArg[1]);
+                    complete(frameCaller, ahArg[0], (JavaLong) ahArg[1]);
 
                 return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
-            return processArgs(frame, ahArg[0], (JavaLong) ahArg[1]);
+            return complete(frame, ahArg[0], ahArg[1]);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -133,24 +133,12 @@ public abstract class OpIndex
             }
         }
 
-    protected int processArgs(Frame frame, ObjectHandle hTarget, JavaLong hIndex)
-        {
-        if (isAssignOp() && frame.isNextRegister(m_nRetValue))
-            {
-            introduceAssignVar(frame, (int) hIndex.getValue());
-            }
-
-        return complete(frame, hTarget, hIndex);
-        }
-
     /**
-     * Introduce a register for the resulting value.
-     *
-     * This method is overridden by I_Ref/I_Var to introduce a Ref of an element instead.
+     * Complete the op processing.
      */
-    protected void introduceAssignVar(Frame frame, int nIndex)
+    protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hIndex)
         {
-        frame.introduceElementVar(m_nTarget, nIndex);
+        throw new UnsupportedOperationException();
         }
 
     /**
@@ -171,11 +159,6 @@ public abstract class OpIndex
         {
         m_typeTarget = typeTarget;
         m_chain      = chain;
-        }
-
-    protected int complete(Frame frame, ObjectHandle hTarget, JavaLong hIndex)
-        {
-        throw new UnsupportedOperationException();
         }
 
     @Override

@@ -10,6 +10,7 @@ import org.xvm.asm.OpIndex;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.JavaLong;
 
 import org.xvm.runtime.template.IndexSupport;
 
@@ -51,10 +52,16 @@ public class IIP_PostDec
         }
 
     @Override
-    protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle.JavaLong hIndex)
+    protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hIndex)
         {
         IndexSupport template = (IndexSupport) hTarget.getOpSupport();
+        long         lIndex   = ((JavaLong) hIndex).getValue();
 
-        return template.invokePostDec(frame, hTarget, hIndex.getValue(), m_nRetValue);
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceElementVar(m_nTarget, (int) lIndex);
+            }
+
+        return template.invokePostDec(frame, hTarget, lIndex, m_nRetValue);
         }
     }

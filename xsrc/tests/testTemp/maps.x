@@ -83,10 +83,10 @@ module TestMaps.xqiz.it
         console.println($"values.size={map.values.size}");
         console.println($"map={map}");
 
-        console.println("keys:");
+        console.println("keys/values:");
         loop: for (String key : map.keys)
             {
-            console.println($"[{loop.count}]:{key}");
+            console.println($"[{loop.count}]:{key}={map[key]}");
             }
         // TODO CP "loop" should cease to exist in the context at this point
 
