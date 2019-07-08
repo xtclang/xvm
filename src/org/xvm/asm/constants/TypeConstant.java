@@ -965,10 +965,9 @@ public abstract class TypeConstant
             }
 
         ConstantPool pool = getConstantPool();
-
-        // validate this TypeConstant (necessary before we build the TypeInfo)
         if (info == null)
             {
+            // validate this TypeConstant (necessary before we build the TypeInfo)
             validate(errs);
 
             if (containsUnresolved())
@@ -976,23 +975,23 @@ public abstract class TypeConstant
                 log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, getValueString());
                 return pool.typeObject().ensureTypeInfo(errs);
                 }
+            }
 
-            // since we're producing a lot of information for the TypeInfo, there is no reason to do
-            // it unless the type is registered (which resolves typedefs)
-            TypeConstant typeResolved = (TypeConstant) pool.register(this);
+        // since we're producing a lot of information for the TypeInfo, there is no reason to do
+        // it unless the type is registered (which resolves typedefs)
+        TypeConstant typeResolved = (TypeConstant) pool.register(this);
 
-            // Additionally:
-            // - resolve the auto-narrowing;
-            // - normalize the type to make sure that all formal parameters are filled in
-            typeResolved = typeResolved.
-                                resolveAutoNarrowing(pool, false, null).
-                                normalizeParameters(pool);
-            if (typeResolved != this)
-                {
-                info = typeResolved.ensureTypeInfo(errs);
-                setTypeInfo(info);
-                return info;
-                }
+        // Additionally:
+        // - resolve the auto-narrowing;
+        // - normalize the type to make sure that all formal parameters are filled in
+        typeResolved = typeResolved.
+                            resolveAutoNarrowing(pool, false, null).
+                            normalizeParameters(pool);
+        if (typeResolved != this)
+            {
+            info = typeResolved.ensureTypeInfo(errs);
+            setTypeInfo(info);
+            return info;
             }
 
         // this is where things get very, very complicated. this method is responsible for returning
