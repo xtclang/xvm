@@ -4,6 +4,7 @@
  */
 class ReifiedEntry<KeyType, ValueType>
         implements Map<KeyType, ValueType>.Entry
+        incorporates Stringer
     {
     public construct(Map<KeyType, ValueType> map, KeyType key)
         {
@@ -69,5 +70,45 @@ class ReifiedEntry<KeyType, ValueType>
             throw new ReadOnly("Map operation requires mutability.persistent==False");
             }
         return True;
+        }
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        return estimateStringLength(key) + 1 + estimateStringLength(value);
+
+        static Int estimateStringLength(Object o)
+            {
+            return o.is(Stringable)
+                ? o.estimateStringLength()
+                : 8; // completely arbitrary estimate
+            }
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        if (key.is(Stringable))
+            {
+            // TODO CP remove ".as(Stringable)"
+            key.as(Stringable).appendTo(appender);
+            }
+        else
+            {
+            appender.add(key.toString());
+            }
+
+        appender.add('=');
+
+        if (value.is(Stringable))
+            {
+            value.as(Stringable).appendTo(appender);
+            }
+        else
+            {
+            appender.add(value.toString());
+            }
         }
     }

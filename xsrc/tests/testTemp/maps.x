@@ -2,6 +2,7 @@ module TestMaps.xqiz.it
     {
     import X.collections.HashMap;
     import X.collections.ListMap;
+    import X.collections.maps.KeyEntries;
 
     import X.Duration;
 
@@ -105,6 +106,12 @@ module TestMaps.xqiz.it
         loop3: for (Map<String,String>.Entry entry : map.entries)
             {
             console.println($"[{loop3.count}]:{entry.key}={entry.value}");
+            }
+
+        console.println("key-entries:");
+        loop4: for (Map<String, String>.Entry entry : new KeyEntries<String, String>(map))
+            {
+            console.println($"[{loop4.count}]:{entry}");
             }
         }
     }
