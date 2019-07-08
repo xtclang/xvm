@@ -13,6 +13,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xRef.RefHandle;
@@ -663,6 +664,66 @@ public abstract class ObjectHandle
         public String toString()
             {
             return "Deferred property access: " + f_idProp.getName();
+            }
+        }
+
+    /**
+     * DeferredArrayHandle represents a deferred array initialization, which would place the array
+     * handle on the corresponding frame's stack.
+     *
+     * Note: this handle cannot be allocated naturally and must be processed in a special way.
+     */
+    public static class DeferredArrayHandle
+            extends DeferredCallHandle
+        {
+        private final ClassComposition f_clzArray;
+        private final ObjectHandle[]   f_ahValue;
+
+        public DeferredArrayHandle(ClassComposition clzArray, ObjectHandle[] ahValue)
+            {
+            super((ExceptionHandle) null);
+
+            f_clzArray = clzArray;
+            f_ahValue  = ahValue;
+            }
+
+        @Override
+        public void addContinuation(Frame.Continuation continuation)
+            {
+            throw new UnsupportedOperationException();
+            }
+
+        @Override
+        public int proceed(Frame frameCaller, Frame.Continuation continuation)
+            {
+            Frame.Continuation stepAssign = frame ->
+                {
+                frame.pushStack(
+                    ((xArray) f_clzArray.getTemplate()).createArrayHandle(f_clzArray, f_ahValue));
+                return Op.R_NEXT;
+                };
+
+            switch (new Utils.GetArguments(f_ahValue, stepAssign).doNext(frameCaller))
+                {
+                case Op.R_NEXT:
+                    return continuation.proceed(frameCaller);
+
+                case Op.R_CALL:
+                    frameCaller.m_frameNext.addContinuation(continuation);
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+
+        @Override
+        public String toString()
+            {
+            return "Deferred array initialization: " + f_clzArray.getType();
             }
         }
 

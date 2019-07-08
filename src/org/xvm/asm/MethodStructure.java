@@ -18,6 +18,7 @@ import java.util.Map;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -1034,12 +1035,18 @@ public class MethodStructure
                     : frame.call(frameNext);
             }
 
-        boolean fMainContext = false;
+        List<SingletonConstant> listSingletons = null;
         for (Constant constant : getLocalConstants())
             {
-            if (constant instanceof SingletonConstant)
+            listSingletons = addSingleton(constant, listSingletons);
+            }
+
+        if (listSingletons != null)
+            {
+            boolean fMainContext = false;
+
+            for (SingletonConstant constSingleton : listSingletons)
                 {
-                SingletonConstant constSingleton = (SingletonConstant) constant;
                 ObjectHandle hValue = constSingleton.getHandle();
                 if (hValue != null)
                     {
@@ -1166,6 +1173,34 @@ public class MethodStructure
         return frameNext == null
             ? frame.assignValue(0, xNullable.NULL) // the result is ignored, but has to be assigned
             : frame.call(frameNext);
+        }
+
+    /**
+     * Add SingletonConstant(s) to the specified list.
+     *
+     * @param constant  the constant to check
+     * @param list      the list to add to (could be null)
+     *
+     * @return the resulting list
+     */
+    private List<SingletonConstant> addSingleton(Constant constant, List<SingletonConstant> list)
+        {
+        if (constant instanceof SingletonConstant)
+            {
+            if (list == null)
+                {
+                list = new ArrayList<>(7);
+                }
+            list.add((SingletonConstant) constant);
+            }
+        else if (constant instanceof ArrayConstant)
+            {
+            for (Constant constElement : ((ArrayConstant) constant).getValue())
+                {
+                list = addSingleton(constElement, list);
+                }
+            }
+        return list;
         }
 
     /**

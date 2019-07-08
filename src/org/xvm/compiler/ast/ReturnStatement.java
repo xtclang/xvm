@@ -167,10 +167,17 @@ public class ReturnStatement
             Expression exprOld = listExprs.get(0);
             Expression exprNew;
 
+            TypeConstant typeRequired = cRets == 1 ? aRetTypes[0] : null;
             if (fConditional && exprOld instanceof TernaryExpression)
                 {
                 // ternary expression needs to know the fact that it returns a conditional type
                 ((TernaryExpression) exprOld).markConditional();
+                typeRequired = cRets == 2 ? aRetTypes[1] : null;
+                }
+
+            if (typeRequired != null)
+                {
+                ctx = ctx.enterInferring(typeRequired);
                 }
 
             // several possibilities:
@@ -216,6 +223,11 @@ public class ReturnStatement
                         exprNew = exprOld.validateMulti(ctx, aRetTypes, errs);
                         }
                     }
+                }
+
+            if (typeRequired != null)
+                {
+                ctx = ctx.exit();
                 }
 
             if (exprNew != exprOld)
