@@ -48,6 +48,10 @@
 
 - support @Unchecked IntNumber (assignment from literals; comparison, etc.)
 
+- compiler to verify that const properties are Orderable
+
+- compiler to verify "all or nothing" implementation for funky interfaces
+
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
 - TemplateRegistry and TypeComposition could be mutated by different threads
