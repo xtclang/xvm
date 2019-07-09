@@ -206,7 +206,7 @@ public class TupleExpression
         }
 
     @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         TypeConstant typeTuple = getImplicitType(ctx);
         if (atypeRequired.length == 1)

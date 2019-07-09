@@ -49,7 +49,7 @@ public class IgnoredNameExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         return TypeFit.Fit;
         }

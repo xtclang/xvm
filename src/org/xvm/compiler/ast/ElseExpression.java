@@ -57,12 +57,12 @@ public class ElseExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        TypeFit fit = expr1.testFit(ctx, typeRequired);
+        TypeFit fit = expr1.testFit(ctx, typeRequired, errs);
         if (fit.isFit())
             {
-            fit.combineWith(expr2.testFit(ctx, typeRequired));
+            fit.combineWith(expr2.testFit(ctx, typeRequired, errs));
             }
         return fit;
         }
@@ -84,7 +84,7 @@ public class ElseExpression
             }
 
         TypeConstant type2Req = type1 == null ? null : Op.selectCommonType(type1, null, errs);
-        if (typeRequired != null && (type2Req == null || !expr2.testFit(ctx, type2Req).isFit()))
+        if (typeRequired != null && (type2Req == null || !expr2.testFit(ctx, type2Req, null).isFit()))
             {
             type2Req = typeRequired;
             }

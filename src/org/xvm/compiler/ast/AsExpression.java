@@ -68,7 +68,7 @@ public class AsExpression
 
             // it would be nice if the expression could provide us the type without any additional
             // work!
-            if (expr1.testFit(ctx, type).isFit())
+            if (expr1.testFit(ctx, type, null).isFit())
                 {
                 typeRequest = type;
                 }

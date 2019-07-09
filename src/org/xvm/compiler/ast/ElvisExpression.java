@@ -65,12 +65,12 @@ public class ElvisExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        TypeFit fit = expr1.testFit(ctx, typeRequired.ensureNullable(pool()));
+        TypeFit fit = expr1.testFit(ctx, typeRequired.ensureNullable(pool()), errs);
         if (fit.isFit())
             {
-            fit.combineWith(expr2.testFit(ctx, typeRequired));
+            fit.combineWith(expr2.testFit(ctx, typeRequired, errs));
             }
         return fit;
         }
@@ -96,7 +96,7 @@ public class ElvisExpression
         TypeConstant type2Req = type1 == null ? null :
                 Op.selectCommonType(type1.removeNullable(pool), null, errs);
 
-        if (typeRequired != null && (type2Req == null || !expr2.testFit(ctx, type2Req).isFit()))
+        if (typeRequired != null && (type2Req == null || !expr2.testFit(ctx, type2Req, null).isFit()))
             {
             type2Req = typeRequired;
             }

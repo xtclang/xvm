@@ -82,6 +82,14 @@ public class ErrorList
         }
 
     /**
+     * @return true iff there are errors of any severity
+     */
+    public boolean hasErrors()
+        {
+        return !m_list.isEmpty();
+        }
+
+    /**
      * @return the list of ErrorInfo objects
      */
     public List<ErrorInfo> getErrors()

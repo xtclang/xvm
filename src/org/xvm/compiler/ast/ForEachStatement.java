@@ -388,7 +388,7 @@ public class ForEachStatement
                     throw new IllegalStateException();
                 }
 
-            if (exprRVal.testFit(ctx, typeRVal).isFit())
+            if (exprRVal.testFit(ctx, typeRVal, null).isFit())
                 {
                 // found something that fits!
                 break;

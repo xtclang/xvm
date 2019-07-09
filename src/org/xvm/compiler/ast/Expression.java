@@ -291,11 +291,12 @@ public abstract class Expression
      *
      * @param ctx           the compilation context for the statement
      * @param typeRequired  the type that the expression is being asked if it can provide
+     * @param errs          (optional) the error listener to log to
      *
      * @return a TypeFit value describing the expression's capability (or lack thereof) to produce
      *         the required type
      */
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         checkDepth();
 
@@ -314,7 +315,7 @@ public abstract class Expression
             {
             checkDepth();
             return testFitMulti(ctx, typeRequired == null ? TypeConstant.NO_TYPES
-                                                          : new TypeConstant[] {typeRequired});
+                                                          : new TypeConstant[] {typeRequired}, errs);
             }
 
         throw notImplemented();
@@ -328,11 +329,12 @@ public abstract class Expression
      *
      * @param ctx            the compilation context for the statement
      * @param atypeRequired  the types that the expression is being asked if it can provide
+     * @param errs           (optional) the error listener to log to
      *
      * @return a TypeFit value describing the expression's capability (or lack thereof) to produce
      *         the required type(s)
      */
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         checkDepth();
 
@@ -345,7 +347,7 @@ public abstract class Expression
             case 1:
                 if (hasSingleValueImpl())
                     {
-                    return testFit(ctx, atypeRequired[0]);
+                    return testFit(ctx, atypeRequired[0], errs);
                     }
                 // fall through
 

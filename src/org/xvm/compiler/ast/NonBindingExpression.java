@@ -69,12 +69,12 @@ public class NonBindingExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         return type == null || typeRequired == null
                 ? TypeFit.Fit
                 : type.testFit(ctx, pool().ensureParameterizedTypeConstant(
-                    pool().typeType(), typeRequired));
+                    pool().typeType(), typeRequired), errs);
         }
 
     @Override

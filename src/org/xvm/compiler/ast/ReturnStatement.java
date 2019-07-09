@@ -182,14 +182,14 @@ public class ReturnStatement
 
             // several possibilities:
             // 1) most likely the expression matches the return types for the method
-            if (cRets < 0 || exprOld.testFitMulti(ctx, aRetTypes).isFit())
+            if (cRets < 0 || exprOld.testFitMulti(ctx, aRetTypes, null).isFit())
                 {
                 exprNew = exprOld.validateMulti(ctx, aRetTypes, errs);
                 }
             else
                 {
                 // 2) it could be a conditional false
-                if (fConditional && exprOld.testFit(ctx, pool.typeFalse()).isFit())
+                if (fConditional && exprOld.testFit(ctx, pool.typeFalse(), null).isFit())
                     {
                     exprNew = exprOld.validate(ctx, pool.typeFalse(), errs);
                     if (exprNew != null && (!exprNew.isConstant() || !exprNew.toConstant().equals(pool.valFalse())))
@@ -203,7 +203,7 @@ public class ReturnStatement
                     {
                     // 3) it could be a tuple return
                     TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(pool.typeTuple(), aRetTypes);
-                    if (exprOld.testFit(ctx, typeTuple).isFit())
+                    if (exprOld.testFit(ctx, typeTuple, null).isFit())
                         {
                         exprNew = exprOld.validate(ctx, typeTuple, errs);
                         if (fConditional)

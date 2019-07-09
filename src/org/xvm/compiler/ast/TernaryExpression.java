@@ -79,20 +79,20 @@ public class TernaryExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         switch (generatePlan(ctx))
             {
             case ThenIsFalse:
-                return exprElse.testFit(ctx, typeRequired);
+                return exprElse.testFit(ctx, typeRequired, errs);
 
             case ElseIsFalse:
-                return exprThen.testFit(ctx, typeRequired);
+                return exprThen.testFit(ctx, typeRequired, errs);
 
             default:
             case Symmetrical:
-                return exprThen.testFit(ctx, typeRequired).combineWith(
-                       exprElse.testFit(ctx, typeRequired));
+                return exprThen.testFit(ctx, typeRequired, errs).combineWith(
+                       exprElse.testFit(ctx, typeRequired, errs));
             }
         }
 
@@ -302,13 +302,13 @@ public class TernaryExpression
             TypeConstant typeFalse = pool().typeFalse();
 
             // test "? (true, result) : false" first
-            if (exprElse.testFit(ctx, typeFalse).isFit())
+            if (exprElse.testFit(ctx, typeFalse, null).isFit())
                 {
                 return m_plan = Plan.ElseIsFalse;
                 }
 
             // test "? false : (true, result)" next
-            if (exprThen.testFit(ctx, typeFalse).isFit())
+            if (exprThen.testFit(ctx, typeFalse, null).isFit())
                 {
                 return m_plan = Plan.ThenIsFalse;
                 }

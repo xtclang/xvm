@@ -59,7 +59,7 @@ public class UnaryMinusExpression
         // operation, then do so (just like with binary ops, convert as "deep" in the AST tree as
         // possible)
         TypeConstant typeRight = null;
-        if (typeRequired != null && exprRight.testFit(ctx, typeRequired).isFit()
+        if (typeRequired != null && exprRight.testFit(ctx, typeRequired, null).isFit()
                 && !typeRequired.ensureTypeInfo(errs).findOpMethods("neg", "-#", 0).isEmpty())
             {
             typeRight = typeRequired;
