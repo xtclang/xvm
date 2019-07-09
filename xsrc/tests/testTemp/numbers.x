@@ -28,6 +28,19 @@ module TestNumbers.xqiz.it
         UInt d3 = n2 / 1000;
         console.println("d3=" + d3);
         console.println("n3=" + (d3*1000 + n2 % 1000));
+
+        try
+            {
+            n2++;
+            assert;
+            }
+        catch (Exception e)
+            {
+            }
+
+//        TODO: add support for unchecked IntNumbers
+//        @Unchecked UInt un2 = n2.to<@Unchecked UInt>();
+//        assert ++un2 == 0;
         }
 
     void testByte()
@@ -45,6 +58,15 @@ module TestNumbers.xqiz.it
         Byte d3 = n2 / 10;
         console.println("d3=" + d3);
         console.println("n3=" + (d3*10 + n2 % 10));
+
+        try
+            {
+            n2++;
+            assert;
+            }
+        catch (Exception e)
+            {
+            }
         }
 
     void testInt128()
@@ -73,6 +95,15 @@ module TestNumbers.xqiz.it
         Int128 d4 = n4 / 1000;
         console.println("d4=" + d4);
         console.println("n4=" + (d4*1000 + n4 % 1000));
+
+        try
+            {
+            n2++;
+            assert;
+            }
+        catch (Exception e)
+            {
+            }
         }
 
     void testUInt128()
@@ -90,5 +121,14 @@ module TestNumbers.xqiz.it
         UInt128 d3 = n2 / 1000;
         console.println("d3=" + d3);
         console.println("n3=" + (d3*1000 + n2 % 1000));
+
+        try
+            {
+            n2++;
+            assert;
+            }
+        catch (Exception e)
+            {
+            }
         }
     }

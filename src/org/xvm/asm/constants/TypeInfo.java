@@ -241,11 +241,25 @@ public class TypeInfo
                 }
             }
 
+        TypeConstant typeExtends = limitAccess(f_typeExtends, access);
+        TypeConstant typeRebases = limitAccess(f_typeRebases, access);
+        TypeConstant typeInto    = limitAccess(f_typeInto,    access);
+
         return new TypeInfo(typeNew, f_cInvalidations, f_struct, f_cDepth, false,
                 f_mapTypeParams, f_aannoClass,
-                f_typeExtends, f_typeRebases, f_typeInto,
+                typeExtends, typeRebases, typeInto,
                 f_listProcess, f_listmapClassChain, f_listmapDefaultChain,
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, f_progress);
+        }
+
+    /**
+     * @return a TypeConstant that represents a more limited type for the specified type
+     */
+    private TypeConstant limitAccess(TypeConstant type, Access access)
+        {
+        return type == null || type.getAccess() == Access.PUBLIC
+                ? type
+                : pool().ensureAccessTypeConstant(type, access);
         }
 
     /**
