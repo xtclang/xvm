@@ -201,8 +201,6 @@
 // - lvalue return values can specify the "next register" to allocate
 +I_GET       rvalue-target, rvalue-ix, lvalue        ; T = T[ix]
 +I_SET       rvalue-target, rvalue-ix, rvalue        ; T[ix] = T
-+I_VAR       rvalue-target, rvalue-ix, lvalue        ; Var<T> = &T[ix]
-+I_REF       rvalue-target, rvalue-ix, lvalue        ; Ref<T> = &T[ix]
 
 // ("I"=) index-based ("IP"=) in-place ops:
 +IIP_INC     rvalue-target, rvalue-ix                ; ++T[ix] (no result)

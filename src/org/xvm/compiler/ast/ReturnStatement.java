@@ -167,22 +167,29 @@ public class ReturnStatement
             Expression exprOld = listExprs.get(0);
             Expression exprNew;
 
+            TypeConstant typeRequired = cRets == 1 ? aRetTypes[0] : null;
             if (fConditional && exprOld instanceof TernaryExpression)
                 {
                 // ternary expression needs to know the fact that it returns a conditional type
                 ((TernaryExpression) exprOld).markConditional();
+                typeRequired = cRets == 2 ? aRetTypes[1] : null;
+                }
+
+            if (typeRequired != null)
+                {
+                ctx = ctx.enterInferring(typeRequired);
                 }
 
             // several possibilities:
             // 1) most likely the expression matches the return types for the method
-            if (cRets < 0 || exprOld.testFitMulti(ctx, aRetTypes).isFit())
+            if (cRets < 0 || exprOld.testFitMulti(ctx, aRetTypes, null).isFit())
                 {
                 exprNew = exprOld.validateMulti(ctx, aRetTypes, errs);
                 }
             else
                 {
                 // 2) it could be a conditional false
-                if (fConditional && exprOld.testFit(ctx, pool.typeFalse()).isFit())
+                if (fConditional && exprOld.testFit(ctx, pool.typeFalse(), null).isFit())
                     {
                     exprNew = exprOld.validate(ctx, pool.typeFalse(), errs);
                     if (exprNew != null && (!exprNew.isConstant() || !exprNew.toConstant().equals(pool.valFalse())))
@@ -196,7 +203,7 @@ public class ReturnStatement
                     {
                     // 3) it could be a tuple return
                     TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(pool.typeTuple(), aRetTypes);
-                    if (exprOld.testFit(ctx, typeTuple).isFit())
+                    if (exprOld.testFit(ctx, typeTuple, null).isFit())
                         {
                         exprNew = exprOld.validate(ctx, typeTuple, errs);
                         if (fConditional)
@@ -216,6 +223,11 @@ public class ReturnStatement
                         exprNew = exprOld.validateMulti(ctx, aRetTypes, errs);
                         }
                     }
+                }
+
+            if (typeRequired != null)
+                {
+                ctx = ctx.exit();
                 }
 
             if (exprNew != exprOld)

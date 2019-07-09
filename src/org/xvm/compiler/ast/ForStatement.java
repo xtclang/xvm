@@ -3,11 +3,13 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import java.util.Map.Entry;
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -32,8 +34,6 @@ import static org.xvm.util.Handy.indentLines;
 
 /**
  * The traditional "for" statement.
- * <p/>
- * TODO lots of short-circuit support. for expr condition, it goes to the for statement's exit label. for init & update, the short-circuit just advances to next.
  */
 public class ForStatement
         extends ConditionalStatement
@@ -68,15 +68,18 @@ public class ForStatement
         {
         Context ctxDest = ensureValidationContext();
 
-        // generate a delta of assignment information for the jump
-        Map<String, Assignment> mapAsn = ctxOrigin.prepareJump(ctxDest);
-
-        // record the jump that landed on this statement by recording its assignment impact
-        if (m_listContinues == null)
+        if (ctxOrigin.isReachable())
             {
-            m_listContinues = new ArrayList<>();
+            // generate a delta of assignment information for the jump
+            Map<String, Assignment> mapAsn = ctxOrigin.prepareJump(ctxDest);
+
+            // record the jump that landed on this statement by recording its assignment impact
+            if (m_listContinues == null)
+                {
+                m_listContinues = new ArrayList<>();
+                }
+            m_listContinues.add(new SimpleEntry<>(nodeOrigin, mapAsn));
             }
-        m_listContinues.add(mapAsn);
 
         return getContinueLabel();
         }
@@ -101,6 +104,119 @@ public class ForStatement
             m_labelContinue = label = new Label("continue_for_" + getLabelId());
             }
         return label;
+        }
+
+    @Override
+    protected boolean allowsShortCircuit(AstNode nodeChild)
+        {
+        return     findInitializer(nodeChild) >= 0
+                || findCondition  (nodeChild) >= 0
+                || findUpdate     (nodeChild) >= 0;
+        }
+
+    @Override
+    protected Label ensureShortCircuitLabel(AstNode nodeOrigin, Context ctxOrigin)
+        {
+        AstNode nodeChild = findChild(nodeOrigin);
+        assert nodeChild != null;
+        assert allowsShortCircuit(nodeChild);
+
+        if (findCondition(nodeChild) >= 0)
+            {
+            // short-circuiting a condition is the same as "breaking out of" the loop
+            return ensureBreakLabel(nodeOrigin, ctxOrigin);
+            }
+
+        int     index = findInitializer(nodeChild);
+        boolean fInit = index >= 0;
+        int     count;
+        String  desc;
+        if (fInit)
+            {
+            count  = init.size();
+            desc   = "init";
+            }
+        else
+            {
+            index  = findUpdate(nodeChild);
+            count  = update.size();
+            desc   = "update";
+            assert index >= 0;
+            }
+
+        if (ctxOrigin.isReachable())
+            {
+            // short-circuiting an "initializer" or "update" proceeds to the next one
+            Context ctxDest = ensureValidationContext();
+            if (m_listShorts == null)
+                {
+                m_listShorts = new ArrayList<>();
+                }
+            m_listShorts.add(new SimpleEntry<>(nodeOrigin, ctxOrigin.prepareJump(ctxDest)));
+            }
+
+        // create, store, and return a label for this specific init/update node
+        Label   label = new Label("ground_" + desc + "_" + index + "_of_" + count + "_for_" + getLabelId());
+        Label[] labels = fInit ? m_alabelInitGround : m_alabelUpdateGround;
+        if (labels == null)
+            {
+            labels = new Label[count];
+            if (fInit)
+                {
+                m_alabelInitGround = labels;
+                }
+            else
+                {
+                m_alabelUpdateGround = labels;
+                }
+            }
+        labels[index] = label;
+
+        return label;
+        }
+
+    /**
+     * Search the initializer list for the specified node, and return its index.
+     *
+     * @param node  the node to search for
+     *
+     * @return the index of the node in the initializer list, or -1 if the node is not in the list
+     */
+    protected int findInitializer(AstNode node)
+        {
+        if (node instanceof Statement)
+            {
+            for (int i = 0, c = init.size(); i < c; ++i)
+                {
+                if (node == init.get(i))
+                    {
+                    return i;
+                    }
+                }
+            }
+        return -1;
+        }
+
+    /**
+     * Search the "update" list for the specified node, and return its index.
+     *
+     * @param node  the node to search for
+     *
+     * @return the index of the node in the update list, or -1 if the node is not in the list
+     */
+    protected int findUpdate(AstNode node)
+        {
+        if (node instanceof Statement)
+            {
+            for (int i = 0, c = update.size(); i < c; ++i)
+                {
+                if (node == update.get(i))
+                    {
+                    return i;
+                    }
+                }
+            }
+        return -1;
         }
 
     @Override
@@ -185,6 +301,18 @@ public class ForStatement
                 {
                 listInit.set(i, stmtNew);
                 }
+
+            if (m_listShorts != null)
+                {
+                for (Entry<AstNode, Map<String, Assignment>> entry : m_listShorts)
+                    {
+                    if (!entry.getKey().isDiscarded())
+                        {
+                        ctx.merge(entry.getValue());
+                        }
+                    }
+                m_listShorts = null;
+                }
             }
 
         // the test expression plays a role of an "if", since the block cannot be entered if this
@@ -246,13 +374,17 @@ public class ForStatement
                 }
             }
 
-        List<Map<String, Assignment>> listContinues = m_listContinues;
-        if (listContinues != null)
+        if (m_listContinues != null)
             {
-            for (Map<String, Assignment> mapAsn : listContinues)
+            // the last "continue" is translated as a "break"
+            for (Entry<AstNode, Map<String, Assignment>> entry : m_listContinues)
                 {
-                ctx.merge(mapAsn);
+                if (!entry.getKey().isDiscarded())
+                    {
+                    ctx.merge(entry.getValue());
+                    }
                 }
+            m_listContinues = null;
             }
 
         List<Statement> listUpdate = update;
@@ -268,6 +400,18 @@ public class ForStatement
             else if (stmtNew != stmtOld)
                 {
                 listUpdate.set(i, stmtNew);
+                }
+
+            if (m_listShorts != null)
+                {
+                for (Entry<AstNode, Map<String, Assignment>> entry : m_listShorts)
+                    {
+                    if (!entry.getKey().isDiscarded())
+                        {
+                        ctx.merge(entry.getValue());
+                        }
+                    }
+                m_listShorts = null;
                 }
             }
 
@@ -310,11 +454,18 @@ public class ForStatement
             code.add(new Var_IN(m_regCount, name, pool().val0()));
             }
 
-        List<Statement> listInit = init;
-        int             cInit    = listInit.size();
+        List<Statement> listInit   = init;
+        int             cInit      = listInit.size();
+        Label[]         aInitLabel = m_alabelInitGround;
         for (int i = 0; i < cInit; ++i)
             {
             fCompletes = listInit.get(i).completes(ctx, fCompletes, code, errs);
+
+            Label labelGround = aInitLabel == null ? null : aInitLabel[i];
+            if (labelGround != null)
+                {
+                code.add(labelGround);
+                }
             }
 
         Label labelRepeat = new Label("loop_for_" + getLabelId());
@@ -381,11 +532,18 @@ public class ForStatement
             code.add(getContinueLabel());
             }
 
-        List<Statement> listUpdate = update;
-        int             cUpdate    = listUpdate.size();
+        List<Statement> listUpdate   = update;
+        int             cUpdate      = listUpdate.size();
+        Label[]         aUpdateLabel = m_alabelUpdateGround;
         for (int i = 0; i < cUpdate; ++i)
             {
             fCompletes &= listUpdate.get(i).completes(ctx, fCompletes, code, errs) || !fAlwaysTrue;
+
+            Label labelGround = aUpdateLabel == null ? null : aUpdateLabel[i];
+            if (labelGround != null)
+                {
+                code.add(labelGround);
+                }
             }
 
         if (regFirst != null)
@@ -486,7 +644,22 @@ public class ForStatement
     /**
      * Generally null, unless there is a "continue" that jumps to this statement.
      */
-    private transient List<Map<String, Assignment>> m_listContinues;
+    private transient List<Map.Entry<AstNode,Map<String, Assignment>>> m_listContinues;
+
+    /**
+     * The short-circuits from inside of the most recent "init" or "update".
+     */
+    private transient List<Map.Entry<AstNode, Map<String, Assignment>>> m_listShorts;
+
+    /**
+     * The short-circuit grounding label for each "init". (Array or elements may be null.)
+     */
+    private transient Label[] m_alabelInitGround;
+
+    /**
+     * The short-circuit grounding label for each "update". (Array or elements may be null.)
+     */
+    private transient Label[] m_alabelUpdateGround;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ForStatement.class, "init", "conds", "update", "block");
     }

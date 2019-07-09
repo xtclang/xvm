@@ -22,6 +22,7 @@ import java.util.Set;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
@@ -856,7 +857,7 @@ public abstract class AstNode
                 ctx = ctx.enterInferring(typeTest);
                 }
 
-            fit = fit.combineWith(listExpr.get(i).testFit(ctx, typeTest));
+            fit = fit.combineWith(listExpr.get(i).testFit(ctx, typeTest, null));
 
             if (typeTest != null)
                 {
@@ -1090,9 +1091,10 @@ public abstract class AstNode
         // collect all theoretically matching methods
         Set<MethodConstant> setIs      = new HashSet<>();
         Set<MethodConstant> setConvert = new HashSet<>();
+        ErrorList           errsTemp   = new ErrorList(1);
 
         collectMatchingMethods(ctx, infoTarget, setMethods, listExprArgs,
-                atypeArgs, mapNamedExpr, atypeReturn, setIs, setConvert);
+                atypeArgs, mapNamedExpr, atypeReturn, setIs, setConvert, errsTemp);
 
         // now choose the best match
         if (!setIs.isEmpty())
@@ -1110,8 +1112,9 @@ public abstract class AstNode
             atypeArgs  = typeTupleArg.getParamTypesArray();
             setMethods = infoTarget.findMethods(sMethodName, atypeArgs.length, methodType);
 
+            ErrorList errsTempT = new ErrorList(1);
             collectMatchingMethods(ctx, infoTarget, setMethods, null,
-                    atypeArgs, mapNamedExpr, atypeReturn, setIs, setConvert);
+                    atypeArgs, mapNamedExpr, atypeReturn, setIs, setConvert, errsTempT);
 
             if (!setIs.isEmpty())
                 {
@@ -1122,19 +1125,31 @@ public abstract class AstNode
                 {
                 return chooseBest(setConvert, typeTarget, errs);
                 }
+
+            if (errsTempT.hasErrors() && !errsTemp.hasErrors())
+                {
+                errsTempT.logTo(errsTemp);
+                }
             }
 
-        // report a miss
-        if (methodType == MethodType.Constructor)
+        if (errsTemp.isAbortDesired())
             {
-            log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, typeTarget.getValueString());
+            errsTemp.logTo(errs);
             }
         else
             {
-            // TODO: create a signature representation of what is known
-            //       for example, if we are looking for "foo" in invocation "a.foo(x-> x.bar())"
-            //       and "bar" is missing - we'll get here complaining about "foo" rather than "bar"
-            log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sMethodName);
+            // there are no fatal errors so far; report a miss
+            if (methodType == MethodType.Constructor)
+                {
+                log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, typeTarget.getValueString());
+                }
+            else
+                {
+                // TODO: create a signature representation of what is known
+                //       for example, if we are looking for "foo" in invocation "a.foo(x-> x.bar())"
+                //       and "bar" is missing - we'll get here complaining about "foo" rather than "bar"
+                log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sMethodName);
+                }
             }
         return null;
         }
@@ -1151,13 +1166,16 @@ public abstract class AstNode
             Map<String, Expression> mapNamedExpr,
             TypeConstant[]          atypeReturn,
             Set<MethodConstant>     setIs,
-            Set<MethodConstant>     setConvert)
+            Set<MethodConstant>     setConvert,
+            ErrorListener           errs)
         {
         ConstantPool pool     = pool();
         int          cArgs    = atypeArgs.length;
         int          cReturns = atypeReturn == null ? 0 : atypeReturn.length;
         int          cNamed   = mapNamedExpr == null ? 0 : mapNamedExpr.size();
         int          cUnnamed = cArgs - cNamed;
+        ErrorList    errsTemp = errs == ErrorListener.BLACKHOLE ? null : new ErrorList(1);
+        ErrorList    errsBest = null;
 
         NextMethod: for (MethodConstant idMethod : setMethods)
             {
@@ -1228,6 +1246,7 @@ public abstract class AstNode
 
             TypeConstant[] atypeParam = sigMethod.getRawParams();
             boolean        fConvert   = false;
+            TypeFit        fit        = TypeFit.Fit;
             for (int i = 0; i < cArgs; ++i)
                 {
                 TypeConstant typeParam = atypeParam[cTypeParams + i];
@@ -1245,7 +1264,8 @@ public abstract class AstNode
                         }
                     else
                         {
-                        continue NextMethod;
+                        fit = TypeFit.NoFit;
+                        break;
                         }
                     }
                 else
@@ -1255,11 +1275,9 @@ public abstract class AstNode
                         {
                         ctx = ctx.enterInferring(typeParam);
                         }
-                    // TODO: we should pass an ErrorListener to testFit() API, since in case
-                    //       of a LambdaExpression, this spot could be the only place where the
-                    //       validity of the expression was checked, resulting in MISSING_METHOD
-                    //       error rather than the actual issue at the lambda
-                    TypeFit fit = exprArg.testFit(ctx, typeParam);
+
+                    // if *all* tests fail, report the errors from the first unsuccessful attempt
+                    fit = exprArg.testFit(ctx, typeParam, errsTemp);
                     if (fit.isFit())
                         {
                         if (fit.isConverting())
@@ -1303,9 +1321,32 @@ public abstract class AstNode
 
                     if (!fit.isFit())
                         {
-                        continue NextMethod;
+                        break;
                         }
                     }
+                }
+
+            if (!fit.isFit())
+                {
+                if (errsTemp != null && errsTemp.hasErrors())
+                    {
+                    // if (and as long as) we are looking for errors, then keep the worst one
+                    // that we have found thus far (we call it the "best" one because it is the
+                    // "worst" result), but once we find something bad enough to stop
+                    // compilation, that becomes our permanently-best choice (so we stop looking
+                    // for more errors, but we keep looking for a method that fits)
+                    if (errsBest == null ||
+                            errsTemp.getSeverity().compareTo(errsBest.getSeverity()) > 0)
+                        {
+                        errsBest = errsTemp;
+                        errsTemp = errsTemp.isAbortDesired() ? null : new ErrorList(1);
+                        }
+                    else
+                        {
+                        errsTemp.clear();
+                        }
+                    }
+                continue; // NextMethod
                 }
 
             if (cTypeParams > 0)
@@ -1353,6 +1394,11 @@ public abstract class AstNode
                 {
                 setIs.add(idMethod);
                 }
+            }
+
+        if (errsBest != null)
+            {
+            errsBest.logTo(errs);
             }
         }
 

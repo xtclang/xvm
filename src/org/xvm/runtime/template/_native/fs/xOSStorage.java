@@ -69,12 +69,6 @@ public class xOSStorage
         }
 
     @Override
-    protected ExceptionHandle makeImmutable(ObjectHandle hTarget)
-        {
-        return null;
-        }
-
-    @Override
     public int getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
         if (idProp.getName().equals("fileStore"))

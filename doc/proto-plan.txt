@@ -40,13 +40,13 @@
    - assignment w/ multi-LVal needs to testFit for Tuple if testFit for multi fails
      (and use Expression.packedExpression and unpackedExpressions for code gen?)
 
-- refactor AnonInnerClass to process errors correctly
-
 - finish nesting call chain support
 
 - heap.getType() vs. Constant.getType()
 
 - Lazy property on an immutable object must not produce a mutable value
+
+- support @Unchecked IntNumber (assignment from literals; comparison, etc.)
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 

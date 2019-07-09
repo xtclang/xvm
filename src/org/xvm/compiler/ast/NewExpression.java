@@ -562,7 +562,7 @@ public class NewExpression
                         {
                         typeTuple = pool.ensureParameterizedTypeConstant(
                                 pool.typeTuple(), atypeArgs);
-                        if (!listArgs.get(0).testFit(ctx, typeTuple).isFit())
+                        if (!listArgs.get(0).testFit(ctx, typeTuple, null).isFit())
                             {
                             // the regular "validateExpressions" call will report an error
                             typeTuple = null;

@@ -87,15 +87,15 @@ public class LabeledExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        return expr.testFit(ctx, typeRequired);
+        return expr.testFit(ctx, typeRequired, errs);
         }
 
     @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
-        return expr.testFitMulti(ctx, atypeRequired);
+        return expr.testFitMulti(ctx, atypeRequired, errs);
         }
 
     @Override

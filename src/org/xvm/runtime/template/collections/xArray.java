@@ -19,6 +19,7 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
+import org.xvm.runtime.ObjectHandle.DeferredArrayHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
@@ -176,23 +177,25 @@ public class xArray
         Constant[]   aconst    = constArray.getValue();
         int cSize = aconst.length;
 
-        ObjectHandle[] ahValue = new ObjectHandle[cSize];
+        ObjectHandle[] ahValue   = new ObjectHandle[cSize];
+        boolean        fDeferred = false;
         for (int i = 0; i < cSize; i++)
             {
             ObjectHandle hValue = frame.getConstHandle(aconst[i]);
 
             if (hValue instanceof DeferredCallHandle)
                 {
-                throw new UnsupportedOperationException("not implemented"); // TODO
+                fDeferred = true;
                 }
             ahValue[i] = hValue;
             }
 
         ClassComposition clzArray = f_templates.resolveClass(typeArray);
-        ArrayHandle      hArray   = ((xArray) clzArray.getTemplate()).
-            createArrayHandle(clzArray, ahValue);
+        ObjectHandle     hResult  = fDeferred
+            ? new DeferredArrayHandle(clzArray, ahValue)
+            : ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahValue);
 
-        frame.pushStack(hArray);
+        frame.pushStack(hResult);
         return Op.R_NEXT;
         }
 

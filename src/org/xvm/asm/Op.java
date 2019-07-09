@@ -1217,8 +1217,6 @@ public abstract class Op
 
             case OP_I_GET:       return new I_Get       (in, aconst);
             case OP_I_SET:       return new I_Set       (in, aconst);
-            case OP_I_VAR:       return new I_Var       (in, aconst);
-            case OP_I_REF:       return new I_Ref       (in, aconst);
 
             case OP_IIP_INC:     return new IIP_Inc     (in, aconst);
             case OP_IIP_DEC:     return new IIP_Dec     (in, aconst);
@@ -1424,8 +1422,6 @@ public abstract class Op
             case OP_PIP_SUB:     return "PIP_SUB";
             case OP_I_GET:       return "I_GET";
             case OP_I_SET:       return "I_SET";
-            case OP_I_VAR:       return "I_VAR";
-            case OP_I_REF:       return "I_REF";
             case OP_IIP_INC:     return "IIP_INC";
             case OP_IIP_DEC:     return "IIP_DEC";
             case OP_IIP_INCB:    return "IIP_INCB";
@@ -1690,11 +1686,11 @@ public abstract class Op
     public static final int OP_PIP_AND      = 0x8C;
     public static final int OP_PIP_OR       = 0x8D;
     public static final int OP_PIP_XOR      = 0x8E;
+    public static final int OP_RSVD_8F      = 0x8F;
 
-    public static final int OP_I_GET        = 0x8F;
-    public static final int OP_I_SET        = 0x90;
-    public static final int OP_I_VAR        = 0x91;
-    public static final int OP_I_REF        = 0x92;
+    public static final int OP_I_GET        = 0x90;
+    public static final int OP_I_SET        = 0x91;
+    public static final int OP_RSVD_92      = 0x92;
     public static final int OP_IIP_INC      = 0x93;
     public static final int OP_IIP_DEC      = 0x94;
     public static final int OP_IIP_INCA     = 0x95;

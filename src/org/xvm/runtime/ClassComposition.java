@@ -288,7 +288,10 @@ public class ClassComposition
             {
             // must indicate a private property (defined inside of a method), which is always
             // implicitly "@Unassigned"
-            return false;
+            //
+            // Note: this could also be done by synthetically annotating those properties in
+            //       PropertyDeclarationStatement#validateContent
+            return true;
             }
         return f_typeInception.ensureTypeInfo().findProperty((String) nid).isSimpleUnassigned();
         }

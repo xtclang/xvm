@@ -75,7 +75,7 @@ class KeyEntries<KeyType, ValueType>(Map<KeyType, ValueType> map)
         }
 
     @Override
-    Stream<Entry> stream()
+    Stream<Map<KeyType, ValueType>.Entry> stream()
         {
         TODO
         }

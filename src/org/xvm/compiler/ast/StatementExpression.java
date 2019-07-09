@@ -146,7 +146,7 @@ public class StatementExpression
         }
 
     @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         if (atypeRequired != null && atypeRequired.length == 0)
             {

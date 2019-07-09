@@ -27,7 +27,7 @@ const CPDirectory(Object cookie, Path path, DateTime created, DateTime modified,
             return new Iterator<String>()
                 {
                 @Override
-                conditional ElementType next()
+                conditional String next()
                     {
                     return False;
                     }
@@ -45,7 +45,7 @@ const CPDirectory(Object cookie, Path path, DateTime created, DateTime modified,
             Iterator<FileNode>? iter = exists ? contents.values.iterator(node -> node.is(Directory)) : Null;
 
             @Override
-            conditional Directory next() // TODO GG "ElementType> did not work here (or below in files())
+            conditional Directory next()
                 {
                 if (iter != null)
                     {

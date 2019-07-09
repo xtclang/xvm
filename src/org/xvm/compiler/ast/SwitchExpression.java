@@ -93,14 +93,14 @@ public class SwitchExpression
         }
 
     @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         TypeFit fit = TypeFit.Fit;
         for (AstNode node : contents)
             {
             if (node instanceof Expression)
                 {
-                fit.combineWith(((Expression) node).testFitMulti(ctx, atypeRequired));
+                fit.combineWith(((Expression) node).testFitMulti(ctx, atypeRequired, errs));
                 if (!fit.isFit())
                     {
                     return fit;

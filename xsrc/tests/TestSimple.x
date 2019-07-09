@@ -4,36 +4,7 @@ module TestSimple.xqiz.it
 
     void run()
         {
-        test1();
-        test2();
-        test3();
-        // testIn(); // it works; but an interactive test is a nuisance to run
-        }
-
-    void test1()
-        {
-        console.println("Hello world!!!");
-        }
-
-    void test2()
-        {
-        @Inject X.io.Console console;
-
-        Int i = answer;
-        console.println($"answer is {i}");
-        }
-
-    @Lazy Int answer.calc()
-        {
-        return 42;
-        }
-
-    void test3(String s = "again!!!")
-        {
-        @Inject X.io.Console console;
-        @Inject X.Clock clock;
-
-        console.println(clock.now.toString() + $": Hello {s}");
+        import Ecstasy.collections.HashMap;
         }
 
     void testIn()

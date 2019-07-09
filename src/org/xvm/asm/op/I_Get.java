@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpIndex;
 
 import org.xvm.runtime.CallChain;
@@ -55,13 +56,18 @@ public class I_Get
         }
 
     @Override
-    protected int complete(Frame frame, ObjectHandle hTarget, JavaLong hIndex)
+    protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hIndex)
         {
         ClassTemplate template = hTarget.getTemplate();
         if (template instanceof IndexSupport)
             {
-            return ((IndexSupport) template).
-                extractArrayValue(frame, hTarget, hIndex.getValue(), m_nRetValue);
+            long lIndex = ((JavaLong) hIndex).getValue();
+
+            if (frame.isNextRegister(m_nRetValue))
+                {
+                frame.introduceElementVar(m_nTarget, (int) lIndex);
+                }
+            return ((IndexSupport) template).extractArrayValue(frame, hTarget, lIndex, m_nRetValue);
             }
 
         CallChain chain = getOpChain(hTarget.getType());
@@ -75,7 +81,14 @@ public class I_Get
             saveOpChain(hTarget.getType(), chain);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
+        MethodStructure method = chain.getTop();
+
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceResolvedVar(m_nTarget, method.getReturnTypes()[0]);
+            }
+
+        ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
         ahVar[0] = hIndex;
 
         return hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, m_nRetValue);

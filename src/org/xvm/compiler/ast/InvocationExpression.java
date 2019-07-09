@@ -289,7 +289,7 @@ public class InvocationExpression
         }
 
     @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         if (atypeRequired == null || atypeRequired.length == 0)
             {
@@ -301,8 +301,8 @@ public class InvocationExpression
         }
 
     /**
-     * A common implementation for both {@link #getImplicitType(Context)} and
-     * {@link #testFitMulti(Context, TypeConstant[])} that calculates the return types produced
+     * A common implementation for both {@link #getImplicitType} and
+     * {@link Expression#testFitMulti} that calculates the return types produced
      * by this InvocationExpression.
      *
      * @param ctx            the compilation context for the statement
@@ -708,7 +708,7 @@ public class InvocationExpression
                                 {
                                 typeTuple = pool.ensureParameterizedTypeConstant(
                                         pool.typeTuple(), atypeArgs);
-                                if (!args.get(0).testFit(ctx, typeTuple).isFit())
+                                if (!args.get(0).testFit(ctx, typeTuple, null).isFit())
                                     {
                                     // the regular "validateExpressions" call will report an error
                                     typeTuple = null;
@@ -1930,7 +1930,7 @@ public class InvocationExpression
             Expression   exprArg   = listArgs.get(i);
 
             ctx = ctx.enterInferring(typeParam);
-            if (!exprArg.testFit(ctx, typeParam).isFit())
+            if (!exprArg.testFit(ctx, typeParam, errs).isFit())
                 {
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                         typeParam.getValueString(), exprArg.getTypeString(ctx));

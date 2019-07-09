@@ -338,12 +338,14 @@ public class LambdaExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        if (!ensurePrepared(m_errs))
+        if (!ensurePrepared(errs))
             {
             return TypeFit.NoFit;
             }
+
+        m_errs = errs;
 
         if (isValidated())
             {
@@ -395,10 +397,11 @@ public class LambdaExpression
         int cParams = getParamCount();
         if (atypeReqParams != null && atypeReqParams.length == cParams && atypeReqReturns != null)
             {
-            String[]       asParams    = cParams == 0 ? NO_NAMES : new String[cParams];
-            TypeConstant[] atypeParams = cParams == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cParams];
+            ErrorListener  errs        = m_errs == null ? ErrorListener.BLACKHOLE : m_errs;
+            String[]       asParams    = cParams == 0   ? NO_NAMES : new String[cParams];
+            TypeConstant[] atypeParams = cParams == 0   ? TypeConstant.NO_TYPES : new TypeConstant[cParams];
 
-            if (!collectParamNamesAndTypes(atypeReqParams, atypeParams, asParams, ErrorListener.BLACKHOLE))
+            if (!collectParamNamesAndTypes(atypeReqParams, atypeParams, asParams, errs))
                 {
                 return TypeFit.NoFit;
                 }
@@ -432,6 +435,8 @@ public class LambdaExpression
             {
             return finishValidation(typeRequired, null, TypeFit.NoFit, null, errs);
             }
+
+        m_errs = errs;
 
         // validation only occurs once, but we'll put some extra checks in up front, because we do
         // weird stuff on lambdas like cloning the AST so that we can pass over it once for the
@@ -678,8 +683,9 @@ public class LambdaExpression
         {
         // clone the body (to avoid damaging the original) and validate it to calculate its type
         StatementBlock blockTemp = (StatementBlock) body.clone();
+        ErrorListener  errs      = m_errs == null ? ErrorListener.BLACKHOLE : m_errs;
 
-        if (!new StageMgr(blockTemp, Stage.Validated, ErrorListener.BLACKHOLE).fastForward(20))
+        if (!new StageMgr(blockTemp, Stage.Validated, errs).fastForward(20))
             {
             blockTemp.discard(true);
             return null;
@@ -688,7 +694,7 @@ public class LambdaExpression
         // use a black-hole context (to avoid damaging the original)
         ctx       = ctx.enterBlackhole();
         ctx       = enterCapture(ctx, blockTemp, atypeParams, asParams);
-        blockTemp = (StatementBlock) blockTemp.validate(ctx, ErrorListener.BLACKHOLE);
+        blockTemp = (StatementBlock) blockTemp.validate(ctx, errs);
         ctx       = ctx.exit();
 
         try
