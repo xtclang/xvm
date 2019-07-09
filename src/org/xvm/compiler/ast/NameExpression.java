@@ -1517,7 +1517,7 @@ public class NameExpression
             // the "Type.this" construct is not supported; use "this.Type" instead
             if (sName.equals("this"))
                 {
-                this.log(errs, Severity.ERROR, Compiler.INVALID_OUTER_THIS, left);
+                log(errs, Severity.ERROR, Compiler.INVALID_OUTER_THIS);
                 return null;
                 }
 
