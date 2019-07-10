@@ -3,7 +3,7 @@ Contributing
 
 Thank you for your interest in contributing to The Ecstasy Project. By participating in this project, you agree to abide by our [code of conduct](CODE_OF_CONDUCT.md).
 
-Pull requests are welcome. Before submitting your first pull request, please sign and submit either an [individual contributor agreement](./license/icla.txt) ([PDF](./license/icla.pdf)) or (if contributing as an employee of a company) an [corporate contributor agreement](./license/ccla.txt) ([PDF](./license/ccla.pdf)). Please email the signed form to <info@xtclang.org>.
+Pull requests are welcome. Before submitting your first pull request, please sign and submit either an [individual contributor agreement](./license/icla.txt) ([PDF](./license/icla.pdf)) or (if contributing as an employee of a company) a [corporate contributor agreement](./license/ccla.txt) ([PDF](./license/ccla.pdf)). Please email the signed form to <info@xtclang.org>.
 
 ## Contribution guidelines ##
 
