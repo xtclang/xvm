@@ -9,7 +9,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
@@ -430,7 +429,7 @@ public class xFutureVar
             }
 
         @Override
-        public ObjectHandle getValue()
+        public ObjectHandle getReferent()
             {
             // it's a responsibility of the caller to only use this when the future is known to have
             // completed normally
@@ -473,7 +472,7 @@ public class xFutureVar
             {
             if (isAssigned())
                 {
-                return frame.assignValue(iResult, getValue());
+                return frame.assignValue(iResult, getReferent());
                 }
 
             // add a notification and wait for the assignment/completion;

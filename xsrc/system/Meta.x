@@ -29,7 +29,7 @@ interface Meta<PublicType, ProtectedType, PrivateType, StructType>
      * make a mutable object immutable; once the object is immutable, it cannot be made mutable.
      */
     @Override
-    Boolean immutable_;
+    Boolean isImmutable;
 
     /**
      * The actual amount of memory used by this object, including the object's header (if any) and

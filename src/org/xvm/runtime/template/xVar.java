@@ -62,7 +62,7 @@ public class xVar
         switch (method.getName())
             {
             case "set":
-                return set(frame, hThis, hArg);
+                return setReferent(frame, hThis, hArg);
             }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
@@ -106,7 +106,7 @@ public class xVar
         }
 
     @Override
-    public int set(Frame frame, RefHandle hTarget, ObjectHandle hValue)
+    public int setReferent(Frame frame, RefHandle hTarget, ObjectHandle hValue)
         {
         switch (hTarget.m_iVar)
             {
@@ -115,13 +115,13 @@ public class xVar
 
             case RefHandle.REF_REF:
                 {
-                RefHandle hDelegate = (RefHandle) hTarget.getValue();
-                return hTarget.getVarSupport().set(frame, hDelegate, hValue);
+                RefHandle hDelegate = (RefHandle) hTarget.getReferent();
+                return hTarget.getVarSupport().setReferent(frame, hDelegate, hValue);
                 }
 
             case RefHandle.REF_PROPERTY:
                 {
-                ObjectHandle hDelegate = hTarget.getValue();
+                ObjectHandle hDelegate = hTarget.getReferent();
                 return hDelegate.getTemplate().setPropertyValue(
                     frame, hDelegate, hTarget.getPropertyId(), hTarget);
                 }
@@ -129,7 +129,7 @@ public class xVar
             case RefHandle.REF_ARRAY:
                 {
                 IndexedRefHandle hIndexedRef = (IndexedRefHandle) hTarget;
-                ObjectHandle hArray = hTarget.getValue();
+                ObjectHandle hArray = hTarget.getReferent();
                 IndexSupport template = (IndexSupport) hArray.getTemplate();
 
                 return template.assignArrayValue(frame, hArray, hIndexedRef.f_lIndex, hValue);
@@ -149,7 +149,7 @@ public class xVar
 
     protected int setInternal(Frame frame, RefHandle hRef, ObjectHandle hValue)
         {
-        hRef.setValue(hValue);
+        hRef.setReferent(hValue);
         return Op.R_NEXT;
         }
 

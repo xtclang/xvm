@@ -230,11 +230,11 @@ public class AnnotationSupport
         }
 
     @Override
-    public int get(Frame frame, RefHandle hTarget, int iReturn)
+    public int getReferent(Frame frame, RefHandle hTarget, int iReturn)
         {
         CallChain chain = getGetChain();
         return chain == null
-            ? ensureVarSupport().get(frame, hTarget, iReturn)
+            ? ensureVarSupport().getReferent(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);
         }
 
@@ -275,11 +275,11 @@ public class AnnotationSupport
         }
 
     @Override
-    public int set(Frame frame, RefHandle hTarget, ObjectHandle hValue)
+    public int setReferent(Frame frame, RefHandle hTarget, ObjectHandle hValue)
         {
         CallChain chain = getSetChain();
         return chain == null
-            ? ensureVarSupport().set(frame, hTarget, hValue)
+            ? ensureVarSupport().setReferent(frame, hTarget, hValue)
             : chain.invoke(frame, hTarget, hValue, Op.A_IGNORE);
         }
 

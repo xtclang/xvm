@@ -31,7 +31,7 @@ public interface VarSupport
     // ----- built-in unary operations -------------------------------------------------------------
 
     /**
-     * Get the Var's value.
+     * Get the Var's referent.
      *
      * @param frame    the current frame
      * @param hTarget  the target Var or Ref handle
@@ -40,7 +40,7 @@ public interface VarSupport
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION};
      *         if the target represents a dynamic future, this can amy return {@link Op#R_BLOCK}
      */
-    int get(Frame frame, RefHandle hTarget, int iReturn);
+    int getReferent(Frame frame, RefHandle hTarget, int iReturn);
 
     /**
      * Increment the Var value and retrieve the new value.
@@ -90,7 +90,7 @@ public interface VarSupport
     // ----- built-in binary operations ------------------------------------------------------------
 
     /**
-     * Set the Var's value.
+     * Set the Var's referent.
      *
      * @param frame    the current frame
      * @param hTarget  the target Var handle
@@ -98,7 +98,7 @@ public interface VarSupport
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
-    int set(Frame frame, RefHandle hTarget, ObjectHandle hValue);
+    int setReferent(Frame frame, RefHandle hTarget, ObjectHandle hValue);
 
     /**
      * Perform an "add" operation on the Var.

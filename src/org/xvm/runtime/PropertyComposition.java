@@ -220,7 +220,7 @@ public class PropertyComposition
         {
         assert f_infoProp.getIdentity().getNestedIdentity().equals(idProp.getNestedIdentity());
 
-        return ((xRef) getTemplate()).get(frame, (RefHandle) hTarget, iReturn);
+        return ((xRef) getTemplate()).getReferent(frame, (RefHandle) hTarget, iReturn);
         }
 
     @Override
@@ -228,7 +228,7 @@ public class PropertyComposition
         {
         assert f_infoProp.getIdentity().getNestedIdentity().equals(idProp.getNestedIdentity());
 
-        return ((xRef) getTemplate()).set(frame, (RefHandle) hTarget, hValue);
+        return ((xRef) getTemplate()).setReferent(frame, (RefHandle) hTarget, hValue);
         }
 
     @Override

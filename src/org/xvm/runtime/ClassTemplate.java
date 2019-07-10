@@ -940,7 +940,7 @@ public abstract class ClassTemplate
             {
             RefHandle hRef = (RefHandle) hValue;
             assert !(hRef instanceof FutureHandle);
-            return ((xRef) hRef.getTemplate()).get(frame, hRef, iReturn);
+            return ((xRef) hRef.getTemplate()).getReferent(frame, hRef, iReturn);
             }
 
         return frame.assignValue(iReturn, hValue);
@@ -1023,7 +1023,7 @@ public abstract class ClassTemplate
         if (hThis.isInflated(idProp))
             {
             RefHandle hRef = (RefHandle) hThis.getField(idProp);
-            ((xRef) hRef.getTemplate()).set(frame, hRef, hValue);
+            ((xRef) hRef.getTemplate()).setReferent(frame, hRef, hValue);
             }
         else
             {

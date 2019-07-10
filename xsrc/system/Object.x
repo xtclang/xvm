@@ -39,9 +39,9 @@ class Object
      */
     immutable Object makeImmutable()
         {
-        if (!meta.immutable_)
+        if (!meta.isImmutable)
             {
-            meta.immutable_ = true;
+            meta.isImmutable = true;
             }
 
         return this.as(immutable Object);

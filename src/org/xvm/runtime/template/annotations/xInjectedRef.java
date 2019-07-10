@@ -54,7 +54,7 @@ public class xInjectedRef
     protected int getInternal(Frame frame, RefHandle hTarget, int iReturn)
         {
         InjectedHandle hInjected = (InjectedHandle) hTarget;
-        ObjectHandle   hValue    = hInjected.getValue();
+        ObjectHandle   hValue    = hInjected.getReferent();
         if (hValue == null)
             {
             TypeConstant typeEl = hInjected.getType().resolveGenericType("RefType");
@@ -70,13 +70,13 @@ public class xInjectedRef
                 {
                 ((DeferredCallHandle) hValue).addContinuation(frameCaller ->
                     {
-                    hInjected.setValue(frameCaller.peekStack());
+                    hInjected.setReferent(frameCaller.peekStack());
                     return Op.R_NEXT;
                     });
                 }
             else
                 {
-                hInjected.setValue(hValue);
+                hInjected.setReferent(hValue);
                 }
             }
 

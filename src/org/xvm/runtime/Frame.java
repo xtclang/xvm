@@ -578,7 +578,7 @@ public class Frame
                     RefHandle hVar = (RefHandle) f_ahVar[nVar];
                     // TODO: consider moving the "transfer the referent" logic here (see xVar)
                     // TODO: check the "weak" assignment (here or inside)
-                    return hVar.getVarSupport().set(this, hVar, hValue);
+                    return hVar.getVarSupport().setReferent(this, hVar, hValue);
                     }
 
                 case VAR_STANDARD_WAITING:
@@ -777,7 +777,7 @@ public class Frame
                         RefHandle hRef    = (RefHandle) hValue;
                         int       iResult = hRef instanceof FutureHandle
                             ? ((FutureHandle) hRef).waitAndAssign(framePrev, Op.A_STACK)
-                            : hRef.getVarSupport().get(framePrev, hRef, Op.A_STACK);
+                            : hRef.getVarSupport().getReferent(framePrev, hRef, Op.A_STACK);
 
                         switch (iResult)
                             {
@@ -826,7 +826,7 @@ public class Frame
                 {
                 // dynamic -> dynamic
                 RefHandle hVar = (RefHandle) framePrev.f_ahVar[iReturn];
-                iResult = hVar.getVarSupport().set(framePrev, hVar, hValue);
+                iResult = hVar.getVarSupport().setReferent(framePrev, hVar, hValue);
                 }
             else
                 {
@@ -835,7 +835,7 @@ public class Frame
 
                 iResult = hRef instanceof FutureHandle
                         ? ((FutureHandle) hRef).waitAndAssign(framePrev, iReturn)
-                        : hRef.getVarSupport().get(framePrev, hRef, iReturn);
+                        : hRef.getVarSupport().getReferent(framePrev, hRef, iReturn);
                 }
             }
         else
@@ -1006,7 +1006,7 @@ public class Frame
                     // the dynamic vars will "get" the value naturally on-demand
                     if (info.isStandard())
                         {
-                        switch (hFuture.getVarSupport().get(this, hFuture, i))
+                        switch (hFuture.getVarSupport().getReferent(this, hFuture, i))
                             {
                             case Op.R_NEXT:
                                 break;
@@ -1176,7 +1176,7 @@ public class Frame
                     case VAR_DYNAMIC_REF:
                         {
                         RefHandle hRef = (RefHandle) hValue;
-                        switch (hRef.getVarSupport().get(this, hRef, Op.A_STACK))
+                        switch (hRef.getVarSupport().getReferent(this, hRef, Op.A_STACK))
                             {
                             case Op.R_NEXT:
                                 return popStack();

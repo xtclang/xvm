@@ -67,8 +67,8 @@ public class xRef
 
         switch (sPropName)
             {
-            case "ActualType":
-                switch (get(frame, hRef, Op.A_STACK))
+            case "actualType":
+                switch (getReferent(frame, hRef, Op.A_STACK))
                     {
                     case Op.R_NEXT:
                         return frame.assignValue(iReturn,
@@ -105,8 +105,8 @@ public class xRef
             case "selfContained":
                 return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isSelfContained()));
 
-            case "service_":
-                switch (get(frame, hRef, Op.A_STACK))
+            case "isService":
+                switch (getReferent(frame, hRef, Op.A_STACK))
                     {
                     case Op.R_NEXT:
                         return frame.assignValue(iReturn,
@@ -128,8 +128,8 @@ public class xRef
                         throw new IllegalStateException();
                     }
 
-            case "const_":
-                switch (get(frame, hRef, Op.A_STACK))
+            case "isConst":
+                switch (getReferent(frame, hRef, Op.A_STACK))
                     {
                     case Op.R_NEXT:
                         return frame.assignValue(iReturn,
@@ -151,8 +151,8 @@ public class xRef
                         throw new IllegalStateException();
                     }
 
-            case "immutable_":
-                switch (get(frame, hRef, Op.A_STACK))
+            case "isImmutable":
+                switch (getReferent(frame, hRef, Op.A_STACK))
                     {
                     case Op.R_NEXT:
                         return frame.assignValue(iReturn,
@@ -189,7 +189,7 @@ public class xRef
                 switch (method.getName())
                     {
                     case "get":
-                        return get(frame, hRef, iReturn);
+                        return getReferent(frame, hRef, iReturn);
                     }
                 break;
 
@@ -217,7 +217,7 @@ public class xRef
             case "peek":
                 if (hRef.isAssigned())
                     {
-                    switch (get(frame, hRef, Op.A_STACK))
+                    switch (getReferent(frame, hRef, Op.A_STACK))
                         {
                         case Op.R_NEXT:
                             return frame.assignValues(aiReturn, xBoolean.TRUE, frame.popStack());
@@ -266,7 +266,7 @@ public class xRef
     // ----- VarSupport implementation -------------------------------------------------------------
 
     @Override
-    public int get(Frame frame, RefHandle hTarget, int iReturn)
+    public int getReferent(Frame frame, RefHandle hTarget, int iReturn)
         {
         switch (hTarget.m_iVar)
             {
@@ -275,22 +275,22 @@ public class xRef
 
             case RefHandle.REF_REF:
                 {
-                RefHandle hDelegate = (RefHandle) hTarget.getValue();
-                return hTarget.getVarSupport().get(frame, hDelegate, iReturn);
+                RefHandle hReferent = (RefHandle) hTarget.getReferent();
+                return hTarget.getVarSupport().getReferent(frame, hReferent, iReturn);
                 }
 
             case RefHandle.REF_PROPERTY:
                 {
-                ObjectHandle hDelegate = hTarget.getValue();
-                return hDelegate.getTemplate().getPropertyValue(
-                    frame, hDelegate, hTarget.getPropertyId(), iReturn);
+                ObjectHandle hReferent = hTarget.getReferent();
+                return hReferent.getTemplate().getPropertyValue(
+                    frame, hReferent, hTarget.getPropertyId(), iReturn);
                 }
 
             case RefHandle.REF_ARRAY:
                 {
                 IndexedRefHandle hIndexedRef = (IndexedRefHandle) hTarget;
-                ObjectHandle hArray = hTarget.getValue();
-                IndexSupport template = (IndexSupport) hArray.getTemplate();
+                ObjectHandle     hArray      = hTarget.getReferent();
+                IndexSupport     template    = (IndexSupport) hArray.getTemplate();
 
                 return template.extractArrayValue(frame, hArray, hIndexedRef.f_lIndex, iReturn);
                 }
@@ -314,7 +314,7 @@ public class xRef
      */
     protected int getInternal(Frame frame, RefHandle hRef, int iReturn)
         {
-        ObjectHandle hValue = hRef.getValue();
+        ObjectHandle hValue = hRef.getReferent();
         return hValue == null
             ? frame.raiseException(xException.unassignedReference())
             : frame.assignValue(iReturn, hValue);
@@ -345,7 +345,7 @@ public class xRef
         }
 
     @Override
-    public int set(Frame frame, RefHandle hTarget, ObjectHandle hValue)
+    public int setReferent(Frame frame, RefHandle hTarget, ObjectHandle hValue)
         {
         return readOnly(frame);
         }
@@ -436,9 +436,9 @@ public class xRef
             {
             super(clazz);
 
-            m_sName = sName;
+            m_sName    = sName;
             m_fMutable = true;
-            m_iVar = REF_REFERENT;
+            m_iVar     = REF_REFERENT;
             }
 
         /**
@@ -454,11 +454,11 @@ public class xRef
 
             assert hTarget != null;
 
-            m_hDelegate = hTarget;
-            m_idProp = idProp;
-            m_sName = idProp.getNestedIdentity().toString();
-            m_fMutable = hTarget.isMutable();
-            m_iVar = REF_PROPERTY;
+            m_hReferent = hTarget;
+            m_idProp    = idProp;
+            m_sName     = idProp.getNestedIdentity().toString();
+            m_fMutable  = hTarget.isMutable();
+            m_iVar      = REF_PROPERTY;
             }
 
         /**
@@ -483,14 +483,14 @@ public class xRef
                 {
                 infoSrc.setRef(this);
                 m_frame = frame;
-                m_iVar = iVar;
+                m_iVar  = iVar;
                 }
             else
                 {
                 // there is already a Ref pointing to that register;
                 // simply link to it
-                m_iVar = REF_REF;
-                m_hDelegate = refCurrent;
+                m_iVar      = REF_REF;
+                m_hReferent = refCurrent;
                 }
             }
 
@@ -522,14 +522,14 @@ public class xRef
             return frame.callInitialized(frameID);
             }
 
-        public ObjectHandle getValue()
+        public ObjectHandle getReferent()
             {
-            return m_hDelegate;
+            return m_hReferent;
             }
 
-        public void setValue(ObjectHandle hDelegate)
+        public void setReferent(ObjectHandle hReferent)
             {
-            m_hDelegate = hDelegate;
+            m_hReferent = hReferent;
             }
 
         public String getName()
@@ -557,11 +557,11 @@ public class xRef
             switch (m_iVar)
                 {
                 case REF_REFERENT:
-                    return m_hDelegate != null;
+                    return m_hReferent != null;
 
                 case REF_PROPERTY:
                     {
-                    GenericHandle hTarget = (GenericHandle) m_hDelegate;
+                    GenericHandle hTarget = (GenericHandle) m_hReferent;
                     ObjectHandle  hValue  = hTarget.getField(m_idProp);
                     if (hValue == null)
                         {
@@ -574,7 +574,7 @@ public class xRef
                     return true;
                     }
                 case REF_REF:
-                    return ((RefHandle) m_hDelegate).isAssigned();
+                    return ((RefHandle) m_hReferent).isAssigned();
 
                 default: // assertion m_frame != null && m_iVar >= 0
                     return m_frame.f_ahVar[m_iVar] != null;
@@ -583,7 +583,7 @@ public class xRef
 
         public boolean isSelfContained()
             {
-            return m_hDelegate == null || m_hDelegate.isSelfContained();
+            return m_hReferent == null || m_hReferent.isSelfContained();
             }
 
         // dereference the Ref from a register-bound to a handle-bound
@@ -591,9 +591,9 @@ public class xRef
             {
             assert m_frame != null && m_iVar >= 0;
 
-            m_hDelegate = m_frame.f_ahVar[m_iVar];
-            m_frame = null;
-            m_iVar = REF_REFERENT;
+            m_hReferent = m_frame.f_ahVar[m_iVar];
+            m_frame     = null;
+            m_iVar      = REF_REFERENT;
             }
 
         @Override
@@ -604,36 +604,37 @@ public class xRef
                 {
                 case REF_REFERENT:
                 case REF_ARRAY:
-                    return m_hDelegate == null ? s : s + m_hDelegate;
+                    return m_hReferent == null ? s : s + m_hReferent;
 
                 case REF_REF:
-                    return s + "--> " + m_hDelegate;
+                    return s + "--> " + m_hReferent;
 
                 case REF_PROPERTY:
-                    return s + "-> " + m_hDelegate.getComposition() + "#" + m_sName;
+                    return s + "-> " + m_hReferent.getComposition() + "#" + m_sName;
 
                 default:
                     return s + "-> #" + m_iVar;
                 }
             }
 
-        protected ObjectHandle m_hDelegate; // can point to another Ref for the same referent
+        protected ObjectHandle     m_hReferent; // can point to another Ref for the same referent
         protected PropertyConstant m_idProp;
-        protected String m_sName;
-        protected Frame m_frame;
-        protected int m_iVar;
+        protected String           m_sName;
+        protected Frame            m_frame;
+        protected int              m_iVar;     // non-negative value represents a register;
+                                               // negative values are described below
 
-        // indicates that the m_hDelegate field holds a referent
+        // indicates that the m_hReferent field holds a referent
         protected static final int REF_REFERENT = -1;
 
-        // indicates that the m_hDelegate field holds a Ref that this Ref is "chained" to
-        protected static final int REF_REF = -2;
+        // indicates that the m_hReferent field holds a Ref that this Ref is "chained" to
+        protected static final int REF_REF      = -2;
 
-        // indicates that the m_hDelegate field holds a property target
+        // indicates that the m_hReferent field holds a property target
         protected static final int REF_PROPERTY = -3;
 
-        // indicates that the m_hDelegate field holds an array target
-        protected static final int REF_ARRAY = -4;
+        // indicates that the m_hReferent field holds an array target
+        protected static final int REF_ARRAY    = -4;
         }
 
     /***
@@ -648,9 +649,9 @@ public class xRef
             {
             super(clazz, null);
 
-            m_iVar = REF_ARRAY;
-            m_hDelegate = hTarget;
-            f_lIndex = lIndex;
+            m_iVar      = REF_ARRAY;
+            m_hReferent = hTarget;
+            f_lIndex    = lIndex;
             }
 
         @Override
@@ -700,7 +701,7 @@ public class xRef
                 {
                 RefHandle hRef = index == 0 ? hRef1 : hRef2;
 
-                switch (template.get(frameCaller, hRef, Op.A_STACK))
+                switch (template.getReferent(frameCaller, hRef, Op.A_STACK))
                     {
                     case Op.R_NEXT:
                         updateResult(frameCaller);

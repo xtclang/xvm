@@ -290,7 +290,7 @@ class Array<ElementType>
         // the "mutability" property has to be set before calling makeImmutable(), since no changes
         // will be possible afterwards
         Mutability prev = mutability;
-        if (!meta.immutable_)
+        if (!meta.isImmutable)
             {
             mutability = Constant;
             }
@@ -301,7 +301,7 @@ class Array<ElementType>
             }
         catch (Exception e)
             {
-            if (!meta.immutable_)
+            if (!meta.isImmutable)
                 {
                 mutability = prev;
                 }
@@ -382,7 +382,7 @@ class Array<ElementType>
         Array<ElementType> result = new Array(this, range);
 
         // a slice of an immutable array is also immutable
-        return meta.immutable_
+        return meta.isImmutable
                 ? result.makeImmutable()
                 : result;
         }
