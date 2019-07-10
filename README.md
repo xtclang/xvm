@@ -37,13 +37,15 @@ We will only "get one chance to make a good first impression", and we are determ
 
 ## License
 
-The license for all source code (defined as ./bin/, ./resource/, ./src, and ./xsrc) is Apache 2.0, unless explicitly noted. We chose Apache 2.0 for its compatibility with almost every reasonable use, and its compatibility with almost every license, reasonable or otherwise.
+The license for all source code (defined as ./bin/, ./resource/, ./src, ./tests, and ./xsrc) is Apache 2.0, unless explicitly noted. We chose Apache 2.0 for its compatibility with almost every reasonable use, and its compatibility with almost every license, reasonable or otherwise.
 
 The license for documentation (defined as ./doc/, and the embedded markdown API documentation and/or derivative forms thereof) is Creative Commons CC-BY-4.0, unless explicitly noted.
 
 To help ensure clean IP (which will help us keep this project free and open source), pull requests require a signed contributor agreement to be submitted in advance. We use the Apache contributor model agreements (modified to identify this specific project), which are located under the ./license directory. Contributors are required to sign and submit an Ecstasy Project Individual Contributor License Agreement (ICLA), or be a named employee on an Ecstasy Project Corporate Contributor License Agreement (CCLA), both derived directly from the Apache agreements of the same name.
 
-All content of the project not covered by the above terms is probably an accident that we need to be made aware of, and remains (c) xqiz.it, all rights reserved.
+The Ecstasy name is a trademark owned and administered by The Ecstasy Project. Unlicensed use of the Ecstasy trademark is prohibited and will constitute infringement.
+
+All content of the project not covered by the above terms is probably an accident that we need to be made aware of, and remains (c) The Ecstasy Project, all rights reserved.
 
 ## Layout
 
