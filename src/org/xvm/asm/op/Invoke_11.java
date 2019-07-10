@@ -134,12 +134,12 @@ public class Invoke_11
 
     protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = getCallChain(frame, hTarget);
+        CallChain       chain  = getCallChain(frame, hTarget);
         MethodStructure method = chain.getTop();
 
         checkReturnRegister(frame, hTarget);
 
-        if (method.isNative())
+        if (chain.isNative())
             {
             return hTarget.getTemplate().invokeNative1(frame, method, hTarget, hArg, m_nRetValue);
             }
