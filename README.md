@@ -62,4 +62,4 @@ A few simple Ecstasy source tests are located under xvm/xsrc/tests. The followin
 
 ## Questions?
 
-To submit a contributor agreement, sign up for very hard work, fork over a giant pile of cash, or in case of emergency: "info _at_ xtclang _dot_ org", but please understand if we can not respond to every question. Thank you.
+To submit a contributor agreement, sign up for very hard work, fork over a giant pile of cash, or in case of emergency: "info _at_ xtclang _dot_ org", but please understand if we cannot respond to every question. Thank you.
