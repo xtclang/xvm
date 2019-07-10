@@ -4,8 +4,6 @@ module TestDefAsn.xqiz.it
 
     void run()
         {
-        console.println("hello world!");
-
         testDefAssignment();
         }
 
@@ -29,10 +27,6 @@ module TestDefAsn.xqiz.it
             continue L1;
             }
             while (f2);
-//        else
-//            {
-//            i = 2;
-//            }
 
         console.println("i=" + i);
         }

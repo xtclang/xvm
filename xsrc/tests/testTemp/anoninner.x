@@ -2,21 +2,12 @@ module TestAnonInner.xqiz.it
     {
     void run()
         {
-        @Inject X.io.Console console;
-        console.println("hello world! (anonymous inner class tests)");
-
         testSimple();
         }
 
     class Inner
         {
         construct(String s) {}
-        }
-
-    void foo()
-        {
-        @Inject X.io.Console console;
-        console.println("in foo()");
         }
 
     void testSimple()
