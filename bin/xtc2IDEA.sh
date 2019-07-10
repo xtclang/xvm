@@ -3,11 +3,11 @@
 # install the .x source code syntax highlighting into the IntelliJ IDEA 14
 
 binDir=$(dirname "$BASH_SOURCE")
-ideaDir=~/Library/Preferences/IntelliJIdea14
+ideaDir=~/Library/Preferences/IdeaIC2018.3
 
 if [ ! -d ${ideaDir} ]
 then
-  echo "***" Intellij IDEA 14 is not installed "***"
+  echo "***" Intellij IDEA is not installed "***"
   exit
 fi
 
