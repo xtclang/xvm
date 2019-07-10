@@ -10,9 +10,9 @@
       <option name="HAS_BRACKETS" value="true" />
       <option name="HAS_PARENS" value="true" />
     </options>
-    <keywords keywords="as;class;const;construct;enum;extends;function;implements;import;immutable;incorporates;interface;into;is;module;mixin;package;private;protected;public;service;static" ignore_case="false" />
-    <keywords2 keywords="TODO;assert;case;catch;else;false;finally;for;if;instanceof;new;null;return;super;switch;true;try;while;do;break;continue;throw" />
-    <keywords3 keywords="conditional;typedef" />
+    <keywords keywords="as;class;const;construct;enum;extends;function;implements;immutable;import;incorporates;interface;into;is;module;mixin;package;private;protected;public;service;static" ignore_case="false" />
+    <keywords2 keywords="TODO;assert;case;catch;default;else;false;finally;for;if;instanceof;new;null;return;super;switch;true;try;using;while;do;break;continue;throw" />
+    <keywords3 keywords="conditional;typedef;void;val;var" />
     <keywords4 keywords="@Auto;@Atomic;@Future;@Inject;@Lazy;@Op;@Override;@RO;@Soft;@Watch;@Weak" />
   </highlighting>
   <extensionMap>

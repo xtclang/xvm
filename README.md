@@ -14,6 +14,8 @@ Learn more about the language at [https://xtclang.blogspot.com/](https://xtclang
 
 Learn more about the project at [https://ecstasylang.blogspot.com/](https://ecstasylang.blogspot.com/)
 
+Please respect our [code of conduct](CODE_OF_CONDUCT.md) and each other.
+
 ## Status:
 
 - **PROOF-OF-CONCEPT ONLY!!!** (please add flashing lights, warning bells, etc.)
@@ -35,6 +37,8 @@ There are many additional "nice to haves" that we hope to complete before we fin
 
 We will only "get one chance to make a good first impression", and we are determined not to waste it. We will not ask developers to waste their time attempting to use an incomplete project. At the same time, our doors are open as widely as possible to those who desire to learn, contribute to the project, and propel us towards completion.
 
+Find out more about [how you can contribute to Ecstasy](CONTRIBUTIONS.md).
+
 ## License
 
 The license for all source code (defined as ./bin/, ./resource/, ./src, ./tests, and ./xsrc) is Apache 2.0, unless explicitly noted. We chose Apache 2.0 for its compatibility with almost every reasonable use, and its compatibility with almost every license, reasonable or otherwise.
@@ -53,12 +57,7 @@ The Ecstasy (.x) source files for the runtime library are located under xvm/xsrc
 
 Java code for the prototype is located under xvm/src/org/xvm/. This code will be deprecated and removed as it is incrementally replaced by an all-Ecstasy toolchain.
 
-A few simple Ecstasy source tests are located under xvm/xsrc/tests. The following instructions assume that your local repository is located at ~/Development, and that you are trying to compile and run "misc.x". To compile and run the Ecstasy "misc.x" test in JetBrains IntelliJ IDEA, create a "Run/Debug Configuration" as follows:
-
-* Main class=org.xvm.runtime.TestConnector
-* VM options=-Xms256m -Xmx1g -ea
-* Program arguments=TestMisc.xqiz.it ./tests/testTemp/misc.x
-* Working directory=~/Development/xvm/xsrc/
+Instructions for getting started can be found in our [Contributing to Ecstasy](CONTRIBUTIONS.md) document.
 
 ## Questions?
 
