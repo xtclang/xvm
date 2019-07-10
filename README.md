@@ -37,7 +37,7 @@ There are many additional "nice to haves" that we hope to complete before we fin
 
 We will only "get one chance to make a good first impression", and we are determined not to waste it. We will not ask developers to waste their time attempting to use an incomplete project. At the same time, our doors are open as widely as possible to those who desire to learn, contribute to the project, and propel us towards completion.
 
-Find out more about [how you can contribute to Ecstasy](CONTRIBUTIONS.md).
+Find out more about [how you can contribute to Ecstasy](CONTRIBUTING.md).
 
 ## License
 
@@ -57,7 +57,7 @@ The Ecstasy (.x) source files for the runtime library are located under xvm/xsrc
 
 Java code for the prototype is located under xvm/src/org/xvm/. This code will be deprecated and removed as it is incrementally replaced by an all-Ecstasy toolchain.
 
-Instructions for getting started can be found in our [Contributing to Ecstasy](CONTRIBUTIONS.md) document.
+Instructions for getting started can be found in our [Contributing to Ecstasy](CONTRIBUTING.md) document.
 
 ## Questions?
 
