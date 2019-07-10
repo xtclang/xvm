@@ -623,7 +623,7 @@ public class NameExpression
                         {
                         params.set(i, exprNew);
                         }
-                    atypeParams[i] = exprNew.getType();
+                    atypeParams[i] = exprNew.ensureTypeConstant();
                     }
                 }
             }
@@ -664,7 +664,7 @@ public class NameExpression
                                 // the class could either be identified (in the raw) by an identity
                                 // constant, or a relative (pseudo) constant
                                 assert argRaw instanceof IdentityConstant || argRaw instanceof PseudoConstant;
-                                constVal = pool.ensureTerminalTypeConstant((Constant) argRaw);
+                                constVal = type;
                                 break;
 
                             case Singleton:

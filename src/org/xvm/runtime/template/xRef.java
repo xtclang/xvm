@@ -3,6 +3,8 @@ package org.xvm.runtime.template;
 
 import java.util.List;
 
+import java.util.function.ToIntFunction;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
@@ -23,6 +25,7 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.VarSupport;
 
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
+import org.xvm.runtime.template.xType.TypeHandle;
 
 
 /**
@@ -68,35 +71,18 @@ public class xRef
         switch (sPropName)
             {
             case "actualType":
-                switch (getReferent(frame, hRef, Op.A_STACK))
-                    {
-                    case Op.R_NEXT:
-                        return frame.assignValue(iReturn,
-                            frame.popStack().getType().getTypeHandle());
-
-                    case Op.R_CALL:
-                        frame.addContinuation(frameCaller ->
-                            frameCaller.assignValue(iReturn,
-                                frameCaller.popStack().getType().getTypeHandle()));
-                        return Op.R_CALL;
-
-                    case Op.R_BLOCK:
-                        return frame.raiseException(xException.unassignedReference());
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
+                return actOnReferent(frame, hRef,
+                    h -> frame.assignValue(iReturn, h.getType().getTypeHandle()));
 
             case "assigned":
                 return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isAssigned()));
 
             case "refName":
+                {
                 String sName = hRef.getName();
                 return frame.assignValue(iReturn, sName == null ?
                     xNullable.NULL : xString.makeHandle(sName));
+                }
 
             case "byteLength":
                 // TODO: deferred
@@ -106,75 +92,39 @@ public class xRef
                 return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isSelfContained()));
 
             case "isService":
-                switch (getReferent(frame, hRef, Op.A_STACK))
-                    {
-                    case Op.R_NEXT:
-                        return frame.assignValue(iReturn,
-                            xBoolean.makeHandle(frame.popStack().getTemplate().isService()));
-
-                    case Op.R_CALL:
-                        frame.addContinuation(frameCaller ->
-                            frameCaller.assignValue(iReturn,
-                                xBoolean.makeHandle(frame.popStack().getTemplate().isService())));
-                        return Op.R_CALL;
-
-                    case Op.R_BLOCK:
-                        return frame.raiseException(xException.unassignedReference());
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
+                return actOnReferent(frame, hRef,
+                    h -> frame.assignValue(iReturn,
+                        xBoolean.makeHandle(h.getTemplate().isService())));
 
             case "isConst":
-                switch (getReferent(frame, hRef, Op.A_STACK))
-                    {
-                    case Op.R_NEXT:
-                        return frame.assignValue(iReturn,
-                            xBoolean.makeHandle(frame.popStack().getComposition().isConst()));
-
-                    case Op.R_CALL:
-                        frame.addContinuation(frameCaller ->
-                            frameCaller.assignValue(iReturn,
-                                xBoolean.makeHandle(frame.popStack().getComposition().isConst())));
-                        return Op.R_CALL;
-
-                    case Op.R_BLOCK:
-                        return frame.raiseException(xException.unassignedReference());
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
+                return actOnReferent(frame, hRef,
+                    h -> frame.assignValue(iReturn,
+                        xBoolean.makeHandle(h.getComposition().isConst())));
 
             case "isImmutable":
-                switch (getReferent(frame, hRef, Op.A_STACK))
-                    {
-                    case Op.R_NEXT:
-                        return frame.assignValue(iReturn,
-                            xBoolean.makeHandle(!frame.popStack().isMutable()));
-
-                    case Op.R_CALL:
-                        frame.addContinuation(frameCaller ->
-                            frameCaller.assignValue(iReturn,
-                                xBoolean.makeHandle(!frame.popStack().isMutable())));
-                        return Op.R_CALL;
-
-                    case Op.R_BLOCK:
-                        return frame.raiseException(xException.unassignedReference());
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
+                return actOnReferent(frame, hRef,
+                    h -> frame.assignValue(iReturn,
+                        xBoolean.makeHandle(!h.isMutable())));
             }
+
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
+        }
+
+    @Override
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle hArg, int iReturn)
+        {
+        RefHandle hRef = (RefHandle) hTarget;
+
+        switch (method.getName())
+            {
+            case "instanceOf":
+                return actOnReferent(frame, hRef,
+                    h -> frame.assignValue(iReturn,
+                        xBoolean.makeHandle(instanceOf(h, (TypeHandle) hArg))));
+            }
+
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
     @Override
@@ -190,6 +140,19 @@ public class xRef
                     {
                     case "get":
                         return getReferent(frame, hRef, iReturn);
+                    }
+                break;
+
+            case 1:
+                switch (method.getName())
+                    {
+                    case "maskAs":
+                        return actOnReferent(frame, hRef,
+                            h -> maskAs(frame, h, (TypeHandle) ahArg[0], iReturn));
+
+                    case "revealAs":
+                        return actOnReferent(frame, hRef,
+                            h -> revealAs(frame, h, (TypeHandle) ahArg[0], iReturn));
                     }
                 break;
 
@@ -416,10 +379,86 @@ public class xRef
         return readOnly(frame);
         }
 
+
+    // ----- helper methods ------------------------------------------------------------------------
+
     protected int readOnly(Frame frame)
         {
         return frame.raiseException(xException.makeHandle("Ref cannot be assigned"));
         }
+
+    /**
+     * Get the referent and apply the specified action.
+     *
+     * @param frame   the current frame
+     * @param hRef    the target RefHandle
+     * @param action  the action
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION}
+     */
+    protected int actOnReferent(Frame frame, RefHandle hRef, ToIntFunction<ObjectHandle> action)
+        {
+        switch (getReferent(frame, hRef, Op.A_STACK))
+            {
+            case Op.R_NEXT:
+                return action.applyAsInt(frame.popStack());
+
+            case Op.R_CALL:
+                frame.addContinuation(frameCaller ->
+                    action.applyAsInt(frameCaller.popStack()));
+                return Op.R_CALL;
+
+            case Op.R_BLOCK:
+                return frame.raiseException(xException.unassignedReference());
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
+     * Mask the specified target as a wider type.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target object
+     * @param hType    the type handle to mask as
+     * @param iReturn  the register to return the result into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION}
+     */
+    protected int maskAs(Frame frame, ObjectHandle hTarget, TypeHandle hType, int iReturn)
+        {
+        // TODO
+        return frame.raiseException(xException.unsupportedOperation());
+        }
+
+    /**
+     * Reveal the specified target as a narrower type.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target object
+     * @param hType    the type handle to reveal as
+     * @param iReturn  the register to return the result into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION}
+     */
+    protected int revealAs(Frame frame, ObjectHandle hTarget, TypeHandle  hType, int iReturn)
+        {
+        // TODO
+        return frame.raiseException(xException.unsupportedOperation());
+        }
+
+    /**
+     * @return true iff the specified target is of the specified type
+     */
+    protected boolean instanceOf(ObjectHandle hTarget, TypeHandle  hType)
+        {
+        return hTarget.getType().isA(hType.getDataType());
+        }
+
 
     // ----- handle class -----
 
