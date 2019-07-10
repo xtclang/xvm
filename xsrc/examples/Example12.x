@@ -2645,3 +2645,29 @@ static boolean isDependent(String sDepId, String sId)
 //   - may short circuit
 //   - may abruptly non-complete (break, return, throw, etc.)
 //     - with or without an error, e.g. the T0D0 expression should *silently* non-complete
+
+// --
+
+if (s != Null)
+    {
+    console.println($"String s is ${s.size} characters long.");
+    }
+
+x = x!=Null ? x : y;
+x = x? : y;
+x = x ?: y;
+x ?:= y;
+
+String? foo();
+if (String s ?= foo())
+    {
+
+    }
+
+s ?= foo();
+s = foo()?;
+
+if (s != null)
+    {
+    // ...
+    }

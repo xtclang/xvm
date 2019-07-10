@@ -1,0 +1,96 @@
+getComponent().getIdentityConstant().getModuleConstant().getName().contains("Test")
+
+- expressions
+  - Statement expression
+  - Lambda (needs captures)
+  - anonymous inner classes ("new" expression) (needs captures)
+  - merge Throw and T0D0 expressions; test
+  - Version
+
+- statements
+  - for
+  - for v2
+  - multi variable declaration
+  - ExpressionStatement - need to lock down what is allowed there
+
+- test static property with value (both constant and init function)
+
+- verify that inner structs are getting created correctly:
+  - inner class
+  - class in a method
+  - method in a method
+  - lambda in a method
+  - static property in a method
+  - method in a property
+  - property in a property
+  - class in a property
+
+- auto conversion
+  - IntLiteral[] -> Int[] ???
+  - Tuple(String, IntLiteral) -> Tuple(String, Int) ???
+
+- tests
+  - props: should NOT be able to combine constants, type params, and props
+  - props: should NOT be able to re-introduce setter if super is unreachable
+  - props: "delegates" should default Ref / Var -
+  - props: nested inside other props, methods
+  - props: implicit never getting set for either props or methods? test "into"
+  - props: "invoke non virtual" question from gene regarding public/private implementation (in the presence of virtual collisions)
+
+- TypeInfo
+  - nested / scoped stuff
+    - static props in methods must be private
+  - methods
+  - constructors
+  - immutable types (const, enum, module, package) should have @RO for public/protected/private props
+    - but yet still have Var with field for struct, unless otherwise suppressed
+
+- Doc
+  - type system - no terminals - why it's completely different
+  - "free" objects, e.g. properties, array/tuple/function of this
+  - arrays of structs - how a handle could indicate type of "Person" vs. "Person as an array element"
+    (with any of them identifiable as: type="Person as an array element", array ref, index)
+  - arrays of columns vs. rows (SIMD opts) -- could just be two different types
+
+Contributions and call chains:
+- In the case of interfaces, there are three forms of contributions:
+  (i)   the declarative and default-implementation contents of the interface itself (internally
+        using an "equals" contribution);
+  (ii)  other interface types via "implements" contributions (note that the source code uses the
+        "extends" keyword, but the compiled result uses "implements"); and
+  (iii) a special "into" contribution of the base Object class, which allows the default method code
+        on an interface to be compiled with the implicit presence of the members of the Object class.
+- While "interface types" are often interfaces, there are several other ways to specify an interface
+  type, all of which hold declarative members, but none of which has the ability to provide default
+  member implementations:
+  (i)   a "difference type" is always an interface type;
+  (ii)  an "intersection type" always yields an interface type (in addition to yielding two separate
+        constraint types); and
+  (iii) a "union type" of types 'a' and 'b' yields an interface type iff both 'a' and 'b' are
+        interface types.
+- Mixins have a dramatically larger set of contributions available:
+  (i)   the members of the mixin itself (internally using an "equals" contribution);
+  (ii)  extends mixin (optional)
+  (iii) incorporates (including conditional mix-in)
+  (iv)  annotated-by
+  (v)   delegates interface type(s)
+  (vi)  implements interface type(s)
+  (vii) into -
+- Classes have a similar set of call chains, lacking "into" (since classes are not "mixed into"
+  anything) and adding a "rebases onto" contribution for specialized classes, such as "const" and
+  "service" types:
+  (i)   the members of the class itself (internally using an "equals" contribution);
+  (ii)  extends class (except that Object does not extend anything)
+  (iii) rebases-onto
+  (iv)  incorporates (including conditional mix-in)
+  (v)   annotated-by
+  (vi)  delegates interface type(s)
+  (vii) implements interface type(s)
+- Properties also have call chains.
+  ( ) the members of the property, referred to as "custom code";
+  ( ) the Ref/Var annotations on the property;
+  ( ) delegates (from the containing type);
+  ( ) "rebase onto" or "mixes into" Ref/Var.
+  ( ) default implementation of get() from an interface
+
+-- cut & paste
