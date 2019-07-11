@@ -534,23 +534,39 @@ public class InvocationExpression
 
             // validate the "redundant returns" expressions
             List<TypeExpression> listRedundant = exprName.params;
+
+            ValidateRedundant:
             if (listRedundant != null)
                 {
-                int cRequired  = atypeRequired == null ? 0 : atypeRequired.length;
-                int cRedundant = listRedundant.size();
-                if (cRedundant > cRequired)
+                int     cRequired  = atypeRequired == null ? 0 : atypeRequired.length;
+                int     cRedundant = listRedundant.size();
+                boolean fCond      = false;
+
+                if (cRedundant >= cRequired)
                     {
                     atypeReturn = new TypeConstant[cRedundant];
                     }
                 else
                     {
-                    atypeReturn = atypeRequired.clone(); // keep the tail as is
+                    // the only case when we have fewer types than required is a conditional return
+                    if (cRequired == cRedundant + 1 && atypeRequired[0].isA(pool.typeBoolean()))
+                        {
+                        fCond       = true;
+                        atypeReturn = atypeRequired.clone();
+                        }
+                    else
+                        {
+                        log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_MISMATCH);
+                        fValid = false;
+                        break ValidateRedundant;
+                        }
                     }
 
                 for (int i = 0; i < cRedundant; ++i)
                     {
+                    int          ixType      = fCond ? i + 1 : i;
                     TypeConstant typeTypeReq = i < cRequired
-                            ? pool.ensureParameterizedTypeConstant(pool.typeType(), atypeRequired[i])
+                            ? pool.ensureParameterizedTypeConstant(pool.typeType(), atypeRequired[ixType])
                             : pool.typeType();
 
                     TypeExpression exprOld = listRedundant.get(i);
@@ -567,7 +583,7 @@ public class InvocationExpression
                             //          _subsumed_ by this InvocationExpression
                             listRedundant.set(i, exprNew);
                             }
-                        atypeReturn[i] = exprNew.getType().getParamTypesArray()[0];
+                        atypeReturn[ixType] = exprNew.getType().getParamTypesArray()[0];
                         }
                     }
                 }
