@@ -51,6 +51,13 @@ module Ecstasy.xtclang.org
             extends Exception(text, cause);
 
     /**
+     * A TypeMismatch exception is raised when an attempt is made to cast a reference to a type, and
+     * the reference is incompatible with the specified type.
+     */
+    const TypeMismatch(String? text = null, Exception? cause = null)
+            extends Exception(text, cause);
+
+    /**
      * An OutOfBounds exception is raised when an attempt is made to invoke an operation with a
      * value that is out-of-bounds, or if the operation would result in an out-of-bounds condition.
      */
