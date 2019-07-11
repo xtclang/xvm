@@ -466,7 +466,11 @@ public abstract class ClassTemplate
 
             if (isConstructImmutable())
                 {
-                makeImmutable(hStruct);
+                ExceptionHandle hEx = makeImmutable(hStruct);
+                if (hEx != null)
+                    {
+                    return frame.raiseException(hEx);
+                    }
                 }
 
             ObjectHandle hPublic = hStruct.ensureAccess(Access.PUBLIC);
