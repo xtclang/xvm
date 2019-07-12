@@ -1,0 +1,66 @@
+{{Infobox programming language
+| name                   = Ecstasy
+| logo                   =
+| family                 = [[List of C-family programming languages|C]]
+| paradigm               = [[Programming paradigm#Multi-paradigm|Multi-paradigm]]: [[generic programming|generic]], [[object-oriented]] ([[class-based programming|class-based]]), [[reflection (computer programming)|reflective]], [[Concurrent programming|concurrent]], [[Event-driven programming|event-driven]], [[Functional programming|functional]], [[imperative programming|imperative]]
+| year                   = {{start date and age|2019}}<ref>https://ecstasylang.blogspot.com/2019/06/public-project.html</ref>
+| designer               = {{unbulleted list|Cameron Purdy|Gene Gleyzer}}
+| developer              = {{unbulleted list|The Ecstasy Project|xqiz.it}}
+| latest release version =
+| latest release date    =
+| latest preview version = 0.1<ref>https://ecstasylang.blogspot.com/2019/06/public-project.html</ref>
+| latest preview date    = 9 July 2019
+| typing                 = [[Type inference|Inferred]], [[static typing|static]], [[strong typing|strong]], [[Type safety|safe]], [[dynamic typing|dynamic]], [[duck typing|duck]]
+| implementations        =
+| platform               = XVM
+| dialects               =
+| influenced_by          = [[Smalltalk]], [[Erlang (programming language)|Erlang]], [[Java (programming language)|Java]], [[C Sharp (programming language)|C#]], [[C (programming language)|C]] [[C++]]
+| influenced             =
+| file ext               = .x, .xtc
+| license                = [[Apache License 2.0]]
+| website                = {{URL|xtclang.org}}
+| wikibooks              =
+}}
+
+'''Ecstasy''' is a general-purpose, [[multi-paradigm programming language]] encompassing [[Concurrent programming|concurrent]], [[Event-driven programming|event-driven]], [[Type safety|type-safe]] [[strong typing]] with [[Type inference|inference]], [[Lexically scoped|lexically scoped]], [[Imperative programming|imperative]], [[Declarative programming|declarative]], [[Functional programming|functional]], [[Generic programming|generic]], [[Object-oriented programming|pure object-oriented]] ([[Class (computer science)|class]]-based), and [[Component-based software engineering|component-oriented]] programming disciplines. Software written in Ecstasy is compiled to an [[Intermediate representation|binary IR format]] (.xtc file) and executed on the XTC Virtual Machine (XVM), which is also part of the Ecstasy Project<ref>https://github.com/xtclang/xvm/blob/master/src/README.md</ref>.
+
+Ecstasy was designed by Cameron Purdy and Gene Gleyzer, at xqiz.it. The most recent version is Ecstasy 0.1 ("not ready for production use"<ref>https://github.com/xtclang/xvm/blob/master/README.md</ref>), released in July 2019.
+
+== Design Goals ==
+
+Ecstasy was designed explicitly for cloud applications<ref>https://xtclang.blogspot.com/2019/04/signs-of-spring.html</ref>. According to the project blog<ref>https://xtclang.blogspot.com/2019/04/explicit-intent-enumerating-priorities.html</ref>, the design goals were prioritized as follows:
+
+{{Quote frame|
+* Correctness, aka Predictability. The behavior of a language must be obvious, correct, and predictable. This also incorporates The Principle of Least Surprise.
+* Security. While generally not a priority for language design, it is self-evident that security is not something that one adds to a system; security is either in the foundation and the substrate of a system, or it does not exist. Specifically, a language must not make possible the access to (or even make detectable the existence of) any resource that is not explicitly granted to the running software.
+* Composability. High-level computer languages are about composition. Specifically, a language should enable a developer to locate each piece of design and logic in its one best and natural place.
+* Readability. Code is written once, and referenced many times. What we call “code” should be a thing of beauty, where form follows function.
+* Lastly, a language must be recursive in its design. There is no other mechanism that predictably folds in complexity and naturally enables encapsulation. It’s turtles, the whole way down.
+}}
+
+== Syntax ==
+The core syntax of the Ecstasy language is similar to that of other C-style languages such as C, C++, Java, and C#. In particular:
+
+* Semicolons are used to denote the end of a statement.
+* [[Curly brackets]] are used to group statements. Statements are commonly grouped into functions or methods, which may then be grouped into properties or classes (recursively), and classes into packages, and packages into modules.
+* Variables are assigned using an [[equals sign]], but compared using [[==|two consecutive equals signs]].
+* [[Square brackets]] are used with [[Array data structure|arrays]]: For type declarations, for variable declarations, for array literals, and to dereference a value at a given index.
+
+== Type System ==
+The type system is a [[Object-oriented programming|pure object type system]]. Different languages assign different meanings to the term, though; in Ecstasy, ''everything is an object'', which means that anything that can be treated as a value, is an object<ref>https://xtclang.blogspot.com/2019/06/an-introduction-to-ecstasy-type-system.html</ref>.
+
+In Ecstasy, unlike most C family languages, pointers (or ''references'') are objects<ref>https://www.quora.com/Is-a-pointer-to-an-object-considered-to-be-an-object-too/answer/Cameron-Purdy</ref><ref>https://xtclang.blogspot.com/2019/06/a-pointed-paean-for-c.html</ref>. Additionally, the <code>null</code> value is an object<ref>https://www.quora.com/I-have-always-had-a-question-null-is-a-cumbersome-thing-to-deal-with-what-is-the-reason-for-creating-it/answer/Cameron-Purdy</ref>.
+
+Ecstasy is also a [[reflection (computer programming)|reflective]] language, which means that the composition of the executing code (such as modules, classes, properties, methods, functions, and types themselves) can be treated as values, which (by the [[Transitive relation|transitive property]]) means that they are objects in the type system.
+
+As a [[generic programming|generic type system]], Ecstasy generic types<ref>https://xtclang.blogspot.com/2019/06/an-introduction-to-ecstasy-type-system.html</ref> and generic type parameters<ref>https://xtclang.blogspot.com/2019/06/the-quest-for-equality.html</ref> are types, and thus  values, and thus objects. Ecstasy generic types are covariant by default<ref>https://xtclang.blogspot.com/2019/06/an-introduction-to-ecstasy-type-system.html</ref>, but can be explicitly specified as invariant.
+
+The Ecstasy type system supports duck typing, but explicitly limits the support to interface types<ref>https://xtclang.blogspot.com/2019/07/if-it-quacks.html</ref>.
+
+Ecstasy method and function declarations can specify an [[Option type|option type]] return using the <code>conditional</code> keyword<ref>https://xtclang.blogspot.com/2019/06/conditional-methods.html</ref>. The compiler supports type-safe consumption of the option type via the <code>if</code>, <code>while</code>, <code>for</code>, and <code>assert</code> statements.
+
+The Ecstasy type system supports immutability<ref>https://xtclang.blogspot.com/2019/06/an-introduction-to-ecstasy-type-system.html</ref><ref>https://www.quora.com/What-are-the-pros-and-cons-of-immutability-and-immutable-data/answer/Cameron-Purdy</ref>.
+
+== References ==
+<!-- Inline citations added to your article will automatically display here. See en.wikipedia.org/wiki/WP:REFB for instructions on how to add citations. -->
+{{reflist}}
