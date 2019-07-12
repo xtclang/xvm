@@ -10,7 +10,7 @@ Ecstasy is the programming language designed for serverless cloud applications a
 
 The Ecstasy project is composed of a programming language specification, a developer toolchain, a core runtime library, and a portable (IR-based) runtime specification.
 
-Learn more about the language at [https://xtclang.blogspot.com/](https://xtclang.blogspot.com/2016/11/welcome-to-ecstasy-language-first.html) (Twitter @xtclang)
+Learn more about the language at [https://xtclang.blogspot.com/](https://xtclang.blogspot.com/2016/11/welcome-to-ecstasy-language-first.html) (Twitter [@xtclang](https://twitter.com/xtclang))
 
 Learn more about the project at [https://ecstasylang.blogspot.com/](https://ecstasylang.blogspot.com/)
 
