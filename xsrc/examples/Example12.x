@@ -2572,6 +2572,7 @@ if (c1.equals(c2))
     // ...
     }
 
+
 // ----- assumptions
 
 // 1) this and outer this's (assumption-safe) : "this", "this.outer", "this.outer.outer", etc.
@@ -2670,4 +2671,22 @@ s = foo()?;
 if (s != null)
     {
     // ...
+    }
+
+
+interface Duck
+    {
+    void waddle();
+    void quack();
+    }
+
+class Gosling
+    {
+    void waddle() {}
+    void quack() {}
+    }
+
+Duck foo(Gosling james)
+    {
+    return james;
     }
