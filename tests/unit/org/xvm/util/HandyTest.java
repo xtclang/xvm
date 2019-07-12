@@ -2,19 +2,15 @@ package org.xvm.util;
 
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
-
 import java.io.OutputStream;
 
-import java.math.BigInteger;
 import java.util.Arrays;
 
-import java.util.Random;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -45,8 +41,6 @@ import static org.xvm.util.Handy.appendChar;
 import static org.xvm.util.Handy.quotedChar;
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.quotedString;
-import static org.xvm.util.Handy.readPackedLong;
-import static org.xvm.util.Handy.writePackedLong;
 import static org.xvm.util.Handy.writeUtf8String;
 
 
@@ -477,119 +471,6 @@ public class HandyTest
         }
 
     @Test
-    public void testReadPackedLong()
-            throws IOException
-        {
-        // 1-byte format
-        Assert.assertEquals( 0L, readPackedLong(dis("0x01")));
-        Assert.assertEquals( 1L, readPackedLong(dis("0x03")));
-        Assert.assertEquals(-1L, readPackedLong(dis("0xFF")));
-
-        // 1-byte "standalone trail" format (should never be used in reality)
-        Assert.assertEquals(0x0000, readPackedLong(dis("0x0000")));
-        Assert.assertEquals(0x0001, readPackedLong(dis("0x0001")));
-        Assert.assertEquals(-1    , readPackedLong(dis("0x00FF")));
-        Assert.assertEquals(0x007F, readPackedLong(dis("0x007F")));
-        Assert.assertEquals(0x002E, readPackedLong(dis("0x002E")));
-
-        // 2-byte "standalone trail" format (should never be used in reality)
-        Assert.assertEquals(0x0000, readPackedLong(dis("0x040000")));
-        Assert.assertEquals(0x0001, readPackedLong(dis("0x040001")));
-        Assert.assertEquals(-1    , readPackedLong(dis("0x04FFFF")));
-        Assert.assertEquals(0x7FFF, readPackedLong(dis("0x047FFF")));
-        Assert.assertEquals(0x5432, readPackedLong(dis("0x045432")));
-
-        // 4-byte trail format
-        Assert.assertEquals(0x80000000, readPackedLong(dis("0x0880000000")));
-        Assert.assertEquals(0x7FFFFFFF, readPackedLong(dis("0x087FFFFFFF")));
-
-        // 8-byte trail format
-        Assert.assertEquals(0x123456789ABCDEF0L, readPackedLong(dis("0x0C123456789ABCDEF0")));
-        Assert.assertEquals(0xFFFFFFFFFFFFFFFFL, readPackedLong(dis("0x0CFFFFFFFFFFFFFFFF")));
-        Assert.assertEquals(0x8000000000000000L, readPackedLong(dis("0x0C8000000000000000")));
-        Assert.assertEquals(0x7FFFFFFFFFFFFFFFL, readPackedLong(dis("0x0C7FFFFFFFFFFFFFFF")));
-        Assert.assertEquals(0x0000000080000000L, readPackedLong(dis("0x0C0000000080000000")));
-        Assert.assertEquals(0x000000007FFFFFFFL, readPackedLong(dis("0x0C000000007FFFFFFF")));
-        Assert.assertEquals(0x8000000000000001L, readPackedLong(dis("0x0C8000000000000001")));
-        Assert.assertEquals(0x7FFFFFFFFFFFFFFEL, readPackedLong(dis("0x0C7FFFFFFFFFFFFFFE")));
-        }
-
-    @Test
-    public void testWritePackedLong()
-            throws IOException
-        {
-        // simple
-        StringBuilder sb = new StringBuilder("0x");
-        writePackedLong(dos(sb), 0);
-        Assert.assertEquals("0x01", sb.toString());
-
-        sb = new StringBuilder("0x");
-        writePackedLong(dos(sb), 1);
-        Assert.assertEquals("0x03", sb.toString());
-
-        sb = new StringBuilder("0x");
-        writePackedLong(dos(sb), -1);
-        Assert.assertEquals("0xFF", sb.toString());
-
-        sb = new StringBuilder("0x");
-        writePackedLong(dos(sb), 0x80000000);
-        Assert.assertEquals("0x0880000000", sb.toString());
-
-        sb = new StringBuilder("0x");
-        writePackedLong(dos(sb), 0x7FFFFFFF);
-        Assert.assertEquals("0x087FFFFFFF", sb.toString());
-
-        sb = new StringBuilder("0x");
-        writePackedLong(dos(sb), 0x123456789ABCDEF0L);
-        Assert.assertEquals("0x0C123456789ABCDEF0", sb.toString());
-
-        sb = new StringBuilder("0x");
-        writePackedLong(dos(sb), 0x8000000000000000L);
-        Assert.assertEquals("0x0C8000000000000000", sb.toString());
-
-        sb = new StringBuilder("0x");
-        writePackedLong(dos(sb), 0x7FFFFFFFFFFFFFFFL);
-        Assert.assertEquals("0x0C7FFFFFFFFFFFFFFF", sb.toString());
-
-        sb = new StringBuilder("0x");
-        writePackedLong(dos(sb), 0x0000000080000000L);
-        Assert.assertEquals("0x0C0000000080000000", sb.toString());
-
-        sb = new StringBuilder("0x");
-        writePackedLong(dos(sb), 0x8000000000000001L);
-        Assert.assertEquals("0x0C8000000000000001", sb.toString());
-
-        sb = new StringBuilder("0x");
-        writePackedLong(dos(sb), 0x7FFFFFFFFFFFFFFEL);
-        Assert.assertEquals("0x0C7FFFFFFFFFFFFFFE", sb.toString());
-        }
-
-    @Test
-    public void testReadAndWritePackedLong()
-            throws IOException
-        {
-        ByteArrayOutputStream outRaw = new ByteArrayOutputStream();
-        DataOutputStream      out    = new DataOutputStream(outRaw);
-        for (long i = -17000000; i < 17000000; ++i) // cover +/- 2^24 ...
-            {
-            writePackedLong(out, i);
-            }
-
-        DataInputStream in = new DataInputStream(new ByteArrayInputStream(outRaw.toByteArray()));
-        for (long i = -17000000; i < 17000000; ++i)
-            {
-            Assert.assertEquals(i, readPackedLong(in));
-            }
-
-        try
-            {
-            in.readByte();
-            throw new IllegalStateException("oops .. bytes left over");
-            }
-        catch (IOException e) {}
-        }
-
-    @Test
     public void testReadAndWriteUtf8String()
             throws IOException
         {
@@ -610,7 +491,7 @@ public class HandyTest
         }
 
 
-    // ----- helpers -----------------------------------------------------------
+    // ----- helpers -------------------------------------------------------------------------------
 
     static DataInput dis(String s)
         {

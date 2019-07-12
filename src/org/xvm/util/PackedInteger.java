@@ -7,18 +7,56 @@ import java.io.IOException;
 
 import java.math.BigInteger;
 
-import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
- * A PackedInteger represents a 2s-complement integer of 1, 2, 4, 8, 16, or 32
- * bytes. Values up to 8 bytes can be accessed as a <tt>long</tt> value, while
- * values of any size can be accessed as a BigInteger.
+ * A PackedInteger represents a signed, 2's-complement integer of 1-512 bytes in size.
+ * <p/>
+ * Values up to 8 bytes can be accessed as a <tt>long</tt> value, while values of any size can be
+ * accessed as a BigInteger.
+ * <p/>
+ * The storage format is compressed as much as possible. There are four storage formats:
+ * <ul><li>
+ * <b>Tiny</b>: For a value in the range -64..63 (7 bits), the value can be encoded in one byte.
+ * The least significant 7 bits of the value are shifted left by 1 bit, and the 0x1 bit is set to 1.
+ * When reading in a packed integer, if bit 0x1 of the first byte is 1, then it's Tiny.
+ * </li><li>
+ * <b>Small</b>: For a value in the range -4096..4095 (13 bits), the value can be encoded in two
+ * bytes. The first byte contains the value 0x2 in the least significant 3 bits (010), and bits 8-12
+ * of the integer in bits 3-7; the second byte contains bits 0-7 of the integer.
+ * </li><li>
+ * <b>Medium</b>: For a value in the range -1048576..1048575 (21 bits), the value can be encoded in
+ * three bytes. The first byte contains the value 0x6 in the least significant 3 bits (110), and
+ * bits 16-20 of the integer in bits 3-7; the second byte contains bits 8-15 of the integer; the
+ * third byte contains bits 0-7 of the integer.
+ * </li><li>
+ * <b>Large</b>: For a value in the range -(2^511)..2^511-1 (4096 bits), a value with `{@code s}`
+ * significant bits can be encoded in no less than {@code 1+max(1,(s+7)/8)} bytes; let `{@code b}`
+ * be the selected encoding length, in bytes. The first byte contains the value 0x0 in the least
+ * significant 2 bits (00), and the least 6 significant bits of {@code (b-2)} in bits 2-7. The
+ * following {@code (b-1)} bytes contain the least significant {@code (b-1)*8} bits of the integer.
+ * </li></ul>
+ * <p/>
+ * To maximimize density and minimize pipeline stalls, the algorithms in this file use the smallest
+ * possible encoding for each value. Since an 8 significant-bit value can be encoded in two bytes
+ * using either a small or large encoding, we choose large to eliminate the potential for a
+ * (conditional-induced) pipeline stall. Since a 14..16 significant-bit value can be encoded in
+ * three bytes using either a medium or large encoding, we choose large for the same reason. Here
+ * is the
+ * <pre><code>
+ *     significant bits  encoding
+ *     ----------------  --------
+ *           <= 7        Tiny
+ *            8          Large
+ *           9-13        Small
+ *          14-16        Large
+ *          17-21        Medium
+ *          >= 22        Large
+ * </code></pre>
  */
 public class PackedInteger
         implements Comparable<PackedInteger>
     {
-    // ----- constructors ------------------------------------------------------
+    // ----- constructors --------------------------------------------------------------------------
 
     /**
      * Construct an uninitialized PackedInteger.
@@ -62,7 +100,7 @@ public class PackedInteger
         }
 
 
-    // ----- public methods ----------------------------------------------------
+    // ----- public methods ------------------------------------------------------------------------
 
     /**
      * Obtain a PackedInteger that has the specified <tt>long</tt> value. This
@@ -521,84 +559,21 @@ public class PackedInteger
         {
         verifyUninitialized();
 
-        // the first bit of the first byte is used to indicate a single byte
-        // format, in which the entire value is contained in the 7 MSBs
-        int b = in.readByte();
-        if ((b & 0x01) != 0)
+        final int b = in.readByte();
+        if ((b & 0b11) == 0b00 && (b & 0b111000_00) != 0)
             {
-            setLong(b >> 1);
-            return;
+            // "big" values are large format values with more than 8 trailing bytes (use BigInteger)
+            final int    cBytes = 1 + ((b & 0xFF) >> 2);
+            final byte[] ab     = new byte[cBytes];
+            in.readFully(ab);
+            setBigInteger(new BigInteger(ab));
             }
-
-        // the second bit is used to indicate a format that uses 1 or 2 bytes
-        // in addition to the 5 MSBs of the first byte
-        if ((b & 0x02) != 0)
+        else
             {
-            // the third bit is used to indicate 0: 1 byte, or 1: 2 bytes
-            setLong((((b & 0x04) == 0
-                    ? (int) in.readByte()
-                    : in.readShort()) << 5) | ((b >> 3) & 0x1F));
-            return;
+            // tiny, small, medium, and large (up to 8 trailing bytes) format values values fit into
+            // a Java long
+            setLong(readLong(in, b));
             }
-
-        // the size of the integer value is defined by the third to seventh bit,
-        // such that the number of bytes is (1 << nSize)
-        switch (b & 0xFC)
-            {
-            case 0b0_0_0000_00:
-                setLong(in.readByte());
-                return;
-
-            case 0b0_0_0001_00:
-                setLong(in.readShort());
-                return;
-
-            case 0b0_0_0010_00:
-                setLong(in.readInt());
-                return;
-
-            case 0b0_0_0011_00:
-                setLong(in.readLong());
-                return;
-
-            case 0b1_0_0000_00:
-                setLong(in.readUnsignedByte());
-                return;
-
-            case 0b1_0_0001_00:
-                setLong(in.readUnsignedShort());
-                return;
-
-            case 0b1_0_0010_00:
-                // unsigned int
-                setLong(in.readInt() & 0x00000000FFFFFFFFL);
-                return;
-            }
-
-        final boolean fAnyLen = (b & 0x40) != 0;
-        final int     cBytes  = fAnyLen
-                ? in.readUnsignedByte()
-                : 1 << ((b & 0x3C) >> 2);
-        if (cBytes == 0)
-            {
-            setLong(0);
-            return;
-            }
-
-        byte[] ab = new byte[cBytes];
-        in.readFully(ab);
-
-        final boolean fUnsigned = (b & 0x80) != 0;
-        if (fUnsigned && (ab[0] & 0x80) != 0)
-            {
-            // need to prepend a zero byte so that the value doesn't get interpreted as a negative
-            // value
-            byte[] abUnsigned = new byte[cBytes+1];
-            System.arraycopy(ab, 0, abUnsigned, 1, cBytes);
-            ab = abUnsigned;
-            }
-
-        setBigInteger(new BigInteger(ab));
         }
 
     /**
@@ -620,8 +595,9 @@ public class PackedInteger
             byte[] ab = m_bigint.toByteArray();
             int    cb = ab.length;
             int    of = 0;
-            assert cb > 8;
+            assert cb > 8 && cb <= 64;
 
+            // truncate any redundant bytes
             boolean fNeg  = (ab[0] & 0x80) != 0;
             int     bSkip = fNeg ? 0xFF : 0x00;
             while (of < cb-1 && ab[of] == bSkip && (ab[of+1] & 0x80) == (bSkip & 0x80))
@@ -629,23 +605,15 @@ public class PackedInteger
                 ++of;
                 }
             cb -= of;
-            assert cb > 0 && cb <= 0x100;
+            assert cb > 0 && cb <= 64;
 
-            if (Integer.bitCount(cb) == 1)
-                {
-                out.writeByte((~bSkip & 0x80) | (Integer.numberOfTrailingZeros(cb) << 2));
-                }
-            else
-                {
-                out.writeByte((~bSkip & 0x80) | 0x40);
-                out.writeByte(cb);
-                }
-
+            // write out using large format
+            out.writeByte((cb-1) << 2);
             out.write(ab, of, cb);
             }
         else
             {
-            writePackedLong(out, m_lValue);
+            writeLong(out, m_lValue);
             }
         }
 
@@ -680,7 +648,7 @@ public class PackedInteger
         }
 
 
-    // ----- Object methods ----------------------------------------------------
+    // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int hashCode()
@@ -709,7 +677,7 @@ public class PackedInteger
         }
 
 
-    // ----- Comparable methods ------------------------------------------------
+    // ----- Comparable methods --------------------------------------------------------------------
 
     @Override
     public int compareTo(PackedInteger that)
@@ -725,7 +693,167 @@ public class PackedInteger
         }
 
 
-    // ----- internal ----------------------------------------------------------
+    // ----- public helpers ------------------------------------------------------------------------
+
+    /**
+     * Write a signed 64-bit integer to a stream using variable-length
+     * encoding.
+     *
+     * @param out  the <tt>DataOutput</tt> stream to write to
+     * @param l    the <tt>long</tt> value to write
+     *
+     * @throws IOException  if an I/O exception occurs
+     */
+    public static void writeLong(DataOutput out, long l)
+            throws IOException
+        {
+        // test for Tiny
+        if (l <= 63 && l >= -64)
+            {
+            out.writeByte(((int) l) << 1 | 0x01);
+            return;
+            }
+
+        final int cBits = 65 - Long.numberOfLeadingZeros(Math.max(l, ~l));
+
+        // test for Small and Medium
+        int i = (int) l;
+        if (((1L << cBits) & 0x3E3E00L) != 0)           // test against bits 9-13 and 17-21
+            {
+            if (cBits <= 13)
+                {
+                out.writeShort(0b010_00000000           // 0x2 marker at 0..2 in byte #1
+                        | (i & 0x1F00) << 3             // bits 8..12 at 3..7 in byte #1
+                        | (i & 0x00FF));                // bits 0..7  at 0..7 in byte #2
+                }
+            else
+                {
+                out.writeByte(0b110                     // 0x6 marker  at 0..2 in byte #1
+                        | (i & 0x1F0000) >>> 13);       // bits 16..20 at 3..7 in byte #1
+                out.writeShort(i);                      // bits 8..15  at 0..7 in byte #2
+                }                                       // bits 0..7   at 0..7 in byte #3
+            return;
+            }
+
+        int cBytes = (cBits + 7) >>> 3;
+        out.writeByte((cBytes - 1) << 2);
+        switch (cBytes)
+            {
+            case 1:
+                out.writeByte(i);
+                break;
+            case 2:
+                out.writeShort(i);
+                break;
+            case 3:
+                out.writeByte(i >>> 16);
+                out.writeShort(i);
+                break;
+            case 4:
+                out.writeInt(i);
+                break;
+            case 5:
+                out.writeByte((int) (l >>> 32));
+                out.writeInt(i);
+                break;
+            case 6:
+                out.writeShort((int) (l >>> 32));
+                out.writeInt(i);
+                break;
+            case 7:
+                out.writeByte((int) (l >>> 48));
+                out.writeShort((int) (l >>> 32));
+                out.writeInt(i);
+                break;
+            case 8:
+                out.writeLong(l);
+                break;
+            default:
+                throw new IllegalStateException("n=" + l);
+            }
+        }
+
+    /**
+     * Read a variable-length encoded integer value from a stream.
+     *
+     * @param in  a <tt>DataInput</tt> stream to read from
+     *
+     * @return a <tt>long</tt> value
+     *
+     * @throws IOException  if an I/O exception occurs
+     * @throws NumberFormatException  if the integer does not fit into
+     *         a <tt>long</tt> value
+     */
+    public static long readLong(DataInput in)
+            throws IOException
+        {
+        return readLong(in, in.readByte());
+        }
+
+
+    // ----- internal ------------------------------------------------------------------------------
+
+    private static long readLong(DataInput in, int b)
+            throws IOException
+        {
+        if ((b & 0x01) != 0)
+            {
+            // Tiny format: the first bit of the first byte is used to indicate a single byte
+            // format, in which the entire value is contained in the 7 MSBs
+            return b >> 1;
+            }
+
+        if ((b & 0x02) != 0)
+            {
+            // the third bit is used to indicate 0: 1 trailing byte, or 1: 2 trailing bytes
+            if ((b & 0x04) == 0)
+                {
+                // Small format: bits 3..7 of the first byte are bits 8..12 of the result, and the
+                // next byte provides bits 0..7 of the result (note: and then also sign-extend)
+                return (b & 0xFFFFFFF8) << 5 | in.readUnsignedByte();
+                }
+            else
+                {
+                // Medium format: bits 3..7 of the first byte are bits 16..20 of the result, and the
+                // next byte provides bits 8..15 of the result, and the next byte provides bits 0..7
+                // of the result (note: and then also sign-extend)
+                return (b & 0xFFFFFFF8) << 13 | in.readUnsignedShort();
+                }
+            }
+
+        // Large format: the first two bits of the first byte are 0, so bits 3..7 of the
+        // first byte are the trailing number of bytes minus 1
+        int cBytes = 1 + ((b & 0xFC) >>> 2);
+        switch (cBytes)
+            {
+            case 1:
+                return in.readByte();
+            case 2:
+                return in.readShort();
+            case 3:
+                return in.readByte() << 16 | in.readUnsignedShort();
+            case 4:
+                return in.readInt();
+            case 5:
+                return ((long) in.readByte()) << 32 | readUnsignedInt(in);
+            case 6:
+                return ((long) in.readShort()) << 32 | readUnsignedInt(in);
+            case 7:
+                return ((long) in.readByte()) << 48
+                        | ((long) in.readUnsignedShort()) << 32
+                        | readUnsignedInt(in);
+            case 8:
+                return in.readLong();
+            default:
+                throw new IllegalStateException("# trailing bytes=" + cBytes);
+            }
+        }
+
+    private static long readUnsignedInt(DataInput in)
+            throws IOException
+        {
+        return in.readInt() & 0xFFFFFFFFL;
+        }
 
     /**
      * Determine how many bytes is necessary to hold the specified BigInteger.
@@ -754,7 +882,7 @@ public class PackedInteger
         }
 
 
-    // ----- data members ------------------------------------------------------
+    // ----- data members --------------------------------------------------------------------------
 
     /**
      * Set to true once the value has been set.
@@ -785,7 +913,7 @@ public class PackedInteger
     private static final PackedInteger[] CACHE = new PackedInteger[0x1000];
 
 
-    // ----- constants ---------------------------------------------------------
+    // ----- constants -----------------------------------------------------------------------------
 
     /**
      * Smallest integer value to cache. One quarter of the cache size is

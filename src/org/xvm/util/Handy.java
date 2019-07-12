@@ -9,12 +9,12 @@ import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.IOException;
-
 import java.io.InputStream;
+import java.io.IOException;
 import java.io.UTFDataFormatException;
 
 import java.lang.reflect.Array;
+
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 
@@ -29,7 +29,7 @@ import java.util.Arrays;
  */
 public class Handy
     {
-    // ----- String formatting -------------------------------------------------
+    // ----- String formatting ---------------------------------------------------------------------
 
     /**
      * Take the passed nibble (the low order 4 bits of the int) and return the
@@ -517,7 +517,7 @@ public class Handy
         }
 
 
-    // ----- String manipulation -----------------------------------------------
+    // ----- String manipulation -------------------------------------------------------------------
 
     /**
      * Count the number occurrences of the specified character in the passed
@@ -735,7 +735,7 @@ public class Handy
         }
 
 
-    // ----- packed integers ---------------------------------------------------
+    // ----- packed integers -----------------------------------------------------------------------
 
     /**
      * Read a variable-length encoded integer value from a stream.
@@ -751,49 +751,7 @@ public class Handy
     public static long readPackedLong(DataInput in)
             throws IOException
         {
-        // the first bit of the first byte is used to indicate a single byte
-        // format, in which the entire value is contained in the 7 MSBs
-        int b = in.readByte();
-        if ((b & 0x01) != 0)
-            {
-            return b >> 1;
-            }
-
-        // the second bit is used to indicate a format that uses 1 or 2 bytes
-        // in addition to the 5 MSBs of the first byte
-        if ((b & 0x02) != 0)
-            {
-            // the third bit is used to indicate 0: 1 byte, or 1: 2 bytes
-            return (((b & 0x04) == 0
-                    ? (int) in.readByte()
-                    : in.readShort()) << 5) | ((b >> 3) & 0x1F);
-            }
-
-        // the size of the integer value is defined by bits 2 through 7, representing the
-        // power-of-two number of bytes in the integer, such that a value of 0 is 1 byte (8 bits),
-        // a value of 1 is 2 bytes (16 bits), and so on
-        final int cBits = 1 << ((b & 0x1C) >> 2) + 3;
-        if (cBits == 64)
-            {
-            // TODO convert to switch and add unsigned knowledge
-            return in.readLong();
-            }
-        else if (cBits == 32)
-            {
-            return in.readInt();
-            }
-        else if (cBits == 16)
-            {
-            return in.readShort();
-            }
-        else if (cBits == 8)
-            {
-            return in.readByte();
-            }
-        else // if (cBits > 64)
-            {
-            throw new NumberFormatException("too many bits: " + cBits);
-            }
+        return PackedInteger.readLong(in);
         }
 
     /**
@@ -808,36 +766,7 @@ public class Handy
     public static void writePackedLong(DataOutput out, long n)
             throws IOException
         {
-        // values small enough to fit in a 1-byte format
-        if (n <= 63 && n >= -64)
-            {
-            out.writeByte(((int) n) << 1 | 0x01);
-            return;
-            }
-
-        final int cBits = 65 - Long.numberOfLeadingZeros(Math.max(n, ~n));
-        if (cBits <= 21)
-            {
-            if (cBits <= 13)
-                {
-                out.writeShort(0b010_00000000 | (((int) n) << 11) | ((((int) n) >> 5) & 0xFF));
-                }
-            else
-                {
-                out.writeByte(0b110 | (((int) n) << 3));
-                out.writeShort(((int) n) >> 5);
-                }
-            }
-        else if (cBits <= 32)
-            {
-            out.writeByte(0b010_00);
-            out.writeInt((int) n);
-            }
-        else
-            {
-            out.writeByte(0b011_00);
-            out.writeLong(n);
-            }
+        PackedInteger.writeLong(out, n);
         }
 
     /**
@@ -927,7 +856,7 @@ public class Handy
         }
 
 
-    // ----- unicode -----------------------------------------------------------
+    // ----- unicode -------------------------------------------------------------------------------
 
     /**
      * Read a single unicode character (code-point) from the passed DataInput,
@@ -1257,7 +1186,7 @@ public class Handy
             }
         }
 
-    // ----- file I/O ----------------------------------------------------------
+    // ----- file I/O ------------------------------------------------------------------------------
 
     /**
      * Open the specified file as an InputStream.
@@ -1875,7 +1804,7 @@ public class Handy
         }
 
 
-    // ----- constants ---------------------------------------------------------
+    // ----- constants -----------------------------------------------------------------------------
 
     /**
      * A constant empty array of <tt>byte</tt>.

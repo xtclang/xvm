@@ -1,19 +1,30 @@
 package org.xvm.util;
 
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 
 import java.math.BigInteger;
 
 import java.util.Random;
+
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.xvm.util.Handy.appendByteArrayAsHex;
+import static org.xvm.util.Handy.appendByteAsHex;
 import static org.xvm.util.Handy.hexStringToByteArray;
-
 import static org.xvm.util.Handy.intToHexString;
-import static org.xvm.util.HandyTest.dis;
-import static org.xvm.util.HandyTest.dos;
+import static org.xvm.util.PackedInteger.readLong;
+import static org.xvm.util.PackedInteger.writeLong;
 
 
 /**
@@ -21,6 +32,101 @@ import static org.xvm.util.HandyTest.dos;
  */
 public class PackedIntegerTest
     {
+    @Test
+    public void testWritePackedLong()
+            throws IOException
+        {
+        // tiny
+        for (int i = -64; i <= 63; ++i)
+            {
+            StringBuilder sb = new StringBuilder();
+            writeLong(dos(sb), i);
+            Assert.assertEquals("i="+i, 2, sb.length());
+            }
+
+        // small (or large+1)
+        for (int i = -4096; i <= 4095; ++i)
+            {
+            if (i < -64 || i > 63)
+                {
+                StringBuilder sb = new StringBuilder();
+                writeLong(dos(sb), i);
+                Assert.assertEquals("i="+i, 4, sb.length());
+                }
+            }
+
+        // medium (or large+2)
+        for (int i = -1048576; i <= 1048575; ++i)
+            {
+            if (i < -4096 || i > 4095)
+                {
+                StringBuilder sb = new StringBuilder();
+                writeLong(dos(sb), i);
+                Assert.assertEquals("i="+i, 6, sb.length());
+                }
+            }
+        }
+
+    @Test
+    public void testReadAndWritePackedLong()
+            throws IOException
+        {
+        ByteArrayOutputStream outRaw = new ByteArrayOutputStream();
+        DataOutputStream out    = new DataOutputStream(outRaw);
+        for (long i = -17000000; i < 17000000; ++i) // cover +/- 2^24 ...
+            {
+            writeLong(out, i);
+            }
+
+        DataInputStream in = new DataInputStream(new ByteArrayInputStream(outRaw.toByteArray()));
+        for (long i = -17000000; i < 17000000; ++i)
+            {
+            Assert.assertEquals(i, readLong(in));
+            }
+
+        try
+            {
+            in.readByte();
+            throw new IllegalStateException("oops .. bytes left over");
+            }
+        catch (IOException e) {}
+        }
+
+    @Test
+    public void testReadAndWritePackedLongRnd()
+            throws IOException
+        {
+        Random rnd    = ThreadLocalRandom.current();
+        long   lStart = System.currentTimeMillis();
+        long   lStop  = lStart + 10000;
+        do
+            {
+            long lOrig = rnd.nextLong();
+
+            ByteArrayOutputStream outRaw = new ByteArrayOutputStream();
+            DataOutputStream      out    = new DataOutputStream(outRaw);
+            for (int i = 0; i < 40; ++i)
+                {
+                writeLong(out, lOrig >> i);
+                }
+
+            DataInputStream in = new DataInputStream(new ByteArrayInputStream(outRaw.toByteArray()));
+            for (int i = 0; i < 40; ++i)
+                {
+                long lCheck = readLong(in);
+                Assert.assertEquals(lOrig >> i, lCheck);
+                }
+
+            try
+                {
+                in.readByte();
+                throw new IllegalStateException("oops .. bytes left over");
+                }
+            catch (IOException e) {}
+            }
+        while (System.currentTimeMillis() < lStop);
+        }
+
     @Test
     public void testSer()
             throws IOException
@@ -98,7 +204,7 @@ public class PackedIntegerTest
         long lStop = System.currentTimeMillis() + 30000;
         for (int i = 0; i < 100000000; ++i)
             {
-            int cb = rnd.nextInt(rnd.nextInt(70)+1)+1;
+            int cb = rnd.nextInt(rnd.nextInt(64)+1)+1;
             byte[] ab = new byte[cb];
             rnd.nextBytes(ab);
             testSer(ab);
@@ -109,14 +215,17 @@ public class PackedIntegerTest
             }
         }
 
-    private void testSer(String s)
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    private static void testSer(String s)
             throws IOException
         {
         byte[] ab = hexStringToByteArray(s);
         testSer(ab);
         }
 
-    private void testSer(byte[] ab)
+    private static void testSer(byte[] ab)
             throws IOException
         {
         BigInteger bigint = new BigInteger(ab);
@@ -127,5 +236,34 @@ public class PackedIntegerTest
         Assert.assertEquals(pint, pint2);
         BigInteger bigint2 = pint2.getBigInteger();
         Assert.assertEquals(bigint, bigint2);
+        }
+
+    private static DataInput dis(String s)
+        {
+        return new DataInputStream(new ByteArrayInputStream(hexStringToByteArray(s)));
+        }
+
+    private static DataOutput dos(StringBuilder sb)
+        {
+        return new DataOutputStream(new OutputStream()
+            {
+            @Override
+            public void write(int b)
+                {
+                appendByteAsHex(sb, b);
+                }
+
+            @Override
+            public void write(byte b[])
+                {
+                appendByteArrayAsHex(sb, b);
+                }
+
+            @Override
+            public void write(byte b[], int off, int len)
+                {
+                appendByteArrayAsHex(sb, b, off, len);
+                }
+            });
         }
     }
