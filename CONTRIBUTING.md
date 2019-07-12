@@ -3,7 +3,9 @@ Contributing
 
 Thank you for your interest in contributing to The Ecstasy Project. By participating in this project, you agree to abide by our [code of conduct](CODE_OF_CONDUCT.md).
 
-Pull requests are welcome. Before submitting your first pull request, please sign and submit either an [individual contributor agreement](./license/icla.txt) ([PDF](./license/icla.pdf)) or (if contributing as an employee of a company) a [corporate contributor agreement](./license/ccla.txt) ([PDF](./license/ccla.pdf)). (For information about the basis and purpose of our contributor agreements, see <https://www.apache.org/licenses/contributor-agreements.html>.) Please email the signed form to <info@xtclang.org>.
+Pull requests are welcome. Documentation changes do not require a contributor agreement.
+
+Code submissions (new or modified code) do require a contributor agreement. To keep things simple for legal purposes, The Ecstasy Project uses the same contributor agreements as the Apache Software Foundation, but modified to refer to The Ecstasy Project; for information about the basis and purpose of our contributor agreements, see <https://www.apache.org/licenses/contributor-agreements.html>.) Please sign and submit either an [individual contributor agreement](./license/icla.txt) ([PDF](./license/icla.pdf)) or (if contributing as an employee of a company) a [corporate contributor agreement](./license/ccla.txt) ([PDF](./license/ccla.pdf)) to <info@xtclang.org>. (Our apologies in advance for the hassle, but we need to be very careful about potential IP issues, based on the same fundamental concerns that Apache has. Thank you for your understanding.)
 
 ## Contribution guidelines ##
 
