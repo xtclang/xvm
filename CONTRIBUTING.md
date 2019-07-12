@@ -5,7 +5,9 @@ Thank you for your interest in contributing to The Ecstasy Project. By participa
 
 Pull requests are welcome. Documentation changes do not require a contributor agreement.
 
-Code submissions (new or modified code) do require a contributor agreement. To keep things simple for legal purposes, The Ecstasy Project uses the same contributor agreements as the Apache Software Foundation, but modified to refer to The Ecstasy Project; for information about the basis and purpose of our contributor agreements, see <https://www.apache.org/licenses/contributor-agreements.html>.) Please sign and submit either an [individual contributor agreement](./license/icla.txt) ([PDF](./license/icla.pdf)) or (if contributing as an employee of a company) a [corporate contributor agreement](./license/ccla.txt) ([PDF](./license/ccla.pdf)) to <info@xtclang.org>. (Our apologies in advance for the hassle, but we need to be very careful about potential IP issues, based on the same fundamental concerns that Apache has. Thank you for your understanding.)
+Code submissions (new or modified code) do require a contributor agreement. To keep things simple for legal purposes, The Ecstasy Project uses the same contributor agreements as the Apache Software Foundation, but modified to refer to The Ecstasy Project. For information about the basis and purpose of our contributor agreements, see <https://www.apache.org/licenses/contributor-agreements.html>. Please sign and submit either an [individual contributor agreement](./license/icla.txt) ([PDF](./license/icla.pdf)) or (if contributing as an employee of a company) a [corporate contributor agreement](./license/ccla.txt) ([PDF](./license/ccla.pdf)) to <info@xtclang.org>.
+
+_(Our apologies in advance for the hassle, but we need to be very careful about potential IP issues, based on the same fundamental concerns that Apache has. Thank you for your understanding.)_
 
 ## Contribution guidelines ##
 
