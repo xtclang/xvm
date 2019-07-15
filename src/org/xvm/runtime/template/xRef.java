@@ -122,6 +122,10 @@ public class xRef
                 return actOnReferent(frame, hRef,
                     h -> frame.assignValue(iReturn,
                         xBoolean.makeHandle(instanceOf(h, (TypeHandle) hArg))));
+
+            case "maskAs":
+                return actOnReferent(frame, hRef,
+                    h -> maskAs(frame, h, (TypeHandle) hArg, iReturn));
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -133,37 +137,17 @@ public class xRef
         {
         RefHandle hRef = (RefHandle) hTarget;
 
-        switch (ahArg.length)
+        switch (method.getName())
             {
-            case 0:
-                switch (method.getName())
-                    {
-                    case "get":
-                        return getReferent(frame, hRef, iReturn);
-                    }
-                break;
+            case "get":
+                return getReferent(frame, hRef, iReturn);
 
-            case 1:
-                switch (method.getName())
-                    {
-                    case "maskAs":
-                        return actOnReferent(frame, hRef,
-                            h -> maskAs(frame, h, (TypeHandle) ahArg[0], iReturn));
-
-                    case "revealAs":
-                        return actOnReferent(frame, hRef,
-                            h -> revealAs(frame, h, (TypeHandle) ahArg[0], iReturn));
-                    }
-                break;
-
-            case 3:
-                if (method.getName().equals("equals"))
-                    {
-                    RefHandle hRef1 = (RefHandle) ahArg[1];
-                    RefHandle hRef2 = (RefHandle) ahArg[2];
-                    return new CompareReferents(hRef1, hRef2, this, iReturn).doNext(frame);
-                    }
-                break;
+            case "equals":
+                {
+                RefHandle hRef1 = (RefHandle) ahArg[1];
+                RefHandle hRef2 = (RefHandle) ahArg[2];
+                return new CompareReferents(hRef1, hRef2, this, iReturn).doNext(frame);
+                }
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -178,30 +162,16 @@ public class xRef
         switch (method.getName())
             {
             case "peek":
-                if (hRef.isAssigned())
-                    {
-                    switch (getReferent(frame, hRef, Op.A_STACK))
-                        {
-                        case Op.R_NEXT:
-                            return frame.assignValues(aiReturn, xBoolean.TRUE, frame.popStack());
+                return hRef.isAssigned()
+                    ? actOnReferent(frame, hRef,
+                        h -> frame.assignValues(aiReturn, xBoolean.TRUE, h))
+                    : frame.assignValue(aiReturn[0], xBoolean.FALSE);
 
-                        case Op.R_CALL:
-                            frame.addContinuation(frameCaller ->
-                                frame.assignValues(aiReturn, xBoolean.TRUE, frame.popStack()));
-                            return Op.R_CALL;
-
-                        case Op.R_EXCEPTION:
-                            return Op.R_EXCEPTION;
-
-                        default:
-                            throw new IllegalStateException();
-                        }
-                    }
-                 else
-                    {
-                    return frame.assignValue(aiReturn[0], xBoolean.FALSE);
-                    }
+            case "revealAs":
+                return actOnReferent(frame, hRef,
+                    h -> revealAs(frame, h, (TypeHandle) ahArg[0], aiReturn));
             }
+
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
@@ -431,30 +401,52 @@ public class xRef
      */
     protected int maskAs(Frame frame, ObjectHandle hTarget, TypeHandle hType, int iReturn)
         {
-        // TODO
-        return frame.raiseException(xException.unsupportedOperation());
+        if (hTarget instanceof GenericHandle)
+            {
+            ObjectHandle hMasked =
+                ((GenericHandle) hTarget).maskAs(frame, hType.getDataType());
+
+            return hMasked == null
+                ? frame.raiseException(xException.illegalCast(hType.getDataType().getValueString()))
+                : frame.assignValue(iReturn, hMasked);
+            }
+        else
+            {
+            return frame.raiseException(xException.unsupportedOperation());
+            }
         }
 
     /**
      * Reveal the specified target as a narrower type.
      *
-     * @param frame    the current frame
-     * @param hTarget  the target object
-     * @param hType    the type handle to reveal as
-     * @param iReturn  the register to return the result into
+     * @param frame     the current frame
+     * @param hTarget   the target object
+     * @param hType     the type handle to reveal as
+     * @param aiReturn  the register to return the conditional result into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION}
      */
-    protected int revealAs(Frame frame, ObjectHandle hTarget, TypeHandle  hType, int iReturn)
+    protected int revealAs(Frame frame, ObjectHandle hTarget, TypeHandle hType, int[] aiReturn)
         {
-        // TODO
-        return frame.raiseException(xException.unsupportedOperation());
+        if (hTarget instanceof GenericHandle)
+            {
+            ObjectHandle hRevealed =
+                ((GenericHandle) hTarget).revealAs(frame, hType.getDataType());
+
+            return hRevealed == null
+                ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
+                : frame.assignValues(aiReturn, xBoolean.TRUE, hRevealed);
+            }
+        else
+            {
+            return frame.raiseException(xException.unsupportedOperation());
+            }
         }
 
     /**
      * @return true iff the specified target is of the specified type
      */
-    protected boolean instanceOf(ObjectHandle hTarget, TypeHandle  hType)
+    protected boolean instanceOf(ObjectHandle hTarget, TypeHandle hType)
         {
         return hTarget.getType().isA(hType.getDataType());
         }

@@ -342,6 +342,49 @@ public abstract class ObjectHandle
             return listUnassigned;
             }
 
+        @Override
+        public boolean isNativeEqual()
+            {
+            return false;
+            }
+
+        /**
+         * @return a new GenericHandle for this object masked to the specified type or null if the
+         *         request cannot be fulfilled
+         */
+        public GenericHandle maskAs(Frame frame, TypeConstant typeAs)
+            {
+            TypeComposition clzAs = getComposition().maskAs(typeAs);
+            if (clzAs != null)
+                {
+                GenericHandle hClone = (GenericHandle) cloneAs(clzAs);
+                hClone.m_owner = frame.f_context.f_container;
+                return hClone;
+                }
+            return null;
+            }
+
+        /**
+         * @return a new GenericHandle for this object revealed as the specified type or null if the
+         *         request cannot be fulfilled
+         */
+        public GenericHandle revealAs(Frame frame, TypeConstant typeAs)
+            {
+            if (m_owner != null && m_owner != frame.f_context.f_container)
+                {
+                // only the owner can reveal
+                return null;
+                }
+
+            TypeComposition clzAs = getComposition().revealAs(typeAs);
+            if (clzAs != null)
+                {
+                // TODO: consider holding to the original object and returning it
+                return (GenericHandle) cloneAs(clzAs);
+                }
+            return null;
+            }
+
         public static boolean compareIdentity(GenericHandle h1, GenericHandle h2)
             {
             if (h1 == h2)
@@ -383,14 +426,11 @@ public abstract class ObjectHandle
             return true;
             }
 
-        @Override
-        public boolean isNativeEqual()
-            {
-            return false;
-            }
-
         // keyed by the property name or a NestedIdentity
         private Map<Object, ObjectHandle> m_mapFields;
+
+        // not null only if this object was explicitly "masked as"
+        private Container m_owner;
 
         /**
          * Synthetic property holding a reference to a parent instance.

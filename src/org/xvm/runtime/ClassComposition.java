@@ -25,7 +25,6 @@ import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
-import org.xvm.runtime.template.InterfaceProxy;
 import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xString.StringHandle;
 
@@ -137,35 +136,20 @@ public class ClassComposition
     @Override
     public ClassComposition maskAs(TypeConstant type)
         {
-        if (type.equals(f_typeRevealed))
-            {
-            return this;
-            }
-
-        if (!f_typeRevealed.isA(type))
-            {
-            throw new IllegalArgumentException("Type " + f_typeRevealed + " cannot be widened to " + type);
-            }
-
-        return f_mapCompositions.computeIfAbsent(type, typeR -> new ClassComposition(this, typeR));
+        return type.equals(f_typeRevealed) ? this :
+               f_typeRevealed.isA(type)
+                   ? f_mapCompositions.computeIfAbsent(type, typeR -> new ClassComposition(this, typeR))
+                   : null;
         }
 
     @Override
-    public ClassComposition revealAs(TypeConstant type, Container container)
+    public ClassComposition revealAs(TypeConstant type)
         {
-        // TODO: this is only allowed within the container that created the original TypeComposition
-
-        if (type.equals(f_typeRevealed))
-            {
-            return this;
-            }
-
-        if (!f_typeInception.isA(type))
-            {
-            throw new IllegalArgumentException("Type " + f_typeInception + " cannot be revealed as " + type);
-            }
-
-        return f_mapCompositions.computeIfAbsent(type, typeR -> new ClassComposition(this, typeR));
+        return type.equals(f_typeRevealed)  ? this :
+               type.equals(f_typeInception) ? f_clzInception :
+               f_typeInception.isA(type)
+                   ? f_mapCompositions.computeIfAbsent(type, typeR -> new ClassComposition(this, typeR))
+                   : null;
         }
 
     @Override

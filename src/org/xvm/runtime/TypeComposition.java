@@ -42,6 +42,8 @@ public interface TypeComposition
      * Retrieve a TypeComposition that widens the current type to the specified type.
      *
      * Note that the underlying ClassTemplate doesn't change.
+     *
+     * @return the new composition or null if the operation cannot be fulfilled
      */
     TypeComposition maskAs(TypeConstant type);
 
@@ -49,8 +51,10 @@ public interface TypeComposition
      * Retrieve a TypeComposition that widens the actual type to the specified type.
      *
      * Note that the underlying ClassTemplate doesn't change.
+     *
+     * @return the new composition or null if the operation cannot be fulfilled
      */
-    TypeComposition revealAs(TypeConstant type, Container container);
+    TypeComposition revealAs(TypeConstant type);
 
     /**
      * @return an inception TypeComposition

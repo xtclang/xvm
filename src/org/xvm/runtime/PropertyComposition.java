@@ -80,7 +80,7 @@ public class PropertyComposition
         }
 
     @Override
-    public TypeComposition revealAs(TypeConstant type, Container container)
+    public TypeComposition revealAs(TypeConstant type)
         {
         throw new UnsupportedOperationException();
         }

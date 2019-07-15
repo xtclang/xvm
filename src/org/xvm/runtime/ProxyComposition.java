@@ -66,7 +66,7 @@ public class ProxyComposition
         }
 
     @Override
-    public ProxyComposition revealAs(TypeConstant type, Container container)
+    public ProxyComposition revealAs(TypeConstant type)
         {
         throw new UnsupportedOperationException();
         }
