@@ -990,6 +990,40 @@ public class ClassStructure
             return true;
             }
 
+        return findContributionImpl(idClass, fAllowInto) != null;
+        }
+
+    /**
+     * Find a contribution of a specified identity.
+     *
+     * @param idContrib   the contribution identity
+     *
+     * @return a first (if more than one) contribution matching the specified identity
+     *         or null if none found
+     */
+    public Contribution findContribution(IdentityConstant idContrib)
+        {
+        if (idContrib.equals(getIdentityConstant()))
+            {
+            return new Contribution(Composition.Equal, getFormalType());
+            }
+
+        return findContributionImpl(idContrib, false);
+        }
+
+    /**
+     * Implementation of the contribution lookup.
+     *
+     * @param idContrib   the contribution identity (must mot be this class's id)
+     * @param fAllowInto  if false, ignore the Into contributions
+     *
+     * @return a first (if more than one) contribution matching the specified identity
+     *         or null if none found
+     */
+    private Contribution findContributionImpl(IdentityConstant idContrib, boolean fAllowInto)
+        {
+        assert !idContrib.equals(getIdentityConstant());
+
         for (Contribution contrib : getContributionsAsList())
             {
             TypeConstant typeContrib = contrib.getTypeConstant();
@@ -1013,20 +1047,26 @@ public class ClassStructure
                 case Incorporates:
                 case Extends:
                 case Delegates:
-                    ClassStructure clzContrib = (ClassStructure)
-                            typeContrib.getSingleUnderlyingClass(true).getComponent();
-                    if (clzContrib.hasContribution(idClass, false))
+                    {
+                    IdentityConstant idContribNext = typeContrib.getSingleUnderlyingClass(true);
+                    if (idContribNext.equals(idContrib))
                         {
-                        return true;
+                        return contrib;
                         }
+                    ClassStructure clzContrib  = (ClassStructure) idContribNext.getComponent();
+                    Contribution   contribNext = clzContrib.findContributionImpl(idContrib, false);
+                    if (contribNext != null)
+                        {
+                        return contribNext;
+                        }
+                    }
 
                 default:
                     // ignore any other contributions
                     break;
                 }
             }
-
-        return false;
+        return null;
         }
 
     /**

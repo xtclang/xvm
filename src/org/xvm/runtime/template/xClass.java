@@ -138,6 +138,11 @@ public class xClass
             super(clzTarget);
             }
 
+        public TypeConstant getPublicType()
+            {
+            return getType().getParamTypesArray()[0];
+            }
+
         @Override
         public String toString()
             {
