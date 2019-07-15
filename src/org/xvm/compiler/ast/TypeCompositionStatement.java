@@ -34,6 +34,7 @@ import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodType;
@@ -1152,7 +1153,7 @@ public class TypeCompositionStatement
 
                 case DELEGATES:
                     // these are all OK; other checks will be done after the types are resolvable
-                    TypeConstant constClass = composition.getType().ensureTypeConstant();
+                    TypeConstant      constClass = composition.getType().ensureTypeConstant();
                     PropertyConstant  constProp  = pool.ensurePropertyConstant(component.getIdentityConstant(),
                             ((Composition.Delegates) composition).getPropertyName()); // TODO change back from prop -> expr
                     for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
@@ -1838,6 +1839,38 @@ public class TypeCompositionStatement
                 if (constructor.isSynthetic() && !constructor.ensureCode().hasOps())
                     {
                     generateConstructor(component, constructor, errs);
+                    }
+                }
+            }
+
+        if (compositions == null)
+            {
+            return;
+            }
+
+        for (Composition composition : compositions)
+            {
+            if (composition instanceof Composition.Delegates)
+                {
+                String sProp = ((Composition.Delegates) composition).getPropertyName();
+
+                TypeConstant typePri = pool().ensureAccessTypeConstant(
+                                            component.getFormalType(), Access.PRIVATE);
+                TypeInfo     infoThis = typePri.ensureTypeInfo(errs);
+                PropertyInfo infoProp = infoThis.findProperty(sProp);
+                if (infoProp == null)
+                    {
+                    composition.log(errs, Severity.ERROR, Compiler.DELEGATE_PROP_MISSING, sProp);
+                    return;
+                    }
+
+                TypeConstant typeDelegate = composition.getType().ensureTypeConstant();
+                TypeConstant typeProp     = infoProp.getType();
+                if (!typeProp.isA(typeDelegate))
+                    {
+                    composition.log(errs, Severity.ERROR, Compiler.DELEGATE_PROP_WRONG_TYPE, sProp,
+                            typeDelegate.getValueString(), typeProp.getValueString());
+                    return;
                     }
                 }
             }

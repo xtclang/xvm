@@ -87,7 +87,7 @@ public class MultiMethodConstant
         }
 
     @Override
-    public IdentityConstant ensureNestedIdentity(ConstantPool pool, IdentityConstant that)
+    public MultiMethodConstant ensureNestedIdentity(ConstantPool pool, IdentityConstant that)
         {
         return pool.ensureMultiMethodConstant(
                 getParentConstant().ensureNestedIdentity(pool, that), getName());

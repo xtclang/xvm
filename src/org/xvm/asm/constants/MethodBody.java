@@ -132,6 +132,16 @@ public class MethodBody
         }
 
     /**
+     * Set the method structure for this body.
+     */
+    public void setMethodStructure(MethodStructure method)
+        {
+        assert m_structMethod == null;
+        m_structMethod = method;
+        }
+
+
+    /**
      * @return true iff this is an abstract method, which means that the method is declared or
      *         implied, but not implemented
      */

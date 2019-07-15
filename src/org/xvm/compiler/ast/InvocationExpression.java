@@ -705,14 +705,21 @@ public class InvocationExpression
                             {
                             // purge the type parameters and resolve the method signature
                             // against all the types we know by now
-                            int            cParams = method.getParamCount() - cTypeParams;
-                            TypeConstant[] atype   = new TypeConstant[cParams];
+                            int cParams = method.getParamCount() - cTypeParams;
+                            if (cParams > 0)
+                                {
+                                TypeConstant[] atype   = new TypeConstant[cParams];
 
-                            System.arraycopy(atypeArgs, cTypeParams, atype, 0, cParams);
+                                System.arraycopy(atypeArgs, cTypeParams, atype, 0, cParams);
 
-                            GenericTypeResolver resolver = makeTypeParameterResolver(ctx, method,
-                                    m_fCall ? atypeReturn : TypeConstant.NO_TYPES);
-                            atypeArgs = resolveTypes(resolver, atype);
+                                GenericTypeResolver resolver = makeTypeParameterResolver(ctx, method,
+                                        m_fCall ? atypeReturn : TypeConstant.NO_TYPES);
+                                atypeArgs = resolveTypes(resolver, atype);
+                                }
+                            else
+                                {
+                                atypeArgs = TypeConstant.NO_TYPES;
+                                }
                             }
 
                         // test the "regular fit" first and Tuple afterwards

@@ -20,6 +20,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
@@ -30,9 +31,20 @@ import org.xvm.asm.constants.TypeConstant.Relation;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.Call_01;
+import org.xvm.asm.op.Invoke_00;
 import org.xvm.asm.op.Invoke_01;
+import org.xvm.asm.op.Invoke_0N;
+import org.xvm.asm.op.Invoke_10;
+import org.xvm.asm.op.Invoke_11;
+import org.xvm.asm.op.Invoke_1N;
+import org.xvm.asm.op.Invoke_N0;
+import org.xvm.asm.op.Invoke_N1;
+import org.xvm.asm.op.Invoke_NN;
+import org.xvm.asm.op.L_Get;
 import org.xvm.asm.op.L_Set;
 import org.xvm.asm.op.Return_0;
+import org.xvm.asm.op.Return_1;
+import org.xvm.asm.op.Return_N;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -2509,6 +2521,122 @@ public class ClassStructure
             method.setAbstract(true);
             }
         return method;
+        }
+
+    /**
+     * Create a synthetic "delegating" method for this class that delegates to the specified
+     * method on the specified property.
+     *
+     * @param method  the method to delegate to
+     * @param sProp   the delegating property name
+     *
+     * @return a synthetic MethodStructure that has the auto-generated delegating code
+     */
+    public MethodStructure ensureDelegation(MethodStructure method, String sProp)
+        {
+        SignatureConstant sig            = method.getIdentityConstant().getSignature();
+        MethodStructure   methodDelegate = findMethod(sig);
+        if (methodDelegate == null)
+            {
+            TypeConstant typeFormal   = getFormalType();
+            TypeConstant typePrivate  = getConstantPool().ensureAccessTypeConstant(typeFormal, Access.PRIVATE);
+            TypeInfo     infoPrivate  = typePrivate.ensureTypeInfo();
+            PropertyInfo infoProp     = infoPrivate.findProperty(sProp);
+            TypeConstant typeProp     = infoProp.getType();
+
+            Parameter[]  aParams      = method.getParamArray().clone();
+            Parameter[]  aReturns     = method.getReturnArray().clone();
+
+            methodDelegate  = createMethod(false, method.getAccess(), null,
+                    aReturns, method.getName(), aParams, true, false);
+
+            MethodStructure.Code code         = methodDelegate.createCode();
+            MethodInfo           infoDelegate = typeProp.ensureTypeInfo().getMethodBySignature(sig);
+            MethodConstant       idDelegate   = infoDelegate.getIdentity();
+            int                  cParams      = method.getParamCount();
+            int                  cReturns     = method.getReturnCount();
+            Register[]           aregParam    = cParams  == 0 ? null : new Register[cParams];
+            Register[]           aregReturn   = cReturns == 0 ? null : new Register[cReturns];
+
+            for (int i = 0; i < cParams; i++)
+                {
+                aregParam[i] = new Register(aParams[i].getType(), i);
+                }
+
+            Register regProp = new Register(typeProp);
+
+            code.add(new L_Get(infoProp.getIdentity(), regProp));
+
+            switch (aReturns.length)
+                {
+                case 0:
+                    switch (aParams.length)
+                        {
+                        case 0:
+                            code.add(new Invoke_00(regProp, idDelegate));
+                            break;
+
+                        case 1:
+                            code.add(new Invoke_10(regProp, idDelegate, aregParam[0]));
+                            break;
+
+                        default:
+                            code.add(new Invoke_N0(regProp, idDelegate, aregParam));
+                            break;
+                        }
+                    code.add(new Return_0());
+                    break;
+
+                case 1:
+                    {
+                    Register regReturn = new Register(aReturns[0].getType(), Op.A_STACK);
+                    switch (aParams.length)
+                        {
+                        case 0:
+                            code.add(new Invoke_01(regProp, idDelegate, regReturn));
+                            break;
+
+                        case 1:
+                            code.add(new Invoke_11(regProp, idDelegate, aregParam[0], regReturn));
+                            break;
+
+                        default:
+                            code.add(new Invoke_N1(regProp, idDelegate, aregParam, regReturn));
+                            break;
+                        }
+                    code.add(new Return_1(regReturn));
+                    break;
+                    }
+
+                default:
+                    {
+                    for (int i = 0; i < cReturns; i++)
+                        {
+                        aregReturn[i] = new Register(aReturns[i].getType());
+                        }
+
+                    switch (aParams.length)
+                        {
+                        case 0:
+                            code.add(new Invoke_0N(regProp, idDelegate, aregReturn));
+                            break;
+
+                        case 1:
+                            code.add(new Invoke_1N(regProp, idDelegate, aregParam[0], aregReturn));
+                            break;
+
+                        default:
+                            code.add(new Invoke_NN(regProp, idDelegate, aregParam, aregReturn));
+                            break;
+                        }
+                    code.add(new Return_N(aregReturn));
+                    break;
+                    }
+                }
+
+            code.ensureAssembled();
+            }
+        return methodDelegate;
         }
 
     /**

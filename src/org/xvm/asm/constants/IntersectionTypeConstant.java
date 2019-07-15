@@ -370,7 +370,7 @@ public class IntersectionTypeConstant
                 // TODO: check for the type compatibility and maybe a "common" structure
                 //       and then choose/build the best PropertyInfo
 
-                PropertyInfo prop1 = info1.findProperty(sName);
+                PropertyInfo prop1 = entry.getValue();
                 map.put(prop1.getIdentity(), prop1);
                 }
             }
@@ -391,7 +391,7 @@ public class IntersectionTypeConstant
                 // the method exists in both maps;
                 // TODO: check for the compatibility and choose the best MethodInfo
 
-                MethodInfo method1 = info1.getMethodBySignature(sig);
+                MethodInfo method1 = entry.getValue();
                 map.put(method1.getIdentity(), method1);
                 }
             }

@@ -4,8 +4,13 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Component.SimpleCollector;
@@ -14,6 +19,8 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+
+import org.xvm.util.ListMap;
 
 
 /**
@@ -182,15 +189,110 @@ public class DifferenceTypeConstant
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
         // we've been asked to resolve some type defined as "T1 - T2", which means that we need to
-        // first resolve T1 and T2, and then add all the information from T1 that is not in T2 to
-        // the passed-in TypeInfo; the primary complication at this point is that we may have
-        // type parameter information that will be required to resolve either T1 and/or T2
-        TypeInfo info1 = getUnderlyingType().ensureTypeInfo(errs);
-        TypeInfo info2 = getUnderlyingType2().ensureTypeInfo(errs);
-        // TODO
-        throw new UnsupportedOperationException("TODO");
+        // first resolve T1 and T2, and then collect all the information from T1 that is not in T2
+        TypeConstant type1   = m_constType1;
+        TypeConstant type2   = m_constType2;
+        int          cInvals = getConstantPool().getInvalidationCount();
+        TypeInfo     info1   = type1.ensureTypeInfo(errs);
+        TypeInfo     info2   = type2.ensureTypeInfo(errs);
+
+        return new TypeInfo(this,
+                            cInvals,
+                            null,                   // struct
+                            0,                      // depth
+                            false,                  // synthetic
+                            mergeTypeParams(info1, info2, errs),
+                            mergeAnnotations(info1, info2, errs),
+                            null,                   // typeExtends
+                            null,                   // typeRebase
+                            null,                   // typeInto
+                            Collections.EMPTY_LIST, // listProcess,
+                            ListMap.EMPTY,          // listmapClassChain
+                            ListMap.EMPTY,          // listmapDefaultChain
+                            mergeProperties(info1, info2, errs),
+                            mergeMethods(info1, info2, errs),
+                            Collections.EMPTY_MAP,  // mapVirtProps
+                            Collections.EMPTY_MAP,  // mapVirtMethods
+                            info1.getProgress().worstOf(info2.getProgress())
+                            );
         }
 
+    protected Map<Object, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs)
+        {
+        Map<Object, ParamInfo> map1 = info1.getTypeParams();
+        Map<Object, ParamInfo> map2 = info2.getTypeParams();
+        Map<Object, ParamInfo> map  = new HashMap<>(map1);
+
+        // keep all the type params from the first type unless they are not compatible with the second
+        for (Iterator<Map.Entry<Object, ParamInfo>> iter = map.entrySet().iterator(); iter.hasNext();)
+            {
+            Map.Entry<Object, ParamInfo> entry = iter.next();
+
+            Object nid = entry.getKey();
+
+            ParamInfo param2 = map2.get(nid);
+            if (param2 != null)
+                {
+                // the type param exists in both maps; check if the types are compatible
+                ParamInfo    param1 = entry.getValue();
+                TypeConstant type1  = param1.getActualType();
+                TypeConstant type2  = param2.getActualType();
+
+                if (!type2.isAssignableTo(type1))
+                    {
+                    // the type param is incompatible; remove it
+                    iter.remove();
+                    }
+                }
+            }
+
+        return map;
+        }
+
+    protected Annotation[] mergeAnnotations(TypeInfo info1, TypeInfo info2, ErrorListener errs)
+        {
+        // TODO
+        return null;
+        }
+
+    protected Map<PropertyConstant, PropertyInfo> mergeProperties(TypeInfo info1, TypeInfo info2, ErrorListener errs)
+        {
+        Map<PropertyConstant, PropertyInfo> map = new HashMap<>();
+
+        for (Map.Entry<String, PropertyInfo> entry : info1.ensurePropertiesByName().entrySet())
+            {
+            String sName = entry.getKey();
+
+            PropertyInfo prop2 = info2.findProperty(sName);
+            if (prop2 == null)
+                {
+                // the property only exists in the first map; take it
+                PropertyInfo prop1 = entry.getValue();
+                map.put(prop1.getIdentity(), prop1);
+                }
+            }
+        return map;
+        }
+
+    protected Map<MethodConstant, MethodInfo> mergeMethods(TypeInfo info1, TypeInfo info2, ErrorListener errs)
+        {
+        Map<MethodConstant, MethodInfo> map = new HashMap<>();
+
+        for (Map.Entry<SignatureConstant, MethodInfo> entry : info1.ensureMethodsBySignature().entrySet())
+            {
+            SignatureConstant sig = entry.getKey();
+
+            MethodInfo method1 = entry.getValue();
+            MethodInfo method2 = info2.getMethodBySignature(sig);
+
+            if (method2 == null && !method1.isConstructor())
+                {
+                // the method only exists in the first map; take it
+                map.put(method1.getIdentity(), method1);
+                }
+            }
+        return map;
+        }
 
     // ----- type comparison support ---------------------------------------------------------------
 

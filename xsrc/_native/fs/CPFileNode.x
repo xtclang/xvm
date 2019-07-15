@@ -9,7 +9,7 @@ import Ecstasy.fs.Path;
  */
 const CPFileNode(Object cookie, Path path, DateTime created, DateTime modified, Int size)
         implements FileNode
-        implements Stringable
+        delegates  Stringable(path)
     {
     construct (Object cookie)
         {
@@ -94,27 +94,6 @@ const CPFileNode(Object cookie, Path path, DateTime created, DateTime modified, 
     Cancellable watch(FileWatcher watch)
         {
         return () -> {};
-        }
-
-    @Override
-    String toString()
-        {
-        return path.toString();
-        }
-
-
-    // ----- Stringable methods --------------------------------------------------------------------
-
-    @Override
-    Int estimateStringLength()
-        {
-        return path.estimateStringLength();
-        }
-
-    @Override
-    void appendTo(Appender<Char> appender)
-        {
-        path.appendTo(appender);
         }
 
 

@@ -354,7 +354,7 @@ public class UnionTypeConstant
             {
             String sName = entry.getKey();
 
-            PropertyInfo prop1 = info1.findProperty(sName);
+            PropertyInfo prop1 = entry.getValue();
             assert prop1 != null;
 
             PropertyInfo prop2 = info2.findProperty(sName);
@@ -377,7 +377,7 @@ public class UnionTypeConstant
             {
             String sName = entry.getKey();
 
-            PropertyInfo prop2 = info2.findProperty(sName);
+            PropertyInfo prop2 = entry.getValue();
             assert prop2 != null;
 
             PropertyInfo prop1 = info2.findProperty(sName);
@@ -397,10 +397,8 @@ public class UnionTypeConstant
         // take only non-nested methods
         for (Map.Entry<SignatureConstant, MethodInfo> entry : info1.ensureMethodsBySignature().entrySet())
             {
-            SignatureConstant sig = entry.getKey();
-
-            MethodInfo method1 = info1.getMethodBySignature(sig);
-            assert method1 != null;
+            SignatureConstant sig     = entry.getKey();
+            MethodInfo        method1 = entry.getValue();
 
             if (method1.isConstructor())
                 {
@@ -424,10 +422,8 @@ public class UnionTypeConstant
 
         for (Map.Entry<SignatureConstant, MethodInfo> entry : info2.ensureMethodsBySignature().entrySet())
             {
-            SignatureConstant sig = entry.getKey();
-
-            MethodInfo method2 = info2.getMethodBySignature(sig);
-            assert method2 != null;
+            SignatureConstant sig     = entry.getKey();
+            MethodInfo        method2 = entry.getValue();
 
             if (method2.isConstructor())
                 {

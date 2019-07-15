@@ -1154,6 +1154,15 @@ public class Compiler
      */
     public static final String SHORT_CIRCUIT_ALWAYS_NULL          = "COMPILER-130";
     /**
+     * The delegation property {0} does not exist.
+     */
+    public static final String DELEGATE_PROP_MISSING              = "COMPILER-131";
+    /**
+     * The delegation type for the property {0} does not match; the expected type is {1},
+     * but the property is of type {2}.
+     */
+    public static final String DELEGATE_PROP_WRONG_TYPE           = "COMPILER-132";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

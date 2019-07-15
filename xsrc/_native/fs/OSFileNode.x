@@ -10,6 +10,7 @@ import Ecstasy.fs.Path;
  */
 const OSFileNode
         implements FileNode
+        delegates  Stringable(pathString)
     {
     @Override
     @Lazy Path path.calc()
@@ -81,20 +82,6 @@ const OSFileNode
 
     @Override
     conditional FileNode renameTo(String name);
-
-    // ----- Stringable methods --------------------------------------------------------------------
-
-    @Override
-    Int estimateStringLength()
-        {
-        return pathString.size;
-        }
-
-    @Override
-    void appendTo(Appender<Char> appender)
-        {
-        pathString.appendTo(appender);
-        }
 
     // ----- equality support ----------------------------------------------------------------------
 

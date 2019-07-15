@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
@@ -658,8 +659,9 @@ public class MethodInfo
             MethodBody bodyDefault = null;
             for (int i = 0, c = chain.length; i < c; ++i)
                 {
-                MethodBody body = chain[i];
-                switch (body.getImplementation())
+                MethodBody     body = chain[i];
+                Implementation impl;
+                switch (impl = body.getImplementation())
                     {
                     case Implicit:
                         if (fMixin)
@@ -699,9 +701,21 @@ public class MethodInfo
                     case Delegating:
                     case Field:
                     case Explicit:
+                        MethodStructure method = body.getMethodStructure();
+                        if (method == null)
+                            {
+                            assert impl == Implementation.Delegating;
+
+                            ClassConstant  idHost  = (ClassConstant) body.getIdentity().getNamespace();
+                            ClassStructure clzHost = (ClassStructure) idHost.getComponent();
+                            method = clzHost.ensureDelegation(
+                                    getTopmostMethodStructure(infoType),
+                                    body.getPropertyConstant().getName());
+                            body.setMethodStructure(method);
+                            }
                         // it's possible the method was marked as "native" after the body
                         // was constructed; re-check it
-                        if (body.getMethodStructure().isNative())
+                        else if (method.isNative())
                             {
                             if (listNew == null)
                                 {
@@ -717,8 +731,8 @@ public class MethodInfo
                             }
                         break;
 
-                    default:
                     case Capped:
+                    default:
                         throw new IllegalStateException();
                     }
                 }
@@ -740,8 +754,11 @@ public class MethodInfo
                 {
                 // when the method is a property accessor, we need to use the PropertyInfo
                 // to get the optimized chain (to include a potential field access body)
-                MethodStructure method    = bodyHead.getMethodStructure();
-                Component       container = method.getParent().getParent();
+                MethodStructure method = bodyHead.getMethodStructure();
+
+                assert method != null;
+
+                Component container = method.getParent().getParent();
                 if (container instanceof PropertyStructure)
                     {
                     PropertyStructure property     = (PropertyStructure) container;

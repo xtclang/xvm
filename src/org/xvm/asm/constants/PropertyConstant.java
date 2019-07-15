@@ -254,7 +254,7 @@ public class PropertyConstant
         }
 
     @Override
-    public IdentityConstant ensureNestedIdentity(ConstantPool pool, IdentityConstant that)
+    public PropertyConstant ensureNestedIdentity(ConstantPool pool, IdentityConstant that)
         {
         return pool.ensurePropertyConstant(
                 getParentConstant().ensureNestedIdentity(pool, that), getName());
