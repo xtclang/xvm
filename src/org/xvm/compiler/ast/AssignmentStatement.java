@@ -664,6 +664,11 @@ public class AssignmentStatement
 
             case CondRight:
                 {
+                if (lvalue instanceof Statement)
+                    {
+                    fCompletes = ((Statement) lvalue).completes(ctx, fCompletes, code, errs);
+                    }
+
                 if (op.getId() == Id.COND_NN_ASN)
                     {
                     Argument arg = rvalue.generateArgument(ctx, code, false, false, errs);
