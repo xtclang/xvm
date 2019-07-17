@@ -349,10 +349,8 @@ public class ReturnStatement
                                 }
                             else
                                 {
-                                if (!container.isReturnConditional())
-                                    {
-                                    throw new AssertionError();
-                                    }
+                                assert container.isReturnConditional();
+
                                 // REVIEW: we can use pool.valFalse() or add an Assert op here
                                 code.add(new Return_1(args[0]));
                                 }

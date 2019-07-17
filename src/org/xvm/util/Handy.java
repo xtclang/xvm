@@ -807,19 +807,19 @@ public class Handy
     public static int readMagnitude(DataInput in)
             throws IOException
         {
-        long cb = readPackedLong(in);
-        if (cb > Integer.MAX_VALUE)
+        long n = readPackedLong(in);
+        if (n > Integer.MAX_VALUE)
             {
             // this is unsupported in Java; arrays are limited in size
             // by their use of signed 32-bit magnitudes and indexes
-            throw new IOException("magnitude (" + cb + ") exceeds 32-bit maximum");
+            throw new IOException("magnitude (" + n + ") exceeds 32-bit maximum");
             }
-        else if (cb < 0)
+        else if (n < 0)
             {
-            throw new IOException("negative magnitude (" + cb + ") is illegal");
+            throw new IOException("negative magnitude (" + n + ") is illegal");
             }
 
-        return (int) cb;
+        return (int) n;
         }
 
     /**
