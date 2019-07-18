@@ -89,6 +89,10 @@ public abstract class OpCondJump
             }
 
         writePackedLong(out, m_nArg);
+        if (isBinaryOp())
+            {
+            writePackedLong(out, m_nArg2);
+            }
         writePackedLong(out, m_ofJmp);
         }
 
@@ -155,7 +159,7 @@ public abstract class OpCondJump
                 return R_REPEAT;
                 }
 
-            TypeConstant typeCommon = frame.resolveType(m_typeCommon);
+            TypeConstant typeCommon = calculateCommonType(frame, ahArg);
 
             if (anyDeferred(ahArg))
                 {
@@ -172,6 +176,20 @@ public abstract class OpCondJump
             return frame.raiseException(e);
             }
         }
+
+    protected TypeConstant calculateCommonType(Frame frame, ObjectHandle[] ahArg)
+        {
+        // REVIEW: this should be injected by the verifier
+        TypeConstant typeCommon = m_typeCommon;
+        if (typeCommon == null)
+            {
+            TypeConstant type1 = frame.getLocalType(m_nArg, ahArg[0]);
+            TypeConstant type2 = frame.getLocalType(m_nArg2, ahArg[1]);
+            m_typeCommon = typeCommon = selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
+            }
+        return frame.resolveType(typeCommon);
+        }
+
 
     /**
      * A completion of a unary op; must me overridden by all binary ops.

@@ -41,7 +41,6 @@ public class JumpCond
             throws IOException
         {
         super(in, aconst);
-        // TODO m_cond = aconst[...];
         }
 
     @Override

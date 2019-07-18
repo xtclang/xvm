@@ -115,7 +115,9 @@ public abstract class OpVar
     @Override
     public void simulate(Scope scope)
         {
-        m_nVar = m_reg.assignIndex(scope.allocVar());
+        m_nVar = m_reg == null
+                ? scope.allocVar()
+                : m_reg.assignIndex(scope.allocVar());
         }
 
     @Override
@@ -144,8 +146,15 @@ public abstract class OpVar
               .append(',');
             }
 
-        sb.append(' ')
-          .append(m_reg);
+        sb.append(' ');
+        if (m_reg == null)
+            {
+            sb.append('#').append(m_nVar);
+            }
+        else
+            {
+            sb.append(m_reg);
+            }
 
         return sb.toString();
         }

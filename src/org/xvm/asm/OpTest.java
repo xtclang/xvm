@@ -150,7 +150,7 @@ public abstract class OpTest
                 return R_REPEAT;
                 }
 
-            TypeConstant typeCommon = frame.resolveType(m_typeCommon);
+            TypeConstant typeCommon = calculateCommonType(frame, ahArg);
 
             if (anyDeferred(ahArg))
                 {
@@ -166,6 +166,19 @@ public abstract class OpTest
             {
             return frame.raiseException(e);
             }
+        }
+
+    protected TypeConstant calculateCommonType(Frame frame, ObjectHandle[] ahArg)
+        {
+        // REVIEW: this should be injected by the verifier
+        TypeConstant typeCommon = m_typeCommon;
+        if (typeCommon == null)
+            {
+            TypeConstant type1 = frame.getLocalType(m_nValue1, ahArg[0]);
+            TypeConstant type2 = frame.getLocalType(m_nValue2, ahArg[1]);
+            m_typeCommon = typeCommon = selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
+            }
+        return frame.resolveType(typeCommon);
         }
 
     /**

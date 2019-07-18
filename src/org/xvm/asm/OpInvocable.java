@@ -45,9 +45,6 @@ public abstract class OpInvocable extends Op
         {
         m_nTarget   = readPackedInt(in);
         m_nMethodId = readPackedInt(in);
-
-        // for debugging support
-        m_constMethod = (MethodConstant) aconst[m_nMethodId];
         }
 
     @Override
@@ -127,7 +124,7 @@ public abstract class OpInvocable extends Op
             }
 
         TypeComposition clazz    = m_clazz = hTarget.getComposition();
-        MethodConstant  idMethod = (MethodConstant) frame.getConstant(m_nMethodId);
+        MethodConstant  idMethod = m_constMethod = (MethodConstant) frame.getConstant(m_nMethodId);
         if (idMethod.isLambda())
             {
             return m_chain = new CallChain(idMethod);

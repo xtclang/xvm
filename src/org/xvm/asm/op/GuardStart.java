@@ -72,7 +72,7 @@ public class GuardStart
         m_aOpCatch = new CatchStart[c];
         for (int i = 0; i < c; i++)
             {
-            CatchStart op = (CatchStart) code.get(i);
+            CatchStart op = (CatchStart) code.get(ofThis + m_aofCatch[i]);
             op.setNameId(m_anNameId[i]);
             op.setTypeId(m_anTypeId[i]);
             m_aOpCatch[i] = op;
