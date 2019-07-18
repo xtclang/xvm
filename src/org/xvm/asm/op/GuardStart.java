@@ -68,7 +68,8 @@ public class GuardStart
         {
         super.resolveCode(code, aconst);
 
-        int c = m_aofCatch.length;
+        int ofThis = getAddress();
+        int c      = m_aofCatch.length;
         m_aOpCatch = new CatchStart[c];
         for (int i = 0; i < c; i++)
             {
