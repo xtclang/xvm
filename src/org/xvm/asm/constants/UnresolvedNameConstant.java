@@ -1,7 +1,6 @@
 package org.xvm.asm.constants;
 
 
-import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
@@ -231,13 +230,6 @@ public class UnresolvedNameConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        throw new UnsupportedOperationException();
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

@@ -24,24 +24,6 @@ public abstract class NamedConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Constructor used for deserialization.
-     *
-     * @param pool    the ConstantPool that will contain this Constant
-     * @param format  the format of the Constant in the stream
-     * @param in      the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
-     */
-    public NamedConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
-        super(pool);
-
-        m_iParent = readMagnitude(in);
-        m_iName   = readMagnitude(in);
-        }
-
-    /**
      * Construct a constant whose purpose is to identify a structure of a specified name that exists
      * within its parent structure.
      *
@@ -65,6 +47,33 @@ public abstract class NamedConstant
 
         m_constParent = constParent;
         m_constName   = pool.ensureStringConstant(sName);
+        }
+
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param format  the format of the Constant in the stream
+     * @param in      the DataInput stream to read the Constant value from
+     *
+     * @throws IOException  if an issue occurs reading the Constant value
+     */
+    public NamedConstant(ConstantPool pool, Format format, DataInput in)
+            throws IOException
+        {
+        super(pool);
+
+        m_iParent = readMagnitude(in);
+        m_iName   = readMagnitude(in);
+        }
+
+    @Override
+    protected void resolveConstants()
+        {
+        ConstantPool pool = getConstantPool();
+
+        m_constParent = (IdentityConstant) pool.getConstant(m_iParent);
+        m_constName   = (StringConstant)   pool.getConstant(m_iName);
         }
 
 
@@ -180,15 +189,6 @@ public abstract class NamedConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        ConstantPool pool = getConstantPool();
-        m_constParent = (IdentityConstant) pool.getConstant(m_iParent);
-        m_constName   = (StringConstant)   pool.getConstant(m_iName);
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

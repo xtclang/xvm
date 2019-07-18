@@ -42,24 +42,6 @@ public class AnnotatedTypeConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Constructor used for deserialization.
-     *
-     * @param pool    the ConstantPool that will contain this Constant
-     * @param format  the format of the Constant in the stream
-     * @param in      the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
-     */
-    public AnnotatedTypeConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
-        super(pool);
-
-        m_annotation = new Annotation(pool, in);
-        m_iType      = readIndex(in);
-        }
-
-    /**
      * Construct a constant whose value is an annotated data type.
      *
      * @param pool         the ConstantPool that will contain this Constant
@@ -68,7 +50,7 @@ public class AnnotatedTypeConstant
      * @param constType    the type being annotated
      */
     public AnnotatedTypeConstant(ConstantPool pool, Constant constClass,
-            Constant[] aconstParam, TypeConstant constType)
+                                 Constant[] aconstParam, TypeConstant constType)
         {
         super(pool);
 
@@ -114,6 +96,33 @@ public class AnnotatedTypeConstant
 
         m_annotation = annotation;
         m_constType  = constType;
+        }
+
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param format  the format of the Constant in the stream
+     * @param in      the DataInput stream to read the Constant value from
+     *
+     * @throws IOException  if an issue occurs reading the Constant value
+     */
+    public AnnotatedTypeConstant(ConstantPool pool, Format format, DataInput in)
+            throws IOException
+        {
+        super(pool);
+
+        m_iAnno = readIndex(in);
+        m_iType = readIndex(in);
+        }
+
+    @Override
+    protected void resolveConstants()
+        {
+        ConstantPool pool = getConstantPool();
+
+        m_annotation = (Annotation) pool.getConstant(m_iAnno);
+        m_constType  = (TypeConstant) pool.getConstant(m_iType);
         }
 
 
@@ -519,14 +528,6 @@ public class AnnotatedTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        m_annotation.disassemble(in);
-        m_constType = (TypeConstant) getConstantPool().getConstant(m_iType);
-        }
-
-    @Override
     protected void registerConstants(ConstantPool pool)
         {
         m_annotation = (Annotation)   pool.register(m_annotation);
@@ -538,7 +539,7 @@ public class AnnotatedTypeConstant
             throws IOException
         {
         out.writeByte(getFormat().ordinal());
-        m_annotation.assemble(out);
+        writePackedLong(out, indexOf(m_annotation));
         writePackedLong(out, indexOf(m_constType));
         }
 
@@ -608,14 +609,19 @@ public class AnnotatedTypeConstant
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * The annotation.
+     * During disassembly, this holds the index of the Annotation.
      */
-    private Annotation m_annotation;
+    private int m_iAnno;
 
     /**
      * During disassembly, this holds the index of the type constant of the type being annotated.
      */
     private int m_iType;
+
+    /**
+     * The annotation.
+     */
+    private Annotation m_annotation;
 
     /**
      * The type being annotated.

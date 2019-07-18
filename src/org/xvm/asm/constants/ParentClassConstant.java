@@ -24,23 +24,6 @@ public class ParentClassConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Constructor used for deserialization.
-     *
-     * @param pool    the ConstantPool that will contain this Constant
-     * @param format  the format of the Constant in the stream
-     * @param in      the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
-     */
-    public ParentClassConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
-        super(pool);
-
-        m_iChild = readMagnitude(in);
-        }
-
-    /**
      * Construct a constant whose value is an auto-narrowable parent class identity.
      *
      * @param pool        the ConstantPool that will contain this Constant
@@ -62,6 +45,29 @@ public class ParentClassConstant
             }
 
         m_constChild = constChild;
+        }
+
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param format  the format of the Constant in the stream
+     * @param in      the DataInput stream to read the Constant value from
+     *
+     * @throws IOException  if an issue occurs reading the Constant value
+     */
+    public ParentClassConstant(ConstantPool pool, Format format, DataInput in)
+            throws IOException
+        {
+        super(pool);
+
+        m_iChild = readMagnitude(in);
+        }
+
+    @Override
+    protected void resolveConstants()
+        {
+        m_constChild = (PseudoConstant) getConstantPool().getConstant(m_iChild);
         }
 
 
@@ -208,13 +214,6 @@ public class ParentClassConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        m_constChild = (PseudoConstant) getConstantPool().getConstant(m_iChild);
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

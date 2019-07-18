@@ -48,22 +48,6 @@ public class LiteralConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Constructor used for deserialization.
-     *
-     * @param pool    the ConstantPool that will contain this Constant
-     * @param format  the format of the Constant in the stream
-     * @param in      the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
-     */
-    public LiteralConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
-        this(pool, format);
-        m_iStr = readMagnitude(in);
-        }
-
-    /**
      * Construct a constant whose value is a literal.
      *
      * @param pool    the ConstantPool that will contain this Constant
@@ -158,6 +142,29 @@ public class LiteralConstant
             }
 
         m_fmt = format;
+        }
+
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param format  the format of the Constant in the stream
+     * @param in      the DataInput stream to read the Constant value from
+     *
+     * @throws IOException  if an issue occurs reading the Constant value
+     */
+    public LiteralConstant(ConstantPool pool, Format format, DataInput in)
+            throws IOException
+        {
+        this(pool, format);
+
+        m_iStr = readMagnitude(in);
+        }
+
+    @Override
+    protected void resolveConstants()
+        {
+        m_constStr = (StringConstant) getConstantPool().getConstant(m_iStr);
         }
 
 
@@ -1377,19 +1384,9 @@ public class LiteralConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        final ConstantPool pool = getConstantPool();
-        m_constStr = (StringConstant) pool.getConstant(m_iStr);
-        assert m_constStr != null;
-        }
-
-    @Override
     protected void registerConstants(ConstantPool pool)
         {
         m_constStr = (StringConstant) pool.register(m_constStr);
-        assert m_constStr != null;
         }
 
     @Override

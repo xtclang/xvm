@@ -63,23 +63,6 @@ public class AnonymousClassTypeConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Constructor used for deserialization.
-     *
-     * @param pool    the ConstantPool that will contain this Constant
-     * @param format  the format of the Constant in the stream
-     * @param in      the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
-     */
-    public AnonymousClassTypeConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
-        super(pool, format, in);
-
-        m_iAnon = readIndex(in);
-        }
-
-    /**
      * Construct a constant whose value is a data type.
      *
      * @param pool        the ConstantPool that will contain this Constant
@@ -101,6 +84,31 @@ public class AnonymousClassTypeConstant
             throw new IllegalArgumentException("id is required");
             }
         m_idAnon = idAnon;
+        }
+
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param format  the format of the Constant in the stream
+     * @param in      the DataInput stream to read the Constant value from
+     *
+     * @throws IOException  if an issue occurs reading the Constant value
+     */
+    public AnonymousClassTypeConstant(ConstantPool pool, Format format, DataInput in)
+            throws IOException
+        {
+        super(pool, format, in);
+
+        m_iAnon = readIndex(in);
+        }
+
+    @Override
+    protected void resolveConstants()
+        {
+        super.resolveConstants();
+
+        m_idAnon = (ClassConstant) getConstantPool().getConstant(m_iAnon);
         }
 
     /**
@@ -351,15 +359,6 @@ public class AnonymousClassTypeConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        super.disassemble(in);
-
-        m_idAnon = (ClassConstant) getConstantPool().getConstant(m_iAnon);
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

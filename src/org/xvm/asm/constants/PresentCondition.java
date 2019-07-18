@@ -28,6 +28,19 @@ public class PresentCondition
     // ----- constructors --------------------------------------------------------------------------
 
     /**
+     * Construct a PresentCondition.
+     *
+     * @param pool           the ConstantPool that will contain this Constant
+     * @param constVMStruct  the Module, Package, Class, Property or Method
+     */
+    public PresentCondition(ConstantPool pool, Constant constVMStruct)
+        {
+        super(pool);
+        assert constVMStruct  instanceof IdentityConstant || constVMStruct instanceof UnresolvedNameConstant;
+        m_constStruct = constVMStruct;
+        }
+
+    /**
      * Constructor used for deserialization.
      *
      * @param pool    the ConstantPool that will contain this Constant
@@ -40,20 +53,19 @@ public class PresentCondition
             throws IOException
         {
         super(pool);
-        m_iStruct   = readMagnitude(in);
+
+        m_iStruct = readMagnitude(in);
         }
 
-    /**
-     * Construct a PresentCondition.
-     *
-     * @param pool           the ConstantPool that will contain this Constant
-     * @param constVMStruct  the Module, Package, Class, Property or Method
-     */
-    public PresentCondition(ConstantPool pool, Constant constVMStruct)
+    @Override
+    protected void resolveConstants()
         {
-        super(pool);
-        assert constVMStruct  instanceof IdentityConstant || constVMStruct instanceof UnresolvedNameConstant;
-        m_constStruct = constVMStruct;
+        m_constStruct = (IdentityConstant) getConstantPool().getConstant(m_iStruct);
+        assert     m_constStruct instanceof ModuleConstant
+                || m_constStruct instanceof PackageConstant
+                || m_constStruct instanceof ClassConstant
+                || m_constStruct instanceof PropertyConstant
+                || m_constStruct instanceof MethodConstant;
         }
 
 
@@ -177,18 +189,6 @@ public class PresentCondition
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        m_constStruct = (IdentityConstant) getConstantPool().getConstant(m_iStruct);
-        assert     m_constStruct instanceof ModuleConstant
-                || m_constStruct instanceof PackageConstant
-                || m_constStruct instanceof ClassConstant
-                || m_constStruct instanceof PropertyConstant
-                || m_constStruct instanceof MethodConstant;
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

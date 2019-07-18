@@ -30,48 +30,6 @@ public class MapConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Constructor used for deserialization.
-     *
-     * @param pool    the ConstantPool that will contain this Constant
-     * @param format  the format of the Constant in the stream
-     * @param in      the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
-     */
-    public MapConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
-        super(pool);
-
-        int iType    = readMagnitude(in);
-        int cEntries = readMagnitude(in);
-        int[] aiKeys = new int[cEntries];
-        int[] aiVals = new int[cEntries];
-        for (int i = 0; i < cEntries; ++i)
-            {
-            aiKeys[i] = readMagnitude(in);
-            aiVals[i] = readMagnitude(in);
-            }
-
-        m_fmt    = format;
-        m_iType  = iType;
-        m_aiKeys = aiKeys;
-        m_aiVals = aiVals;
-        }
-
-    /**
-     * Construct a constant whose value is a map entry.
-     *
-     * @param pool        the ConstantPool that will contain this Constant
-     * @param constType   the data type of the map entry
-     * @param entry       the map entry
-     */
-    public MapConstant(ConstantPool pool, TypeConstant constType, Map.Entry<Constant, Constant> entry)
-        {
-        this(pool, constType, entry.getKey(), entry.getValue());
-        }
-
-    /**
      * Construct a constant whose value is a map entry.
      *
      * @param pool        the ConstantPool that will contain this Constant
@@ -155,6 +113,57 @@ public class MapConstant
         m_constType  = constType;
         m_aconstKey  = aconstKey;
         m_aconstVal  = aconstVal;
+        }
+
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param format  the format of the Constant in the stream
+     * @param in      the DataInput stream to read the Constant value from
+     *
+     * @throws IOException  if an issue occurs reading the Constant value
+     */
+    public MapConstant(ConstantPool pool, Format format, DataInput in)
+            throws IOException
+        {
+        super(pool);
+
+        int iType    = readMagnitude(in);
+        int cEntries = readMagnitude(in);
+        int[] aiKeys = new int[cEntries];
+        int[] aiVals = new int[cEntries];
+        for (int i = 0; i < cEntries; ++i)
+            {
+            aiKeys[i] = readMagnitude(in);
+            aiVals[i] = readMagnitude(in);
+            }
+
+        m_fmt    = format;
+        m_iType  = iType;
+        m_aiKeys = aiKeys;
+        m_aiVals = aiVals;
+        }
+
+    @Override
+    protected void resolveConstants()
+        {
+        ConstantPool pool = getConstantPool();
+
+        m_constType = (TypeConstant) pool.getConstant(m_iType);
+
+        int[]      aiConstKey = m_aiKeys;
+        int[]      aiConstVal = m_aiVals;
+        int        cEntries   = aiConstKey.length;
+        Constant[] aconstKey  = new Constant[cEntries];
+        Constant[] aconstVal  = new Constant[cEntries];
+        for (int i = 0; i < cEntries; ++i)
+            {
+            aconstKey[i] = pool.getConstant(aiConstKey[i]);
+            aconstVal[i] = pool.getConstant(aiConstVal[i]);
+            }
+        m_aconstKey = aconstKey;
+        m_aconstVal = aconstVal;
         }
 
 
@@ -328,27 +337,6 @@ public class MapConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        final ConstantPool pool = getConstantPool();
-        m_constType = (TypeConstant) pool.getConstant(m_iType);
-
-        int[]      aiConstKey = m_aiKeys;
-        int[]      aiConstVal = m_aiVals;
-        int        cEntries   = aiConstKey.length;
-        Constant[] aconstKey  = new Constant[cEntries];
-        Constant[] aconstVal  = new Constant[cEntries];
-        for (int i = 0; i < cEntries; ++i)
-            {
-            aconstKey[i] = pool.getConstant(aiConstKey[i]);
-            aconstVal[i] = pool.getConstant(aiConstVal[i]);
-            }
-        m_aconstKey = aconstKey;
-        m_aconstVal = aconstVal;
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

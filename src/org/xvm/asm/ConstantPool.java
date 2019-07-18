@@ -2308,12 +2308,12 @@ public class ConstantPool
                     constant = new LiteralConstant(this, format, in);
                     break;
 
-                case Bit:
-                case Nibble:
                 case Int8:
                     constant = new Int8Constant(this, format, in);
                     break;
 
+                case Bit:
+                case Nibble:
                 case UInt8:
                     constant = new UInt8Constant(this, format, in);
                     break;
@@ -2440,8 +2440,8 @@ public class ConstantPool
                     break;
 
                 case Annotation:
-                    // it does extend Constant, but it's not stored in the ConstantPool itself
-                    throw new IllegalStateException();
+                    constant = new Annotation(this, in);
+                    break;
 
                 /*
                 * Pseudo identifiers.
@@ -2573,7 +2573,7 @@ public class ConstantPool
         // convert indexes into constant references
         for (Constant constant : m_listConst)
             {
-            constant.disassemble(null);
+            constant.resolveConstants();
             }
         }
 

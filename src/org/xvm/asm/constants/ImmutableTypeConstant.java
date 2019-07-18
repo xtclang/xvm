@@ -27,6 +27,24 @@ public class ImmutableTypeConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
+     * Construct a constant whose value is an immutable type.
+     *
+     * @param pool       the ConstantPool that will contain this Constant
+     * @param constType  a TypeConstant that this constant modifies to be immutable
+     */
+    public ImmutableTypeConstant(ConstantPool pool, TypeConstant constType)
+        {
+        super(pool);
+
+        if (constType == null)
+            {
+            throw new IllegalArgumentException("type required");
+            }
+
+        m_constType = constType;
+        }
+
+    /**
      * Constructor used for deserialization.
      *
      * @param pool    the ConstantPool that will contain this Constant
@@ -43,22 +61,10 @@ public class ImmutableTypeConstant
         m_iType = readMagnitude(in);
         }
 
-    /**
-     * Construct a constant whose value is an immutable type.
-     *
-     * @param pool       the ConstantPool that will contain this Constant
-     * @param constType  a TypeConstant that this constant modifies to be immutable
-     */
-    public ImmutableTypeConstant(ConstantPool pool, TypeConstant constType)
+    @Override
+    protected void resolveConstants()
         {
-        super(pool);
-
-        if (constType == null)
-            {
-            throw new IllegalArgumentException("type required");
-            }
-
-        m_constType = constType;
+        m_constType = (TypeConstant) getConstantPool().getConstant(m_iType);
         }
 
 
@@ -162,13 +168,6 @@ public class ImmutableTypeConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        m_constType = (TypeConstant) getConstantPool().getConstant(m_iType);
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

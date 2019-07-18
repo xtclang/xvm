@@ -31,6 +31,19 @@ public class ModuleConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
+     * Construct a constant whose value is a module identifier.
+     *
+     * @param pool     the ConstantPool that will contain this Constant
+     * @param sName    the qualified module name
+     */
+    public ModuleConstant(ConstantPool pool, String sName)
+        {
+        super(pool);
+
+        m_constName = pool.ensureStringConstant(sName);
+        }
+
+    /**
      * Constructor used for deserialization.
      *
      * @param pool    the ConstantPool that will contain this Constant
@@ -43,20 +56,14 @@ public class ModuleConstant
             throws IOException
         {
         super(pool);
+
         m_iName = readMagnitude(in);
         }
 
-    /**
-     * Construct a constant whose value is a module identifier.
-     *
-     * @param pool     the ConstantPool that will contain this Constant
-     * @param sName    the qualified module name
-     */
-    public ModuleConstant(ConstantPool pool, String sName)
+    @Override
+    protected void resolveConstants()
         {
-        super(pool);
-
-        m_constName = pool.ensureStringConstant(sName);
+        m_constName = (StringConstant) getConstantPool().getConstant(m_iName);
         }
 
 
@@ -220,13 +227,6 @@ public class ModuleConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        m_constName = (StringConstant) getConstantPool().getConstant(m_iName);
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

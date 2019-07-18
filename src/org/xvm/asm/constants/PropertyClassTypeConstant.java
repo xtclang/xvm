@@ -52,23 +52,6 @@ public class PropertyClassTypeConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Constructor used for deserialization.
-     *
-     * @param pool    the ConstantPool that will contain this Constant
-     * @param format  the format of the Constant in the stream
-     * @param in      the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
-     */
-    public PropertyClassTypeConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
-        super(pool, format, in);
-
-        m_iProp = readIndex(in);
-        }
-
-    /**
      * Construct a constant whose value is a data type.
      *
      * @param pool        the ConstantPool that will contain this Constant
@@ -90,6 +73,31 @@ public class PropertyClassTypeConstant
             }
 
         m_idProp = idProp;
+        }
+
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param format  the format of the Constant in the stream
+     * @param in      the DataInput stream to read the Constant value from
+     *
+     * @throws IOException  if an issue occurs reading the Constant value
+     */
+    public PropertyClassTypeConstant(ConstantPool pool, Format format, DataInput in)
+            throws IOException
+        {
+        super(pool, format, in);
+
+        m_iProp = readIndex(in);
+        }
+
+    @Override
+    protected void resolveConstants()
+        {
+        super.resolveConstants();
+
+        m_idProp = (PropertyConstant) getConstantPool().getConstant(m_iProp);
         }
 
     /**
@@ -289,15 +297,6 @@ public class PropertyClassTypeConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        super.disassemble(in);
-
-        m_idProp = (PropertyConstant) getConstantPool().getConstant(m_iProp);
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

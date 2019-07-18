@@ -29,6 +29,20 @@ public class VersionMatchesCondition
     // ----- constructors --------------------------------------------------------------------------
 
     /**
+     * Construct a VersionMatchesCondition.
+     *
+     * @param pool         the ConstantPool that will contain this Constant
+     * @param constModule  the Module to test the version of
+     * @param constVer     the version of the Module to test for
+     */
+    public VersionMatchesCondition(ConstantPool pool, ModuleConstant constModule, VersionConstant constVer)
+        {
+        super(pool);
+        m_constStruct = constModule;
+        m_constVer    = constVer;
+        }
+
+    /**
      * Constructor used for deserialization.
      *
      * @param pool    the ConstantPool that will contain this Constant
@@ -41,22 +55,18 @@ public class VersionMatchesCondition
             throws IOException
         {
         super(pool);
+
         m_iModule = readMagnitude(in);
         m_iVer    = readIndex(in);
         }
 
-    /**
-     * Construct a VersionMatchesCondition.
-     *
-     * @param pool         the ConstantPool that will contain this Constant
-     * @param constModule  the Module to test the version of
-     * @param constVer     the version of the Module to test for
-     */
-    public VersionMatchesCondition(ConstantPool pool, ModuleConstant constModule, VersionConstant constVer)
+    @Override
+    protected void resolveConstants()
         {
-        super(pool);
-        m_constStruct = constModule;
-        m_constVer    = constVer;
+        ConstantPool pool = getConstantPool();
+
+        m_constStruct = (ModuleConstant)  pool.getConstant(m_iModule);
+        m_constVer    = (VersionConstant) pool.getConstant(m_iVer);
         }
 
 
@@ -193,15 +203,6 @@ public class VersionMatchesCondition
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        final ConstantPool pool = getConstantPool();
-        m_constStruct = (ModuleConstant)  pool.getConstant(m_iModule);
-        m_constVer    = (VersionConstant) pool.getConstant(m_iVer);
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

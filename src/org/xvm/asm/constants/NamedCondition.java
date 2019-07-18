@@ -26,6 +26,21 @@ public class NamedCondition
     // ----- constructors --------------------------------------------------------------------------
 
     /**
+     * Construct a NotCondition.
+     *
+     * @param pool       the ConstantPool that will contain this Constant
+     * @param constName  specifies the named condition; it is simply a name that is either defined
+     *                   or undefined
+     */
+    public NamedCondition(ConstantPool pool, StringConstant constName)
+        {
+        super(pool);
+
+        assert constName != null;
+        m_constName = constName;
+        }
+
+    /**
      * Constructor used for deserialization.
      *
      * @param pool    the ConstantPool that will contain this Constant
@@ -38,21 +53,14 @@ public class NamedCondition
             throws IOException
         {
         super(pool);
+
         m_iName = readMagnitude(in);
         }
 
-    /**
-     * Construct a NotCondition.
-     *
-     * @param pool       the ConstantPool that will contain this Constant
-     * @param constName  specifies the named condition; it is simply a name that is either defined
-     *                   or undefined
-     */
-    public NamedCondition(ConstantPool pool, StringConstant constName)
+    @Override
+    protected void resolveConstants()
         {
-        super(pool);
-        assert constName != null;
-        m_constName = constName;
+        m_constName = (StringConstant) getConstantPool().getConstant(m_iName);
         }
 
 
@@ -136,13 +144,6 @@ public class NamedCondition
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        m_constName = (StringConstant) getConstantPool().getConstant(m_iName);
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

@@ -34,24 +34,6 @@ public abstract class RelationalTypeConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Constructor used for deserialization.
-     *
-     * @param pool    the ConstantPool that will contain this Constant
-     * @param format  the format of the Constant in the stream
-     * @param in      the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
-     */
-    protected RelationalTypeConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
-        super(pool);
-
-        m_iType1 = readMagnitude(in);
-        m_iType2 = readMagnitude(in);
-        }
-
-    /**
      * Construct a relational constant based on two specified types.
      *
      * @param pool        the ConstantPool that will contain this Constant
@@ -69,6 +51,33 @@ public abstract class RelationalTypeConstant
 
         m_constType1 = constType1;
         m_constType2 = constType2;
+        }
+
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param format  the format of the Constant in the stream
+     * @param in      the DataInput stream to read the Constant value from
+     *
+     * @throws IOException  if an issue occurs reading the Constant value
+     */
+    protected RelationalTypeConstant(ConstantPool pool, Format format, DataInput in)
+            throws IOException
+        {
+        super(pool);
+
+        m_iType1 = readMagnitude(in);
+        m_iType2 = readMagnitude(in);
+        }
+
+    @Override
+    protected void resolveConstants()
+        {
+        ConstantPool pool = getConstantPool();
+
+        m_constType1 = (TypeConstant) pool.getConstant(m_iType1);
+        m_constType2 = (TypeConstant) pool.getConstant(m_iType2);
         }
 
     /**
@@ -527,14 +536,6 @@ public abstract class RelationalTypeConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        m_constType1 = (TypeConstant) getConstantPool().getConstant(m_iType1);
-        m_constType2 = (TypeConstant) getConstantPool().getConstant(m_iType2);
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

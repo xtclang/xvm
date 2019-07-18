@@ -29,24 +29,6 @@ public class AccessTypeConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Constructor used for deserialization.
-     *
-     * @param pool    the ConstantPool that will contain this Constant
-     * @param format  the format of the Constant in the stream
-     * @param in      the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
-     */
-    public AccessTypeConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
-        super(pool);
-
-        m_iType  = readIndex(in);
-        m_access = Access.valueOf(readIndex(in));
-        }
-
-    /**
      * Construct a constant whose value is an access specified type.
      *
      * @param pool       the ConstantPool that will contain this Constant
@@ -76,6 +58,30 @@ public class AccessTypeConstant
 
         m_constType = constType;
         m_access    = access;
+        }
+
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param format  the format of the Constant in the stream
+     * @param in      the DataInput stream to read the Constant value from
+     *
+     * @throws IOException  if an issue occurs reading the Constant value
+     */
+    public AccessTypeConstant(ConstantPool pool, Format format, DataInput in)
+            throws IOException
+        {
+        super(pool);
+
+        m_iType  = readIndex(in);
+        m_access = Access.valueOf(readIndex(in));
+        }
+
+    @Override
+    protected void resolveConstants()
+        {
+        m_constType = (TypeConstant) getConstantPool().getConstant(m_iType);
         }
 
 
@@ -225,13 +231,6 @@ public class AccessTypeConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        m_constType = (TypeConstant) getConstantPool().getConstant(m_iType);
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

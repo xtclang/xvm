@@ -29,33 +29,6 @@ public class Annotation
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Constructor used for deserialization.
-     *
-     * @param pool    the ConstantPool that will contain this Constant
-     * @param in      the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
-     */
-    public Annotation(ConstantPool pool, DataInput in)
-            throws IOException
-        {
-        super(pool);
-
-        m_iClass = readIndex(in);
-
-        int cParams = readMagnitude(in);
-        if (cParams > 0)
-            {
-            int[] aiParam = new int[cParams];
-            for (int i = 1; i <= cParams; ++i)
-                {
-                aiParam[i] = readIndex(in);
-                }
-            m_aiParam = aiParam;
-            }
-        }
-
-    /**
      * Construct an annotation.
      *
      * @param pool         the ConstantPool this constant belongs to
@@ -78,6 +51,56 @@ public class Annotation
 
         m_constClass = constClass;
         m_aParams    = aconstParam == null ? Constant.NO_CONSTS : aconstParam;
+        }
+
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param in      the DataInput stream to read the Constant value from
+     *
+     * @throws IOException  if an issue occurs reading the Constant value
+     */
+    public Annotation(ConstantPool pool, DataInput in)
+            throws IOException
+        {
+        super(pool);
+
+        m_iClass = readIndex(in);
+
+        int cParams = readMagnitude(in);
+        if (cParams > 0)
+            {
+            int[] aiParam = new int[cParams];
+            for (int i = 0; i < cParams; ++i)
+                {
+                aiParam[i] = readIndex(in);
+                }
+            m_aiParam = aiParam;
+            }
+        }
+
+    @Override
+    protected void resolveConstants()
+        {
+        ConstantPool pool = getConstantPool();
+
+        m_constClass = (ClassConstant) pool.getConstant(m_iClass);
+
+        int cParams = m_aiParam == null ? 0 : m_aiParam.length;
+        if (cParams == 0)
+            {
+            m_aParams = NO_CONSTS;
+            }
+        else
+            {
+            Constant[] aParams = new Constant[cParams];
+            for (int i = 0; i < cParams; ++i)
+                {
+                aParams[i] = pool.getConstant(m_aiParam[i]);
+                }
+            m_aParams = aParams;
+            }
         }
 
 
@@ -255,30 +278,6 @@ public class Annotation
         }
 
     @Override
-    public void disassemble(DataInput in)
-            throws IOException
-        {
-        ConstantPool pool = getConstantPool();
-
-        m_constClass = (ClassConstant) pool.getConstant(m_iClass);
-
-        int cParams = m_aiParam == null ? 0 : m_aiParam.length;
-        if (cParams == 0)
-            {
-            m_aParams = NO_CONSTS;
-            }
-        else
-            {
-            Constant[] aParams = new Constant[cParams];
-            for (int i = 0; i < cParams; ++i)
-                {
-                aParams[i] = pool.getConstant(m_aiParam[i]);
-                }
-            m_aParams = aParams;
-            }
-        }
-
-    @Override
     public void registerConstants(ConstantPool pool)
         {
         m_constClass = (ClassConstant) pool.register(getAnnotationClass());
@@ -296,9 +295,10 @@ public class Annotation
         }
 
     @Override
-    public void assemble(DataOutput out)
+    protected void assemble(DataOutput out)
             throws IOException
         {
+        out.writeByte(getFormat().ordinal());
         writePackedLong(out, getAnnotationClass().getPosition());
         writePackedLong(out, m_aParams.length);
         for (Constant param : m_aParams)

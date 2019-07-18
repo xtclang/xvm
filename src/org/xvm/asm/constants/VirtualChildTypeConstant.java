@@ -57,23 +57,6 @@ public class VirtualChildTypeConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Constructor used for deserialization.
-     *
-     * @param pool    the ConstantPool that will contain this Constant
-     * @param format  the format of the Constant in the stream
-     * @param in      the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
-     */
-    public VirtualChildTypeConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
-        super(pool, format, in);
-
-        m_iName = readIndex(in);
-        }
-
-    /**
      * Construct a constant whose value is a data type.
      *
      * @param pool        the ConstantPool that will contain this Constant
@@ -95,6 +78,31 @@ public class VirtualChildTypeConstant
             throw new IllegalArgumentException("name is required");
             }
         m_constName = pool.ensureStringConstant(sName);
+        }
+
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param format  the format of the Constant in the stream
+     * @param in      the DataInput stream to read the Constant value from
+     *
+     * @throws IOException  if an issue occurs reading the Constant value
+     */
+    public VirtualChildTypeConstant(ConstantPool pool, Format format, DataInput in)
+            throws IOException
+        {
+        super(pool, format, in);
+
+        m_iName = readIndex(in);
+        }
+
+    @Override
+    protected void resolveConstants()
+        {
+        super.resolveConstants();
+
+        m_constName = (StringConstant) getConstantPool().getConstant(m_iName);
         }
 
     /**
@@ -463,15 +471,6 @@ public class VirtualChildTypeConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        super.disassemble(in);
-
-        m_constName = (StringConstant) getConstantPool().getConstant(m_iName);
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

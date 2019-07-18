@@ -57,6 +57,25 @@ public class TerminalTypeConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
+     * Construct a constant whose value is a data type.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param constId a ModuleConstant, PackageConstant, or ClassConstant
+     */
+    public TerminalTypeConstant(ConstantPool pool, Constant constId)
+        {
+        super(pool);
+
+        if (!constId.getFormat().isTypable())
+            {
+            throw new IllegalArgumentException("constant " + constId.getFormat()
+                + " is not a Module, Package, Class, Typedef, or formal type parameter");
+            }
+
+        m_constId = constId;
+        }
+
+    /**
      * Constructor used for deserialization.
      *
      * @param pool   the ConstantPool that will contain this Constant
@@ -73,23 +92,10 @@ public class TerminalTypeConstant
         m_iDef = readIndex(in);
         }
 
-    /**
-     * Construct a constant whose value is a data type.
-     *
-     * @param pool    the ConstantPool that will contain this Constant
-     * @param constId a ModuleConstant, PackageConstant, or ClassConstant
-     */
-    public TerminalTypeConstant(ConstantPool pool, Constant constId)
+    @Override
+    protected void resolveConstants()
         {
-        super(pool);
-
-        if (!constId.getFormat().isTypable())
-            {
-            throw new IllegalArgumentException("constant " + constId.getFormat()
-                    + " is not a Module, Package, Class, Typedef, or formal type parameter");
-            }
-
-        m_constId = constId;
+        m_constId = getConstantPool().getConstant(m_iDef);
         }
 
 
@@ -1484,13 +1490,6 @@ public class TerminalTypeConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        m_constId = getConstantPool().getConstant(m_iDef);
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

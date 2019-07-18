@@ -28,35 +28,6 @@ public abstract class MultiCondition
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Constructor used for deserialization.
-     *
-     * @param pool    the ConstantPool that will contain this Constant
-     * @param format  the format of the Constant in the stream
-     * @param in      the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
-     */
-    protected MultiCondition(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
-        super(pool);
-
-        final int c = readMagnitude(in);
-        if (c < 2 || c > 63)
-            {
-            throw new IllegalStateException("# conditions=" + c);
-            }
-
-        int[] ai = new int[c];
-        for (int i = 0; i < c; ++i)
-            {
-            ai[i] = readMagnitude(in);
-            }
-
-        m_aiCond = ai;
-        }
-
-    /**
      * Construct a MultiCondition.
      *
      * @param pool        the ConstantPool that will contain this Constant
@@ -82,6 +53,54 @@ public abstract class MultiCondition
             if (aconstCond[i] == null)
                 {
                 throw new IllegalArgumentException("condition " + i + " required");
+                }
+            }
+
+        m_aconstCond = aconstCond;
+        }
+
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param format  the format of the Constant in the stream
+     * @param in      the DataInput stream to read the Constant value from
+     *
+     * @throws IOException  if an issue occurs reading the Constant value
+     */
+    protected MultiCondition(ConstantPool pool, Format format, DataInput in)
+            throws IOException
+        {
+        super(pool);
+
+        int c = readMagnitude(in);
+        if (c < 2 || c > 63)
+            {
+            throw new IllegalStateException("# conditions=" + c);
+            }
+
+        int[] ai = new int[c];
+        for (int i = 0; i < c; ++i)
+            {
+            ai[i] = readMagnitude(in);
+            }
+
+        m_aiCond = ai;
+        }
+
+    @Override
+    protected void resolveConstants()
+        {
+        int[] ai = m_aiCond;
+        int   c  = ai.length;
+        ConditionalConstant[] aconstCond = new ConditionalConstant[c];
+
+        if (c > 0)
+            {
+            ConstantPool pool = getConstantPool();
+            for (int i = 0; i < c; ++i)
+                {
+                aconstCond[i] = (ConditionalConstant) pool.getConstant(ai[i]);
                 }
             }
 
@@ -289,26 +308,6 @@ public abstract class MultiCondition
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        final int[] ai = m_aiCond;
-        final int c = ai.length;
-        final ConditionalConstant[] aconstCond = new ConditionalConstant[c];
-
-        if (c > 0)
-            {
-            final ConstantPool pool = getConstantPool();
-            for (int i = 0; i < c; ++i)
-                {
-                aconstCond[i] = (ConditionalConstant) pool.getConstant(ai[i]);
-                }
-            }
-
-        m_aconstCond = aconstCond;
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

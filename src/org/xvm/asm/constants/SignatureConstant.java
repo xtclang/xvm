@@ -66,24 +66,6 @@ public class SignatureConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Constructor used for deserialization.
-     *
-     * @param pool    the ConstantPool that will contain this Constant
-     * @param format  the format of the Constant in the stream
-     * @param in      the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
-     */
-    public SignatureConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
-        super(pool);
-        m_iName     = readMagnitude(in);
-        m_aiReturns = readMagnitudeArray(in);
-        m_aiParams  = readMagnitudeArray(in);
-        }
-
-    /**
      * Construct a constant whose value is a method signature identifier.
      *
      * @param pool     the ConstantPool that will contain this Constant
@@ -127,6 +109,38 @@ public class SignatureConstant
         m_aconstParams  = ConstantPool.NO_TYPES;
         m_aconstReturns = new TypeConstant[] {constProperty.getType()};
         m_fProperty     = true;
+        }
+
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param format  the format of the Constant in the stream
+     * @param in      the DataInput stream to read the Constant value from
+     *
+     * @throws IOException  if an issue occurs reading the Constant value
+     */
+    public SignatureConstant(ConstantPool pool, Format format, DataInput in)
+            throws IOException
+        {
+        super(pool);
+
+        m_iName     = readMagnitude(in);
+        m_aiParams  = readMagnitudeArray(in);
+        m_aiReturns = readMagnitudeArray(in);
+        }
+
+    @Override
+    protected void resolveConstants()
+        {
+        ConstantPool pool = getConstantPool();
+
+        m_constName     = (StringConstant) pool.getConstant(m_iName);
+        m_aconstParams  = lookupTypes(pool, m_aiParams);
+        m_aconstReturns = lookupTypes(pool, m_aiReturns);
+
+        m_aiParams  = null;
+        m_aiReturns = null;
         }
 
 
@@ -648,19 +662,6 @@ public class SignatureConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        ConstantPool pool = getConstantPool();
-        m_constName     = (StringConstant) pool.getConstant(m_iName);
-        m_aconstParams  = lookupTypes(pool, m_aiParams);
-        m_aconstReturns = lookupTypes(pool, m_aiReturns);
-
-        m_aiReturns = null;
-        m_aiParams  = null;
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

@@ -16,7 +16,6 @@ import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 
 import static org.xvm.util.Handy.readMagnitude;
-import static org.xvm.util.Handy.readPackedLong;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -28,23 +27,6 @@ public class TypeParameterConstant
         implements FormalConstant
     {
     // ----- constructors --------------------------------------------------------------------------
-
-    /**
-     * Constructor used for deserialization.
-     *
-     * @param pool    the ConstantPool that will contain this Constant
-     * @param format  the format of the Constant in the stream
-     * @param in      the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
-     */
-    public TypeParameterConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
-        super(pool, format, in);
-
-        m_iReg = readMagnitude(in);
-        }
 
     /**
      * Construct a constant whose value is a type parameter identifier.
@@ -63,6 +45,29 @@ public class TypeParameterConstant
             }
 
         m_iReg = iReg;
+        }
+
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param format  the format of the Constant in the stream
+     * @param in      the DataInput stream to read the Constant value from
+     *
+     * @throws IOException  if an issue occurs reading the Constant value
+     */
+    public TypeParameterConstant(ConstantPool pool, Format format, DataInput in)
+            throws IOException
+        {
+        super(pool, format, in);
+
+        m_iReg = readMagnitude(in);
+        }
+
+    @Override
+    protected void resolveConstants()
+        {
+        super.resolveConstants();
         }
 
 
@@ -247,15 +252,6 @@ public class TypeParameterConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        super.disassemble(in);
-
-        m_iReg = (int) readPackedLong(in);
-        }
 
     @Override
     protected void assemble(DataOutput out)

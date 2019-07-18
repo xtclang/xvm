@@ -37,6 +37,18 @@ public class VersionedCondition
     // ----- constructors --------------------------------------------------------------------------
 
     /**
+     * Construct a VersionedCondition.
+     *
+     * @param pool       the ConstantPool that will contain this Constant
+     * @param constVer   the version of this Module to evaluate
+     */
+    public VersionedCondition(ConstantPool pool, VersionConstant constVer)
+        {
+        super(pool);
+        m_constVer  = constVer;
+        }
+
+    /**
      * Constructor used for deserialization.
      *
      * @param pool    the ConstantPool that will contain this Constant
@@ -49,19 +61,14 @@ public class VersionedCondition
             throws IOException
         {
         super(pool);
-        m_iVer      = readMagnitude(in);
+
+        m_iVer = readMagnitude(in);
         }
 
-    /**
-     * Construct a VersionedCondition.
-     *
-     * @param pool       the ConstantPool that will contain this Constant
-     * @param constVer   the version of this Module to evaluate
-     */
-    public VersionedCondition(ConstantPool pool, VersionConstant constVer)
+    @Override
+    protected void resolveConstants()
         {
-        super(pool);
-        m_constVer  = constVer;
+        m_constVer = (VersionConstant) getConstantPool().getConstant(m_iVer);
         }
 
 
@@ -187,13 +194,6 @@ public class VersionedCondition
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        m_constVer = (VersionConstant) getConstantPool().getConstant(m_iVer);
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

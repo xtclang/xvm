@@ -82,6 +82,16 @@ public abstract class Constant
         super(pool);
         }
 
+    /**
+     * Since the reading of the Constant information is done as part of construction, this method is
+     * used to provide the Constant a chance to resolve other Constants that it knows only by index.
+     * <p/>
+     * This method must be overridden by constant types which reference other constants.
+     */
+    protected void resolveConstants()
+        {
+        }
+
 
     // ----- Constant operations -------------------------------------------------------------------
 
@@ -508,18 +518,11 @@ public abstract class Constant
         return true;
         }
 
-    /**
-     * {@inheritDoc}
-     * <p/>
-     * Since the reading of the Constant information is done as part of construction, this method is
-     * used to provide the Constant a chance to resolve other Constants that it knows only by index.
-     * <p/>
-     * This method must be overridden by constant types which reference other constants.
-     */
     @Override
     protected void disassemble(DataInput in)
-            throws IOException
         {
+        // constants are fully assembled during the construction/resolveConstants() cycle
+        throw new IllegalStateException();
         }
 
     /**

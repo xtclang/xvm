@@ -23,6 +23,18 @@ public class ThisClassConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
+     * Construct a constant whose value is the auto-narrowing identifier "this:class".
+     *
+     * @param pool  the ConstantPool that will contain this Constant
+     */
+    public ThisClassConstant(ConstantPool pool, IdentityConstant constClass)
+        {
+        super(pool);
+
+        m_constClass = constClass;
+        }
+
+    /**
      * Constructor used for deserialization.
      *
      * @param pool    the ConstantPool that will contain this Constant
@@ -39,16 +51,10 @@ public class ThisClassConstant
         m_iClass = readMagnitude(in);
         }
 
-    /**
-     * Construct a constant whose value is the auto-narrowing identifier "this:class".
-     *
-     * @param pool  the ConstantPool that will contain this Constant
-     */
-    public ThisClassConstant(ConstantPool pool, IdentityConstant constClass)
+    @Override
+    protected void resolveConstants()
         {
-        super(pool);
-
-        m_constClass = constClass;
+        m_constClass = (IdentityConstant) getConstantPool().getConstant(m_iClass);
         }
 
 
@@ -136,13 +142,6 @@ public class ThisClassConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        m_constClass = (IdentityConstant) getConstantPool().getConstant(m_iClass);
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

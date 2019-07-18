@@ -24,6 +24,29 @@ public class ArrayConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
+     * Construct a constant whose value is an array, tuple, or set.
+     *
+     * @param pool       the ConstantPool that will contain this Constant
+     * @param fmt        the format of the constant
+     * @param constType  the data type of the constant
+     * @param aconstVal  the value of the constant
+     */
+    public ArrayConstant(ConstantPool pool, Format fmt, TypeConstant constType, Constant... aconstVal)
+        {
+        super(pool);
+        validateFormatAndType(fmt, constType);
+
+        if (aconstVal == null)
+            {
+            throw new IllegalArgumentException("value required");
+            }
+
+        m_fmt       = fmt;
+        m_constType = constType;
+        m_aconstVal = aconstVal;
+        }
+
+    /**
      * Constructor used for deserialization.
      *
      * @param pool    the ConstantPool that will contain this Constant
@@ -45,31 +68,26 @@ public class ArrayConstant
             aiVal[i] = readMagnitude(in);
             }
 
+        m_fmt   = format;
         m_iType = iType;
         m_aiVal = aiVal;
         }
 
-    /**
-     * Construct a constant whose value is an array, tuple, or set.
-     *
-     * @param pool       the ConstantPool that will contain this Constant
-     * @param fmt        the format of the constant
-     * @param constType  the data type of the constant
-     * @param aconstVal  the value of the constant
-     */
-    public ArrayConstant(ConstantPool pool, Format fmt, TypeConstant constType, Constant... aconstVal)
+    @Override
+    protected void resolveConstants()
         {
-        super(pool);
-        validateFormatAndType(fmt, constType);
+        ConstantPool pool = getConstantPool();
 
-        if (aconstVal == null)
+        m_constType = (TypeConstant) pool.getConstant(m_iType);
+
+        int[]      aiConst = m_aiVal;
+        int        cConsts = aiConst.length;
+        Constant[] aconst  = new Constant[cConsts];
+        for (int i = 0; i < cConsts; ++i)
             {
-            throw new IllegalArgumentException("value required");
+            aconst[i] = pool.getConstant(aiConst[i]);
             }
-
-        m_fmt       = fmt;
-        m_constType = constType;
-        m_aconstVal = aconstVal;
+        m_aconstVal = aconst;
         }
 
     private void validateFormatAndType(Format fmt, TypeConstant constType)
@@ -300,24 +318,6 @@ public class ArrayConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        ConstantPool pool = getConstantPool();
-
-        m_constType = (TypeConstant) pool.getConstant(m_iType);
-
-        int[]      aiConst = m_aiVal;
-        int        cConsts = aiConst.length;
-        Constant[] aconst  = new Constant[cConsts];
-        for (int i = 0; i < cConsts; ++i)
-            {
-            aconst[i] = pool.getConstant(aiConst[i]);
-            }
-        m_aconstVal = aconst;
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

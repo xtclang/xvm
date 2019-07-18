@@ -30,24 +30,6 @@ public class MethodConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Constructor used for deserialization.
-     *
-     * @param pool    the ConstantPool that will contain this Constant
-     * @param format  the format of the Constant in the stream
-     * @param in      the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
-     */
-    public MethodConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
-        super(pool);
-        m_iParent = readMagnitude(in);
-        m_iSig    = readMagnitude(in);
-        m_iLambda = readMagnitude(in);
-        }
-
-    /**
      * Construct a constant whose value is a method identifier.
      *
      * @param pool         the ConstantPool that will contain this Constant
@@ -68,7 +50,7 @@ public class MethodConstant
      * @param returns      the return types
      */
     public MethodConstant(ConstantPool pool, MultiMethodConstant constParent,
-            TypeConstant[] params, TypeConstant[] returns)
+                          TypeConstant[] params, TypeConstant[] returns)
         {
         this(pool, constParent, pool.ensureSignatureConstant(constParent.getName(), params, returns), 0);
         }
@@ -93,7 +75,8 @@ public class MethodConstant
      * @param constSig     the method signature constant
      * @param iLambda      the separate lambda identity
      */
-    protected MethodConstant(ConstantPool pool, MultiMethodConstant constParent, SignatureConstant constSig, int iLambda)
+    protected MethodConstant(ConstantPool pool, MultiMethodConstant constParent,
+                             SignatureConstant constSig, int iLambda)
         {
         super(pool);
 
@@ -115,6 +98,34 @@ public class MethodConstant
         m_constParent = constParent;
         m_constSig    = constSig;
         m_iLambda     = iLambda;
+        }
+
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param format  the format of the Constant in the stream
+     * @param in      the DataInput stream to read the Constant value from
+     *
+     * @throws IOException  if an issue occurs reading the Constant value
+     */
+    public MethodConstant(ConstantPool pool, Format format, DataInput in)
+            throws IOException
+        {
+        super(pool);
+
+        m_iParent = readMagnitude(in);
+        m_iSig    = readMagnitude(in);
+        m_iLambda = readMagnitude(in);
+        }
+
+    @Override
+    protected void resolveConstants()
+        {
+        ConstantPool pool = getConstantPool();
+
+        m_constParent = (MultiMethodConstant) pool.getConstant(m_iParent);
+        m_constSig    = (SignatureConstant  ) pool.getConstant(m_iSig   );
         }
 
     // ----- type-specific functionality -----------------------------------------------------------
@@ -537,16 +548,6 @@ public class MethodConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        ConstantPool pool = getConstantPool();
-
-        m_constParent = (MultiMethodConstant) pool.getConstant(m_iParent);
-        m_constSig    = (SignatureConstant  ) pool.getConstant(m_iSig   );
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

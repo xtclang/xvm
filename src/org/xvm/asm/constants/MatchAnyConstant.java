@@ -23,22 +23,6 @@ public class MatchAnyConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Constructor used for deserialization.
-     *
-     * @param pool    the ConstantPool that will contain this Constant
-     * @param format  the format of the Constant in the stream
-     * @param in      the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
-     */
-    public MatchAnyConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
-        super(pool);
-        m_iType = readMagnitude(in);
-        }
-
-    /**
      * Construct a constant whose value is any and all values of the specified type.
      *
      * @param pool  the ConstantPool that will contain this Constant
@@ -54,6 +38,29 @@ public class MatchAnyConstant
             }
 
         m_constType = type;
+        }
+
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param format  the format of the Constant in the stream
+     * @param in      the DataInput stream to read the Constant value from
+     *
+     * @throws IOException  if an issue occurs reading the Constant value
+     */
+    public MatchAnyConstant(ConstantPool pool, Format format, DataInput in)
+            throws IOException
+        {
+        super(pool);
+
+        m_iType = readMagnitude(in);
+        }
+
+    @Override
+    protected void resolveConstants()
+        {
+        m_constType = (TypeConstant) getConstantPool().getConstant(m_iType);
         }
 
 
@@ -124,13 +131,6 @@ public class MatchAnyConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        m_constType = (TypeConstant) getConstantPool().getConstant(m_iType);
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

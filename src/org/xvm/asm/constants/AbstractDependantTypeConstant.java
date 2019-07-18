@@ -23,6 +23,24 @@ public abstract class AbstractDependantTypeConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
+     * Construct a constant whose value is a data type.
+     *
+     * @param pool        the ConstantPool that will contain this Constant
+     * @param typeParent  the parent's type
+     */
+    public AbstractDependantTypeConstant(ConstantPool pool, TypeConstant typeParent)
+        {
+        super(pool);
+
+        if (typeParent == null)
+            {
+            throw new IllegalArgumentException("parent type is required");
+            }
+
+        m_typeParent = typeParent.resolveTypedefs();
+        }
+
+    /**
      * Constructor used for deserialization.
      *
      * @param pool    the ConstantPool that will contain this Constant
@@ -39,22 +57,10 @@ public abstract class AbstractDependantTypeConstant
         m_iTypeParent = readIndex(in);
         }
 
-    /**
-     * Construct a constant whose value is a data type.
-     *
-     * @param pool        the ConstantPool that will contain this Constant
-     * @param typeParent  the parent's type
-     */
-    public AbstractDependantTypeConstant(ConstantPool pool, TypeConstant typeParent)
+    @Override
+    protected void resolveConstants()
         {
-        super(pool);
-
-        if (typeParent == null)
-            {
-            throw new IllegalArgumentException("parent type is required");
-            }
-
-        m_typeParent = typeParent.resolveTypedefs();
+        m_typeParent = (TypeConstant) getConstantPool().getConstant(m_iTypeParent);
         }
 
 
@@ -204,13 +210,6 @@ public abstract class AbstractDependantTypeConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        m_typeParent = (TypeConstant) getConstantPool().getConstant(m_iTypeParent);
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

@@ -18,6 +18,19 @@ public class VersionConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
+     * Construct a constant whose value is a PackedInteger.
+     *
+     * @param pool  the ConstantPool that will contain this Constant
+     * @param ver   the version
+     */
+    public VersionConstant(ConstantPool pool, Version ver)
+        {
+        super(pool, Format.Version, ver.toString(), null); // REVIEW should we use "ver" as the value?
+
+        m_ver = ver;
+        }
+
+    /**
      * Constructor used for deserialization.
      *
      * @param pool    the ConstantPool that will contain this Constant
@@ -32,16 +45,12 @@ public class VersionConstant
         super(pool, format, in);
         }
 
-    /**
-     * Construct a constant whose value is a PackedInteger.
-     *
-     * @param pool  the ConstantPool that will contain this Constant
-     * @param ver   the version
-     */
-    public VersionConstant(ConstantPool pool, Version ver)
+    @Override
+    protected void resolveConstants()
         {
-        super(pool, Format.Version, ver.toString(), null); // REVIEW should we use "ver" as the value?
-        m_ver = ver;
+        super.resolveConstants();
+
+        m_ver = new Version(getValue());
         }
 
 
@@ -82,14 +91,6 @@ public class VersionConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        super.disassemble(in);
-        m_ver = new Version(getValue());
-        }
 
     @Override
     public String getDescription()

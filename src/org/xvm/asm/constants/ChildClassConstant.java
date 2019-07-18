@@ -24,23 +24,6 @@ public class ChildClassConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Constructor used for deserialization.
-     *
-     * @param pool    the ConstantPool that will contain this Constant
-     * @param format  the format of the Constant in the stream
-     * @param in      the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
-     */
-    public ChildClassConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
-        super(pool);
-        m_iParent = readMagnitude(in);
-        m_iName   = readMagnitude(in);
-        }
-
-    /**
      * Construct a constant that represents the class of a non-static child whose identity is
      * auto-narrowing.
      *
@@ -74,6 +57,33 @@ public class ChildClassConstant
 
         m_constParent = constParent;
         m_constName   = pool.ensureStringConstant(sName);
+        }
+
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param format  the format of the Constant in the stream
+     * @param in      the DataInput stream to read the Constant value from
+     *
+     * @throws IOException  if an issue occurs reading the Constant value
+     */
+    public ChildClassConstant(ConstantPool pool, Format format, DataInput in)
+            throws IOException
+        {
+        super(pool);
+
+        m_iParent = readMagnitude(in);
+        m_iName   = readMagnitude(in);
+        }
+
+    @Override
+    protected void resolveConstants()
+        {
+        ConstantPool pool = getConstantPool();
+
+        m_constParent = (PseudoConstant) pool.getConstant(m_iParent);
+        m_constName   = (StringConstant) pool.getConstant(m_iName);
         }
 
 
@@ -224,14 +234,6 @@ public class ChildClassConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        m_constParent = (PseudoConstant) getConstantPool().getConstant(m_iParent);
-        m_constName   = (StringConstant) getConstantPool().getConstant(m_iName);
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

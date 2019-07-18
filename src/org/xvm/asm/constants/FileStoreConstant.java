@@ -25,23 +25,6 @@ public class FileStoreConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Constructor used for deserialization.
-     *
-     * @param pool    the ConstantPool that will contain this Constant
-     * @param format  the format of the Constant in the stream
-     * @param in      the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
-     */
-    public FileStoreConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
-        super(pool);
-        m_iPath = readMagnitude(in);
-        m_iDir  = readMagnitude(in);
-        }
-
-    /**
      * Construct a constant whose value is a FileStore.
      *
      * @param pool      the ConstantPool that will contain this Constant
@@ -64,6 +47,33 @@ public class FileStoreConstant
 
         m_constPath = pool.ensureStringConstant(sPath);
         m_constDir  = constDir;
+        }
+
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param format  the format of the Constant in the stream
+     * @param in      the DataInput stream to read the Constant value from
+     *
+     * @throws IOException  if an issue occurs reading the Constant value
+     */
+    public FileStoreConstant(ConstantPool pool, Format format, DataInput in)
+            throws IOException
+        {
+        super(pool);
+
+        m_iPath = readMagnitude(in);
+        m_iDir  = readMagnitude(in);
+        }
+
+    @Override
+    protected void resolveConstants()
+        {
+        ConstantPool pool = getConstantPool();
+
+        m_constPath = (StringConstant) pool.getConstant(m_iPath);
+        m_constDir  = (FSNodeConstant) pool.getConstant(m_iDir);
         }
 
 
@@ -171,14 +181,6 @@ public class FileStoreConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        m_constPath = (StringConstant) getConstantPool().getConstant(m_iPath);
-        m_constDir  = (FSNodeConstant) getConstantPool().getConstant(m_iDir);
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

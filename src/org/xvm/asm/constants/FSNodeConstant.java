@@ -29,27 +29,6 @@ public class FSNodeConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Constructor used for deserialization.
-     *
-     * @param pool    the ConstantPool that will contain this Constant
-     * @param format  the format of the Constant in the stream
-     * @param in      the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
-     */
-    public FSNodeConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
-        super(pool);
-
-        m_fmt       = format;
-        m_iName     = readMagnitude(in);
-        m_iCreated  = readMagnitude(in);
-        m_iModified = readMagnitude(in);
-        m_iData     = readMagnitude(in);
-        }
-
-    /**
      * Construct a constant whose value is a filing system directory.
      *
      * @param pool        the ConstantPool that will contain this Constant
@@ -147,6 +126,38 @@ public class FSNodeConstant
         m_constCreated  = pool.ensureDateTimeConstant(ftCreated);
         m_constModified = pool.ensureDateTimeConstant(ftModified);
         m_constData     = constLinkTo;
+        }
+
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param format  the format of the Constant in the stream
+     * @param in      the DataInput stream to read the Constant value from
+     *
+     * @throws IOException  if an issue occurs reading the Constant value
+     */
+    public FSNodeConstant(ConstantPool pool, Format format, DataInput in)
+            throws IOException
+        {
+        super(pool);
+
+        m_fmt       = format;
+        m_iName     = readMagnitude(in);
+        m_iCreated  = readMagnitude(in);
+        m_iModified = readMagnitude(in);
+        m_iData     = readMagnitude(in);
+        }
+
+    @Override
+    protected void resolveConstants()
+        {
+        ConstantPool pool = getConstantPool();
+
+        m_constName     = (StringConstant ) pool.getConstant(m_iName    );
+        m_constCreated  = (LiteralConstant) pool.getConstant(m_iCreated );
+        m_constModified = (LiteralConstant) pool.getConstant(m_iModified);
+        m_constData     =                   pool.getConstant(m_iData    );
         }
 
 
@@ -345,18 +356,6 @@ public class FSNodeConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        ConstantPool pool = getConstantPool();
-
-        m_constName     = (StringConstant ) pool.getConstant(m_iName    );
-        m_constCreated  = (LiteralConstant) pool.getConstant(m_iCreated );
-        m_constModified = (LiteralConstant) pool.getConstant(m_iModified);
-        m_constData     =                   pool.getConstant(m_iData    );
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

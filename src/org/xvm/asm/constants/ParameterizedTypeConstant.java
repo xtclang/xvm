@@ -34,34 +34,6 @@ public class ParameterizedTypeConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Constructor used for deserialization.
-     *
-     * @param pool    the ConstantPool that will contain this Constant
-     * @param format  the format of the Constant in the stream
-     * @param in      the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
-     */
-    public ParameterizedTypeConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
-        super(pool);
-
-        m_iType = readIndex(in);
-
-        int cTypes  = readMagnitude(in);
-        if (cTypes > 0)
-            {
-            int[] aiType = new int[cTypes];
-            for (int i = 1; i <= cTypes; ++i)
-                {
-                aiType[i] = readIndex(in);
-                }
-            m_aiTypeParams = aiType;
-            }
-        }
-
-    /**
      * Construct a constant whose value is a type-parameterized type.
      *
      * @param pool             the ConstantPool that will contain this Constant
@@ -69,7 +41,7 @@ public class ParameterizedTypeConstant
      * @param constTypeParams  a number of TypeConstants representing the type parameters
      */
     public ParameterizedTypeConstant(ConstantPool pool, TypeConstant constType,
-            TypeConstant... constTypeParams)
+                                     TypeConstant... constTypeParams)
         {
         super(pool);
 
@@ -101,6 +73,58 @@ public class ParameterizedTypeConstant
 
         m_constType   = constType;
         m_atypeParams = constTypeParams;
+        }
+
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param format  the format of the Constant in the stream
+     * @param in      the DataInput stream to read the Constant value from
+     *
+     * @throws IOException  if an issue occurs reading the Constant value
+     */
+    public ParameterizedTypeConstant(ConstantPool pool, Format format, DataInput in)
+            throws IOException
+        {
+        super(pool);
+
+        m_iType = readIndex(in);
+
+        int cTypes = readMagnitude(in);
+        if (cTypes > 0)
+            {
+            int[] aiType = new int[cTypes];
+            for (int i = 0; i < cTypes; ++i)
+                {
+                aiType[i] = readIndex(in);
+                }
+            m_aiTypeParams = aiType;
+            }
+        }
+
+    @Override
+    protected void resolveConstants()
+        {
+        ConstantPool pool = getConstantPool();
+
+        m_constType = (TypeConstant) pool.getConstant(m_iType);
+
+        if (m_aiTypeParams == null)
+            {
+            m_atypeParams = ConstantPool.NO_TYPES;
+            }
+        else
+            {
+            int            cParams     = m_aiTypeParams.length;
+            TypeConstant[] atypeParams = new TypeConstant[cParams];
+            for (int i = 0; i < cParams; ++i)
+                {
+                atypeParams[i] = (TypeConstant) pool.getConstant(m_aiTypeParams[i]);
+                }
+            m_atypeParams  = atypeParams;
+            m_aiTypeParams = null;
+            }
         }
 
 
@@ -715,31 +739,6 @@ public class ParameterizedTypeConstant
         }
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        ConstantPool pool = getConstantPool();
-
-        m_constType = (TypeConstant) pool.getConstant(m_iType);
-
-        if (m_aiTypeParams == null)
-            {
-            m_atypeParams = ConstantPool.NO_TYPES;
-            }
-        else
-            {
-            int            cParams     = m_aiTypeParams.length;
-            TypeConstant[] atypeParams = new TypeConstant[cParams];
-            for (int i = 0; i < cParams; ++i)
-                {
-                atypeParams[i] = (TypeConstant) pool.getConstant(m_aiTypeParams[i]);
-                }
-            m_atypeParams  = atypeParams;
-            m_aiTypeParams = null;
-            }
-        }
 
     @Override
     protected void registerConstants(ConstantPool pool)
