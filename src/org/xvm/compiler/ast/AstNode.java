@@ -188,7 +188,7 @@ public abstract class AstNode
      *
      * @param fRecurse  pass true to discard the entire tree from this node down
      */
-    void discard(boolean fRecurse)
+    protected void discard(boolean fRecurse)
         {
         m_stage = Stage.Discarded;
         if (fRecurse)
@@ -203,7 +203,7 @@ public abstract class AstNode
     /**
      * @return true iff the node has been discarded
      */
-    boolean isDiscarded()
+    protected boolean isDiscarded()
         {
         return m_stage == Stage.Discarded;
         }

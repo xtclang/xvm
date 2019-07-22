@@ -511,7 +511,7 @@ public class LambdaExpression
             }
 
         LambdaContext ctxLambda = enterCapture(ctx, blockTemp, atypeParams, asParams);
-        StatementBlock blockNew  = (StatementBlock) blockTemp.validate(ctxLambda, errs);
+        StatementBlock blockNew = (StatementBlock) blockTemp.validate(ctxLambda, errs);
         if (blockNew == null)
             {
             blockTemp.discard(true);
@@ -522,6 +522,7 @@ public class LambdaExpression
             // we do NOT store off the validated block; the block does NOT belong to the lambda
             // expression; rather, it belongs to the function (m_lambda) that we created, and the
             // real (not temp) block will get validated and compiled by generateCode() above
+            blockNew.discard(true);
             }
 
         // collected VAS information from the lambda context
@@ -790,6 +791,27 @@ public class LambdaExpression
             // neither target nor param binding
             LVal.assign(idLambda, code, errs);
             }
+        }
+
+    @Override
+    protected void discard(boolean fRecurse)
+        {
+        super.discard(fRecurse);
+
+        if (m_lambda != null)
+            {
+            m_lambda.getParent().removeChild(m_lambda);
+            m_lambda = null;
+            }
+        }
+
+    @Override
+    public AstNode clone()
+        {
+        // the reference to the lambda's method structure should not be a part of the cloned state
+        LambdaExpression exprClone = (LambdaExpression) super.clone();
+        exprClone.m_lambda = null;
+        return exprClone;
         }
 
 

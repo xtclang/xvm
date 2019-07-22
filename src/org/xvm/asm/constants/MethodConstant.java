@@ -554,10 +554,8 @@ public class MethodConstant
         {
         m_type = null;
 
-        // TODO - since we go ahead and build everything even after we hit otherwise-fatal errors,
-        // this assertion is currently invalid:
-        // assert !isNascent();
-
+        // there is a possibility of creating a method for a lambda hosted by another lambda
+        // while the containing lambda has not yet been injected with the signature
         m_constParent = (MultiMethodConstant) pool.register(m_constParent);
         m_constSig    = (SignatureConstant  ) pool.register(m_constSig   );
         }
@@ -568,9 +566,7 @@ public class MethodConstant
         {
         m_type = null;
 
-        // TODO - since we go ahead and build everything even after we hit otherwise-fatal errors,
-        // this assertion is currently invalid:
-        // assert !isNascent();
+        assert !isNascent();
 
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constParent.getPosition());
