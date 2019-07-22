@@ -1580,7 +1580,7 @@ public class Frame
             sb.append("\n  - ")
               .append(formatFrameDetails(frame.f_context, frame.f_function, iPC, frame.f_aOp, frame.f_framePrev));
 
-            iPC = frame.f_iPCPrev;
+            iPC   = frame.f_iPCPrev - 1;
             frame = frame.f_framePrev;
             if (frame == null)
                 {
