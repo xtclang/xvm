@@ -620,7 +620,7 @@ public class PropertyStructure
         int nValue  = readIndex(in);
         if (nValue >= 0)
             {
-            m_constVal  = pool.getConstant(nValue);
+            m_constVal = pool.getConstant(nValue);
             }
         }
 
@@ -647,10 +647,7 @@ public class PropertyStructure
 
         out.writeByte(m_accessVar == null ? -1 : m_accessVar.ordinal());
         writePackedLong(out, m_type.getPosition());
-        if (m_constVal != null)
-            {
-            writePackedLong(out, m_constVal.getPosition());
-            }
+        writePackedLong(out, Constant.indexOf(m_constVal));
         }
 
     @Override

@@ -46,6 +46,7 @@ import org.xvm.runtime.template.xNullable;
 import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.indentLines;
+import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -906,7 +907,18 @@ public class MethodStructure
     public MethodStructure getConstructFinally()
         {
         assert isConstructor();
-        return m_structFinally;
+
+        MethodStructure structFinally = m_structFinally;
+        if (structFinally == null)
+            {
+            if (m_idFinally == null)
+                {
+                return null;
+                }
+            m_structFinally = structFinally = (MethodStructure) m_idFinally.getComponent();
+            }
+
+        return structFinally;
         }
 
     /**
@@ -915,7 +927,9 @@ public class MethodStructure
     public void setConstructFinally(MethodStructure structFinally)
         {
         assert isConstructor();
+
         m_structFinally = structFinally;
+        m_idFinally     = structFinally.getIdentityConstant();
         }
 
     /**
@@ -1464,6 +1478,15 @@ public class MethodStructure
         TypeConstant[] aconstReturnTypes = constMethod.getRawReturns();
         TypeConstant[] aconstParamTypes  = constMethod.getRawParams();
 
+        int          cAnnos = readMagnitude(in);
+        Annotation[] aAnnos = cAnnos == 0 ? Annotation.NO_ANNOTATIONS : new Annotation[cAnnos];
+        for (int i = 0; i < cAnnos; ++i)
+            {
+            aAnnos[i] = (Annotation) pool.getConstant(readMagnitude(in));
+            }
+
+        m_idFinally = (MethodConstant) pool.getConstant(readIndex(in));
+
         int         cReturns = aconstReturnTypes.length;
         Parameter[] aReturns = new Parameter[cReturns];
         boolean     fCond    = isConditionalReturn();
@@ -1477,12 +1500,12 @@ public class MethodStructure
             aReturns[i] = param;
             }
 
+        int         cTypeParams = readMagnitude(in);
         int         cParams     = aconstParamTypes.length;
         Parameter[] aParams     = new Parameter[cParams];
-        int         cTypeParams = readMagnitude(in);
         for (int i = 0; i < cParams; ++i)
             {
-            Parameter param = new Parameter(pool, in, true, i, i < cTypeParams);
+            Parameter param = new Parameter(pool, in, false, i, i < cTypeParams);
             if (!param.getType().equals(aconstParamTypes[i]))
                 {
                 throw new IOException("type mismatch between method constant and param " + i + " value type");
@@ -1491,29 +1514,42 @@ public class MethodStructure
             }
 
         // read local "constant pool"
-        int cConsts = readMagnitude(in);
-        Constant[] aconst = cConsts == 0 ? Constant.NO_CONSTS : new Constant[cConsts];
+        int        cConsts = readMagnitude(in);
+        Constant[] aconst  = cConsts == 0 ? Constant.NO_CONSTS : new Constant[cConsts];
         for (int i = 0; i < cConsts; ++i)
             {
             aconst[i] = pool.getConstant(readMagnitude(in));
             }
 
         // read code
-        int cbOps = readMagnitude(in);
-        byte[] abOps = new byte[cbOps];
-        in.readFully(abOps);
+        byte[] abOps = null;
+        int    cbOps = readMagnitude(in);
+        if (cbOps > 0)
+            {
+            abOps = new byte[cbOps];
+            in.readFully(abOps);
+            }
 
-        m_aReturns    = aReturns;
-        m_cTypeParams = cTypeParams;
-        m_aParams     = aParams;
-        m_aconstLocal = aconst;
-        m_abOps       = abOps;
+        m_aAnnotations = aAnnos;
+        m_aReturns     = aReturns;
+        m_cTypeParams  = cTypeParams;
+        m_aParams      = aParams;
+        m_aconstLocal  = aconst;
+        m_abOps        = abOps;
+        m_FHasCode     = abOps != null;
+
+        ensureCode(); // REVIEW can or should we defer this?
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
         super.registerConstants(pool);
+
+        for (int i = 0, c = m_aAnnotations.length; i < c; i++)
+            {
+            m_aAnnotations[i] = (Annotation) pool.register(m_aAnnotations[i]);
+            }
 
         for (Parameter param : m_aReturns)
             {
@@ -1539,12 +1575,7 @@ public class MethodStructure
                 {
                 for (int i = 0, c = aconst.length; i < c; ++i)
                     {
-                    Constant constOld = aconst[i];
-                    Constant constNew = pool.register(constOld);
-                    if (constNew != constOld)
-                        {
-                        aconst[i] = constNew;
-                        }
+                    aconst[i] = pool.register(aconst[i]);
                     }
                 }
             }
@@ -1560,6 +1591,14 @@ public class MethodStructure
         {
         super.assemble(out);
 
+        writePackedLong(out, m_aAnnotations.length);
+        for (Annotation anno : m_aAnnotations)
+            {
+            writePackedLong(out, anno.getPosition());
+            }
+
+        writePackedLong(out, Constant.indexOf(m_idFinally));
+
         for (Parameter param : m_aReturns)
             {
             param.assemble(out);
@@ -1571,15 +1610,7 @@ public class MethodStructure
             param.assemble(out);
             }
 
-        // write out the "local constant pool"
-        Constant[] aconst  = m_aconstLocal;
-        int        cConsts = aconst == null ? 0 : aconst.length;
-        writePackedLong(out, cConsts);
-        for (int i = 0; i < cConsts; ++i)
-            {
-            writePackedLong(out, aconst[i].getPosition());
-            }
-
+        // produce the op bytes and "local constant pool"
         if (m_abOps == null && m_code != null)
             {
             try
@@ -1592,6 +1623,15 @@ public class MethodStructure
                         + this.getParent().getContainingClass().getName() + "."
                         + this.getName() + ": " + e);
                 }
+            }
+
+        // write out the "local constant pool"
+        Constant[] aconst  = m_aconstLocal;
+        int        cConsts = aconst == null ? 0 : aconst.length;
+        writePackedLong(out, cConsts);
+        for (int i = 0; i < cConsts; ++i)
+            {
+            writePackedLong(out, aconst[i].getPosition());
             }
 
         // write out the bytes (if there are any)
@@ -2262,7 +2302,10 @@ public class MethodStructure
                 DataOutputStream      outData  = new DataOutputStream(outBytes);
                 try
                     {
-                    for (Op op : ensureOps())
+                    Op[] aOp = ensureOps();
+
+                    writePackedLong(outData, aOp.length);
+                    for (Op op : aOp)
                         {
                         op.write(outData, registry);
                         }
@@ -2290,7 +2333,7 @@ public class MethodStructure
                             + f_method.getIdentityConstant().getPathString()
                             + "\" is neither native nor compiled");
                     }
-                m_aop = aop = m_listOps.toArray(new Op[m_listOps.size()]);
+                m_aop = aop = m_listOps.toArray(Op.NO_OPS);
                 }
             return aop;
             }
@@ -2342,19 +2385,14 @@ public class MethodStructure
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * Empty array of Parameters.
-     */
-    public static final Parameter[] NO_PARAMS = Parameter.NO_PARAMS;
-
-    /**
-     * Empty array of Ops.
-     */
-    public static final Op[] NO_OPS = new Op[0];
-
-    /**
      * The method annotations.
      */
     private Annotation[] m_aAnnotations;
+
+    /**
+     * For constructors, an optional identity of the corresponding "finally" block.
+     */
+    private MethodConstant m_idFinally;
 
     /**
      * The return value types. (A zero-length array is "void".)
@@ -2377,6 +2415,11 @@ public class MethodStructure
     private Parameter[] m_aParams;
 
     /**
+     * The ops.
+     */
+    private byte[] m_abOps;
+
+    /**
      * The constants used by the Ops.
      */
     Constant[] m_aconstLocal;
@@ -2385,11 +2428,6 @@ public class MethodStructure
      * The constant registry used while assembling the Ops.
      */
     transient ConstantRegistry m_registry;
-
-    /**
-     * The yet-to-be-deserialized ops.
-     */
-    transient byte[] m_abOps;
 
     /**
      * The method's code (for assembling new code).

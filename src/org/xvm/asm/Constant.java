@@ -325,6 +325,7 @@ public abstract class Constant
             throw new IllegalStateException(e);
             }
         that.setContaining(pool);
+        that.resetRefs();
         return that;
         }
 

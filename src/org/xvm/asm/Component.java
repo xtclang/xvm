@@ -2160,8 +2160,8 @@ public abstract class Component
         int c = readMagnitude(in);
         if (c > 0)
             {
-            final List<Contribution> list = new ArrayList<>();
-            final ConstantPool       pool = getConstantPool();
+            ConstantPool       pool = getConstantPool();
+            List<Contribution> list = new ArrayList<>();
             for (int i = 0; i < c; ++i)
                 {
                 list.add(new Contribution(in, pool));
@@ -2187,7 +2187,7 @@ public abstract class Component
         m_cond    = (ConditionalConstant) pool.register(m_cond);
 
         // register the contributions
-        final List<Contribution> listContribs = m_listContribs;
+        List<Contribution> listContribs = m_listContribs;
         if (listContribs != null  && listContribs.size() > 0)
             {
             for (Contribution contribution : listContribs)
@@ -2215,8 +2215,8 @@ public abstract class Component
         writePackedLong(out, m_constId.getPosition());
 
         // write out the contributions
-        final List<Contribution> listContribs = m_listContribs;
-        final int cContribs = listContribs == null ? 0 : listContribs.size();
+        List<Contribution> listContribs = m_listContribs;
+        int                cContribs    = listContribs == null ? 0 : listContribs.size();
         writePackedLong(out, cContribs);
         if (cContribs > 0)
             {
@@ -2270,8 +2270,8 @@ public abstract class Component
 
         sIndent = nextIndent(sIndent);
 
-        final List<Contribution> listContribs = m_listContribs;
-        final int cContribs = listContribs == null ? 0 : listContribs.size();
+        List<Contribution> listContribs = m_listContribs;
+        int                cContribs    = listContribs == null ? 0 : listContribs.size();
         if (cContribs > 0)
             {
             for (int i = 0; i < cContribs; ++i)
@@ -2361,10 +2361,10 @@ public abstract class Component
                 }
 
             // contributions (order is considered important)
-            final List<Contribution> listThisContribs = this.m_listContribs;
-            final List<Contribution> listThatContribs = that.m_listContribs;
-            final int cThisContribs = listThisContribs == null ? 0 : listThisContribs.size();
-            final int cThatContribs = listThatContribs == null ? 0 : listThatContribs.size();
+            List<Contribution> listThisContribs = this.m_listContribs;
+            List<Contribution> listThatContribs = that.m_listContribs;
+            int cThisContribs = listThisContribs == null ? 0 : listThisContribs.size();
+            int cThatContribs = listThatContribs == null ? 0 : listThatContribs.size();
             return !(cThisContribs != cThatContribs ||
                     (cThisContribs > 0 && !listThisContribs.equals(listThatContribs)));
             }
@@ -2609,8 +2609,8 @@ public abstract class Component
             return null;
             }
 
-        final ListMap<StringConstant, TypeConstant> map = new ListMap<>();
-        final ConstantPool pool = getConstantPool();
+        ListMap<StringConstant, TypeConstant> map = new ListMap<>();
+        ConstantPool pool = getConstantPool();
         for (int i = 0; i < c; ++i)
             {
             StringConstant constName = (StringConstant) pool.getConstant(readIndex(in));
@@ -2635,7 +2635,7 @@ public abstract class Component
             return mapOld;
             }
 
-        final ConstantPool pool = getConstantPool();
+        ConstantPool                          pool   = getConstantPool();
         ListMap<StringConstant, TypeConstant> mapNew = mapOld;
         for (Map.Entry<StringConstant, TypeConstant> entry : mapOld.entrySet())
             {
@@ -2833,7 +2833,7 @@ public abstract class Component
 
                 case Annotation:
                     m_typeContrib = (TypeConstant) constContrib;
-                    m_annotation  = new Annotation(pool, in);
+                    m_annotation  = (Annotation) pool.getConstant(readIndex(in));
                     break;
 
                 case Delegates:
@@ -2843,10 +2843,10 @@ public abstract class Component
 
                 case Incorporates:
                     m_typeContrib = (TypeConstant) constContrib;
-                    final int cParams = readMagnitude(in);
+                    int cParams = readMagnitude(in);
                     if (cParams > 0)
                         {
-                        final ListMap<StringConstant, TypeConstant> map = new ListMap<>();
+                        ListMap<StringConstant, TypeConstant> map = new ListMap<>();
                         for (int i = 0; i < cParams; ++i)
                             {
                             int iName = readMagnitude(in);
@@ -3174,11 +3174,7 @@ public abstract class Component
             m_constModule  = (ModuleConstant)   pool.register(m_constModule);
             m_typeContrib  = (TypeConstant)     pool.register(m_typeContrib);
             m_constProp    = (PropertyConstant) pool.register(m_constProp);
-
-            if (m_annotation != null)
-                {
-                m_annotation.registerConstants(pool);
-                }
+            m_annotation   = (Annotation)       pool.register(m_annotation);
 
             ListMap<StringConstant, TypeConstant> mapOld = m_mapParams;
             if (mapOld != null)
@@ -3208,7 +3204,7 @@ public abstract class Component
             switch (m_composition)
                 {
                 case Annotation:
-                    m_annotation.assemble(out);
+                    writePackedLong(out, Constant.indexOf(m_annotation));
                     break;
 
                 case Delegates:
@@ -3216,7 +3212,7 @@ public abstract class Component
                     break;
 
                 case Incorporates:
-                    final ListMap<StringConstant, TypeConstant> map = m_mapParams;
+                    ListMap<StringConstant, TypeConstant> map = m_mapParams;
                     if (map == null)
                         {
                         writePackedLong(out, 0);

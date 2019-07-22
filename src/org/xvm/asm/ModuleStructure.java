@@ -354,9 +354,9 @@ public class ModuleStructure
 
         if (isFingerprint())
             {
-            final ConstantPool pool = getConstantPool();
+            ConstantPool pool = getConstantPool();
 
-            final VersionTree<Boolean> vtreeAllow = vtreeImportAllowVers;
+            VersionTree<Boolean> vtreeAllow = vtreeImportAllowVers;
             writePackedLong(out, vtreeAllow.size());
             for (Version ver : vtreeAllow)
                 {
@@ -364,7 +364,7 @@ public class ModuleStructure
                 out.writeBoolean(vtreeAllow.get(ver));
                 }
 
-            final List<Version> listPrefer = listImportPreferVers;
+            List<Version> listPrefer = listImportPreferVers;
             writePackedLong(out, listPrefer.size());
             for (Version ver : listPrefer)
                 {
@@ -386,8 +386,8 @@ public class ModuleStructure
             {
             sb.append(", fingerprint=true");
 
-            final VersionTree<Boolean> vtreeAllow = vtreeImportAllowVers;
-            final List<Version>        listPrefer = listImportPreferVers;
+            VersionTree<Boolean> vtreeAllow = vtreeImportAllowVers;
+            List<Version>        listPrefer = listImportPreferVers;
             if (!vtreeAllow.isEmpty() || !listPrefer.isEmpty())
                 {
                 sb.append(", version={");

@@ -43,12 +43,15 @@ public class Parameter
         {
         super(pool);
 
-        m_iType     = readMagnitude(in);
-        m_iName     = fReturn ? readIndex(in) : readMagnitude(in);
-        m_iDefault  = readIndex(in);
+        int iType      = readMagnitude(in);
+        int iName      = fReturn ? readIndex(in) : readMagnitude(in);
+        int iDefault   = readIndex(in);
 
-        m_iParam    = fReturn ? -1 - index : index;
-        m_fOrdinary = !fSpecial;
+        m_constType    = (TypeConstant)   pool.getConstant(iType   );
+        m_constName    = (StringConstant) pool.getConstant(iName   );
+        m_constDefault =                  pool.getConstant(iDefault);
+        m_iParam       = fReturn ? -1 - index : index;
+        m_fOrdinary    = !fSpecial;
         }
 
     /**
@@ -262,12 +265,8 @@ public class Parameter
 
     @Override
     protected void disassemble(DataInput in)
-            throws IOException
         {
-        final ConstantPool pool = getConstantPool();
-        m_constType    = (TypeConstant)   pool.getConstant(m_iType   );
-        m_constName    = (StringConstant) pool.getConstant(m_iName   );
-        m_constDefault =                  pool.getConstant(m_iDefault);
+        throw new IllegalStateException();
         }
 
     @Override
@@ -371,24 +370,6 @@ public class Parameter
      * Empty array of Parameters.
      */
     public static final Parameter[] NO_PARAMS = new Parameter[0];
-
-    /**
-     * During disassembly, this holds the index of the constant that specifies the type of this
-     * parameter.
-     */
-    private transient int m_iType;
-
-    /**
-     * During disassembly, this holds the index of the constant that specifies the name of this
-     * parameter.
-     */
-    private transient int m_iName;
-
-    /**
-     * During disassembly, this holds the index of the constant that specifies the default value
-     * of this parameter.
-     */
-    private transient int m_iDefault;
 
     /**
      * The constant that represents the type of this parameter.
