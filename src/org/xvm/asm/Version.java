@@ -1,8 +1,9 @@
 package org.xvm.asm;
 
 
+import java.util.ArrayList;
+
 import static org.xvm.util.Handy.isDigit;
-import static org.xvm.util.Handy.parseDelimitedString;
 
 
 /**
@@ -16,121 +17,160 @@ public class Version
     /**
      * Construct a Version from a version string.
      *
-     * @param literal  the version string
+     * @param sLiteral  the version string
      */
-    public Version(String literal)
+    public Version(String sLiteral)
         {
-        this.literal = literal;
-        this.strs    = parseDelimitedString(literal, '.');
+        ArrayList<Integer> listParts = new ArrayList<>();
+        String             sBuild    = null;
+        int                cLen      = sLiteral.length();
+        int                ix        = 0;
+        boolean            fErr      = false;
 
-        boolean fGA  = true;
-        for (int i = 0, c = strs.length; i < c; ++i)
+        while (ix < cLen && isDigit(sLiteral.charAt(ix)))
             {
-            // each of the parts has to be an integer, except for the last which can start with
-            // a non-GA designator
-            String part = strs[i];
-            if (isValidVersionPart(part, i == c-1))
+            int n = 0;
+            do
                 {
-                // check if it's a non-GA part
-                if (!isDigit(part.charAt(0)))
-                    {
-                    if (!fGA)
-                        {
-                        throw new IllegalStateException("illegal version: " + literal
-                                + " (only one non-GA specifier allowed)");
-                        }
-                    fGA = false;
+                n = n * 10 + (sLiteral.charAt(ix++) - '0');
+                }
+            while (ix < cLen && isDigit(sLiteral.charAt(ix)));
 
-                    if (i > 0 && Integer.valueOf(strs[i-1]) == 0)
-                        {
-                        throw new IllegalStateException("illegal version: " + literal
-                                + " (a non-GA specifier cannot follow a dot-zero version)");
-                        }
+            listParts.add(n);
+
+            if (ix == cLen)
+                {
+                break;
+                }
+
+            if (sLiteral.charAt(ix) == '.')
+                {
+                ix++;
+                continue;
+                }
+
+            if (sLiteral.charAt(ix) == '-')
+                {
+                ix++;
+                break;
+                }
+
+            fErr = true;
+            break;
+            }
+
+        if (!fErr && ix < cLen)
+            {
+            switch (sLiteral.charAt(ix))
+                {
+                case 'A':
+                case 'a':
+                    listParts.add(-3);
+                    fErr = !match(sLiteral, ix, "alpha");
+                    ix += 5;
+                    break;
+
+                case 'B':
+                case 'b':
+                    listParts.add(-2);
+                    fErr = !match(sLiteral, ix, "beta");
+                    ix += 4;
+                    break;
+
+                case 'C':
+                case 'c':
+                    listParts.add(-6);
+                    fErr = !match(sLiteral, ix, "ci");
+                    ix += 2;
+                    break;
+
+                case 'D':
+                case 'd':
+                    listParts.add(-5);
+                    fErr = !match(sLiteral, ix, "dev");
+                    ix += 3;
+                    break;
+
+                case 'Q':
+                case 'q':
+                    listParts.add(-4);
+                    fErr = !match(sLiteral, ix, "qa");
+                    ix += 2;
+                    break;
+
+                case 'R':
+                case 'r':
+                    listParts.add(-1);
+                    fErr = !match(sLiteral, ix, "rc");
+                    ix += 2;
+                    break;
+
+                default:
+                    fErr = true;
+                    break;
+                }
+
+            while (!fErr && ix < cLen && isDigit(sLiteral.charAt(ix)))
+                {
+                int n = 0;
+                do
+                    {
+                    n = n * 10 + (sLiteral.charAt(ix++) - '0');
                     }
+                while (ix < cLen && isDigit(sLiteral.charAt(ix)));
+
+                listParts.add(n);
+                }
+            }
+
+        if (!fErr && ix < cLen)
+            {
+            if (sLiteral.charAt(ix) == '+')
+                {
+                sBuild = sLiteral.substring(ix + 1);
                 }
             else
                 {
-                throw new IllegalStateException("illegal version: " + literal);
+                fErr = true;
                 }
             }
+
+        if (fErr)
+            {
+            throw new IllegalStateException("illegal version: " + sLiteral);
+            }
+
+        int   cParts  = listParts.size();
+        int[] aiParts = new int[cParts];
+        for (int i = 0; i < cParts; ++i)
+            {
+            aiParts[i] = listParts.get(i);
+            }
+
+        this.literal = sLiteral;
+        this.ints    = aiParts;
+        this.build   = sBuild;
         }
 
-    public Version(String[] parts, String build)
+    /**
+     * Construct a Version from an array of version indicators and an optional description.
+     *
+     * @param aiParts  the array of version indicators
+     * @param sBuild  an optional build description
+     */
+    public Version(int[] aiParts, String sBuild)
         {
-        if (parts == null || parts.length == 0)
-            {
-            throw new IllegalArgumentException("illegal empty version");
-            }
-
-        StringBuilder sb  = new StringBuilder();
-        boolean       fGA = true;
-        for (int i = 0, c = parts.length; i < c; ++i)
-            {
-            // each of the parts has to be an integer, except for the last which can start with
-            // a non-GA designator
-            String part = parts[i];
-            if (isValidVersionPart(part, i == c-1))
-                {
-                // check if it's a non-GA part
-                if (!isDigit(part.charAt(0)))
-                    {
-                    if (!fGA)
-                        {
-                        throw new IllegalArgumentException("illegal version: " + literal
-                                + " (only one non-GA specifier allowed)");
-                        }
-                    fGA = false;
-
-                    if (i > 0 && Integer.valueOf(parts[i-1]) == 0)
-                        {
-                        throw new IllegalArgumentException("illegal version: " + literal
-                                + " (a non-GA specifier cannot follow a dot-zero version)");
-                        }
-                    }
-                }
-            else
-                {
-                throw new IllegalArgumentException("illegal version: " + literal);
-                }
-
-            if (i > 0)
-                {
-                if (fGA)
-                    {
-                    sb.append('.');
-                    }
-                else if (!isDigit(part.charAt(0)))
-                    {
-                    sb.append('-');
-                    }
-                }
-            sb.append(part);
-            }
-
-        if (build != null && build.length() > 0)
-            {
-            sb.append('+')
-              .append(build);
-            }
-
-        this.literal = sb.toString();
-        this.strs    = parts;
-        this.build   = build;
-        }
-
-    public Version(int[] parts, String build)
-        {
-        assert parts != null;
+        assert aiParts != null;
 
         // each version indicator must be >= 0, except the second-to-the-last or last, which may be
         // between -1 and -5
         StringBuilder sb  = new StringBuilder();
-        boolean       err = parts.length == 0;
+        boolean       err = aiParts.length == 0;
         boolean       fGA = true;
-        for (int i = 0, c = parts.length; i < c; ++i)
+        for (int i = 0, c = aiParts.length; i < c; ++i)
             {
-            int part = parts[i];
-            if (parts[i] >= 0)
+            int part = aiParts[i];
+            if (aiParts[i] >= 0)
                 {
                 if (i > 0 && fGA)
                     {
@@ -148,7 +188,7 @@ public class Version
                         break;
                     case 2:
                         // second to last element; last must be >= 0
-                        if (parts[i+1] < 0)
+                        if (aiParts[i+1] < 0)
                             {
                             err = true;
                             }
@@ -157,7 +197,7 @@ public class Version
                         err = true;
                         break;
                     }
-                if (i > 0 && parts[i-1] == 0)
+                if (i > 0 && aiParts[i-1] == 0)
                     {
                     // previous part must > 0
                     err = true;
@@ -178,15 +218,15 @@ public class Version
                 }
             }
 
-        if (build != null && build.length() > 0)
+        if (sBuild != null && sBuild.length() > 0)
             {
             sb.append('+')
-              .append(build);
+              .append(sBuild);
             }
 
         this.literal = sb.toString();
-        this.ints    = parts;
-        this.build   = build;
+        this.ints    = aiParts;
+        this.build   = sBuild;
 
         if (err)
             {
@@ -198,35 +238,13 @@ public class Version
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
-     * Obtain the Version as an array of {@code String}, one for each dot-delimited indicator in
-     * the version string.
-     *
-     * @return an array of Strings
-     */
-    public String[] toStringArray()
-        {
-        return ensureStringArray().clone();
-        }
-
-    /**
-     * Obtain the Version as an array of ints, which may be one element larger than the number of
-     * parts in the version due to the manner in which pre-release versions are numbered.
-     *
-     * @return an array of ints
-     */
-    public int[] toIntArray()
-        {
-        return ensureIntArray().clone();
-        }
-
-    /**
      * @return true iff the version number indicates a generally available release; false if the
      *         version number indicates a continuous integration build, a dev build, an alpha or
      *         beta release, or a release candidate
      */
     public boolean isGARelease()
         {
-        for (int part : ensureIntArray())
+        for (int part : getIntArray())
             {
             if (part < 0)
                 {
@@ -241,7 +259,7 @@ public class Version
      */
     public int getReleaseCategory()
         {
-        for (int part : ensureIntArray())
+        for (int part : getIntArray())
             {
             if (part < 0)
                 {
@@ -308,8 +326,8 @@ public class Version
         // sure that they are identical; for example, when comparing "1.2.3" and "1.2.4", this would
         // compare both the "1" and the "2" parts, but when comparing "1.2.3" and "1.2", this would
         // only check the "1" part.
-        int[] thisInts = this.ensureIntArray();
-        int[] thatInts = that.ensureIntArray();
+        int[] thisInts = this.getIntArray();
+        int[] thatInts = that.getIntArray();
         int   cThis    = thisInts.length;
         int   cThisGA  = thisInts[cThis - 1] < 0 ? cThis - 1 : cThis >= 2 && thisInts[cThis - 2] < 0 ? cThis - 2 : cThis;
         int   cThat    = thatInts.length;
@@ -435,8 +453,8 @@ public class Version
             }
 
         // check all of the shared version parts to make sure that they are identical
-        int[] thisInts = this.ensureIntArray();
-        int[] thatInts = that.ensureIntArray();
+        int[] thisInts = this.getIntArray();
+        int[] thatInts = that.getIntArray();
         int   cThis    = thisInts.length;
         int   cThat    = thatInts.length;
         int   cShared  = Math.min(cThis, cThat);
@@ -472,7 +490,7 @@ public class Version
      */
     public Version normalize()
         {
-        int[] parts  = ensureIntArray();
+        int[] parts  = getIntArray();
         int   cParts = parts.length;
         int   cZeros = 0;
         for (int i = cParts - 1; i > 0; --i)
@@ -503,8 +521,8 @@ public class Version
     @Override
     public int compareTo(Version that)
         {
-        int[] thisParts = this.ensureIntArray();
-        int[] thatParts = that.ensureIntArray();
+        int[] thisParts = this.getIntArray();
+        int[] thatParts = that.getIntArray();
         int   nDefault  = thisParts.length - thatParts.length;
         for (int i = 0, c = Math.min(thisParts.length, thatParts.length); i < c; ++i)
             {
@@ -539,169 +557,19 @@ public class Version
         }
 
 
-    // ----- debugging assistance ------------------------------------------------------------------
-
-    public String toDebugString()
-        {
-        StringBuilder sb = new StringBuilder();
-
-        // yes, we could just return the literal value, but doing it the hard way tests to make
-        // sure that the parsing works
-
-        sb.append('\"');
-        String[] strs  = ensureStringArray();
-        boolean  first = true;
-        for (String str : strs)
-            {
-            if (first)
-                {
-                first = false;
-                }
-            else
-                {
-                sb.append('.');
-                }
-            sb.append(str);
-            }
-        sb.append('\"');
-
-        int[] ints = ensureIntArray();
-        if (ints.length > strs.length || ints[ints.length-1] < 0)
-            {
-            sb.append(" /* ");
-            first = true;
-            for (int n : ints)
-                {
-                if (first)
-                    {
-                    first = false;
-                    }
-                else
-                    {
-                    sb.append('.');
-                    }
-                sb.append(n);
-                }
-            sb.append(" */");
-            }
-
-        return sb.toString();
-        }
-
-
     // ----- internal ------------------------------------------------------------------------------
 
-    /**
-     * @return the version as an array of Strings
-     */
-    protected String[] ensureStringArray()
+    private boolean match(String sLiteral, int of, String sPrefix)
         {
-        if (strs == null)
-            {
-            strs = parseDelimitedString(literal, '.');
-            }
-        return strs;
+        return sLiteral.regionMatches(true, of, sPrefix, 0, sPrefix.length());
         }
 
     /**
      * @return the version as an array of ints
      */
-    protected int[] ensureIntArray()
+    protected int[] getIntArray()
         {
-        if (ints == null)
-            {
-            String[] parts = ensureStringArray();
-
-            int cInts = parts.length;
-            String last = parts[cInts - 1];
-            if (!isDigit(last.charAt(0)) && isDigit(last.charAt(last.length() - 1)))
-                {
-                // starts with a non-GA string indicator but ends with a digit, meaning the last part
-                // is actually two parts
-                ++cInts;
-                }
-
-            ints = new int[cInts];
-            int i = 0;
-            EachPart:
-            for (String part : parts)
-                {
-                if (isDigit(part.charAt(0)))
-                    {
-                    ints[i++] = Integer.valueOf(part);
-                    }
-                else
-                    {
-                    assert part == last;
-                    int ver = -PREFIX.length;
-                    for (String prefix : PREFIX)
-                        {
-                        if (part.startsWith(prefix))
-                            {
-                            ints[i++] = ver;
-                            if (part.length() > prefix.length())
-                                {
-                                ints[i] = Integer.valueOf(part.substring(prefix.length()));
-                                }
-                            break EachPart;
-                            }
-                        ++ver;
-                        }
-                    throw new IllegalStateException("invalid version token: " + part);
-                    }
-                }
-            }
         return ints;
-        }
-
-    /**
-     * Examine a part of a version to see if it is a legitimate part of a version.
-     *
-     * @param part   a part of a dot-delimited version
-     *
-     * @return true iff the string is a legitimate part of a version
-     */
-    public static boolean isValidVersionPart(String part, boolean fLast)
-        {
-        // check to see if it's all numbers
-        boolean allDigits = true;
-        for (char ch : part.toCharArray())
-            {
-            if (!isDigit(ch))
-                {
-                allDigits = false;
-                break;
-                }
-            }
-        if (allDigits)
-            {
-            return true;
-            }
-
-        if (fLast)
-            {
-            for (String prefix : PREFIX)
-                {
-                if (part.equals(prefix))
-                    {
-                    return true;
-                    }
-
-                if (part.startsWith(prefix))
-                    {
-                    for (char ch : part.substring(prefix.length()).toCharArray())
-                        {
-                        if (!isDigit(ch))
-                            {
-                            return false;
-                            }
-                        }
-                    return true;
-                    }
-                }
-            }
-
-        return false;
         }
 
 
@@ -709,8 +577,7 @@ public class Version
 
     private static final String[] PREFIX = {"CI", "Dev", "QC", "alpha", "beta", "rc"};
 
-    protected String   literal;
-    protected String[] strs;
-    protected int[]    ints;
-    protected String   build;
+    protected String  literal;
+    protected int[]   ints;
+    protected String  build;
     }

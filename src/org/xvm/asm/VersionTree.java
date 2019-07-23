@@ -203,8 +203,8 @@ public class VersionTree<V>
      */
     public Version findClosestVersion(Version ver)
         {
-        int[] parts = ver.ensureIntArray();
-        Node node = root.findClosestNode(parts, 0);
+        int[] parts = ver.getIntArray();
+        Node  node  = root.findClosestNode(parts, 0);
         return node == null ? null : node.getVersion();
         }
 
@@ -228,8 +228,8 @@ public class VersionTree<V>
      */
     public Version findHighestVersion(Version ver)
         {
-        int[] parts = ver.ensureIntArray();
-        Node node = root.findHighestNode(parts, 0);
+        int[] parts = ver.getIntArray();
+        Node  node  = root.findHighestNode(parts, 0);
         return node == null ? null : node.getVersion();
         }
 
@@ -410,7 +410,7 @@ public class VersionTree<V>
     private Node<V> findNode(Version ver)
         {
         Node<V> node  = root;
-        int[]   parts = ver.ensureIntArray();
+        int[]   parts = ver.getIntArray();
         for (int i = 0, c = parts.length; i < c && node != null; ++i)
             {
             node = node.getChild(parts[i]);
@@ -429,7 +429,7 @@ public class VersionTree<V>
     private Node<V> ensureNode(Version ver)
         {
         Node<V> node  = root;
-        int[]   parts = ver.ensureIntArray();
+        int[]   parts = ver.getIntArray();
         for (int i = 0, c = parts.length; i < c; ++i)
             {
             node = node.ensureChild(parts[i]);
