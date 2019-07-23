@@ -316,6 +316,26 @@ public abstract class Op
         }
 
     /**
+     * Get an op at a relative address from this Op.
+     *
+     * @param aop  an array of ops
+     * @param of   the relative offset
+     *
+     * @return the Op or the very last op if the destination op has been eliminated
+     */
+    protected Op calcRelativeOp(Op[] aop, int of)
+        {
+        try
+            {
+            return aop[getAddress() + of];
+            }
+        catch (ArrayIndexOutOfBoundsException e)
+            {
+            return aop[aop.length - 1];
+            }
+        }
+
+    /**
      * Calculate a relative address from this Op to the specified destination Op.
      *
      * @param opDest  the destination Op
