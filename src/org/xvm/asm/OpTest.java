@@ -65,6 +65,7 @@ public abstract class OpTest
         if (isBinaryOp())
             {
             m_nValue2 = readPackedInt(in);
+            m_nType   = readPackedInt(in);
             }
         m_nRetValue = readPackedInt(in);
         }
@@ -81,6 +82,8 @@ public abstract class OpTest
             if (isBinaryOp())
                 {
                 m_nValue2 = encodeArgument(m_argVal2, registry);
+                // NOTE: IsType is a binary op that doesn't get injected with the common type
+                m_nType   = m_typeCommon == null ? -1 : encodeArgument(m_typeCommon, registry);
                 }
             m_nRetValue = encodeArgument(m_argReturn, registry);
             }
@@ -89,6 +92,7 @@ public abstract class OpTest
         if (isBinaryOp())
             {
             writePackedLong(out, m_nValue2);
+            writePackedLong(out, m_nType);
             }
         writePackedLong(out, m_nRetValue);
         }
@@ -150,7 +154,7 @@ public abstract class OpTest
                 return R_REPEAT;
                 }
 
-            TypeConstant typeCommon = calculateCommonType(frame, ahArg);
+            TypeConstant typeCommon = calculateCommonType(frame);
 
             if (anyDeferred(ahArg))
                 {
@@ -168,15 +172,12 @@ public abstract class OpTest
             }
         }
 
-    protected TypeConstant calculateCommonType(Frame frame, ObjectHandle[] ahArg)
+    protected TypeConstant calculateCommonType(Frame frame)
         {
-        // REVIEW: this should be injected by the verifier
         TypeConstant typeCommon = m_typeCommon;
         if (typeCommon == null)
             {
-            TypeConstant type1 = frame.getLocalType(m_nValue1, ahArg[0]);
-            TypeConstant type2 = frame.getLocalType(m_nValue2, ahArg[1]);
-            m_typeCommon = typeCommon = selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
+            m_typeCommon = typeCommon = (TypeConstant) frame.getConstant(m_nType);
             }
         return frame.resolveType(typeCommon);
         }
@@ -251,5 +252,7 @@ public abstract class OpTest
     protected Argument m_argReturn;
 
     // the type to use for the comparison
-    transient protected TypeConstant m_typeCommon;
+    // TODO: it should be injected by the verifier and removed from the serialization logic
+    protected int m_nType;
+    protected TypeConstant m_typeCommon;
     }

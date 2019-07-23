@@ -69,6 +69,7 @@ public abstract class OpCondJump
         if (isBinaryOp())
             {
             m_nArg2 = readPackedInt(in);
+            m_nType = readPackedInt(in);
             }
         m_ofJmp = readPackedInt(in);
         }
@@ -85,6 +86,8 @@ public abstract class OpCondJump
             if (isBinaryOp())
                 {
                 m_nArg2 = encodeArgument(m_argVal2, registry);
+                // NOTE: JumpNType is a binary op that doesn't get injected with the common type
+                m_nType = m_typeCommon == null ? -1 : encodeArgument(m_typeCommon, registry);
                 }
             }
 
@@ -92,6 +95,7 @@ public abstract class OpCondJump
         if (isBinaryOp())
             {
             writePackedLong(out, m_nArg2);
+            writePackedLong(out, m_nType);
             }
         writePackedLong(out, m_ofJmp);
         }
@@ -163,7 +167,7 @@ public abstract class OpCondJump
                 return R_REPEAT;
                 }
 
-            TypeConstant typeCommon = calculateCommonType(frame, ahArg);
+            TypeConstant typeCommon = calculateCommonType(frame);
 
             if (anyDeferred(ahArg))
                 {
@@ -181,19 +185,15 @@ public abstract class OpCondJump
             }
         }
 
-    protected TypeConstant calculateCommonType(Frame frame, ObjectHandle[] ahArg)
+    protected TypeConstant calculateCommonType(Frame frame)
         {
-        // REVIEW: this should be injected by the verifier
         TypeConstant typeCommon = m_typeCommon;
         if (typeCommon == null)
             {
-            TypeConstant type1 = frame.getLocalType(m_nArg, ahArg[0]);
-            TypeConstant type2 = frame.getLocalType(m_nArg2, ahArg[1]);
-            m_typeCommon = typeCommon = selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
+            m_typeCommon = typeCommon = (TypeConstant) frame.getConstant(m_nType);
             }
         return frame.resolveType(typeCommon);
         }
-
 
     /**
      * A completion of a unary op; must me overridden by all binary ops.
@@ -341,5 +341,7 @@ public abstract class OpCondJump
     transient protected int m_cExits;
 
     // the type to use for the comparison
-    transient protected TypeConstant m_typeCommon;
+    // TODO: it should be injected by the verifier and removed from the serialization logic
+    protected int m_nType;
+    protected TypeConstant m_typeCommon;
     }
