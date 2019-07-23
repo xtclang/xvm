@@ -17,8 +17,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.xRef.RefHandle;
-
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -129,7 +127,7 @@ public class P_Ref
     @Override
     public void simulate(Scope scope)
         {
-        checkNextRegister(scope, m_argReturn);
+        checkNextRegister(scope, m_argReturn, m_nRetValue);
         }
 
     @Override

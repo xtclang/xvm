@@ -172,7 +172,7 @@ public abstract class OpPropInPlace
         {
         if (isAssignOp())
             {
-            checkNextRegister(scope, m_argReturn);
+            checkNextRegister(scope, m_argReturn, m_nRetValue);
             }
         }
 

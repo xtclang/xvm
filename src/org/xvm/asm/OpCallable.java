@@ -101,11 +101,11 @@ public abstract class OpCallable extends Op
         {
         if (isMultiReturn())
             {
-            checkNextRegisters(scope, m_aArgReturn);
+            checkNextRegisters(scope, m_aArgReturn, m_anRetValue);
             }
         else
             {
-            checkNextRegister(scope, m_argReturn);
+            checkNextRegister(scope, m_argReturn, m_nRetValue);
             }
         }
 

@@ -127,7 +127,7 @@ public class P_Var
     @Override
     public void simulate(Scope scope)
         {
-        checkNextRegister(scope, m_argReturn);
+        checkNextRegister(scope, m_argReturn, m_nRetValue);
         }
 
     @Override

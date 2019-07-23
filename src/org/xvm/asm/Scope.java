@@ -116,6 +116,29 @@ public class Scope
             }
         }
 
+    /**
+     * Ensure a variable (a sequential register number) has been allocated a slot.
+     *
+     * @param iVar the variable identity
+     */
+    public void ensureVar(int iVar)
+        {
+        if (m_scopeChild == null)
+            {
+            // var is allocated in this scope
+            validate();
+            m_cVars = Math.max(iVar + 1, m_cVars);
+            if (m_cVars > m_cMaxVars)
+                {
+                m_cMaxVars = m_cVars;
+                }
+            }
+        else
+            {
+            m_scopeChild.ensureVar(iVar - m_cVars);
+            }
+        }
+
 
     // ----- API for querying statistics -----------------------------------------------------------
 

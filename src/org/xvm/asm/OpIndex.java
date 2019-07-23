@@ -175,7 +175,7 @@ public abstract class OpIndex
         {
         if (isAssignOp())
             {
-            checkNextRegister(scope, m_argReturn);
+            checkNextRegister(scope, m_argReturn, m_nRetValue);
             }
         }
 

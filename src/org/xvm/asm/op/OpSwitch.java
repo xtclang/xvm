@@ -87,11 +87,24 @@ public abstract class OpSwitch
         }
 
     @Override
-    public void resolveAddresses()
+    public void resolveAddresses(Op[] aop)
         {
-        if (m_aOpCase != null)
+        if (m_aOpCase == null)
+            {
+            int nAddr = getAddress();
+            int c     = m_aofCase.length;
+
+            m_aOpCase = new Op[c];
+            for (int i = 0; i < c; i++)
+                {
+                m_aOpCase[i] = aop[nAddr + m_aofCase[i]];
+                }
+            m_opDefault = aop[nAddr + m_ofDefault];
+            }
+        else
             {
             int c = m_aOpCase.length;
+
             m_aofCase = new int[c];
             for (int i = 0; i < c; i++)
                 {
@@ -119,9 +132,9 @@ public abstract class OpSwitch
         }
 
     @Override
-    public boolean branches(List<Integer> list)
+    public boolean branches(Op[] aop, List<Integer> list)
         {
-        resolveAddresses();
+        resolveAddresses(aop);
         for (int i : m_aofCase)
             {
             list.add(i);

@@ -60,7 +60,7 @@ public abstract class OpIndexInPlace
             m_nValue = encodeArgument(m_argValue, registry);
             }
 
-        writePackedLong(out, m_nTarget);
+        writePackedLong(out, m_nValue);
         }
 
     @Override

@@ -18,6 +18,7 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xException;
 
+import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -51,6 +52,8 @@ public class MoveCast
             throws IOException
         {
         super(in, aconst);
+
+        m_nToType = readPackedInt(in);
         }
 
     @Override
@@ -63,6 +66,7 @@ public class MoveCast
             {
             m_nToType = encodeArgument(m_typeTo, registry);
             }
+        writePackedLong(out, m_nToType);
         }
 
     @Override

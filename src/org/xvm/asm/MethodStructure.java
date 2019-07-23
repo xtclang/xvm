@@ -2166,7 +2166,7 @@ public class MethodStructure
                 {
                 op.markReachable(aop);
 
-                if (op.branches(listBranches))
+                if (op.branches(aop, listBranches))
                     {
                     for (int cJmp : listBranches)
                         {
@@ -2276,7 +2276,7 @@ public class MethodStructure
 
             for (Op op : aop)
                 {
-                op.resolveAddresses();
+                op.resolveAddresses(aop);
                 }
 
             f_method.m_cVars   = scope.getMaxVars();

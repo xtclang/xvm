@@ -114,13 +114,24 @@ public class GuardStart
         }
 
     @Override
-    public void resolveAddresses()
+    public void resolveAddresses(Op[] aop)
         {
-        if (m_aOpCatch != null)
+        if (m_aOpCatch == null)
+            {
+            int nAddr = getAddress();
+            int c     = m_aofCatch.length;
+
+            m_aOpCatch = new CatchStart[c];
+            for (int i = 0; i < c; i++)
+                {
+                m_aOpCatch[i] = (CatchStart) aop[nAddr + m_aofCatch[i]];
+                }
+            }
+        else
             {
             int c = m_aOpCatch.length;
-            m_aofCatch = new int[c];
 
+            m_aofCatch = new int[c];
             for (int i = 0; i < c; i++)
                 {
                 m_aofCatch[i] = calcRelativeAddress(m_aOpCatch[i]);
@@ -171,9 +182,9 @@ public class GuardStart
         }
 
     @Override
-    public boolean branches(List<Integer> list)
+    public boolean branches(Op[] aop, List<Integer> list)
         {
-        resolveAddresses();
+        resolveAddresses(aop);
         for (int i : m_aofCatch)
             {
             list.add(i);

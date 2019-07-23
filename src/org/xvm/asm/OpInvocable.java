@@ -6,7 +6,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -91,11 +90,11 @@ public abstract class OpInvocable extends Op
         {
         if (isMultiReturn())
             {
-            checkNextRegisters(scope, m_aArgReturn);
+            checkNextRegisters(scope, m_aArgReturn, m_anRetValue);
             }
         else
             {
-            checkNextRegister(scope, m_argReturn);
+            checkNextRegister(scope, m_argReturn, m_nRetValue);
             }
         }
 

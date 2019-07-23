@@ -65,7 +65,7 @@ public abstract class OpMove
     @Override
     public void simulate(Scope scope)
         {
-        checkNextRegister(scope, m_argTo);
+        checkNextRegister(scope, m_argTo, m_nToValue);
         }
 
     @Override

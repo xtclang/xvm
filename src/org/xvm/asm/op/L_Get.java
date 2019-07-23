@@ -96,7 +96,7 @@ public class L_Get
     @Override
     public void simulate(Scope scope)
         {
-        checkNextRegister(scope, m_argReturn);
+        checkNextRegister(scope, m_argReturn, m_nRetValue);
         }
 
     @Override

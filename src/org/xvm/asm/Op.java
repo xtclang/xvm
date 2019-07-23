@@ -219,7 +219,7 @@ public abstract class Op
     /**
      * Find the "closing" op that corresponds to this op.
      *
-     * @param aop    the ops of this method
+     * @param aop  the ops of this method
      *
      * @return the op that corresponds to this op
      */
@@ -277,11 +277,12 @@ public abstract class Op
     /**
      * Determine if the op branches.
      *
+     * @param aop   the ops of this method
      * @param list  a list to put the branches (relative addresses) into, if there are any
      *
      * @return true if the op branches, and those branches have been added to the passed list
      */
-    public boolean branches(List<Integer> list)
+    public boolean branches(Op[] aop, List<Integer> list)
         {
         return false;
         }
@@ -308,8 +309,9 @@ public abstract class Op
      * Before the op is assembled, it is given an opportunity to determine relative addresses to
      * other ops.
      *
+     * @param aop  the ops of the current method
      */
-    public void resolveAddresses()
+    public void resolveAddresses(Op[] aop)
         {
         }
 
@@ -354,7 +356,7 @@ public abstract class Op
         }
 
     /**
-     * @return true iff this op represents an explicit or implicit ENTER
+     * @return true iff this op represents an explicit or implicit EXIT
      */
     public boolean isExit()
         {
@@ -571,9 +573,9 @@ public abstract class Op
             }
 
         @Override
-        public boolean branches(List<Integer> list)
+        public boolean branches(Op[] aop, List<Integer> list)
             {
-            return m_op.branches(list);
+            return m_op.branches(aop, list);
             }
 
         @Override
@@ -589,9 +591,9 @@ public abstract class Op
             }
 
         @Override
-        public void resolveAddresses()
+        public void resolveAddresses(Op[] aop)
             {
-            m_op.resolveAddresses();
+            m_op.resolveAddresses(aop);
             }
 
         @Override
@@ -811,10 +813,16 @@ public abstract class Op
      *
      * @param scope  the scope
      * @param arg    the argument
+     * @param nArg   the argument's id
      */
-    public static void checkNextRegister(Scope scope, Argument arg)
+    public static void checkNextRegister(Scope scope, Argument arg, int nArg)
         {
-        if (arg instanceof Register && ((Register) arg).isUnknown())
+        if (arg == null)
+            {
+            // this means we have just loaded the ops from disk
+            scope.ensureVar(nArg);
+            }
+        else if (arg instanceof Register && ((Register) arg).isUnknown())
             {
             ((Register) arg).assignIndex(scope.allocVar());
             }
@@ -826,10 +834,19 @@ public abstract class Op
      *
      * @param scope  the scope
      * @param aArg   the argument array
+     * @param anArg  the array of argument ids
      */
-    public static void checkNextRegisters(Scope scope, Argument[] aArg)
+    public static void checkNextRegisters(Scope scope, Argument[] aArg, int[] anArg)
         {
-        if (aArg != null)
+        if (aArg == null)
+            {
+            // this means we have just loaded the ops from disk
+            for (int nArg : anArg)
+                {
+                scope.ensureVar(nArg);
+                }
+            }
+        else
             {
             for (Argument arg : aArg)
                 {

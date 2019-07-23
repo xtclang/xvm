@@ -128,7 +128,7 @@ public class GP_DivMod
     @Override
     public void simulate(Scope scope)
         {
-        checkNextRegisters(scope, m_aargReturn);
+        checkNextRegisters(scope, m_aargReturn, m_anRetValue);
         }
 
     @Override

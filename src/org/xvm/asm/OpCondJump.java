@@ -97,13 +97,17 @@ public abstract class OpCondJump
         }
 
     @Override
-    public void resolveAddresses()
+    public void resolveAddresses(Op[] aop)
         {
-        if (m_opDest != null)
+        if (m_opDest == null)
             {
-            m_ofJmp  = calcRelativeAddress(m_opDest);
-            m_cExits = calcExits(m_opDest);
+            m_opDest = aop[getAddress() + m_ofJmp];
             }
+        else
+            {
+            m_ofJmp = calcRelativeAddress(m_opDest);
+            }
+        m_cExits = calcExits(m_opDest);
         }
 
     /**
@@ -230,7 +234,7 @@ public abstract class OpCondJump
         }
 
     @Override
-    public boolean branches(List<Integer> list)
+    public boolean branches(Op[] aop, List<Integer> list)
         {
         list.add(getRelativeAddress());
         return true;
