@@ -1500,9 +1500,10 @@ public class MethodStructure
             aReturns[i] = param;
             }
 
-        int         cTypeParams = readMagnitude(in);
-        int         cParams     = aconstParamTypes.length;
-        Parameter[] aParams     = new Parameter[cParams];
+        int         cTypeParams    = readMagnitude(in);
+        int         cDefaultParams = readMagnitude(in);
+        int         cParams        = aconstParamTypes.length;
+        Parameter[] aParams        = new Parameter[cParams];
         for (int i = 0; i < cParams; ++i)
             {
             Parameter param = new Parameter(pool, in, false, i, i < cTypeParams);
@@ -1530,13 +1531,14 @@ public class MethodStructure
             in.readFully(abOps);
             }
 
-        m_aAnnotations = aAnnos;
-        m_aReturns     = aReturns;
-        m_cTypeParams  = cTypeParams;
-        m_aParams      = aParams;
-        m_aconstLocal  = aconst;
-        m_abOps        = abOps;
-        m_FHasCode     = abOps != null;
+        m_aAnnotations   = aAnnos;
+        m_aReturns       = aReturns;
+        m_cTypeParams    = cTypeParams;
+        m_cDefaultParams = cDefaultParams;
+        m_aParams        = aParams;
+        m_aconstLocal    = aconst;
+        m_abOps          = abOps;
+        m_FHasCode       = abOps != null;
 
         ensureCode(); // REVIEW can or should we defer this?
         }
@@ -1605,6 +1607,7 @@ public class MethodStructure
             }
 
         writePackedLong(out, m_cTypeParams);
+        writePackedLong(out, m_cDefaultParams);
         for (Parameter param : m_aParams)
             {
             param.assemble(out);
