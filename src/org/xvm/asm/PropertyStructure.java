@@ -641,7 +641,7 @@ public class PropertyStructure
             throws IOException
         {
         // the value should have already been resolved by this point
-        // assert !m_fHasValue; TODO: re-introduce the assert
+        assert !m_fHasValue;
 
         super.assemble(out);
 

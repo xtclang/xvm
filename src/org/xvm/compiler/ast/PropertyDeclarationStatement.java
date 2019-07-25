@@ -370,10 +370,11 @@ public class PropertyDeclarationStatement
                         return;
                         }
 
-                    // the assignment statement takes the place of the initial value, but there
-                    // should not be any side-effects of leaving the "value" field assigned
-                    //   value = null;
+                    // the assignment statement takes the place of the initial value
                     assignment = stmtInit;
+
+                    // clear the "has initial value" setting
+                    prop.setInitialValue(null);
                     }
                 else
                     {
