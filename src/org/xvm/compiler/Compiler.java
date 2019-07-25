@@ -178,27 +178,7 @@ public class Compiler
 
         // first time through, load any module dependencies
         setStage(Stage.Loading);
-        for (String sModule : m_structFile.moduleNames())
-            {
-            if (!sModule.equals(m_structFile.getModuleName()))
-                {
-                ModuleStructure structFingerprint = m_structFile.getModule(sModule);
-                assert structFingerprint.isFingerprint();
-                assert structFingerprint.getFingerprintOrigin() == null;
-
-                // load the module against which the compilation will occur
-                if (!m_repos.getModuleNames().contains(sModule))
-                    {
-                    // no error is logged here; the package that imports the module will detect
-                    // the error when it is asked to resolve global names; see
-                    // TypeCompositionStatement
-                    continue;
-                    }
-
-                ModuleStructure structActual = m_repos.loadModule(sModule); // TODO versions etc.
-                structFingerprint.setFingerprintOrigin(structActual);
-                }
-            }
+        m_structFile.linkModules(m_repos);
 
         exit();
         setStage(Stage.Loaded);

@@ -273,6 +273,36 @@ public class FileStructure
         }
 
     /**
+     * Link the modules in this FileStructure.
+     *
+     * @param repository  the module repository to load modules from
+     */
+    public void linkModules(ModuleRepository repository)
+        {
+        for (String sModule : moduleNames())
+            {
+            if (!sModule.equals(getModuleName()))
+                {
+                ModuleStructure structFingerprint = getModule(sModule);
+                assert structFingerprint.isFingerprint();
+                assert structFingerprint.getFingerprintOrigin() == null;
+
+                // load the module against which the compilation will occur
+                if (!repository.getModuleNames().contains(sModule))
+                    {
+                    // no error is logged here; the package that imports the module will detect
+                    // the error when it is asked to resolve global names; see
+                    // TypeCompositionStatement
+                    continue;
+                    }
+
+                ModuleStructure structActual = repository.loadModule(sModule); // TODO versions etc.
+                structFingerprint.setFingerprintOrigin(structActual);
+                }
+            }
+        }
+
+    /**
      * @return a read-only tree of versions in this FileStructure
      */
     public VersionTree<Boolean> getVersionTree()

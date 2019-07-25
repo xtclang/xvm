@@ -37,6 +37,17 @@ public class BuildRepository
         }
 
 
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Copy all the modules from a specified BuildRepository.
+     */
+    public void storeAll(BuildRepository repoThat)
+        {
+        modulesByName.putAll(repoThat.modulesByName);
+        }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     private Map<String, ModuleStructure> modulesByName = new TreeMap<>();

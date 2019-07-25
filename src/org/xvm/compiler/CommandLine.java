@@ -121,41 +121,47 @@ public class CommandLine
 
         configureRepository();
 
-        // what are the modules that need to be compiled?
-        selectCompileTargets();
+        // what are the modules that need to be compiled/loaded?
+        selectTargets();
         checkTerminalFailure();
 
         // parse the modules
         parseSource();
         checkTerminalFailure();
 
-        // assign names
-        populateNamespace();
-        checkCompilerErrors();
-        checkTerminalFailure();
+        // register names
+        registerNames();
 
-        // dependency resolution
-        resolveDependencies();
-        checkCompilerErrors();
-        checkTerminalFailure();
-
-        // expression resolution
-        validateExpressions();
-        checkCompilerErrors();
-        checkTerminalFailure();
-
-        // assembling the actual code
-        generateCode();
-        checkCompilerErrors();
-        checkTerminalFailure();
-
-        // write out the results
-        emitModules();
-        checkTerminalFailure();
-
-        if (opts.verbose)
+        if (!readModules())
             {
-            dump();
+            // create the parse tree
+            populateNamespace();
+            checkCompilerErrors();
+            checkTerminalFailure();
+
+            // dependency resolution
+            resolveDependencies();
+            checkCompilerErrors();
+            checkTerminalFailure();
+
+            // expression resolution
+            validateExpressions();
+            checkCompilerErrors();
+            checkTerminalFailure();
+
+            // assembling the actual code
+            generateCode();
+            checkCompilerErrors();
+            checkTerminalFailure();
+
+            // write out the results
+            emitModules();
+            checkTerminalFailure();
+
+            if (opts.verbose)
+                {
+                dump();
+                }
             }
 
         return repoBuild;
@@ -402,9 +408,9 @@ public class CommandLine
         }
 
     /**
-     * Select the modules to compile.
+     * Select the modules to compile/load.
      */
-    protected void selectCompileTargets()
+    protected void selectTargets()
         {
         if (sources.isEmpty())
             {
@@ -648,7 +654,7 @@ public class CommandLine
         }
 
     /**
-     * Parse all of the source code that needs to be compiled.
+     * Parse all of the source code that needs to be compiled and calculate timestamps.
      */
     protected void parseSource()
         {
@@ -660,6 +666,17 @@ public class CommandLine
         }
 
     /**
+     * Register module names.
+     */
+    protected void registerNames()
+        {
+        for (Node module : modules.values())
+            {
+            module.registerNames();
+            }
+        }
+
+    /**
      * Link all of the AST objects for each module into a single parse tree, and create the outline
      * of the finished FileStructure.
      */
@@ -667,7 +684,6 @@ public class CommandLine
         {
         for (Node module : modules.values())
             {
-            module.registerNames();
             String name = module.name();
             if (modulesByName.containsKey(name))
                 {
@@ -675,7 +691,6 @@ public class CommandLine
                 error = true;
                 continue;
                 }
-
 
             // when there are multiple files, they have to all be linked together as a giant parse
             // tree
@@ -836,6 +851,66 @@ public class CommandLine
         }
 
     /**
+     * Load modules from disk.
+     *
+     * @return true iff all the modules were loaded and saved into the build repository
+     */
+    protected boolean readModules()
+        {
+        int                 cModules  = modules.size();
+        List<FileStructure> listFiles = new ArrayList<>(cModules);
+        BuildRepository     repoTemp  = new BuildRepository();
+
+        for (Node module : modules.values())
+            {
+            // figure out where to find the module
+            File file = module.getFile().getParentFile();
+
+            // at this point, we either have a directory or a file to put it in; resolve that to
+            // an actual compiled module file name
+            if (file.isDirectory())
+                {
+                String sName = module.name();
+                int ofDot = sName.indexOf('.');
+                if (ofDot > 0)
+                    {
+                    sName = sName.substring(0, ofDot);
+                    }
+                file = new File(file, sName + ".xtc");
+                }
+
+            if (!file.exists() || module.lastModified() > file.lastModified())
+                {
+                return false;
+                }
+
+            try
+                {
+                FileStructure structFile = new FileStructure(file);
+                repoTemp.storeModule(structFile.getModule());
+                listFiles.add(structFile);
+                }
+            catch (Exception e)
+                {
+                deferred.add("xtc: Exception (" + e
+                        + ") occurred while attempting to read module file \""
+                        + file.getAbsolutePath() + "\"");
+                return false;
+                }
+            module.checkErrors();
+            }
+
+        // link the modules
+        for (FileStructure structFile : listFiles)
+            {
+            structFile.linkModules(repoTemp);
+            }
+
+        repoBuild.storeAll(repoTemp);
+        return true;
+        }
+
+    /**
      * see where we're at
      */
     public void dump()
@@ -949,8 +1024,9 @@ public class CommandLine
     interface Node
         {
         File getFile();
+        long lastModified();
         void parse();
-        public void registerNames();
+        void registerNames();
         String name();
         String descriptiveName();
         TypeCompositionStatement getType();
@@ -967,19 +1043,26 @@ public class CommandLine
     public class DirNode
             implements Node
         {
-        public Progress                 progress    = Progress.INIT;
-        public DirNode                  parent;
-        public File                     fileDir;
-        public File                     filePkg;
-        public FileNode                 pkgNode;
-        public ListMap<File, FileNode>  sources     = new ListMap<>();
-        public List<DirNode>            packages    = new ArrayList<>();
-        public Map<String, Node>        children    = new HashMap<>();
+        private Progress                 progress    = Progress.INIT;
+        private DirNode                  parent;
+        private File                     fileDir;
+        private File                     filePkg;
+        private long                     lastModified;
+        private FileNode                 pkgNode;
+        private ListMap<File, FileNode>  sources     = new ListMap<>();
+        private List<DirNode>            packages    = new ArrayList<>();
+        private Map<String, Node>        children    = new HashMap<>();
 
         @Override
         public File getFile()
             {
             return fileDir;
+            }
+
+        @Override
+        public long lastModified()
+            {
+            return lastModified;
             }
 
         /**
@@ -990,25 +1073,34 @@ public class CommandLine
             {
             if (progress == Progress.INIT)
                 {
+                long lModified = fileDir.lastModified();
+
                 if (pkgNode == null)
                     {
                     // provide a default implementation
                     assert parent != null;
                     pkgNode = new FileNode("package " + fileDir.getName() + "{}");
                     }
+                else
+                    {
+                    lModified = Math.max(lModified, pkgNode.lastModified);
+                    }
                 pkgNode.parse();
 
                 for (FileNode cmpFile : sources.values())
                     {
                     cmpFile.parse();
+                    lModified = Math.max(lModified, cmpFile.lastModified);
                     }
 
                 for (DirNode child : packages)
                     {
                     child.parse();
+                    lModified = Math.max(lModified, child.lastModified);
                     }
 
-                progress = Progress.PARSED;
+                progress     = Progress.PARSED;
+                lastModified = lModified;
                 }
             }
 
@@ -1212,6 +1304,7 @@ public class CommandLine
         {
         public Progress  progress = Progress.INIT;
         public File      file;
+        public long      lastModified;
         public Source    source;
         public ErrorList errs = new ErrorList(100);
         public Statement stmt;
@@ -1227,7 +1320,8 @@ public class CommandLine
             this.file = file;
             try
                 {
-                source = new Source(file, cDepth);
+                source       = new Source(file, cDepth);
+                lastModified = file.lastModified();
                 }
             catch (IOException e)
                 {
@@ -1240,6 +1334,12 @@ public class CommandLine
         public File getFile()
             {
             return file;
+            }
+
+        @Override
+        public long lastModified()
+            {
+            return lastModified;
             }
 
         /**

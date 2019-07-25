@@ -2,6 +2,12 @@
 
 START_TIME=$(date +%s)
 
+# Note: TestLiterals depends on existence of TestFiles.xtc (files.x being compiled)
+
+if [ "$1" = "-f" ]; then
+    rm -f Ecstasy.xtc
+fi
+
 java -classpath ../classes/ org.xvm.runtime.TestConnector \
     TestAnonInner.xqiz.it tests/testTemp/anoninner.x \
     TestArray.xqiz.it tests/testTemp/array.x \
