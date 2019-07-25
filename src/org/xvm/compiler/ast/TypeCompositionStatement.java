@@ -1710,7 +1710,7 @@ public class TypeCompositionStatement
                                 mgr.requestRevisit();
                                 return;
                                 }
-                            // note: it is too early in the compilation cycle to use "isA()" (REVIEW GG)
+                            // note: it is too early in the compilation cycle to use "isA()"
                             if (!atypeParams[i].equals(typeConsParam))
                                 {
                                 continue NextConstructor;

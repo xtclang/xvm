@@ -27,7 +27,7 @@ public class xInt64
             {
             INSTANCE = this;
 
-            if (cache[0] == null) // REVIEW GG
+            if (cache[0] == null)
                 {
                 ClassComposition clz = getCanonicalClass();
                 for (int i = 0; i < cache.length; ++i)

@@ -1009,8 +1009,8 @@ public class LambdaExpression
                     }
                 assert iParam == cBindArgs;
 
-                // since the Move* ops push refs onto the stack, add them in the inverse order // REVIEW GG
-                for (int i = listMoveOp.size() -1; i >= 0; --i)
+                // since the Move* ops push refs onto the stack, add them in the inverse order
+                for (int i = listMoveOp.size() - 1; i >= 0; --i)
                     {
                     code.add(listMoveOp.get(i));
                     }

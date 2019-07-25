@@ -349,7 +349,7 @@ public class xArray
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         // hArg is either Iterable<ElementType> or ElementType
-        return hArg.getType().isA(hTarget.getType().getParamTypesArray()[0])    // REVIEW GG
+        return hArg.getType().isA(hTarget.getType().getParamTypesArray()[0])
                 ? addElement(frame, hTarget, hArg, iReturn)
                 : addElements(frame, hTarget, hArg, iReturn);
         }
