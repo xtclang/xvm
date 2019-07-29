@@ -139,8 +139,12 @@ public class PropertyInfo
                 {
                 for (int iThis = 0; iThis < cBase; ++iThis)
                     {
+                    PropertyBody bodyBase = aBase[iThis];
+
                     // discard duplicate "into" and class properties
-                    if (bodyAdd.equals(aBase[iThis]))
+                    if (bodyAdd.equals(bodyBase) ||
+                        bodyAdd.getIdentity().equals(bodyBase.getIdentity())
+                            && bodyAdd.getImplementation() == Implementation.Implicit)
                         {
                         // we found a duplicate, so we can ignore it (it'll get added when we add
                         // all of the bodies from this)

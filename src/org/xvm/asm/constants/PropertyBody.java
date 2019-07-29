@@ -412,8 +412,8 @@ public class PropertyBody
      */
     public boolean isExplicitAbstract()
         {
-        return m_structProp != null && TypeInfo.containsAnnotation(
-                m_structProp.getPropertyAnnotations(), "Abstract");
+        return m_structProp != null && m_impl != Implementation.Implicit
+                && TypeInfo.containsAnnotation(m_structProp.getPropertyAnnotations(), "Abstract");
         }
 
     /**
