@@ -3980,16 +3980,17 @@ public abstract class TypeConstant
                     Progress.Incomplete);
                 }
 
-            info = mergeMixinTypeInfo(cInvalidations, idBase, infoBase.getClassStructure(),
+            info = mergeMixinTypeInfo(this, cInvalidations, idBase, infoBase.getClassStructure(),
                     info, infoMixin, null, errs);
             }
         return info;
         }
 
     /**
-     * For this type representing a base for conditional incorporates, merge the "source" TypeInfo
-     * with the TypeInfo of a mixin.
+     * For this type representing a base for an annotated type or a conditional incorporation,
+     * merge the "source" TypeInfo with the TypeInfo of a mixin.
      *
+     * @param typeOrigin      the type to build the TypeInfo for
      * @param cInvalidations  the count of TypeInfo invalidations before staring building the info
      * @param idBase          the identity constant of the class that this type is based on
      * @param structBase      the ClassStructure for the base type
@@ -4001,6 +4002,7 @@ public abstract class TypeConstant
      * @return the resulting TypeInfo
      */
     protected TypeInfo mergeMixinTypeInfo(
+            TypeConstant     typeOrigin,
             int              cInvalidations,
             IdentityConstant idBase,
             ClassStructure   structBase,
@@ -4031,12 +4033,12 @@ public abstract class TypeConstant
             layerOnMixinMethod(pool, idBase, mapMethods, mapVirtMethods, entry.getKey(), entry.getValue(), errs);
             }
 
-        return new TypeInfo(this, cInvalidations, structBase, 0, false, mapMixinParams,
+        return new TypeInfo(typeOrigin, cInvalidations, structBase, 0, false, mapMixinParams,
                 listClassAnnos == null ? null : listClassAnnos.toArray(Annotation.NO_ANNOTATIONS),
                 infoMixin.getExtends(), infoMixin.getRebases(), infoMixin.getInto(),
                 infoMixin.getContributionList(), infoMixin.getClassChain(), infoMixin.getDefaultChain(),
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods,
-                TypeInfo.Progress.Complete);
+                Progress.Complete);
         }
 
     /**

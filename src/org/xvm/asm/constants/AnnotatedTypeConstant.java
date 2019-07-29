@@ -252,10 +252,11 @@ public class AnnotatedTypeConstant
         // this can only be called from TypeConstant.buildTypeInfoImpl()
         assert getAccess() == Access.PUBLIC;
 
-        ConstantPool     pool            = getConstantPool();
-        int              cInvals         = pool.getInvalidationCount();
-        List<Annotation> listClassAnnos  = new ArrayList<>();
-        TypeConstant     typeBase        = extractClassAnnotation(listClassAnnos, errs);
+        ConstantPool     pool           = getConstantPool();
+        int              cInvals        = pool.getInvalidationCount();
+        List<Annotation> listClassAnnos = new ArrayList<>();
+        TypeConstant     typeBase       = extractClassAnnotation(listClassAnnos, errs);
+        TypeConstant     typePrivate    = pool.ensureAccessTypeConstant(this, Access.PRIVATE);
 
         if (typeBase instanceof AnnotatedTypeConstant)
             {
@@ -272,25 +273,24 @@ public class AnnotatedTypeConstant
             typeBase = pool.ensureAccessTypeConstant(typeAnnoBase.getUnderlyingType(), Access.PRIVATE);
 
             TypeInfo infoBase = typeBase.ensureTypeInfoInternal(errs);
-            if (infoMixin == null)
-                {
-                return null;
-                }
 
-            return typeBase.mergeMixinTypeInfo(cInvals, idBase, infoBase.getClassStructure(),
-                    infoBase, infoMixin, listClassAnnos, errs);
+            return infoBase == null
+                    ? null
+                    : typeBase.mergeMixinTypeInfo(typePrivate, cInvals, idBase,
+                        infoBase.getClassStructure(), infoBase, infoMixin, listClassAnnos, errs);
             }
         else
             {
             // there are no other annotations except the "into Class" tags
             assert !listClassAnnos.isEmpty();
 
-            TypeConstant typePrivate = pool.ensureAccessTypeConstant(typeBase, Access.PRIVATE);
-            TypeInfo     info        = typePrivate.ensureTypeInfoInternal(errs);
+            typeBase = pool.ensureAccessTypeConstant(typeBase, Access.PRIVATE);
+
+            TypeInfo info = typeBase.ensureTypeInfoInternal(errs);
 
             return info == null
                     ? null
-                    : new TypeInfo(this, cInvals, info.getClassStructure(), 0, false,
+                    : new TypeInfo(typePrivate, cInvals, info.getClassStructure(), 0, false,
                         info.getTypeParams(), listClassAnnos.toArray(Annotation.NO_ANNOTATIONS),
                         info.getExtends(), info.getRebases(), info.getInto(),
                         info.getContributionList(), info.getClassChain(), info.getDefaultChain(),
