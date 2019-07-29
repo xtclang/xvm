@@ -371,7 +371,7 @@ public class MethodDeclarationStatement
                             aReturns, "finally", aParams, true, false);
 
                     MethodStructure methodConstruct = (MethodStructure) m_stmtComplement.getComponent();
-                    if (methodConstruct != null)
+                    if (methodConstruct != null && method != null)
                         {
                         methodConstruct.setConstructFinally(method);
                         }
@@ -388,7 +388,7 @@ public class MethodDeclarationStatement
                     method = container.createMethod(fFunction, access, aAnnotations,
                             aReturns, sName, aParams, body != null, fUsesSuper);
 
-                    if (fConstructor)
+                    if (method != null && fConstructor)
                         {
                         MethodDeclarationStatement stmtFinally = m_stmtComplement;
                         if (stmtFinally != null)
@@ -401,6 +401,13 @@ public class MethodDeclarationStatement
                             }
                         }
                     }
+
+                if (method == null)
+                    {
+                    log(errs, Severity.ERROR, Compiler.DUPLICATE_METHOD, sName, container);
+                    return;
+                    }
+
                 setComponent(method);
                 }
             else

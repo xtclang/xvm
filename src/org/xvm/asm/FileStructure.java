@@ -56,7 +56,11 @@ public class FileStructure
         // create and register the main module
         ConstantPool    pool   = new ConstantPool(this);
         ModuleStructure module = new ModuleStructure(this, pool.ensureModuleConstant(sModule));
-        addChild(module);
+
+        if (!addChild(module))
+            {
+            throw new IllegalStateException("module already exists");
+            }
 
         this.pool       = pool;
         this.moduleName = sModule;

@@ -1143,6 +1143,10 @@ public class Compiler
      */
     public static final String DELEGATE_PROP_WRONG_TYPE           = "COMPILER-132";
     /**
+     * Method {0} already exists.
+     */
+    public static final String DUPLICATE_METHOD                   = "COMPILER-133";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

@@ -865,8 +865,10 @@ public abstract class Component
      * Adopt the specified child.
      *
      * @param child  the new child of this component
+     *
+     * @return true iff the child was successfully added
      */
-    protected void addChild(Component child)
+    protected boolean addChild(Component child)
         {
         // if the child is a method, it can only be contained by a MultiMethodStructure
         assert !(child instanceof MethodStructure);
@@ -879,12 +881,17 @@ public abstract class Component
             {
             kids.put(sName, child);
             }
-        else
+        else if (isSiblingAllowed())
             {
             linkSibling(child, sibling);
             }
+        else
+            {
+            return false;
+            }
 
         markModified();
+        return true;
         }
 
     /**
@@ -1060,9 +1067,8 @@ public abstract class Component
         int              nFlags  = Format.PACKAGE.ordinal() | access.FLAGS;
         PackageConstant  constId = getConstantPool().ensurePackageConstant(getIdentityConstant(), sName);
         PackageStructure struct  = new PackageStructure(this, nFlags, constId, cond);
-        addChild(struct);
 
-        return struct;
+        return addChild(struct) ? struct : null;
         }
 
     /**
@@ -1098,9 +1104,8 @@ public abstract class Component
         int            nFlags  = format.ordinal() | access.FLAGS;
         ClassConstant  constId = getConstantPool().ensureClassConstant(getIdentityConstant(), sName);
         ClassStructure struct  = new ClassStructure(this, nFlags, constId, cond);
-        addChild(struct);
 
-        return struct;
+        return addChild(struct) ? struct : null;
         }
 
     /**
@@ -1166,9 +1171,8 @@ public abstract class Component
         int               nFlags  = Format.PROPERTY.ordinal() | accessRef.FLAGS | (fStatic ? STATIC_BIT : 0);
         PropertyConstant  constId = getConstantPool().ensurePropertyConstant(getIdentityConstant(), sName);
         PropertyStructure struct  = new PropertyStructure(this, nFlags, constId, null, accessVar, constType);
-        addChild(struct);
 
-        return struct;
+        return addChild(struct) ? struct : null;
         }
 
     /**
@@ -1196,9 +1200,8 @@ public abstract class Component
                 sName);
         TypedefStructure struct  = new TypedefStructure(this, nFlags, constId, null);
         struct.setType(constType);
-        addChild(struct);
 
-        return struct;
+        return addChild(struct) ? struct : null;
         }
 
     /**
@@ -1222,7 +1225,7 @@ public abstract class Component
      * @param fHasCode     true indicates that the method is known to have a natural body
      * @param fUsesSuper   true indicates that the method is known to reference "super"
      *
-     * @return a new MethodStructure
+     * @return a new MethodStructure or null if the equivalent method already exists
      */
     public MethodStructure createMethod(boolean fFunction, Access access,
             Annotation[] annotations, Parameter[] returnTypes, String sName, Parameter[] paramTypes,
@@ -1251,9 +1254,8 @@ public abstract class Component
 
         MultiMethodConstant  constId = getConstantPool().ensureMultiMethodConstant(getIdentityConstant(), sName);
         MultiMethodStructure struct  = new MultiMethodStructure(this, Format.MULTIMETHOD.ordinal(), constId, null);
-        addChild(struct);
 
-        return struct;
+        return addChild(struct) ? struct : null;
         }
 
     /**

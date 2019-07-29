@@ -86,7 +86,7 @@ public class MultiMethodStructure
         }
 
     @Override
-    protected void addChild(Component child)
+    protected boolean addChild(Component child)
         {
         // MultiMethodStructure can only hold MethodStructures
         assert child instanceof MethodStructure;
@@ -99,12 +99,17 @@ public class MultiMethodStructure
             {
             kids.put(id, method);
             }
-        else
+        else if (isSiblingAllowed())
             {
             linkSibling(method, sibling);
             }
+        else
+            {
+            return false;
+            }
 
         markModified();
+        return true;
         }
 
     @Override
@@ -233,7 +238,7 @@ public class MultiMethodStructure
      * @param fHasCode     true indicates that the method has code
      * @param fUsesSuper   true indicates that the method is known to reference "super"
      *
-     * @return a method structure
+     * @return a method structure or null if an equivalent structure already exists
      */
     public MethodStructure createMethod(boolean fFunction, Access access, Annotation[] annotations,
             Parameter[] aReturns, Parameter[] aParams, boolean fHasCode, boolean fUsesSuper)
@@ -289,8 +294,8 @@ public class MultiMethodStructure
                 getIdentityConstant(), getName(), aconstParams, aconstReturns);
         MethodStructure struct = new MethodStructure(this, nFlags, constId, null, annotations,
                 aReturns, aParams, fHasCode, fUsesSuper);
-        addChild(struct);
-        return struct;
+
+        return addChild(struct) ? struct : null;
         }
 
     /**
@@ -332,8 +337,8 @@ public class MultiMethodStructure
         int nFlags = Format.METHOD.ordinal() | Component.ACCESS_PRIVATE | Component.STATIC_BIT;
         MethodStructure struct = new MethodStructure(this, nFlags, id, null,
                 Annotation.NO_ANNOTATIONS, Parameter.NO_PARAMS, aParams, true, false);
-        addChild(struct);
-        return struct;
+
+        return addChild(struct) ? struct : null;
         }
 
     /**
@@ -396,7 +401,7 @@ public class MultiMethodStructure
     // ----- data fields ---------------------------------------------------------------------------
 
     /**
-     * This holds all of the method children. See the explanation of {@link #m_childByName}.
+     * This holds all of the method children. See the explanation of Component.m_childByName.
      */
     private Map<MethodConstant, MethodStructure> m_methodByConstant;
     }

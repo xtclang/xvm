@@ -346,7 +346,7 @@ public class CompositeComponent
         }
 
     @Override
-    protected void addChild(Component child)
+    protected boolean addChild(Component child)
         {
         // TODO - figure out how to add a child to multiple components
         throw new UnsupportedOperationException();
