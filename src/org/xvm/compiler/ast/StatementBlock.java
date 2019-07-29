@@ -1063,7 +1063,14 @@ public class StatementBlock
                 return component.getIdentityConstant();
                 }
 
-            log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
+            if (name == null)
+                {
+                log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
+                }
+            else
+                {
+                name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
+                }
             return null;
             }
 
