@@ -26,9 +26,22 @@ module TestProps.xqiz.it
         private Int x = 0;
         // compiles as:
         // private Int x;       // not inside the method compilation itself
-        // x = 0;               // THIS CODE gets compiled as part of the method (but within an "if (!(&x.assigned))" check
+        // x = 0;               // THIS CODE gets compiled as part of the method
+                                // (but within an "if (!(&x.assigned))" check
 
-        console.println(" - in showMethodProperty(), ++x=" + ++x);
+        static Int y = calcStaticProperty();
+        // compiles as a private static property, which should be initialized just once
+        // (before the method is called the very first time)
+
+        console.println($" - in showMethodProperty(), ++x={++x}, y={y}");
+        }
+
+    static Int calcStaticProperty()
+        {
+        @Inject X.io.Console console;
+
+        console.println(" - in calcStaticProperty()");
+        return 3;
         }
 
     void testLazyProperty()

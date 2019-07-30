@@ -2493,7 +2493,7 @@ public class ClassStructure
                 }
             else
                 {
-                if (clzRef == null || !infoProp.isImplicitlyUnassigned())
+                if (!infoProp.isImplicitlyUnassigned())
                     {
                     constInit = infoProp.getType().getDefaultValue();
                     }

@@ -127,13 +127,6 @@ public class PropertyDeclarationStatement
      */
     public boolean isStatic()
         {
-        // properties inside a method are ALWAYS specified as static, but NEVER actually static (in
-        // the "constant property" sense)
-        if (getParent().getComponent() instanceof MethodStructure)
-            {
-            return false;
-            }
-
         List<Token> list = modifiers;
         if (list != null && !list.isEmpty())
             {
@@ -277,11 +270,14 @@ public class PropertyDeclarationStatement
 
         if (fInMethod)
             {
-            if (fStatic && accessGet != null)
+            if (fStatic)
                 {
-                // a property in a method must either say "private" or "static", but not both
-                log(errs, Severity.ERROR, Compiler.STATIC_PROP_IN_METHOD_HAS_ACCESS,
-                        sName, container.getIdentityConstant().getValueString());
+                if (accessGet != null)
+                    {
+                    // a property in a method must either say "private" or "static", but not both
+                    log(errs, Severity.ERROR, Compiler.STATIC_PROP_IN_METHOD_HAS_ACCESS,
+                            sName, container.getIdentityConstant().getValueString());
+                    }
                 }
             else if (accessGet != Access.PRIVATE)
                 {
@@ -373,6 +369,9 @@ public class PropertyDeclarationStatement
                     // the assignment statement takes the place of the initial value
                     assignment = stmtInit;
 
+                    // mark the property as unassigned to prevent default initialization
+                    prop.addAnnotation(pool().clzUnassigned());
+
                     // clear the "has initial value" setting
                     prop.setInitialValue(null);
                     }
@@ -423,12 +422,11 @@ public class PropertyDeclarationStatement
                         }
                     else
                         {
+                        // the initializer statement takes the place of the initial value
+                        initializer = stmtInit;
+
                         // clear the "has initial value" setting
                         prop.setInitialValue(null);
-
-                        // REVIEW should value be nulled out since it's now "owned by" initializer?
-                        // REVIEW and if so, what other methods make decisions based on "value != null"?
-                        initializer = stmtInit;
                         }
                     }
                 }

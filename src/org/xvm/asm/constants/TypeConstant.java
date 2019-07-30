@@ -3552,9 +3552,6 @@ public abstract class TypeConstant
                 break;
 
             case Method:
-                // "static" properties inside a method are just an indication that the Ref/Var is
-                // is a property of the containing class
-                fConstant = false;
                 if (prop.getParent().isStatic())
                     {
                     // a function cannot contain properties
