@@ -573,6 +573,7 @@ public class TypeCompositionStatement
             case SERVICE:
             case CONST:
             case CLASS:
+            case INTERFACE:
                 // class is not allowed to be declared static if it is top-level, otherwise all of
                 // these can always be declared static
                 if (!(component.getFormat() == Format.CLASS && zone == Zone.TopLevel))
@@ -582,7 +583,6 @@ public class TypeCompositionStatement
                 // fall through
             case PACKAGE:
             case ENUM:
-            case INTERFACE:
             case MIXIN:
                 {
                 // these are all allowed to be declared public/private/protected, except when they

@@ -5,10 +5,22 @@ module TestInnerOuter.xqiz.it
     void run()
         {
         testSimple();
+        testStaticIface();
         testAnonInner();
         }
 
+    interface IfaceOuter
+        {
+        void fnOuter();
+
+        static interface IfaceInner
+            {
+            void fnInner();
+            }
+        }
+
     class Base(String text)
+            implements IfaceOuter
         {
         class Child_V()
             {
@@ -23,9 +35,21 @@ module TestInnerOuter.xqiz.it
                 }
             }
 
-        static class Child_NV
+        @Override
+        void fnOuter()
             {
             }
+
+        static const Child_NV(String name)
+                implements IfaceOuter.IfaceInner
+            {
+            @Override
+            void fnInner()
+                {
+                console.println(" -> fnInner");
+                }
+            }
+
 
         @Override
         String toString()
@@ -49,6 +73,15 @@ module TestInnerOuter.xqiz.it
             console.println(" -> by-outer=" + child.textByOuter);
             console.println(" -> by-name=" + child.textByName);
             }
+        }
+
+    void testStaticIface()
+        {
+        console.println("\n** testStaticIface()");
+
+        IfaceOuter.IfaceInner childNV = new Base.Child_NV("NonVirtual");
+        console.println($"childNV={childNV}");
+        childNV.fnInner();
         }
 
     void testAnonInner()
