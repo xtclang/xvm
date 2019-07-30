@@ -497,7 +497,7 @@ public abstract class ConditionalConstant
      * Brute force test every single possible input on this condition.
      * <p/>
      * This is broken out in a hope that it will be easier for the JVM to optimize.
-     * 
+     *
      * @param cConds     the number of input conditions being tested
      * @param amaskSkip  the masks to check for skipping specific tests
      * @param aptrnSkip  the patterns associated with the masks for determining which tests to skip
@@ -509,7 +509,7 @@ public abstract class ConditionalConstant
      *                   this is an output parameter, indexed by condition
      * @param aResultTT  the number of tests with a true condition input and a true result;
      *                   this is an output parameter, indexed by condition
-     * 
+     *
      * @return the number of tests run
      */
     private final void bruteForce(int cConds, long[] amaskSkip, long[] aptrnSkip,
@@ -577,7 +577,7 @@ public abstract class ConditionalConstant
     public Influence getSatisfiability()
         {
         Influence result = Influence.NONE;
-        
+
         for (Influence influence : terminalInfluences().values())
             {
             switch (influence)
@@ -592,7 +592,7 @@ public abstract class ConditionalConstant
                     return Influence.CONTRIB;
                 }
             }
-        
+
         return result;
         }
 
@@ -713,71 +713,71 @@ public abstract class ConditionalConstant
      *     <code><pre>
      *                this
      *                F   T
-     *              ╔═══╤═══╗
-     *            F ║ x │ x ║
-     *       that   ╟───┼───╢
-     *            T ║ x │ x ║
-     *              ╚═══╧═══╝
+     *              +===+===+
+     *            F | x │ x |
+     *       that   +===+===+
+     *            T | x │ x |
+     *              +===+===+
      *      </pre></code>
      * <li><b>Equivalent:</b> This condition is equivalent to that condition;</li>
      *     <code><pre>
      *                this
      *                F   T
-     *              ╔═══╤═══╗
-     *            F ║ x │   ║
-     *       that   ╟───┼───╢
-     *            T ║   │ x ║
-     *              ╚═══╧═══╝
+     *              +===+===+
+     *            F | x │   |
+     *       that   +===+===+
+     *            T |   │ x |
+     *              +===+===+
      *      </pre></code>
      * <li><b>Inverse:</b> This condition is the inverse of that condition;</li>
      *     <code><pre>
      *                this
      *                F   T
-     *              ╔═══╤═══╗
-     *            F ║   │ x ║
-     *       that   ╟───┼───╢
-     *            T ║ x │   ║
-     *              ╚═══╧═══╝
+     *              +===+===+
+     *            F |   │ x |
+     *       that   +===+===+
+     *            T | x │   |
+     *              +===+===+
      *      </pre></code>
      * <li><b>Mutual-Exclusion:</b> This condition is mutually exclusive with that condition;</li>
      *     <code><pre>
      *                this
      *                F   T
-     *              ╔═══╤═══╗
-     *            F ║ x │ x ║
-     *       that   ╟───┼───╢
-     *            T ║ x │   ║
-     *              ╚═══╧═══╝
+     *              +===+===+
+     *            F | x │ x |
+     *       that   +===+===+
+     *            T | x │   |
+     *              +===+===+
      *      </pre></code>
      * <li><b>Mutual-Inclusion:</b> This condition is mutually inclusive with that condition;</li>
      *     <code><pre>
      *                this
      *                F   T
-     *              ╔═══╤═══╗
-     *            F ║   │ x ║
-     *       that   ╟───┼───╢
-     *            T ║ x │ x ║
-     *              ╚═══╧═══╝
+     *              +===+===+
+     *            F |   │ x |
+     *       that   +===+===+
+     *            T | x │ x |
+     *              +===+===+
      *      </pre></code>
      * <li><b>Implies:</b> If this is true, it implies that is true;</li>
      *     <code><pre>
      *                this
      *                F   T
-     *              ╔═══╤═══╗
-     *            F ║ x │   ║
-     *       that   ╟───┼───╢
-     *            T ║ x │ x ║
-     *              ╚═══╧═══╝
+     *              +===+===+
+     *            F | x │   |
+     *       that   +===+===+
+     *            T | x │ x |
+     *              +===+===+
      *      </pre></code>
      * <li><b>Implied:</b> If that is true, this is implied to be true.</li>
      *     <code><pre>
      *                this
      *                F   T
-     *              ╔═══╤═══╗
-     *            F ║ x │ x ║
-     *       that   ╟───┼───╢
-     *            T ║   │ x ║
-     *              ╚═══╧═══╝
+     *              +===+===+
+     *            F | x │ x |
+     *       that   +===+===+
+     *            T |   │ x |
+     *              +===+===+
      *      </pre></code>
      * </ul>
      */
@@ -825,7 +825,7 @@ public abstract class ConditionalConstant
 
 
     // ----- Influence enum ------------------------------------------------------------------------
-    
+
     /**
      * Represents a 3x3 truth table:
      * <p/>
@@ -834,17 +834,17 @@ public abstract class ConditionalConstant
      *                          Result is ...
      *
      *                           False      Mixed        True
-     *                         ╔══════════╤══════════╤══════════╗
-     *                  False  ║ ALWAYS_F │ AND      │ IDENTITY ║
-     * Input of False          ╟──────────┼──────────┼──────────╢
-     * Result is ...    Mixed  ║ INV_AND  │ CONTRIB  │ OR       ║
-     *                         ╟──────────┼──────────┼──────────╢
-     *                  True   ║ INVERSE  │ INV_OR   │ ALWAYS_T ║
-     *                         ╚══════════╧══════════╧══════════╝
+     *                         +==========+==========+==========+
+     *                  False  | ALWAYS_F │ AND      │ IDENTITY |
+     * Input of False          |──────────┼──────────┼──────────|
+     * Result is ...    Mixed  | INV_AND  │ CONTRIB  │ OR       |
+     *                         |──────────┼──────────┼──────────|
+     *                  True   | INVERSE  │ INV_OR   │ ALWAYS_T |
+     *                         +==========+==========+==========+
      * </pre></code>
      * <p/>
      * The NONE influence is used to indicate that an input is not related to, and thus does not
-     * influence, the result of a condition. 
+     * influence, the result of a condition.
      */
     public enum Influence
         {
@@ -924,7 +924,7 @@ public abstract class ConditionalConstant
             {
             return this == AND || this == IDENTITY;
             }
-        
+
         public static Influence translate(long cFalseInFalseOut, long cFalseInTrueOut,
                                           long cTrueInFalseOut,  long cTrueInTrueOut)
             {
@@ -936,32 +936,32 @@ public abstract class ConditionalConstant
                 case 0b0000:
                     // there were no test results? not sure here whether to assert, throw, or NONE
                     return NONE;
-                
+
                 case 0b0001:
                 case 0b0100:
                 case 0b0101:
                     return ALWAYS_T;
-                
+
                 case 0b0010:
                 case 0b1000:
                 case 0b1010:
                     return ALWAYS_F;
-                                     
+
                 case 0b0110:
                     return INVERSE;
-                
+
                 case 0b0111:
                     return INV_OR;
-                    
+
                 case 0b1001:
                     return IDENTITY;
-                
+
                 case 0b1011:
                     return AND;
-                
+
                 case 0b1101:
                     return OR;
-                
+
                 case 0b1110:
                     return INV_AND;
 
@@ -987,38 +987,38 @@ public abstract class ConditionalConstant
                            boolean fFalsePossible, ConditionalConstant condFalse)
             {
             this.fTruePossible  = fTruePossible;
-            this.condTrue       = condTrue;       
-            this.fFalsePossible = fFalsePossible; 
-            this.condFalse      = condFalse;      
+            this.condTrue       = condTrue;
+            this.fFalsePossible = fFalsePossible;
+            this.condFalse      = condFalse;
             }
-        
+
         public boolean isTruePossible()
             {
             return fTruePossible;
             }
-        
+
         public ConditionalConstant getTrueCondition()
             {
             return condTrue;
             }
-        
+
         public boolean isFalsePossible()
             {
             return fFalsePossible;
             }
-        
+
         public ConditionalConstant getFalseCondition()
             {
             return condFalse;
             }
-        
+
         private boolean             fTruePossible;
         private ConditionalConstant condTrue;
         private boolean             fFalsePossible;
         private ConditionalConstant condFalse;
         }
-    
-    
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     /**
