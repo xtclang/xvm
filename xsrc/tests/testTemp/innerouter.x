@@ -1,11 +1,11 @@
 module TestInnerOuter.xqiz.it
     {
+    @Inject X.io.Console console;
+
     void run()
         {
-        @Inject X.io.Console console;
-        console.println("hello world! (inner-class / outer-reference tests)");
-
         testSimple();
+        testAnonInner();
         }
 
     class Base(String text)
@@ -36,7 +36,6 @@ module TestInnerOuter.xqiz.it
 
     void testSimple()
         {
-        @Inject X.io.Console console;
         console.println("\n** testSimple()");
 
         Base b1 = new Base("Hello");
@@ -50,5 +49,32 @@ module TestInnerOuter.xqiz.it
             console.println(" -> by-outer=" + child.textByOuter);
             console.println(" -> by-name=" + child.textByName);
             }
+        }
+
+    void testAnonInner()
+        {
+        console.println("\n** testAnonInner()");
+
+        class Inner
+            {
+            construct(String s) {}
+            }
+
+        Int i = 4;
+
+        // var o = new Object()
+        var o = new Inner("hello")
+            {
+            void run()
+                {
+                console.println("in run (i=" + i + ")");
+                ++i;
+                // foo();
+                }
+            };
+
+        o.run();
+
+        console.println("done (i=" + i + ")");
         }
     }

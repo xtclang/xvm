@@ -9,7 +9,6 @@ if [ "$1" = "-f" ]; then
 fi
 
 java -classpath ../classes/ org.xvm.runtime.TestConnector \
-    TestAnonInner.xqiz.it tests/testTemp/anoninner.x \
     TestArray.xqiz.it tests/testTemp/array.x \
     TestDefAsn.xqiz.it tests/testTemp/defasn.x \
     TestTry.xqiz.it tests/testTemp/exceptions.x \
