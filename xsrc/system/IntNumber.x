@@ -173,11 +173,10 @@ const IntNumber
      */
     Boolean[] to<Boolean[]>();
 
-// REVIEW GG every IntNumber needs to be able to produced an "unchecked" form of itself
     /**
      * Obtain the integer number as an integer that does not check for overflow or underflow.
      */
-    @Unchecked IntNumber to<@Unchecked IntNumber>()
+    @Unchecked IntNumber toUnchecked()
         {
         TODO
         }
@@ -394,6 +393,44 @@ const IntNumber
         }
 
     /**
+     * @return a new bit array that contains only the leftmost bit.
+     */
+    static Bit[] bitLeftmost(Bit[] bits)
+        {
+        Int bitLength = bits.size;
+
+        Bit[] bitsNew = new Bit[bitLength];
+        for (Int i = bitLength - 1; i >= 0; i--)
+            {
+            if (bits[i] != 0)
+                {
+                bitsNew[i] = 1;
+                break;
+                }
+            }
+        return bitsNew;
+        }
+
+    /**
+     * @return a new bit array that contains only the rightmost bit.
+     */
+    static Bit[] bitRightmost(Bit[] bits)
+        {
+        Int bitLength = bits.size;
+
+        Bit[] bitsNew = new Bit[bitLength];
+        for (Int i = 0; i < bitLength; i++)
+            {
+            if (bits[i] != 0)
+                {
+                bitsNew[i] = 1;
+                break;
+                }
+            }
+        return bitsNew;
+        }
+
+    /**
      * @return a new Boolean array for this bit array.
      */
     static Boolean[] bitBooleans(Bit[] bits)
@@ -433,6 +470,6 @@ const IntNumber
                 return index + 1;
                 }
             }
-        TODO remove this
+        assert;
         }
     }

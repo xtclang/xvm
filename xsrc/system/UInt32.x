@@ -298,4 +298,36 @@ const UInt32
 
         return result;
         }
-    }
+
+    @Override
+    Int estimateStringLength()
+        {
+        return calculateStringSize(this, sizeArray);
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        if (sign == Zero)
+            {
+            appender.add('0');
+            }
+        else
+            {
+            (UInt32 left, UInt32 digit) = this /% 10;
+            if (left.sign != Zero)
+                {
+                left.appendTo(appender);
+                }
+            appender.add(DIGITS[digit]);
+            }
+        }
+
+    // maxvalue = 4_294_967_295 (10 digits)
+    static private UInt32[] sizeArray =
+         [
+         9, 99, 999, 9_999, 99_999, 999_999,
+         9_999_999, 99_999_999, 999_999_999,
+         4_294_967_295
+         ];
+     }

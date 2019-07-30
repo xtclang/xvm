@@ -3,6 +3,8 @@ package org.xvm.runtime.template;
 
 import org.xvm.asm.ClassStructure;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
@@ -18,6 +20,23 @@ public abstract class xUncheckedConstrainedInt
                                long cMinValue, long cMaxValue, int cNumBits, boolean fUnsigned)
         {
         super(templates, structure, cMinValue, cMaxValue, cNumBits, fUnsigned, false);
+
+        f_typeCanonical = pool().ensureAnnotatedTypeConstant(
+            pool().clzUnchecked(), null, structure.getCanonicalType());
+        f_nMask = cMaxValue - cMinValue;
+        f_nSign = cMaxValue + 1; // used only for signed
+        }
+
+    @Override
+    protected xUncheckedConstrainedInt getUncheckedTemplate()
+        {
+        return this;
+        }
+
+    @Override
+    public TypeConstant getCanonicalType()
+        {
+        return f_typeCanonical;
         }
 
     @Override
@@ -79,4 +98,22 @@ public abstract class xUncheckedConstrainedInt
         {
         return frame.assignValue(iReturn, makeJavaLong(lValue));
         }
+
+    @Override
+    public JavaLong makeJavaLong(long lValue)
+        {
+        if (f_cNumBits < 64)
+            {
+            lValue &= f_nMask;
+            if ((lValue & f_nSign) != 0 && f_fSigned)
+                {
+                lValue = -lValue;
+                }
+            }
+        return super.makeJavaLong(lValue);
+        }
+
+    private final TypeConstant f_typeCanonical;
+    private final long         f_nMask;
+    private final long         f_nSign;
     }

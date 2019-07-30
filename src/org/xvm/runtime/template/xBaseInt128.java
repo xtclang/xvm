@@ -36,19 +36,22 @@ public abstract class xBaseInt128
     @Override
     public void initDeclared()
         {
+        String sName = f_struct.getName();
+
         markNativeProperty("magnitude");
 
-        markNativeMethod("to", VOID, new String[]{"Int128"});
+        markNativeMethod("toUnchecked", VOID, null);
+
+        markNativeMethod("to", VOID, sName.equals("Int128") ? THIS : new String[]{"Int128"});
         markNativeMethod("to", VOID, new String[]{"Int64"});
         markNativeMethod("to", VOID, new String[]{"Int32"});
         markNativeMethod("to", VOID, new String[]{"Int16"});
         markNativeMethod("to", VOID, new String[]{"Int8"});
-        markNativeMethod("to", VOID, new String[]{"UInt128"});
+        markNativeMethod("to", VOID, sName.equals("UInt128") ? THIS : new String[]{"UInt128"});
         markNativeMethod("to", VOID, new String[]{"UInt64"});
         markNativeMethod("to", VOID, new String[]{"UInt32"});
         markNativeMethod("to", VOID, new String[]{"UInt16"});
         markNativeMethod("to", VOID, new String[]{"UInt8"});
-        markNativeMethod("to", VOID, THIS);
 
         // @Op methods
         markNativeMethod("abs", VOID, THIS);
@@ -139,6 +142,11 @@ public abstract class xBaseInt128
         {
         switch (method.getName())
             {
+            case "toUnchecked":
+                {
+                return frame.raiseException(xException.unsupportedOperation());
+                }
+
             case "to":
                 {
                 TypeConstant  typeRet  = method.getReturn(0).getType();

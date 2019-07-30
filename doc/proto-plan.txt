@@ -28,8 +28,6 @@
 
 - ast.Annotation - use the InvocationExpression's approach for argument validation
 
-- AssignmentStatement - avoid narrowing if reference is taken
-
 - native optimization Stringable methods on xInt*, xUInt*, etc.
 
 - consider a FormalTypeConstant instead of TerminalType(PropertyConstant)
@@ -45,8 +43,6 @@
 - heap.getType() vs. Constant.getType()
 
 - Lazy property on an immutable object must not produce a mutable value
-
-- support @Unchecked IntNumber (assignment from literals; comparison, etc.)
 
 - compiler to verify that const properties are Orderable
 

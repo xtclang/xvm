@@ -236,7 +236,9 @@ public abstract class ClassTemplate
 
         ClassComposition clz = m_mapCompositions.computeIfAbsent(typeInception, (typeI) ->
             {
-            OpSupport support = typeI.isAnnotated() ? typeI.getOpSupport(f_templates) : this;
+            OpSupport support = typeI.isAnnotated() && typeI.isIntoVariableType()
+                    ? typeI.getOpSupport(f_templates)
+                    : this;
 
             return new ClassComposition(support, typeI);
             });

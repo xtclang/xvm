@@ -6,6 +6,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -19,6 +20,8 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.template.collections.BitBasedArray;
 import org.xvm.runtime.template.collections.BitBasedArray.BitArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
+
+import org.xvm.util.PackedInteger;
 
 
 /**
@@ -56,6 +59,8 @@ public abstract class xConstrainedInteger
         markNativeProperty("rightmostBit");
         markNativeProperty("leadingZeroCount");
         markNativeProperty("trailingZeroCount");
+
+        markNativeMethod("toUnchecked", VOID, null);
 
         markNativeMethod("to", VOID, sName.equals("Int64")  ? THIS : new String[]{"Int64"});
         markNativeMethod("to", VOID, sName.equals("Int32")  ? THIS : new String[]{"Int32"});
@@ -100,10 +105,24 @@ public abstract class xConstrainedInteger
         markNativeMethod("shiftAllRight", INT, THIS);
         }
 
+    @Override
+    public ClassTemplate getTemplate(TypeConstant type)
+        {
+        return type instanceof AnnotatedTypeConstant &&
+            ((AnnotatedTypeConstant) type).getAnnotationClass().equals(pool().clzUnchecked())
+             ? getUncheckedTemplate()
+             : this;
+        }
+
     /**
      * @return a complimentary template (signed for unsigned and vice versa)
      */
     abstract protected xConstrainedInteger getComplimentaryTemplate();
+
+    /**
+     * @return an unchecked template for this type
+     */
+    abstract protected xUncheckedConstrainedInt getUncheckedTemplate();
 
     @Override
     public boolean isGenericHandle()
@@ -162,13 +181,13 @@ public abstract class xConstrainedInteger
                         }
                     }
 
-                return frame.assignValue(iReturn, makeInt(cDigits));
+                return frame.assignValue(iReturn, xInt64.makeHandle(cDigits));
                 }
 
             case "bitCount":
                 {
                 long l = ((JavaLong) hTarget).getValue();
-                return frame.assignValue(iReturn, makeInt(Long.bitCount(l)));
+                return frame.assignValue(iReturn, xInt64.makeHandle(Long.bitCount(l)));
                 }
 
             case "leftmostBit":
@@ -259,6 +278,12 @@ public abstract class xConstrainedInteger
                     return frame.assignValue(iReturn, l >= 0 ? hTarget : makeJavaLong(-l));
                     }
                 return frame.assignValue(iReturn, hTarget);
+                }
+
+            case "toUnchecked":
+                {
+                long l = ((JavaLong) hTarget).getValue();
+                return frame.assignValue(iReturn, getUncheckedTemplate().makeJavaLong(l));
                 }
 
             case "to":
@@ -571,7 +596,7 @@ public abstract class xConstrainedInteger
         {
         long l = ((JavaLong) hTarget).getValue();
 
-        return frame.assignValue(iReturn, makeInt(l));
+        return frame.assignValue(iReturn, xInt64.makeHandle(l));
         }
 
     // ----- comparison support -----
@@ -596,6 +621,18 @@ public abstract class xConstrainedInteger
 
         return frame.assignValue(iReturn,
             xOrdered.makeHandle(Long.compare(h1.getValue(), h2.getValue())));
+        }
+
+    /**
+     * Convert a PackedInteger value into a handle for the type represented by this template.
+     *
+     * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
+     */
+    public int convertLong(Frame frame, PackedInteger piValue, int iReturn)
+        {
+        return piValue.isBig()
+            ? overflow(frame)
+            : convertLong(frame, piValue.getLong(), iReturn);
         }
 
     /**
@@ -631,14 +668,15 @@ public abstract class xConstrainedInteger
         return frame.raiseException(xException.makeHandle(f_struct.getName() + " overflow"));
         }
 
-    public JavaLong makeInt(long lValue)
-        {
-        return xInt64.makeHandle(lValue);
-        }
-
+    /**
+     * Create a JavaLong handle for the type represented by this template.
+     *
+     * @param lValue  the underlying long value
+     *
+     * @return the corresponding handle
+     */
     public JavaLong makeJavaLong(long lValue)
         {
-        // TODO: cache frequently used values
         return new JavaLong(getCanonicalClass(), lValue);
         }
 

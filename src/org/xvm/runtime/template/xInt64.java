@@ -35,6 +35,8 @@ public class xInt64
                     cache[i] = new JavaLong(clz, i);
                     }
                 }
+            // create unchecked template
+            new xUncheckedInt64(templates, structure, true);
             }
         }
 
@@ -42,6 +44,12 @@ public class xInt64
     protected xConstrainedInteger getComplimentaryTemplate()
         {
         return xUInt64.INSTANCE;
+        }
+
+    @Override
+    protected xUncheckedConstrainedInt getUncheckedTemplate()
+        {
+        return xUncheckedInt64.INSTANCE;
         }
 
     @Override
@@ -82,12 +90,19 @@ public class xInt64
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
-    public static JavaLong makeHandle(long lValue)
+    @Override
+    public JavaLong makeJavaLong(long lValue)
         {
         if (lValue == (lValue & 0x7F))
             {
+            // TODO: cache some negative values as well
             return cache[(int)lValue];
             }
+        return super.makeJavaLong(lValue);
+        }
+
+    public static JavaLong makeHandle(long lValue)
+        {
         return INSTANCE.makeJavaLong(lValue);
         }
 

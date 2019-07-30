@@ -173,12 +173,8 @@ public class xIntLiteral
 
                 if (template instanceof xConstrainedInteger)
                     {
-                    if (piValue.isBig())
-                        {
-                        return ((xConstrainedInteger) template).overflow(frame);
-                        }
                     return ((xConstrainedInteger) template).
-                        convertLong(frame, piValue.getLong(), iReturn);
+                        convertLong(frame, piValue, iReturn);
                     }
                 if (template instanceof xBaseInt128)
                     {

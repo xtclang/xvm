@@ -1,6 +1,7 @@
 package org.xvm.runtime.template;
 
 
+import java.math.BigInteger;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
@@ -28,6 +29,9 @@ public class xUInt64
         if (fInstance)
             {
             INSTANCE = this;
+
+            // create unchecked template
+            new xUncheckedUInt64(templates, structure, true);
             }
         }
 
@@ -35,6 +39,12 @@ public class xUInt64
     protected xConstrainedInteger getComplimentaryTemplate()
         {
         return xInt64.INSTANCE;
+        }
+
+    @Override
+    protected xUncheckedConstrainedInt getUncheckedTemplate()
+        {
+        return xUncheckedUInt64.INSTANCE;
         }
 
     @Override
@@ -95,6 +105,29 @@ public class xUInt64
             }
 
         return frame.assignValue(iReturn, makeJavaLong(modUnassigned(l1, l2)));
+        }
+
+    @Override
+    public int convertLong(Frame frame, PackedInteger piValue, int iReturn)
+        {
+        if (piValue.isBig())
+            {
+            // there is a range: 0x7FFF_FFFF_FFFF_FFFF .. 0xFFFF_FFFF_FFFF_FFFF
+            // that fits "long", but represented by the PackedInteger as "big"
+            BigInteger bi = piValue.getBigInteger();
+            if (bi.signum() > 0 && bi.bitLength() <= 64)
+                {
+                return frame.assignValue(iReturn, makeJavaLong(bi.longValue()));
+                }
+            else
+                {
+                return overflow(frame);
+                }
+            }
+        else
+            {
+            return super.convertLong(frame, piValue, iReturn);
+            }
         }
 
 

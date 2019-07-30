@@ -21,6 +21,9 @@ public class xUInt32
         if (fInstance)
             {
             INSTANCE = this;
+
+            // create unchecked template
+            new xUncheckedUInt32(templates, structure, true);
             }
         }
 
@@ -28,5 +31,11 @@ public class xUInt32
     protected xConstrainedInteger getComplimentaryTemplate()
         {
         return xInt32.INSTANCE;
+        }
+
+    @Override
+    protected xUncheckedConstrainedInt getUncheckedTemplate()
+        {
+        return xUncheckedUInt32.INSTANCE;
         }
     }

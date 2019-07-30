@@ -1,5 +1,6 @@
 module TestNumbers.xqiz.it
     {
+    import X.Int8;
     import X.Int128;
     import X.UInt128;
 
@@ -38,9 +39,17 @@ module TestNumbers.xqiz.it
             {
             }
 
-//        TODO: add support for unchecked IntNumbers
-//        @Unchecked UInt un2 = n2.to<@Unchecked UInt>();
-//        assert ++un2 == 0;
+        Int un1 = Int.maxvalue.to<Int>().toUnchecked();
+        Int un2 = un1 + 1;
+
+        assert un2 == Int.minvalue; // wraps around w/out exception
+        assert un2.is(@Unchecked Int);
+
+        UInt un3 = UInt.maxvalue.to<UInt>().toUnchecked();
+        UInt un4 = ++un3;
+        assert un4 == 0;
+
+        assert un4.is(@Unchecked UInt);
         }
 
     void testByte()
@@ -67,6 +76,19 @@ module TestNumbers.xqiz.it
         catch (Exception e)
             {
             }
+
+        // Byte == UInt8
+        Byte un1 = Byte.maxvalue.to<Byte>().toUnchecked();
+        Byte un2 = un1 + 1;
+
+        assert un2 == 0; // wraps around w/out exception
+        assert un2.is(@Unchecked Byte);
+
+        Int8 un3 = Int8.maxvalue.to<Int8>().toUnchecked();
+        Int8 un4 = ++un3;
+        assert un4 == Int8.minvalue;
+
+        assert un4.is(@Unchecked Int8);
         }
 
     void testInt128()

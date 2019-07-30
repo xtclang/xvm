@@ -16,7 +16,7 @@ public class xUncheckedUInt64
 
     public xUncheckedUInt64(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, Long.MIN_VALUE, Long.MAX_VALUE, 64, true);
+        super(templates, structure, 0L, 0xFFFF_FFFF_FFFF_FFFFL, 64, true);
 
         if (fInstance)
             {

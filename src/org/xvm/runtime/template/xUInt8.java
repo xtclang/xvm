@@ -29,6 +29,9 @@ public class xUInt8
         if (fInstance)
             {
             INSTANCE = this;
+
+            // create unchecked template
+            new xUncheckedUInt8(templates, structure, true);
             }
         }
 
@@ -48,6 +51,12 @@ public class xUInt8
     protected xConstrainedInteger getComplimentaryTemplate()
         {
         return xInt8.INSTANCE;
+        }
+
+    @Override
+    protected xUncheckedConstrainedInt getUncheckedTemplate()
+        {
+        return xUncheckedUInt8.INSTANCE;
         }
 
     @Override

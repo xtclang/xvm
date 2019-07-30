@@ -15,7 +15,7 @@ public class xUncheckedUInt16
 
     public xUncheckedUInt16(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, 0, 2L * (long)Short.MAX_VALUE, 16, true);
+        super(templates, structure, 0L, 0xFFFFL, 16, true);
 
         if (fInstance)
             {

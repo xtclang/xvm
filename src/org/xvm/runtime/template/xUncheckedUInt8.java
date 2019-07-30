@@ -16,7 +16,7 @@ public class xUncheckedUInt8
 
     public xUncheckedUInt8(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, 0, 2L * (long)Byte.MAX_VALUE, 8, true);
+        super(templates, structure, 0L, 0xFFL, 8, true);
 
         if (fInstance)
             {

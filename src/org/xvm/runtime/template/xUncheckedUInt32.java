@@ -15,7 +15,7 @@ public class xUncheckedUInt32
 
     public xUncheckedUInt32(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, 0, 2L * (long)(Integer.MAX_VALUE), 32, true);
+        super(templates, structure, 0L, 0xFFFF_FFFFL, 32, true);
 
         if (fInstance)
             {

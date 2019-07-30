@@ -298,4 +298,34 @@ const UInt16
 
         return result;
         }
+
+    @Override
+    Int estimateStringLength()
+        {
+        return calculateStringSize(this, sizeArray);
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        if (sign == Zero)
+            {
+            appender.add('0');
+            }
+        else
+            {
+            (UInt16 left, UInt16 digit) = this /% 10;
+            if (left.sign != Zero)
+                {
+                left.appendTo(appender);
+                }
+            appender.add(DIGITS[digit]);
+            }
+        }
+
+    // maxvalue = 65_535 (5 digits)
+    static private UInt16[] sizeArray =
+         [
+         9, 99, 999, 9_999, 65_535
+         ];
     }
