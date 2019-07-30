@@ -777,7 +777,7 @@ public class ConstantPool
         }
 
     /**
-     * Given a version , obtain a VersionedCondition that represents a test for that version
+     * Given a version, obtain a VersionedCondition that represents a test for that version
      * of this module.
      *
      * @param ver  the version of this module to test for
@@ -1874,6 +1874,19 @@ public class ConstantPool
             }
 
         return constType;
+        }
+
+    /**
+     * Create an Annotation.
+     *
+     * @param constClass   the class of the annotation
+     * @param aconstParam  the parameters of the annotation, or null
+     *
+     * @return the specified Annotation constant
+     */
+    public Annotation ensureAnnotation(Constant constClass, Constant... aconstParam)
+        {
+        return (Annotation) register(new Annotation(this, constClass, aconstParam));
         }
 
     /**

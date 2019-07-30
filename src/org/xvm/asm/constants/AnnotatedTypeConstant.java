@@ -69,7 +69,7 @@ public class AnnotatedTypeConstant
             throw new IllegalArgumentException("annotated type required");
             }
 
-        m_annotation = new Annotation(pool, constClass, aconstParam);
+        m_annotation = pool.ensureAnnotation(constClass, aconstParam);
         m_constType  = constType;
         }
 

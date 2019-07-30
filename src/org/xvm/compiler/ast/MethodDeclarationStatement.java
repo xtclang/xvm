@@ -506,7 +506,7 @@ public class MethodDeclarationStatement
 
                     // the parameters were already matched; no need to re-check
                     org.xvm.asm.Annotation[] annos = new org.xvm.asm.Annotation[]
-                            {new org.xvm.asm.Annotation(pool, pool.clzOverride(), Constant.NO_CONSTS)};
+                            {pool.ensureAnnotation(pool.clzOverride())};
                     MethodStructure method = container.createMethod(
                             false, methodSuper.getAccess(), annos, aReturns, sName, aParams,
                             body != null, usesSuper());

@@ -551,12 +551,12 @@ public abstract class Component
     /**
      * Add an annotation.
      *
-     * @param constType    the annotation class type
+     * @param constAnno    the annotation class type
      * @param aconstParam  the annotation parameters (optional)
      */
-    public void addAnnotation(TypeConstant constType, Constant[] aconstParam)
+    public void addAnnotation(IdentityConstant constAnno, Constant... aconstParam)
         {
-        addAnnotation(new Annotation(getConstantPool(), constType, aconstParam));
+        addAnnotation(getConstantPool().ensureAnnotation(constAnno, aconstParam));
         }
 
     /**

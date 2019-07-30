@@ -155,7 +155,7 @@ public class Annotation
                 }
             }
 
-        org.xvm.asm.Annotation anno = new org.xvm.asm.Annotation(pool, constClass, aconstArgs);
+        org.xvm.asm.Annotation anno = pool.ensureAnnotation(constClass, aconstArgs);
         if (constNoIdea != null)
             {
             anno.markUnresolved();
