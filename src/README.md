@@ -31,4 +31,5 @@ Status: Proof-of-concept (will be replaced by LLVM back end)
 
 ## Hints
 
+* On Windows, to compile these sources using "javac", you must add the command line option "-encoding UTF8".
 * In IDEA, if you open a class (like `AstNode` or `XvmStructure`) that is the root of a big type hierarchy, then press `Ctrl-H`, it will provide a browsable tree of that type hierarchy.
