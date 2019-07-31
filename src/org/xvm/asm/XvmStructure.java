@@ -467,7 +467,6 @@ public abstract class XvmStructure
         return ensureErrorListener(errs).log(sev, sCode, aoParam, this);
         }
 
-
     /**
      * Make sure that an error listener is returned to use.
      *
@@ -650,19 +649,6 @@ public abstract class XvmStructure
         return sIndent + "  ";
         }
 
-    /**
-     * Temporary helper for places in the code that have to log an error.
-     * TODO delete this method when done
-     *
-     * @param s  a description of the error
-     *
-     * @return the method never returns; it always throws
-     */
-    public IllegalStateException todoLogError(String s)
-        {
-        throw new IllegalStateException(s);
-        }
-
 
     // ----- Object methods ------------------------------------------------------------------------
 
@@ -688,29 +674,10 @@ public abstract class XvmStructure
         }
 
 
-    // ----- inner class: SourceInfo ---------------------------------------------------------------
-
-    static class SourceInfo
-        {
-        public SourceInfo(Source source, long start, long end)
-            {
-            this.source = source;
-            this.start  = start;
-            this.end    = end;
-            }
-
-        public final Source source;
-        public final long   start;
-        public final long   end;
-        }
-
-
     // ----- fields --------------------------------------------------------------------------------
 
     /**
      * The containing XVM structure.
      */
     private XvmStructure m_xsParent;
-
-    private transient SourceInfo m_sourceinfo; // REVIEW not used!?!
     }

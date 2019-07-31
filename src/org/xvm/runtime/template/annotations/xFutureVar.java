@@ -113,7 +113,7 @@ public class xFutureVar
                 {
                 EnumHandle hValue =
                     cf == null || !cf.isDone() ?
-                        Pending : // REVIEW: shouldn't we throw if unassigned?
+                        Pending :
                     cf.isCompletedExceptionally() ?
                         Error :
                         Result;

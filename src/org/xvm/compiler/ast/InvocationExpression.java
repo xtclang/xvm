@@ -1167,7 +1167,7 @@ public class InvocationExpression
                                     break;
 
                                 default:
-                                    throw new UnsupportedOperationException("TODO method invocation");
+                                    throw new UnsupportedOperationException("invocation: " + combine(chArgs, chRets));
                                 }
 
                             return;
@@ -1311,7 +1311,7 @@ public class InvocationExpression
 
                     case 'T':
                     default:
-                        throw new UnsupportedOperationException("TODO constructor");
+                        throw new UnsupportedOperationException("constructor by Tuple");
                     }
                 return;
                 }
@@ -1366,7 +1366,7 @@ public class InvocationExpression
                     break;
 
                 default:
-                    throw new UnsupportedOperationException("TODO method invocation");
+                    throw new UnsupportedOperationException("invocation " + combine(chArgs, chRets));
                 }
             return;
             }
@@ -1673,8 +1673,8 @@ public class InvocationExpression
             {
             if (tokName.isSpecial())
                 {
-                // TODO handle special names (e.g. ".this")
-                throw new UnsupportedOperationException("no handling yet for ." + sName);
+                tokName.log(errs, getSource(), Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
+                return null;
                 }
 
             // the left expression provides the scope to search for a matching method/function;

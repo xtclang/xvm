@@ -238,7 +238,7 @@ public class RelOpExpression
         if (mapBest != null)
             {
             SignatureConstant sigBest = typeLeft.selectBest(
-                    mapBest.keySet().toArray(new SignatureConstant[mapBest.size()]));
+                    mapBest.keySet().toArray(new SignatureConstant[0]));
             if (sigBest == null)
                 {
                 return null;
@@ -282,10 +282,10 @@ public class RelOpExpression
                 TypeConstant typeResult = aRets[0];
                 if (typeResult.isA(typeRequired))
                     {
-                    // REVIEW do we need to test the "right" expression again the type of the param of the op method?
+                    // the "right" expression will be checked during validation
                     return TypeFit.Fit;
                     }
-                else if (!fitVia.isFit() && typeResult.isAssignableTo(typeRequired))
+                if (!fitVia.isFit() && typeResult.isAssignableTo(typeRequired))
                     {
                     // there is a solution via conversion on the result of an operator
                     fitVia = TypeFit.Conv;
@@ -346,11 +346,11 @@ public class RelOpExpression
                 {
                 if (aRets[0].isA(atypeRequired[0]) && aRets[1].isA(atypeRequired[1]))
                     {
-                    // REVIEW do we need to test the "right" expression again the type of the param of the op method?
+                    // the "right" expression will be checked during validation
                     return TypeFit.Fit;
                     }
-                else if (!fitVia.isFit() && aRets[0].isAssignableTo(atypeRequired[0])
-                                         && aRets[1].isAssignableTo(atypeRequired[1]))
+                if (!fitVia.isFit() && aRets[0].isAssignableTo(atypeRequired[0])
+                                    && aRets[1].isAssignableTo(atypeRequired[1]))
                     {
                     // there is a solution via conversion on the result of an operator
                     fitVia = TypeFit.Conv;

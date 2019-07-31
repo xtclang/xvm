@@ -66,7 +66,13 @@ public class PropertyBody
                 || impl == Implementation.Explicit;
         assert (impl == Implementation.Delegating) ^ (constDelegate == null);
         assert constInitVal == null || constInitFunc == null;
-//        assert !fConstant || (constInitVal == null ^ constInitFunc == null);    // REVIEW when building TypeInfo and the class isn't done yet, this assertion fails, so we need to invalidate the TypeInfo afterwards
+        if (fConstant && constInitVal == null && constInitFunc == null)
+            {
+            // this can only happen when we're building the TypeInfo for a partially compiled class,
+            // so we will need to invalidate the TypeInfo afterwards;
+            // mark the implementation as "Implicit" just to assert it gets replaced later
+            impl = Implementation.Implicit;
+            }
         assert effectGet != null && effectSet != null;
 
         m_structProp    = struct;

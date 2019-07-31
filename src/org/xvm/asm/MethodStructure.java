@@ -1539,8 +1539,6 @@ public class MethodStructure
         m_aconstLocal    = aconst;
         m_abOps          = abOps;
         m_FHasCode       = abOps != null;
-
-        ensureCode(); // REVIEW can or should we defer this?
         }
 
     @Override

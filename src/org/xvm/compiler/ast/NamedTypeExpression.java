@@ -753,7 +753,6 @@ public class NamedTypeExpression
                     // (e.g. HashMap or Map if we are inside of HashMap);
                     // default to the formal type unless the type parameters are explicitly
                     // specified by this expression or the context doesn't allow it (e.g. function);
-                    // REVIEW: are there scenarios when isAutoNarrowingAllowed() yields undesired result?
                     if (clzTarget.isParameterized() && paramTypes == null && isAutoNarrowingAllowed())
                         {
                         typeTarget = pool.ensureClassTypeConstant(constTarget, null,

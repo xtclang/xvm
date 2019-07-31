@@ -65,7 +65,7 @@ public class I_Set
                 assignArrayValue(frame, hTarget, hIndex.getValue(), hValue);
             }
 
-        CallChain chain = getOpChain(hTarget.getType()); // REVIEW: should we respect the value type?
+        CallChain chain = getOpChain(hTarget.getType());
         if (chain == null)
             {
             chain = template.findOpChain(hTarget, "[]=", new ObjectHandle[] {hIndex, hValue});

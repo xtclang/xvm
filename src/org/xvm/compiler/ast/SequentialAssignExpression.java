@@ -82,7 +82,7 @@ public class SequentialAssignExpression
         TypeConstant typeSequential = pool().typeSequential();
         TypeConstant typeRequest    = typeRequired != null && typeRequired.isA(typeSequential)
                 ? typeRequired
-                : typeSequential;       // REVIEW does this need more type checking later?
+                : typeSequential;
         Expression exprNew = expr.validate(ctx, typeRequest, errs);
         if (exprNew == null)
             {
@@ -93,7 +93,7 @@ public class SequentialAssignExpression
             expr = exprNew;
             type = exprNew.getType();
             exprNew.requireAssignable(ctx, errs);
-            // TODO verify that there is a next/prev method that produces the same type
+            // TODO verify that there is a next/prev method that produces the required type
             exprNew.markAssignment(ctx, false, errs);
             }
 

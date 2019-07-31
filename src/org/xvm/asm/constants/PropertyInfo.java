@@ -1171,8 +1171,6 @@ public class PropertyInfo
     /**
      * Augment the method chain for a property accessor represented by this property info.
      *
-     * REVIEW some of this could be done by the TypeInfo "build" process
-     *
      * @param chain    the raw method chain
      * @param type     the enclosing TypeInfo
      * @param constId  the accessor method constant

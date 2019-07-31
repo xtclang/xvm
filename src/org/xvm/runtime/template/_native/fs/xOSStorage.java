@@ -93,10 +93,10 @@ public class xOSStorage
         ServiceHandle hStorage = (ServiceHandle) hTarget;
         ObjectHandle  hStore   = hStorage.getField("fileStore");
 
+        // the handles below are cached by the Container.initResources()
         switch (sPropName)
             {
             case "homeDir":
-                // REVIEW: should we cache those handles?
                 return OSFileNode.createHandle(frame, hStore,
                     Paths.get(System.getProperty("user.home")), true, iReturn);
 

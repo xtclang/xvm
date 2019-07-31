@@ -176,7 +176,7 @@ public class MultiValueExpression
         Argument[]   aArgs  = new Argument[cExprs];
         for (int i = 0; i < cExprs; ++i)
             {
-            // REVIEW is it ok to pass through the "used once" flag?
+            // only the first argument is allowed to be on-stack
             aArgs[i] = aExprs[i].generateArgument(ctx, code, fLocalPropOk, fUsedOnce && i == 0, errs);
             }
         return aArgs;

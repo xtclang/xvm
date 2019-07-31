@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -267,9 +268,10 @@ public class ReturnStatement
         if (container instanceof StatementExpression)
             {
             // emit() for a return inside a StatementExpression produces an assignment from the
-            // expression REVIEW tuple return, #exprs > 1
-            Assignable aLVals[] = ((StatementExpression) container).getAssignables();
-            int        cLVals   = aLVals.length;
+            // expression
+            // TODO m_fTupleReturn
+            Assignable[] aLVals = ((StatementExpression) container).getAssignables();
+            int          cLVals = aLVals.length;
             for (int i = 0, cExprs = exprs == null ? 0 : exprs.size(); i < cExprs; ++i)
                 {
                 if (i < cLVals)
@@ -297,6 +299,7 @@ public class ReturnStatement
             {
             // the return statement has a single expression; the type that the expression has to
             // generate is the "tuple of" all of the return types
+            // TODO cExprs != 1
             Argument arg = listExprs.get(0).generateArgument(ctx, code, true, true, errs);
             code.add(new Return_T(arg));
             }
@@ -351,8 +354,16 @@ public class ReturnStatement
                                 {
                                 assert container.isReturnConditional();
 
-                                // REVIEW: we can use pool.valFalse() or add an Assert op here
-                                code.add(new Return_1(args[0]));
+                                Constant valFalse = pool().valFalse();
+                                if (expr.isConstant() && expr.toConstant().equals(valFalse))
+                                    {
+                                    code.add(new Return_1(valFalse));
+                                    }
+                                else
+                                    {
+                                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                                        valFalse.getValueString(), expr.getType().getValueString());
+                                    }
                                 }
                         }
                     break;
