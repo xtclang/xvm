@@ -697,19 +697,40 @@ public class ArrayAccessExpression
             listMatch.add(info);
             }
 
-        if (listMatch.isEmpty())
+        int cMatches = listMatch.size();
+        if (cMatches == 0)
             {
             return null;
             }
 
-        if (listMatch.size() == 1)
+        if (cMatches == 1)
             {
             return listMatch.get(0);
             }
 
-        // TODO disambiguate (pick the best choice)
-        notImplemented();
-        return null;
+        // disambiguate (pick the best choice)
+        MethodInfo        infoBest = listMatch.get(0);
+        SignatureConstant sigBest  = infoBest.getSignature();
+        for (int i = 1; i < cMatches; i++)
+            {
+            MethodInfo        info = listMatch.get(i);
+            SignatureConstant sig  = info.getSignature();
+
+            boolean fOldBetter = sig.isSubstitutableFor(sigBest, typeTarget);
+            boolean fNewBetter = sigBest.isSubstitutableFor(sig, typeTarget);
+            if (fOldBetter ^ fNewBetter)
+                {
+                if (fNewBetter)
+                    {
+                    infoBest = info;
+                    sigBest  = sig;
+                    }
+                continue;
+                }
+            infoBest = null;
+            break;
+            }
+        return infoBest;
         }
 
     /**

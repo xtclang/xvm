@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -592,7 +593,8 @@ public class RelOpExpression
         }
 
     /**
-     * Find the method to use to implement the op. TODO: merge with ArrayAccessExpression.findOpMethod()
+     * Find the method to use to implement the op.
+     * TODO: consider merging with ArrayAccessExpression.findOpMethod()
      *
      * @param type1         the type of the first expression
      * @param type2         the type of the second expression
@@ -610,7 +612,7 @@ public class RelOpExpression
             ErrorListener errs)
         {
         // select the method on expr1 that will be used to implement the op
-        MethodConstant      idOp     = null;
+        MethodConstant      idBest   = null;
         Set<MethodConstant> setOps   = null;
         MethodConstant      idConv   = null;
         Set<MethodConstant> setConvs = null;
@@ -633,13 +635,13 @@ public class RelOpExpression
                         {
                         setOps.add(method);
                         }
-                    else if (idOp == null)
+                    else if (idBest == null)
                         {
-                        idOp = method;
+                        idBest = method;
                         }
                     else
                         {
-                        SignatureConstant sigOp     = idOp.getSignature();
+                        SignatureConstant sigOp     = idBest.getSignature();
                         SignatureConstant sigMethod = method.getSignature();
                         if (!sigOp.equals(sigMethod))
                             {
@@ -649,13 +651,13 @@ public class RelOpExpression
                                 }
                             if (sigOp.isSubstitutableFor(sigMethod, type1))
                                 {
-                                idOp = method;
+                                idBest = method;
                                 continue;
                                 }
                             setOps = new HashSet<>();
-                            setOps.add(idOp);
+                            setOps.add(idBest);
                             setOps.add(method);
-                            idOp = null;
+                            idBest = null;
                             }
                         }
                     }
@@ -681,34 +683,81 @@ public class RelOpExpression
             }
 
         // having collected all of the possible ops that could be used, select the one method to use
-        if (idOp != null)
+        if (idBest != null)
             {
-            return idOp;
+            return idBest;
             }
-        else if (setOps != null)
+
+        if (setOps != null)
             {
             // find the best op method out of the multiple options
-            System.err.println("TODO multi setOps on RelOpExpression for op=" + operator.getValueText() + ", type=" + type1.getValueString());
-            return setOps.iterator().next(); // TODO
+            idBest = chooseBestMethod(setOps, type2);
+
+            if (idBest == null)
+                {
+                operator.log(errs, getSource(), Severity.ERROR, Compiler.AMBIGUOUS_OPERATOR_SIGNATURE,
+                                sOp, type1.getValueString());
+                }
+            return idBest;
             }
-        else if (idConv != null)
+
+        if (idConv != null)
             {
             assert typeRequired != null;
             return idConv;
             }
-        else if (setConvs != null)
+
+        if (setConvs != null)
             {
             // find the best op method and conversion out of the multiple options
-            System.err.println("TODO multi setConvs on RelOpExpression for op=" + operator.getValueText() + ", type=" + type1.getValueString());
-            return setConvs.iterator().next(); // TODO
+            // find the best op method out of the multiple options
+            idBest = chooseBestMethod(setConvs, type2);
+
+            if (idBest == null)
+                {
+                operator.log(errs, getSource(), Severity.ERROR, Compiler.AMBIGUOUS_OPERATOR_SIGNATURE,
+                                sOp, type1.getValueString());
+                }
+            return idBest;
             }
-        else
+
+        // error: somehow, we got this far, but we couldn't find an op that matched the
+        // necessary types
+        operator.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OPERATION);
+        return null;
+        }
+
+    /**
+     * Find the best matching method from the set that has a parameter of the specified type.
+
+     * @param setOps      the methods
+     * @param typeActual  the actual parameter type
+     *
+     * @return the best method id or null if nothing matches or ambiguous
+     */
+    private MethodConstant chooseBestMethod(Set<MethodConstant> setOps, TypeConstant typeActual)
+        {
+        MethodConstant idBest = null;
+        for (Iterator<MethodConstant> iter = setOps.iterator(); iter.hasNext();)
             {
-            // error: somehow, we got this far, but we couldn't find an op that matched the
-            // necessary types
-            operator.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OPERATION);
-            return null;
+            MethodConstant idMethod  = iter.next();
+            TypeConstant   typeParam = idMethod.getRawParams()[0];
+
+            if (typeActual.equals(typeParam))
+                {
+                return idMethod;
+                }
+
+            if (typeActual.isA(typeParam))
+                {
+                idBest = idMethod;
+                }
+            else
+                {
+                iter.remove();
+                }
             }
+        return setOps.size() == 1 ? idBest : null;
         }
 
     @Override
