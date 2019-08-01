@@ -1352,17 +1352,16 @@ public abstract class TypeConstant
         int cInvalidations = getConstantPool().getInvalidationCount();
 
         List<Contribution> listContribs = struct.getContributionsAsList();
-        TypeConstant[]     aContribType = resolveContributionTypes(listContribs);
+        TypeConstant[]     atypeContrib = resolveContributionTypes(listContribs);
         TypeConstant[]     atypeCondInc = extractConditionalContributes(
-                                            constId, struct, listContribs, aContribType, errs);
-
+                                            constId, struct, listContribs, atypeContrib, errs);
         // walk through each of the contributions, starting from the implied contributions that are
         // represented by annotations in this type constant itself, followed by the annotations in
         // the class structure, followed by the class structure (as its own pseudo-contribution),
         // followed by the remaining contributions
         List<Contribution> listProcess  = new ArrayList<>();
         TypeConstant[]     atypeSpecial = createContributionList(
-                                            constId, struct, aContribType, listProcess, errs);
+                                            constId, struct, atypeContrib, listProcess, errs);
         TypeConstant typeInto    = atypeSpecial[0];
         TypeConstant typeExtends = atypeSpecial[1];
         TypeConstant typeRebase  = atypeSpecial[2];
@@ -2011,7 +2010,7 @@ public abstract class TypeConstant
         int            cContribs    = listContribs.size();
         TypeConstant[] aContribType = new TypeConstant[cContribs];
 
-        for (int iContrib = 0 ; iContrib < cContribs; ++iContrib)
+        for (int iContrib = 0; iContrib < cContribs; ++iContrib)
             {
             aContribType[iContrib] = listContribs.get(iContrib).
                 resolveGenerics(pool, this);

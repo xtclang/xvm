@@ -1341,9 +1341,7 @@ public class TypeInfo
                     }
                 }
             }
-
-        // TODO: temporary; return null instead
-        throw new IllegalStateException("TODO: couldn't find " + nid + " at " + f_type);
+        return null;
         }
 
     /**
