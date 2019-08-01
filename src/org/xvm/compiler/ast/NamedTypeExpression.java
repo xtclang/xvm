@@ -9,6 +9,7 @@ import java.util.List;
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorList;
@@ -234,7 +235,7 @@ public class NamedTypeExpression
                         && structThatClass.getFormat().isAutoNarrowingAllowed())
                     {
                     IdentityConstant idClz = structThisClass.getIdentityConstant();
-                    if (idClz.getFormat() == Constant.Format.Class)
+                    if (idClz.getFormat() == Format.Class)
                         {
                         ClassConstant constThisClass = (ClassConstant) structThisClass.getIdentityConstant();
                         return constThisClass.calculateAutoNarrowingConstant(idThatClass);
@@ -327,7 +328,7 @@ public class NamedTypeExpression
         {
         Constant             constId    = getIdentityConstant();
         Access               access     = getExplicitAccess();
-        List<TypeExpression> listParams = this.paramTypes;
+        List<TypeExpression> listParams = paramTypes;
 
         if (constId instanceof TypeConstant)
             {
@@ -474,6 +475,15 @@ public class NamedTypeExpression
                     return;
                     }
 
+                if (constId.getFormat() == Format.Property && paramTypes != null)
+                    {
+                    // cannot proceed
+                    errsTemp.logTo(errs);
+                    log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+                    mgr.deferChildren();
+                    return;
+                    }
+
                 // now that we have the resolved constId, update the unresolved m_constId to point to
                 // the resolved one (just in case anyone is holding the wrong one
                 Constant constIdNew = m_constId = inferAutoNarrowing(constId, errsTemp);
@@ -512,7 +522,7 @@ public class NamedTypeExpression
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         ConstantPool         pool       = pool();
-        List<TypeExpression> listParams = this.paramTypes;
+        List<TypeExpression> listParams = paramTypes;
         boolean              fValid     = true;
         TypeConstant         type       = null;
 
