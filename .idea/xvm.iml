@@ -10,7 +10,6 @@
       <sourceFolder url="file://$MODULE_DIR$/resources" type="java-resource" />
       <excludeFolder url="file://$MODULE_DIR$/bin" />
       <excludeFolder url="file://$MODULE_DIR$/doc" />
-      <excludeFolder url="file://$MODULE_DIR$/prj" />
     </content>
     <orderEntry type="jdk" jdkName="Java 11" jdkType="JavaSDK" />
     <orderEntry type="sourceFolder" forTests="false" />
