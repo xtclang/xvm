@@ -743,7 +743,7 @@ StatementExpression
     StatementBlock
 
 SwitchExpression
-    switch "(" SwitchCondition-opt ")" "{" SwitchExpressionBlocks "}"
+    "switch" "(" SwitchCondition-opt ")" "{" SwitchExpressionBlocks "}"
 
 SwitchExpressionBlocks
     SwitchExpressionBlock
