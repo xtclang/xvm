@@ -23,11 +23,8 @@
 
 # User specific tool settings
 #############################
-*.iml
 *.ipr
 *.iws
-*.ipr
-*.iml
 *.swp
 
 # Logs and databases #
@@ -46,9 +43,15 @@
 ehthumbs.db
 Thumbs.db
 
-# build directory
+# build directory #
+###################
 classes/
 
-# project files (temporary hack to avoid Gene overwriting the project files from IDEA :)
+# user-specific project files #
+###############################
 prj/
-
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/dictionaries
+.idea/**/shelf
