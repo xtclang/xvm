@@ -644,8 +644,8 @@ public class ForEachStatement
             {
             switch (m_exprRValue.getType().getParamTypesArray()[0].getEcstasyClassName())
                 {
-                case "Bit":     // TODO requires additional functionality on Bit.x?
-                case "Nibble":  // TODO requires additional functionality on Nibble.x?
+                case "Bit":
+                case "Nibble":
                 case "Char":
                 case "Int8":
                 case "Int16":

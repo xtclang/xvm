@@ -1,4 +1,5 @@
 const Bit
+    implements Sequential
     default(0)
     {
     construct(IntLiteral literal)
@@ -56,6 +57,36 @@ const Bit
     @Op Bit not()
         {
         return literal == 1 ? 0 : 1;
+        }
+
+    // ----- Sequential interface ------------------------------------------------------------------
+
+    @Override
+    conditional Bit next()
+        {
+        if (this == 0)
+            {
+            return true, 1;
+            }
+
+        return false;
+        }
+
+    @Override
+    conditional Bit prev()
+        {
+        if (this == 1)
+            {
+            return true, 0;
+            }
+
+        return false;
+        }
+
+    @Override
+    Int stepsTo(Bit that)
+        {
+        return that - this;
         }
 
     // ----- Stringable ----------------------------------------------------------------------------

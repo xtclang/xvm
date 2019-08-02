@@ -3,12 +3,14 @@ package org.xvm.runtime.template;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Constant.Format;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IntConstant;
-
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.UInt8Constant;
+
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
@@ -57,6 +59,11 @@ public class xBit
         if (constant instanceof IntConstant)
             {
             frame.pushStack(makeHandle(((IntConstant) constant).getValue().getLong() != 0L));
+            return Op.R_NEXT;
+            }
+        if (constant.getFormat() == Format.Bit)
+            {
+            frame.pushStack(makeHandle(((UInt8Constant) constant).getValue().intValue() != 0));
             return Op.R_NEXT;
             }
         return super.createConstHandle(frame, constant);

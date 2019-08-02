@@ -36,6 +36,7 @@ import org.xvm.asm.constants.ParentClassConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.PseudoConstant;
+import org.xvm.asm.constants.RelationalTypeConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.ThisClassConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -526,13 +527,14 @@ public class NameExpression
         {
         assert aTypes != null && aTypes.length >= 1;
 
-        TypeConstant typeNew = aTypes[0];
+        TypeConstant typeThis = getType();
+        TypeConstant typeNew  = aTypes[0];
         Argument     arg     = ctx.getVar(name.getValueText());
-        TypeConstant typeOld = arg == null ? getType() : arg.getType();
+        TypeConstant typeOld = arg == null ? typeThis : arg.getType();
 
         if (!typeOld.equals(typeNew))
             {
-            assert typeNew.isA(getType());
+            typeNew = RelationalTypeConstant.combineWith(pool(), typeNew, typeThis);
 
             ctx.narrowType(this, Context.Branch.Always, typeNew);
             }

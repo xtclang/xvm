@@ -10,7 +10,8 @@ class Array<ElementType>
         implements MutableAble, FixedSizeAble, PersistentAble, ConstAble
         implements Stringable
         incorporates Stringer
-        // TODO conditional incorporation of something to do comparable?
+        incorporates conditional Orderer<ElementType extends Orderable>
+        // incorporates conditional Hasher<ElementType extends Hashable>
         // TODO have to implement Const (at least conditionally if ElementType extends Const)
         // TODO fill() reverse() copy()
     {
@@ -959,5 +960,55 @@ class Array<ElementType>
             }
 
         appender.add(']');
+        }
+
+
+    // ----- Orderable mixin -----------------------------------------------------------------------
+
+    static mixin Orderer<ElementType extends Orderable>
+            into Array<ElementType>
+            implements Orderable
+        {
+        /**
+         * Compare two arrays of the same type for purposes of ordering.
+         */
+        static <CompileType extends Orderer>
+                Ordered compare(CompileType array1, CompileType array2)
+            {
+            for (Int i = 0, Int c = Int.minOf(array1.size, array2.size); i < c; i++)
+                {
+                Ordered order = array1[i] <=> array2[i];
+                if (order != Equal)
+                    {
+                    return order;
+                    }
+                }
+
+            return array1.size <=> array2.size;
+            }
+
+        /**
+         * Compare two arrays of the same type for equality.
+         *
+         * @return true iff the arrays are equivalent
+         */
+        static <CompileType extends Orderer>
+                Boolean equals(CompileType array1, CompileType array2)
+            {
+            if (array1.size != array2.size)
+                {
+                return False;
+                }
+
+            for (Int i = 0, Int c = Int.minOf(array1.size, array2.size); i < c; i++)
+                {
+                if (array1[i] != array2[i])
+                    {
+                    return False;
+                    }
+                }
+
+            return True;
+            }
         }
     }

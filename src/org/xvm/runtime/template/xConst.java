@@ -5,6 +5,7 @@ import java.util.Iterator;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -13,6 +14,7 @@ import org.xvm.asm.constants.IntervalConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.UInt8Constant;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
@@ -26,6 +28,7 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xBitArray;
 
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xString.StringHandle;
@@ -55,6 +58,8 @@ public class xConst
         {
         if (this == INSTANCE)
             {
+            ConstantPool pool = pool();
+
             // equals and Comparable support
             f_struct.findMethod("equals",   3).setNative(true);
             f_struct.findMethod("compare",  3).setNative(true);
@@ -70,20 +75,26 @@ public class xConst
             INTERVAL_CONSTRUCT = f_templates.getClassStructure("Interval").
                 findMethod("construct", 2);
 
+            // Nibble support
+            TypeConstant typeBitArray = pool.ensureParameterizedTypeConstant(
+                pool.typeArray(), pool.ensureEcstasyTypeConstant("Bit"));
+            NIBBLE_CONSTRUCT = f_templates.getClassStructure("Nibble").
+                findMethod("construct", 1, typeBitArray);
+
             // DateTime support
             DATETIME_CONSTRUCT = f_templates.getClassStructure("DateTime").
-                findMethod("construct", 1, pool().typeString());
+                findMethod("construct", 1, pool.typeString());
             DATE_CONSTRUCT     = f_templates.getClassStructure("Date").
-                findMethod("construct", 1, pool().typeString());
+                findMethod("construct", 1, pool.typeString());
             TIME_CONSTRUCT     = f_templates.getClassStructure("Time").
-                findMethod("construct", 1, pool().typeString());
+                findMethod("construct", 1, pool.typeString());
             DURATION_CONSTRUCT = f_templates.getClassStructure("Duration").
-                findMethod("construct", 1, pool().typeString());
+                findMethod("construct", 1, pool.typeString());
             VERSION_CONSTRUCT = f_templates.getClassStructure("rt.Version").
-                findMethod("construct", 1, pool().typeString());
+                findMethod("construct", 1, pool.typeString());
 
             PATH_CONSTRUCT = f_templates.getClassStructure("fs.Path").
-                findMethod("construct", 1, pool().typeString());
+                findMethod("construct", 1, pool.typeString());
 
             HASH_SIG = f_templates.getClassStructure("collections.Hashable").
                 findMethod("hashCode", 2).getIdentityConstant().getSignature();
@@ -170,6 +181,16 @@ public class xConst
             ahArg[0] = xString.makeHandle(((LiteralConstant) constant).getValue());
 
             return construct(frame, constructor, clz, null, ahArg, Op.A_STACK);
+            }
+
+        if (constant.getFormat() == Format.Nibble)
+            {
+            byte[] abValue = new byte[] {((UInt8Constant) constant).getValue().byteValue()};
+
+            ObjectHandle[] ahArg = new ObjectHandle[NIBBLE_CONSTRUCT.getMaxVars()];
+            ahArg[0] = xBitArray.makeHandle(4, abValue, xArray.Mutability.Constant);
+
+            return construct(frame, NIBBLE_CONSTRUCT, ensureClass(constant.getType()), null, ahArg, Op.A_STACK);
             }
 
         return super.createConstHandle(frame, constant);
@@ -476,7 +497,7 @@ public class xConst
                 if (typeProp.findCallable(pool.sigCompare()) == null)
                     {
                     return frameCaller.raiseException(
-                            xException.makeHandle("Property \"" + sProp + " is not Orderable"));
+                            xException.makeHandle("Property \"" + sProp + "\" is not Orderable"));
                     }
 
                 switch (typeProp.callCompare(frameCaller, h1, h2, Op.A_STACK))
@@ -702,6 +723,7 @@ public class xConst
     private static MethodStructure FN_ESTIMATE_LENGTH;
     private static MethodStructure FN_APPEND_TO;
     private static MethodStructure INTERVAL_CONSTRUCT;
+    private static MethodStructure NIBBLE_CONSTRUCT;
     private static MethodStructure DATETIME_CONSTRUCT;
     private static MethodStructure DATE_CONSTRUCT;
     private static MethodStructure TIME_CONSTRUCT;

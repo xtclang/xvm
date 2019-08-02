@@ -113,15 +113,15 @@ public class ObjectHeap
         {
         switch (constValue.getFormat())
             {
-            case Int64:
-                return f_poolRoot.typeInt();
-
+            case Char:
+            case String:
             case IntLiteral:
-                return f_poolRoot.clzIntLiteral().getType();
-
+            case Bit:
+            case Nibble:
             case Int8:
             case Int16:
             case Int32:
+            case Int64:
             case Int128:
             case VarInt:
             case UInt8:
@@ -141,6 +141,7 @@ public class ObjectHeap
             case Dec128:
             case VarDec:
             case Array:
+            case UInt8Array:
             case Map:
             case Tuple:
             case Path:
@@ -150,21 +151,10 @@ public class ObjectHeap
             case Date:
             case Time:
             case DateTime:
+            case Duration:
             case Interval:
             case Version:
                 return constValue.getType();
-
-            case Char:
-                return f_poolRoot.typeChar();
-
-            case String:
-                return f_poolRoot.typeString();
-
-            case Duration:
-                return f_poolRoot.typeDuration();
-
-            case UInt8Array:
-                return f_poolRoot.typeByteArray();
 
             case Set:
             case MapEntry:

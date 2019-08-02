@@ -1,11 +1,11 @@
 module TestArray.xqiz.it
     {
-    @Inject X.io.Console console;
+    @Inject Ecstasy.io.Console console;
 
     void run()
         {
         testSimple();
-        // testStrBuf();
+        testStrBuf();
         testConstElement();
         testConstSlice();
 
@@ -15,6 +15,7 @@ module TestArray.xqiz.it
 
         testAssignSideEffects();
         testNew();
+        testNibble();
         testBits();
         }
 
@@ -136,6 +137,19 @@ module TestArray.xqiz.it
             array += "#" + i;
             }
         console.println("array=" + array + ", size=" + array.size);
+        }
+
+    void testNibble()
+        {
+        import Ecstasy.Nibble;
+
+        console.println("\n** testNibble()");
+
+        loop:
+        for (Nibble b : Nibble.minvalue..Nibble.maxvalue)
+            {
+            console.println($"b{loop.count}={b}");
+            }
         }
 
     void testBits()

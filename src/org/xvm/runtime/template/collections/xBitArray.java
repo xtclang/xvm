@@ -54,4 +54,18 @@ public class xBitArray
         {
         return xBit.makeHandle(f);
         }
+
+    /**
+     * Create a bit array handle.
+     *
+     * @param cBits       the array arity
+     * @param abValue     the underlying bytes
+     * @param mutability  the mutability
+     *
+     * @return the array handle
+     */
+    public static BitArrayHandle makeHandle(int cBits, byte[] abValue, Mutability mutability)
+        {
+        return new BitArrayHandle(INSTANCE.getCanonicalClass(), cBits, abValue, mutability);
+        }
     }
