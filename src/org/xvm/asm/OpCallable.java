@@ -264,13 +264,12 @@ public abstract class OpCallable extends Op
                     m_function = function = (MethodStructure) idFunction.getComponent();
                     if (function == null)
                         {
-                        m_function = function = typeParent.findCallable(
-                                idFunction.getSignature().resolveGenericTypes(pool, resolver));
+                        m_function = function = typeParent.findCallable(idFunction.getSignature());
                         if (function == null)
                             {
                             frame.raiseException(xException.makeHandle(
                                 "unresolvable or ambiguous function \"" + idFunction.getValueString() +
-                                 "\" for " + typeParent.getValueString()));
+                                "\" for " + typeParent.getValueString()));
                             }
                         }
                     m_typeParent = typeParent;
