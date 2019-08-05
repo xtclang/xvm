@@ -1916,14 +1916,15 @@ public abstract class TypeConstant
         }
 
     /**
-     * TODO
+     * Extract the types of conditional incorporates.
      *
-     * @param constId
-     * @param struct
-     * @param listContribs
-     * @param aContribType
-     * @param errs
-     * @return
+     * @param constId       the identity constant of the class that the type is based on
+     * @param struct        the structure of the class that the type is based on
+     * @param listContribs  the contribution list
+     * @param aContribType  the contribution types that correspond the contributions in the list
+     * @param errs          the error listener
+     *
+     * @return the conditionally incorporated types
      */
     private TypeConstant[] extractConditionalContributes(
             IdentityConstant   constId,
@@ -1990,10 +1991,11 @@ public abstract class TypeConstant
 
             // call processIncorporates() for validation only
             processIncorporates(constId, typeMixin, struct, new ArrayList<>(), errs);
-            return listCondContribs.toArray(TypeConstant.NO_TYPES);
             }
 
-        return null;
+        return listCondContribs == null
+                ? null
+                : listCondContribs.toArray(TypeConstant.NO_TYPES);
         }
 
     /**
@@ -3959,7 +3961,7 @@ public abstract class TypeConstant
         {
         ConstantPool pool = getConstantPool();
         TypeInfo     info = infoBase;
-        for (int c = atypeCondInc.length, i = c-1; i >= 0; --i)
+        for (int i = 0, c = atypeCondInc.length; i < c; i++)
             {
             TypeConstant typeMixin   = atypeCondInc[i];
             TypeConstant typePrivate = pool.ensureAccessTypeConstant(typeMixin, Access.PRIVATE);
