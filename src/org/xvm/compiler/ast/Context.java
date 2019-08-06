@@ -170,7 +170,10 @@ public class Context
                     markVarRead(sFormalName);
                     }
                 }
-            return arg.getType();
+
+            TypeConstant typeType = arg.getType();
+            assert typeType.isTypeOfType();
+            return typeType.getParamType(0);
             };
         }
 
@@ -1284,6 +1287,8 @@ public class Context
 
                     if (idProp.isTypeParameter())
                         {
+                        assert typeNarrow.isTypeOfType();
+
                         Register regFormal = new Register(typeNarrow);
                         regFormal.markEffectivelyFinal();
                         narrowFormalType(sName, branch, regFormal);
@@ -1466,7 +1471,16 @@ public class Context
 
         return map == Collections.EMPTY_MAP
                 ? null
-                : map::get;
+                : sFormalName ->
+                    {
+                    TypeConstant typeType = map.get(sFormalName);
+                    if (typeType == null)
+                        {
+                        return null;
+                        }
+                    assert typeType.isTypeOfType();
+                    return typeType.getParamType(0);
+                    };
         }
 
     /**

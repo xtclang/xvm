@@ -80,15 +80,6 @@ public class IsExpression
                 TypeConstant   typeTarget = exprTarget.getType();
                 TypeConstant   typeTest   = exprType.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool);
 
-                // there is a case for formal type narrowing, e.g.
-                //     ElementType.is(Type<Hashable>)
-                // that needs to be processed in a special way
-                if (typeTarget.isFormalTypeType() && typeTest.isTypeOfType())
-                    {
-                    typeTarget = typeTarget.getParamTypesArray()[0];
-                    typeTest   = typeTest  .getParamTypesArray()[0];
-                    }
-
                 ctx.narrowType(exprName, Branch.WhenTrue,
                         RelationalTypeConstant.combineWith(pool, typeTarget, typeTest));
                 ctx.narrowType(exprName, Branch.WhenFalse,

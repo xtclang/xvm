@@ -318,6 +318,16 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return the type parameter at the specified index (Object if there are none)
+     */
+    public TypeConstant getParamType(int i)
+        {
+        return getParamsCount() == 0
+                ? getConstantPool().typeObject()
+                : getParamTypesArray()[i];
+        }
+
+    /**
      * @return true iff this type has a formal type parameter with the specified name
      */
     public boolean containsGenericParam(String sName)

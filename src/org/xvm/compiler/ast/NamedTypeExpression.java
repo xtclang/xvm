@@ -25,7 +25,6 @@ import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.Constants;
 import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
@@ -562,7 +561,7 @@ public class NamedTypeExpression
                 type = pool.ensureTerminalTypeConstant(m_constId);
                 }
 
-            if (type.isGenericType())
+            if (type.containsGenericType())
                 {
                 ctx.requireThis(getStartPosition(), errs);
                 }
@@ -720,7 +719,9 @@ public class NamedTypeExpression
                     Argument arg = ctx.getVar(idProp.getName());
                     if (arg != null)
                         {
-                        return arg.getType();
+                        TypeConstant typeType = arg.getType();
+                        assert typeType.isTypeOfType();
+                        return typeType.getParamType(0);
                         }
                     }
 
