@@ -281,6 +281,12 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
+    public boolean containsGenericType()
+        {
+        return m_constType1.containsGenericType() || m_constType2.containsGenericType();
+        }
+
+    @Override
     public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
         {
         TypeConstant constOriginal1 = m_constType1;

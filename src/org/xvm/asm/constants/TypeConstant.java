@@ -4883,6 +4883,14 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff the TypeConstant contains a generic type
+     */
+    public boolean containsGenericType()
+        {
+        return getUnderlyingType().containsGenericType();
+        }
+
+    /**
      * @return true iff the TypeConstant represents a type parameter
      */
     public boolean isTypeParameter()

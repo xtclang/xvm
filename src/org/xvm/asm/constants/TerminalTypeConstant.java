@@ -800,6 +800,19 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public boolean containsGenericType()
+        {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return constId.getReferredToType().containsGenericType();
+            }
+
+        return isGenericType();
+        }
+
+    @Override
     public Category getCategory()
         {
         if (!isSingleDefiningConstant())

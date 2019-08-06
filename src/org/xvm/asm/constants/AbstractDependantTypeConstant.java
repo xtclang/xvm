@@ -127,6 +127,12 @@ public abstract class AbstractDependantTypeConstant
         }
 
     @Override
+    public boolean containsGenericType()
+        {
+        return getParentType().containsGenericType();
+        }
+
+    @Override
     public boolean isTuple()
         {
         return false;

@@ -291,6 +291,20 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public boolean containsGenericType()
+        {
+        for (int i = 0, c = m_atypeParams.length; i < c; ++i)
+            {
+            if (m_atypeParams[i].containsGenericType())
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
+    @Override
     public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
         {
         return m_constType.adoptParameters(pool, atypeParams == null ? m_atypeParams : atypeParams);
