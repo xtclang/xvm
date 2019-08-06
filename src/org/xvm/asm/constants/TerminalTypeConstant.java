@@ -302,6 +302,15 @@ public class TerminalTypeConstant
         // because isA() uses this method, there is a chicken-and-egg problem, so instead of
         // materializing the TypeInfo at this point, just answer the question without it
         ClassStructure clz = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
+        if (isFormalType())
+            {
+            assert listParams.isEmpty();
+
+            IdentityConstant idFormal = (IdentityConstant) getDefiningConstant();
+            return clz.containsGenericParamType(sName)
+                    ? getConstantPool().ensureFormalTypeChildConstant(idFormal, sName).getType()
+                    : null;
+            }
         return clz.getGenericParamType(getConstantPool(), sName, listParams);
         }
 

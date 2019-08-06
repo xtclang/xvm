@@ -224,8 +224,7 @@ public abstract class TypeConstant
     public TypeConstant removeImmutable(ConstantPool pool)
         {
         // replace the TerminalType of the typeActual with the inception type
-        Function<TypeConstant, TypeConstant> transformer =
-                new Function<TypeConstant, TypeConstant>()
+        Function<TypeConstant, TypeConstant> transformer = new Function<>()
             {
             public TypeConstant apply(TypeConstant type)
                 {
