@@ -119,7 +119,14 @@ public abstract class RelationalTypeConstant
             {
             return type2;
             }
-        return pool.ensureUnionTypeConstant(type1, type2);
+
+        // type Type is known to have a distributive property:
+        // Type<X> + Type<Y> == Type<X + Y>
+        return type1.isTypeOfType() && type1.getParamsCount() > 0 &&
+               type2.isTypeOfType() && type1.getParamsCount() > 0
+                ? pool.ensureParameterizedTypeConstant(pool.typeType(),
+                    combineWith(pool, type1.getParamTypesArray()[0], type2.getParamTypesArray()[0]))
+                : pool.ensureUnionTypeConstant(type1, type2);
         }
 
     /**
@@ -162,7 +169,13 @@ public abstract class RelationalTypeConstant
                     }
                 }
             }
-        return type1;
+        // type Type is known to have a distributive property:
+        // Type<X> - Type<Y> == Type<X - Y>
+        return type1.isTypeOfType() && type1.getParamsCount() > 0 &&
+               type2.isTypeOfType() && type2.getParamsCount() > 0
+                ? pool.ensureParameterizedTypeConstant(pool.typeType(),
+                    combineWithout(pool, type1.getParamTypesArray()[0], type2.getParamTypesArray()[0]))
+                : type1;
         }
 
 
