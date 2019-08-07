@@ -1,4 +1,4 @@
-import io.UTFDataFormatException;
+import io.IllegalUTF;
 
 const Char
         implements Sequential
@@ -225,7 +225,7 @@ const Char
 
             default:
                 // TODO: ch.toHexString() would be a better output
-                throw new UTFDataFormatException("illegal character: " + ch);
+                throw new IllegalUTF("illegal character: " + ch);
             }
         Int length = trailing + 1;
 
