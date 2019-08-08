@@ -19,8 +19,7 @@ import org.xvm.asm.PropertyStructure;
  * Represent a property constant, which identifies a particular property structure.
  */
 public class PropertyConstant
-        extends    NamedConstant
-        implements FormalConstant
+        extends FormalConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
