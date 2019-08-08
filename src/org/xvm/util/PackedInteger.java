@@ -689,7 +689,7 @@ public class PackedInteger
 
         long lThis = this.m_lValue;
         long lThat = that.m_lValue;
-        return lThis < lThat ? -1 : lThis == lThat ? 0 : 1;
+        return Long.compare(lThis, lThat);
         }
 
 
@@ -821,7 +821,7 @@ public class PackedInteger
                 }
             }
 
-        // Large format: the first two bits of the first byte are 0, so bits 3..7 of the
+        // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
         // first byte are the trailing number of bytes minus 1
         int cBytes = 1 + ((b & 0xFC) >>> 2);
         switch (cBytes)
@@ -999,7 +999,7 @@ public class PackedInteger
     /**
      * Largest 4-byte (32-bit) unsigned integer value.
      */
-    public static final PackedInteger UINT4_MAX  = valueOf(0xFFFF_FFFFl);
+    public static final PackedInteger UINT4_MAX  = valueOf(0xFFFF_FFFFL);
     /**
      * Largest 8-byte (64-bit) unsigned integer value.
      */
@@ -1012,9 +1012,4 @@ public class PackedInteger
      * Largest 32-byte (256-bit) unsigned integer value.
      */
     public static final PackedInteger UINT32_MAX = new PackedInteger(new BigInteger("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16));
-
-    /**
-     * An array of zero bytes.
-     */
-    private static final byte[] EMPTY = new byte[32];
     }
