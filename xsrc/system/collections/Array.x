@@ -11,7 +11,7 @@ class Array<ElementType>
         implements Stringable
         incorporates Stringer
         incorporates conditional Orderer<ElementType extends Orderable>
-        // incorporates conditional Hasher<ElementType extends Hashable>
+        incorporates conditional Hasher<ElementType extends Hashable>
         // TODO have to implement Const (at least conditionally if ElementType extends Const)
         // TODO fill() reverse() copy()
     {
@@ -993,6 +993,51 @@ class Array<ElementType>
          * @return true iff the arrays are equivalent
          */
         static <CompileType extends Orderer>
+                Boolean equals(CompileType array1, CompileType array2)
+            {
+            if (array1.size != array2.size)
+                {
+                return False;
+                }
+
+            for (Int i = 0, Int c = Int.minOf(array1.size, array2.size); i < c; i++)
+                {
+                if (array1[i] != array2[i])
+                    {
+                    return False;
+                    }
+                }
+
+            return True;
+            }
+        }
+
+
+    // ----- Hashable mixin ------------------------------------------------------------------------
+
+    static mixin Hasher<ElementType extends Hashable>
+            into Array<ElementType>
+            implements Hashable
+        {
+        /**
+         * Calculate a hash code for a given array.
+         */
+        static <CompileType extends Hasher> Int hashCode(CompileType array)
+            {
+            Int hash = 0;
+            for (CompileType.ElementType el : array)
+                {
+                hash += CompileType.ElementType.hashCode(el);
+                }
+            return hash;
+            }
+
+        /**
+         * Compare two arrays of the same type for equality.
+         *
+         * @return true iff the arrays are equivalent
+         */
+        static <CompileType extends Hasher>
                 Boolean equals(CompileType array1, CompileType array2)
             {
             if (array1.size != array2.size)

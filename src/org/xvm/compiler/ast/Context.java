@@ -162,10 +162,10 @@ public class Context
             // implicitly, thus preventing the context to register/collect a corresponding type
             // parameter (see the lambda in List.bubbleSort() function as an example);
             // hence the compensation below
-            if (arg instanceof Register && !((Register) arg).isUnknown())
+            if (arg instanceof Register)
                 {
-                int iReg = ((Register) arg).getIndex();
-                if (iReg >= 0 && iReg < getMethod().getTypeParamCount())
+                Register reg = (Register) arg;
+                if (!reg.isUnknown() && getMethod().isTypeParameter(reg.getIndex()))
                     {
                     markVarRead(sFormalName);
                     }
@@ -1259,7 +1259,7 @@ public class Context
 
                         assert sName.equals(id.getName());
 
-                        if (idProp.isTypeParameter())
+                        if (idProp.isFormalType())
                             {
                             narrowFormalType(sName, branch, new TargetInfo(info, typeNarrow));
                             }
@@ -1285,7 +1285,7 @@ public class Context
 
                     assert sName.equals(idProp.getName());
 
-                    if (idProp.isTypeParameter())
+                    if (idProp.isFormalType())
                         {
                         assert typeNarrow.isTypeOfType();
 

@@ -24,6 +24,7 @@ import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.FormalConstant;
+import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -1580,11 +1581,9 @@ public class InvocationExpression
                     {
                     return null;
                     }
-                else
-                    {
-                    m_argMethod = arg;
-                    return arg;
-                    }
+
+                m_argMethod = arg;
+                return arg;
                 }
 
             if (arg instanceof TargetInfo)
@@ -1737,10 +1736,19 @@ public class InvocationExpression
                     case Property:
                         {
                         PropertyConstant idProp = (PropertyConstant) nameLeft.getIdentity(ctx);
-                        if (idProp.isTypeParameter())
+                        if (idProp.isFormalType())
                             {
-                            ErrorList errsTemp = new ErrorList(1);
+                            // Example (NaturalHasher.x):
+                            //   Int hashOf(ValueType value)
+                            //     {
+                            //     return ValueType.hashCode(value);
+                            //     }
+                            //
+                            // "this" is "ValueType.hashCode(value)"
+                            // idProp.getFormalType() is NaturalHasher.ValueType
+
                             TypeInfo  infoType = idProp.getFormalType().ensureTypeInfo(errs);
+                            ErrorList errsTemp = new ErrorList(1);
 
                             Argument arg = findCallable(ctx, infoType, sName, MethodType.Function, false,
                                                 atypeReturn, errsTemp);
@@ -1757,6 +1765,38 @@ public class InvocationExpression
                         break;
                         }
 
+                    case FormalType:
+                        {
+                        // Example:
+                        //   static <CompileType extends Hasher> Int hashCode(CompileType array)
+                        //      {
+                        //      Int hash = 0;
+                        //      for (CompileType.ElementType el : array)
+                        //          {
+                        //          hash += CompileType.ElementType.hashCode(el);
+                        //          }
+                        //      return hash;
+                        //      }
+                        // "this" is "CompileType.ElementType.hashCode(el)"
+                        //  typeLeft is a type of "CompileType.ElementType" formal type child
+
+                        TypeInfo  infoLeft = typeLeft.ensureTypeInfo(errs);
+                        ErrorList errsTemp = new ErrorList(1);
+
+                        Argument arg = findCallable(ctx, infoLeft, sName, MethodType.Function, false,
+                                            atypeReturn, errsTemp);
+                        if (arg != null)
+                            {
+                            m_argMethod   = arg;
+                            m_method      = getMethod(infoLeft, arg);
+                            m_fBindTarget = false;
+                            m_idFormal    = (FormalTypeChildConstant) nameLeft.getIdentity(ctx);
+                            errsTemp.logTo(errs);
+                            return arg;
+                            }
+                        break;
+                        }
+
                     case Variable:
                         {
                         Register reg = (Register) nameLeft.resolveRawArgument(ctx, false, errs);
@@ -1764,9 +1804,8 @@ public class InvocationExpression
                             {
                             int             iReg   = reg.getIndex();
                             MethodStructure method = ctx.getMethod();
-                            if (iReg < method.getTypeParamCount())
+                            if (method.isTypeParameter(iReg))
                                 {
-                                // the register points to a formal type parameter
                                 TypeParameterConstant idParam = method.getParam(iReg).
                                         asTypeParameterConstant(method.getIdentityConstant());
 

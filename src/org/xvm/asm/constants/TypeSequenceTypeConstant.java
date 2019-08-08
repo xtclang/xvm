@@ -95,6 +95,12 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
+    public boolean isTypeOfType()
+        {
+        return false;
+        }
+
+    @Override
     public Category getCategory()
         {
         return Category.FORMAL;

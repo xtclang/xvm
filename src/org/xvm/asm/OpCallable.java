@@ -278,16 +278,15 @@ public abstract class OpCallable extends Op
                 break;
                 }
 
+            case FormalTypeChild:
             case Property:
             case TypeParameter:
-            case FormalTypeChild:
                 {
                 GenericTypeResolver resolver   = frame.getGenericsResolver();
                 TypeConstant        typeParent = ((FormalConstant) idParent).resolve(resolver);
                 if (function == null || !typeParent.equals(m_typeParent))
                     {
-                    m_function = function = typeParent.findCallable(
-                            idFunction.getSignature().resolveGenericTypes(frame.poolContext(), resolver));
+                    m_function = function = typeParent.findCallable(idFunction.getSignature());
                     if (function == null)
                         {
                         frame.raiseException(xException.makeHandle(

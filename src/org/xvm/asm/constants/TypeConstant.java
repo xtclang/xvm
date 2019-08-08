@@ -4926,9 +4926,19 @@ public abstract class TypeConstant
      */
     public boolean isFormalTypeType()
         {
-        return isTypeOfType()
-                && getParamsCount() == 1
-                && getParamTypesArray()[0].isFormalType();
+        if (isTypeOfType() && getParamsCount() == 1)
+            {
+            TypeConstant typeParam = getParamTypesArray()[0];
+            if (typeParam.isFormalType())
+                {
+                // we need to make sure *not* to include the Type<DataType>
+                Constant constant = typeParam.getDefiningConstant();
+                return constant.getFormat() != Format.Property ||
+                    !((PropertyConstant) constant).getParentConstant().equals(
+                        getConstantPool().clzType());
+                }
+            }
+        return false;
         }
 
     /**

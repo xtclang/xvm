@@ -1177,6 +1177,7 @@ public class StatementBlock
         protected void initNameMap(Map<String, Argument> mapByName)
             {
             MethodStructure         method      = m_method;
+            MethodConstant          idMethod    = method.getIdentityConstant();
             Map<String, Assignment> mapAssigned = ensureDefiniteAssignments();
             for (int i = 0, c = method.getParamCount(); i < c; ++i)
                 {
@@ -1184,10 +1185,15 @@ public class StatementBlock
                 String    sName = param.getName();
                 if (!sName.equals(Id.ANY.TEXT))
                     {
-                    Register reg = new Register(param.getType(), i);
+                    Register reg;
                     if (param.isTypeParameter())
                         {
+                        reg = new Register(param.asTypeParameterType(idMethod).getType(), i);
                         reg.markEffectivelyFinal();
+                        }
+                    else
+                        {
+                        reg = new Register(param.getType(), i);
                         }
                     mapByName.put(sName, reg);
 

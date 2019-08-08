@@ -320,18 +320,18 @@ public class NameResolver
                                 throw new IllegalStateException();
                             }
                         }
-                    else // must be a Parameter
+                    else
                         {
-                        Parameter    parameter = (Parameter) structure;
+                        Parameter parameter = (Parameter) structure;
+                        assert parameter.isTypeParameter();
+
                         TypeConstant typeParam = parameter.getType();
+                        assert typeParam.isTypeOfType();
 
-                        assert typeParam.isA(getPool().typeType()) && typeParam.getParamsCount() == 1;
-
-                        typeParam = typeParam.getParamTypesArray()[0];
-
-                        if (typeParam.isSingleDefiningConstant())
+                        TypeConstant typeConstraint = typeParam.getParamType(0);
+                        if (typeConstraint.isSingleDefiningConstant())
                             {
-                            Constant  id        = typeParam.getDefiningConstant();
+                            Constant  id        = typeConstraint.getDefiningConstant();
                             Component component = id instanceof IdentityConstant
                                     ? ((IdentityConstant) id).getComponent()
                                     : id instanceof PseudoConstant
