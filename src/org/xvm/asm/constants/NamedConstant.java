@@ -28,8 +28,8 @@ public abstract class NamedConstant
      * within its parent structure.
      *
      * @param pool         the ConstantPool that will contain this Constant
-     * @param constParent  the module, package, class, or method that contains this property
-     * @param sName        the property name
+     * @param constParent  the module, package, class, or method that contains this identity
+     * @param sName        the name associated with this identity
      */
     public NamedConstant(ConstantPool pool, IdentityConstant constParent, String sName)
         {

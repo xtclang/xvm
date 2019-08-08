@@ -13,8 +13,7 @@ import org.xvm.asm.GenericTypeResolver;
  * Represent a formal child of a generic property, type parameter or formal child constant.
  */
 public class FormalTypeChildConstant
-        extends    NamedConstant
-        implements FormalConstant
+        extends FormalConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -91,8 +90,8 @@ public class FormalTypeChildConstant
     @Override
     public TypeConstant getConstraintType()
         {
-        FormalConstant constParent    = (FormalConstant) getParentConstant();
-        TypeConstant   typeConstraint = constParent.getConstraintType();
+        FormalConstant idParent       = (FormalConstant) getParentConstant();
+        TypeConstant   typeConstraint = idParent.getConstraintType();
 
         assert typeConstraint.containsGenericParam(getName());
 
@@ -107,8 +106,8 @@ public class FormalTypeChildConstant
     @Override
     public TypeConstant resolve(GenericTypeResolver resolver)
         {
-        FormalConstant constParent  = (FormalConstant) getParentConstant();
-        TypeConstant   typeResolved = constParent.resolve(resolver);
+        FormalConstant idParent     = (FormalConstant) getParentConstant();
+        TypeConstant   typeResolved = idParent.resolve(resolver);
 
         return typeResolved == null
                 ? null
