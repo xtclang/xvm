@@ -294,9 +294,21 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
+    public boolean containsFormalType()
+        {
+        return m_constType1.containsFormalType() || m_constType2.containsFormalType();
+        }
+
+    @Override
     public boolean containsGenericType()
         {
         return m_constType1.containsGenericType() || m_constType2.containsGenericType();
+        }
+
+    @Override
+    public boolean containsTypeParameter()
+        {
+        return m_constType1.containsTypeParameter() || m_constType2.containsTypeParameter();
         }
 
     @Override

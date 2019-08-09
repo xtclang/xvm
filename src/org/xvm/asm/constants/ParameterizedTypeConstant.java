@@ -291,11 +291,39 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public boolean containsFormalType()
+        {
+        for (int i = 0, c = m_atypeParams.length; i < c; ++i)
+            {
+            if (m_atypeParams[i].containsFormalType())
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
+    @Override
     public boolean containsGenericType()
         {
         for (int i = 0, c = m_atypeParams.length; i < c; ++i)
             {
             if (m_atypeParams[i].containsGenericType())
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
+    @Override
+    public boolean containsTypeParameter()
+        {
+        for (int i = 0, c = m_atypeParams.length; i < c; ++i)
+            {
+            if (m_atypeParams[i].containsTypeParameter())
                 {
                 return true;
                 }

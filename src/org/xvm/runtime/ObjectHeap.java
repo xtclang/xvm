@@ -81,15 +81,23 @@ public class ObjectHeap
         switch (template.createConstHandle(frame, constValue))
             {
             case Op.R_NEXT:
-                return saveConstHandle(constValue, frame.popStack());
+                {
+                hValue = frame.popStack();
+                return constValue.isValueCacheable()
+                    ? saveConstHandle(constValue, hValue)
+                    : hValue;
+                }
 
             case Op.R_CALL:
                 Frame frameNext = frame.m_frameNext;
-                frameNext.addContinuation(frameCaller ->
+                if (constValue.isValueCacheable())
                     {
-                    saveConstHandle(constValue, frameCaller.peekStack());
-                    return Op.R_NEXT;
-                    });
+                    frameNext.addContinuation(frameCaller ->
+                        {
+                        saveConstHandle(constValue, frameCaller.peekStack());
+                        return Op.R_NEXT;
+                        });
+                    }
                 return new DeferredCallHandle(frameNext);
 
             case Op.R_EXCEPTION:

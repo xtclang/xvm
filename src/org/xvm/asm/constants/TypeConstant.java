@@ -4872,6 +4872,15 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff the TypeConstant contains a "formal type", which could be either
+     *         generic type or type parameter
+     */
+    public boolean containsFormalType()
+        {
+        return getUnderlyingType().containsFormalType();
+        }
+
+    /**
      * @return true iff the TypeConstant represents a generic type
      */
     public boolean isGenericType()
@@ -4919,6 +4928,14 @@ public abstract class TypeConstant
                 }
             }
         return false;
+        }
+
+    /**
+     * @return true iff the TypeConstant contains a type parameter type
+     */
+    public boolean containsTypeParameter()
+        {
+        return getUnderlyingType().containsTypeParameter();
         }
 
     /**
@@ -5297,6 +5314,12 @@ public abstract class TypeConstant
     public boolean isAutoNarrowing()
         {
         return isAutoNarrowing(true);
+        }
+
+    @Override
+    public boolean isValueCacheable()
+        {
+        return !containsFormalType();
         }
 
     @Override
