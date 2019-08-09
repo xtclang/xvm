@@ -102,35 +102,27 @@ public class UnresolvedNameConstant
         }
 
     @Override
-    public boolean isValue()
+    public boolean isValueCacheable()
         {
-        return isNameResolved()
-                ? m_constId.isValue()
-                : super.isValue();
+        return isNameResolved() && m_constId.isValueCacheable();
         }
 
     @Override
     public boolean isClass()
         {
-        return isNameResolved()
-                ? m_constId.isClass()
-                : super.isClass();
+        return isNameResolved() && m_constId.isClass();
         }
 
     @Override
     public boolean isAutoNarrowing()
         {
-        return isNameResolved()
-                ? m_constId.isAutoNarrowing()
-                : super.isAutoNarrowing();
+        return isNameResolved() && m_constId.isAutoNarrowing();
         }
 
     @Override
     public boolean isProperty()
         {
-        return isNameResolved()
-                ? m_constId.isProperty()
-                : super.isProperty();
+        return isNameResolved() && m_constId.isProperty();
         }
 
     @Override

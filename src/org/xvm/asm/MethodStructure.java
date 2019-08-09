@@ -440,6 +440,14 @@ public class MethodStructure
         }
 
     /**
+     * @return true iff the specified parameter is a formal type parameter
+     */
+    public boolean isTypeParameter(int i)
+        {
+        return 0 <= i && i < m_cTypeParams;
+        }
+
+    /**
      * @return a list of Parameter structures that represent all parameters of the method
      */
     public List<Parameter> getParams()

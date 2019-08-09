@@ -26,6 +26,7 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.FormalConstant;
+import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -1376,7 +1377,8 @@ public class NameExpression
         // the first step is to resolve the name to a "raw" argument, i.e. what does the name refer
         // to, without consideration to read-only vs. read-write, reference vs. de-reference, static
         // vs. virtual, and so on
-        String sName = name.getValueText();
+        ConstantPool pool  = pool();
+        String       sName = name.getValueText();
         if (left == null)
             {
             // resolve the initial name; try to avoid double-reporting
@@ -1439,7 +1441,7 @@ public class NameExpression
 
                         // we will use the private access info here since the access restrictions
                         // must have been already checked by the "resolveName"
-                        TypeInfo infoClz = pool().ensureAccessTypeConstant(clzTop.getFormalType(),
+                        TypeInfo infoClz = pool.ensureAccessTypeConstant(clzTop.getFormalType(),
                                 Access.PRIVATE).ensureTypeInfo(errs);
 
                         // only include methods if this context is a method
@@ -1568,8 +1570,39 @@ public class NameExpression
                 TypeConstant typeLeft = left.getImplicitType(ctx);
                 if (typeLeft != null)
                     {
-                    if (typeLeft.isFormalType() && !typeLeft.isFormalTypeSequence())
+                    FormalConstant constFormal = null;
+                    if (typeLeft.isFormalTypeType())
                         {
+                        // Example (Array.x):
+                        //   static <CompileType extends Hasher> Int hashCode(CompileType array)
+                        //       {
+                        //       Int hash = 0;
+                        //       for (CompileType.ElementType el : array)
+                        //           {
+                        //           hash += CompileType.ElementType.hashCode(el);
+                        //           }
+                        //       return hash;
+                        //       }
+                        //
+                        // "this" is "CompileType.ElementType"
+                        // typeLeft is a type of the "CompileType" type parameter
+
+                        TypeConstant typeFormal = typeLeft.getParamType(0);
+
+                        constFormal = (FormalConstant) typeFormal.getDefiningConstant();
+                        typeLeft    = constFormal.getConstraintType();
+                        }
+                    else if (typeLeft.isFormalType() && !typeLeft.isFormalTypeSequence())
+                        {
+                        // Example (Enum.x):
+                        //   static <CompileType extends Enum> Ordered compare(CompileType value1, CompileType value2)
+                        //   {
+                        //   return value1.ordinal <=> value2.ordinal;
+                        //   }
+                        //
+                        // "this" is value1.ordinal
+                        // typeLeft is the "CompileType" type parameter
+
                         typeLeft = ((FormalConstant) typeLeft.getDefiningConstant()).getConstraintType();
                         }
 
@@ -1583,7 +1616,7 @@ public class NameExpression
                         if (arg instanceof Register &&
                                 ((Register) arg).isTarget() || isNestMate(ctx, typeLeft))
                             {
-                            typeLeft = pool().ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
+                            typeLeft = pool.ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
                             }
                         }
                     TypeInfo     infoType = typeLeft.ensureTypeInfo(errs);
@@ -1635,8 +1668,16 @@ public class NameExpression
                         }
                     else
                         {
-                        m_arg         = infoProp.getIdentity();
-                        m_fAssignable = infoProp.isVar();
+                        if (constFormal == null)
+                            {
+                            m_arg         = infoProp.getIdentity();
+                            m_fAssignable = infoProp.isVar();
+                            }
+                        else
+                            {
+                            m_arg         = pool.ensureFormalTypeChildConstant(constFormal, sName);
+                            m_fAssignable = false;
+                            }
                         }
                     }
                 }
@@ -1705,6 +1746,20 @@ public class NameExpression
                 // there is a possibility that the register type in this context is narrower than
                 // its original type; we can return it only if it fits the desired type
                 TypeConstant typeLocal = reg.getType();
+                if (!reg.isUnknown())
+                    {
+                    MethodStructure method = ctx.getMethod();
+                    int             iReg   = reg.getIndex();
+                    if (method.isTypeParameter(iReg))
+                        {
+                        TypeConstant typeParam = method.getParam(iReg).
+                            asTypeParameterType(method.getIdentityConstant());
+
+                        TypeConstant typeConstraint = typeLocal.getParamType(0);
+                        assert typeParam.isA(typeConstraint);
+                        typeLocal = typeParam.getType(); // type of type
+                        }
+                    }
                 return isRValue() || typeDesired != null && typeLocal.isA(typeDesired)
                         ? typeLocal
                         : reg.getOriginalType();
@@ -1912,6 +1967,12 @@ public class NameExpression
                     }
                 }
 
+            case FormalTypeChild:
+                {
+                FormalTypeChildConstant idFormal = (FormalTypeChildConstant) constant;
+                return idFormal.getType();
+                }
+
             case Typedef:
                 {
                 if (aTypeParams != null)
@@ -2033,6 +2094,9 @@ public class NameExpression
 
                 case Property:
                     return Meaning.Property;
+
+                case FormalTypeChild:
+                    return Meaning.FormalType;
 
                 case Method:
                 case MultiMethod:
@@ -2277,7 +2341,7 @@ public class NameExpression
     /**
      * Represents the category of argument that the expression yields.
      */
-    enum Meaning {Unknown, Reserved, Variable, Property, Method, Class, Typedef, Label}
+    enum Meaning {Unknown, Reserved, Variable, Property, FormalType, Method, Class, Typedef, Label}
 
     /**
      * Represents the necessary argument/assignable transformation that the expression will have to

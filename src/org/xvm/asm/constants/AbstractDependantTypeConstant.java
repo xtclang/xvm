@@ -127,9 +127,21 @@ public abstract class AbstractDependantTypeConstant
         }
 
     @Override
+    public boolean containsFormalType()
+        {
+        return getParentType().containsFormalType();
+        }
+
+    @Override
     public boolean containsGenericType()
         {
         return getParentType().containsGenericType();
+        }
+
+    @Override
+    public boolean containsTypeParameter()
+        {
+        return getParentType().containsTypeParameter();
         }
 
     @Override

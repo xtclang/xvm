@@ -711,7 +711,7 @@ public class NamedTypeExpression
             case Property:
                 {
                 PropertyConstant idProp = (PropertyConstant) constTarget;
-                assert idProp.isTypeParameter();
+                assert idProp.isFormalType();
 
                 if (ctx != null)
                     {

@@ -82,7 +82,7 @@ public class PropertyConstant
     @Override
     public TypeConstant getConstraintType()
         {
-        assert isTypeParameter();
+        assert isFormalType();
 
         // the type of the property must be "Type<X>", so return X
         TypeConstant typeConstraint = getType();
@@ -160,14 +160,14 @@ public class PropertyConstant
      */
     public TypeConstant getFormalType()
         {
-        assert isTypeParameter();
+        assert isFormalType();
         return getConstantPool().ensureTerminalTypeConstant(this);
         }
 
     /**
      * @return true iff this property is a type parameter
      */
-    public boolean isTypeParameter()
+    public boolean isFormalType()
         {
         PropertyStructure struct = (PropertyStructure) getComponent();
         return struct != null && struct.isGenericTypeParameter();
@@ -179,7 +179,7 @@ public class PropertyConstant
      */
     public boolean isTypeSequenceTypeParameter()
         {
-        return isTypeParameter() && getConstraintType() instanceof TypeSequenceTypeConstant;
+        return isFormalType() && getConstraintType() instanceof TypeSequenceTypeConstant;
         }
 
 

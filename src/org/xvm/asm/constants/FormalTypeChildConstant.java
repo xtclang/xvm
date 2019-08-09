@@ -4,7 +4,6 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 
@@ -51,7 +50,7 @@ public class FormalTypeChildConstant
                 break;
 
             case Property:
-                if (((PropertyConstant) constParent).isTypeParameter())
+                if (((PropertyConstant) constParent).isFormalType())
                     {
                     break;
                     }
@@ -68,14 +67,14 @@ public class FormalTypeChildConstant
     /**
      * @return the top formal parent of this formal child
      */
-    public Constant getTopParent()
+    public IdentityConstant getTopParent()
         {
-        Constant constParent = getParentConstant();
-        while (constParent.getFormat() == Format.FormalTypeChild)
+        IdentityConstant idParent = getParentConstant();
+        while (idParent.getFormat() == Format.FormalTypeChild)
             {
-            constParent = ((FormalTypeChildConstant) constParent).getParentConstant();
+            idParent = idParent.getParentConstant();
             }
-        return constParent;
+        return idParent;
         }
 
 
