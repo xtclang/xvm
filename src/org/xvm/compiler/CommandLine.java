@@ -857,12 +857,16 @@ public class CommandLine
      */
     protected boolean readModules()
         {
-        int                 cModules  = modules.size();
-        List<FileStructure> listFiles = new ArrayList<>(cModules);
-        BuildRepository     repoTemp  = new BuildRepository();
+        int                 cModules   = modules.size();
+        List<FileStructure> listFiles  = new ArrayList<>(cModules);
+        BuildRepository     repoTemp   = new BuildRepository();
+        File                fileRoot   = null;
+        ModuleStructure     structRoot = null;
 
-        for (Node module : modules.values())
+        for (File fileSrc : modules.keySet())
             {
+            Node module = modules.get(fileSrc);
+
             // figure out where to find the module
             File file = module.getFile().getParentFile();
 
@@ -881,14 +885,28 @@ public class CommandLine
 
             if (!file.exists() || module.lastModified() > file.lastModified())
                 {
+                if (structRoot != null)
+                    {
+                    // the root Ecstasy module has no external dependencies and doesn't have
+                    // to be recompiled
+                    modules.remove(fileRoot);
+                    repoBuild.storeModule(structRoot);
+                    }
                 return false;
                 }
 
             try
                 {
-                FileStructure structFile = new FileStructure(file);
-                repoTemp.storeModule(structFile.getModule());
+                FileStructure   structFile   = new FileStructure(file);
+                ModuleStructure structModule = structFile.getModule();
+                repoTemp.storeModule(structModule);
                 listFiles.add(structFile);
+
+                if (structModule.getName().equals(Constants.ECSTASY_MODULE))
+                    {
+                    fileRoot   = fileSrc;
+                    structRoot = structModule;
+                    }
                 }
             catch (Exception e)
                 {
