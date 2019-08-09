@@ -343,7 +343,7 @@ public class AssertStatement
 
             // add traces (if anything is interesting to trace)
             Map<String, Expression> mapTrace = new ListMap<>();
-            getCondition(i).selectTraceableExpressions(mapTrace);
+            cond.selectTraceableExpressions(mapTrace);
             if (!mapTrace.isEmpty())
                 {
                 StringBuilder sb = new StringBuilder(sCond);
@@ -426,12 +426,10 @@ public class AssertStatement
                 for (Expression expr : mapTrace.values())
                     {
                     Argument[] aArgs = ((TraceExpression) expr.getParent()).getArguments();
-                    for (Argument arg : aArgs)
-                        {
-                        argV.add(arg);
-                        }
+                    Collections.addAll(argV, aArgs);
                     }
-                code.add(new AssertV(argCond, constructException, constText, argV.toArray(new Argument[0])));
+                code.add(new AssertV(
+                    argCond, constructException, constText, argV.toArray(Expression.NO_RVALUES)));
                 }
             }
 
@@ -456,7 +454,7 @@ public class AssertStatement
         }
 
     /**
-     * Re-arrange the conditions, if possible, to splijt them into smaller chunks by applying the
+     * Re-arrange the conditions, if possible, to split them into smaller chunks by applying the
      * rules of De Morgan.
      */
     protected void demorgan()
