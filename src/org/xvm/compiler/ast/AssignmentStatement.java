@@ -440,7 +440,7 @@ public class AssignmentStatement
                 // allow the r-value to resolve names based on the l-value type's
                 // contributions
                 ctx = ctx.enterInferring(atypeLeft[0]);
-                TypeFit fit = rvalue.testFitMulti(ctx, atypeTest, null);
+                TypeFit fit = rvalue.testFitMulti(ctx, atypeTest, errs);
                 ctx = ctx.exit();
 
                 if (!fit.isFit())
