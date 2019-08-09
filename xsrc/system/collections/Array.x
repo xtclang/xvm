@@ -967,6 +967,7 @@ class Array<ElementType>
 
     static mixin Orderer<ElementType extends Orderable>
             into Array<ElementType>
+            extends Comparator<ElementType>
             implements Orderable
         {
         /**
@@ -986,30 +987,6 @@ class Array<ElementType>
 
             return array1.size <=> array2.size;
             }
-
-        /**
-         * Compare two arrays of the same type for equality.
-         *
-         * @return true iff the arrays are equivalent
-         */
-        static <CompileType extends Orderer>
-                Boolean equals(CompileType array1, CompileType array2)
-            {
-            if (array1.size != array2.size)
-                {
-                return False;
-                }
-
-            for (Int i = 0, Int c = Int.minOf(array1.size, array2.size); i < c; i++)
-                {
-                if (array1[i] != array2[i])
-                    {
-                    return False;
-                    }
-                }
-
-            return True;
-            }
         }
 
 
@@ -1017,6 +994,7 @@ class Array<ElementType>
 
     static mixin Hasher<ElementType extends Hashable>
             into Array<ElementType>
+            extends Comparator<ElementType>
             implements Hashable
         {
         /**
@@ -1031,13 +1009,19 @@ class Array<ElementType>
                 }
             return hash;
             }
+        }
 
+    // ----- the base mixin for Orderable and Hashable ---------------------------------------------
+
+    static mixin Comparator<ElementType>
+            into Array<ElementType>
+        {
         /**
          * Compare two arrays of the same type for equality.
          *
          * @return true iff the arrays are equivalent
          */
-        static <CompileType extends Hasher>
+        static <CompileType extends Comparator>
                 Boolean equals(CompileType array1, CompileType array2)
             {
             if (array1.size != array2.size)
