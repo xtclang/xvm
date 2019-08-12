@@ -286,7 +286,7 @@ public class InvocationExpression
     @Override
     public TypeConstant[] getImplicitTypes(Context ctx)
         {
-        return resolveReturnTypes(ctx, null);
+        return resolveReturnTypes(ctx, null, ErrorListener.BLACKHOLE);
         }
 
     @Override
@@ -297,7 +297,9 @@ public class InvocationExpression
             return TypeFit.Fit;
             }
 
-        TypeConstant[] atype = resolveReturnTypes(ctx, atypeRequired);
+        TypeConstant[] atype = resolveReturnTypes(ctx, atypeRequired,
+                                    errs == null ? ErrorListener.BLACKHOLE : errs);
+
         return calcFitMulti(ctx, atype, atypeRequired);
         }
 
@@ -308,11 +310,13 @@ public class InvocationExpression
      *
      * @param ctx            the compilation context for the statement
      * @param atypeRequired  the types that the expression is being asked to provide (optional)
+     * @param errs           the error listener
      *
      * @return an array of the types produced by the expression, or an empty array if the expression
      *         is void (or if its type cannot be determined)
      */
-    protected TypeConstant[] resolveReturnTypes(Context ctx, TypeConstant[] atypeRequired)
+    protected TypeConstant[] resolveReturnTypes(Context ctx, TypeConstant[] atypeRequired,
+                                                ErrorListener errs)
         {
         ConstantPool pool = pool();
 
@@ -365,7 +369,7 @@ public class InvocationExpression
                     }
                 }
 
-            Argument argMethod = resolveName(ctx, false, typeLeft, atypeReturn, ErrorListener.BLACKHOLE);
+            Argument argMethod = resolveName(ctx, false, typeLeft, atypeReturn, errs);
             if (argMethod == null)
                 {
                 return TypeConstant.NO_TYPES;
@@ -474,7 +478,7 @@ public class InvocationExpression
             TypeConstant typeFn = expr.getImplicitType(ctx);
             if (typeFn != null)
                 {
-                typeFn = testFunction(ctx, typeFn, atypeRequired, ErrorListener.BLACKHOLE);
+                typeFn = testFunction(ctx, typeFn, atypeRequired, errs);
                 if (typeFn != null)
                     {
                     return calculateReturnType(typeFn);

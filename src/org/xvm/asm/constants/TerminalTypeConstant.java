@@ -733,8 +733,14 @@ public class TerminalTypeConstant
             case TypeParameter:
             case FormalTypeChild:
                 {
+                ConstantPool pool           = getConstantPool();
                 TypeConstant typeConstraint = ((FormalConstant) constant).getConstraintType();
-                int          cInvalidations = getConstantPool().getInvalidationCount();
+                int          cInvalidations = pool.getInvalidationCount();
+
+                if (typeConstraint.isAutoNarrowing())
+                    {
+                    typeConstraint = typeConstraint.resolveAutoNarrowingBase(pool);
+                    }
                 return new TypeInfo(this, typeConstraint.ensureTypeInfoInternal(errs), cInvalidations);
                 }
 

@@ -1405,18 +1405,9 @@ public class MethodStructure
                 return false;
                 }
 
-            // abstract (no code) functions on interfaces allow auto-narrowing as an exception from
-            // the rules as well as the "equals" method on Object
-            ClassStructure   structClz = (ClassStructure) container;
-            IdentityConstant idClz     = structClz.getIdentityConstant();
-            if (getName().equals("equals") && idClz.equals(idClz.getConstantPool().clzObject()))
-                {
-                return true;
-                }
-            if (hasCode() || structClz.getFormat() != Format.INTERFACE)
-                {
-                return false;
-                }
+            // since funky interfaces allow auto-narrowing, we don't restrict the functions here;
+            // however, we may need to limit this functionality later int the cycle, for example
+            // during the function compilation (e.g. MethodDeclarationStatement##compile)
             }
         else if (isConstructor())
             {
