@@ -1752,7 +1752,11 @@ public class TypeInfo
                             {
                             setMethods = new HashSet<>(7);
                             }
-                        setMethods.add(resolveMethodConstant(info));
+
+                        MethodConstant idMethod = method.isFunction()
+                                ? method.getIdentityConstant()
+                                : resolveMethodConstant(info);
+                        setMethods.add(idMethod);
                         }
                     }
                 }

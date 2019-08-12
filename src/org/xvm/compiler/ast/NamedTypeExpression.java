@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
@@ -742,7 +743,8 @@ public class NamedTypeExpression
             }
 
         TypeConstant   typeTarget = null;
-        ClassStructure clzClass   = getComponent().getContainingClass();
+        Component      component  = getComponent();
+        ClassStructure clzClass   = component.getContainingClass();
         if (idTarget != null && clzClass != null)
             {
             IdentityConstant idClass   = clzClass.getIdentityConstant();
@@ -763,8 +765,8 @@ public class NamedTypeExpression
                     // the target is the base class itself or some of it's contributions
                     // (e.g. HashMap or Map if we are inside of HashMap);
                     // default to the formal type unless the type parameters are explicitly
-                    // specified by this expression or the context doesn't allow it (e.g. function);
-                    if (clzTarget.isParameterized() && paramTypes == null && isAutoNarrowingAllowed())
+                    // specified by this expression or the context is static (e.g. function)
+                    if (clzTarget.isParameterized() && paramTypes == null && !component.isStatic())
                         {
                         typeTarget = pool.ensureClassTypeConstant(constTarget, null,
                             clzTarget.getFormalType().getParamTypesArray());
