@@ -1253,13 +1253,13 @@ public class TerminalTypeConstant
 
     @Override
     public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
-                                               List<TypeConstant> listParams)
+                                               boolean fFunction, List<TypeConstant> listParams)
         {
         if (!isSingleDefiningConstant())
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return constId.getReferredToType().containsSubstitutableMethod(signature, access, listParams);
+            return constId.getReferredToType().containsSubstitutableMethod(signature, access, fFunction, listParams);
             }
 
         Constant constIdThis = getDefiningConstant();
@@ -1272,20 +1272,20 @@ public class TerminalTypeConstant
                 IdentityConstant idThis  = (IdentityConstant) constIdThis;
                 ClassStructure   clzThis = (ClassStructure) idThis.getComponent();
 
-                return clzThis.containsSubstitutableMethod(signature, access, listParams);
+                return clzThis.containsSubstitutableMethod(signature, access, fFunction, listParams);
                 }
 
             case Property:
             case TypeParameter:
             case FormalTypeChild:
                 return ((FormalConstant) constIdThis).getConstraintType().
-                    containsSubstitutableMethod(signature, access, listParams);
+                    containsSubstitutableMethod(signature, access, fFunction, listParams);
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
                 return ((PseudoConstant) constIdThis).getDeclarationLevelClass().getType().
-                    containsSubstitutableMethod(signature, access, listParams);
+                    containsSubstitutableMethod(signature, access, fFunction, listParams);
 
             default:
                 throw new IllegalStateException("unexpected constant: " + constIdThis);

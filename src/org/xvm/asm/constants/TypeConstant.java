@@ -4684,14 +4684,15 @@ public abstract class TypeConstant
      *
      * @param signature   the signature to check the substitutability for (resolved formal types)
      * @param access      the access level to limit the check to
+     * @param fFunction   if true, the signature represents a function
      * @param listParams  the list of actual generic parameters
      *
      *  @return true iff the specified type could be assigned to this interface type
      */
-    public boolean containsSubstitutableMethod(SignatureConstant signature,
-                                               Access access, List<TypeConstant> listParams)
+    public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
+                                               boolean fFunction, List<TypeConstant> listParams)
         {
-        return getUnderlyingType().containsSubstitutableMethod(signature, access, listParams);
+        return getUnderlyingType().containsSubstitutableMethod(signature, access, fFunction, listParams);
         }
 
     /**

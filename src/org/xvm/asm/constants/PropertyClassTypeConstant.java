@@ -247,9 +247,9 @@ public class PropertyClassTypeConstant
 
     @Override
     public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
-                                               List<TypeConstant> listParams)
+                                               boolean fFunction, List<TypeConstant> listParams)
         {
-        return getPropertyType().containsSubstitutableMethod(signature, access, listParams);
+        return getPropertyType().containsSubstitutableMethod(signature, access, fFunction, listParams);
         }
 
     // ----- run-time support ----------------------------------------------------------------------

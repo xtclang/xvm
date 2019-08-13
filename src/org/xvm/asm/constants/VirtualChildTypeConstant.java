@@ -356,9 +356,9 @@ public class VirtualChildTypeConstant
 
     @Override
     public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
-                                               List<TypeConstant> listParams)
+                                               boolean fFunction, List<TypeConstant> listParams)
         {
-        return getChildStructure().containsSubstitutableMethod(signature, access, listParams);
+        return getChildStructure().containsSubstitutableMethod(signature, access, fFunction, listParams);
         }
 
     @Override

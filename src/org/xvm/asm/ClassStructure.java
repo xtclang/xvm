@@ -2252,7 +2252,11 @@ public class ClassStructure
                     }
                 else
                     {
-                    // TODO: check access
+                    // TODO: should we check the "Var" access?
+                    if (!prop.isRefAccessible(accessLeft))
+                        {
+                        continue;
+                        }
 
                     SignatureConstant sig = prop.getIdentityConstant().getSignature();
                     if (!listLeft.isEmpty())
@@ -2265,7 +2269,7 @@ public class ClassStructure
                         }
 
                     if (!typeRight.containsSubstitutableMethod(sig,
-                            Access.PUBLIC, Collections.EMPTY_LIST))
+                            Access.PUBLIC, false, Collections.EMPTY_LIST))
                         {
                         setMiss.add(sig);
                         }
@@ -2276,26 +2280,39 @@ public class ClassStructure
                 MultiMethodStructure mms = (MultiMethodStructure) child;
                 for (MethodStructure method : mms.methods())
                     {
-                    if (method.isStatic() || !method.isAccessible(accessLeft))
+                    if (!method.isAccessible(accessLeft))
                         {
                         continue;
                         }
 
-                    SignatureConstant sig = method.getIdentityConstant().getSignature().
-                                                resolveAutoNarrowing(pool, null);
-                    if (!listLeft.isEmpty())
-                        {
-                        if (resolver == null)
-                            {
-                            resolver = new SimpleTypeResolver(listLeft);
-                            }
-                        sig = sig.resolveGenericTypes(pool, resolver);
-                        }
+                    SignatureConstant sig = method.getIdentityConstant().getSignature();
 
-                    if (!typeRight.containsSubstitutableMethod(sig,
-                            Access.PUBLIC, Collections.EMPTY_LIST))
+                    if (method.isFunction())
                         {
-                        setMiss.add(sig);
+                        if (!typeRight.containsSubstitutableMethod(sig,
+                                Access.PUBLIC, true, Collections.EMPTY_LIST))
+                            {
+                            setMiss.add(sig);
+                            }
+                        }
+                    else
+                        {
+                        sig = sig.resolveAutoNarrowing(pool, null);
+
+                        if (!listLeft.isEmpty())
+                            {
+                            if (resolver == null)
+                                {
+                                resolver = new SimpleTypeResolver(listLeft);
+                                }
+                            sig = sig.resolveGenericTypes(pool, resolver);
+                            }
+
+                        if (!typeRight.containsSubstitutableMethod(sig,
+                                Access.PUBLIC, false, Collections.EMPTY_LIST))
+                            {
+                            setMiss.add(sig);
+                            }
                         }
                     }
                 }
@@ -2324,18 +2341,20 @@ public class ClassStructure
      *
      * @param signature   the signature to look for the match for (formal parameters resolved)
      * @param access      the access level to limit the check to
+     * @param fFunction   if true, the signature represents a function
      * @param listParams  the actual generic parameters for this interface
      *
      * @return true iff there is a matching method or property
      */
     public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
-                                               List<TypeConstant> listParams)
+                                               boolean fFunction, List<TypeConstant> listParams)
         {
-        return containsSubstitutableMethodImpl(signature, access, listParams, getIdentityConstant(), true);
+        return containsSubstitutableMethodImpl(signature, access, fFunction,
+                listParams, getIdentityConstant(), true);
         }
 
     protected boolean containsSubstitutableMethodImpl(SignatureConstant signature, Access access,
-                                                      List<TypeConstant> listParams,
+                                                      boolean fFunction, List<TypeConstant> listParams,
                                                       IdentityConstant idClass, boolean fAllowInto)
         {
         ConstantPool pool  = ConstantPool.getCurrentPool();
@@ -2345,11 +2364,11 @@ public class ClassStructure
             {
             if (child instanceof PropertyStructure)
                 {
-                PropertyStructure property = (PropertyStructure) child;
+                PropertyStructure prop = (PropertyStructure) child;
 
-                // TODO: check access
-
-                if (property.isSubstitutableFor(pool, signature, listParams))
+                // TODO: should we check the "Var" access?
+                if (prop.isRefAccessible(access) &&
+                    prop.isSubstitutableFor(pool, signature, listParams))
                     {
                     return true;
                     }
@@ -2366,14 +2385,25 @@ public class ClassStructure
 
                 for (MethodStructure method : mms.methods())
                     {
-                    if (!method.isStatic() && method.isAccessible(access))
+                    SignatureConstant sigMethod = method.getIdentityConstant().getSignature();
+                    if (method.isAccessible(access) && method.isFunction() == fFunction)
                         {
-                        SignatureConstant sigMethod = method.getIdentityConstant().getSignature().
-                                                        resolveAutoNarrowing(pool, null).
-                                                        resolveGenericTypes(pool, resolver);
-                        if (sigMethod.isSubstitutableFor(signature, idClass.getType()))
+                        if (fFunction)
                             {
-                            return true;
+                            // functions must match exactly
+                            if (sigMethod.equals(signature))
+                                {
+                                return true;
+                                }
+                            }
+                        else
+                            {
+                            sigMethod = sigMethod.resolveAutoNarrowing(pool, null)
+                                                 .resolveGenericTypes(pool, resolver);
+                            if (sigMethod.isSubstitutableFor(signature, idClass.getType()))
+                                {
+                                return true;
+                                }
                             }
                         }
                     }
@@ -2417,8 +2447,8 @@ public class ClassStructure
                     ClassStructure clzContrib = (ClassStructure)
                         typeResolved.getSingleUnderlyingClass(true).getComponent();
 
-                    if (clzContrib.containsSubstitutableMethodImpl(signature,
-                            access, typeResolved.getParamTypes(), idClass, false))
+                    if (clzContrib.containsSubstitutableMethodImpl(signature, access, fFunction,
+                            typeResolved.getParamTypes(), idClass, false))
                         {
                         return true;
                         }
@@ -2428,7 +2458,7 @@ public class ClassStructure
                 {
                 typeContrib = contrib.resolveGenerics(pool, new SimpleTypeResolver(listParams));
 
-                if (typeContrib.containsSubstitutableMethod(signature, access, new ArrayList<>()))
+                if (typeContrib.containsSubstitutableMethod(signature, access, fFunction, new ArrayList<>()))
                     {
                     return true;
                     }

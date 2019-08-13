@@ -656,10 +656,10 @@ public class ParameterizedTypeConstant
 
     @Override
     public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
-                                               List<TypeConstant> listParams)
+                                               boolean fFunction, List<TypeConstant> listParams)
         {
         assert listParams.isEmpty();
-        return super.containsSubstitutableMethod(signature, access, getParamTypes());
+        return super.containsSubstitutableMethod(signature, access, fFunction, getParamTypes());
         }
 
     @Override

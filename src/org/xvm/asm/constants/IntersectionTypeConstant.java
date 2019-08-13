@@ -476,10 +476,11 @@ public class IntersectionTypeConstant
         }
 
     @Override
-    public boolean containsSubstitutableMethod(SignatureConstant signature, Access access, List<TypeConstant> listParams)
+    public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
+                                               boolean fFunction, List<TypeConstant> listParams)
         {
-        return getUnderlyingType().containsSubstitutableMethod(signature, access, listParams)
-            && getUnderlyingType2().containsSubstitutableMethod(signature, access, listParams);
+        return getUnderlyingType().containsSubstitutableMethod(signature, access, fFunction, listParams)
+            && getUnderlyingType2().containsSubstitutableMethod(signature, access, fFunction, listParams);
         }
 
     @Override

@@ -318,11 +318,11 @@ public class DifferenceTypeConstant
         }
 
     @Override
-    public boolean containsSubstitutableMethod(
-            SignatureConstant signature, Access access, List<TypeConstant> listParams)
+    public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
+                                               boolean fFunction, List<TypeConstant> listParams)
         {
-        return m_constType1.containsSubstitutableMethod(signature, access, listParams)
-            && m_constType2.containsSubstitutableMethod(signature, access, listParams);
+        return m_constType1.containsSubstitutableMethod(signature, access, fFunction, listParams)
+            && m_constType2.containsSubstitutableMethod(signature, access, fFunction, listParams);
         }
 
 

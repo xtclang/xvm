@@ -113,6 +113,22 @@ public class PropertyStructure
         }
 
     /**
+     * Check if the "Ref" for property is accessible with the specified access policy.
+     */
+    public boolean isRefAccessible(Access access)
+        {
+        return getAccess().ordinal() <= access.ordinal();
+        }
+
+    /**
+     * Check if the "Var" for this property is accessible with the specified access policy.
+     */
+    public boolean isVarAccessible(Access access)
+        {
+        return getVarAccess().ordinal() <= access.ordinal();
+        }
+
+    /**
      * @return the TypeConstant representing the data type of the property value
      */
     public TypeConstant getType()
