@@ -396,6 +396,13 @@ public class xCharArray
             return obj instanceof CharArrayHandle
                 && Arrays.equals(m_achValue, ((CharArrayHandle) obj).m_achValue);
             }
+
+        @Override
+        public String toString()
+            {
+            // for debugging only
+            return String.copyValueOf(m_achValue, 0, m_cSize);
+            }
         }
 
     public static CharArrayHandle makeHandle(char[] ach, Mutability mutability)

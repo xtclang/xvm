@@ -24,13 +24,10 @@ module TestMisc.xqiz.it
         testStmtExpr();
         testAssignOps();
 
-        // TODO make a new "test asserts" module? something that can tolerate assertions?
-        // testAssert();
-        // testAssertTrue();
-        // testAssertFalse();
-        // testAssertTrueExpr();
-        // testAssertFalseExpr();
-        // testAssertDecl();
+        testAssertTrue();
+        testAssertTrueExpr();
+        testAssertFalseExpr();
+        testAssertDecl();
 
         testInterval();
         testException();
@@ -371,14 +368,19 @@ module TestMisc.xqiz.it
     void testAssertFalseExpr()
         {
         console.println("\n** testAssertFalseExpr()");
-        assert True == False;
-        console.println("(done)");
+        try
+            {
+            assert True == False;
+            }
+        catch (IllegalState e)
+            {
+            console.println("(done)");
+            }
         }
 
     void testAssertDecl()
         {
         console.println("\n** testAssertDecl()");
-        // REVIEW BUGBUG NPE: Iterator<Int> iter = [1].iterator();
         Int[] array = [1];
         Iterator<Int> iter = array.iterator();
         assert Int i := iter.next();

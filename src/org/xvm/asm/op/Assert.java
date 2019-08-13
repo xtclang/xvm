@@ -166,8 +166,9 @@ public class Assert
     @Override
     public boolean advances()
         {
-        // TODO this won't work when we read from disk
-        return !(m_argTest instanceof Constant && m_argTest.equals(((Constant) m_argTest).getConstantPool().valFalse()));
+        // this assumes that we never call "advance()" when we read ops from disk
+        return !(m_argTest instanceof Constant &&
+                 m_argTest.equals(((Constant) m_argTest).getConstantPool().valFalse()));
         }
 
     @Override

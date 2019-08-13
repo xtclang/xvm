@@ -4,8 +4,6 @@ module TestNesting.xqiz.it
 
     void run()
         {
-        console.println("hello world! (nested class tests)");
-
         testSimple();
         testInsane();
         }
@@ -18,7 +16,7 @@ module TestNesting.xqiz.it
         new BOuter().new Inner().foo();
         }
 
-    class BOuter // TODO unrelated compiler bug: "class BOuter extends Something" causes IllegalState
+    class BOuter
         {
         void bar()
             {

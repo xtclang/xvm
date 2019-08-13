@@ -187,7 +187,6 @@ module TestLiterals.xqiz.it
         console.println($"bytes={bytes[0..10]}...{bytes[bytes.size-10..bytes.size-1]}");
 
         bytes = #/literals.x;
-        // console.println($"bytes={bytes[0..10]}..{bytes[bytes.size-10..bytes.size-1]"); TODO CP - infinite loop in lexer?
         console.println($"bytes={bytes[0..10]}...{bytes[bytes.size-10..bytes.size-1]}");
         }
 
