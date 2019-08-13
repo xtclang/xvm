@@ -227,12 +227,14 @@ public class LiteralConstant
     public int getIntRadix()
         {
         assert getFormat() == Format.IntLiteral;
-        String s = getValue();
 
-        // if the next character is '0', it is potentially part of a prefix denoting a radix
-        if (s.length() > 2 && s.charAt(0) == '0')
+        // if the first character is '0', it is potentially part of a prefix denoting a radix
+        // (note that the literal may begin with a minus sign)
+        String s  = getValue();
+        int    of = s.startsWith("-") ? 1 : 0;
+        if (s.length() > of+2 && s.charAt(of) == '0')
             {
-            switch (s.charAt(1))
+            switch (s.charAt(of+1))
                 {
                 case 'B':
                 case 'b':
@@ -272,9 +274,12 @@ public class LiteralConstant
                 }
             else
                 {
-                pint = s.length() < 2 + (64 / Integer.numberOfTrailingZeros(r))
-                        ? new PackedInteger(Long.parseLong(s.substring(2), r))
-                        : new PackedInteger(new BigInteger(s.substring(2), r));
+                boolean fNeg = s.startsWith("-");
+                int     of   = fNeg ? 1 : 0;
+                String  sNum = (fNeg ? "-" : "") + s.substring(of+2);
+                pint = s.length() < of+2 + (64 / Integer.numberOfTrailingZeros(r))
+                        ? new PackedInteger(Long.parseLong(sNum, r))
+                        : new PackedInteger(new BigInteger(sNum, r));
                 }
             m_oVal = pint;
             }
