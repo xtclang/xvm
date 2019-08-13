@@ -448,7 +448,6 @@ public abstract class IdentityConstant
         private Object resolve(Object element)
             {
             ConstantPool pool = ConstantPool.getCurrentPool();
-            // REVIEW: should we resolveAutoNarrowing()
             return m_resolver != null && element instanceof SignatureConstant
                     ? ((SignatureConstant) element).resolveGenericTypes(pool, m_resolver)
                     : element;

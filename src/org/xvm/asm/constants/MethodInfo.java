@@ -497,7 +497,7 @@ public class MethodInfo
                     fIgnoreAbstract = true;
                     break;
 
-                case Capped: // REVIEW?
+                case Capped:
                 case Default:
                 case Delegating:
                 case Field:

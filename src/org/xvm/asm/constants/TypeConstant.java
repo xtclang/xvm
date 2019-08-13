@@ -1450,8 +1450,6 @@ public abstract class TypeConstant
             if (prop.isTypeParam() || prop.isConstant() || prop.hasField())
                 {
                 PropertyConstant id = entry.getKey();
-                // REVIEW do we need to transform "prop" into some sort of "struct" form?
-                // REVIEW if we do, then we need to explicitly retain the PropertyInfo.getFieldIdentity()
                 if (prop.isVirtual())
                     {
                     mapVirtProps.put(id.resolveNestedIdentity(pool, null), prop);
@@ -3046,8 +3044,6 @@ public abstract class TypeConstant
                             // as a result, the call to
                             //      constId.appendNestedIdentity(pool, nid)
                             // below may produce different results
-                            // TODO: consider making appendNestedIdentity() implementation
-                            //       more predictable and "m_resolver" aware
                             nidContrib = nidBase;
                             }
                         else

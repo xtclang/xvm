@@ -308,24 +308,6 @@ public abstract class AstNode
         }
 
     /**
-     * Verify that the node has reached the specified stage.
-     *
-     * @param stage  the stage that the node must have already reached
-     *
-     * @throws IllegalStateException  if the node has not reached the specified stage
-     */
-    protected void ensureReached(Stage stage)
-        {
-        if (!alreadyReached(stage))
-            {
-            // TODO remove when done
-            notImplemented();
-
-            throw new IllegalStateException("Stage=" + getStage() + " (expected: " + stage + ")");
-            }
-        }
-
-    /**
      * Update the stage to the specified stage, if the specified stage is later than the current
      * stage.
      *
