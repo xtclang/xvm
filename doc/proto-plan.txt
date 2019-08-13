@@ -48,6 +48,23 @@
 
 - compiler to verify "all or nothing" implementation for funky interfaces
 
+- formal types with .is() should be smarter at compile time
+
+module TestSimple.xqiz.it
+    {
+    @Inject X.io.Console console;
+
+    void run()
+        {
+        import Ecstasy.collections.HashMap;
+        Map m = new HashMap<String, Int>();
+        // TODO GG SHOULD BE COMPILER ERROR (Type cannot be String)
+        console.print($"m.KeyType.is(String)={m.KeyType.is(String)}");
+        // TODO GG SHOULD BE COMPILER WARNING (right side is not Type)
+        console.print($"m.KeyType.is(Stringable)={m.KeyType.is(Stringable)}");
+        }
+    }
+
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
 - TemplateRegistry and TypeComposition could be mutated by different threads
