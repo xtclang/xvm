@@ -272,8 +272,7 @@ public abstract class OpCallable extends Op
                                 "\" for " + typeParent.getValueString()));
                             }
                         }
-                    m_typeParent = typeParent;
-                    m_template   = frame.f_context.f_templates.getTemplate(typeParent);
+                    m_template = frame.f_context.f_templates.getTemplate(typeParent);
                     }
                 break;
                 }

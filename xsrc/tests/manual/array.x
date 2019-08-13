@@ -17,6 +17,8 @@ module TestArray.xqiz.it
         testNew();
         testNibble();
         testBits();
+
+        testComparable();
         }
 
     void testSimple()
@@ -163,5 +165,24 @@ module TestArray.xqiz.it
             console.print(bit);
             }
         console.println("");
+        }
+
+    void testComparable()
+        {
+        import Ecstasy.collections.Hasher;
+        import Ecstasy.collections.NaturalHasher;
+
+        console.println("\n** testComparable()");
+
+        // Hasher<Int[]> hasher = new NaturalHasher(); // REVIEW with Cam; NaturalHasher is a Hasher<Int[]>
+        Hasher<Int[]> hasher =  new NaturalHasher<Int[]>();
+
+        Int[] ints = [0, 1, 2, 3, 4];
+        Int hash1 = hasher.hashOf(ints);
+        Int hash2 = Array<Int>.hashCode(ints);
+        assert hash1 == hash2;
+
+        Bit[] bits = [0, 1, 1, 0];
+        console.println($"Array<Bit>.hashCode(bits)={Array<Bit>.hashCode(bits)}");
         }
     }

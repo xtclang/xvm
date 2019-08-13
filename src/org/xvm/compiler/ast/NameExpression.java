@@ -663,13 +663,6 @@ public class NameExpression
                                 // not a constant
                                 break;
 
-                            case TypeOfClass:
-                                // the class could either be identified (in the raw) by an identity
-                                // constant, or a relative (pseudo) constant
-                                assert argRaw instanceof IdentityConstant || argRaw instanceof PseudoConstant;
-                                constVal = type;
-                                break;
-
                             case Singleton:
                                 // theoretically, the singleton could be a parent of the current
                                 // class, so we could have a PseudoConstant for it
@@ -683,6 +676,13 @@ public class NameExpression
                             default:
                                 throw new IllegalStateException("plan=" + m_plan);
                             }
+                        break;
+
+                    case Type:
+                        // the class could either be identified (in the raw) by an identity
+                        // constant, or a relative (pseudo) constant
+                        assert argRaw instanceof IdentityConstant || argRaw instanceof PseudoConstant;
+                        constVal = type;
                         break;
 
                     case Property:
@@ -2086,11 +2086,15 @@ public class NameExpression
                     // class ID
                 case Module:
                 case Package:
-                case Class:
                     // relative ID
                 case ThisClass:
                 case ParentClass:
                     return Meaning.Class;
+
+                case Class:
+                    return m_plan == Plan.TypeOfClass
+                            ? Meaning.Type
+                            : Meaning.Class;
 
                 case Property:
                     return Meaning.Property;
@@ -2130,6 +2134,7 @@ public class NameExpression
         switch (getMeaning())
             {
             case Class:
+            case Type:
                 {
                 // a class name can continue identity mode if no-de-ref is specified:
                 // Name        method             specifies            "static"            specifies
@@ -2341,7 +2346,7 @@ public class NameExpression
     /**
      * Represents the category of argument that the expression yields.
      */
-    enum Meaning {Unknown, Reserved, Variable, Property, FormalType, Method, Class, Typedef, Label}
+    enum Meaning {Unknown, Reserved, Variable, Property, FormalType, Method, Class, Type, Typedef, Label}
 
     /**
      * Represents the necessary argument/assignable transformation that the expression will have to

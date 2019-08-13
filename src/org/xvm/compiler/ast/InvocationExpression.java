@@ -1705,11 +1705,33 @@ public class InvocationExpression
                         {
                         access = Access.PRIVATE;
                         }
-                    TypeInfo   infoLeft   = idLeft.ensureTypeInfo(access, errs);
+
+                    TypeInfo infoLeft;
+                    boolean  fPreserveOrigin;
+
+                    if (nameLeft.getMeaning() == NameExpression.Meaning.Type)
+                        {
+                        // "Class" meaning in IdentityMode can only indicate a "type-of-class" scenario
+                        assert typeLeft.isTypeOfType();
+
+                        typeLeft = typeLeft.getParamType(0);
+                        if (access != typeLeft.getAccess())
+                            {
+                            typeLeft = pool.ensureAccessTypeConstant(typeLeft, access);
+                            }
+                        infoLeft         = typeLeft.ensureTypeInfo(errs);
+                        fPreserveOrigin  = false;
+                        }
+                    else
+                        {
+                        infoLeft         = idLeft.ensureTypeInfo(access, errs);
+                        fPreserveOrigin  = true;
+                        }
+
                     MethodType methodType = fConstruct ? MethodType.Constructor
                             : fNoFBind && fNoCall ? MethodType.Either : MethodType.Function;
-                    Argument   arg        = findCallable(ctx, infoLeft, sName, methodType,
-                                                false, atypeReturn, errs);
+
+                    Argument arg = findCallable(ctx, infoLeft, sName, methodType, false, atypeReturn, errs);
                     if (arg != null)
                         {
                         MethodConstant idMethod   = (MethodConstant) arg;
@@ -1723,9 +1745,12 @@ public class InvocationExpression
                             return null;
                             }
 
-                        if (!idMethod.getNamespace().equals(idLeft))
+                        if (fPreserveOrigin && !idMethod.getNamespace().equals(idLeft))
                             {
-                            // preserve the origin information on the function's MethodConstant
+                            // preserve the origin information on the function's MethodConstant;
+                            // for example, if there is a call "Point.hashCode(p)", the runtime
+                            // should know to use the Point's structure even though the "hashCode"
+                            // only declared on Const
                             idMethod = pool.ensureMethodConstant(idLeft, idMethod.getSignature());
                             }
 
