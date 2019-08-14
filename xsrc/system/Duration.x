@@ -117,12 +117,11 @@ const Duration(UInt128 picoseconds)
                                     --digits;
                                     }
 
-                                // TODO (GG?) this should be allowed here (since it is a constant)
-                                //private static UInt128[] SCALE_10 = [       1_000_000_000_000,
-                                //        100_000_000_000,    10_000_000_000,     1_000_000_000,
-                                //            100_000_000,        10_000_000,         1_000_000,
-                                //                100_000,            10_000,             1_000,
-                                //                    100,                10,                 1 ];
+                                static UInt128[] SCALE_10 = [               1_000_000_000_000,
+                                        100_000_000_000,    10_000_000_000,     1_000_000_000,
+                                            100_000_000,        10_000_000,         1_000_000,
+                                                100_000,            10_000,             1_000,
+                                                    100,                10,                 1 ];
 
                                 factor = SCALE_10[digits];
                                 }
@@ -169,12 +168,6 @@ const Duration(UInt128 picoseconds)
             throw new IllegalArgument($"no duration information provided: \"{duration}\"");
             }
         }
-
-    private static UInt128[] SCALE_10 = [       1_000_000_000_000,
-            100_000_000_000,    10_000_000_000,     1_000_000_000,
-                100_000_000,        10_000_000,         1_000_000,
-                    100_000,            10_000,             1_000,
-                        100,                10,                 1 ];
 
     /**
      * Create a Duration of a certain number of days.

@@ -1995,15 +1995,16 @@ public class MethodStructure
         @Override
         public String toString()
             {
-            if (m_listOps == null)
+            if (m_listOps == null && m_aop == null)
                 {
                 return "native";
                 }
 
-            StringBuilder sb = new StringBuilder();
+            Op[]          aOp = m_aop == null ? m_listOps.toArray(Op.NO_OPS) : m_aop;
+            StringBuilder sb  = new StringBuilder();
 
             int i = 0;
-            for (Op op : m_listOps)
+            for (Op op : aOp)
                 {
                 sb.append("\n[")
                   .append(i++)

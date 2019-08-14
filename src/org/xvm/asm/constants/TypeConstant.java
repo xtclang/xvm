@@ -3550,7 +3550,7 @@ public abstract class TypeConstant
         switch (constParent.getFormat())
             {
             case Property:
-                if (prop.getParent().isStatic())
+                if (!fConstant && prop.getParent().isStatic())
                     {
                     log(errs, Severity.ERROR, VE_CONST_CODE_ILLEGAL,
                             constParent.getValueString(), sName);
@@ -3558,7 +3558,7 @@ public abstract class TypeConstant
                 break;
 
             case Method:
-                if (prop.getParent().isStatic())
+                if (!fConstant && prop.getParent().isStatic())
                     {
                     // a function cannot contain properties
                     log(errs, Severity.ERROR, VE_FUNCTION_CONTAINS_PROPERTY,
