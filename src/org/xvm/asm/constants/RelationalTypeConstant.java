@@ -294,6 +294,19 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
+    public TypeConstant resolveConstraints(ConstantPool pool)
+        {
+        TypeConstant constOriginal1 = m_constType1;
+        TypeConstant constOriginal2 = m_constType2;
+        TypeConstant constResolved1 = constOriginal1.resolveConstraints(pool);
+        TypeConstant constResolved2 = constOriginal2.resolveConstraints(pool);
+
+        return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
+                ? this
+                : cloneRelational(pool, constResolved1, constResolved2);
+        }
+
+    @Override
     public boolean containsFormalType()
         {
         return m_constType1.containsFormalType() || m_constType2.containsFormalType();

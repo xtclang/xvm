@@ -627,6 +627,22 @@ public abstract class TypeConstant
         }
 
     /**
+     * If this type contains any formal type, replace that formal type with its constraint type.
+     *
+     * @param pool  the ConstantPool to place a potentially created new constant into
+     *
+     * @return the resulting type
+     */
+    public TypeConstant resolveConstraints(ConstantPool pool)
+        {
+        TypeConstant constOriginal = getUnderlyingType();
+        TypeConstant constResolved = constOriginal.resolveConstraints(pool);
+        return constResolved == constOriginal
+                ? this
+                : cloneSingle(pool, constResolved);
+        }
+
+    /**
      * @param pool  the ConstantPool to place a potentially created new constant into
      *
      * @return this same type, but with the number of parameters equal to the number of

@@ -121,6 +121,16 @@ public abstract class AbstractDependantTypeConstant
         }
 
     @Override
+    public TypeConstant resolveConstraints(ConstantPool pool)
+        {
+        TypeConstant constOriginal = getParentType();
+        TypeConstant constResolved = constOriginal.resolveConstraints(pool);
+        return constResolved == constOriginal
+                ? this
+                : cloneSingle(pool, constResolved);
+        }
+
+    @Override
     public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName)
         {
         return null;

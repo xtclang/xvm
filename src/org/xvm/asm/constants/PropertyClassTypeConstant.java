@@ -38,7 +38,6 @@ import static org.xvm.util.Handy.writePackedLong;
  *         Ref<String> ref = o.&p;
  *         ...
  *         }
- *
  *     }
  * </pre>
  *
@@ -142,6 +141,12 @@ public class PropertyClassTypeConstant
     public Constant getDefiningConstant()
         {
         return getPropertyInfo().getIdentity();
+        }
+
+    @Override
+    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
+        {
+        return pool.ensurePropertyClassTypeConstant(type, m_idProp);
         }
 
     @Override

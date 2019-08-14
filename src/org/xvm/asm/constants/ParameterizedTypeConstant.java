@@ -291,6 +291,41 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public TypeConstant resolveConstraints(ConstantPool pool)
+        {
+        TypeConstant constOriginal = m_constType;
+        TypeConstant constResolved = constOriginal.resolveConstraints(pool);
+        boolean      fDiff         = constOriginal != constResolved;
+
+        assert !constResolved.isParamsSpecified();
+
+        TypeConstant[] aconstOriginal = m_atypeParams;
+        TypeConstant[] aconstResolved = aconstOriginal;
+        for (int i = 0, c = aconstOriginal.length; i < c; ++i)
+            {
+            TypeConstant constParamOriginal = aconstOriginal[i];
+            TypeConstant constParamResolved = constParamOriginal.resolveConstraints(pool);
+            if (constParamOriginal != constParamResolved)
+                {
+                if (aconstResolved == aconstOriginal)
+                    {
+                    aconstResolved = aconstOriginal.clone();
+                    }
+                aconstResolved[i] = constParamResolved;
+                fDiff = true;
+                }
+            }
+
+        if (fDiff)
+            {
+            ParameterizedTypeConstant typeResolved = (ParameterizedTypeConstant)
+                pool.ensureParameterizedTypeConstant(constResolved, aconstResolved);
+            return typeResolved;
+            }
+        return this;
+        }
+
+    @Override
     public boolean containsFormalType()
         {
         for (int i = 0, c = m_atypeParams.length; i < c; ++i)

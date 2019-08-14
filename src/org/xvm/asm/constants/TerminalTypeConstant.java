@@ -469,6 +469,26 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public TypeConstant resolveConstraints(ConstantPool pool)
+        {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return constId.getReferredToType().resolveConstraints(pool);
+            }
+
+        Constant constId = getDefiningConstant();
+        if (constId instanceof FormalConstant)
+            {
+            FormalConstant constFormal  = (FormalConstant) constId;
+            return constFormal.getConstraintType();
+            }
+
+        return this;
+        }
+
+    @Override
     public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
         {
         Constant constId = ensureResolvedConstant();
