@@ -6,10 +6,10 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.Move;
 import org.xvm.asm.op.MoveCast;
 
 import org.xvm.compiler.Token;
@@ -66,11 +66,10 @@ public class AsExpression
             expr2 = exprType;
             type  = exprType.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool);
 
-            // it would be nice if the expression could provide us the type without any additional
-            // work!
             if (expr1.testFit(ctx, type, null).isFit())
                 {
-                typeRequest = type;
+                typeRequest     = type;
+                m_fCastRequired = false;
                 }
             }
 
@@ -87,7 +86,7 @@ public class AsExpression
         Constant constVal = null;
         if (expr1.isConstant())
             {
-            // TODO calculate constant if possible
+            constVal = expr1.toConstant();
             }
 
         return finishValidation(typeRequired, type, fit, constVal, errs);
@@ -99,9 +98,23 @@ public class AsExpression
         {
         Argument     argBefore = expr1.generateArgument(ctx, code, true, true, errs);
         TypeConstant type      = getType();
-        Register     regAfter  = createRegister(type, fUsedOnce);
-        code.add(new MoveCast(argBefore, regAfter, type));
-        return regAfter;
+        Argument     argAfter  = createRegister(type, fUsedOnce);
+        if (m_fCastRequired)
+            {
+            code.add(new MoveCast(argBefore, argAfter, type));
+            }
+        else
+            {
+            if (argBefore.getType().equals(type))
+                {
+                argAfter = argBefore;
+                }
+            else
+                {
+                code.add(new Move(argBefore, argAfter));
+                }
+            }
+        return argAfter;
         }
 
     @Override
@@ -110,7 +123,14 @@ public class AsExpression
         if (LVal.isLocalArgument())
             {
             Argument argTarget = expr1.generateArgument(ctx, code, true, true, errs);
-            code.add(new MoveCast(argTarget, LVal.getLocalArgument(), getType()));
+            if (m_fCastRequired)
+                {
+                code.add(new MoveCast(argTarget, LVal.getLocalArgument(), getType()));
+                }
+            else
+                {
+                code.add(new Move(argTarget, LVal.getLocalArgument()));
+                }
             }
         else
             {
@@ -121,4 +141,5 @@ public class AsExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    private transient boolean m_fCastRequired = true;
     }
