@@ -686,6 +686,7 @@ PostfixExpression
     PostfixExpression "--"
     PostfixExpression "(" Arguments-opt ")"
     PostfixExpression ArrayDims                                 # TODO REVIEW - is this correct? (does it imply that the expression is a type expression?)
+    PostfixExpression "..."                                     # TODO REVIEW - is this correct? (does it imply that the expression is a type expression?)
     PostfixExpression ArrayIndexes
     PostfixExpression NoWhitespace "?"
     PostfixExpression "." "&"-opt Name TypeParameterTypeList-opt

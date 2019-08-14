@@ -64,7 +64,7 @@ module TestInnerOuter.xqiz.it
 
         Base b1 = new Base("Hello");
         Base b2 = new Base("World");
-        Base[] bases = [b1, b2];        // TODO allow "Base..."
+        Base... bases = [b1, b2];
 
         for (Base base : bases)
             {

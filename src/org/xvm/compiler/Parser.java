@@ -2945,6 +2945,7 @@ public class Parser
      *     PostfixExpression "--"
      *     PostfixExpression ArgumentList
      *     PostfixExpression ArrayDims
+     *     PostfixExpression "..."
      *     PostfixExpression ArrayIndex
      *     PostfixExpression NoWhitespace "?"
      *     PostfixExpression "." Name
@@ -3120,6 +3121,13 @@ public class Parser
                                 : parseComplexLiteral(type);
                         }
                     break;
+                    }
+
+                case ELLIPSIS:
+                    {
+                    // Sequence
+                    Token tok = expect(Id.ELLIPSIS);
+                    return new SequenceTypeExpression(expr.toTypeExpression(), tok);
                     }
 
                 default:
