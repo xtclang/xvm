@@ -30,7 +30,7 @@ class Object
      */
     String toString()
         {
-        // the Object's rudimentary to<String> shows class information only
+        // the Object's rudimentary toString() shows class information only
         return meta.class_.toString();
         }
 

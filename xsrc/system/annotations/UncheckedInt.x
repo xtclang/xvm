@@ -7,8 +7,6 @@
 mixin UncheckedInt
         into IntNumber
     {
-    static const MathException extends Exception {}
-
     @Override
     @Op IntNumber nextValue()
         {
@@ -16,9 +14,9 @@ mixin UncheckedInt
             {
             return super();
             }
-        catch (MathException e)
+        catch (OutOfBounds e)
             {
-            return this.to<VarInt>().nextValue().truncate(bitLength).toUnchecked();
+            return this.toVarInt().nextValue().truncate(bitLength).toUnchecked();
             }
         }
 
@@ -29,9 +27,9 @@ mixin UncheckedInt
             {
             return super();
             }
-        catch (MathException e)
+        catch (OutOfBounds e)
             {
-            return this.to<VarInt>().prevValue().truncate(bitLength).toUnchecked();
+            return this.toVarInt().prevValue().truncate(bitLength).toUnchecked();
             }
         }
 
@@ -42,9 +40,9 @@ mixin UncheckedInt
             {
             return super(n);
             }
-        catch (MathException e)
+        catch (OutOfBounds e)
             {
-            return this.to<VarInt>().add(n.to<VarInt>()).truncate(bitLength).toUnchecked();
+            return this.toVarInt().add(n.toVarInt()).truncate(bitLength).toUnchecked();
             }
         }
 
@@ -55,9 +53,9 @@ mixin UncheckedInt
             {
             return super(n);
             }
-        catch (MathException e)
+        catch (OutOfBounds e)
             {
-            return this.to<VarInt>().sub(n.to<VarInt>()).truncate(bitLength).toUnchecked();
+            return this.toVarInt().sub(n.toVarInt()).truncate(bitLength).toUnchecked();
             }
         }
 
@@ -68,9 +66,9 @@ mixin UncheckedInt
             {
             return super(n);
             }
-        catch (MathException e)
+        catch (OutOfBounds e)
             {
-            return this.to<VarInt>().mul(n.to<VarInt>()).truncate(bitLength).toUnchecked();
+            return this.toVarInt().mul(n.toVarInt()).truncate(bitLength).toUnchecked();
             }
         }
 
@@ -81,9 +79,9 @@ mixin UncheckedInt
             {
             return super(n);
             }
-        catch (MathException e)
+        catch (OutOfBounds e)
             {
-            return this.to<VarInt>().pow(n.to<VarInt>()).truncate(bitLength).toUnchecked();
+            return this.toVarInt().pow(n.toVarInt()).truncate(bitLength).toUnchecked();
             }
         }
 
@@ -94,9 +92,9 @@ mixin UncheckedInt
             {
             return super();
             }
-        catch (MathException e)
+        catch (OutOfBounds e)
             {
-            return this.to<VarInt>().neg().truncate(bitLength).toUnchecked();
+            return this.toVarInt().neg().truncate(bitLength).toUnchecked();
             }
         }
 
@@ -107,9 +105,9 @@ mixin UncheckedInt
             {
             return super();
             }
-        catch (MathException e)
+        catch (OutOfBounds e)
             {
-            return this.to<VarInt>().abs().truncate(bitLength).toUnchecked();
+            return this.toVarInt().abs().truncate(bitLength).toUnchecked();
             }
         }
     }

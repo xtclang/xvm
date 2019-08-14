@@ -89,7 +89,7 @@ mixin Enumeration<EnumType extends Enum>
      */
     @Lazy String[] names.calc()
         {
-        return byName.keys.to<String[]>();
+        return byName.keys.toArray();
         }
 
     /**
@@ -102,7 +102,7 @@ mixin Enumeration<EnumType extends Enum>
      */
     @Lazy EnumType[] values.calc()
         {
-        return byName.values.to<EnumType[]>();
+        return byName.values.toArray();
         }
 
     /**

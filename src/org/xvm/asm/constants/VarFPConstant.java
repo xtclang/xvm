@@ -49,10 +49,15 @@ public class VarFPConstant
             throw new IllegalStateException("format required");
             }
 
+        int cbMin;
         switch (format)
             {
             case VarDec:
+                cbMin = 4;
+                break;
+
             case VarFloat:
+                cbMin = 2;
                 break;
 
             default:
@@ -64,10 +69,10 @@ public class VarFPConstant
             throw new IllegalArgumentException("value required");
             }
         int cbVal = abVal.length;
-        if (cbVal < 32 || cbVal > 16384 || Integer.bitCount(cbVal) != 1)
+        if (cbVal < cbMin || cbVal > 16384 || Integer.bitCount(cbVal) != 1)
             {
             throw new IllegalArgumentException("value length (" + cbVal
-                    + ") must be a power-of-two between 32 and 16384");
+                    + ") must be a power-of-two between " + cbMin + " and 16384");
             }
 
         m_fmt   = format;
@@ -178,9 +183,10 @@ public class VarFPConstant
         {
         int nHash = 0;
         byte[] ab = m_abVal;
-        for (int of = 0; of < 16; ++of)
+        int    cb = ab.length;
+        for (int of = 0; of < cb; ++of)
             {
-            nHash *= 19 + ab[of];
+            nHash = nHash * 19 + ab[of];
             }
         return nHash;
         }

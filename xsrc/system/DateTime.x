@@ -13,9 +13,9 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
         // (DST "spring forward") date and time values
         assert timezone.resolved;
 
-        Int128 picos = date.epochDay.to<Int128>() * Time.PICOS_PER_DAY
-                     + time.picos.to<Int128>()
-                     - timezone.picos.to<Int128>();
+        Int128 picos = date.epochDay.toInt128() * Time.PICOS_PER_DAY
+                     + time.picos.toInt128()
+                     - timezone.picos.toInt128();
 
         construct DateTime(picos, timezone);
         }
@@ -76,7 +76,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
 
     Int128 adjustedPicos.get()
         {
-        return timezone.resolve(this).picos.to<Int128>() + epochPicos;
+        return timezone.resolve(this).picos.toInt128() + epochPicos;
         }
 
     /**
@@ -86,8 +86,8 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
         {
         Int128 picos = adjustedPicos;
         return new Date(picos >= 0
-                ? (picos / Time.PICOS_PER_DAY).to<Int>()
-                : -1 - ((picos.abs() - 1) / Time.PICOS_PER_DAY).to<Int>());
+                ? (picos / Time.PICOS_PER_DAY).toInt()
+                : -1 - ((picos.abs() - 1) / Time.PICOS_PER_DAY).toInt());
         }
 
     /**
@@ -95,7 +95,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
      */
     Time time.get()
         {
-        return new Time((adjustedPicos % Time.PICOS_PER_DAY).to<Int>());
+        return new Time((adjustedPicos % Time.PICOS_PER_DAY).toInt());
         }
 
     /**
@@ -118,7 +118,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
      */
     @Op("+") DateTime add(Duration duration)
         {
-        return new DateTime(epochPicos + duration.picoseconds.to<Int128>(), timezone);
+        return new DateTime(epochPicos + duration.picoseconds.toInt128(), timezone);
         }
 
     /**
@@ -126,7 +126,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
      */
     @Op("-") DateTime sub(Duration duration)
         {
-        return new DateTime(epochPicos - duration.picoseconds.to<Int128>(), timezone);
+        return new DateTime(epochPicos - duration.picoseconds.toInt128(), timezone);
         }
 
     /**
@@ -139,7 +139,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
     @Op("-") Duration sub(DateTime datetime)
         {
         assert this.timezone.isNoTZ == datetime.timezone.isNoTZ;
-        return new Duration((this.epochPicos - datetime.epochPicos).to<UInt128>());
+        return new Duration((this.epochPicos - datetime.epochPicos).toUInt128());
         }
 
     /**

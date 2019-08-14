@@ -104,7 +104,7 @@ module Ecstasy.xtclang.org
      * to a closed state, including when a future is awaited and it is closed.
      */
     const Closed(String? text = null, Exception? cause = null)
-            extends Exception(text, cause);
+            extends IllegalState(text, cause);
 
     /**
      * The interface associated with objects that are automatically closed by the {@code using} and

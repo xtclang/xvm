@@ -79,7 +79,7 @@ interface Iterable<ElementType>
      *
      * @return an array of elements from this iterable source
      */
-    ElementType[] to<ElementType[]>(VariablyMutable.Mutability mutability = Persistent)
+    ElementType[] toArray(VariablyMutable.Mutability mutability = Persistent)
         {
         ElementType[] result = new Array<ElementType>(size); // mutable
 

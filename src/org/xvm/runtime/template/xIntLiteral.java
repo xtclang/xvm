@@ -48,22 +48,22 @@ public class xIntLiteral
 
         markNativeMethod("toString", VOID, STRING);
 
-        markNativeMethod("to", VOID, new String[]{"Int128"});
-        markNativeMethod("to", VOID, new String[]{"Int64"});
-        markNativeMethod("to", VOID, new String[]{"Int32"});
-        markNativeMethod("to", VOID, new String[]{"Int16"});
-        markNativeMethod("to", VOID, new String[]{"Int8"});
+        markNativeMethod("toInt8"    , VOID, new String[]{"Int8"});
+        markNativeMethod("toInt16"   , VOID, new String[]{"Int16"});
+        markNativeMethod("toInt32"   , VOID, new String[]{"Int32"});
+        markNativeMethod("toInt"     , VOID, new String[]{"Int64"});
+        markNativeMethod("toInt128"  , VOID, new String[]{"Int128"});
 
-        markNativeMethod("to", VOID, new String[]{"UInt128"});
-        markNativeMethod("to", VOID, new String[]{"UInt64"});
-        markNativeMethod("to", VOID, new String[]{"UInt32"});
-        markNativeMethod("to", VOID, new String[]{"UInt16"});
-        markNativeMethod("to", VOID, new String[]{"UInt8"});
+        markNativeMethod("toByte"    , VOID, new String[]{"UInt8"});
+        markNativeMethod("toUInt16"  , VOID, new String[]{"UInt16"});
+        markNativeMethod("toUInt32"  , VOID, new String[]{"UInt32"});
+        markNativeMethod("toUInt"    , VOID, new String[]{"UInt64"});
+        markNativeMethod("toUInt128" , VOID, new String[]{"UInt128"});
 
-        markNativeMethod("to", VOID, new String[]{"VarInt"});
-        markNativeMethod("to", VOID, new String[]{"VarUInt"});
-        markNativeMethod("to", VOID, new String[]{"VarFloat"});
-        markNativeMethod("to", VOID, new String[]{"VarDec"});
+        markNativeMethod("toVarInt"  , VOID, new String[]{"VarInt"});
+        markNativeMethod("toVarUInt" , VOID, new String[]{"VarUInt"});
+        markNativeMethod("toVarFloat", VOID, new String[]{"VarFloat"});
+        markNativeMethod("toVarDec"  , VOID, new String[]{"VarDec"});
         }
 
     @Override
@@ -166,7 +166,20 @@ public class xIntLiteral
         VarIntHandle hLiteral = (VarIntHandle) hTarget;
         switch (method.getName())
             {
-            case "to":
+            case "toInt8":
+            case "toInt16":
+            case "toInt32":
+            case "toInt":
+            case "toInt128":
+            case "toByte":
+            case "toUInt16":
+            case "toUInt32":
+            case "toUInt":
+            case "toUInt128":
+            case "toVarInt":
+            case "toVarUInt":
+            case "toVarFloat":
+            case "toVarDec":
                 TypeConstant  typeRet  = method.getReturn(0).getType();
                 ClassTemplate template = f_templates.getTemplate(typeRet);
                 PackedInteger piValue  = hLiteral.getValue();

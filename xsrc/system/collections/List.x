@@ -206,7 +206,7 @@ interface List<ElementType>
             }
         else
             {
-            temp    = to<ElementType[]>();
+            temp    = toArray();
             inPlace = False;
             }
 

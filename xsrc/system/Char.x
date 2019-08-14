@@ -13,12 +13,12 @@ const Char
 
     construct(Byte b)
         {
-        construct Char(b.to<UInt32>());
+        construct Char(b.toUInt32());
         }
 
     construct(Int n)
         {
-        construct Char(n.to<UInt32>());
+        construct Char(n.toUInt32());
         }
 
     UInt32 codepoint;
@@ -27,10 +27,10 @@ const Char
      * A direct conversion from the Char to a Byte is supported because of ASCII. An
      * out-of-range value will result in an exception.
      */
-    Byte to<Byte>()
+    Byte toByte()
         {
         assert codepoint <= 0x7f;
-        return codepoint.to<Byte>();
+        return codepoint.toByte();
         }
 
     // ----- Sequential ----------------------------------------------------------------------------
@@ -77,32 +77,32 @@ const Char
         return bytes.makeImmutable();
         }
 
-    UInt32 to<UInt32>()
+    UInt32 toUInt32()
         {
         return codepoint;
         }
 
-    Int to<Int>()
+    Int toInt()
         {
-        return codepoint.to<Int>();
+        return codepoint.toInt();
         }
 
     @Op("+")
     Char add(Int n)
         {
-        return new Char(this.to<Int>() + n);
+        return new Char(this.toInt() + n);
         }
 
     @Op("-")
     Char sub(Int n)
         {
-        return new Char(this.to<Int>() - n);
+        return new Char(this.toInt() - n);
         }
 
     @Op("-")
     Int sub(Char ch)
         {
-        return this.to<Int>() - ch.to<Int>();
+        return this.toInt() - ch.toInt();
         }
 
     @Op("*")
@@ -164,7 +164,7 @@ const Char
         if (ch <= 0x7F)
             {
             // ASCII - single byte 0xxxxxxx format
-            bytes[of] = ch.to<Byte>();
+            bytes[of] = ch.toByte();
             return 1;
             }
 

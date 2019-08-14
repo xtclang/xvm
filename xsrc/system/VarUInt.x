@@ -4,54 +4,48 @@
 const VarUInt
         extends UIntNumber
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     /**
-     * TODO
+     * Construct a variable-length unsigned integer number from its bitwise machine representation.
      *
-     * Note that the bits are arranged such that bits[0] is the least significant bit and
-     * bits[bits.length-1] is the most significant bit.
+     * @param bits  an array of bit values that represent this number, ordered from Least
+     *              Significant Bit (LSB) in the `0` element, to Most Significant Bit (MSB) in the
+     *              `size-1` element
      */
     construct(Bit[] bits)
         {
-        // ignore leading zeros to find the actual number of bits necessary for the value
-        Int    bitsUsed = bits.size;
-        while (bitsUsed > 0 && bits[bitsUsed-1] == 0)
-            {
-            --bitsUsed;
-            }
-
-        // determine the sign of the integer
-        sign = bitsUsed == 0 ? Zero : Positive;
-
-        // round up the number of bits to the next largest power of two
-        bitsUsed = bitsUsed < 8 ? 8 : (bitsUsed * 2 - 1).leftmostBit;
-
-        // if the passed-in bits array isn't the right length, then replace it with a correct one
-        if (bitsUsed != bits.size)
-            {
-            // need to allocate a new array of bits of the calculated size, and copy over
-            // the least significant bitsUsed number of bits that were passed in
-            Bit[] newBits = new Bit[bitsUsed];
-            for (Int i = 0, Int c = bitsUsed.minOf(bits.size); i < c; ++i)
-                {
-                newBits[i] = bits[i];
-                }
-            bits = newBits;
-            }
-
+        assert bits.size >= 8 && bits.size.bitCount == 1;
         construct UIntNumber(bits);
         }
+
+    /**
+     * Construct a variable-length unsigned integer number from its network-portable representation.
+     *
+     * @param bytes  an array of byte values that represent this number, ordered from left-to-right,
+     *               as they would appear on the wire or in a file
+     */
+    construct(Byte[] bytes)
+        {
+        assert bytes.size >= 1;
+        construct UIntNumber(bytes);
+        }
+
 
     /**
      * The sign property is declared by Number as read-only, but the VarUInt actually needs storage
      * for the sign property, so it is declaring it at this level as a read/write property (which,
      * due to the constness of this class, is read-only in reality.)
      */
+    @Override
+    public/private Signum sign; // TODO when this was Boolean, it didn't complain (should have been compiler error)
 
     @Override
-    Bit[] to<Bit[]>()
+    immutable Bit[] toBitArray()
         {
-        return bits;
+        return bits.reverse.as(immutable Bit[]);
         }
+
 
     // ----- IntNumber support ---------------------------------------------------------------------
 
@@ -207,31 +201,31 @@ const VarUInt
         }
 
     @Override
-    VarInt to<VarInt>()
+    VarInt toVarInt()
         {
         TODO
         }
 
     @Override
-    VarUInt to<VarUInt>()
+    VarUInt toVarUInt()
         {
         TODO
         }
 
     @Override
-    VarFloat to<VarFloat>()
+    VarFloat toVarFloat()
         {
         TODO
         }
 
     @Override
-    VarDec to<VarDec>()
+    VarDec toVarDec()
         {
         TODO
         }
 
     @Override
-    Boolean[] to<Boolean[]>()
+    immutable Boolean[] toBooleanArray()
         {
         return bitBooleans(bits);
         }

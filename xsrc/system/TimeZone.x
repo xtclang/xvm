@@ -63,8 +63,8 @@ const TimeZone(Int picos, String? name = null)
                 {
                 if (colon > 1 && colon < tz.size-1)
                     {
-                    hours = new IntLiteral(tz[1..colon-1]).to<Int>();
-                    mins  = new IntLiteral(tz.substring(colon+1)).to<Int>();
+                    hours = new IntLiteral(tz[1..colon-1]).toInt();
+                    mins  = new IntLiteral(tz.substring(colon+1)).toInt();
                     }
                 }
             else
@@ -278,13 +278,13 @@ const TimeZone(Int picos, String? name = null)
     @Op("+") TimeZone add(Duration duration)
         {
         assert resolved && !isNoTZ;
-        return new TimeZone(normalize(this.picos.to<Int128>() + duration.picoseconds.to<Int128>()));
+        return new TimeZone(normalize(this.picos.toInt128() + duration.picoseconds.toInt128()));
         }
 
     @Op("-") TimeZone sub(Duration duration)
         {
         assert resolved && !isNoTZ;
-        return new TimeZone(normalize(this.picos.to<Int128>() - duration.picoseconds.to<Int128>()));
+        return new TimeZone(normalize(this.picos.toInt128() - duration.picoseconds.toInt128()));
         }
 
     /**
@@ -298,7 +298,7 @@ const TimeZone(Int picos, String? name = null)
             picos = picos.abs();
             }
 
-        Int normalized = (picos % Time.PICOS_PER_DAY).to<Int>();
+        Int normalized = (picos % Time.PICOS_PER_DAY).toInt();
         if (normalized > 12 * Time.PICOS_PER_HOUR)
             {
             normalized -= Time.PICOS_PER_DAY;
@@ -318,7 +318,7 @@ const TimeZone(Int picos, String? name = null)
             difference += Time.PICOS_PER_DAY;
             }
 
-        return new Duration(difference.to<UInt128>());
+        return new Duration(difference.toUInt128());
         }
 
     // ----- Stringable ----------------------------------------------------------------------------
@@ -340,7 +340,7 @@ const TimeZone(Int picos, String? name = null)
                 else
                     {
                     // we would have to do something like this to get a real estimate:
-                    //   new Duration(picos.abs().to<UInt128>()).estimateStringLength();
+                    //   new Duration(picos.abs().toUInt128()).estimateStringLength();
                     // so make a guess instead
                     offsetLength = 10;
                     }

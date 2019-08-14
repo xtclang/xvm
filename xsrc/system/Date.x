@@ -42,18 +42,18 @@ const Date(Int epochDay)
         switch (parts.size)
             {
             case 3:
-                year  = new IntLiteral(parts[0]).to<Int>();
-                month = new IntLiteral(parts[1]).to<Int>();
-                day   = new IntLiteral(parts[2]).to<Int>();
+                year  = new IntLiteral(parts[0]).toInt();
+                month = new IntLiteral(parts[1]).toInt();
+                day   = new IntLiteral(parts[2]).toInt();
                 break;
 
             case 1:
                 Int len = date.size;
                 if (len >= 8)
                     {
-                    year  = new IntLiteral(date[0    ..len-5]).to<Int>();
-                    month = new IntLiteral(date[len-4..len-3]).to<Int>();
-                    day   = new IntLiteral(date[len-2..len-1]).to<Int>();
+                    year  = new IntLiteral(date[0    ..len-5]).toInt();
+                    month = new IntLiteral(date[len-4..len-3]).toInt();
+                    day   = new IntLiteral(date[len-2..len-1]).toInt();
                     break;
                     }
                 continue;
@@ -186,7 +186,7 @@ const Date(Int epochDay)
     /**
      * @return a DateTime that corresponds to midnight (start of day) on this Date
      */
-    DateTime to<DateTime>()
+    DateTime toDateTime()
         {
         return new DateTime(this, Time.MIDNIGHT, TimeZone.NoTZ);
         }

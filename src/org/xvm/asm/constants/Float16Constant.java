@@ -35,7 +35,7 @@ public class Float16Constant
         }
 
     /**
-     * Construct a constant whose value is a 32-bit binary floating point.
+     * Construct a constant whose value is a 16-bit binary floating point.
      *
      * @param pool   the ConstantPool that will contain this Constant
      * @param flVal  the floating point value

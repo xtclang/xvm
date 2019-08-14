@@ -13,7 +13,7 @@ const FPLiteral(String text)
     /**
      * Convert the number to a variable-length binary radix floating point number.
      */
-    @Auto VarFloat to<VarFloat>()
+    @Auto VarFloat toVarFloat()
         {
         TODO
         }
@@ -21,39 +21,39 @@ const FPLiteral(String text)
     /**
      * Convert the number to a 16-bit radix-2 (binary) floating point number.
      */
-    @Auto Float16 to<Float16>()
+    @Auto Float16 toFloat16()
         {
-        return to<VarFloat>().to<Float16>();
+        return toVarFloat().toFloat16();
         }
 
     /**
      * Convert the number to a 32-bit radix-2 (binary) floating point number.
      */
-    @Auto Float32 to<Float32>()
+    @Auto Float32 toFloat32()
         {
-        return to<VarFloat>().to<Float32>();
+        return toVarFloat().toFloat32();
         }
 
     /**
      * Convert the number to a 64-bit radix-2 (binary) floating point number.
      */
-    @Auto Float64 to<Float64>()
+    @Auto Float64 toFloat64()
         {
-        return to<VarFloat>().to<Float64>();
+        return toVarFloat().toFloat64();
         }
 
     /**
      * Convert the number to a 128-bit radix-2 (binary) floating point number.
      */
-    @Auto Float128 to<Float128>()
+    @Auto Float128 toFloat128()
         {
-        return to<VarFloat>().to<Float128>();
+        return toVarFloat().toFloat128();
         }
 
     /**
      * Convert the number to a variable-length decimal radix floating point number.
      */
-    @Auto VarDec to<VarDec>()
+    @Auto VarDec toVarDec()
         {
         TODO
         }
@@ -61,25 +61,25 @@ const FPLiteral(String text)
     /**
      * Convert the number to a 32-bit radix-10 (decimal) floating point number.
      */
-    @Auto Dec32 to<Dec32>()
+    @Auto Dec32 toDec32()
         {
-        return to<VarDec>().to<Dec32>();
+        return toVarDec().toDec32();
         }
 
     /**
      * Convert the number to a 64-bit radix-10 (decimal) floating point number.
      */
-    @Auto Dec64 to<Dec64>()
+    @Auto Dec64 toDec64()
         {
-        return to<VarDec>().to<Dec64>();
+        return toVarDec().toDec64();
         }
 
     /**
      * Convert the number to a 128-bit radix-10 (decimal) floating point number.
      */
-    @Auto Dec128 to<Dec128>()
+    @Auto Dec128 toDec128()
         {
-        return to<VarDec>().to<Dec128>();
+        return toVarDec().toDec128();
         }
 
     @Override

@@ -10,6 +10,8 @@ class Array<ElementType>
         implements MutableAble, FixedSizeAble, PersistentAble, ConstAble
         implements Stringable
         incorporates Stringer
+        incorporates conditional BitArray<ElementType extends Bit>
+        incorporates conditional ByteArray<ElementType extends Byte>
         incorporates conditional Orderer<ElementType extends Orderable>
         incorporates conditional Hasher<ElementType extends Hashable>
         // TODO have to implement Const (at least conditionally if ElementType extends Const)
@@ -118,8 +120,14 @@ class Array<ElementType>
         {
         this.delegate = array;
         this.section  = section;
+
+        if (array.mutability == Constant)
+            {
+            makeImmutable();
+            }
         }
 
+    // TODO delegate fixed size with index and value translation
 
     // ----- properties ----------------------------------------------------------------------------
 
@@ -407,7 +415,7 @@ class Array<ElementType>
         }
 
     @Override
-    ElementType[] to<ElementType[]>(VariablyMutable.Mutability? mutability = Null)
+    ElementType[] toArray(VariablyMutable.Mutability? mutability = Null)
         {
         return mutability == null || mutability == this.mutability
                 ? this
@@ -960,6 +968,705 @@ class Array<ElementType>
             }
 
         appender.add(']');
+        }
+
+
+    // ----- BitArray mixin ------------------------------------------------------------------------
+
+    /**
+     * Functionality specific to arrays of bits.
+     */
+    static mixin BitArray<ElementType extends Bit>
+            into Array<ElementType>
+        {
+        /**
+         * @return an array of booleans corresponding to the bits in this array
+         */
+        immutable Boolean[] toBooleanArray()
+            {
+            return new Array<Boolean>(size, i -> this[i].toBoolean()).ensureConst(true);
+            }
+
+        /**
+         * @return an array of nibbles corresponding to the bits in this array
+         */
+        immutable Nibble[] toNibbleArray()
+            {
+            Int      nibcount = (size+3) / 4;
+            Nibble[] nibbles  = new Nibble[nibcount]; // TODO misspelled name in the [] causes weird compiler error: COMPILER-65: Could not find a matching constructor for type "Ecstasy:collections.Array<Ecstasy:Nibble>:private". ("new Nibble[count]")
+            Int      nibnum   = 0;
+            Int      bitnum   = -((4 - size % 4) % 4);
+
+            if (bitnum < 0)
+                {
+                // not enough bits to make a full nibble, so assume that the missing bits are 0s
+                nibbles[0] = switch (bitnum)
+                    {
+                    case -3: new Nibble([this[1], 0      , 0      , 0].as(Bit[]));
+                    case -2: new Nibble([this[2], this[1], 0      , 0].as(Bit[]));
+                    case -1: new Nibble([this[3], this[2], this[1], 0].as(Bit[]));
+                    default: assert;
+                    };
+
+                ++nibnum;
+                bitnum += 4;
+                }
+
+            while (nibnum < nibcount)
+                {
+                nibbles[nibnum++] = new Nibble(this[bitnum+3..bitnum]);
+                bitnum += 4;
+                }
+
+            return nibbles.ensureConst(true);
+            }
+
+        /**
+         * Obtain the number as an array of bytes, in left-to-right order.
+         */
+        immutable Byte[] toByteArray()
+            {
+            TODO
+//            // make sure the bit length is at least 8, and also a power-of-two
+//            assert bitLength == (bitLength & ~0x7).leftmostBit;
+//
+//            // not used
+//            class SequenceImpl(Number num)
+//                    implements Sequence<Byte>
+//                {
+//                @Override
+//                @RO Int size.get()
+//                    {
+//                    return num.bitLength / 8;
+//                    }
+//
+//                @Override
+//                Byte getElement(Int index)
+//                    {
+//                    assert index >= 0 && index < size;
+//
+//                    // the byte array is in the opposite (!!!) sequence of the bit array; bit 0 is
+//                    // the least significant (rightmost) bit, while byte 0 is the leftmost byte
+//                    Bit[] bits = num.toBitArray();
+//                    Int   of   = bits.size - index * 8 - 1;
+//                    return new Byte([bits[of], bits[of-1], bits[of-2], bits[of-3],
+//                             bits[of-4], bits[of-5], bits[of-6], bits[of-7]].as(Bit[]));
+//                    }
+//                }
+//
+//            Bit[]  bits  = toBitArray();
+//            Int    size  = byteLength;
+//            Byte[] bytes = new Byte[size];
+//
+//            for (Int index : 0..size-1)
+//                {
+//                // the byte array is in the opposite (!!!) sequence of the bit array; bit 0 is
+//                // the least significant (rightmost) bit, while byte 0 is the leftmost byte
+//                Int of = bitLength - index * 8 - 1;
+//                bytes[index] = new Byte([bits[of], bits[of-1], bits[of-2], bits[of-3],
+//                         bits[of-4], bits[of-5], bits[of-6], bits[of-7]].as(Bit[]));
+//                }
+//
+//            return bytes.ensureConst(true);
+            }
+
+        /**
+         * Convert the bit array to a variable-length signed integer.
+         */
+        VarInt toVarInt()
+            {
+            TODO
+            }
+
+        /**
+         * Convert the bit array to a signed 8-bit integer.
+         *
+         * @throws OutOfBounds  if the resulting value is out of the signed 8-bit integer range
+         */
+        Int8 toInt8()
+            {
+            return toVarInt().toInt8();
+            }
+
+        /**
+         * Convert the bit array to a signed 16-bit integer.
+         *
+         * @throws OutOfBounds  if the resulting value is out of the signed 16-bit integer range
+         */
+        Int16 toInt16()
+            {
+            return toVarInt().toInt16();
+            }
+
+        /**
+         * Convert the bit array to a signed 32-bit integer.
+         *
+         * @throws OutOfBounds  if the resulting value is out of the signed 32-bit integer range
+         */
+        Int32 toInt32()
+            {
+            return toVarInt().toInt32();
+            }
+
+        /**
+         * Convert the bit array to a signed 64-bit integer.
+         *
+         * @throws OutOfBounds  if the resulting value is out of the signed 64-bit integer range
+         */
+        Int64 toInt()
+            {
+            return toVarInt().toInt();
+            }
+
+        /**
+         * Convert the bit array to a signed 128-bit integer.
+         *
+         * @throws OutOfBounds  if the resulting value is out of the signed 128-bit integer range
+         */
+        Int128 toInt128()
+            {
+            return toVarInt().toInt128();
+            }
+
+        /**
+         * Convert the bit array to a variable-length unsigned integer.
+         */
+        VarUInt toVarUInt()
+            {
+            TODO
+            }
+
+        /**
+         * Convert the bit array to a unsigned 8-bit integer.
+         *
+         * @throws OutOfBounds  if the resulting value is out of the unsigned 8-bit integer range
+         */
+        UInt8 toByte()
+            {
+            return toVarUInt().toByte();
+            }
+
+        /**
+         * Convert the bit array to a unsigned 16-bit integer.
+         *
+         * @throws OutOfBounds  if the resulting value is out of the unsigned 16-bit integer range
+         */
+        UInt16 toUInt16()
+            {
+            return toVarUInt().toUInt16();
+            }
+
+        /**
+         * Convert the bit array to a unsigned 32-bit integer.
+         *
+         * @throws OutOfBounds  if the resulting value is out of the unsigned 32-bit integer range
+         */
+        UInt32 toUInt32()
+            {
+            return toVarUInt().toUInt32();
+            }
+
+        /**
+         * Convert the bit array to a unsigned 64-bit integer.
+         *
+         * @throws OutOfBounds  if the resulting value is out of the unsigned 64-bit integer range
+         */
+        UInt64 toUInt()
+            {
+            return toVarUInt().toUInt();
+            }
+
+        /**
+         * Convert the bit array to a unsigned 128-bit integer.
+         *
+         * @throws OutOfBounds  if the resulting value is out of the unsigned 128-bit integer range
+         */
+        UInt128 toUInt128()
+            {
+            return toVarInt().toUInt128();
+            }
+
+        /**
+         * Convert the bit array to a variable-length binary radix floating point number.
+         */
+        VarFloat toVarFloat()
+            {
+            TODO
+            }
+
+        /**
+         * Convert the bit array to a 16-bit radix-2 (binary) floating point number.
+         */
+        Float16 toFloat16()
+            {
+            return toVarFloat().toFloat16();
+            }
+
+        /**
+         * Convert the bit array to a 16-bit radix-2 (binary) floating point number.
+         */
+        BFloat16 toBFloat16()
+            {
+            return toVarFloat().toBFloat16();
+            }
+
+        /**
+         * Convert the bit array to a 32-bit radix-2 (binary) floating point number.
+         */
+        Float32 toFloat32()
+            {
+            return toVarFloat().toFloat32();
+            }
+
+        /**
+         * Convert the bit array to a 64-bit radix-2 (binary) floating point number.
+         */
+        Float64 toFloat64()
+            {
+            return toVarFloat().toFloat64();
+            }
+
+        /**
+         * Convert the bit array to a 128-bit radix-2 (binary) floating point number.
+         */
+        Float128 toFloat128()
+            {
+            return toVarFloat().toFloat128();
+            }
+
+        /**
+         * Convert the bit array to a variable-length decimal radix floating point number.
+         */
+        VarDec toVarDec()
+            {
+            TODO
+            }
+
+        /**
+         * Convert the bit array to a 32-bit radix-10 (decimal) floating point number.
+         */
+        Dec32 toDec32()
+            {
+            return toVarDec().toDec32();
+            }
+
+        /**
+         * Convert the bit array to a 64-bit radix-10 (decimal) floating point number.
+         */
+        Dec64 toDec64()
+            {
+            return toVarDec().toDec64();
+            }
+
+        /**
+         * Convert the bit array to a 128-bit radix-10 (decimal) floating point number.
+         */
+        Dec128 toDec128()
+            {
+            return toVarDec().toDec128();
+            }
+        }
+
+
+    // ----- ByteArray mixin -----------------------------------------------------------------------
+
+    /**
+     * Functionality specific to arrays of bytes.
+     */
+    static mixin ByteArray<ElementType extends Byte>
+            into Array<ElementType>
+        {
+        /**
+         * Obtain a view of this array as an array of bits. The array is immutable if this array is
+         * immutable, and shares the mutability attribute of this array, except that the resulting
+         * array is FixedSize if this array is Mutable.
+         *
+         * @return an array of bits that represents the contents of this array
+         */
+        // TODO Bit[] asBitArray()
+
+        /**
+         * Convert the byte array to an immutable array of bits.
+         *
+         * @return an immutable array of bits corresponding to the bytes in this array
+         */
+        immutable Bit[] toBitArray()
+            {
+            Int   bytecount = size;
+            Int   bitcount  = bytecount * 8;
+            Bit[] bits      = new Bit[bitcount];
+            Int   index     = 0;
+            EachByte: for (Byte byte : this)
+                {
+                for (Bit bit : byte.toBitArray())
+                    {
+                    bits[index++] = bit;
+                    }
+                }
+            return bits.ensureConst(true);
+            }
+
+        /**
+         * Convert the byte array to an immutable array of nibbles.
+         *
+         * @return an immutable array of nibbles corresponding to the bytes in this array
+         */
+        immutable Nibble[] toNibbleArray()
+            {
+            Int      bytecount = size;
+            Int      nibcount  = bytecount * 2;
+            Nibble[] nibbles   = new Nibble[nibcount];
+            Int      index     = 0;
+            EachByte: for (Byte byte : this)
+                {
+                for (Nibble nibble : byte.toNibbleArray())
+                    {
+                    nibbles[index++] = nibble;
+                    }
+                }
+
+            return nibbles.ensureConst(true);
+            }
+
+        /**
+         * Convert the byte array to a variable-length signed integer.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a variable-length
+         *                      signed integer
+         */
+        VarInt toVarInt()
+            {
+            assert:bounds size > 0;
+            return new VarInt(this);
+            }
+
+        /**
+         * Convert the byte array to a signed 8-bit integer.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a 8-bit
+         *                      signed integer, or if the resulting value is out of the signed
+         *                      8-bit integer range
+         */
+        Int8 toInt8()
+            {
+            return new Int8(verifyMax2sComplementBytes(1));
+            }
+
+        /**
+         * Convert the byte array to a signed 16-bit integer.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a 16-bit
+         *                      signed integer, or if the resulting value is out of the signed
+         *                      16-bit integer range
+         */
+        Int16 toInt16()
+            {
+            return new Int16(verifyMax2sComplementBytes(2));
+            }
+
+        /**
+         * Convert the byte array to a signed 32-bit integer.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a 32-bit
+         *                      signed integer, or if the resulting value is out of the signed
+         *                      32-bit integer range
+         */
+        Int32 toInt32()
+            {
+            return new Int32(verifyMax2sComplementBytes(4));
+            }
+
+        /**
+         * Convert the byte array to a signed 64-bit integer.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a 64-bit
+         *                      signed integer, or if the resulting value is out of the signed
+         *                      64-bit integer range
+         */
+        Int64 toInt()
+            {
+            return new Int64(verifyMax2sComplementBytes(8));
+            }
+
+        /**
+         * Convert the byte array to a signed 128-bit integer.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a 128-bit
+         *                      signed integer, or if the resulting value is out of the signed
+         *                      128-bit integer range
+         */
+        Int128 toInt128()
+            {
+            return new Int128(verifyMax2sComplementBytes(16));
+            }
+
+        /**
+         * Convert the byte array to a variable-length unsigned integer.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a variable-length
+         *                      unsigned integer
+         */
+        VarUInt toVarUInt()
+            {
+            assert:bounds size > 0;
+            return new VarUInt(this);
+            }
+
+        /**
+         * Convert the byte array to a unsigned 8-bit integer.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a 8-bit
+         *                      unsigned integer, or if the resulting value is out of the unsigned
+         *                      8-bit integer range
+         */
+        UInt8 toByte()
+            {
+            return new UInt8(verifyMaxSignificantBytes(1));
+            }
+
+        /**
+         * Convert the byte array to a unsigned 16-bit integer.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a 16-bit
+         *                      unsigned integer, or if the resulting value is out of the unsigned
+         *                      16-bit integer range
+         */
+        UInt16 toUInt16()
+            {
+            return new UInt16(verifyMaxSignificantBytes(2));
+            }
+
+        /**
+         * Convert the byte array to a unsigned 32-bit integer.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a 32-bit
+         *                      unsigned integer, or if the resulting value is out of the unsigned
+         *                      32-bit integer range
+         */
+        UInt32 toUInt32()
+            {
+            return new UInt32(verifyMaxSignificantBytes(4));
+            }
+
+        /**
+         * Convert the byte array to a unsigned 64-bit integer.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a 64-bit
+         *                      unsigned integer, or if the resulting value is out of the unsigned
+         *                      64-bit integer range
+         */
+        UInt64 toUInt()
+            {
+            return new UInt64(verifyMaxSignificantBytes(8));
+            }
+
+        /**
+         * Convert the byte array to a unsigned 128-bit integer.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a 128-bit
+         *                      unsigned integer, or if the resulting value is out of the unsigned
+         *                      128-bit integer range
+         */
+        UInt128 toUInt128()
+            {
+            return new UInt128(verifyMaxSignificantBytes(16));
+            }
+
+        /**
+         * Convert the byte array to a variable-length binary radix floating point number.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a variable-length
+         *                      radix-2 (binary) floating point number
+         */
+        VarFloat toVarFloat()
+            {
+            assert:bounds size >= 2 && size.bitCount == 1;
+            return new VarFloat(this);
+            }
+
+        /**
+         * Convert the byte array to a 16-bit radix-2 (binary) floating point number.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a 16-bit radix-2
+         *                      (binary) floating point number
+         */
+        Float16 toFloat16()
+            {
+            assert:bounds size == 2;
+            return new Float16(this);
+            }
+
+        /**
+         * Convert the byte array to a 16-bit radix-2 (binary) floating point number.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a 16-bit radix-2
+         *                      (binary) floating point number
+         */
+        BFloat16 toBFloat16()
+            {
+            assert:bounds size == 2;
+            return new BFloat16(this);
+            }
+
+        /**
+         * Convert the byte array to a 32-bit radix-2 (binary) floating point number.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a 32-bit radix-2
+         *                      (binary) floating point number
+         */
+        Float32 toFloat32()
+            {
+            assert:bounds size == 4;
+            return new Float32(this);
+            }
+
+        /**
+         * Convert the byte array to a 64-bit radix-2 (binary) floating point number.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a 64-bit radix-2
+         *                      (binary) floating point number
+         */
+        Float64 toFloat64()
+            {
+            assert:bounds size == 8;
+            return new Float64(this);
+            }
+
+        /**
+         * Convert the byte array to a 128-bit radix-2 (binary) floating point number.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a 128-bit radix-2
+         *                      (binary) floating point number
+         */
+        Float128 toFloat128()
+            {
+            assert:bounds size == 16;
+            return new Float128(this);
+            }
+
+        /**
+         * Convert the byte array to a variable-length decimal radix floating point number.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a variable-length
+         *                      radix-10 (decimal) floating point number
+         */
+        VarDec toVarDec()
+            {
+            assert:bounds size >= 4 && size.bitCount == 1;
+            return new VarDec(this);
+            }
+
+        /**
+         * Convert the byte array to a 32-bit radix-10 (decimal) floating point number.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a 32-bit radix-10
+         *                      (decimal) floating point number
+         */
+        Dec32 toDec32()
+            {
+            assert:bounds size == 4;
+            return new Dec32(this);
+            }
+
+        /**
+         * Convert the byte array to a 64-bit radix-10 (decimal) floating point number.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a 64-bit radix-10
+         *                      (decimal) floating point number
+         */
+        Dec64 toDec64()
+            {
+            assert:bounds size == 8;
+            return new Dec64(this);
+            }
+
+        /**
+         * Convert the byte array to a 128-bit radix-10 (decimal) floating point number.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a 128-bit radix-10
+         *                      (decimal) floating point number
+         */
+        Dec128 toDec128()
+            {
+            assert:bounds size == 16;
+            return new Dec128(this);
+            }
+
+        /**
+         * Internal helper to verify that a 2s-complement number will fit into the specified number
+         * of bytes.
+         *
+         * @param n  the maximum number of bytes
+         *
+         * @return the Byte[] of the specified size
+         *
+         * @throws IllegalBounds  if this array cannot be used to form a 2s-complement integer of
+         *                        the specified size
+         */
+        private Byte[] verifyMax2sComplementBytes(Int n)
+            {
+            assert:bounds size > 0;
+
+            Int delta = n - size;
+            switch (delta.sign)
+                {
+                case Zero:
+                    // this byte array is the perfect size
+                    return this;
+
+                case Positive:
+                    // this byte array is missing some leading bytes; fill them in with 0s or Fs
+                    Byte fill = this[0]/*TODO remove*/.as(Byte) & 0x80 == 0 ? 0x00 : 0xFF;
+                    return new Array<Byte>(n, i -> (i < delta ? fill : this[i-delta]/*TODO remove*/.as(Byte)).as(ElementType));
+                    // return new Array<Byte>(n, i -> i < delta ? fill : this[i-delta]);
+
+                case Negative:
+                    // make sure that all of the extra bytes are 0s or Fs (and then discard them)
+                    Byte expect = this[delta]/*TODO remove*/.as(Byte) & 0x80 == 0 ? 0x00 : 0xFF;
+                    for (Byte byte : this[0..-1-delta])
+                        {
+                        assert:bounds byte/*TODO remove*/.as(Byte) == expect;
+                        }
+                    return this[size-n .. size-1];
+                }
+            }
+
+        /**
+         * Internal helper to verify that a 2s-complement number will fit into the specified number
+         * of bytes.
+         *
+         * @param n  the maximum number of bytes
+         *
+         * @return the Byte[] of the specified size
+         *
+         * @throws IllegalBounds  if this array cannot be used to form a 2s-complement integer of
+         *                        the specified size
+         */
+        private Byte[] verifyMaxSignificantBytes(Int n)
+            {
+            assert:bounds size > 0;
+
+            Int delta = n - size;
+            switch (delta.sign)
+                {
+                case Zero:
+                    // this byte array is the perfect size
+                    return this;
+
+                case Positive:
+                    // this byte array is missing some leading bytes; fill them in with 0s
+                    return new Array<Byte>(n, i -> (i < delta ? 0 : this[i-delta]/*TODO remove*/.as(Byte)).as(ElementType));
+                    // return new Array<Byte>(n, i -> i < delta ? 0 : this[i-delta]);
+
+                case Negative:
+                    // make sure that all of the extra bytes are zeros (and then discard them)
+                    for (Byte byte : this[0..-1-delta])
+                        {
+                        assert:bounds byte/*TODO remove*/.as(Byte) == 0;
+                        }
+                    return this[size-n .. size-1];
+                }
+            }
         }
 
 

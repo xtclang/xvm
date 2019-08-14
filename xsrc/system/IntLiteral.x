@@ -79,15 +79,15 @@ const IntLiteral(String text)
             Int  nch;
             if (ch >= '0' && ch <= '9')
                 {
-                nch = ch.to<Int>() - '0'.to<Int>();
+                nch = ch.toInt() - '0'.toInt();
                 }
             else if (ch >= 'A' && ch <= 'F')
                 {
-                nch = ch.to<Int>() - 'A'.to<Int>() + 10;
+                nch = ch.toInt() - 'A'.toInt() + 10;
                 }
             else if (ch >= 'a' && ch <= 'f')
                 {
-                nch = ch.to<Int>() - 'a'.to<Int>() + 10;
+                nch = ch.toInt() - 'a'.toInt() + 10;
                 }
             else
                 {
@@ -96,7 +96,7 @@ const IntLiteral(String text)
                 }
 
             assert nch < radix;
-            magnitude = magnitude * radix + nch.to<VarInt>();
+            magnitude = magnitude * radix + nch.toVarInt();
             ++digits;
             underscoreOk = true;
             }
@@ -187,7 +187,7 @@ const IntLiteral(String text)
             return 8;
             }
 
-        return (magnitude.leftmostBit.trailingZeroCount * 2 + 1).leftmostBit.maxOf(8).to<Int>();
+        return (magnitude.leftmostBit.trailingZeroCount * 2 + 1).leftmostBit.maxOf(8).toInt();
         }
 
     /**
@@ -208,7 +208,7 @@ const IntLiteral(String text)
         TODO
         }
 
-    @Auto Bit to<Bit>()
+    @Auto Bit toBit()
         {
         if (magnitude == 0)
             {
@@ -222,7 +222,7 @@ const IntLiteral(String text)
     /**
      * Convert the number to a variable-length signed integer.
      */
-    @Auto VarInt to<VarInt>()
+    @Auto VarInt toVarInt()
         {
         TODO
         }
@@ -231,60 +231,60 @@ const IntLiteral(String text)
      * Convert the number to a 4-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @Auto Nibble to<Nibble>()
+    @Auto Nibble toNibble()
         {
-        return to<VarInt>().to<Nibble>();
+        return toVarInt().toNibble();
         }
 
     /**
      * Convert the number to a signed 8-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @Auto Int8 to<Int8>()
+    @Auto Int8 toInt8()
         {
-        return to<VarInt>().to<Int8>();
+        return toVarInt().toInt8();
         }
 
     /**
      * Convert the number to a signed 16-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @Auto Int16 to<Int16>()
+    @Auto Int16 toInt16()
         {
-        return to<VarInt>().to<Int16>();
+        return toVarInt().toInt16();
         }
 
     /**
      * Convert the number to a signed 32-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @Auto Int32 to<Int32>()
+    @Auto Int32 toInt32()
         {
-        return to<VarInt>().to<Int32>();
+        return toVarInt().toInt32();
         }
 
     /**
      * Convert the number to a signed 64-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @Auto Int64 to<Int64>()
+    @Auto Int64 toInt()
         {
-        return to<VarInt>().to<Int64>();
+        return toVarInt().toInt();
         }
 
     /**
      * Convert the number to a signed 128-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @Auto Int128 to<Int128>()
+    @Auto Int128 toInt128()
         {
-        return to<VarInt>().to<Int128>();
+        return toVarInt().toInt128();
         }
 
     /**
      * Convert the number to a variable-length unsigned integer.
      */
-    @Auto VarUInt to<VarUInt>()
+    @Auto VarUInt toVarUInt()
         {
         TODO
         }
@@ -293,51 +293,51 @@ const IntLiteral(String text)
      * Convert the number to a unsigned 8-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @Auto UInt8 to<UInt8>()
+    @Auto UInt8 toByte()
         {
-        return to<VarUInt>().to<UInt8>();
+        return toVarUInt().toByte();
         }
 
     /**
      * Convert the number to a unsigned 16-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @Auto UInt16 to<UInt16>()
+    @Auto UInt16 toUInt16()
         {
-        return to<VarUInt>().to<UInt16>();
+        return toVarUInt().toUInt16();
         }
 
     /**
      * Convert the number to a unsigned 32-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @Auto UInt32 to<UInt32>()
+    @Auto UInt32 toUInt32()
         {
-        return to<VarUInt>().to<UInt32>();
+        return toVarUInt().toUInt32();
         }
 
     /**
      * Convert the number to a unsigned 64-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @Auto UInt64 to<UInt64>()
+    @Auto UInt64 toUInt()
         {
-        return to<VarUInt>().to<UInt64>();
+        return toVarUInt().toUInt();
         }
 
     /**
      * Convert the number to a unsigned 128-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @Auto UInt128 to<UInt128>()
+    @Auto UInt128 toUInt128()
         {
-        return to<VarInt>().to<UInt128>();
+        return toVarInt().toUInt128();
         }
 
     /**
      * Convert the number to a variable-length binary radix floating point number.
      */
-    @Auto VarFloat to<VarFloat>()
+    @Auto VarFloat toVarFloat()
         {
         TODO
         }
@@ -345,39 +345,47 @@ const IntLiteral(String text)
     /**
      * Convert the number to a 16-bit radix-2 (binary) floating point number.
      */
-    @Auto Float16 to<Float16>()
+    @Auto Float16 toFloat16()
         {
-        return to<VarFloat>().to<Float16>();
+        return toVarFloat().toFloat16();
+        }
+
+    /**
+     * Convert the number to a 16-bit radix-2 (binary) "brain" floating point number.
+     */
+    @Auto BFloat16 toBFloat16()
+        {
+        return toVarFloat().toBFloat16();
         }
 
     /**
      * Convert the number to a 32-bit radix-2 (binary) floating point number.
      */
-    @Auto Float32 to<Float32>()
+    @Auto Float32 toFloat32()
         {
-        return to<VarFloat>().to<Float32>();
+        return toVarFloat().toFloat32();
         }
 
     /**
      * Convert the number to a 64-bit radix-2 (binary) floating point number.
      */
-    @Auto Float64 to<Float64>()
+    @Auto Float64 toFloat64()
         {
-        return to<VarFloat>().to<Float64>();
+        return toVarFloat().toFloat64();
         }
 
     /**
      * Convert the number to a 128-bit radix-2 (binary) floating point number.
      */
-    @Auto Float128 to<Float128>()
+    @Auto Float128 toFloat128()
         {
-        return to<VarFloat>().to<Float128>();
+        return toVarFloat().toFloat128();
         }
 
     /**
      * Convert the number to a variable-length decimal radix floating point number.
      */
-    @Auto VarDec to<VarDec>()
+    @Auto VarDec toVarDec()
         {
         TODO
         }
@@ -385,25 +393,25 @@ const IntLiteral(String text)
     /**
      * Convert the number to a 32-bit radix-10 (decimal) floating point number.
      */
-    @Auto Dec32 to<Dec32>()
+    @Auto Dec32 toDec32()
         {
-        return to<VarDec>().to<Dec32>();
+        return toVarDec().toDec32();
         }
 
     /**
      * Convert the number to a 64-bit radix-10 (decimal) floating point number.
      */
-    @Auto Dec64 to<Dec64>()
+    @Auto Dec64 toDec64()
         {
-        return to<VarDec>().to<Dec64>();
+        return toVarDec().toDec64();
         }
 
     /**
      * Convert the number to a 128-bit radix-10 (decimal) floating point number.
      */
-    @Auto Dec128 to<Dec128>()
+    @Auto Dec128 toDec128()
         {
-        return to<VarDec>().to<Dec128>();
+        return toVarDec().toDec128();
         }
 
     // ----- IntNumber API -------------------------------------------------------------------------
@@ -469,7 +477,7 @@ const IntLiteral(String text)
      */
     @Op Interval<Int> through(Int n)
         {
-        return new Interval<Int>(this.to<Int>(), n);
+        return new Interval<Int>(this.toInt(), n);
         }
 
     // ----- Number API ----------------------------------------------------------------------------
@@ -479,7 +487,7 @@ const IntLiteral(String text)
      */
     @Op("+") IntLiteral add(IntLiteral n)
         {
-        return new IntLiteral((this.to<VarInt>() + n.to<VarInt>()).toString());
+        return new IntLiteral((this.toVarInt() + n.toVarInt()).toString());
         }
 
     /**
@@ -487,7 +495,7 @@ const IntLiteral(String text)
      */
     @Op("-") IntLiteral sub(IntLiteral n)
         {
-        return new IntLiteral((this.to<VarInt>() - n.to<VarInt>()).toString());
+        return new IntLiteral((this.toVarInt() - n.toVarInt()).toString());
         }
 
     /**
@@ -495,7 +503,7 @@ const IntLiteral(String text)
      */
     @Op("*") IntLiteral mul(IntLiteral n)
         {
-        return new IntLiteral((this.to<VarInt>() * n.to<VarInt>()).toString());
+        return new IntLiteral((this.toVarInt() * n.toVarInt()).toString());
         }
 
     /**
@@ -503,7 +511,7 @@ const IntLiteral(String text)
      */
     @Op("/") IntLiteral div(IntLiteral n)
         {
-        return new IntLiteral((this.to<VarInt>() / n.to<VarInt>()).toString());
+        return new IntLiteral((this.toVarInt() / n.toVarInt()).toString());
         }
 
     /**
@@ -511,14 +519,14 @@ const IntLiteral(String text)
      */
     @Op("%") IntLiteral mod(IntLiteral n)
         {
-        return new IntLiteral((this.to<VarInt>() % n.to<VarInt>()).toString());
+        return new IntLiteral((this.toVarInt() % n.toVarInt()).toString());
         }
 
     // ----- other Number-like operations ----------------------------------------------------------
 
     @Op("+") Int64 add(Int64 n)
         {
-        return this.to<Int>() + n;
+        return this.toInt() + n;
         }
 
     /**
@@ -526,7 +534,7 @@ const IntLiteral(String text)
      */
     @Op("-") Int64 sub(Int64 n)
         {
-        return this.to<Int>() - n;
+        return this.toInt() - n;
         }
 
     /**
@@ -534,7 +542,7 @@ const IntLiteral(String text)
      */
     @Op("*") Int64 mul(Int64 n)
         {
-        return this.to<Int>() * n;
+        return this.toInt() * n;
         }
 
     /**
@@ -542,7 +550,7 @@ const IntLiteral(String text)
      */
     @Op("/") Int64 div(Int64 n)
         {
-        return this.to<Int>() / n;
+        return this.toInt() / n;
         }
 
     /**
@@ -550,7 +558,7 @@ const IntLiteral(String text)
      */
     @Op("%") Int64 mod(Int64 n)
         {
-        return this.to<Int>() % n;
+        return this.toInt() % n;
         }
 
     // ----- Sequential ----------------------------------------------------------------------------
@@ -578,10 +586,10 @@ const IntLiteral(String text)
     /**
      * Convert the number to a 128-bit radix-10 (decimal) floating point number.
      */
-    Char to<Char>()
+    Char toChar()
         {
         // truncate out-of-range values to the original 16-bit Unicode range
-        UInt32 n = to<UInt32>();
+        UInt32 n = toUInt32();
         return new Char(n <= 0x10FFFF ? n : n & 0xFFFF);
         }
 

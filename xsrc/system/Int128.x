@@ -2,6 +2,8 @@ const Int128
         extends IntNumber
         default(0)
     {
+    // ----- constants -----------------------------------------------------------------------------
+
     /**
      * The minimum value for an Int128.
      */
@@ -12,11 +14,34 @@ const Int128
      */
     static IntLiteral maxvalue =  0x7FFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF;
 
+
+    // ----- constructors --------------------------------------------------------------------------
+
+    /**
+     * Construct a 128-bit signed integer number from its bitwise machine representation.
+     *
+     * @param bits  an array of bit values that represent this number, ordered from Least
+     *              Significant Bit (LSB) in the `0` element, to Most Significant Bit (MSB) in the
+     *              `size-1` element
+     */
     construct(Bit[] bits)
         {
         assert bits.size == 128;
         construct IntNumber(bits);
         }
+
+    /**
+     * Construct a 128-bit signed integer number from its network-portable representation.
+     *
+     * @param bytes  an array of byte values that represent this number, ordered from left-to-right,
+     *               as they would appear on the wire or in a file
+     */
+    construct(Byte[] bytes)
+        {
+        assert bytes.size == 16;
+        construct IntNumber(bytes);
+        }
+
 
     @Override
     Int bitLength.get()
@@ -49,103 +74,103 @@ const Int128
     @Override
     @RO UInt128 magnitude.get()
         {
-        return to<VarInt>().abs().to<UInt128>();
+        return toVarInt().abs().toUInt128();
         }
 
     @Override
-    @Auto Int8 to<Int8>()
+    @Auto Int8 toInt8()
         {
         return this;
         }
 
     @Override
-    @Auto Int16 to<Int16>()
+    @Auto Int16 toInt16()
         {
         return this;
         }
 
     @Override
-    @Auto Int32 to<Int32>()
+    @Auto Int32 toInt32()
         {
         return this;
         }
 
     @Override
-    @Auto Int64 to<Int64>()
+    @Auto Int64 toInt()
         {
         return this;
         }
 
     @Override
-    @Auto Int128 to<Int128>()
+    @Auto Int128 toInt128()
         {
         return this;
         }
 
     @Override
-    @Auto UInt8 to<UInt8>()
+    @Auto UInt8 toByte()
         {
         return this;
         }
 
     @Override
-    @Auto UInt16 to<UInt16>()
+    @Auto UInt16 toUInt16()
         {
         return this;
         }
 
     @Override
-    @Auto UInt32 to<UInt32>()
+    @Auto UInt32 toUInt32()
         {
         return this;
         }
 
     @Override
-    @Auto UInt64 to<UInt64>()
+    @Auto UInt64 toUInt()
         {
         return this;
         }
 
     @Override
-    @Auto UInt128 to<UInt128>()
+    @Auto UInt128 toUInt128()
         {
         return this;
         }
 
     @Override
-    @Auto VarUInt to<VarUInt>()
+    @Auto VarUInt toVarUInt()
         {
         return this;
         }
 
     @Override
-    @Auto VarFloat to<VarFloat>()
+    @Auto VarFloat toVarFloat()
         {
         return this;
         }
 
     @Override
-    @Auto VarDec to<VarDec>()
+    @Auto VarDec toVarDec()
         {
         return this;
         }
 
     @Override
-    @Auto VarInt to<VarInt>()
+    @Auto VarInt toVarInt()
         {
         return this;
         }
 
     @Override
-    Boolean[] to<Boolean[]>()
+    immutable Boolean[] toBooleanArray()
         {
         return bitBooleans(bits);
         }
 
     @Override
-    Bit[] to<Bit[]>()
+    immutable Bit[] toBitArray()
         {
-        return bits;
+        return bits.reverse.as(immutable Bit[]);
         }
 
     @Override

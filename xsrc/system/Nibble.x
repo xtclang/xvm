@@ -20,21 +20,21 @@ const Nibble
 
     private Bit[] bits;
 
-    Char to<Char>()
+    Char toChar()
         {
-        Byte b = to<Byte>();
+        Byte b = toByte();
         if (b >= 0 && b <= 9)
             {
-            b = '0'.to<Byte>() + b;
+            b = '0'.toByte() + b;
             }
         else
             {
-            b = 'A'.to<Byte>() + b - 0xA;
+            b = 'A'.toByte() + b - 0xA;
             }
         return new Char(b);
         }
 
-    @Auto Byte to<Byte>()
+    @Auto Byte toByte()
         {
         return    (bits[0] == 0 ? 0 : 1)
                 + (bits[1] == 0 ? 0 : 2)
@@ -42,14 +42,14 @@ const Nibble
                 + (bits[3] == 0 ? 0 : 8);
         }
 
-    @Auto Int to<Int>()
+    @Auto Int toInt()
         {
-        return to<Byte>().to<Int>();
+        return toByte().toInt();
         }
 
-    @Auto UInt to<UInt>()
+    @Auto UInt toUInt()
         {
-        return to<Byte>().to<UInt>();
+        return toByte().toUInt();
         }
 
     /**

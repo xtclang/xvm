@@ -176,7 +176,7 @@ const Duration(UInt128 picoseconds)
      */
     static Duration ofDays(Int days)
         {
-        return new Duration(days.to<UInt128>() * PICOS_PER_DAY);
+        return new Duration(days.toUInt128() * PICOS_PER_DAY);
         }
 
     /**
@@ -186,7 +186,7 @@ const Duration(UInt128 picoseconds)
      */
     static Duration ofHours(Int hours)
         {
-        return new Duration(hours.to<UInt128>() * PICOS_PER_HOUR);
+        return new Duration(hours.toUInt128() * PICOS_PER_HOUR);
         }
 
     /**
@@ -196,7 +196,7 @@ const Duration(UInt128 picoseconds)
      */
     static Duration ofMinutes(Int minutes)
         {
-        return new Duration(minutes.to<UInt128>() * PICOS_PER_MINUTE);
+        return new Duration(minutes.toUInt128() * PICOS_PER_MINUTE);
         }
 
     /**
@@ -206,7 +206,7 @@ const Duration(UInt128 picoseconds)
      */
     static Duration ofSeconds(Int seconds)
         {
-        return new Duration(seconds.to<UInt128>() * PICOS_PER_SECOND);
+        return new Duration(seconds.toUInt128() * PICOS_PER_SECOND);
         }
 
     /**
@@ -216,7 +216,7 @@ const Duration(UInt128 picoseconds)
      */
     static Duration ofMillis(Int millis)
         {
-        return new Duration(millis.to<UInt128>() * PICOS_PER_MILLI);
+        return new Duration(millis.toUInt128() * PICOS_PER_MILLI);
         }
 
     /**
@@ -226,7 +226,7 @@ const Duration(UInt128 picoseconds)
      */
     static Duration ofMicros(Int micros)
         {
-        return new Duration(micros.to<UInt128>() * PICOS_PER_MICRO);
+        return new Duration(micros.toUInt128() * PICOS_PER_MICRO);
         }
 
     /**
@@ -236,7 +236,7 @@ const Duration(UInt128 picoseconds)
      */
     static Duration ofNanos(Int nanos)
         {
-        return new Duration(nanos.to<UInt128>() * PICOS_PER_NANO);
+        return new Duration(nanos.toUInt128() * PICOS_PER_NANO);
         }
 
     /**
@@ -246,7 +246,7 @@ const Duration(UInt128 picoseconds)
      */
     static Duration ofPicos(Int picos)
         {
-        return new Duration(picos.to<UInt128>());
+        return new Duration(picos.toUInt128());
         }
 
     /**
@@ -281,7 +281,7 @@ const Duration(UInt128 picoseconds)
                             + hours  ) * 60
                             + minutes) * 60
                             + seconds) * 1000
-                            + millis ).to<UInt128>() * PICOS_PER_MILLI + picos.to<UInt128>());
+                            + millis ).toUInt128() * PICOS_PER_MILLI + picos.toUInt128());
         }
 
     /**
@@ -291,7 +291,7 @@ const Duration(UInt128 picoseconds)
      */
     Int days.get()
         {
-        return (picoseconds / PICOS_PER_DAY).to<Int>();
+        return (picoseconds / PICOS_PER_DAY).toInt();
         }
 
     /**
@@ -301,7 +301,7 @@ const Duration(UInt128 picoseconds)
      */
     Int hours.get()
         {
-        return (picoseconds / PICOS_PER_HOUR).to<Int>();
+        return (picoseconds / PICOS_PER_HOUR).toInt();
         }
 
     /**
@@ -311,7 +311,7 @@ const Duration(UInt128 picoseconds)
      */
     Int minutes.get()
         {
-        return (picoseconds / PICOS_PER_MINUTE).to<Int>();
+        return (picoseconds / PICOS_PER_MINUTE).toInt();
         }
 
     /**
@@ -325,7 +325,7 @@ const Duration(UInt128 picoseconds)
      */
     Int seconds.get()
         {
-        return (picoseconds / PICOS_PER_SECOND).to<Int>();
+        return (picoseconds / PICOS_PER_SECOND).toInt();
         }
 
     /**
@@ -335,7 +335,7 @@ const Duration(UInt128 picoseconds)
      */
     Int milliseconds.get()
         {
-        return (picoseconds / PICOS_PER_MILLI).to<Int>();
+        return (picoseconds / PICOS_PER_MILLI).toInt();
         }
 
     /**
@@ -345,7 +345,7 @@ const Duration(UInt128 picoseconds)
      */
     Int microseconds.get()
         {
-        return (picoseconds / PICOS_PER_MICRO).to<Int>();
+        return (picoseconds / PICOS_PER_MICRO).toInt();
         }
 
     /**
@@ -355,7 +355,7 @@ const Duration(UInt128 picoseconds)
      */
     Int nanoseconds.get()
         {
-        return (picoseconds / PICOS_PER_NANO).to<Int>();
+        return (picoseconds / PICOS_PER_NANO).toInt();
         }
 
     /**
@@ -451,7 +451,7 @@ const Duration(UInt128 picoseconds)
      */
     Int picosecondsPart.get()
         {
-        return (picoseconds % PICOS_PER_SECOND).to<Int>();
+        return (picoseconds % PICOS_PER_SECOND).toInt();
         }
 
     /**
@@ -475,7 +475,7 @@ const Duration(UInt128 picoseconds)
      */
     @Op("*") Duration mul(Int factor)
         {
-        return new Duration(this.picoseconds * factor.to<UInt128>());
+        return new Duration(this.picoseconds * factor.toUInt128());
         }
 
     /**
@@ -483,7 +483,7 @@ const Duration(UInt128 picoseconds)
      */
     @Op("*") Duration mul(Dec factor)
         {
-        return new Duration((this.picoseconds.to<VarDec>() * factor.to<VarDec>()).to<UInt128>());
+        return new Duration((this.picoseconds.toVarDec() * factor.toVarDec()).toUInt128());
         }
 
     /**
@@ -491,7 +491,7 @@ const Duration(UInt128 picoseconds)
      */
     @Op("/") Duration div(Int divisor)
         {
-        return new Duration(this.picoseconds / divisor.to<UInt128>());
+        return new Duration(this.picoseconds / divisor.toUInt128());
         }
 
     @Override

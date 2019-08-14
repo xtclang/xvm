@@ -123,8 +123,8 @@ public class xArray
                 }
             }
 
-        // cache "Iterable.to<Array>()" method
-        ITERABLE_TO_ARRAY = f_templates.getClassStructure("Iterable").findMethod("to", 1);
+        // cache "Iterable.toArray()" method
+        ITERABLE_TO_ARRAY = f_templates.getClassStructure("Iterable").findMethod("toArray", 1);
 
         // cache Mutability template
         MUTABILITY = (xEnum) f_templates.getTemplate("collections.VariablyMutable.Mutability");

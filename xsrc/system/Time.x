@@ -79,8 +79,8 @@ const Time(Int picos)
                 throw new IllegalArgument($"invalid ISO-8601 time: \"{time}\"");
             }
 
-        Int hour = new IntLiteral(hours).to<Int>();
-        Int min  = new IntLiteral(mins ).to<Int>();
+        Int hour = new IntLiteral(hours).toInt();
+        Int min  = new IntLiteral(mins ).toInt();
         Int sec  = 0;
         Int pico = 0;
 
@@ -90,7 +90,7 @@ const Time(Int picos)
                 {
                 if (dot > 0)
                     {
-                    sec = new IntLiteral(secs[0..dot-1]).to<Int>();
+                    sec = new IntLiteral(secs[0..dot-1]).toInt();
                     }
 
                 Int len = secs.size;
@@ -102,12 +102,12 @@ const Time(Int picos)
                         picos = picos[0..11];
                         }
 
-                    pico = new IntLiteral(picos).to<Int>() * SCALE_10[picos.size];
+                    pico = new IntLiteral(picos).toInt() * SCALE_10[picos.size];
                     }
                 }
             else
                 {
-                sec = new IntLiteral(secs).to<Int>();
+                sec = new IntLiteral(secs).toInt();
                 }
             }
 
@@ -195,13 +195,13 @@ const Time(Int picos)
             return this;
             }
 
-        return new Time(((picos.to<UInt128>() + period) % PICOS_PER_DAY).to<Int>());
+        return new Time(((picos.toUInt128() + period) % PICOS_PER_DAY).toInt());
         }
 
     @Op("-") Time sub(Duration duration)
         {
         Int minuend    = this.picos;
-        Int subtrahend = (duration.picoseconds % PICOS_PER_DAY).to<Int>();
+        Int subtrahend = (duration.picoseconds % PICOS_PER_DAY).toInt();
         if (subtrahend > minuend)
             {
             minuend += PICOS_PER_DAY;
@@ -217,7 +217,7 @@ const Time(Int picos)
             {
             picosStop += PICOS_PER_DAY;
             }
-        return new Duration((picosStop - picosStart).to<UInt128>());
+        return new Duration((picosStop - picosStart).toUInt128());
         }
 
     // ----- conversions ---------------------------------------------------------------------------
@@ -225,9 +225,9 @@ const Time(Int picos)
     /**
      * @return the Duration of time since midnight represented by this Time object
      */
-    Duration to<Duration>()
+    Duration toDuration()
         {
-        return new Duration(picos.to<UInt128>());
+        return new Duration(picos.toUInt128());
         }
 
     // ----- Stringable ----------------------------------------------------------------------------

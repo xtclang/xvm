@@ -159,7 +159,7 @@ module TestArray.xqiz.it
         console.println("\n** testBits()");
 
         Int n = 17;
-        Bit[] bits = n.to<Bit[]>();
+        Bit[] bits = n.toBitArray();
         for (Bit bit : bits)
             {
             console.print(bit);

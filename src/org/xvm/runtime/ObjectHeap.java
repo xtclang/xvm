@@ -139,6 +139,7 @@ public class ObjectHeap
             case UInt128:
             case VarUInt:
             case FPLiteral:
+            case BFloat16:
             case Float16:
             case Float32:
             case Float64:

@@ -4,22 +4,22 @@ enum Boolean
     False
         {
         @Override
-        Bit to<Bit>()
+        Bit toBit()
             {
             return 0;
             }
         @Override
-        Byte to<Byte>()
+        Byte toByte()
             {
             return 0;
             }
         @Override
-        Int to<Int>()
+        Int toInt()
             {
             return 0;
             }
         @Override
-        UInt to<UInt>()
+        UInt toUInt()
             {
             return 0;
             }
@@ -48,22 +48,22 @@ enum Boolean
     True
         {
         @Override
-        Bit to<Bit>()
+        Bit toBit()
             {
             return 1;
             }
         @Override
-        Byte to<Byte>()
+        Byte toByte()
             {
             return 1;
             }
         @Override
-        Int to<Int>()
+        Int toInt()
             {
             return 1;
             }
         @Override
-        UInt to<UInt>()
+        UInt toUInt()
             {
             return 1;
             }
@@ -89,10 +89,10 @@ enum Boolean
             }
         };
 
-    Bit  to<Bit>();
-    Byte to<Byte>();
-    Int  to<Int>();
-    UInt to<UInt>();
+    Bit  toBit();
+    Byte toByte();
+    Int  toInt();
+    UInt toUInt();
 
     @Op Boolean and(Boolean that);
     @Op Boolean or(Boolean that);

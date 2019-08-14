@@ -164,9 +164,9 @@ const String
     /**
      * @return the characters of this String as an array
      */
-    Char[] to<Char[]>()
+    immutable Char[] toCharArray()
         {
-        return chars;
+        return chars.as(immutable Char[]);
         }
 
     /**

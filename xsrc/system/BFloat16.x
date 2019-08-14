@@ -1,10 +1,10 @@
-const Float32
+const BFloat16
         extends BinaryFPNumber
     {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a 32-bit binary floating point number (a "single float") from its bitwise machine
+     * Construct a 16-bit binary floating point number (a "brain float 16") from its bitwise machine
      * representation.
      *
      * @param bits  an array of bit values that represent this number, ordered from Least
@@ -13,19 +13,19 @@ const Float32
      */
     construct(Bit[] bits)
         {
-        assert bits.size == 32;
+        assert bits.size == 16;
         construct BinaryFPNumber(bits);
         }
 
     /**
-     * Construct a 32-bit binary floating point number from its network-portable representation.
+     * Construct a 16-bit "brain" floating point number from its network-portable representation.
      *
      * @param bytes  an array of byte values that represent this number, ordered from left-to-right,
      *               as they would appear on the wire or in a file
      */
     construct(Byte[] bytes)
         {
-        assert bytes.size == 4;
+        assert bytes.size == 2;
         construct BinaryFPNumber(bytes);
         }
 
@@ -42,49 +42,49 @@ const Float32
     // ----- Number operations ---------------------------------------------------------------------
 
     @Override
-    @Op Float32 add(Float32 n)
+    @Op BFloat16 add(BFloat16 n)
         {
         TODO
         }
 
     @Override
-    @Op Float32 sub(Float32 n)
+    @Op BFloat16 sub(BFloat16 n)
         {
         TODO
         }
 
     @Override
-    @Op Float32 mul(Float32 n)
+    @Op BFloat16 mul(BFloat16 n)
         {
         TODO
         }
 
     @Override
-    @Op Float32 div(Float32 n)
+    @Op BFloat16 div(BFloat16 n)
         {
         TODO
         }
 
     @Override
-    @Op Float32 mod(Float32 n)
+    @Op BFloat16 mod(BFloat16 n)
         {
         TODO
         }
 
     @Override
-    Float32 abs()
+    BFloat16 abs()
         {
         return this < 0 ? -this : this;
         }
 
     @Override
-    @Op Float32 neg()
+    @Op BFloat16 neg()
         {
         TODO
         }
 
     @Override
-    Float32 pow(Float32 n)
+    BFloat16 pow(BFloat16 n)
         {
         TODO
         }
@@ -114,97 +114,97 @@ const Float32
     // ----- FPNumber operations -------------------------------------------------------------------
 
     @Override
-    Float32 round()
+    BFloat16 round()
         {
         TODO
         }
 
     @Override
-    Float32 floor()
+    BFloat16 floor()
         {
         TODO
         }
 
     @Override
-    Float32 ceil()
+    BFloat16 ceil()
         {
         TODO
         }
 
     @Override
-    Float32 exp()
+    BFloat16 exp()
         {
         TODO
         }
 
     @Override
-    Float32 log()
+    BFloat16 log()
         {
         TODO
         }
 
     @Override
-    Float32 log10()
+    BFloat16 log10()
         {
         TODO
         }
 
     @Override
-    Float32 sqrt()
+    BFloat16 sqrt()
         {
         TODO
         }
 
     @Override
-    Float32 cbrt()
+    BFloat16 cbrt()
         {
         TODO
         }
 
     @Override
-    Float32 sin()
+    BFloat16 sin()
         {
         TODO
         }
 
     @Override
-    Float32 cos()
+    BFloat16 cos()
         {
         TODO
         }
 
     @Override
-    Float32 tan()
+    BFloat16 tan()
         {
         TODO
         }
 
     @Override
-    Float32 asin()
+    BFloat16 asin()
         {
         TODO
         }
 
     @Override
-    Float32 acos()
+    BFloat16 acos()
         {
         TODO
         }
 
     @Override
-    Float32 atan()
+    BFloat16 atan()
         {
         TODO
         }
 
     @Override
-    Float32 deg2rad()
+    BFloat16 deg2rad()
         {
         TODO
         }
 
     @Override
-    Float32 rad2deg()
+    BFloat16 rad2deg()
         {
         TODO
         }
@@ -213,7 +213,7 @@ const Float32
     // ----- conversions ---------------------------------------------------------------------------
 
     @Override
-    Float32! toFloat32()
+    BFloat16! toBFloat16()
         {
         return this;
         }

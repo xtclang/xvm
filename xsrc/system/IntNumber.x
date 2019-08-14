@@ -5,10 +5,31 @@ const IntNumber
         extends Number
         implements Sequential
     {
+    // ----- constructors --------------------------------------------------------------------------
+
+    /**
+     * Construct an integer number from its bitwise machine representation.
+     *
+     * @param bits  an array of bit values that represent this number, ordered from Least
+     *              Significant Bit (LSB) in the `0` element, to Most Significant Bit (MSB) in the
+     *              `size-1` element
+     */
     protected construct(Bit[] bits)
         {
         construct Number(bits);
         }
+
+    /**
+     * Construct an integer number from its network-portable representation.
+     *
+     * @param bytes  an array of byte values that represent this number, ordered from left-to-right,
+     *               as they would appear on the wire or in a file
+     */
+    protected construct(Byte[] bytes)
+        {
+        construct Number(bytes);
+        }
+
 
     // ----- Number --------------------------------------------------------------------------------
 
@@ -21,7 +42,7 @@ const IntNumber
     @Override
     Int stepsTo(IntNumber that)
         {
-        return (that - this).to<Int>();
+        return (that - this).toInt();
         }
 
 
@@ -161,17 +182,27 @@ const IntNumber
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
+     * Convert the number to a Nibble (4-bit) integer.
+     * Any additional magnitude is discarded; any fractional value is discarded.
+     * REVIEW maybe this should be on Byte or IntNumber instead?
+     */
+    Nibble toNibble()
+        {
+        return toVarInt().toNibble();
+        }
+
+    /**
      * Convert the integer number to a character.
      */
-    Char to<Char>()
+    Char toChar()
         {
-        return new Char(to<UInt32>());
+        return new Char(toUInt32());
         }
 
     /**
      * Obtain the number as an array of boolean values.
      */
-    Boolean[] to<Boolean[]>();
+    immutable Boolean[] toBooleanArray();
 
     /**
      * Obtain the integer number as an integer that does not check for overflow or underflow.
@@ -433,9 +464,9 @@ const IntNumber
     /**
      * @return a new Boolean array for this bit array.
      */
-    static Boolean[] bitBooleans(Bit[] bits)
+    static immutable Boolean[] bitBooleans(Bit[] bits)
         {
-        return new Array<Boolean>(bits.size, i -> bits[i] == 1);
+        return new Array<Boolean>(bits.size, i -> bits[i] == 1).ensureConst();
         }
 
     // ----- Stringable ----------------------------------------------------------------------------

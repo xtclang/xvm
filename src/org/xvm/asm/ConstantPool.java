@@ -452,6 +452,36 @@ public class ConstantPool
         }
 
     /**
+     * Given the specified decimal floating point value (stored in a byte array), obtain a
+     * VarFPConstant that represents it.
+     *
+     * @param abVal  the floating point value encoded in 2, 4, 8, 16, 32 (and so on) bytes
+     *
+     * @return a VarFPConstant for the passed floating point value
+     */
+    public VarFPConstant ensureVarDecimalConstant(byte[] abVal)
+        {
+        return (VarFPConstant) register(new VarFPConstant(this, Format.VarDec, abVal));
+        }
+
+    /**
+     * Given the specified floating point value, obtain a BFloat16Constant that represents it.
+     *
+     * @param flVal  the floating point value
+     *
+     * @return a BFloat16Constant for the passed floating point value
+     */
+    public BFloat16Constant ensureBFloat16Constant(float flVal)
+        {
+        BFloat16Constant constant = (BFloat16Constant) ensureLocatorLookup(Format.BFloat16).get(flVal);
+        if (constant == null)
+            {
+            constant = (BFloat16Constant) register(new BFloat16Constant(this, flVal));
+            }
+        return constant;
+        }
+
+    /**
      * Given the specified floating point value, obtain a Float16Constant that represents it.
      *
      * @param flVal  the floating point value
@@ -513,6 +543,19 @@ public class ConstantPool
     public Float128Constant ensureFloat128Constant(byte[] abVal)
         {
         return (Float128Constant) register(new Float128Constant(this, abVal));
+        }
+
+    /**
+     * Given the specified binary floating point value (stored in a byte array), obtain a
+     * VarFPConstant that represents it.
+     *
+     * @param abVal  the floating point value encoded in 2, 4, 8, 16, 32 (and so on) bytes
+     *
+     * @return a VarFPConstant for the passed floating point value
+     */
+    public VarFPConstant ensureVarFloatConstant(byte[] abVal)
+        {
+        return (VarFPConstant) register(new VarFPConstant(this, Format.VarFloat, abVal));
         }
 
     /**
@@ -2342,6 +2385,10 @@ public class ConstantPool
                 case UInt128:
                 case VarUInt:
                     constant = new IntConstant(this, format, in);
+                    break;
+
+                case BFloat16:
+                    constant = new BFloat16Constant(this, format, in);
                     break;
 
                 case Float16:

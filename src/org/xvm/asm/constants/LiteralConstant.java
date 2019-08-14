@@ -544,6 +544,15 @@ public class LiteralConstant
         }
 
     /**
+     * @return the equivalent BFloat16Constant for this LiteralConstant
+     */
+    public BFloat16Constant toBFloat16Constant()
+        {
+        assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
+        return getConstantPool().ensureBFloat16Constant(getFloat());
+        }
+
+    /**
      * @return the equivalent Float16Constant for this LiteralConstant
      */
     public Float16Constant toFloat16Constant()
@@ -576,6 +585,33 @@ public class LiteralConstant
     public Float128Constant toFloat128Constant()
         {
         assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
+
+        byte[] ab = null;
+
+        if (m_fmt == Format.IntLiteral)
+            {
+            PackedInteger pi = getPackedInteger();
+            if (!pi.isBig())
+                {
+                long l = pi.getLong();
+                if (l == 0)
+                    {
+                    ab = new byte[16];
+                    if (getValue().startsWith("-"))
+                        {
+                        ab[0] = (byte) 0x80;
+                        }
+                    }
+                }
+            }
+
+        // TODO
+
+        if (ab != null)
+            {
+            return getConstantPool().ensureFloat128Constant(ab);
+            }
+
         throw new UnsupportedOperationException();
         }
 
@@ -586,6 +622,33 @@ public class LiteralConstant
     public VarFPConstant toVarFloatConstant()
         {
         assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
+
+        byte[] ab = null;
+
+        if (m_fmt == Format.IntLiteral)
+            {
+            PackedInteger pi = getPackedInteger();
+            if (!pi.isBig())
+                {
+                long l = pi.getLong();
+                if (l == 0)
+                    {
+                    ab = new byte[2];
+                    if (getValue().startsWith("-"))
+                        {
+                        ab[0] = (byte) 0x80;
+                        }
+                    }
+                }
+            }
+
+        // TODO
+
+        if (ab != null)
+            {
+            return getConstantPool().ensureVarFloatConstant(ab);
+            }
+
         throw new UnsupportedOperationException();
         }
 
@@ -606,6 +669,33 @@ public class LiteralConstant
     public VarFPConstant toVarDecConstant()
         {
         assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
+
+        byte[] ab = null;
+
+        if (m_fmt == Format.IntLiteral)
+            {
+            PackedInteger pi = getPackedInteger();
+            if (!pi.isBig())
+                {
+                long l = pi.getLong();
+                if (l == 0)
+                    {
+                    ab = new byte[4];
+                    if (getValue().startsWith("-"))
+                        {
+                        ab[0] = (byte) 0x80;
+                        }
+                    }
+                }
+            }
+
+        // TODO
+
+        if (ab != null)
+            {
+            return getConstantPool().ensureVarDecimalConstant(ab);
+            }
+
         throw new UnsupportedOperationException();
         }
 
@@ -1043,6 +1133,30 @@ public class LiteralConstant
             case "FPLiteral<=>Float16":
                 return this.toFloat16Constant().apply(op, that);
 
+            case "IntLiteral+BFloat16":
+            case "IntLiteral-BFloat16":
+            case "IntLiteral*BFloat16":
+            case "IntLiteral/BFloat16":
+            case "IntLiteral==BFloat16":
+            case "IntLiteral!=BFloat16":
+            case "IntLiteral<BFloat16":
+            case "IntLiteral<=BFloat16":
+            case "IntLiteral>BFloat16":
+            case "IntLiteral>=BFloat16":
+            case "IntLiteral<=>BFloat16":
+            case "FPLiteral+BFloat16":
+            case "FPLiteral-BFloat16":
+            case "FPLiteral*BFloat16":
+            case "FPLiteral/BFloat16":
+            case "FPLiteral==BFloat16":
+            case "FPLiteral!=BFloat16":
+            case "FPLiteral<BFloat16":
+            case "FPLiteral<=BFloat16":
+            case "FPLiteral>BFloat16":
+            case "FPLiteral>=BFloat16":
+            case "FPLiteral<=>BFloat16":
+                return this.toBFloat16Constant().apply(op, that);
+
             case "IntLiteral+Float32":
             case "IntLiteral-Float32":
             case "IntLiteral*Float32":
@@ -1274,6 +1388,10 @@ public class LiteralConstant
 
             case "IntLiteral->FPLiteral":
                 return getConstantPool().ensureLiteralConstant(Format.FPLiteral, getValue());
+
+            case "IntLiteral->BFloat16":
+            case "FPLiteral->BFloat16":
+                return toBFloat16Constant();
 
             case "IntLiteral->Float16":
             case "FPLiteral->Float16":

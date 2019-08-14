@@ -42,16 +42,16 @@ public abstract class xBaseInt128
 
         markNativeMethod("toUnchecked", VOID, null);
 
-        markNativeMethod("to", VOID, sName.equals("Int128") ? THIS : new String[]{"Int128"});
-        markNativeMethod("to", VOID, new String[]{"Int64"});
-        markNativeMethod("to", VOID, new String[]{"Int32"});
-        markNativeMethod("to", VOID, new String[]{"Int16"});
-        markNativeMethod("to", VOID, new String[]{"Int8"});
-        markNativeMethod("to", VOID, sName.equals("UInt128") ? THIS : new String[]{"UInt128"});
-        markNativeMethod("to", VOID, new String[]{"UInt64"});
-        markNativeMethod("to", VOID, new String[]{"UInt32"});
-        markNativeMethod("to", VOID, new String[]{"UInt16"});
-        markNativeMethod("to", VOID, new String[]{"UInt8"});
+        markNativeMethod("toInt128" , VOID, sName.equals("Int128") ? THIS : new String[]{"Int128"});
+        markNativeMethod("toInt"    , VOID, new String[]{"Int64"});
+        markNativeMethod("toInt32"  , VOID, new String[]{"Int32"});
+        markNativeMethod("toInt16"  , VOID, new String[]{"Int16"});
+        markNativeMethod("toInt8"   , VOID, new String[]{"Int8"});
+        markNativeMethod("toUInt128", VOID, sName.equals("UInt128") ? THIS : new String[]{"UInt128"});
+        markNativeMethod("toUInt"   , VOID, new String[]{"UInt64"});
+        markNativeMethod("toUInt32" , VOID, new String[]{"UInt32"});
+        markNativeMethod("toUInt16" , VOID, new String[]{"UInt16"});
+        markNativeMethod("toByte"   , VOID, new String[]{"UInt8"});
 
         // @Op methods
         markNativeMethod("abs", VOID, THIS);
@@ -147,7 +147,16 @@ public abstract class xBaseInt128
                 return frame.raiseException(xException.unsupportedOperation());
                 }
 
-            case "to":
+            case "toInt8":
+            case "toInt16":
+            case "toInt32":
+            case "toInt":
+            case "toInt128":
+            case "toByte":
+            case "toUInt16":
+            case "toUInt32":
+            case "toUInt":
+            case "toUInt128":
                 {
                 TypeConstant  typeRet  = method.getReturn(0).getType();
                 ClassTemplate template = f_templates.getTemplate(typeRet);

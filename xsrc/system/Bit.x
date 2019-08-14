@@ -10,29 +10,29 @@ const Bit
 
     private IntLiteral literal;
 
-    IntLiteral to<IntLiteral>()
+    IntLiteral toIntLiteral()
         {
         return literal;
         }
 
-    Boolean to<Boolean>()
+    Boolean toBoolean()
         {
         return literal == 1;
         }
 
-    @Auto Byte to<Byte>()
+    @Auto Byte toByte()
         {
-        return literal.to<Byte>();
+        return literal.toByte();
         }
 
-    @Auto Int to<Int>()
+    @Auto Int toInt()
         {
-        return literal.to<Int>();
+        return literal.toInt();
         }
 
-    @Auto UInt to<UInt>()
+    @Auto UInt toUInt()
         {
-        return literal.to<UInt>();
+        return literal.toUInt();
         }
 
     @Op("&")
@@ -58,6 +58,7 @@ const Bit
         {
         return literal == 1 ? 0 : 1;
         }
+
 
     // ----- Sequential interface ------------------------------------------------------------------
 
@@ -89,6 +90,7 @@ const Bit
         return that - this;
         }
 
+
     // ----- Stringable ----------------------------------------------------------------------------
 
     @Override
@@ -100,6 +102,6 @@ const Bit
     @Override
     void appendTo(Appender<Char> appender)
         {
-        appender.add(to<Boolean>() ? '1' : '0');
+        appender.add(toBoolean() ? '1' : '0');
         }
     }

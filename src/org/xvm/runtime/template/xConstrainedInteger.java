@@ -62,24 +62,24 @@ public abstract class xConstrainedInteger
 
         markNativeMethod("toUnchecked", VOID, null);
 
-        markNativeMethod("to", VOID, sName.equals("Int64")  ? THIS : new String[]{"Int64"});
-        markNativeMethod("to", VOID, sName.equals("Int32")  ? THIS : new String[]{"Int32"});
-        markNativeMethod("to", VOID, sName.equals("Int16")  ? THIS : new String[]{"Int16"});
-        markNativeMethod("to", VOID, sName.equals("Int8")   ? THIS : new String[]{"Int8"});
-        markNativeMethod("to", VOID, sName.equals("UInt64") ? THIS : new String[]{"UInt64"});
-        markNativeMethod("to", VOID, sName.equals("UInt32") ? THIS : new String[]{"UInt32"});
-        markNativeMethod("to", VOID, sName.equals("UInt16") ? THIS : new String[]{"UInt16"});
-        markNativeMethod("to", VOID, sName.equals("UInt8")  ? THIS : new String[]{"UInt8"});
+        markNativeMethod("toInt8"  , VOID, sName.equals("Int8")   ? THIS : new String[]{"Int8"});
+        markNativeMethod("toInt16" , VOID, sName.equals("Int16")  ? THIS : new String[]{"Int16"});
+        markNativeMethod("toInt32" , VOID, sName.equals("Int32")  ? THIS : new String[]{"Int32"});
+        markNativeMethod("toInt"   , VOID, sName.equals("Int64")  ? THIS : new String[]{"Int64"});
+        markNativeMethod("toByte"  , VOID, sName.equals("UInt8")  ? THIS : new String[]{"UInt8"});
+        markNativeMethod("toUInt16", VOID, sName.equals("UInt16") ? THIS : new String[]{"UInt16"});
+        markNativeMethod("toUInt32", VOID, sName.equals("UInt32") ? THIS : new String[]{"UInt32"});
+        markNativeMethod("toUInt"  , VOID, sName.equals("UInt64") ? THIS : new String[]{"UInt64"});
 
-        markNativeMethod("to", VOID, new String[]{"Int128"});
-        markNativeMethod("to", VOID, new String[]{"UInt128"});
-        markNativeMethod("to", VOID, new String[]{"VarInt"});
-        markNativeMethod("to", VOID, new String[]{"VarUInt"});
-        markNativeMethod("to", VOID, new String[]{"VarFloat"});
-        markNativeMethod("to", VOID, new String[]{"VarDec"});
-        markNativeMethod("to", VOID, new String[]{"Char"});
-        markNativeMethod("to", VOID, new String[]{"collections.Array<Boolean>"});
-        markNativeMethod("to", VOID, new String[]{"collections.Array<Bit>"});
+        markNativeMethod("toInt128"      , VOID, new String[]{"Int128"});
+        markNativeMethod("toUInt128"     , VOID, new String[]{"UInt128"});
+        markNativeMethod("toVarInt"      , VOID, new String[]{"VarInt"});
+        markNativeMethod("toVarUInt"     , VOID, new String[]{"VarUInt"});
+        markNativeMethod("toVarFloat"    , VOID, new String[]{"VarFloat"});
+        markNativeMethod("toVarDec"      , VOID, new String[]{"VarDec"});
+        markNativeMethod("toChar"        , VOID, new String[]{"Char"});
+        markNativeMethod("toBooleanArray", VOID, new String[]{"collections.Array<Boolean>"});
+        markNativeMethod("toBitArray"    , VOID, new String[]{"collections.Array<Bit>"});
 
         markNativeMethod("rotateLeft"   , INT , THIS);
         markNativeMethod("rotateRight"  , INT , THIS);
@@ -286,7 +286,23 @@ public abstract class xConstrainedInteger
                 return frame.assignValue(iReturn, getUncheckedTemplate().makeJavaLong(l));
                 }
 
-            case "to":
+            case "toInt8":
+            case "toInt16":
+            case "toInt32":
+            case "toInt":
+            case "toInt128":
+            case "toByte":
+            case "toUInt16":
+            case "toUInt32":
+            case "toUInt":
+            case "toUInt128":
+            case "toVarInt":
+            case "toVarUInt":
+            case "toVarFloat":
+            case "toVarDec":
+            case "toChar":
+            case "toBooleanArray":
+            case "toBitArray":
                 {
                 TypeConstant  typeRet  = method.getReturn(0).getType();
                 ClassTemplate template = f_templates.getTemplate(typeRet);

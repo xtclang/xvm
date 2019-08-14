@@ -498,7 +498,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     /**
      * Obtain a public type for this Class instance.
      */
-    @Auto Type to<Type>()
+    @Auto Type toType()
         {
         return PublicType;
         }

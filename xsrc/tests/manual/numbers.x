@@ -39,13 +39,13 @@ module TestNumbers.xqiz.it
             {
             }
 
-        Int un1 = Int.maxvalue.to<Int>().toUnchecked();
+        Int un1 = Int.maxvalue.toInt().toUnchecked();
         Int un2 = un1 + 1;
 
         assert un2 == Int.minvalue; // wraps around w/out exception
         assert un2.is(@Unchecked Int);
 
-        UInt un3 = UInt.maxvalue.to<UInt>().toUnchecked();
+        UInt un3 = UInt.maxvalue.toUInt().toUnchecked();
         UInt un4 = ++un3;
         assert un4 == 0;
 
@@ -78,13 +78,13 @@ module TestNumbers.xqiz.it
             }
 
         // Byte == UInt8
-        Byte un1 = Byte.maxvalue.to<Byte>().toUnchecked();
+        Byte un1 = Byte.maxvalue.toByte().toUnchecked();
         Byte un2 = un1 + 1;
 
         assert un2 == 0; // wraps around w/out exception
         assert un2.is(@Unchecked Byte);
 
-        Int8 un3 = Int8.maxvalue.to<Int8>().toUnchecked();
+        Int8 un3 = Int8.maxvalue.toInt8().toUnchecked();
         Int8 un4 = ++un3;
         assert un4 == Int8.minvalue;
 

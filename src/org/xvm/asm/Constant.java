@@ -253,6 +253,8 @@ public abstract class Constant
             case "VarDec":
                 throw new UnsupportedOperationException();
 
+            case "BFloat16":
+                return pool.ensureBFloat16Constant(0.0f);
             case "Float16":
                 return pool.ensureFloat16Constant(0.0f);
             case "Float32":
@@ -784,6 +786,7 @@ public abstract class Constant
         UInt128,
         VarUInt,
         FPLiteral,
+        BFloat16,
         Float16,
         Float32,
         Float64,

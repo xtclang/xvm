@@ -134,7 +134,7 @@ interface Sequence<ElementType>
      * @return an array of elements from this sequence
      */
     @Override
-    ElementType[] to<ElementType[]>(VariablyMutable.Mutability mutability = Persistent)
+    ElementType[] toArray(VariablyMutable.Mutability mutability = Persistent)
         {
         return new Array<ElementType>(mutability, this);
         }
@@ -156,6 +156,18 @@ interface Sequence<ElementType>
      */
     @Op("[..]")
     Sequence slice(Range<Int> range);
+
+    /**
+     * Obtain a Sequence that represents the revers order of this Sequence. This is likely to create
+     * a new Sequence.
+     *
+     * @return a Sequence that is in the reverse order as this Sequence
+     */
+    Sequence reverse()
+        {
+        Int count = size;
+        return count <= 1 ? this : slice(count-1..0);
+        }
 
     /**
      * Obtain a Sequence of the same length and that contains the same values as this Sequence, but
