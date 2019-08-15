@@ -201,12 +201,10 @@ public class TernaryExpression
                 if (typeResult == null)
                     {
                     typeResult = pool.ensureIntersectionTypeConstant(typeThen, typeElse);
-                    if (!typeResult.isA(typeRequired))
+                    if (typeRequired != null && !typeResult.isA(typeRequired))
                         {
-                        // leave as is (but not null)
-                        typeResult = typeRequired == null
-                                ? pool.typeObject()
-                                : typeRequired;
+                        // leave as is
+                        typeResult = typeRequired;
                         }
                     }
                 break;
