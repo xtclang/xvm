@@ -197,11 +197,11 @@ public class UnresolvedTypeConstant
         }
 
     @Override
-    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
+    public TypeConstant resolveConstraints(ConstantPool pool)
         {
         return m_type == null
-                ? super.cloneSingle(pool, type)
-                : m_type.cloneSingle(pool, type);
+                ? this
+                : m_type.resolveConstraints(pool);
         }
 
     @Override
