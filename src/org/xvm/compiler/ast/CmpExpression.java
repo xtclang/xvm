@@ -12,7 +12,6 @@ import org.xvm.asm.OpCondJump;
 import org.xvm.asm.OpTest;
 
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.Cmp;
 import org.xvm.asm.op.IsEq;
@@ -135,7 +134,7 @@ public class CmpExpression
             ctx = ctx.exit();
             }
 
-        TypeConstant typeRequest = Op.selectCommonType(type1, type2, errs);
+        TypeConstant typeRequest = chooseCommonType(type1, type2, false);
         Expression   expr1New    = expr1.validate(ctx, typeRequest, errs);
         if (expr1New == null)
             {
@@ -150,7 +149,7 @@ public class CmpExpression
             // that the first expression is validated
             if (typeRequest == null)
                 {
-                typeRequest = Op.selectCommonType(type1, type2, errs);
+                typeRequest = chooseCommonType(type1, type2, false);
                 }
             }
 
@@ -178,7 +177,7 @@ public class CmpExpression
                 ConstantPool pool = pool();
 
                 // make sure that we can compare the left value to the right value
-                TypeConstant typeCommon = chooseCommonType(type1, type2);
+                TypeConstant typeCommon = chooseCommonType(type1, type2, true);
                 if (typeCommon == null)
                     {
                     // try to resolve the types using the current context
@@ -186,7 +185,7 @@ public class CmpExpression
                     TypeConstant        type1R   = type1.resolveGenerics(pool, resolver);
                     TypeConstant        type2R   = type2.resolveGenerics(pool, resolver);
 
-                    typeCommon = chooseCommonType(type1R, type2R);
+                    typeCommon = chooseCommonType(type1R, type2R, true);
                     }
 
                 if (typeCommon == null)
@@ -241,35 +240,74 @@ public class CmpExpression
                 fValid ? TypeFit.Fit : TypeFit.NoFit, constVal, errs);
         }
 
-    private TypeConstant chooseCommonType(TypeConstant type1, TypeConstant type2)
+    /**
+     * Choose a common type for the specified types.
+     *
+     * @param type1   the first type
+     * @param type2   the second type
+     * @param fCheck  if true, ensure the common type has the required function
+     *
+     * @return the common type; null if there is no common type
+     */
+    private TypeConstant chooseCommonType(TypeConstant type1, TypeConstant type2, boolean fCheck)
         {
+        TypeConstant typeCommon = Op.selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
+
+        if (type1 == null || type2 == null)
+            {
+            return typeCommon;
+            }
+
         ConstantPool pool = pool();
 
-        TypeConstant typeCommon = Op.selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
-        if (typeCommon == null)
-            {
-            // equality check for any Ref objects is allowed
-            if (usesEquals()
-                    && type1 != null && type1.isA(pool.typeRef())
-                    && type2 != null && type2.isA(pool.typeRef()))
-                {
-                return pool.typeRef();
-                }
-            }
-        else
+        if (typeCommon != null && fCheck)
             {
             boolean fConstant1 = expr1.isConstant();
             boolean fConstant2 = expr2.isConstant();
+
             if (usesEquals()
-                    ? typeCommon.supportsEquals(pool,  type1, fConstant1) &&
-                      typeCommon.supportsEquals(pool,  type2, fConstant2)
+                    ? typeCommon.supportsEquals (pool,  type1, fConstant1) &&
+                      typeCommon.supportsEquals (pool,  type2, fConstant2)
+                   // Compare
                     : typeCommon.supportsCompare(pool, type1, fConstant1) &&
                       typeCommon.supportsCompare(pool, type2, fConstant2))
                 {
                 return typeCommon;
                 }
+
+            // the support check failed; go to the resolution logic
+            typeCommon = null;
             }
-        return null;
+
+        if (typeCommon == null)
+            {
+            // equality check for any Ref objects is allowed
+            if (usesEquals()
+                    && type1.isA(pool.typeRef())
+                    && type2.isA(pool.typeRef()))
+                {
+                return pool.typeRef();
+                }
+
+            // try to resolve formal types
+            boolean fFormal1 = type1.containsFormalType();
+            boolean fFormal2 = type2.containsFormalType();
+
+            if (fFormal1 || fFormal2)
+                {
+                if (fFormal1)
+                    {
+                    type1 = type1.resolveConstraints(pool);
+                    }
+                if (fFormal2)
+                    {
+                    type2 = type2.resolveConstraints(pool);
+                    }
+                // since it's guaranteed that neither type contains formal, we can recurse
+                typeCommon = chooseCommonType(type1, type2, fCheck);
+                }
+            }
+        return typeCommon;
         }
 
     private boolean checkNullComparison(Context ctx, NameExpression exprTarget, ErrorListener errs)

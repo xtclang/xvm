@@ -1616,16 +1616,15 @@ class Array<ElementType>
 
                 case Positive:
                     // this byte array is missing some leading bytes; fill them in with 0s or Fs
-                    Byte fill = this[0]/*TODO remove*/.as(Byte) & 0x80 == 0 ? 0x00 : 0xFF;
-                    return new Array<Byte>(n, i -> (i < delta ? fill : this[i-delta]/*TODO remove*/.as(Byte)).as(ElementType));
-                    // return new Array<Byte>(n, i -> i < delta ? fill : this[i-delta]);
+                    Byte fill = this[0] & 0x80 == 0 ? 0x00 : 0xFF;
+                    return new Array<Byte>(n, i -> (i < delta ? fill : this[i-delta]));
 
                 case Negative:
                     // make sure that all of the extra bytes are 0s or Fs (and then discard them)
-                    Byte expect = this[delta]/*TODO remove*/.as(Byte) & 0x80 == 0 ? 0x00 : 0xFF;
+                    Byte expect = this[delta] & 0x80 == 0 ? 0x00 : 0xFF;
                     for (Byte byte : this[0..-1-delta])
                         {
-                        assert:bounds byte/*TODO remove*/.as(Byte) == expect;
+                        assert:bounds byte == expect;
                         }
                     return this[size-n .. size-1];
                 }
@@ -1655,14 +1654,13 @@ class Array<ElementType>
 
                 case Positive:
                     // this byte array is missing some leading bytes; fill them in with 0s
-                    return new Array<Byte>(n, i -> (i < delta ? 0 : this[i-delta]/*TODO remove*/.as(Byte)).as(ElementType));
-                    // return new Array<Byte>(n, i -> i < delta ? 0 : this[i-delta]);
+                    return new Array<Byte>(n, i -> (i < delta ? 0 : this[i-delta]));
 
                 case Negative:
                     // make sure that all of the extra bytes are zeros (and then discard them)
                     for (Byte byte : this[0..-1-delta])
                         {
-                        assert:bounds byte/*TODO remove*/.as(Byte) == 0;
+                        assert:bounds byte == 0;
                         }
                     return this[size-n .. size-1];
                 }

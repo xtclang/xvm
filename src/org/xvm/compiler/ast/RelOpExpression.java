@@ -9,6 +9,7 @@ import java.util.Set;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
@@ -429,7 +430,28 @@ public class RelOpExpression
         int            cExpected    = fMulti ? 2 : 1;
         int            cResults     = cExpected;
         TypeConstant[] atypeResults = null;
-        MethodConstant idOp         = findOpMethod(type1Act, type2Act, typeRequired, errs);
+        ErrorList      errsTemp     = new ErrorList(1);
+        MethodConstant idOp         = findOpMethod(type1Act, type2Act, typeRequired, errsTemp);
+
+        if (idOp == null)
+            {
+            // try to resolve the formal types and see if there is an op that matches
+            if (type1Act.containsFormalType() || type2Act.containsFormalType())
+                {
+                ConstantPool pool = pool();
+
+                type1Act = type1Act.resolveConstraints(pool);
+                type2Act = type2Act.resolveConstraints(pool);
+
+                idOp = findOpMethod(type1Act, type2Act, typeRequired, ErrorListener.BLACKHOLE);
+                }
+
+            if (idOp == null)
+                {
+                errsTemp.logTo(errs);
+                }
+            }
+
         if (idOp != null)
             {
             atypeResults = idOp.getRawReturns();
@@ -443,7 +465,7 @@ public class RelOpExpression
                 }
 
             TypeConstant[] atypeFake = fMulti
-                    ? new TypeConstant[] {type1Act, type1Act}
+                    ? new TypeConstant[] {type1Act, type2Act}
                     : new TypeConstant[] {type1Act};
             return finishValidations(atypeRequired, atypeFake, TypeFit.NoFit, null, errs);
             }
@@ -454,7 +476,6 @@ public class RelOpExpression
         if (expr1New.isConstant() && expr2New.isConstant())
             {
             // delegate the operation to the constants
-            TypeConstant typeResult  = atypeResults[0];
             try
                 {
                 Constant constResult = expr1New.toConstant().apply(operator.getId(), expr2New.toConstant());
@@ -703,7 +724,6 @@ public class RelOpExpression
 
         if (idConv != null)
             {
-            assert typeRequired != null;
             return idConv;
             }
 
