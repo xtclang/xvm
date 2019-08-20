@@ -546,24 +546,19 @@ public class AnnotatedTypeConstant
     @Override
     public boolean validate(ErrorListener errs)
         {
-        boolean fBad  = false;
-        boolean fHalt = false;
-
         if (!isValidated())
             {
-            fHalt |= super.validate(errs);
-
             // an annotated type constant can modify a parameterized or a terminal type constant
             // that refers to a class/interface
             TypeConstant typeBase = m_constType.resolveTypedefs();
             if (!(typeBase instanceof AnnotatedTypeConstant || typeBase.isExplicitClassIdentity(true)))
                 {
-                fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_ILLEGAL, typeBase.getValueString());
-                fBad   = true;
+                log(errs, Severity.ERROR, VE_ANNOTATION_ILLEGAL, typeBase.getValueString());
+                return true;
                 }
 
             // validate the annotation itself
-            fHalt |= m_annotation.validate(errs);
+            boolean fBad = m_annotation.validate(errs);
 
             // make sure that this annotation is not repeated
             ClassConstant idAnno = (ClassConstant) m_annotation.getAnnotationClass();
@@ -573,27 +568,33 @@ public class AnnotatedTypeConstant
                 {
                 if (((AnnotatedTypeConstant) typeNext).m_annotation.getAnnotationClass().equals(idAnno))
                     {
-                    fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_REDUNDANT, idAnno.getValueString());
-                    fBad   = true;
+                    log(errs, Severity.ERROR, VE_ANNOTATION_REDUNDANT, idAnno.getValueString());
+                    fBad = true;
                     break;
                     }
                 }
 
-            if (!fBad && !fHalt)
+            if (!fBad)
                 {
                 TypeConstant typeMixin = getAnnotationType();
                 TypeConstant typeInto  = typeMixin.getExplicitClassInto();
                 if (!m_constType.isA(typeInto))
                     {
-                    fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
+                    log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
                             m_constType.getValueString(),
                             idAnno.getValueString(),
                             typeInto.getValueString());
+                    fBad = true;
                     }
+                }
+
+            if (!fBad)
+                {
+                return super.validate(errs);
                 }
             }
 
-        return fHalt;
+        return false;
         }
 
 

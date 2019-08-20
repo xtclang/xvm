@@ -551,7 +551,10 @@ public interface Constants
      * Unexpected auto-narrowing contribution "{0}" for type "{1}".
      */
     public static final String VE_UNEXPECTED_AUTO_NARROW              = "VERIFY-93";
-
+    /**
+     * A virtual child {0} cannot be found on {1}.
+     */
+    public static final String VE_VIRTUAL_CHILD_MISSING               = "VERIFY-94";
 
     // ----- miscellaneous -------------------------------------------------------------------------
 

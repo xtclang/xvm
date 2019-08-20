@@ -598,9 +598,11 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public boolean validate(ErrorListener errlist)
+    public boolean validate(ErrorListener errs)
         {
-        return !isValidated() && (super.validate(errlist) | m_constType2.validate(errlist));
+        return !isValidated()
+            && m_constType1.validate(errs) && m_constType2.validate(errs)
+            && super.validate(errs);
         }
 
 

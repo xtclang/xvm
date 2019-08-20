@@ -840,21 +840,30 @@ public class ParameterizedTypeConstant
     @Override
     public boolean validate(ErrorListener errs)
         {
-        boolean fHalt = false;
-
         if (!isValidated())
             {
-            fHalt |= super.validate(errs);
+            boolean fHalt = false;
+
+            for (TypeConstant type : m_atypeParams)
+                {
+                fHalt |= type.validate(errs);
+                }
 
             // a parameterized type constant has to be followed by a terminal type constant
             // specifying a class/interface identity
             if (!(m_constType.resolveTypedefs()).isExplicitClassIdentity(false))
                 {
-                fHalt |= log(errs, Severity.ERROR, VE_PARAM_TYPE_ILLEGAL, m_constType.getValueString());
+                log(errs, Severity.ERROR, VE_PARAM_TYPE_ILLEGAL, m_constType.getValueString());
+                fHalt = true;
+                }
+
+            if (!fHalt)
+                {
+                return super.validate(errs);
                 }
             }
 
-        return fHalt;
+        return false;
         }
 
 

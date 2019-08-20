@@ -993,9 +993,7 @@ public abstract class TypeConstant
         if (info == null)
             {
             // validate this TypeConstant (necessary before we build the TypeInfo)
-            validate(errs);
-
-            if (containsUnresolved())
+            if (validate(errs) || containsUnresolved())
                 {
                 log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, getValueString());
                 return pool.typeObject().ensureTypeInfo(errs);
@@ -5367,15 +5365,15 @@ public abstract class TypeConstant
             throws IOException;
 
     @Override
-    public boolean validate(ErrorListener errlist)
+    public boolean validate(ErrorListener errs)
         {
         boolean fHalt = false;
 
         if (!m_fValidated)
             {
-            fHalt |= super.validate(errlist);
-            fHalt |= isModifyingType() && getUnderlyingType().validate(errlist);
-            m_fValidated = true;
+            fHalt |= super.validate(errs);
+            fHalt |= isModifyingType() && getUnderlyingType().validate(errs);
+            m_fValidated = !fHalt;
             }
 
         return fHalt;

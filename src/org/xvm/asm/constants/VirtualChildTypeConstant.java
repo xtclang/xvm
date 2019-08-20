@@ -19,10 +19,13 @@ import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 
 import org.xvm.runtime.OpSupport;
 import org.xvm.runtime.TemplateRegistry;
+
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
@@ -120,12 +123,7 @@ public class VirtualChildTypeConstant
         {
         ClassStructure parent = (ClassStructure)
                 m_typeParent.getSingleUnderlyingClass(true).getComponent();
-        ClassStructure child = parent.getVirtualChild(getChildName());
-        if (child == null)
-            {
-            throw new IllegalStateException();
-            }
-        return child;
+        return parent.getVirtualChild(getChildName());
         }
 
 
@@ -489,6 +487,23 @@ public class VirtualChildTypeConstant
         writePackedLong(out, m_constName.getPosition());
         }
 
+    @Override
+    public boolean validate(ErrorListener errs)
+        {
+        if (!isValidated())
+            {
+            // the child must exists
+            if (getChildStructure() == null)
+                {
+                log(errs, Severity.ERROR, VE_VIRTUAL_CHILD_MISSING,
+                                m_constName.getValue(), m_typeParent.getValueString());
+                return true;
+                }
+            return super.validate(errs);
+            }
+
+        return false;
+        }
 
     // ----- Object methods ------------------------------------------------------------------------
 

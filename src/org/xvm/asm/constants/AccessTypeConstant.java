@@ -250,22 +250,21 @@ public class AccessTypeConstant
     @Override
     public boolean validate(ErrorListener errs)
         {
-        boolean fHalt = false;
-
         if (!isValidated())
             {
-            fHalt |= super.validate(errs);
-
             // an access type constant can modify an annotated, a parameterized, or a terminal type
             // constant that refers to a class/interface
             TypeConstant type = m_constType.resolveTypedefs();
             if (!(type instanceof AnnotatedTypeConstant || type.isExplicitClassIdentity(true)))
                 {
-                fHalt |= log(errs, Severity.ERROR, VE_ACCESS_TYPE_ILLEGAL, type.getValueString());
+                log(errs, Severity.ERROR, VE_ACCESS_TYPE_ILLEGAL, type.getValueString());
+                return true;
                 }
+
+            return super.validate(errs);
             }
 
-        return fHalt;
+        return false;
         }
 
 

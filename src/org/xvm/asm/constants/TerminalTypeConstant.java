@@ -1580,17 +1580,13 @@ public class TerminalTypeConstant
     @Override
     public boolean validate(ErrorListener errs)
         {
-        boolean fHalt = false;
-
         if (!isValidated())
             {
-            fHalt |= super.validate(errs);
-
             if (!isSingleDefiningConstant())
                 {
                 // this can only happen if this type is a Typedef referring to a relational type
                 TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-                return constId.getReferredToType().validate(errs);
+                return constId.getReferredToType().validate(errs) && super.validate(errs);
                 }
 
             Constant constant = getDefiningConstant();
@@ -1606,18 +1602,18 @@ public class TerminalTypeConstant
                 case ParentClass:
                 case ChildClass:
                 case NativeClass:
-                    break;
+                    return super.validate(errs);
 
                 case UnresolvedName:
                 default:
                     // this is basically an illegal state exception
-                    fHalt |= log(errs, Severity.ERROR, VE_UNKNOWN, constant.getValueString()
+                    log(errs, Severity.ERROR, VE_UNKNOWN, constant.getValueString()
                             + " (" + constant.getFormat() + ')');
-                    break;
+                    return true;
                 }
             }
 
-        return fHalt;
+        return false;
         }
 
 

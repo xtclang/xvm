@@ -185,11 +185,9 @@ public class ImmutableTypeConstant
     @Override
     public boolean validate(ErrorListener errs)
         {
-        boolean fHalt = false;
-
         if (!isValidated())
             {
-            fHalt |= super.validate(errs);
+            boolean fHalt = false;
 
             // the immutable type constant can modify any type constant other than an immutable
             // type constant
@@ -202,11 +200,17 @@ public class ImmutableTypeConstant
             // a service type cannot be immutable
             if (type.ensureTypeInfo(errs).getFormat() == Component.Format.SERVICE)
                 {
-                fHalt |= log(errs, Severity.ERROR, VE_IMMUTABLE_SERVICE_ILLEGAL, type.getValueString());
+                log(errs, Severity.ERROR, VE_IMMUTABLE_SERVICE_ILLEGAL, type.getValueString());
+                fHalt = true;
+                }
+
+            if (!fHalt)
+                {
+                return super.validate(errs);
                 }
             }
 
-        return fHalt;
+        return false;
         }
 
 
