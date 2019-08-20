@@ -397,6 +397,20 @@ public class NamedTypeExpression
                 }
             }
 
+        if (type.containsUnresolved())
+            {
+            m_typeValidate = type;
+            }
+        else
+            {
+            if (type.validate(ErrorListener.BLACKHOLE))
+                {
+                // we cannot report any error now, so let's just create a non-resolvable
+                // type that look like this type
+                return new UnresolvedTypeConstant(pool,
+                    new UnresolvedNameConstant(pool, getNames(), false));
+                }
+            }
         return type;
         }
 
@@ -488,16 +502,33 @@ public class NamedTypeExpression
                 // the resolved one (just in case anyone is holding the wrong one
                 Constant constIdNew = m_constId = inferAutoNarrowing(constId, errsTemp);
 
-                if (m_constUnresolved != null)
+                if (!errsTemp.isAbortDesired())
                     {
-                    m_constUnresolved.resolve(constIdNew);
-                    m_constUnresolved = null;
+                    if (m_constUnresolved != null)
+                        {
+                        m_constUnresolved.resolve(constIdNew);
+                        m_constUnresolved = null;
+                        }
+
+                    if (m_typeUnresolved != null)
+                        {
+                        m_typeUnresolved.resolve(calculateDefaultType(null, constIdNew));
+                        m_typeUnresolved = null;
+                        }
+
+                    if (m_typeValidate != null)
+                        {
+                        m_typeValidate.validate(errsTemp);
+                        m_typeValidate = null;
+                        }
                     }
 
-                if (m_typeUnresolved != null)
+                if (errsTemp.isAbortDesired())
                     {
-                    m_typeUnresolved.resolve(calculateDefaultType(null, constIdNew));
-                    m_typeUnresolved = null;
+                    // cannot proceed
+                    errsTemp.logTo(errs);
+                    mgr.deferChildren();
+                    return;
                     }
 
                 // reset the type constant
@@ -905,6 +936,7 @@ public class NamedTypeExpression
     // unresolved constant that may have been created by this statement
     protected transient UnresolvedNameConstant m_constUnresolved;
     protected transient UnresolvedTypeConstant m_typeUnresolved;
+    protected transient TypeConstant           m_typeValidate;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NamedTypeExpression.class, "left", "paramTypes");
     }

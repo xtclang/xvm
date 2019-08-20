@@ -193,33 +193,54 @@ public class NewExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
+        return calculateTargetType(ctx, null);
+        }
+
+    private TypeConstant calculateTargetType(Context ctx, ErrorListener errs)
+        {
         if (isValidated())
             {
             return getType();
             }
 
+        if (errs == null)
+            {
+            errs = ErrorListener.BLACKHOLE;
+            }
+
+        TypeConstant typeTarget;
         if (body == null)
             {
-            TypeConstant typeTarget = type.ensureTypeConstant(ctx);
-            if (typeTarget.containsUnresolved() || !typeTarget.isSingleUnderlyingClass(false))
-                {
-                // unknown or not a class; someone will report an error later
-                return null;
-                }
-            return typeTarget;
+            typeTarget  = type.ensureTypeConstant(ctx);
             }
         else
             {
             if (anon == null)
                 {
-                ensureInnerClass(ctx, AnonPurpose.RoughDraft, ErrorListener.BLACKHOLE);
-                return type.ensureTypeConstant(ctx);
+                ensureInnerClass(ctx, AnonPurpose.RoughDraft, errs);
+                typeTarget  = type.ensureTypeConstant(ctx);
                 }
-
-            // there must be an anonymous inner class skeleton by this point
-            assert anon != null && anon.getComponent() != null;
-            return ((ClassStructure) anon.getComponent()).getFormalType();
+            else
+                {
+                // there must be an anonymous inner class skeleton by this point
+                assert anon != null && anon.getComponent() != null;
+                return ((ClassStructure) anon.getComponent()).getFormalType();
+                }
             }
+
+        if (typeTarget.containsUnresolved())
+            {
+            log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, type.toString());
+            return null;
+            }
+
+        return typeTarget;
+        }
+
+    @Override
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+        {
+        return calcFit(ctx, calculateTargetType(ctx, errs), typeRequired);
         }
 
     @Override
