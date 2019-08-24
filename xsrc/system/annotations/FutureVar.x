@@ -196,11 +196,10 @@ mixin FutureVar<RefType>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-// TODO: GG?
-//    <NewType> FutureVar!<NewType> transform(function NewType (RefType) convert)
-//        {
-//        return chain(new FutureVar<NewType>.TransformStep<RefType>(convert));
-//        }
+    <NewType> FutureVar!<NewType> transform(function NewType (RefType) convert)
+        {
+        return chain(new TransformStep<NewType, RefType>(convert));
+        }
 
     /**
      * Create and return a new future that will handle an exceptional completion from this future.
@@ -239,11 +238,10 @@ mixin FutureVar<RefType>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-// TODO: GG?
-//    <NewType> FutureVar!<NewType> transformOrHandle(function NewType (RefType?, Exception?) convert)
-//        {
-//        return chain(new FutureVar<NewType>.Transform2Step<RefType>(convert));
-//        }
+    <NewType> FutureVar!<NewType> transformOrHandle(function NewType (RefType?, Exception?) convert)
+        {
+        return chain(new Transform2Step<NewType, RefType>(convert));
+        }
 
     /**
      * Create and return a new future that will complete when either *one* of _this_ future or the
@@ -258,9 +256,9 @@ mixin FutureVar<RefType>
      * * If this future or the other future completes exceptionally, and the new future has not
      *   already completed, then the new future will complete exceptionally with the same exception.
      */
-    <OtherType> FutureVar! or(FutureVar!<OtherType> other)
+    FutureVar!<RefType> or(FutureVar!<RefType> other)
         {
-        return chain(new OrStep(other));
+        return chain(new OrStep<RefType>(other));
         }
 
     /**
@@ -277,9 +275,9 @@ mixin FutureVar<RefType>
      *   not already completed, then the new future will complete exceptionally with the same
      *   exception.
      */
-    FutureVar! orAny(FutureVar! ... others)
+    FutureVar!<RefType> orAny(FutureVar!<RefType> ... others)
         {
-        FutureVar result = this;
+        FutureVar<RefType> result = this;
         others.iterator().forEach(other -> {result = result.or(other);});
         return result;
         }
@@ -302,11 +300,10 @@ mixin FutureVar<RefType>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-    <OtherType, Other2Type> FutureVar! and(FutureVar!<Other2Type> other,
-            function FutureVar! (OtherType, Other2Type) combine)
+    <OtherType, NewType> FutureVar!<NewType> and(FutureVar!<OtherType> other,
+            function NewType (RefType, OtherType) combine)
         {
-        // return chain(new AndStep<OtherType, Other2Type>(other, combine));
-        TODO
+        return chain(new AndStep<NewType, RefType, OtherType>(other, combine));
         }
 
     /**
@@ -321,9 +318,9 @@ mixin FutureVar<RefType>
      *   (successfully or exceptionally) and with the same result (value or exception) as this
      *   future.
      */
-    FutureVar! whenComplete(function void (RefType?, Exception?) notify)
+    FutureVar!<RefType> whenComplete(function void (RefType?, Exception?) notify)
         {
-        return chain(new WhenCompleteStep(notify));
+        return chain(new WhenCompleteStep<RefType>(notify));
         }
 
     /**
@@ -343,11 +340,10 @@ mixin FutureVar<RefType>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-// TODO: GG?
-//    <NewType> FutureVar!<NewType> createContinuation(function NewType (RefType) async)
-//        {
-//        return chain(new FutureVar<NewType>.ContinuationStep<RefType>(async));
-//        }
+    <NewType> FutureVar!<NewType> createContinuation(function NewType (RefType) async)
+        {
+        return chain(new ContinuationStep<NewType, RefType>(async));
+        }
 
 
     // ----- completion handling -------------------------------------------------------------------
@@ -438,7 +434,7 @@ mixin FutureVar<RefType>
      * a {@link NotifyDependent} function, allowing one or more FutureVar instances to notify it of
      * their completion. The FutureVar can chain to any number of DependentFuture instances.
      */
-    FutureVar! chain(DependentFuture nextFuture)
+    <NewType> FutureVar!<NewType> chain(DependentFuture<NewType> nextFuture)
         {
         chain(nextFuture.parentCompleted);
         return nextFuture;
@@ -459,7 +455,7 @@ mixin FutureVar<RefType>
                     }
                 else
                     {
-                    this.notify = new MultiCompleter(this.notify.as(NotifyDependent), notify).parentCompleted;
+                    this.notify = new MultiCompleter<RefType>(this.notify.as(NotifyDependent), notify).parentCompleted;
                     }
                 break;
 
@@ -484,7 +480,7 @@ mixin FutureVar<RefType>
      * of the DependentFuture, which in turn completes the future, which in turn invokes the next in
      * the chain.
      */
-    static class DependentFuture<InputType>
+    static class DependentFuture<RefType, InputType>
             incorporates FutureVar<RefType>
             delegates Var<RefType>(resultVar)
         {
@@ -515,11 +511,11 @@ mixin FutureVar<RefType>
         }
 
     /**
-     * A MultiCompleter multiplexes a single dependent completion into multiple chained completions.
+     * A MultiCompleter de-multiplexes a single dependent completion into multiple chained completions.
      * A MultiCompleter is not intended to be used as a normal future, but rather is used by other
      * figures solely to multiplex their own completion dependencies.
      */
-    static class MultiCompleter
+    static class MultiCompleter<RefType>
             extends DependentFuture<RefType> // InputType == RefType
         {
         construct(NotifyDependent first, NotifyDependent second)
@@ -565,8 +561,8 @@ mixin FutureVar<RefType>
      * If the parent completed exceptionally, or if the parent completed successfully but the
      * {@link run} function throws an exception, then this future completes exceptionally.
      */
-    static class ThenDoStep(function void () run)
-            extends DependentFuture<RefType> // InputType == RefType
+    static class ThenDoStep<RefType>(function void () run)
+            extends DependentFuture<RefType, RefType>
         {
         @Override
         void parentCompleted(Completion completion, RefType? input, Exception? e)
@@ -596,8 +592,8 @@ mixin FutureVar<RefType>
      * If the parent completed exceptionally, or if the parent completed successfully but the
      * {@link consume} function throws an exception, then this future completes exceptionally.
      */
-    static class PassToStep(function void (RefType) consume)
-            extends DependentFuture<RefType> // InputType == RefType
+    static class PassToStep<RefType>(function void (RefType) consume)
+            extends DependentFuture<RefType, RefType>
         {
         @Override
         void parentCompleted(Completion completion, RefType? input, Exception? e)
@@ -631,8 +627,8 @@ mixin FutureVar<RefType>
      * If the parent completed exceptionally and the {@link convert} function throws an exception,
      * then this future completes exceptionally.
      */
-    static class HandleStep(function RefType (Exception) convert)
-            extends DependentFuture<RefType> // InputType == RefType
+    static class HandleStep<RefType>(function RefType (Exception) convert)
+            extends DependentFuture<RefType, RefType>
         {
         @Override
         void parentCompleted(Completion completion, RefType? input, Exception? e)
@@ -666,8 +662,8 @@ mixin FutureVar<RefType>
      * If the parent completed exceptionally, or if the parent completed successfully but the
      * {@link notify} function throws an exception, then this future completes exceptionally.
      */
-    static class WhenCompleteStep(function void (RefType?, Exception?) notifyComplete)
-            extends DependentFuture<RefType> // InputType == RefType
+    static class WhenCompleteStep<RefType>(function void (RefType?, Exception?) notifyComplete)
+            extends DependentFuture<RefType, RefType>
         {
         @Override
         void parentCompleted(Completion completion, RefType? input, Exception? e)
@@ -700,10 +696,10 @@ mixin FutureVar<RefType>
      * * Generally, it is expected that the first parent that notifies this future of the parent's
      *   completion will cause this future to complete.
      */
-    static class OrStep<InputType>
-            extends DependentFuture<InputType>
+    static class OrStep<RefType>
+            extends DependentFuture<RefType, RefType>
         {
-        construct(FutureVar<InputType> other)
+        construct(FutureVar<RefType> other)
             {
             }
         finally
@@ -718,8 +714,8 @@ mixin FutureVar<RefType>
      * words, both of the parents must complete successfully in order for this future to complete
      * successfully.
      */
-    static class AndStep<InputType, Input2Type>
-            extends DependentFuture<InputType>
+    static class AndStep<RefType, InputType, Input2Type>
+            extends DependentFuture<RefType, InputType>
         {
         construct(FutureVar<Input2Type> other, function RefType (InputType, Input2Type) combine)
             {
@@ -811,8 +807,8 @@ mixin FutureVar<RefType>
      * If the parent completed exceptionally, or if the parent completed successfully but the
      * {@link convert} function throws an exception, then this future completes exceptionally.
      */
-    static class TransformStep<InputType>(function RefType (InputType) convert)
-            extends DependentFuture<InputType>
+    static class TransformStep<RefType, InputType>(function RefType (InputType) convert)
+            extends DependentFuture<RefType, InputType>
         {
         @Override
         void parentCompleted(Completion completion, InputType? input, Exception? e)
@@ -845,8 +841,8 @@ mixin FutureVar<RefType>
      * If the parent completed exceptionally, or if the parent completed successfully but the
      * {@link convert} function throws an exception, then this future completes exceptionally.
      */
-    static class Transform2Step<InputType>(function RefType (InputType?, Exception?) convert)
-            extends DependentFuture<InputType>
+    static class Transform2Step<RefType, InputType>(function RefType (InputType?, Exception?) convert)
+            extends DependentFuture<RefType, InputType>
         {
         @Override
         void parentCompleted(Completion completion, InputType? input, Exception? e)
@@ -873,8 +869,8 @@ mixin FutureVar<RefType>
      * If the parent completed exceptionally, or if the parent completed successfully but the
      * {@link async} function throws an exception, then this future completes exceptionally.
      */
-    static class ContinuationStep<InputType>(function RefType (InputType) invokeAsync)
-            extends DependentFuture<InputType>
+    static class ContinuationStep<RefType, InputType>(function RefType (InputType) invokeAsync)
+            extends DependentFuture<RefType, InputType>
         {
         protected FutureVar? asyncResult;
 

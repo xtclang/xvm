@@ -584,13 +584,9 @@ public class NamedTypeExpression
                 {
                 type = (TypeConstant) m_constId;
                 }
-            else if (listParams == null)
-                {
-                type = calculateDefaultType(ctx, m_constId);
-                }
             else
                 {
-                type = pool.ensureTerminalTypeConstant(m_constId);
+                type = calculateDefaultType(ctx, m_constId);
                 }
 
             if (type.containsGenericType())
