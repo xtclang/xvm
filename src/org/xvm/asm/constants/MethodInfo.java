@@ -63,7 +63,7 @@ public class MethodInfo
         {
         // both method chains must be virtual, and neither can already be capped
         assert this.isOverridable();
-        assert that.isOverridable();
+        assert that.isOverridable() || that.isPotentialPropertyOverlay();
 
         // create a MethodConstant for the cap that will sit next to the method body that caused the
         // narrowing to occur
