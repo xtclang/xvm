@@ -524,6 +524,7 @@ public class InvocationExpression
                     typeLeft = exprLeft.getType();
                     if (typeLeft == null)
                         {
+                        exprLeft.log(errs, Severity.ERROR, Compiler.RETURN_REQUIRED);
                         fValid = false;
                         }
                     }

@@ -906,9 +906,13 @@ public abstract class Expression
         {
         checkValidated();
 
-        return m_oType instanceof TypeConstant
-                ? (TypeConstant) m_oType
-                : ((TypeConstant[]) m_oType)[0];
+        if (m_oType instanceof TypeConstant)
+            {
+            return (TypeConstant) m_oType;
+            }
+
+        TypeConstant[] atype = (TypeConstant[]) m_oType;
+        return atype.length == 0 ? null : atype[0];
         }
 
     /**
@@ -1370,7 +1374,7 @@ public abstract class Expression
         int     cRVals = getValueCount();
         boolean fCond  = getCodeContainer().isReturnConditional();
 
-        assert cLVals <= cRVals || fCond && cLVals == cRVals + 1;
+        assert cLVals <= cRVals || fCond && cLVals == cRVals + 1 || !isCompletable();
 
         if (cLVals < cRVals)
             {

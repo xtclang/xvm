@@ -173,7 +173,10 @@ public class SwitchExpression
                         listNodes.set(iNode, exprNew);
                         }
 
-                    collector.add(exprNew.getTypes());
+                    if (exprNew.isCompletable())
+                        {
+                        collector.add(exprNew.getTypes());
+                        }
                     }
                 }
             }
