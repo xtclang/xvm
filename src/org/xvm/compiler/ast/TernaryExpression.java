@@ -200,6 +200,27 @@ public class TernaryExpression
                 typeResult = Op.selectCommonType(typeThen, typeElse, errs);
                 if (typeResult == null)
                     {
+                    // try to resolve formal types
+                    boolean fFormalThen = typeThen.containsFormalType();
+                    boolean fFormalElse = typeElse.containsFormalType();
+
+                    if (fFormalThen || fFormalElse)
+                        {
+                        if (fFormalThen)
+                            {
+                            typeThen = typeThen.resolveConstraints(pool);
+                            }
+                        if (fFormalElse)
+                            {
+                            typeElse = typeElse.resolveConstraints(pool);
+                            }
+                        // since it's guaranteed that neither type contains formal, we can recurse
+                        typeResult = Op.selectCommonType(typeThen, typeElse, errs);
+                        }
+                    }
+
+                if (typeResult == null)
+                    {
                     typeResult = pool.ensureIntersectionTypeConstant(typeThen, typeElse);
                     if (typeRequired != null && !typeResult.isA(typeRequired))
                         {

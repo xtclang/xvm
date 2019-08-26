@@ -1119,8 +1119,7 @@ class Array<ElementType>
         @Op("<<")
         Bit[] shiftLeft(Int count)
             {
-            // TODO GG get rid of "toBit()"
-            return new Array<Bit>(size, i -> (i < size-count ? this[i + count] : 0.toBit()));
+            return new Array<Bit>(size, i -> (i < size-count ? this[i + count] : 0));
             }
 
         /**
@@ -1142,8 +1141,7 @@ class Array<ElementType>
         @Op(">>>")
         Bit[] shiftAllRight(Int count)
             {
-            // TODO GG get rid of "toBit()"
-            return new Array<Bit>(size, i -> (i < count ? 0.toBit() : this[i - count]));
+            return new Array<Bit>(size, i -> (i < count ? 0 : this[i - count]));
             }
 
         /**
@@ -1240,7 +1238,7 @@ class Array<ElementType>
          */
         immutable Byte[] toByteArray()
             {
-            TODO
+            TODO CP
 //            // make sure the bit length is at least 8, and also a power-of-two
 //            assert bitLength == (bitLength & ~0x7).leftmostBit;
 //
@@ -1540,7 +1538,7 @@ class Array<ElementType>
 //                }
 //
 //            return nibbles.ensureConst(true);
-            TODO "CP";
+            TODO CP;
             }
 
         /**
