@@ -289,7 +289,7 @@ public class Annotation
         {
         if (m_anno != null)
             {
-            return m_anno.toString();
+            return m_anno.getValueString();
             }
 
         StringBuilder sb = new StringBuilder();

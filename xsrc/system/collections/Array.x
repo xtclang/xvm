@@ -1119,7 +1119,8 @@ class Array<ElementType>
         @Op("<<")
         Bit[] shiftLeft(Int count)
             {
-            return new Array<Bit>(size, i -> (i < size-count ? this[i + count] : 0));
+            // TODO GG get rid of "toBit()"
+            return new Array<Bit>(size, i -> (i < size-count ? this[i + count] : 0.toBit()));
             }
 
         /**
@@ -1141,7 +1142,8 @@ class Array<ElementType>
         @Op(">>>")
         Bit[] shiftAllRight(Int count)
             {
-            return new Array<Bit>(size, i -> (i < count ? 0 : this[i - count]));
+            // TODO GG get rid of "toBit()"
+            return new Array<Bit>(size, i -> (i < count ? 0.toBit() : this[i - count]));
             }
 
         /**
@@ -1525,19 +1527,20 @@ class Array<ElementType>
          */
         immutable Nibble[] toNibbleArray()
             {
-            Int      bytecount = size;
-            Int      nibcount  = bytecount * 2;
-            Nibble[] nibbles   = new Nibble[nibcount];
-            Int      index     = 0;
-            EachByte: for (Byte byte : this)
-                {
-                for (Nibble nibble : byte.toNibbleArray())
-                    {
-                    nibbles[index++] = nibble;
-                    }
-                }
-
-            return nibbles.ensureConst(true);
+//            Int      bytecount = size;
+//            Int      nibcount  = bytecount * 2;
+//            Nibble[] nibbles   = new Nibble[nibcount];
+//            Int      index     = 0;
+//            EachByte: for (Byte byte : this)
+//                {
+//                for (Nibble nibble : byte.toNibbleArray())
+//                    {
+//                    nibbles[index++] = nibble;
+//                    }
+//                }
+//
+//            return nibbles.ensureConst(true);
+            TODO "CP";
             }
 
         /**

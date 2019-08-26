@@ -53,7 +53,6 @@ public abstract class xConstrainedInteger
         String sName = f_struct.getName();
 
         markNativeProperty("magnitude");
-        markNativeProperty("digitCount");
         markNativeProperty("bitCount");
         markNativeProperty("leftmostBit");
         markNativeProperty("rightmostBit");
@@ -83,7 +82,8 @@ public abstract class xConstrainedInteger
 
         markNativeMethod("rotateLeft"   , INT , THIS);
         markNativeMethod("rotateRight"  , INT , THIS);
-        markNativeMethod("truncate"     , INT , THIS);
+        markNativeMethod("retainLSBits" , INT , THIS);
+        markNativeMethod("retainMSBits" , INT , THIS);
         markNativeMethod("reverseBits"  , VOID, THIS);
         markNativeMethod("reverseBytes" , VOID, THIS);
         markNativeMethod("stepsTo"      , THIS, INT );

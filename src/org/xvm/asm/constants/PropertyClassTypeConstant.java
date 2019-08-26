@@ -14,6 +14,7 @@ import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 
 import org.xvm.runtime.OpSupport;
@@ -121,11 +122,11 @@ public class PropertyClassTypeConstant
         }
 
     /**
-     * @return the property type
+     * @return the property ref type
      */
-    public TypeConstant getPropertyType()
+    public TypeConstant getRefType()
         {
-        return getPropertyInfo().getType();
+        return getPropertyInfo().getBaseRefType();
         }
 
 
@@ -219,14 +220,13 @@ public class PropertyClassTypeConstant
     @Override
     public boolean containsGenericParam(String sName)
         {
-        return getPropertyInfo().getBaseRefType().containsGenericParam(sName)
-            || m_typeParent.containsGenericParam(sName);
+        return getRefType().containsGenericParam(sName);
         }
 
     @Override
     protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
         {
-        TypeConstant type = getPropertyInfo().getBaseRefType().getGenericParamType(sName, listParams);
+        TypeConstant type = getRefType().getGenericParamType(sName, listParams);
         if (type != null)
             {
             return type.isGenericType()
@@ -234,35 +234,45 @@ public class PropertyClassTypeConstant
                     : type;
             }
 
-        // the passed in list represents the "child" and should not be used by the parent
-        return m_typeParent.getGenericParamType(sName, Collections.EMPTY_LIST);
+        return null;
         }
 
     @Override
     protected Relation calculateRelationToLeft(TypeConstant typeLeft)
         {
-        return getPropertyType().calculateRelationToLeft(typeLeft);
+        return getRefType().calculateRelationToLeft(typeLeft);
         }
 
     @Override
     protected Relation calculateRelationToRight(TypeConstant typeRight)
         {
-        return getPropertyType().calculateRelationToRight(typeRight);
+        return getRefType().calculateRelationToRight(typeRight);
         }
 
     @Override
     public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
                                                boolean fFunction, List<TypeConstant> listParams)
         {
-        return getPropertyType().containsSubstitutableMethod(signature, access, fFunction, listParams);
+        return getRefType().containsSubstitutableMethod(signature, access, fFunction, listParams);
         }
+
+
+    // ----- TypeInfo support ----------------------------------------------------------------------
+
+    @Override
+    protected TypeInfo buildTypeInfo(ErrorListener errs)
+        {
+        // TODO: merge the custom methods
+        return getRefType().buildTypeInfo(errs);
+        }
+
 
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override
     public OpSupport getOpSupport(TemplateRegistry registry)
         {
-        return getPropertyInfo().getBaseRefType().getOpSupport(registry);
+        return getRefType().getOpSupport(registry);
         }
 
 
@@ -297,7 +307,7 @@ public class PropertyClassTypeConstant
     @Override
     public String getValueString()
         {
-        return m_typeParent.getValueString() + '.' + m_idProp.getValueString();
+        return m_typeParent.getValueString() + '.' + m_idProp.getName();
         }
 
 

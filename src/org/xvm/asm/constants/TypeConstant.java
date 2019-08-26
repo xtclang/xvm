@@ -702,10 +702,6 @@ public abstract class TypeConstant
                 }
             }
 
-        // TODO GG?
-        System.err.println("TypeConstant.adoptParameters: types are not compatible: " +
-            typeFrom.getValueString() + " -> " + this.getValueString());
-
         return this;
         }
 
