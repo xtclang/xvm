@@ -96,15 +96,23 @@ public class xArray
         for (MethodStructure method :
                 ((MultiMethodStructure) f_struct.getChild("construct")).methods())
             {
+            TypeConstant typeParam0 = method.getParam(0).getType();
+
             if (method.getParamCount() == 1)
                 {
-                // 0) construct(Int capacity = 0)
-                CONSTRUCTORS[0] = method;
+                if (typeParam0.equals(pool.typeInt()))
+                    {
+                    // 0) construct(Int capacity = 0)
+                    CONSTRUCTORS[0] = method;
+                    }
+                else
+                    {
+                    // protected construct(ArrayDelegate<ElementType> delegate)
+                    // must not be called
+                    }
                 }
             else
                 {
-                TypeConstant typeParam0 = method.getParam(0).getType();
-
                 // 1) construct(Int size, ElementType | function ElementType (Int) supply)
                 // 2) construct(Mutability mutability, ElementType... elements)
                 // 3) construct(Array<ElementType> array, Range<Int> section)

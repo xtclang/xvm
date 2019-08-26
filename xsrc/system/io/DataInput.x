@@ -233,7 +233,7 @@ interface DataInput
      *   following `(b-1)` bytes contain the least significant `(b-1)*8` bits of the integer.
      *
      * TODO the following doc should move to (and only be present on) the write function
-     * To maximimize density and minimize pipeline stalls, this implementation uses the smallest
+     * To maximize density and minimize pipeline stalls, this implementation uses the smallest
      * possible encoding for each value. Since an 8 significant-bit value can be encoded in two
      * bytes using either a Small or Large encoding, we choose Large to eliminate the potential for
      * a (conditional-induced) pipeline stall. Since a 14..16 significant-bit value can be encoded
