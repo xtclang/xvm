@@ -7,6 +7,7 @@ import io.IllegalUTF;
  * encoded as UTF-8, UTF-16, UTF-32, or even ASCII.
  */
 interface DataInput
+        extends InputStream
     {
     /**
      * @return  a value of type Boolean read from the stream
@@ -59,39 +60,6 @@ interface DataInput
         // the default implementation assumes that an 8-bit signed integer is present in the stream
         // as a single byte of data in the twos-complement format
         return new Int8(readByte().toBitArray());
-        }
-
-    /**
-     * @return  a value of type Byte read from the stream
-     */
-    Byte readByte();
-
-    /**
-     * Read bytes into the provided array.
-     *
-     * @param  bytes  the byte array to read into
-     */
-    void readBytes(Byte[] bytes)
-        {
-        readBytes(bytes, 0, bytes.size);
-        }
-
-    /**
-     * Read the specified number of bytes into the provided array.
-     *
-     * @param  bytes   the byte array to read into
-     * @param  offset  the offset into the array to store the first byte read
-     * @param  count   the number of bytes to read
-     */
-    void readBytes(Byte[] bytes, Int offset, Int count)
-        {
-        assert offset >= 0 && count >= 0;
-
-        Int last = offset + count;
-        while (offset < last)
-            {
-            bytes[offset++] = readByte();
-            }
         }
 
     /**
