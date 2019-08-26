@@ -9,9 +9,8 @@ const VarUInt
     /**
      * Construct a variable-length unsigned integer number from its bitwise machine representation.
      *
-     * @param bits  an array of bit values that represent this number, ordered from Least
-     *              Significant Bit (LSB) in the `0` element, to Most Significant Bit (MSB) in the
-     *              `size-1` element
+     * @param bits  an array of bit values that represent this number, ordered from left-to-right,
+     *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     construct(Bit[] bits)
         {
@@ -32,239 +31,345 @@ const VarUInt
         }
 
 
-    /**
-     * The sign property is declared by Number as read-only, but the VarUInt actually needs storage
-     * for the sign property, so it is declaring it at this level as a read/write property (which,
-     * due to the constness of this class, is read-only in reality.)
-     */
-    @Override
-    public/private Signum sign; // TODO when this was Boolean, it didn't complain (should have been compiler error)
+    // ----- properties ----------------------------------------------------------------------------
 
     @Override
-    immutable Bit[] toBitArray()
+    Signum sign.get()
         {
-        return bits.reverse.as(immutable Bit[]);
-        }
-
-
-    // ----- IntNumber support ---------------------------------------------------------------------
-
-    @Override
-    @Op VarUInt and(VarUInt that)
-        {
-        return this & that;
+        return this == 0 ? Zero : Positive;
         }
 
     @Override
-    @Op VarUInt or(VarUInt that)
-        {
-        return this | that;
-        }
-
-    @Override
-    @Op VarUInt xor(VarUInt that)
-        {
-        return this ^ that;
-        }
-
-    @Override
-    @Op VarUInt not()
-        {
-        return ~this;
-        }
-
-    @Override
-    @Op VarUInt shiftLeft(Int count)
-        {
-        return this << count;
-        }
-
-    @Override
-    @Op VarUInt shiftRight(Int count)
-        {
-        return this >> count;
-        }
-
-    @Override
-    @Op VarUInt shiftAllRight(Int count)
-        {
-        return this >>> count;
-        }
-
-    @Override
-    VarUInt rotateLeft(Int count)
+    VarUInt leftmostBit.get()
         {
         TODO
         }
 
     @Override
-    VarUInt rotateRight(Int count)
+    VarUInt rightmostBit.get()
         {
         TODO
         }
 
-    @Override
-    VarUInt truncate(Int count)
-        {
-        TODO
-        }
+
+    // ----- operations ----------------------------------------------------------------------------
 
     @Override
-    @RO VarUInt leftmostBit.get()
-        {
-        TODO
-        }
-
-    @Override
-    @RO VarUInt rightmostBit.get()
-        {
-        TODO
-        }
-
-    @Override
-    @RO Int leadingZeroCount.get()
-        {
-        TODO
-        }
-
-    @Override
-    @RO Int trailingZeroCount.get()
-        {
-        TODO
-        }
-
-    @Override
-    @RO Int bitCount.get()
-        {
-        TODO
-        }
-
-    @Override
-    VarUInt reverseBits()
-        {
-        TODO
-        }
-
-    @Override
-    VarUInt reverseBytes()
-        {
-        TODO
-        }
-
-    // ----- Number support ------------------------------------------------------------------------
-
-    @Override
-    @Op VarUInt neg()
-        {
-        return -this;
-        }
-
-    @Override
-    @Op VarUInt pow(VarUInt n)
-        {
-        VarUInt result = 1;
-        for (VarUInt p = 0; p < n; p++)
-            {
-            result *= this;
-            }
-        return result;
-        }
-
-    @Override
-    @Op VarUInt add(VarUInt n)
+    @Op("+")
+    VarUInt add(VarUInt n)
         {
         return this + n;
         }
 
     @Override
-    @Op VarUInt sub(VarUInt n)
+    @Op("-")
+    VarUInt sub(VarUInt n)
         {
         return this - n;
         }
 
     @Override
-    @Op VarUInt mul(VarUInt n)
+    @Op("*")
+    VarUInt mul(VarUInt n)
         {
         return this * n;
         }
 
     @Override
-    @Op VarUInt div(VarUInt n)
+    @Op("/")
+    VarUInt div(VarUInt n)
         {
         return this / n;
         }
 
     @Override
-    @Op VarUInt mod(VarUInt n)
+    @Op("%")
+    VarUInt mod(VarUInt n)
         {
         return this % n;
         }
 
     @Override
-    VarInt toVarInt()
+    @Op("&")
+    VarUInt and(VarUInt n)
         {
-        TODO
+        return new VarUInt(this.bits & n.bits);
         }
 
     @Override
-    VarUInt toVarUInt()
+    @Op("|")
+    VarUInt or(VarUInt n)
         {
-        TODO
+        return new VarUInt(this.bits | n.bits);
         }
 
     @Override
-    VarFloat toVarFloat()
+    @Op("^")
+    VarUInt xor(VarUInt n)
         {
-        TODO
+        return new VarUInt(this.bits ^ n.bits);
         }
 
     @Override
-    VarDec toVarDec()
+    @Op("~")
+    VarUInt not()
         {
-        TODO
+        return new VarUInt(~bits);
         }
 
     @Override
-    immutable Boolean[] toBooleanArray()
+    @Op("<<")
+    VarUInt shiftLeft(Int count)
         {
-        return bitBooleans(bits);
+        return new VarUInt(bits << count);
         }
+
+    @Override
+    @Op(">>")
+    VarUInt shiftRight(Int count)
+        {
+        return new VarUInt(bits >> count);
+        }
+
+    @Override
+    @Op(">>>")
+    VarUInt shiftAllRight(Int count)
+        {
+        return new VarUInt(bits >>> count);
+        }
+
+    @Override
+    VarUInt rotateLeft(Int count)
+        {
+        return new VarUInt(bits.rotateLeft(count));
+        }
+
+    @Override
+    VarUInt rotateRight(Int count)
+        {
+        return new VarUInt(bits.rotateRight(count));
+        }
+
+    @Override
+    VarUInt retainLSBits(Int count)
+        {
+        if (count <= 0)
+            {
+            return 0;
+            }
+
+        if (count >= bitLength)
+            {
+            return this;
+            }
+
+        return new VarUInt(bits.fill(0, 0..bitLength-count-1));
+        }
+
+    @Override
+    VarUInt retainMSBits(Int count)
+        {
+        if (count <= 0)
+            {
+            return 0;
+            }
+
+        if (count >= bitLength)
+            {
+            return this;
+            }
+
+        return new VarUInt(bits.fill(0, count..bitLength-1));
+        }
+
+    @Override
+    VarUInt reverseBits()
+        {
+        return new VarUInt(bits.reverse());
+        }
+
+    @Override
+    VarUInt reverseBytes()
+        {
+        return new VarUInt(toByteArray().reverse());
+        }
+
+    @Override
+    VarUInt pow(VarUInt n)
+        {
+        VarUInt result = 1;
+
+        while (n-- > 0)
+            {
+            result *= this;
+            }
+
+        return result;
+        }
+
 
     // ----- Sequential interface ------------------------------------------------------------------
 
-    /**
-     * Value increment. Never throws.
-     */
-    @Override
-    VarUInt nextValue()
-        {
-        return this + 1;
-        }
-
-    /**
-     * Value decrement. Never throws.
-     */
-    @Override
-    VarUInt prevValue()
-        {
-        return this - 1;
-        }
-
-    /**
-     * Checked value increment.
-     */
     @Override
     conditional VarUInt next()
         {
         return true, this + 1;
         }
 
-    /**
-     * Checked value decrement.
-     */
     @Override
     conditional VarUInt prev()
         {
-        return true, this - 1;
+        if (this > 0)
+            {
+            return true, this - 1;
+            }
+
+        return false;
+        }
+
+
+    // ----- conversions ---------------------------------------------------------------------------
+
+    @Override
+    immutable Bit[] toBitArray()
+        {
+        return bits.as(immutable Bit[]);
+        }
+
+    @Override
+    immutable Boolean[] toBooleanArray()
+        {
+        return new Array<Boolean>(bits.size, i -> bits[i].toBoolean()).ensureConst(True);
+        }
+
+    @Override
+    VarUInt! toChecked()
+        {
+        return this.is(Unchecked) ? new VarUInt!(bits) : this;
+        }
+
+    @Override
+    @Unchecked VarUInt toUnchecked()
+        {
+        return this.is(Unchecked) ? this : new @Unchecked VarUInt!(bits);
+        }
+
+    @Override
+    @Auto Int8 toInt8()
+        {
+        assert:bounds this <= Int8.maxvalue;
+        return bitLength < 8
+                ? new Int8(new Array<Bit>(8, i -> (i < 8-bitLength ? 0 : bits[i])))
+                : new Int8(bits[bitLength-8..bitLength-1]);
+        }
+
+    @Override
+    @Auto Int16 toInt16()
+        {
+        assert:bounds this <= Int16.maxvalue;
+        return bitLength < 16
+                ? new Int16(new Array<Bit>(16, i -> (i < 16-bitLength ? 0 : bits[i])))
+                : new Int16(bits[bitLength-16..bitLength-1]);
+        }
+
+    @Override
+    @Auto Int32 toInt32()
+        {
+        assert:bounds this <= Int32.maxvalue;
+        return bitLength < 32
+                ? new Int32(new Array<Bit>(32, i -> (i < 32-bitLength ? 0 : bits[i])))
+                : new Int32(bits[bitLength-32..bitLength-1]);
+        }
+
+    @Override
+    @Auto Int64 toInt()
+        {
+        assert:bounds this <= Int64.maxvalue;
+        return bitLength < 64
+                ? new Int64(new Array<Bit>(64, i -> (i < 64-bitLength ? 0 : bits[i])))
+                : new Int64(bits[bitLength-64..bitLength-1]);
+        }
+
+    @Override
+    @Auto Int128 toInt128()
+        {
+        assert:bounds this <= Int128.maxvalue;
+        return bitLength < 128
+                ? new Int128(new Array<Bit>(128, i -> (i < 128-bitLength ? 0 : bits[i])))
+                : new Int128(bits[bitLength-128..bitLength-1]);
+        }
+
+    @Override
+    @Auto UInt8 toByte()
+        {
+        assert:bounds this <= UInt8.maxvalue;
+        return bitLength < 8
+                ? new UInt8(new Array<Bit>(8, i -> (i < 8-bitLength ? 0 : bits[i])))
+                : new UInt8(bits[bitLength-8..bitLength-1]);
+        }
+
+    @Override
+    @Auto UInt16 toUInt16()
+        {
+        assert:bounds this <= UInt16.maxvalue;
+        return bitLength < 16
+                ? new UInt16(new Array<Bit>(16, i -> (i < 16-bitLength ? 0 : bits[i])))
+                : new UInt16(bits[bitLength-16..bitLength-1]);
+        }
+
+    @Override
+    @Auto UInt32 toUInt32()
+        {
+        assert:bounds this <= UInt32.maxvalue;
+        return bitLength < 32
+                ? new UInt32(new Array<Bit>(32, i -> (i < 32-bitLength ? 0 : bits[i])))
+                : new UInt32(bits[bitLength-32..bitLength-1]);
+        }
+
+    @Override
+    @Auto UInt64 toUInt()
+        {
+        assert:bounds this <= UInt64.maxvalue;
+        return bitLength < 64
+                ? new UInt64(new Array<Bit>(64, i -> (i < 64-bitLength ? 0 : bits[i])))
+                : new UInt64(bits[bitLength-64..bitLength-1]);
+        }
+
+    @Override
+    @Auto UInt128 toUInt128()
+        {
+        assert:bounds this <= UInt64.maxvalue;
+        return bitLength < 128
+                ? new UInt128(new Array<Bit>(128, i -> (i < 128-bitLength ? 0 : bits[i])))
+                : new UInt128(bits[bitLength-128..bitLength-1]);
+        }
+
+    @Override
+    @Auto VarInt toVarInt()
+        {
+        Bit[] bits = this.bits;
+        if (bits[0] == 1)
+            {
+            bits = new Array<Bit>(bits.size + 8, i -> (i < 8 ? 0 : bits[i-8]));
+            }
+        return new VarInt(bits);
+        }
+
+    @Override
+    @Auto VarUInt toVarUInt()
+        {
+        return this;
+        }
+
+    @Override
+    @Auto VarFloat toVarFloat()
+        {
+        TODO
+        }
+
+    @Override
+    @Auto VarDec toVarDec()
+        {
+        TODO
         }
     }

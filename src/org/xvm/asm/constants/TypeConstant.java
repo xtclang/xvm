@@ -701,8 +701,12 @@ public abstract class TypeConstant
                 typeParent = typeParent.getParentType();
                 }
             }
-        throw new IllegalArgumentException("types are not compatible: " +
-                typeFrom.getValueString() + " -> " + this.getValueString());
+
+        // TODO GG?
+        System.err.println("TypeConstant.adoptParameters: types are not compatible: " +
+            typeFrom.getValueString() + " -> " + this.getValueString());
+
+        return this;
         }
 
     /**

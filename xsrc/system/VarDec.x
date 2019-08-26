@@ -7,9 +7,8 @@ const VarDec
      * Construct a variable-length decimal floating point number from its bitwise machine
      * representation.
      *
-     * @param bits  an array of bit values that represent this number, ordered from Least
-     *              Significant Bit (LSB) in the `0` element, to Most Significant Bit (MSB) in the
-     *              `size-1` element
+     * @param bits  an array of bit values that represent this number, ordered from left-to-right,
+     *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     construct(Bit[] bits)
         {
@@ -82,10 +81,42 @@ const VarDec
         }
 
 
+    // ----- FPNumber properties -------------------------------------------------------------------
+
+    @Override
+    @RO VarInt emax.get()
+        {
+        // from IEEE 754-2008:
+        //   w    = k/16+4
+        //   emax = 3×2^(w−1)
+        return 3 * (1 << byteLength / 16 + 3);
+        }
+
+    @Override
+    VarInt emin.get()
+        {
+        return 1 - emax;
+        }
+
+    @Override
+    VarInt bias.get()
+        {
+        // from IEEE 754-2008:
+        //   emax+p−2
+        return emax + precision - 2;
+        }
+
+
     // ----- FPNumber operations -------------------------------------------------------------------
 
     @Override
-    VarDec round()
+    (Boolean signBit, VarInt significand, VarInt exponent) split()
+        {
+        TODO
+        }
+
+    @Override
+    VarDec round(Rounding direction = TiesToAway)
         {
         TODO
         }
@@ -109,7 +140,19 @@ const VarDec
         }
 
     @Override
+    VarDec scaleByPow(Int n)
+        {
+        TODO
+        }
+
+    @Override
     VarDec log()
+        {
+        TODO
+        }
+
+    @Override
+    VarDec log2()
         {
         TODO
         }
@@ -169,6 +212,48 @@ const VarDec
         }
 
     @Override
+    VarDec atan2(VarDec y)
+        {
+        TODO
+        }
+
+    @Override
+    VarDec sinh()
+        {
+        TODO
+        }
+
+    @Override
+    VarDec cosh()
+        {
+        TODO
+        }
+
+    @Override
+    VarDec tanh()
+        {
+        TODO
+        }
+
+    @Override
+    VarDec asinh()
+        {
+        TODO
+        }
+
+    @Override
+    VarDec acosh()
+        {
+        TODO
+        }
+
+    @Override
+    VarDec atanh()
+        {
+        TODO
+        }
+
+    @Override
     VarDec deg2rad()
         {
         TODO
@@ -176,6 +261,18 @@ const VarDec
 
     @Override
     VarDec rad2deg()
+        {
+        TODO
+        }
+
+    @Override
+    VarDec nextUp()
+        {
+        TODO
+        }
+
+    @Override
+    VarDec nextDown()
         {
         TODO
         }

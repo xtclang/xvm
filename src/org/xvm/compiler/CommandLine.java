@@ -1324,7 +1324,7 @@ public class CommandLine
         public File      file;
         public long      lastModified;
         public Source    source;
-        public ErrorList errs = new ErrorList(100);
+        public ErrorList errs = new ErrorList(250);
         public Statement stmt;
         public TypeCompositionStatement type;
 

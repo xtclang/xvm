@@ -7,9 +7,8 @@ const Float16
      * Construct a 16-bit binary floating point number (a "half float") from its bitwise machine
      * representation.
      *
-     * @param bits  an array of bit values that represent this number, ordered from Least
-     *              Significant Bit (LSB) in the `0` element, to Most Significant Bit (MSB) in the
-     *              `size-1` element
+     * @param bits  an array of bit values that represent this number, ordered from left-to-right,
+     *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     construct(Bit[] bits)
         {
@@ -99,28 +98,34 @@ const Float16
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
-    Boolean finite.get()
+    Int emax.get()
         {
-        TODO
+        return 15;
         }
 
     @Override
-    Boolean infinite.get()
+    Int emin.get()
         {
-        TODO
+        return 1 - emax;
         }
 
     @Override
-    Boolean NaN.get()
+    Int bias.get()
         {
-        TODO
+        return emax;
         }
 
 
     // ----- FPNumber operations -------------------------------------------------------------------
 
     @Override
-    Float16 round()
+    (Boolean signBit, Int significand, Int exponent) split()
+        {
+        TODO
+        }
+
+    @Override
+    Float16 round(Rounding direction = TiesToAway)
         {
         TODO
         }
@@ -144,7 +149,19 @@ const Float16
         }
 
     @Override
+    Float16 scaleByPow(Int n)
+        {
+        TODO
+        }
+
+    @Override
     Float16 log()
+        {
+        TODO
+        }
+
+    @Override
+    Float16 log2()
         {
         TODO
         }
@@ -204,6 +221,48 @@ const Float16
         }
 
     @Override
+    Float16 atan2(Float16 y)
+        {
+        TODO
+        }
+
+    @Override
+    Float16 sinh()
+        {
+        TODO
+        }
+
+    @Override
+    Float16 cosh()
+        {
+        TODO
+        }
+
+    @Override
+    Float16 tanh()
+        {
+        TODO
+        }
+
+    @Override
+    Float16 asinh()
+        {
+        TODO
+        }
+
+    @Override
+    Float16 acosh()
+        {
+        TODO
+        }
+
+    @Override
+    Float16 atanh()
+        {
+        TODO
+        }
+
+    @Override
     Float16 deg2rad()
         {
         TODO
@@ -211,6 +270,18 @@ const Float16
 
     @Override
     Float16 rad2deg()
+        {
+        TODO
+        }
+
+    @Override
+    Float16 nextUp()
+        {
+        TODO
+        }
+
+    @Override
+    Float16 nextDown()
         {
         TODO
         }

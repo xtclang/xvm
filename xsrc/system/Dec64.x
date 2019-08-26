@@ -6,9 +6,8 @@ const Dec64
     /**
      * Construct a 64-bit decimal floating point number from its bitwise machine representation.
      *
-     * @param bits  an array of bit values that represent this number, ordered from Least
-     *              Significant Bit (LSB) in the `0` element, to Most Significant Bit (MSB) in the
-     *              `size-1` element
+     * @param bits  an array of bit values that represent this number, ordered from left-to-right,
+     *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     construct(Bit[] bits)
         {
@@ -80,10 +79,37 @@ const Dec64
         }
 
 
+    // ----- FPNumber properties -------------------------------------------------------------------
+
+    @Override
+    @RO Int emax.get()
+        {
+        return 384;
+        }
+
+    @Override
+    Int emin.get()
+        {
+        return 1 - emax;
+        }
+
+    @Override
+    Int bias.get()
+        {
+        return 398;
+        }
+
+
     // ----- FPNumber operations -------------------------------------------------------------------
 
     @Override
-    Dec64 round()
+    (Boolean signBit, Int significand, Int exponent) split()
+        {
+        TODO
+        }
+
+    @Override
+    Dec64 round(Rounding direction = TiesToAway)
         {
         TODO
         }
@@ -107,7 +133,19 @@ const Dec64
         }
 
     @Override
+    Dec64 scaleByPow(Int n)
+        {
+        TODO
+        }
+
+    @Override
     Dec64 log()
+        {
+        TODO
+        }
+
+    @Override
+    Dec64 log2()
         {
         TODO
         }
@@ -167,6 +205,48 @@ const Dec64
         }
 
     @Override
+    Dec64 atan2(Dec64 y)
+        {
+        TODO
+        }
+
+    @Override
+    Dec64 sinh()
+        {
+        TODO
+        }
+
+    @Override
+    Dec64 cosh()
+        {
+        TODO
+        }
+
+    @Override
+    Dec64 tanh()
+        {
+        TODO
+        }
+
+    @Override
+    Dec64 asinh()
+        {
+        TODO
+        }
+
+    @Override
+    Dec64 acosh()
+        {
+        TODO
+        }
+
+    @Override
+    Dec64 atanh()
+        {
+        TODO
+        }
+
+    @Override
     Dec64 deg2rad()
         {
         TODO
@@ -174,6 +254,18 @@ const Dec64
 
     @Override
     Dec64 rad2deg()
+        {
+        TODO
+        }
+
+    @Override
+    Dec64 nextUp()
+        {
+        TODO
+        }
+
+    @Override
+    Dec64 nextDown()
         {
         TODO
         }

@@ -194,6 +194,7 @@ interface Service()
      * property may not correctly reflect the presence and/or amount of contention.
      */
     @RO Int backlogDepth;
+
     /**
      * Allow the runtime to process pending runtime notifications for this service, or other service
      * requests in the service's backlog -- if the setting of {@link reentrancy} allows it.

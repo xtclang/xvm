@@ -68,6 +68,33 @@ interface List<ElementType>
         }
 
     /**
+     * Replace existing values in the List with the provided values, starting at the specified
+     * index.
+     *
+     * @param index  the index at which to store the specified value, which must be between `0`
+     *               (inclusive) and `size` (exclusive)
+     * @param value  the value to store
+     *
+     * @return the resultant list, which is the same as `this` for a mutable list
+     *
+     * @throws OutOfBounds  if the specified index is outside of range `0` (inclusive) to
+     *                      `size` (inclusive), or if the specified index plus the size of the
+     *                      provided Iterable is greater than the size of this array
+     */
+    List replaceAll(Int index, Iterable<ElementType> values)
+        {
+        // this implementation should be overridden by any non-mutable implementation of List, and
+        // by any implementation that is able to replace multiple elements efficiently
+        Int  i      = index;
+        List result = this;
+        for (ElementType value : values)
+            {
+            result = result.replace(i++, value);
+            }
+        return result;
+        }
+
+    /**
      * Insert the specified value into the List at the specified index, shifting the contents of the
      * entire remainder of the list as a result. If the index is beyond the end of the list, this
      * operation has the same effect as calling [add].

@@ -7,9 +7,8 @@ const VarFloat
      * Construct a variable-length binary floating point number from its bitwise machine
      * representation.
      *
-     * @param bits  an array of bit values that represent this number, ordered from Least
-     *              Significant Bit (LSB) in the `0` element, to Most Significant Bit (MSB) in the
-     *              `size-1` element
+     * @param bits  an array of bit values that represent this number, ordered from left-to-right,
+     *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     construct(Bit[] bits)
         {
@@ -109,28 +108,36 @@ const VarFloat
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
-    Boolean finite.get()
+    VarInt emax.get()
         {
-        TODO
+        // 2^(k–p–1) – 1
+        Int k = bitLength;
+        return (1 << (k - precision - 1)) - 1;
         }
 
     @Override
-    Boolean infinite.get()
+    VarInt emin.get()
         {
-        TODO
+        return 1 - emax;
         }
 
     @Override
-    Boolean NaN.get()
+    VarInt bias.get()
         {
-        TODO
+        return emax;
         }
 
 
     // ----- FPNumber operations -------------------------------------------------------------------
 
     @Override
-    VarFloat round()
+    (Boolean signBit, VarInt significand, VarInt exponent) split()
+        {
+        TODO
+        }
+
+    @Override
+    VarFloat round(Rounding direction = TiesToAway)
         {
         TODO
         }
@@ -154,7 +161,19 @@ const VarFloat
         }
 
     @Override
+    VarFloat scaleByPow(Int n)
+        {
+        TODO
+        }
+
+    @Override
     VarFloat log()
+        {
+        TODO
+        }
+
+    @Override
+    VarFloat log2()
         {
         TODO
         }
@@ -214,6 +233,48 @@ const VarFloat
         }
 
     @Override
+    VarFloat atan2(VarFloat y)
+        {
+        TODO
+        }
+
+    @Override
+    VarFloat sinh()
+        {
+        TODO
+        }
+
+    @Override
+    VarFloat cosh()
+        {
+        TODO
+        }
+
+    @Override
+    VarFloat tanh()
+        {
+        TODO
+        }
+
+    @Override
+    VarFloat asinh()
+        {
+        TODO
+        }
+
+    @Override
+    VarFloat acosh()
+        {
+        TODO
+        }
+
+    @Override
+    VarFloat atanh()
+        {
+        TODO
+        }
+
+    @Override
     VarFloat deg2rad()
         {
         TODO
@@ -221,6 +282,18 @@ const VarFloat
 
     @Override
     VarFloat rad2deg()
+        {
+        TODO
+        }
+
+    @Override
+    VarFloat nextUp()
+        {
+        TODO
+        }
+
+    @Override
+    VarFloat nextDown()
         {
         TODO
         }

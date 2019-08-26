@@ -20,9 +20,8 @@ const UInt64
     /**
      * Construct a 64-bit unsigned integer number from its bitwise machine representation.
      *
-     * @param bits  an array of bit values that represent this number, ordered from Least
-     *              Significant Bit (LSB) in the `0` element, to Most Significant Bit (MSB) in the
-     *              `size-1` element
+     * @param bits  an array of bit values that represent this number, ordered from left-to-right,
+     *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     construct(Bit[] bits)
         {
@@ -43,118 +42,184 @@ const UInt64
         }
 
 
+    // ----- properties ----------------------------------------------------------------------------
+
     @Override
     Signum sign.get()
         {
-        if (this == 0)
+        return this == 0 ? Zero : Positive;
+        }
+
+    @Override
+    UInt64 leftmostBit.get()
+        {
+        TODO
+        }
+
+    @Override
+    UInt64 rightmostBit.get()
+        {
+        TODO
+        }
+
+
+    // ----- operations ----------------------------------------------------------------------------
+
+    @Override
+    @Op("+")
+    UInt64 add(UInt64 n)
+        {
+        return this + n;
+        }
+
+    @Override
+    @Op("-")
+    UInt64 sub(UInt64 n)
+        {
+        return this - n;
+        }
+
+    @Override
+    @Op("*")
+    UInt64 mul(UInt64 n)
+        {
+        return this * n;
+        }
+
+    @Override
+    @Op("/")
+    UInt64 div(UInt64 n)
+        {
+        return this / n;
+        }
+
+    @Override
+    @Op("%")
+    UInt64 mod(UInt64 n)
+        {
+        return this % n;
+        }
+
+    @Override
+    @Op("&")
+    UInt64 and(UInt64 n)
+        {
+        return new UInt64(this.bits & n.bits);
+        }
+
+    @Override
+    @Op("|")
+    UInt64 or(UInt64 n)
+        {
+        return new UInt64(this.bits | n.bits);
+        }
+
+    @Override
+    @Op("^")
+    UInt64 xor(UInt64 n)
+        {
+        return new UInt64(this.bits ^ n.bits);
+        }
+
+    @Override
+    @Op("~")
+    UInt64 not()
+        {
+        return new UInt64(~bits);
+        }
+
+    @Override
+    @Op("<<")
+    UInt64 shiftLeft(Int count)
+        {
+        return new UInt64(bits << count);
+        }
+
+    @Override
+    @Op(">>")
+    UInt64 shiftRight(Int count)
+        {
+        return new UInt64(bits >> count);
+        }
+
+    @Override
+    @Op(">>>")
+    UInt64 shiftAllRight(Int count)
+        {
+        return new UInt64(bits >>> count);
+        }
+
+    @Override
+    UInt64 rotateLeft(Int count)
+        {
+        return new UInt64(bits.rotateLeft(count));
+        }
+
+    @Override
+    UInt64 rotateRight(Int count)
+        {
+        return new UInt64(bits.rotateRight(count));
+        }
+
+    @Override
+    UInt64 retainLSBits(Int count)
+        {
+        if (count <= 0)
             {
-            return Zero;
+            return 0;
             }
 
-        return Positive;
+        if (count >= bitLength)
+            {
+            return this;
+            }
+
+        return new UInt64(bits.fill(0, 0..bitLength-count-1));
         }
 
     @Override
-    @RO UInt64 magnitude.get()
+    UInt64 retainMSBits(Int count)
         {
-        return this;
+        if (count <= 0)
+            {
+            return 0;
+            }
+
+        if (count >= bitLength)
+            {
+            return this;
+            }
+
+        return new UInt64(bits.fill(0, count..bitLength-1));
         }
 
     @Override
-    @Auto Int8 toInt8()
+    UInt64 reverseBits()
         {
-        return this;
+        return new UInt64(bits.reverse());
         }
 
     @Override
-    @Auto Int16 toInt16()
+    UInt64 reverseBytes()
         {
-        return this;
+        return new UInt64(toByteArray().reverse());
         }
 
     @Override
-    @Auto Int32 toInt32()
+    UInt64 pow(UInt64 n)
         {
-        return this;
+        UInt64 result = 1;
+
+        while (n-- > 0)
+            {
+            result *= this;
+            }
+
+        return result;
         }
 
-    @Override
-    @Auto Int64 toInt()
-        {
-        return this;
-        }
 
-    @Override
-    @Auto Int128 toInt128()
-        {
-        return this;
-        }
-
-    @Override
-    @Auto UInt8 toByte()
-        {
-        return this;
-        }
-
-    @Override
-    @Auto UInt16 toUInt16()
-        {
-        return this;
-        }
-
-    @Override
-    @Auto UInt32 toUInt32()
-        {
-        return this;
-        }
-
-    @Override
-    @Auto UInt64 toUInt()
-        {
-        return this;
-        }
-
-    @Override
-    @Auto UInt128 toUInt128()
-        {
-        return this;
-        }
-
-    @Override
-    @Auto VarUInt toVarUInt()
-        {
-        return this;
-        }
-
-    @Override
-    @Auto VarFloat toVarFloat()
-        {
-        return this;
-        }
-
-    @Override
-    @Auto VarDec toVarDec()
-        {
-        return this;
-        }
-
-    @Override
-    @Auto VarInt toVarInt()
-        {
-        return this;
-        }
-
-    @Override
-    immutable Boolean[] toBooleanArray()
-        {
-        return bitBooleans(bits);
-        }
-
-    @Override
-    immutable Bit[] toBitArray()
-        {
-        return bits.reverse.as(immutable Bit[]);
-        }
+    // ----- Sequential interface ------------------------------------------------------------------
 
     @Override
     conditional UInt64 next()
@@ -178,151 +243,126 @@ const UInt64
         return false;
         }
 
+
+    // ----- conversions ---------------------------------------------------------------------------
+
     @Override
-    @Op UInt64 shiftLeft(Int count)
+    immutable Bit[] toBitArray()
         {
-        return new UInt64(bitShiftLeft(bits, count));
+        return bits.as(immutable Bit[]);
         }
 
     @Override
-    UInt64 rotateLeft(Int count)
+    immutable Boolean[] toBooleanArray()
         {
-        return new UInt64(bitRotateLeft(bits, count));
+        return new Array<Boolean>(bits.size, i -> bits[i].toBoolean()).ensureConst(True);
         }
 
     @Override
-    @Op UInt64 shiftRight(Int count)
+    UInt64! toChecked()
         {
-        return new UInt64(bitShiftAllRight(bits, count));
+        return this.is(Unchecked) ? new UInt64!(bits) : this;
         }
 
     @Override
-    @Op UInt64 rotateRight(Int count)
+    @Unchecked UInt64 toUnchecked()
         {
-        return new UInt64(bitRotateRight(bits, count));
+        return this.is(Unchecked) ? this : new @Unchecked UInt64!(bits);
         }
 
     @Override
-    @Op UInt64 shiftAllRight(Int count)
+    @Auto Int8 toInt8()
         {
-        return new UInt64(bitShiftAllRight(bits, count));
+        assert:bounds this <= Int8.maxvalue;
+        return new Int8(bits[bitLength-8..bitLength-1]);
         }
 
     @Override
-    UInt64 truncate(Int count)
+    @Auto Int16 toInt16()
         {
-        return new UInt64(bitTruncate(bits, count));
+        assert:bounds this <= Int16.maxvalue;
+        return new Int16(bits[bitLength-16..bitLength-1]);
         }
 
     @Override
-    UInt64 leftmostBit.get()
+    @Auto Int32 toInt32()
         {
-        TODO
+        assert:bounds this <= Int32.maxvalue;
+        return new Int32(bits[bitLength-32..bitLength-1]);
         }
 
     @Override
-    UInt64 rightmostBit.get()
+    @Auto Int64 toInt()
         {
-        TODO
+        assert:bounds this <= Int64.maxvalue;
+        return new Int64(bits);
         }
 
     @Override
-    UInt64 reverseBits()
+    @Auto Int128 toInt128()
         {
-        return new UInt64(bitReverse(bits));
+        return new Int128(new Array<Bit>(128, i -> (i < 128-bitLength ? 0 : bits[i])));
         }
 
     @Override
-    UInt64 reverseBytes()
+    @Auto UInt8 toByte()
         {
-        UInt64 result = 0;
-
-        for (Int i = 0; i < bitLength; i += 8)
-            {
-            result |= ((this >>> i) & 0xFF) << (bitLength - i - 8);
-            }
-
-        return result;
+        assert:bounds this <= UInt8.maxvalue;
+        return new UInt8(bits[bitLength-8..bitLength-1]);
         }
 
     @Override
-    @Op UInt64 neg()
+    @Auto UInt16 toUInt16()
         {
-        return this;
+        assert:bounds this <= UInt16.maxvalue;
+        return new UInt16(bits[bitLength-16..bitLength-1]);
         }
 
     @Override
-    @Op UInt64 or(UInt64 n)
+    @Auto UInt32 toUInt32()
         {
-        return new UInt64(bitOr(bits, n.bits));
+        assert:bounds this <= UInt32.maxvalue;
+        return new UInt32(bits[bitLength-32..bitLength-1]);
         }
 
     @Override
-    @Op UInt64 and(UInt64 n)
-        {
-        return new UInt64(bitAnd(bits, n.bits));
-        }
-
-    @Override
-    @Op UInt64 xor(UInt64 n)
-        {
-        return new UInt64(bitXor(bits, n.bits));
-        }
-
-    @Override
-    @Op UInt64 not()
-        {
-        return new UInt64(bitNot(bits));
-        }
-
-    @Override
-    @Op UInt64 add(UInt64 n)
-        {
-        return new UInt64(bitAdd(bits, n.bits));
-        }
-
-    @Override
-    @Op UInt64 sub(UInt64 n)
-        {
-        return this + ~n + 1;
-        }
-
-    @Override
-    @Op UInt64 mul(UInt64 n)
-        {
-        return this * n;
-        }
-
-    @Override
-    @Op UInt64 div(UInt64 n)
-        {
-        return this / n;
-        }
-
-    @Override
-    @Op UInt64 mod(UInt64 n)
-        {
-        return this % n;
-        }
-
-    @Override
-    UInt64 abs()
+    @Auto UInt64 toUInt()
         {
         return this;
         }
 
     @Override
-    UInt64 pow(UInt64 n)
+    @Auto UInt128 toUInt128()
         {
-        UInt64 result = 1;
-
-        while (n-- > 0)
-            {
-            result *= this;
-            }
-
-        return result;
+        return new UInt128(new Array<Bit>(128, i -> (i < 128-bitLength ? 0 : bits[i])));
         }
+
+    @Override
+    @Auto VarInt toVarInt()
+        {
+        return bits[0] == 0 ? new VarInt(bits) : toVarUInt().toVarInt();
+        }
+
+    @Override
+    @Auto VarUInt toVarUInt()
+        {
+        return new VarUInt(bits);
+        }
+
+    @Override
+    @Auto VarFloat toVarFloat()
+        {
+        TODO
+        }
+
+    @Override
+    @Auto VarDec toVarDec()
+        {
+        TODO
+        }
+
+
+    // ----- Stringable implementation -------------------------------------------------------------
 
     @Override
     Int estimateStringLength()

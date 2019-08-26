@@ -6,9 +6,8 @@ const DecimalFPNumber
     /**
      * Construct a decimal floating point number from its bitwise machine representation.
      *
-     * @param bits  an array of bit values that represent this number, ordered from Least
-     *              Significant Bit (LSB) in the `0` element, to Most Significant Bit (MSB) in the
-     *              `size-1` element
+     * @param bits  an array of bit values that represent this number, ordered from left-to-right,
+     *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     protected construct(Bit[] bits)
         {
@@ -65,7 +64,7 @@ const DecimalFPNumber
         }
 
     @Override
-    Boolean infinite.get()
+    Boolean infinity.get()
         {
         // from IEEE 754-2008:
         //   If G0 through G4 are 11110 then r and v = (−1) S × (+∞).
@@ -105,11 +104,20 @@ const DecimalFPNumber
         }
 
     @Override
-    @RO Int emax.get()
+    @RO Int significandBitLength.get()
         {
         // from IEEE 754-2008:
-        //   w    = k/16+4
-        //   emax = 3×2^(w−1)
-        return 3 * (1 << byteLength / 16 + 3);
+        //   15×k/16 – 10
+        return 15 * bitLength / 16 - 10;
+        }
+
+    @Override
+    @RO Int exponentBitLength.get()
+        {
+        // from IEEE 754-2008:
+        //   combination field width in bits
+        //   w+5 = 15×k/16 – 10
+        // subtract 5 bits for the raw exponent length
+        return bitLength / 16 + 4;
         }
     }

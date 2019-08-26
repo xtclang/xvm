@@ -7,9 +7,8 @@ const Float128
      * Construct a 128-bit binary floating point number (a "quad float") from its bitwise machine
      * representation.
      *
-     * @param bits  an array of bit values that represent this number, ordered from Least
-     *              Significant Bit (LSB) in the `0` element, to Most Significant Bit (MSB) in the
-     *              `size-1` element
+     * @param bits  an array of bit values that represent this number, ordered from left-to-right,
+     *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     construct(Bit[] bits)
         {
@@ -93,28 +92,34 @@ const Float128
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
-    Boolean finite.get()
+    Int emax.get()
         {
-        TODO
+        return 16383;
         }
 
     @Override
-    Boolean infinite.get()
+    Int emin.get()
         {
-        TODO
+        return 1 - emax;
         }
 
     @Override
-    Boolean NaN.get()
+    Int bias.get()
         {
-        TODO
+        return emax;
         }
 
 
     // ----- FPNumber operations -------------------------------------------------------------------
 
     @Override
-    Float128 round()
+    (Boolean signBit, Int128 significand, Int exponent) split()
+        {
+        TODO
+        }
+
+    @Override
+    Float128 round(Rounding direction = TiesToAway)
         {
         TODO
         }
@@ -138,7 +143,19 @@ const Float128
         }
 
     @Override
+    Float128 scaleByPow(Int n)
+        {
+        TODO
+        }
+
+    @Override
     Float128 log()
+        {
+        TODO
+        }
+
+    @Override
+    Float128 log2()
         {
         TODO
         }
@@ -198,6 +215,48 @@ const Float128
         }
 
     @Override
+    Float128 atan2(Float128 y)
+        {
+        TODO
+        }
+
+    @Override
+    Float128 sinh()
+        {
+        TODO
+        }
+
+    @Override
+    Float128 cosh()
+        {
+        TODO
+        }
+
+    @Override
+    Float128 tanh()
+        {
+        TODO
+        }
+
+    @Override
+    Float128 asinh()
+        {
+        TODO
+        }
+
+    @Override
+    Float128 acosh()
+        {
+        TODO
+        }
+
+    @Override
+    Float128 atanh()
+        {
+        TODO
+        }
+
+    @Override
     Float128 deg2rad()
         {
         TODO
@@ -205,6 +264,18 @@ const Float128
 
     @Override
     Float128 rad2deg()
+        {
+        TODO
+        }
+
+    @Override
+    Float128 nextUp()
+        {
+        TODO
+        }
+
+    @Override
+    Float128 nextDown()
         {
         TODO
         }

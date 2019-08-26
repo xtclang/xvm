@@ -16,7 +16,7 @@ mixin UncheckedInt
             }
         catch (OutOfBounds e)
             {
-            return this.toVarInt().nextValue().truncate(bitLength).toUnchecked();
+            return this.toVarInt().nextValue().retainLSBits(bitLength).toUnchecked();
             }
         }
 
@@ -29,7 +29,7 @@ mixin UncheckedInt
             }
         catch (OutOfBounds e)
             {
-            return this.toVarInt().prevValue().truncate(bitLength).toUnchecked();
+            return this.toVarInt().prevValue().retainLSBits(bitLength).toUnchecked();
             }
         }
 
@@ -42,7 +42,7 @@ mixin UncheckedInt
             }
         catch (OutOfBounds e)
             {
-            return this.toVarInt().add(n.toVarInt()).truncate(bitLength).toUnchecked();
+            return this.toVarInt().add(n.toVarInt()).retainLSBits(bitLength).toUnchecked();
             }
         }
 
@@ -55,7 +55,7 @@ mixin UncheckedInt
             }
         catch (OutOfBounds e)
             {
-            return this.toVarInt().sub(n.toVarInt()).truncate(bitLength).toUnchecked();
+            return this.toVarInt().sub(n.toVarInt()).retainLSBits(bitLength).toUnchecked();
             }
         }
 
@@ -68,7 +68,7 @@ mixin UncheckedInt
             }
         catch (OutOfBounds e)
             {
-            return this.toVarInt().mul(n.toVarInt()).truncate(bitLength).toUnchecked();
+            return this.toVarInt().mul(n.toVarInt()).retainLSBits(bitLength).toUnchecked();
             }
         }
 
@@ -81,7 +81,7 @@ mixin UncheckedInt
             }
         catch (OutOfBounds e)
             {
-            return this.toVarInt().pow(n.toVarInt()).truncate(bitLength).toUnchecked();
+            return this.toVarInt().pow(n.toVarInt()).retainLSBits(bitLength).toUnchecked();
             }
         }
 
@@ -94,7 +94,7 @@ mixin UncheckedInt
             }
         catch (OutOfBounds e)
             {
-            return this.toVarInt().neg().truncate(bitLength).toUnchecked();
+            return this.toVarInt().neg().retainLSBits(bitLength).toUnchecked();
             }
         }
 
@@ -107,7 +107,7 @@ mixin UncheckedInt
             }
         catch (OutOfBounds e)
             {
-            return this.toVarInt().abs().truncate(bitLength).toUnchecked();
+            return this.toVarInt().abs().retainLSBits(bitLength).toUnchecked();
             }
         }
     }

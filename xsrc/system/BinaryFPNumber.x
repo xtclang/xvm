@@ -6,9 +6,8 @@ const BinaryFPNumber
     /**
      * Construct a binary floating point number from its bitwise machine representation.
      *
-     * @param bits  an array of bit values that represent this number, ordered from Least
-     *              Significant Bit (LSB) in the `0` element, to Most Significant Bit (MSB) in the
-     *              `size-1` element
+     * @param bits  an array of bit values that represent this number, ordered from left-to-right,
+     *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     protected construct(Bit[] bits)
         {
@@ -30,6 +29,18 @@ const BinaryFPNumber
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
+    Boolean infinity.get()
+        {
+        return exponentOnly1s && significandOnly0s;
+        }
+
+    @Override
+    Boolean NaN.get()
+        {
+        return exponentOnly1s && !significandOnly0s;
+        }
+
+    @Override
     @RO Int radix.get()
         {
         return 2;
@@ -38,14 +49,51 @@ const BinaryFPNumber
     @Override
     @RO Int precision.get()
         {
-        // TODO k – round(4×log2(k)) + 13
-        return 0;
+        return significandBitLength + 1;
         }
 
     @Override
-    @RO Int emax.get()
+    Int significandBitLength.get()
         {
-        // TODO 2^(k–p–1) –1
-        return 0;
+        // k – round(4 × log2 (k)) + 12
+        Int k = bitLength;
+        return k - 4 * k.trailingZeroCount + 12;
+        }
+
+    @Override
+    Int exponentBitLength.get()
+        {
+        // round(4 × log2 (k)) – 13
+        Int k = bitLength;
+        return 4 * k.trailingZeroCount - 13;
+        }
+
+
+    // ----- FPNumber properties -------------------------------------------------------------------
+
+    private Boolean exponentOnly1s.get()
+        {
+        Bit[] bitsL2R = toBitArray();
+        for (Bit bit : bitsL2R[1..exponentBitLength])
+            {
+            if (bit == 0)
+                {
+                return False;
+                }
+            }
+        return True;
+        }
+
+    private Boolean significandOnly0s.get()
+        {
+        Bit[] bitsL2R = toBitArray();
+        for (Bit bit : bitsL2R[bitsL2R.size-significandBitLength..bitsL2R.size-1])
+            {
+            if (bit == 1)
+                {
+                return False;
+                }
+            }
+        return True;
         }
     }

@@ -208,6 +208,198 @@ const IntLiteral(String text)
         TODO
         }
 
+
+    // ----- IntNumber API -------------------------------------------------------------------------
+
+    /**
+     * Bitwise AND.
+     */
+    @Op("&")
+    IntLiteral and(IntLiteral that)
+        {
+        return this & that;
+        }
+
+    /**
+     * Bitwise OR.
+     */
+    @Op("|")
+    IntLiteral or(IntLiteral that)
+        {
+        return this | that;
+        }
+
+    /**
+     * Bitwise XOR.
+     */
+    @Op("^")
+    IntLiteral xor(IntLiteral that)
+        {
+        return this ^ that;
+        }
+
+    /**
+     * Bitwise NOT.
+     */
+    @Op("~")
+    IntLiteral not()
+        {
+        return ~this;
+        }
+
+    /**
+     * Shift bits left. Works like an arithmetic left shift.
+     */
+    @Op("<<")
+    IntLiteral shiftLeft(Int count)
+        {
+        return this << count;
+        }
+
+    /**
+     * Shift bits right. Works like an arithmetic right shift.
+     */
+    @Op(">>")
+    IntLiteral shiftRight(Int count)
+        {
+        return this >> count;
+        }
+
+    /**
+     * Works identically to the `shiftRight`.
+     */
+    @Op(">>>")
+    IntLiteral shiftAllRight(Int count)
+        {
+        return this >>> count;
+        }
+
+    /**
+     * Obtain an interval beginning with this number and proceeding to the specified number.
+     */
+    @Op("..")
+    Interval<Int> through(Int n)
+        {
+        return new Interval<Int>(this.toInt(), n);
+        }
+
+
+    // ----- Number API ----------------------------------------------------------------------------
+
+    /**
+     * Addition: Add another number to this number, and return the result.
+     */
+    @Op("+")
+    IntLiteral add(IntLiteral n)
+        {
+        return new IntLiteral((this.toVarInt() + n.toVarInt()).toString());
+        }
+
+    /**
+     * Subtraction: Subtract another number from this number, and return the result.
+     */
+    @Op("-")
+    IntLiteral sub(IntLiteral n)
+        {
+        return new IntLiteral((this.toVarInt() - n.toVarInt()).toString());
+        }
+
+    /**
+     * Multiplication: Multiply this number by another number, and return the result.
+     */
+    @Op("*")
+    IntLiteral mul(IntLiteral n)
+        {
+        return new IntLiteral((this.toVarInt() * n.toVarInt()).toString());
+        }
+
+    /**
+     * Division: Divide this number by another number, and return the result.
+     */
+    @Op("/")
+    IntLiteral div(IntLiteral n)
+        {
+        return new IntLiteral((this.toVarInt() / n.toVarInt()).toString());
+        }
+
+    /**
+     * Modulo: Return the modulo that would result from dividing this number by another number.
+     */
+    @Op("%")
+    IntLiteral mod(IntLiteral n)
+        {
+        return new IntLiteral((this.toVarInt() % n.toVarInt()).toString());
+        }
+
+
+    // ----- other Number-like operations ----------------------------------------------------------
+
+    @Op("+")
+    Int64 add(Int64 n)
+        {
+        return this.toInt() + n;
+        }
+
+    /**
+     * Subtraction: Subtract another number from this number, and return the result.
+     */
+    @Op("-")
+    Int64 sub(Int64 n)
+        {
+        return this.toInt() - n;
+        }
+
+    /**
+     * Multiplication: Multiply this number by another number, and return the result.
+     */
+    @Op("*")
+    Int64 mul(Int64 n)
+        {
+        return this.toInt() * n;
+        }
+
+    /**
+     * Division: Divide this number by another number, and return the result.
+     */
+    @Op("/")
+    Int64 div(Int64 n)
+        {
+        return this.toInt() / n;
+        }
+
+    /**
+     * Modulo: Return the modulo that would result from dividing this number by another number.
+     */
+    @Op("%")
+    Int64 mod(Int64 n)
+        {
+        return this.toInt() % n;
+        }
+
+
+    // ----- Sequential ----------------------------------------------------------------------------
+
+    @Override
+    conditional IntLiteral prev()
+        {
+        return true, this - 1;
+        }
+
+    @Override
+    conditional IntLiteral next()
+        {
+        return true, this + 1;
+        }
+
+    @Override
+    Int stepsTo(IntLiteral that)
+        {
+        return that - this;
+        }
+
+
+    // ----- conversions ---------------------------------------------------------------------------
+
     @Auto Bit toBit()
         {
         if (magnitude == 0)
@@ -225,15 +417,6 @@ const IntLiteral(String text)
     @Auto VarInt toVarInt()
         {
         TODO
-        }
-
-    /**
-     * Convert the number to a 4-bit integer.
-     * Any additional magnitude is discarded; any fractional value is discarded.
-     */
-    @Auto Nibble toNibble()
-        {
-        return toVarInt().toNibble();
         }
 
     /**
@@ -414,183 +597,21 @@ const IntLiteral(String text)
         return toVarDec().toDec128();
         }
 
-    // ----- IntNumber API -------------------------------------------------------------------------
-
     /**
-     * Bitwise AND.
+     * Convert the number to a 4-bit integer.
+     * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @Op IntLiteral and(IntLiteral that)
+    @Auto Nibble toNibble()
         {
-        return this & that;
+        TODO
         }
-
-    /**
-     * Bitwise OR.
-     */
-    @Op IntLiteral or(IntLiteral that)
-        {
-        return this | that;
-        }
-
-    /**
-     * Bitwise XOR.
-     */
-    @Op IntLiteral xor(IntLiteral that)
-        {
-        return this ^ that;
-        }
-
-    /**
-     * Bitwise NOT.
-     */
-    @Op IntLiteral not()
-        {
-        return ~this;
-        }
-
-    /**
-     * Shift bits left. Works like an arithmetic left shift.
-     */
-    @Op IntLiteral shiftLeft(Int count)
-        {
-        return this << count;
-        }
-
-    /**
-     * Shift bits right. Works like an arithmetic right shift.
-     */
-    @Op IntLiteral shiftRight(Int count)
-        {
-        return this >> count;
-        }
-
-    /**
-     * Works identically to the `shiftRight`.
-     */
-    @Op IntLiteral shiftAllRight(Int count)
-        {
-        return this >>> count;
-        }
-
-    /**
-     * Obtain an interval beginning with this number and proceeding to the specified number.
-     */
-    @Op Interval<Int> through(Int n)
-        {
-        return new Interval<Int>(this.toInt(), n);
-        }
-
-    // ----- Number API ----------------------------------------------------------------------------
-
-    /**
-     * Addition: Add another number to this number, and return the result.
-     */
-    @Op("+") IntLiteral add(IntLiteral n)
-        {
-        return new IntLiteral((this.toVarInt() + n.toVarInt()).toString());
-        }
-
-    /**
-     * Subtraction: Subtract another number from this number, and return the result.
-     */
-    @Op("-") IntLiteral sub(IntLiteral n)
-        {
-        return new IntLiteral((this.toVarInt() - n.toVarInt()).toString());
-        }
-
-    /**
-     * Multiplication: Multiply this number by another number, and return the result.
-     */
-    @Op("*") IntLiteral mul(IntLiteral n)
-        {
-        return new IntLiteral((this.toVarInt() * n.toVarInt()).toString());
-        }
-
-    /**
-     * Division: Divide this number by another number, and return the result.
-     */
-    @Op("/") IntLiteral div(IntLiteral n)
-        {
-        return new IntLiteral((this.toVarInt() / n.toVarInt()).toString());
-        }
-
-    /**
-     * Modulo: Return the modulo that would result from dividing this number by another number.
-     */
-    @Op("%") IntLiteral mod(IntLiteral n)
-        {
-        return new IntLiteral((this.toVarInt() % n.toVarInt()).toString());
-        }
-
-    // ----- other Number-like operations ----------------------------------------------------------
-
-    @Op("+") Int64 add(Int64 n)
-        {
-        return this.toInt() + n;
-        }
-
-    /**
-     * Subtraction: Subtract another number from this number, and return the result.
-     */
-    @Op("-") Int64 sub(Int64 n)
-        {
-        return this.toInt() - n;
-        }
-
-    /**
-     * Multiplication: Multiply this number by another number, and return the result.
-     */
-    @Op("*") Int64 mul(Int64 n)
-        {
-        return this.toInt() * n;
-        }
-
-    /**
-     * Division: Divide this number by another number, and return the result.
-     */
-    @Op("/") Int64 div(Int64 n)
-        {
-        return this.toInt() / n;
-        }
-
-    /**
-     * Modulo: Return the modulo that would result from dividing this number by another number.
-     */
-    @Op("%") Int64 mod(Int64 n)
-        {
-        return this.toInt() % n;
-        }
-
-    // ----- Sequential ----------------------------------------------------------------------------
-
-    @Override
-    conditional IntLiteral prev()
-        {
-        return true, this - 1;
-        }
-
-    @Override
-    conditional IntLiteral next()
-        {
-        return true, this + 1;
-        }
-
-    @Override
-    Int stepsTo(IntLiteral that)
-        {
-        return that - this;
-        }
-
-    // ----- conversions ---------------------------------------------------------------------------
 
     /**
      * Convert the number to a 128-bit radix-10 (decimal) floating point number.
      */
     Char toChar()
         {
-        // truncate out-of-range values to the original 16-bit Unicode range
-        UInt32 n = toUInt32();
-        return new Char(n <= 0x10FFFF ? n : n & 0xFFFF);
+        return new Char(toUInt32());
         }
 
     @Override

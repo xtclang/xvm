@@ -15,7 +15,6 @@ class Array<ElementType>
         incorporates conditional Orderer<ElementType extends Orderable>
         incorporates conditional Hasher<ElementType extends Hashable>
         // TODO have to implement Const (at least conditionally if ElementType extends Const)
-        // TODO fill() reverse() copy()
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -118,16 +117,76 @@ class Array<ElementType>
      */
     construct(Array<ElementType> array, Range<Int> section)
         {
-        this.delegate = array;
-        this.section  = section;
+        ArrayDelegate<ElementType> delegate = new ArrayDelegate<ElementType>()
+            {
+            @Override
+            Int size.get()
+                {
+                return section.size;
+                }
 
-        if (array.mutability == Constant)
+            @Override
+            Mutability mutability.get()
+                {
+                return array.mutability;
+                }
+
+            @Override
+            @Op("[]")
+            ElementType getElement(Int index) // TODO GG failed with IndexType (instead of Int)
+                {
+                return array[translateIndex(index)];
+                }
+
+            @Override
+            @Op("[]=")
+            void setElement(Int index, ElementType value) // TODO GG failed with IndexType (instead of Int)
+                {
+                array[translateIndex(index)] = value;
+                }
+
+            @Override
+            Var<ElementType> elementAt(Int index) // TODO GG failed with IndexType (instead of Int)
+                {
+                return array.elementAt(translateIndex(index));
+                }
+
+            /**
+             * Translate from an index into a slice, into an index into the underlying array.
+             *
+             * @param index  the index into the slice
+             *
+             * @return the corresponding index into the underlying array
+             */
+            private Int translateIndex(Int index)
+                {
+                assert:bounds index >= 0 && index < section.size;
+                return section.reversed
+                        ? section.upperBound - index
+                        : section.lowerBound + index;
+                }
+            };
+
+        construct Array(delegate);
+        }
+
+    /**
+     * Construct an array that delegates to some other data structure (such as an array).
+     *
+     * @param delegate  an ArrayDelegate object that allows this array to delegate its functionality
+     */
+    protected construct(ArrayDelegate<ElementType> delegate)
+        {
+        this.delegate = delegate;
+        }
+    finally
+        {
+        if (mutability == Constant)
             {
             makeImmutable();
             }
         }
 
-    // TODO delegate fixed size with index and value translation
 
     // ----- properties ----------------------------------------------------------------------------
 
@@ -139,19 +198,17 @@ class Array<ElementType>
         @Override
         Int get()
             {
-            if (delegate == null)
+            if (delegate != null)
                 {
-                Int count = 0;
-                for (Element? cur = head; cur != null; cur = cur.next)
-                    {
-                    ++count;
-                    }
-                return count;
+                return delegate?.size : assert; // TODO assumptions implementation (should not need '?')
                 }
-            else
+
+            Int count = 0;
+            for (Element? cur = head; cur != null; cur = cur.next)
                 {
-                return section.as(Range<Int>).size;
+                ++count;
                 }
+            return count;
             }
 
         @Override
@@ -187,15 +244,54 @@ class Array<ElementType>
         }
 
 
+    // ----- operations ----------------------------------------------------------------------------
+
+    /**
+     * Fill the specified elements of this array with the specified value.
+     *
+     * @param value  the value to use to fill the array
+     * @param range  an optional range of element indexes, defaulting to the entire array
+     *
+     * @throws ReadOnly  if the array mutability is not Mutable or Fixed
+     */
+    Array fill(ElementType value, Range<Int>? range = Null)
+        {
+        if (range == Null)
+            {
+            if (empty)
+                {
+                return this;
+                }
+            range = 0..size-1;
+            }
+        // TODO GG range should be non-null at this point
+
+        if (mutability.persistent)
+            {
+            Array result = new Array<ElementType>(size, i -> (range.as(Interval<Int>).contains(i) ? value : this[i])); // TODO GG why is ".as(Interval<Int>)" required?
+            return mutability == Constant
+                    ? result.ensureConst(true)
+                    : result.ensurePersistent(true);
+            }
+        else
+            {
+            for (Int i : (range ?: assert)) // TODO null check shold not be necessary
+                {
+                this[i] = value;
+                }
+            return this;
+            }
+        }
+
+
     // ----- VariablyMutable interface -------------------------------------------------------------
 
     @Override
     public/private Mutability mutability.get()
         {
-        Array<ElementType>? delegate = this.delegate;
         if (delegate != null)
             {
-            Mutability mutability = delegate.mutability;
+            Mutability mutability = delegate?.mutability : assert; // TODO
             return mutability == Mutable ? Fixed : mutability;
             }
 
@@ -259,6 +355,13 @@ class Array<ElementType>
         {
         if (mutability == Constant)
             {
+            // it is possible, in the case of a delegating array, that the underling array has been
+            // transitioned to constant without this array having done so as well
+            if (delegate != null && !this.is(immutable Object))
+                {
+                makeImmutable();
+                }
+
             return this.as(immutable ElementType[]);
             }
 
@@ -342,11 +445,9 @@ class Array<ElementType>
     @Override
     Var<ElementType> elementAt(Int index)
         {
-        // TODO make sure that persistent arrays do no expose a read/write element (throw ReadOnly from set())
-        Array<ElementType>? delegate = this.delegate;
         if (delegate != null)
             {
-            return delegate.elementAt(translateIndex(index));
+            return delegate?.elementAt(index) : assert; // TODO shouldn't need null check
             }
 
         if (index < 0 || index >= size)
@@ -369,10 +470,9 @@ class Array<ElementType>
     @Override
     Int size.get()
         {
-        Range<Int>? section = this.section;
-        if (section != null)
+        if (delegate != null)
             {
-            return section.size;
+            return delegate?.size : assert; // TODO
             }
 
         Int count = 0;
@@ -391,7 +491,7 @@ class Array<ElementType>
         Array<ElementType> result = new Array(this, range);
 
         // a slice of an immutable array is also immutable
-        return meta.isImmutable
+        return this.is(immutable Object)
                 ? result.makeImmutable()
                 : result;
         }
@@ -830,7 +930,7 @@ class Array<ElementType>
     /**
      * A node in the linked list.
      */
-    private static class Element
+    private class Element
             delegates Var<ElementType>(valueRef)
         {
         /**
@@ -859,7 +959,14 @@ class Array<ElementType>
          * The value stored in the element.
          */
         @Unassigned
-        ElementType value;
+        ElementType value.set(ElementType value)
+            {
+            if (this.Array.mutability.persistent)
+                {
+                throw new ReadOnly();
+                }
+            super(value);
+            }
 
         /**
          * The next element in the linked list.
@@ -876,37 +983,21 @@ class Array<ElementType>
         }
 
     /**
-     * When an array is a slice of another array, it delegates operations to that array.
+     * An interface to which an Array can delegate its operations, iff the array is simply a
+     * representation of some other structure (such as another array).
      */
-    private Array<ElementType>? delegate;
-
-    /**
-     * When an array is a slice of another array, it knows the range of elements (including a
-     * potential for reverse ordering) from that array that it represents.
-     */
-    private Range<Int>? section;
-
-    /**
-     * Translate from an index into a slice, into an index into the underlying array.
-     *
-     * @param index  the index into the slice
-     *
-     * @return the corresponding index into the underlying array
-     */
-    private Int translateIndex(Int index)
+    protected static interface ArrayDelegate<ElementType>
+            extends UniformIndexed<Int, ElementType>
+            extends VariablyMutable
         {
-        Range<Int>? section = this.section;
-        assert delegate != null && section != null;
-
-        if (index < 0 || index >= section.size)
-            {
-            throw new OutOfBounds("index=" + index + ", size=" + section.size);
-            }
-
-        return section.reversed
-                ? section.upperBound - index
-                : section.lowerBound + index;
+        @RO Int size;
         }
+
+    /**
+     * If the array is simply a representation of some other structure (such as another array), then
+     * this is the object to which this Array will delegate its operations.
+     */
+    private ArrayDelegate<ElementType>? delegate;
 
 
     // ----- Stringable methods --------------------------------------------------------------------
@@ -979,6 +1070,127 @@ class Array<ElementType>
     static mixin BitArray<ElementType extends Bit>
             into Array<ElementType>
         {
+        // REVIEW CP+GG &= etc. for mutable bit array
+        // REVIEW CP+GG mutability of returned arrays
+
+        /**
+         * Bitwise AND.
+         */
+        @Op("&")
+        Bit[] and(Bit[] that)
+            {
+            assert:bounds this.size == that.size;
+            return new Array<Bit>(size, i -> this[i] & that[i]);
+            }
+
+        /**
+         * Bitwise OR.
+         */
+        @Op("|")
+        Bit[] or(Bit[] that)
+            {
+            assert:bounds this.size == that.size;
+            return new Array<Bit>(size, i -> this[i] | that[i]);
+            }
+
+        /**
+         * Bitwise XOR.
+         */
+        @Op("^")
+        Bit[] xor(Bit[] that)
+            {
+            assert:bounds this.size == that.size;
+            return new Array<Bit>(size, i -> this[i] ^ that[i]);
+            }
+
+        /**
+         * Bitwise NOT.
+         */
+        @Op("~")
+        Bit[] not()
+            {
+            return new Array<Bit>(size, i -> ~this[i]);
+            }
+
+        /**
+         * Shift bits left. This is both a logical left shift and arithmetic left shift, for
+         * both signed and unsigned integer values.
+         */
+        @Op("<<")
+        Bit[] shiftLeft(Int count)
+            {
+            return new Array<Bit>(size, i -> (i < size-count ? this[i + count] : 0));
+            }
+
+        /**
+         * Shift bits right. For signed integer values, this is an arithmetic right shift. For
+         * unsigned integer values, this is both a logical right shift and arithmetic right
+         * shift.
+         */
+        @Op(">>")
+        Bit[] shiftRight(Int count)
+            {
+            return new Array<Bit>(size, i -> (i < count ? this[0] : this[i - count]));
+            }
+
+        /**
+         * "Unsigned" shift bits right. For signed integer values, this is an logical right
+         * shift. For unsigned integer values, this is both a logical right shift and arithmetic
+         * right shift.
+         */
+        @Op(">>>")
+        Bit[] shiftAllRight(Int count)
+            {
+            return new Array<Bit>(size, i -> (i < count ? 0 : this[i - count]));
+            }
+
+        /**
+         * Rotate bits left.
+         */
+        Bit[] rotateLeft(Int count)
+            {
+            return new Array<Bit>(size, i -> this[(i + count) % size]);
+            }
+
+        /**
+         * Rotate bits right.
+         */
+        Bit[] rotateRight(Int count)
+            {
+            return new Array<Bit>(size, i -> this[(i - count) % size]);
+            }
+
+
+        // ----- TODO
+
+        /**
+         * @return a new bit array that is an "add" of the specified bit arrays.
+         */
+        static Bit[] bitAdd(Bit[] bits1, Bit[] bits2)
+            {
+            Int bitLength = bits1.size;
+            assert bits2.size == bitLength;
+
+            Bit[] bitsNew = new Bit[bitLength];
+            Bit carry = 0;
+            for (Int i = 0; i < bitLength; ++i)
+                {
+                Bit aXorB = bits1[i] ^ bits2[i];
+                Bit aAndB = bits1[i] & bits2[i];
+
+                bitsNew[i] = aXorB ^ carry;
+                carry = (aXorB & carry) | aAndB;
+                }
+            if (carry == 1)
+                {
+                throw new OutOfBounds();
+                }
+            return bitsNew;
+            }
+
+
+        // ----- conversions -----------------------------------------------------------------------
+
         /**
          * @return an array of booleans corresponding to the bits in this array
          */

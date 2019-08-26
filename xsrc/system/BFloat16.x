@@ -7,9 +7,8 @@ const BFloat16
      * Construct a 16-bit binary floating point number (a "brain float 16") from its bitwise machine
      * representation.
      *
-     * @param bits  an array of bit values that represent this number, ordered from Least
-     *              Significant Bit (LSB) in the `0` element, to Most Significant Bit (MSB) in the
-     *              `size-1` element
+     * @param bits  an array of bit values that represent this number, ordered from left-to-right,
+     *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
     construct(Bit[] bits)
         {
@@ -93,28 +92,46 @@ const BFloat16
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
-    Boolean finite.get()
+    Int emax.get()
         {
-        TODO
+        return 127;
         }
 
     @Override
-    Boolean infinite.get()
+    Int emin.get()
         {
-        TODO
+        return 1 - emax;
         }
 
     @Override
-    Boolean NaN.get()
+    Int bias.get()
         {
-        TODO
+        return emax;
+        }
+
+    @Override
+    Int significandBitLength.get()
+        {
+        return 7;
+        }
+
+    @Override
+    Int exponentBitLength.get()
+        {
+        return 8;
         }
 
 
     // ----- FPNumber operations -------------------------------------------------------------------
 
     @Override
-    BFloat16 round()
+    (Boolean signBit, Int significand, Int exponent) split()
+        {
+        TODO
+        }
+
+    @Override
+    BFloat16 round(Rounding direction = TiesToAway)
         {
         TODO
         }
@@ -138,7 +155,19 @@ const BFloat16
         }
 
     @Override
+    BFloat16 scaleByPow(Int n)
+        {
+        TODO
+        }
+
+    @Override
     BFloat16 log()
+        {
+        TODO
+        }
+
+    @Override
+    BFloat16 log2()
         {
         TODO
         }
@@ -198,6 +227,48 @@ const BFloat16
         }
 
     @Override
+    BFloat16 atan2(BFloat16 y)
+        {
+        TODO
+        }
+
+    @Override
+    BFloat16 sinh()
+        {
+        TODO
+        }
+
+    @Override
+    BFloat16 cosh()
+        {
+        TODO
+        }
+
+    @Override
+    BFloat16 tanh()
+        {
+        TODO
+        }
+
+    @Override
+    BFloat16 asinh()
+        {
+        TODO
+        }
+
+    @Override
+    BFloat16 acosh()
+        {
+        TODO
+        }
+
+    @Override
+    BFloat16 atanh()
+        {
+        TODO
+        }
+
+    @Override
     BFloat16 deg2rad()
         {
         TODO
@@ -205,6 +276,18 @@ const BFloat16
 
     @Override
     BFloat16 rad2deg()
+        {
+        TODO
+        }
+
+    @Override
+    BFloat16 nextUp()
+        {
+        TODO
+        }
+
+    @Override
+    BFloat16 nextDown()
         {
         TODO
         }
