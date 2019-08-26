@@ -3,8 +3,8 @@ import io.IllegalUTF;
 /**
  * The DataInput interface represents a stream of values of various fundamental Ecstasy types. It
  * provides default implementations for some methods, but does not prescribe an underlying data
- * format. For example, integers could be fixed length or compressed, and characters could be 4-byte
- * Unicode values or encoded as UTF-8, etc.
+ * format. For example, integers could be fixed length or compressed, and characters could be
+ * encoded as UTF-8, UTF-16, UTF-32, or even ASCII.
  */
 interface DataInput
     {
@@ -42,7 +42,7 @@ interface DataInput
         }
 
     /**
-     * @return  a value of type X read from the stream
+     * @return  a value of the specified enumeration type read from the stream
      */
     <EnumType extends Enum> EnumType readEnum(Enumeration<EnumType> enumeration)
         {
@@ -65,6 +65,16 @@ interface DataInput
      * @return  a value of type Byte read from the stream
      */
     Byte readByte();
+
+    /**
+     * Read bytes into the provided array.
+     *
+     * @param  bytes  the byte array to read into
+     */
+    void readBytes(Byte[] bytes)
+        {
+        readBytes(bytes, 0, bytes.size);
+        }
 
     /**
      * Read the specified number of bytes into the provided array.
@@ -110,9 +120,9 @@ interface DataInput
     Int readInt();
 
     /**
-     * @return  a value of type UInt64 read from the stream
+     * @return  a value of type UInt read from the stream
      */
-    UInt64 readUInt();
+    UInt readUInt();
 
     /**
      * @return  a value of type Int128 read from the stream
@@ -130,7 +140,7 @@ interface DataInput
     VarInt readVarInt();
 
     /**
-     * @return  a value of type VarInt read from the stream
+     * @return  a value of type VarUInt read from the stream
      */
     VarUInt readVarUInt();
 
@@ -232,22 +242,6 @@ interface DataInput
      *   significant 2 bits (00), and the least 6 significant bits of `(b-2)` in bits 2-7. The
      *   following `(b-1)` bytes contain the least significant `(b-1)*8` bits of the integer.
      *
-     * TODO the following doc should move to (and only be present on) the write function
-     * To maximize density and minimize pipeline stalls, this implementation uses the smallest
-     * possible encoding for each value. Since an 8 significant-bit value can be encoded in two
-     * bytes using either a Small or Large encoding, we choose Large to eliminate the potential for
-     * a (conditional-induced) pipeline stall. Since a 14..16 significant-bit value can be encoded
-     * in three bytes using either a Medium or Large encoding, we choose Large for the same reason.
-     *
-     *     significant bits  encoding
-     *     ----------------  --------
-     *           <= 7        Tiny
-     *            8          Large
-     *           9-13        Small
-     *          14-16        Large
-     *          17-21        Medium
-     *          >= 22        Large
-     *
      * @param in  the stream to read from
      *
      * @return the Int value from the stream
@@ -296,6 +290,9 @@ interface DataInput
         return n;
         }
 
+    /**
+     * TODO doc
+     */
     // TODO GG when this was mistakenly marked as returning Int, it threw IllegalArgument from TypeConstant.adoptParameters()
     static VarInt readPackedVarInt(DataInput in)
         {
