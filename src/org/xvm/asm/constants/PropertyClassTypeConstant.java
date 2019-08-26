@@ -220,7 +220,8 @@ public class PropertyClassTypeConstant
     @Override
     public boolean containsGenericParam(String sName)
         {
-        return getRefType().containsGenericParam(sName);
+        return getRefType().containsGenericParam(sName)
+            || m_typeParent.containsGenericParam(sName);
         }
 
     @Override
@@ -234,7 +235,8 @@ public class PropertyClassTypeConstant
                     : type;
             }
 
-        return null;
+        // the passed in list represents the "child" and should not be used by the parent
+        return m_typeParent.getGenericParamType(sName, Collections.EMPTY_LIST);
         }
 
     @Override
