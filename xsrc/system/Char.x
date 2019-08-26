@@ -7,8 +7,11 @@ const Char
     {
     construct(UInt32 codepoint)
         {
-        assert codepoint <= 0x10FFFF;
-        this.codepoint = codepoint;
+        if (codepoint > 0x10FFFF ||                     // unicode limit
+            codepoint > 0xD7FF && codepoint < 0xE000)   // surrogate values are illegal
+            {
+            throw new IllegalUTF($"illegal code-point: {codepoint}");
+            }
         }
 
     construct(Byte b)
@@ -29,7 +32,7 @@ const Char
      */
     Byte toByte()
         {
-        assert codepoint <= 0x7f;
+        assert codepoint <= 0x7F;
         return codepoint.toByte();
         }
 
