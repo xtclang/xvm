@@ -1,73 +1,41 @@
 /**
- * The InputStream interface represents an input stream of binary data.
+ * The InputStream interface represents a bounded input stream of binary data. Unlike Channel, an
+ * InputStream is **not** open-ended; it has a finite size, although that size may be significantly
+ * larger would fit into a program's memory, and thus the interface supports underlying
+ * implementations that can represent the entirety of the binary stream, while only having an
+ * arbitrarily small portion of it memory-resident.
+ *
+ * By its nature, an InputStream has a knowable length, a current position, and it is _seekable_.
+ * That means that the position within the stream can be modified -- in either direction.
  */
 interface InputStream
+        extends BinaryInput
     {
     /**
-     * @return  a value of type Byte read from the stream
+     * The 0-based offset within the stream. Attempting to set the offset outside of the bounds of
+     * the stream will result in an exception.
      */
-    Byte readByte();
+    Int offset;
 
     /**
-     * Read bytes into the provided array.
-     *
-     * @param  bytes  the byte array to read into
+     * The total size of the stream, in bytes, including any portion that has already been read.
      */
-    void readBytes(Byte[] bytes)
+    @RO Int size;
+
+    /**
+     * The number of bytes remaining in the stream. This will be equal to `size` at the start of
+     * the stream, and equal to `0` at the end of the stream.
+     */
+    Int remaining.get()
         {
-        readBytes(bytes, 0, bytes.size);
+        return (size - offset).maxOf(0);
         }
 
     /**
-     * Read the specified number of bytes into the provided array.
-     *
-     * @param  bytes   the byte array to read into
-     * @param  offset  the offset into the array to store the first byte read
-     * @param  count   the number of bytes to read
+     * True iff the end of the stream has been reached.
      */
-    void readBytes(Byte[] bytes, Int offset, Int count)
+    Boolean eof.get()
         {
-        assert offset >= 0 && count >= 0;
-
-        Int last = offset + count;
-        while (offset < last)
-            {
-            bytes[offset++] = readByte();
-            }
-        }
-
-    /**
-     * Skip forward in the stream over the specified number of bytes.
-     *
-     * @param count  the number of bytes to skip over
-     */
-    void skip(Int count)
-        {
-        while (count-- > 0)
-            {
-            readByte();
-            }
-        }
-
-    /**
-     * Obtain a token that can later be used to restore the stream to the current position.
-     *
-     * @return an object that can later be used to restore the current location within the stream
-     *
-     * @throws UnsupportedOperation  if the stream cannot later restore the current position
-     */
-    immutable Const mark()
-        {
-        TODO
-        }
-
-    /**
-     * Restore the stream to the position represented by the provided `mark`.
-     *
-     * @param mark  a value previously returned by the `mark()` method on this stream
-     */
-    void restore(immutable Const mark)
-        {
-        TODO
+        return remaining == 0;
         }
     }

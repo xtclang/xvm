@@ -7,7 +7,7 @@ import io.IllegalUTF;
  * encoded as UTF-8, UTF-16, UTF-32, or even ASCII.
  */
 interface DataInput
-        extends InputStream
+        extends BinaryInput
     {
     /**
      * @return  a value of type Boolean read from the stream

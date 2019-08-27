@@ -2,42 +2,17 @@
  * The OutputStream interface represents a output stream of binary data.
  */
 interface OutputStream
+        extends BinaryOutput
     {
     /**
-     * Write a Byte value to the stream.
-     *
-     * @param value  a value of type Byte to write to the stream
+     * The 0-based offset within the stream. Attempting to set the offset outside of the bounds of
+     * the stream will result in an exception. When the offset is equal to the size, then the next
+     * write to the stream will append to the end of the stream.
      */
-    void writeByte(Byte value);
+    Int offset;
 
     /**
-     * Write the bytes from the provided array to the stream.
-     *
-     * @param  bytes   the byte array containing the bytes to write out
+     * The total size of the stream, in bytes. This value will grow as more binary data is written.
      */
-    void writeBytes(Byte[] bytes)
-        {
-        for (Byte byte : bytes)
-            {
-            writeByte(byte);
-            }
-        }
-
-    /**
-     * Write the specified number of bytes to the stream from the provided array.
-     *
-     * @param  bytes   the byte array to read from
-     * @param  offset  the offset into the array of the first byte to write
-     * @param  count   the number of bytes to write
-     */
-    void writeBytes(Byte[] bytes, Int offset, Int count)
-        {
-        assert offset >= 0 && count >= 0;
-
-        Int last = offset + count;
-        while (offset < last)
-            {
-            writeByte(bytes[offset++]);
-            }
-        }
+    @RO Int size;
     }

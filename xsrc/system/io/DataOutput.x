@@ -5,7 +5,7 @@
  * encoded as UTF-8, UTF-16, UTF-32, or even ASCII.
  */
 interface DataOutput
-        extends OutputStream
+        extends BinaryOutput
     {
     /**
      * Write a Boolean value to the stream.
