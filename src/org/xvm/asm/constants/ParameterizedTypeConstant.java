@@ -474,14 +474,14 @@ public class ParameterizedTypeConstant
                     {
                     IdentityConstant idClz = constResolved.getSingleUnderlyingClass(true);
                     ClassStructure   clz   = (ClassStructure) idClz.getComponent();
-                    if (!clz.isParameterized())
-                        {
-                        return constResolved;
-                        }
+                    return clz.isParameterized()
+                            ? pool.ensureParameterizedTypeConstant(constResolved, m_atypeParams)
+                            : constResolved;
                     }
+
                 // TODO: how to figure out a case of the resolved type not being congruent
                 //       to the original type and not parameterizable by our parameters?
-                return pool.ensureParameterizedTypeConstant(constResolved, m_atypeParams);
+                return constResolved;
                 }
             }
         }
