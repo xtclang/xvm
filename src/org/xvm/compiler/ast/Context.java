@@ -1743,12 +1743,33 @@ public class Context
             {
             super.promoteNarrowedType(sName, arg, branch);
 
-            // if both branches have an identical narrowing - promote
+            // choose the wider type of the two branches and promote to "Always"
             if (branch == Branch.WhenTrue)
                 {
-                if (arg.equals(getNarrowingMap(false).get(sName)))
+                Argument argTrue  = arg;
+                Argument argFalse = getNarrowingMap(false).get(sName);
+                if (argFalse != null)
                     {
-                    getOuterContext().narrowLocalRegister(sName, arg); // Always
+                    Context      ctxOuter  = getOuterContext();
+                    Argument     argOrig   = ctxOuter.getVar(sName);
+                    TypeConstant typeOrig  = argOrig == null ? null : argOrig.getType();
+                    TypeConstant typeTrue  = argTrue .getType();
+                    TypeConstant typeFalse = argFalse.getType();
+
+                    if (typeFalse.isA(typeTrue))
+                        {
+                        if (!typeTrue.equals(typeOrig))
+                            {
+                            ctxOuter.narrowLocalRegister(sName, argTrue);
+                            }
+                        }
+                    else if (typeTrue.isA(typeFalse))
+                        {
+                        if (!typeFalse.equals(typeOrig))
+                            {
+                            ctxOuter.narrowLocalRegister(sName, argFalse);
+                            }
+                        }
                     }
                 }
             }
@@ -1758,12 +1779,29 @@ public class Context
             {
             super.promoteNarrowedFormalType(sName, typeNarrowed, branch);
 
-            // if both branches have an identical narrowing - promote
+            // choose the wider type of the two branches and promote to "Always"
             if (branch == Branch.WhenTrue)
                 {
-                if (typeNarrowed.equals(getFormalTypeMap(branch.complement()).get(sName)))
+                TypeConstant typeTrue  = typeNarrowed;
+                TypeConstant typeFalse = getFormalTypeMap(Branch.WhenFalse).get(sName);;
+                if (typeFalse != null)
                     {
-                    getOuterContext().ensureFormalTypeMap(Branch.Always).put(sName, typeNarrowed);
+                    Context      ctxOuter = getOuterContext();
+                    TypeConstant typeOrig = ctxOuter.getFormalTypeMap(Branch.Always).get(sName);
+                    if (typeFalse.isA(typeTrue))
+                        {
+                        if (!typeTrue.equals(typeOrig))
+                            {
+                            ctxOuter.ensureFormalTypeMap(Branch.Always).put(sName, typeTrue);
+                            }
+                        }
+                    else if (typeTrue.isA(typeFalse))
+                        {
+                        if (!typeFalse.equals(typeOrig))
+                            {
+                            ctxOuter.ensureFormalTypeMap(Branch.Always).put(sName, typeFalse);
+                            }
+                        }
                     }
                 }
             }

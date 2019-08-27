@@ -133,20 +133,20 @@ class Array<ElementType>
 
             @Override
             @Op("[]")
-            ElementType getElement(Int index) // TODO GG failed with IndexType (instead of Int)
+            ElementType getElement(Int index)
                 {
                 return array[translateIndex(index)];
                 }
 
             @Override
             @Op("[]=")
-            void setElement(Int index, ElementType value) // TODO GG failed with IndexType (instead of Int)
+            void setElement(Int index, ElementType value)
                 {
                 array[translateIndex(index)] = value;
                 }
 
             @Override
-            Var<ElementType> elementAt(Int index) // TODO GG failed with IndexType (instead of Int)
+            Var<ElementType> elementAt(Int index)
                 {
                 return array.elementAt(translateIndex(index));
                 }
@@ -264,18 +264,17 @@ class Array<ElementType>
                 }
             range = 0..size-1;
             }
-        // TODO GG range should be non-null at this point
 
         if (mutability.persistent)
             {
-            Array result = new Array<ElementType>(size, i -> (range.as(Interval<Int>).contains(i) ? value : this[i])); // TODO GG why is ".as(Interval<Int>)" required?
+            Array result = new Array<ElementType>(size, i -> (range.contains(i) ? value : this[i]));
             return mutability == Constant
                     ? result.ensureConst(true)
                     : result.ensurePersistent(true);
             }
         else
             {
-            for (Int i : (range ?: assert)) // TODO null check shold not be necessary
+            for (Int i : range)
                 {
                 this[i] = value;
                 }
