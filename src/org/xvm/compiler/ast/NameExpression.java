@@ -574,14 +574,19 @@ public class NameExpression
             return TypeFit.Fit;
             }
 
-        Argument arg = resolveRawArgument(ctx, true, ErrorListener.BLACKHOLE);
+        if (errs == null)
+            {
+            errs = ErrorListener.BLACKHOLE;
+            }
+
+        Argument arg = resolveRawArgument(ctx, true, errs);
         if (arg == null)
             {
             return TypeFit.NoFit;
             }
 
         TypeConstant typeActual = planCodeGen(ctx, arg,
-                getImplicitTrailingTypeParameters(ctx), typeRequired, ErrorListener.BLACKHOLE);
+                getImplicitTrailingTypeParameters(ctx), typeRequired, errs);
         return calcFit(ctx, typeActual, typeRequired);
         }
 

@@ -1204,7 +1204,7 @@ class Array<ElementType>
         immutable Nibble[] toNibbleArray()
             {
             Int      nibcount = (size+3) / 4;
-            Nibble[] nibbles  = new Nibble[nibcount]; // TODO misspelled name in the [] causes weird compiler error: COMPILER-65: Could not find a matching constructor for type "Ecstasy:collections.Array<Ecstasy:Nibble>:private". ("new Nibble[count]")
+            Nibble[] nibbles  = new Nibble[nibcount];
             Int      nibnum   = 0;
             Int      bitnum   = -((4 - size % 4) % 4);
 
