@@ -156,10 +156,19 @@ public class IfStatement
             stmtThen = stmtThenNew;
             }
 
+        // create a context for "else" even if there is no statement, thus facilitating a merge;
+        // for example (see Array.x):
+        //
+        //   if (range == Null)
+        //     {
+        //     range = 0..size-1;
+        //     }
+        //
+        // at this point "range" should be known to be not Null
+
+        ctx = ctx.enterFork(false);
         if (stmtElse != null)
             {
-            ctx = ctx.enterFork(false);
-
             // short circuits land here
             // REVIEW CP if something was unassigned in the validation context, still unassigned
             //           at the point of the short, and assigned by the point that the condition
@@ -176,7 +185,6 @@ public class IfStatement
                 }
 
             Statement stmtElseNew = stmtElse.validate(ctx, errs);
-            ctx = ctx.exit();
             if (stmtElseNew == null)
                 {
                 fValid = false;
@@ -186,8 +194,9 @@ public class IfStatement
                 stmtElse = stmtElseNew;
                 }
             }
+        ctx = ctx.exit(); // "else"
 
-        ctx = ctx.exit();
+        ctx = ctx.exit(); // "if"
 
         return fValid
                 ? this

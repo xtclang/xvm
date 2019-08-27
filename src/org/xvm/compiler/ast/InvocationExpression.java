@@ -1669,7 +1669,7 @@ public class InvocationExpression
                 }
             else
                 {
-                log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sName);
+                log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sName, ctx.getThisType().getValueString());
                 }
             return null;
             }

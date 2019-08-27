@@ -261,7 +261,6 @@ interface DataInput
     /**
      * TODO doc
      */
-    // TODO GG when this was mistakenly marked as returning Int, it threw IllegalArgument from TypeConstant.adoptParameters()
     static VarInt readPackedVarInt(DataInput in)
         {
         // use a signed byte to get auto sign-extension when converting to an int

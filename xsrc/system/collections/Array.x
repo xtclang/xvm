@@ -133,20 +133,20 @@ class Array<ElementType>
 
             @Override
             @Op("[]")
-            ElementType getElement(Int index) // TODO GG failed with IndexType (instead of Int)
+            ElementType getElement(Int index)
                 {
                 return array[translateIndex(index)];
                 }
 
             @Override
             @Op("[]=")
-            void setElement(Int index, ElementType value) // TODO GG failed with IndexType (instead of Int)
+            void setElement(Int index, ElementType value)
                 {
                 array[translateIndex(index)] = value;
                 }
 
             @Override
-            Var<ElementType> elementAt(Int index) // TODO GG failed with IndexType (instead of Int)
+            Var<ElementType> elementAt(Int index)
                 {
                 return array.elementAt(translateIndex(index));
                 }
@@ -264,18 +264,17 @@ class Array<ElementType>
                 }
             range = 0..size-1;
             }
-        // TODO GG range should be non-null at this point
 
         if (mutability.persistent)
             {
-            Array result = new Array<ElementType>(size, i -> (range.as(Interval<Int>).contains(i) ? value : this[i])); // TODO GG why is ".as(Interval<Int>)" required?
+            Array result = new Array<ElementType>(size, i -> (range.contains(i) ? value : this[i]));
             return mutability == Constant
                     ? result.ensureConst(true)
                     : result.ensurePersistent(true);
             }
         else
             {
-            for (Int i : (range ?: assert)) // TODO null check shold not be necessary
+            for (Int i : range)
                 {
                 this[i] = value;
                 }
@@ -1205,7 +1204,7 @@ class Array<ElementType>
         immutable Nibble[] toNibbleArray()
             {
             Int      nibcount = (size+3) / 4;
-            Nibble[] nibbles  = new Nibble[nibcount]; // TODO misspelled name in the [] causes weird compiler error: COMPILER-65: Could not find a matching constructor for type "Ecstasy:collections.Array<Ecstasy:Nibble>:private". ("new Nibble[count]")
+            Nibble[] nibbles  = new Nibble[nibcount];
             Int      nibnum   = 0;
             Int      bitnum   = -((4 - size % 4) % 4);
 

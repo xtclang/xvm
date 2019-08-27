@@ -1064,7 +1064,7 @@ public abstract class AstNode
                 }
             else
                 {
-                log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sMethodName);
+                log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sMethodName, typeTarget.getValueString());
                 }
             return null;
             }
@@ -1129,7 +1129,7 @@ public abstract class AstNode
                 // TODO: create a signature representation of what is known
                 //       for example, if we are looking for "foo" in invocation "a.foo(x-> x.bar())"
                 //       and "bar" is missing - we'll get here complaining about "foo" rather than "bar"
-                log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sMethodName);
+                log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sMethodName, typeTarget.getValueString());
                 }
             }
         return null;

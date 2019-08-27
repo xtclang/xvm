@@ -492,7 +492,7 @@ public class UnionTypeConstant
         Set<SignatureConstant> setMiss2 =
                 getUnderlyingType2().isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
 
-        setMiss1.retainAll(setMiss2); // signatures in both (intersection) are still missing
+        setMiss1.addAll(setMiss2); // signatures in both (intersection) are still missing
         return setMiss1;
         }
 

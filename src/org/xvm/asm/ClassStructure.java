@@ -808,8 +808,27 @@ public class ClassStructure
         Component child = getChild(sName);
         if (child != null && child.canBeSeen(access))
             {
-            collector.resolvedComponent(child);
-            return ResolutionResult.RESOLVED;
+            switch (child.getIdentityConstant().getFormat())
+                {
+                case Property:
+                    {
+                    PropertyStructure prop = (PropertyStructure) child;
+                    if (!prop.isGenericTypeParameter() &&
+                        !prop.isStatic())
+                        {
+                        // instance property should be resolved directly as well as methods
+                        break;
+                        }
+                    }
+                    // fall through
+                case Module:
+                case Package:
+                case Class:
+                case Typedef:
+                    collector.resolvedComponent(child);
+                    return ResolutionResult.RESOLVED;
+                }
+            return ResolutionResult.UNKNOWN;
             }
 
         // no child by that name; check if it was introduced by a contribution
