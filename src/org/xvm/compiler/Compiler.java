@@ -826,7 +826,7 @@ public class Compiler
      */
     public static final String MISSING_PARAM_INFORMATION          = "COMPILER-55";
     /**
-     * Could not find a matching method or function "{0}".
+     * Could not find a matching method or function "{0}" for type "{1}".
      */
     public static final String MISSING_METHOD                     = "COMPILER-56";
     /**
