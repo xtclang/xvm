@@ -11,8 +11,10 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xType.TypeHandle;
 
 
 /**
@@ -69,9 +71,30 @@ public class IsType
     @Override
     protected int completeUnaryOp(Frame frame, ObjectHandle hValue)
         {
-        TypeConstant type     = hValue.getType();
-        TypeConstant typeTest = frame.resolveType(m_nValue2);
+        TypeConstant typeTarget = hValue.getType();
+        TypeConstant typeTest;
+        if (m_nValue2 < CONSTANT_OFFSET)
+            {
+            typeTest = frame.resolveType(m_nValue2);
+            }
+        else
+            {
+            try
+                {
+                TypeHandle hType = (TypeHandle) frame.getArgument(m_nValue2);
+                typeTest = hType.getType();
+                }
+            catch (ClassCastException e)
+                {
+                // should not happen
+                return frame.assignValue(m_nRetValue, xBoolean.FALSE);
+                }
+            catch (ExceptionHandle.WrapperException e)
+                {
+                return frame.raiseException(e);
+                }
+            }
 
-        return frame.assignValue(m_nRetValue, xBoolean.makeHandle(type.isA(typeTest)));
+        return frame.assignValue(m_nRetValue, xBoolean.makeHandle(typeTarget.isA(typeTest)));
         }
     }

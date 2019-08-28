@@ -135,6 +135,15 @@ public abstract class TypeExpression
         }
 
     /**
+     * @return true iff this is a dynamic type expression representing a type that can only
+     *         be calculated at run-time (for example map.KeyType, where "map" is a local variable)
+     */
+    public boolean isDynamic()
+        {
+        return false;
+        }
+
+    /**
      * For introductory type expressions, obtain the underlying type expression. An introductory
      * type expression is one that may be (or may contain) a separable TypeExpression that belongs
      * to something other than the resulting type, such as an annotation that affects a variable

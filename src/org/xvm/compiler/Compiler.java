@@ -1147,6 +1147,22 @@ public class Compiler
      */
     public static final String DUPLICATE_METHOD                   = "COMPILER-133";
     /**
+     * The evaluating expression {0} has a type of "Ecstasy.Type"; it cannot match type {1}.
+     */
+    public static final String NOT_TYPE_OF_TYPE                   = "COMPILER-134";
+    /**
+     * A type is expected, but a property identity for a formal type was encountered.
+     */
+    public static final String INVALID_FORMAL_TYPE_IDENTITY       = "COMPILER-135";
+    /**
+     * Dynamic type parameters are not supported.
+     */
+    public static final String UNSUPPORTED_DYNAMIC_TYPE_PARAMS    = "COMPILER-136";
+    /**
+     * The evaluating expression {0} has a type of "Ecstasy.Type"; it always matches type {1}.
+     */
+    public static final String TYPE_MATCHES_ALWAYS                = "COMPILER-137";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

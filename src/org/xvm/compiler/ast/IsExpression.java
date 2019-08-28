@@ -15,9 +15,12 @@ import org.xvm.asm.op.JumpNType;
 import org.xvm.asm.op.JumpType;
 import org.xvm.asm.op.Label;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Context.Branch;
+
+import org.xvm.util.Severity;
 
 /**
  * Expression for "expression is expression" or "expression instanceof type".
@@ -57,28 +60,49 @@ public class IsExpression
             }
 
         ConstantPool   pool     = pool();
-        TypeExpression exprType = (TypeExpression) expr2.validate(ctx, pool.typeType(), errs);
-        if (exprType == null)
+        TypeExpression exprTest = (TypeExpression) expr2.validate(ctx, pool.typeType(), errs);
+        if (exprTest == null)
             {
             fit = TypeFit.NoFit;
             }
         else
             {
-            expr2 = exprType;
+            expr2 = exprTest;
             }
 
         Constant constVal = null;
         if (fit.isFit())
             {
-            if (exprTarget.isConstant())
+            TypeConstant typeTarget = exprTarget.getType();
+            TypeConstant typeTest   = exprTest.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool);
+            boolean      fFormal    = typeTest.containsFormalType();
+
+            if (typeTarget.isTypeOfType() && !typeTest.isFormalType())
                 {
-                // TODO calculate constant isA -> true or false
+                // the test must be a type unless it's something that any Type is (e.g. Const),
+                // in which case just issue a warning
+                if (!typeTest.isTypeOfType())
+                    {
+                    if (pool.typeConst().isA(typeTest))
+                        {
+                        log(errs, Severity.WARNING, Compiler.TYPE_MATCHES_ALWAYS,
+                            exprTarget.toString(), typeTest.getValueString());
+                        }
+                    else
+                        {
+                        log(errs, Severity.ERROR, Compiler.NOT_TYPE_OF_TYPE,
+                            exprTarget.toString(), typeTest.getValueString());
+                        return null;
+                        }
+                    }
+                }
+            if (exprTarget.isConstant() && !fFormal)
+                {
+                constVal = pool.valOf(typeTarget.isA(typeTest));
                 }
             else if (exprTarget instanceof NameExpression)
                 {
-                NameExpression exprName   = (NameExpression) exprTarget;
-                TypeConstant   typeTarget = exprTarget.getType();
-                TypeConstant   typeTest   = exprType.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool);
+                NameExpression exprName = (NameExpression) exprTarget;
 
                 ctx.narrowType(exprName, Branch.WhenTrue,
                         RelationalTypeConstant.combineWith(pool, typeTarget, typeTest));
@@ -102,7 +126,17 @@ public class IsExpression
         if (LVal.isLocalArgument())
             {
             Argument argTarget = expr1.generateArgument(ctx, code, true, true, errs);
-            Argument argType   = ((TypeExpression) expr2).ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool());
+            Argument argType;
+
+            TypeExpression exprTest = (TypeExpression) expr2;
+            if (exprTest.isDynamic())
+                {
+                argType = exprTest.generateArgument(ctx, code, false, true, errs);
+                }
+            else
+                {
+                argType = exprTest.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool());
+                }
             code.add(new IsType(argTarget, argType, LVal.getLocalArgument()));
             }
         else

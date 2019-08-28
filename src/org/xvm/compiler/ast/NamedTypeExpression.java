@@ -15,6 +15,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -321,7 +322,7 @@ public class NamedTypeExpression
         }
 
 
-    // ----- TypeConstant methods ------------------------------------------------------------------
+    // ----- TypeExpression methods ----------------------------------------------------------------
 
     @Override
     protected TypeConstant instantiateTypeConstant(Context ctx)
@@ -431,6 +432,12 @@ public class NamedTypeExpression
         info.addContribution(this);
         }
 
+    @Override
+    public boolean isDynamic()
+        {
+        return m_exprDynamic != null;
+        }
+
 
     // ----- compile phases ------------------------------------------------------------------------
 
@@ -480,20 +487,31 @@ public class NamedTypeExpression
                     }
 
                 Constant constId = resolver.getConstant();
+                boolean fProceed = true;
                 if (!constId.getFormat().isTypable())
                     {
-                    // cannot proceed
                     errsTemp.logTo(errs);
                     log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE, constId.getValueString());
-                    mgr.deferChildren();
-                    return;
+                    fProceed = false;
+                    }
+                else if (constId.getFormat() == Format.Property)
+                    {
+                    if (paramTypes != null)
+                        {
+                        errsTemp.logTo(errs);
+                        log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+                        fProceed = false;
+                        }
+                    else if (((PropertyConstant) constId).isFormalType() && names.size() > 1)
+                        {
+                        errsTemp.logTo(errs);
+                        log(errs, Severity.ERROR, Compiler.INVALID_FORMAL_TYPE_IDENTITY);
+                        fProceed = false;
+                        }
                     }
 
-                if (constId.getFormat() == Format.Property && paramTypes != null)
+                if (!fProceed)
                     {
-                    // cannot proceed
-                    errsTemp.logTo(errs);
-                    log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
                     mgr.deferChildren();
                     return;
                     }
@@ -560,7 +578,7 @@ public class NamedTypeExpression
         if (m_constId == null || m_constId.containsUnresolved())
             {
             // this can only mean that the name resolution ended in an error
-            // and has been deferred
+            // and has been deferred (e.g. "that.ElementType" or "that.KeyType.ElementType")
             NameExpression exprOld = new NameExpression(names.get(0));
 
             for (int i = 1, cNames = names.size(); i < cNames; i++)
@@ -570,9 +588,9 @@ public class NamedTypeExpression
                 exprOld = exprNext;
                 }
 
-            getParent().adopt(exprOld);
+            NameExpression exprNew = m_exprDynamic =
+                (NameExpression) exprOld.validate(ctx, pool().typeType(), errs);
 
-            Expression exprNew = exprOld.validate(ctx, pool().typeType(), errs);
             return exprNew == null
                     ? null
                     : finishValidation(typeRequired, exprNew.getType(), TypeFit.Fit, null, errs);
@@ -646,32 +664,38 @@ public class NamedTypeExpression
         TypeConstant[] atypeParams = new TypeConstant[listParams.size()];
         for (int i = 0, c = listParams.size(); i < c; ++i)
             {
-            TypeExpression exprOrig = listParams.get(i);
-            TypeExpression expr     = (TypeExpression) exprOrig.validate(ctx, null, errs);
-            if (expr == null)
+            TypeExpression exprOld = listParams.get(i);
+            TypeExpression exprNew = (TypeExpression) exprOld.validate(ctx, null, errs);
+            if (exprNew == null)
                 {
                 fValid = false;
+                continue;
+                }
+
+            if (exprNew.isDynamic())
+                {
+                log(errs, Severity.ERROR, Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS);
+                fValid = false;
+                continue;
+                }
+
+            if (exprNew != exprOld)
+                {
+                listParams.set(i, exprNew);
+                }
+
+            TypeConstant   typeParam = exprNew.getType();
+            TypeConstant[] atypeSub  = typeParam.getParamTypesArray();
+            if (atypeSub.length >= 1 && typeParam.isA(pool.typeType()))
+                {
+                atypeParams[i] = atypeSub[0];
                 }
             else
                 {
-                if (expr != exprOrig)
-                    {
-                    listParams.set(i, expr);
-                    }
-
-                TypeConstant   typeParam = expr.getType();
-                TypeConstant[] atypeSub  = typeParam.getParamTypesArray();
-                if (atypeSub.length >= 1 && typeParam.isA(pool.typeType()))
-                    {
-                    atypeParams[i] = atypeSub[0];
-                    }
-                else
-                    {
-                    expr.log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                        pool.ensureParameterizedTypeConstant(pool.typeType(),
-                            pool.typeObject()).getValueString(), typeParam.getValueString());
-                    fValid = false;
-                    }
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                    pool.ensureParameterizedTypeConstant(pool.typeType(),
+                        pool.typeObject()).getValueString(), typeParam.getValueString());
+                fValid = false;
                 }
             }
         return fValid ? atypeParams : null;
@@ -854,6 +878,15 @@ public class NamedTypeExpression
         return typeTarget;
         }
 
+    @Override
+    public Argument generateArgument(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+        {
+        assert isDynamic();
+
+        return m_exprDynamic.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -925,9 +958,10 @@ public class NamedTypeExpression
     protected List<TypeExpression> paramTypes;
     protected long                 lEndPos;
 
-    protected transient NameResolver m_resolver;
-    protected transient Constant     m_constId;
-    protected transient boolean      m_fVirtualChild;
+    protected transient NameResolver   m_resolver;
+    protected transient Constant       m_constId;
+    protected transient boolean        m_fVirtualChild;
+    private   transient NameExpression m_exprDynamic;
 
     // unresolved constant that may have been created by this statement
     protected transient UnresolvedNameConstant m_constUnresolved;
