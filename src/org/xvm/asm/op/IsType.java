@@ -82,7 +82,7 @@ public class IsType
             try
                 {
                 TypeHandle hType = (TypeHandle) frame.getArgument(m_nValue2);
-                typeTest = hType.getType();
+                typeTest = hType.getDataType();
                 }
             catch (ClassCastException e)
                 {

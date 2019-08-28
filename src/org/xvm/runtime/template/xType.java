@@ -112,9 +112,9 @@ public class xType
             super(clazz);
             }
 
-        protected TypeConstant getDataType()
+        public TypeConstant getDataType()
             {
-            return m_clazz.getType().getParamTypesArray()[0];
+            return getType().getParamType(0);
             }
         }
     }

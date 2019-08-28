@@ -131,7 +131,7 @@ public class IsExpression
             TypeExpression exprTest = (TypeExpression) expr2;
             if (exprTest.isDynamic())
                 {
-                argType = exprTest.generateArgument(ctx, code, false, true, errs);
+                argType = exprTest.generateArgument(ctx, code, false, false, errs);
                 }
             else
                 {
