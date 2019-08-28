@@ -487,6 +487,11 @@ class Array<ElementType>
     @Op("[..]")
     Array slice(Range<Int> range)
         {
+        if (range.lowerBound == 0 && range.upperBound == size-1 && !range.reversed)
+            {
+            return this;
+            }
+
         Array<ElementType> result = new Array(this, range);
 
         // a slice of an immutable array is also immutable
