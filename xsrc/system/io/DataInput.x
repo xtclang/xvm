@@ -20,7 +20,10 @@ interface DataInput
     /**
      * @return  a value of type Char read from the stream
      */
-    Char readChar();
+    Char readChar()
+        {
+        return new Char(readUInt32());
+        }
 
     /**
      * @return  a value of type String read from the stream
@@ -57,130 +60,225 @@ interface DataInput
      */
     Int8 readInt8()
         {
-        // the default implementation assumes that an 8-bit signed integer is present in the stream
-        // as a single byte of data in the twos-complement format
-        return new Int8(readByte().toBitArray());
+        return new Int8(readBytes(1));
         }
 
     /**
      * @return  a value of type Int16 read from the stream
      */
-    Int16 readInt16();
+    Int16 readInt16()
+        {
+        return new Int16(readBytes(2));
+        }
 
     /**
      * @return  a value of type UInt16 read from the stream
      */
-    UInt16 readUInt16();
+    UInt16 readUInt16()
+        {
+        return new UInt16(readBytes(2));
+        }
 
     /**
      * @return  a value of type Int32 read from the stream
      */
-    Int32 readInt32();
+    Int32 readInt32()
+        {
+        return new Int32(readBytes(4));
+        }
 
     /**
      * @return  a value of type UInt32 read from the stream
      */
-    UInt32 readUInt32();
+    UInt32 readUInt32()
+        {
+        return new UInt32(readBytes(4));
+        }
 
     /**
      * @return  a value of type Int read from the stream
      */
-    Int readInt();
+    Int readInt()
+        {
+        return new Int64(readBytes(8));
+        }
 
     /**
      * @return  a value of type UInt read from the stream
      */
-    UInt readUInt();
+    UInt readUInt()
+        {
+        return new UInt64(readBytes(8));
+        }
 
     /**
      * @return  a value of type Int128 read from the stream
      */
-    Int128 readInt128();
+    Int128 readInt128()
+        {
+        return new Int128(readBytes(16));
+        }
 
     /**
      * @return  a value of type UInt128 read from the stream
      */
-    UInt128 readUInt128();
+    UInt128 readUInt128()
+        {
+        return new UInt128(readBytes(16));
+        }
 
     /**
      * @return  a value of type VarInt read from the stream
      */
-    VarInt readVarInt();
+    VarInt readVarInt()
+        {
+        return new VarInt(readBytes(readInt()));
+        }
 
     /**
      * @return  a value of type VarUInt read from the stream
      */
-    VarUInt readVarUInt();
+    VarUInt readVarUInt()
+        {
+        return new VarUInt(readBytes(readInt()));
+        }
 
     /**
      * @return  a value of type Dec64 read from the stream
      */
-    Dec32 readDec32();
+    Dec32 readDec32()
+        {
+        return new Dec32(readBytes(4));
+        }
 
     /**
      * @return  a value of type Dec64 read from the stream
      */
-    Dec64 readDec64();
+    Dec64 readDec64()
+        {
+        return new Dec64(readBytes(8));
+        }
 
     /**
      * @return  a value of type Dec128 read from the stream
      */
-    Dec128 readDec128();
+    Dec128 readDec128()
+        {
+        return new Dec128(readBytes(16));
+        }
 
     /**
      * @return  a value of type VarDec read from the stream
      */
-    VarDec readVarDec();
+    VarDec readVarDec()
+        {
+        return new VarDec(readBytes(readInt()));
+        }
 
     /**
      * @return  a value of type Float16 read from the stream
      */
-    Float16 readFloat16();
+    Float16 readFloat16()
+        {
+        return new Float16(readBytes(2));
+        }
 
     /**
      * @return  a value of type BFloat16 read from the stream
      */
-    BFloat16 readBFloat16();
+    BFloat16 readBFloat16()
+        {
+        return new BFloat16(readBytes(2));
+        }
 
     /**
      * @return  a value of type Float32 read from the stream
      */
-    Float32 readFloat32();
+    Float32 readFloat32()
+        {
+        return new Float32(readBytes(4));
+        }
 
     /**
      * @return  a value of type Float64 read from the stream
      */
-    Float64 readFloat64();
+    Float64 readFloat64()
+        {
+        return new Float64(readBytes(8));
+        }
 
     /**
      * @return  a value of type Float128 read from the stream
      */
-    Float128 readFloat128();
+    Float128 readFloat128()
+        {
+        return new Float128(readBytes(16));
+        }
 
     /**
      * @return  a value of type VarFloat read from the stream
      */
-    VarFloat readVarFloat();
+    VarFloat readVarFloat()
+        {
+        return new VarFloat(readBytes(readInt()));
+        }
 
     /**
      * @return  a value of type Date read from the stream
      */
-    Date readDate();
+    Date readDate()
+        {
+        return new Date(readInt());
+        }
 
     /**
      * @return  a value of type Time read from the stream
      */
-    Time readTime();
+    Time readTime()
+        {
+        return new Time(readInt());
+        }
 
     /**
      * @return  a value of type DateTime read from the stream
      */
-    DateTime readDateTime();
+    DateTime readDateTime()
+        {
+        return new DateTime(readInt128(), readTimeZone());
+        }
+
+    /**
+     * @return  a value of type TimeZone read from the stream
+     */
+    TimeZone readTimeZone()
+        {
+        switch (Byte b = readByte())
+            {
+            case 0:
+                return TimeZone.UTC;
+
+            case 3:
+                return TimeZone.NoTZ;
+
+            case 2:
+                String name = readString();
+                TODO Rules-based TimeZone
+
+            case 1:
+                return new TimeZone(readInt());
+
+            default:
+                throw new IOException($"illegal timezone format indicator: {b}");
+            }
+        }
 
     /**
      * @return  a value of type Duration read from the stream
      */
-    Duration readDuration();
+    Duration readDuration()
+        {
+        return new Duration(readInt128());
+        }
 
 
     // ----- helper functions ----------------------------------------------------------------------

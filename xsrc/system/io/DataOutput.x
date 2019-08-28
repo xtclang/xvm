@@ -22,7 +22,10 @@ interface DataOutput
      *
      * @param value  a value of type Char to write to the stream
      */
-    void writeChar(Char value);
+    void writeChar(Char value)
+        {
+        writeUInt32(value.codepoint);
+        }
 
     /**
      * Write a String value to the stream.
@@ -55,8 +58,6 @@ interface DataOutput
      */
     void writeInt8(Int8 value)
         {
-        // the default implementation assumes that an 8-bit signed integer is stored as a byte in
-        // the stream
         writeByte(value.toByteArray()[0]);
         }
 
@@ -65,168 +66,276 @@ interface DataOutput
      *
      * @param value  a value of type Int16 to write to the stream
      */
-    void writeInt16(Int16 value);
+    void writeInt16(Int16 value)
+        {
+        writeBytes(value.toByteArray());
+        }
 
     /**
      * Write a UInt16 value to the stream.
      *
      * @param value  a value of type UInt16 to write to the stream
      */
-    void writeUInt16(UInt16 value);
+    void writeUInt16(UInt16 value)
+        {
+        writeBytes(value.toByteArray());
+        }
 
     /**
      * Write an Int32 value to the stream.
      *
      * @param value  a value of type Int32 to write to the stream
      */
-    void writeInt32(Int32 value);
+    void writeInt32(Int32 value)
+        {
+        writeBytes(value.toByteArray());
+        }
 
     /**
      * Write a UInt32 value to the stream.
      *
      * @param value  a value of type UInt32 to write to the stream
      */
-    void writeUInt32(UInt32 value);
+    void writeUInt32(UInt32 value)
+        {
+        writeBytes(value.toByteArray());
+        }
 
     /**
      * Write a 64-bit Int value to the stream.
      *
      * @param value  a value of type Int to write to the stream
      */
-    void writeInt(Int value);
+    void writeInt(Int value)
+        {
+        writeBytes(value.toByteArray());
+        }
 
     /**
      * Write a 64-bit UInt value to the stream.
      *
      * @param value  a value of type UInt64 to write to the stream
      */
-    void writeUInt(UInt value);
+    void writeUInt(UInt value)
+        {
+        writeBytes(value.toByteArray());
+        }
 
     /**
      * Write an Int128 value to the stream.
      *
      * @param value  a value of type Int128 to write to the stream
      */
-    void writeInt128(Int128 value);
+    void writeInt128(Int128 value)
+        {
+        writeBytes(value.toByteArray());
+        }
 
     /**
      * Write a UInt128 value to the stream.
      *
      * @param value  a value of type UInt128 to write to the stream
      */
-    void writeUInt128(UInt128 value);
+    void writeUInt128(UInt128 value)
+        {
+        writeBytes(value.toByteArray());
+        }
 
     /**
      * Write a VarInt value to the stream.
      *
      * @param value  a value of type VarInt to write to the stream
      */
-    void writeVarInt(VarInt value);
+    void writeVarInt(VarInt value)
+        {
+        Byte[] bytes = value.toByteArray();
+        writeInt(bytes.size);
+        writeBytes(bytes);
+        }
 
     /**
      * Write a VarUInt value to the stream.
      *
      * @param value  a value of type VarUInt to write to the stream
      */
-    void writeVarUInt(VarUInt value);
+    void writeVarUInt(VarUInt value)
+        {
+        Byte[] bytes = value.toByteArray();
+        writeInt(bytes.size);
+        writeBytes(bytes);
+        }
 
     /**
      * Write a Dec32 value to the stream.
      *
      * @param value  a value of type Dec64 to write to the stream
      */
-    void writeDec32(Dec32 value);
+    void writeDec32(Dec32 value)
+        {
+        writeBytes(value.toByteArray());
+        }
 
     /**
      * Write a Dec64 value to the stream.
      *
      * @param value  a value of type Dec64 to write to the stream
      */
-    void writeDec64(Dec64 value);
+    void writeDec64(Dec64 value)
+        {
+        writeBytes(value.toByteArray());
+        }
 
     /**
      * Write a Dec128 value to the stream.
      *
      * @param value  a value of type Dec128 to write to the stream
      */
-    void writeDec128(Dec128 value);
+    void writeDec128(Dec128 value)
+        {
+        writeBytes(value.toByteArray());
+        }
 
     /**
      * Write a VarDec value to the stream.
      *
      * @param value  a value of type VarDec to write to the stream
      */
-    void writeVarDec(VarDec value);
+    void writeVarDec(VarDec value)
+        {
+        Byte[] bytes = value.toByteArray();
+        writeInt(bytes.size);
+        writeBytes(bytes);
+        }
 
     /**
      * Write a Float16 value to the stream.
      *
      * @param value  a value of type Float16 to write to the stream
      */
-    void writeFloat16(Float16 value);
+    void writeFloat16(Float16 value)
+        {
+        writeBytes(value.toByteArray());
+        }
 
     /**
      * Write a BFloat16 value to the stream.
      *
      * @param value  a value of type BFloat16 to write to the stream
      */
-    void writeBFloat16(BFloat16 value);
+    void writeBFloat16(BFloat16 value)
+        {
+        writeBytes(value.toByteArray());
+        }
 
     /**
      * Write a Float32 value to the stream.
      *
      * @param value  a value of type Float32 to write to the stream
      */
-    void writeFloat32(Float32 value);
+    void writeFloat32(Float32 value)
+        {
+        writeBytes(value.toByteArray());
+        }
 
     /**
      * Write a Float64 value to the stream.
      *
      * @param value  a value of type Float64 to write to the stream
      */
-    void writeFloat64(Float64 value);
+    void writeFloat64(Float64 value)
+        {
+        writeBytes(value.toByteArray());
+        }
 
     /**
      * Write a Float128 value to the stream.
      *
      * @param value  a value of type Float128 to write to the stream
      */
-    void writeFloat128(Float128 value);
+    void writeFloat128(Float128 value)
+        {
+        writeBytes(value.toByteArray());
+        }
 
     /**
      * Write a VarFloat value to the stream.
      *
      * @param value  a value of type VarFloat to write to the stream
      */
-    void writeVarFloat(VarFloat value);
+    void writeVarFloat(VarFloat value)
+        {
+        Byte[] bytes = value.toByteArray();
+        writeInt(bytes.size);
+        writeBytes(bytes);
+        }
 
     /**
      * Write a Date value to the stream.
      *
      * @param value  a value of type Date to write to the stream
      */
-    void writeDate(Date value);
+    void writeDate(Date value)
+        {
+        writeInt(value.epochDay);
+        }
 
     /**
      * Write a Time value to the stream.
      *
      * @param value  a value of type Time to write to the stream
      */
-    void writeTime(Time value);
+    void writeTime(Time value)
+        {
+        writeInt(value.picos);
+        }
 
     /**
      * Write a DateTime value to the stream.
      *
      * @param value  a value of type DateTime to write to the stream
      */
-    void writeDateTime(DateTime value);
+    void writeDateTime(DateTime value)
+        {
+        writeInt128(value.epochPicos);
+        writeTimeZone(value.timezone);
+        }
+
+    /**
+     * Write a TimeZone value to the stream.
+     *
+     * @param value  a value of type TimeZone to write to the stream
+     */
+    void writeTimeZone(TimeZone value)
+        {
+        if (value.isUTC)
+            {
+            writeByte(0);
+            }
+        else if (value.isNoTZ)
+            {
+            writeByte(3);
+            }
+        else if (value.rules.size > 0)
+            {
+            writeByte(2);
+            writeString(value.name ?: assert);      // TODO
+            }
+        else
+            {
+            writeByte(1);
+            writeInt(value.picos);
+            }
+        }
 
     /**
      * Write a Duration value to the stream.
      *
      * @param value  a value of type Duration to write to the stream
      */
-    void writeDuration(Duration value);
+    void writeDuration(Duration value)
+        {
+        writeInt128(value.picoseconds);
+        }
 
 
     // ----- helper functions ----------------------------------------------------------------------
