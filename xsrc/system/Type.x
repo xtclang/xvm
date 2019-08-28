@@ -179,7 +179,7 @@ const Type<DataType>
      *      1. _r2_ is assignable to _r1_
      * 2. if _T1_ is explicitly immutable, then _T2_ must also be explicitly immutable.
      */
-    Boolean isA(Type<> that)
+    Boolean isA(Type!<> that)
         {
         if (this.as(Object) == that.as(Object))
             {
@@ -260,7 +260,7 @@ const Type<DataType>
      * REVIEW name? this creates a "union type"
      */
     @Op("+")
-    Type add(Type that)
+    Type add(Type!<> that)
         {
         TODO +
         }
@@ -272,7 +272,7 @@ const Type<DataType>
      * REVIEW name? this creates a "difference type"
      */
     @Op("-")
-    Type sub(Type that)
+    Type sub(Type!<> that)
         {
         TODO -
         }
