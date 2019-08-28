@@ -116,6 +116,7 @@ class ByteArrayInputStream
                 {
                 throw new EndOfFile();
                 }
+            return;
             }
 
         super(out, count);
