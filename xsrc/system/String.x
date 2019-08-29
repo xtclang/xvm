@@ -5,6 +5,8 @@ const String
         implements Sequence<Char>
         implements Stringable
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     /**
      * Construct a String from an array of characters.
      *
@@ -15,13 +17,59 @@ const String
         this.chars = chars;
         }
 
+
+    // ----- properties ----------------------------------------------------------------------------
+
     /**
      * The array of characters that form the content of the String.
      */
     private Char[] chars;
 
 
-    // ----- String API ----------------------------------------------------------------------------
+    // ----- operators -----------------------------------------------------------------------------
+
+    /**
+     * Duplicate this String the specified number of times.
+     *
+     * @param n  the number of times to duplicate this String
+     *
+     * @return a String that is the result of duplicating this String the specified number of times
+     */
+    @Op("*")
+    String! dup(Int n)
+        {
+        if (n <= 1)
+            {
+            return n == 1
+                    ? this
+                    : "";
+            }
+
+        StringBuffer buf = new StringBuffer(size*n);
+        for (Int i = 0; i < n; ++i)
+            {
+            appendTo(buf);
+            }
+        return buf.toString();
+        }
+
+    /**
+     * Add the String form of the passed object to this String, returning the result.
+     *
+     * @param o  the object to render as a String and append to this String
+     *
+     * @return the concatenation of the String form of the passed object onto this String
+     */
+    @Op("+")
+    String! append(Object o)
+        {
+        Int          add = o.is(Stringable) ? o.estimateStringLength() : 0x0F;
+        StringBuffer buf = new StringBuffer(size + add);
+        return (buf + this + o).toString();
+        }
+
+
+    // ----- operations ----------------------------------------------------------------------------
 
     /**
      * Obtain a portion of this String, beginning with at specified character index.
@@ -155,20 +203,6 @@ const String
          return false;
          }
 
-    @Override
-    String! toString()
-        {
-        return this;
-        }
-
-    /**
-     * @return the characters of this String as an array
-     */
-    immutable Char[] toCharArray()
-        {
-        return chars.as(immutable Char[]);
-        }
-
     /**
      * Format this String into a left-justified String of the specified length, with the remainder
      * of the new String filled with the specified character. If the specified length is shorter
@@ -251,46 +285,6 @@ const String
             }
         }
 
-    /**
-     * Duplicate this String the specified number of times.
-     *
-     * @param n  the number of times to duplicate this String
-     *
-     * @return a String that is the result of duplicating this String the specified number of times
-     */
-    @Op("*")
-    String! dup(Int n)
-        {
-        if (n <= 1)
-            {
-            return n == 1
-                    ? this
-                    : "";
-            }
-
-        StringBuffer buf = new StringBuffer(size*n);
-        for (Int i = 0; i < n; ++i)
-            {
-            appendTo(buf);
-            }
-        return buf.toString();
-        }
-
-    /**
-     * Add the String form of the passed object to this String, returning the result.
-     *
-     * @param o  the object to render as a String and append to this String
-     *
-     * @return the concatenation of the String form of the passed object onto this String
-     */
-    @Op("+")
-    String! append(Object o)
-        {
-        Int          add = o.is(Stringable) ? o.estimateStringLength() : 0x0F;
-        StringBuffer buf = new StringBuffer(size + add);
-        return (buf + this + o).toString();
-        }
-
 
     // ----- Sequence methods ----------------------------------------------------------------------
 
@@ -330,6 +324,23 @@ const String
     conditional Int lastIndexOf(Char value, Int startAt = Int.maxvalue)
         {
         return chars.lastIndexOf(value, startAt);
+        }
+
+
+    // ----- conversions ---------------------------------------------------------------------------
+
+    /**
+     * @return the characters of this String as an array
+     */
+    immutable Char[] toCharArray()
+        {
+        return chars.as(immutable Char[]);
+        }
+
+    @Override
+    String! toString()
+        {
+        return this;
         }
 
 
