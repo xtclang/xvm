@@ -49,13 +49,23 @@ public abstract class BitBasedArray
                 ab[index(i)] |= bitMask(i);
                 }
             }
-        return new BitArrayHandle(clzArray, cBits, ab, Mutability.Constant);
+        return new BitArrayHandle(clzArray, ab, cBits, Mutability.Constant);
         }
 
     @Override
     public ArrayHandle createArrayHandle(ClassComposition clzArray, int cCapacity, Mutability mutability)
         {
         return new BitArrayHandle(clzArray, 0, cCapacity, mutability);
+        }
+
+    @Override
+    protected ArrayHandle createCopy(ArrayHandle hArray, Mutability mutability)
+        {
+        BitArrayHandle hSrc  = (BitArrayHandle) hArray;
+        int            cBits = hSrc.m_cSize;
+
+        return new BitArrayHandle(hSrc.getComposition(),
+            Arrays.copyOfRange(hSrc.m_abValue, 0, storage(cBits)), cBits, mutability);
         }
 
     @Override
@@ -255,7 +265,8 @@ public abstract class BitBasedArray
                 setBit(abNew, iBit, getBit(abValue, (int) ixFrom + iBit));
                 }
 
-            BitArrayHandle hArrayNew = new BitArrayHandle(hTarget.getComposition(), cBits, abNew, Mutability.Mutable);
+            BitArrayHandle hArrayNew = new BitArrayHandle(hTarget.getComposition(),
+                abNew, cBits, Mutability.Mutable);
 
             return frame.assignValue(iReturn, hArrayNew);
             }
@@ -403,7 +414,7 @@ public abstract class BitBasedArray
         {
         public byte[] m_abValue;
 
-        public BitArrayHandle(TypeComposition clzArray, int cBits, byte[] abValue, Mutability mutability)
+        public BitArrayHandle(TypeComposition clzArray, byte[] abValue, int cBits, Mutability mutability)
             {
             super(clzArray, mutability);
 
@@ -416,6 +427,30 @@ public abstract class BitBasedArray
             super(clzArray, mutability);
 
             m_abValue = new byte[storage(cCapacity)];
+            }
+
+        @Override
+        public int getCapacity()
+            {
+            return m_abValue.length;
+            }
+
+        @Override
+        public void makeImmutable()
+            {
+            if (isMutable())
+                {
+                // purge the unused space
+                byte[] ab = m_abValue;
+                int    c  = storage(m_cSize);
+                if (ab.length != c)
+                    {
+                    byte[] abNew = new byte[c];
+                    System.arraycopy(ab, 0, abNew, 0, c);
+                    m_abValue = abNew;
+                    }
+                super.makeImmutable();
+                }
             }
 
         @Override

@@ -58,14 +58,14 @@ public class xBitArray
     /**
      * Create a bit array handle.
      *
-     * @param cBits       the array arity
      * @param abValue     the underlying bytes
+     * @param cBits       the array arity
      * @param mutability  the mutability
      *
      * @return the array handle
      */
-    public static BitArrayHandle makeHandle(int cBits, byte[] abValue, Mutability mutability)
+    public static BitArrayHandle makeHandle(byte[] abValue, int cBits, Mutability mutability)
         {
-        return new BitArrayHandle(INSTANCE.getCanonicalClass(), cBits, abValue, mutability);
+        return new BitArrayHandle(INSTANCE.getCanonicalClass(), abValue, cBits, mutability);
         }
     }

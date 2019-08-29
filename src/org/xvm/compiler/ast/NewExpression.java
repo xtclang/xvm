@@ -722,7 +722,6 @@ public class NewExpression
         {
         MethodConstant idConstruct = m_constructor.getIdentityConstant();
         TypeConstant   typeTarget  = getType();
-        boolean        fGeneric    = isGeneric(typeTarget);
         int            cAll        = idConstruct.getRawParams().length;
         int            cArgs       = aArgs.length;
         int            cDefaults   = m_cDefaults;
@@ -767,7 +766,7 @@ public class NewExpression
                     }
                 }
 
-            if (fGeneric)
+            if (isTypeRequired(typeTarget))
                 {
                 if (argOuter == null)
                     {
@@ -1237,17 +1236,17 @@ public class NewExpression
         }
 
     /**
-     * @return iff the specified type has any generic portion (excluding virtual children)
+     * @return iff constructing the specified type requires the type in addition to the constructor
      */
-    private static boolean isGeneric(TypeConstant type)
+    private static boolean isTypeRequired(TypeConstant type)
         {
-        if (type.isParamsSpecified())
+        if (type.isParamsSpecified() || type.isAnnotated())
             {
             return true;
             }
         if (type.isAnonymousClass())
             {
-            return isGeneric(type.getParentType());
+            return isTypeRequired(type.getParentType());
             }
         return false;
         }

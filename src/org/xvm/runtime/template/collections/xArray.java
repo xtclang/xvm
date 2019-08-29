@@ -30,6 +30,7 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.IndexSupport;
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
@@ -127,8 +128,9 @@ public class xArray
         MUTABILITY = (xEnum) f_templates.getTemplate("collections.VariablyMutable.Mutability");
 
         // mark native properties and methods
-        markNativeProperty("size");
+        markNativeProperty("capacity");
         markNativeProperty("mutability");
+        markNativeProperty("size");
 
         markNativeMethod("getElement", INT, ELEMENT_TYPE);
         markNativeMethod("setElement", new String[] {"Int64", "ElementType"}, VOID);
@@ -136,6 +138,7 @@ public class xArray
         markNativeMethod("add", ELEMENT_TYPE, ARRAY);
         markNativeMethod("addAll", new String[] {"Iterable<ElementType>"}, ARRAY);
         markNativeMethod("slice", new String[] {"Range<Int64>"}, ARRAY);
+        markNativeMethod("ensureConst", BOOLEAN, null);
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -341,6 +344,22 @@ public class xArray
         }
 
     /**
+     * Create a copy of the specified array for the specified mutability
+     *
+     * @param hArray      the array
+     * @param mutability  the mutability
+     *
+     * @return a new array
+     */
+    protected ArrayHandle createCopy(ArrayHandle hArray, Mutability mutability)
+        {
+        GenericArrayHandle hSrc = (GenericArrayHandle) hArray;
+
+        return new GenericArrayHandle(hSrc.getComposition(),
+            Arrays.copyOfRange(hSrc.m_ahValue, 0, hSrc.m_cSize), mutability);
+        }
+
+    /**
      * Fill the array content with the specified value.
      *
      * @param hArray  the array
@@ -371,6 +390,9 @@ public class xArray
 
         switch (sPropName)
             {
+            case "capacity":
+                return frame.assignValue(iReturn, xInt64.makeHandle(hArray.getCapacity()));
+
             case "mutability":
                 return frame.assignValue(iReturn,
                     MUTABILITY.getEnumByOrdinal(hArray.m_mutability.ordinal()));
@@ -421,6 +443,21 @@ public class xArray
                 long ixTo   = ((JavaLong) hRange.getField("upperBound")).getValue();
 
                 return slice(frame, hTarget, ixFrom, ixTo, iReturn);
+                }
+
+            case "ensureConst": // immutable Array ensureConst(Boolean inPlace = False)
+                {
+                ArrayHandle   hArray   = (ArrayHandle) hTarget;
+                BooleanHandle hInPlace = (BooleanHandle) hArg;
+                if (hInPlace.get())
+                    {
+                    hArray.makeImmutable();
+                    }
+                else
+                    {
+                    hArray = createCopy(hArray, Mutability.Constant);
+                    }
+                return frame.assignValue(iReturn, hArray);
                 }
             }
 
@@ -966,10 +1003,16 @@ public class xArray
 
         public GenericArrayHandle(TypeComposition clzArray, ObjectHandle[] ahValue, Mutability mutability)
             {
+            this(clzArray, ahValue, ahValue.length, mutability);
+            }
+
+        public GenericArrayHandle(TypeComposition clzArray, ObjectHandle[] ahValue,
+                                  int cSize, Mutability mutability)
+            {
             super(clzArray, mutability);
 
             m_ahValue = ahValue;
-            m_cSize   = ahValue.length;
+            m_cSize   = cSize;
             }
 
         public GenericArrayHandle(TypeComposition clzArray, long cCapacity, Mutability mutability)
@@ -977,6 +1020,12 @@ public class xArray
             super(clzArray, mutability);
 
             m_ahValue = new ObjectHandle[(int) cCapacity];
+            }
+
+        @Override
+        public int getCapacity()
+            {
+            return m_ahValue.length;
             }
 
         @Override

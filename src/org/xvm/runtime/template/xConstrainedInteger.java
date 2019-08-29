@@ -8,6 +8,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
@@ -20,6 +21,8 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.template.collections.BitBasedArray;
 import org.xvm.runtime.template.collections.BitBasedArray.BitArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
+import org.xvm.runtime.template.collections.xByteArray;
+import org.xvm.runtime.template.collections.xByteArray.ByteArrayHandle;
 
 import org.xvm.util.PackedInteger;
 
@@ -143,6 +146,37 @@ public abstract class xConstrainedInteger
             }
 
         return super.createConstHandle(frame, constant);
+        }
+
+    @Override
+    public int construct(Frame frame, MethodStructure constructor, ClassComposition clazz,
+                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
+        {
+        // make sure this is a Binary-based constructor
+        SignatureConstant sig = constructor.getIdentityConstant().getSignature();
+        if (sig.getParamCount() == 1 && sig.getRawParams()[0].equals(xByteArray.INSTANCE.getCanonicalType()))
+            {
+            ByteArrayHandle hBytes = (ByteArrayHandle) ahVar[0];
+            byte[]          abVal  = hBytes.m_abValue;
+
+            int cBytes = abVal.length;
+            if (cBytes != f_cNumBits / 8)
+                {
+                return frame.raiseException(xException.illegalOperation()); // TODO: IllegalArgument
+                }
+
+            long lResult = 0;
+            for (int i = 0; i < cBytes; i++)
+                {
+                lResult = lResult << 8 | abVal[i];
+                }
+
+            return convertLong(frame, lResult, iReturn);
+            }
+        else
+            {
+            return frame.raiseException(xException.unsupportedOperation());
+            }
         }
 
     @Override
@@ -356,7 +390,7 @@ public abstract class xConstrainedInteger
                     {
                     long l = ((JavaLong) hTarget).getValue();
                     return frame.assignValue(iReturn, new BitArrayHandle(template.getCanonicalClass(),
-                            f_cNumBits, toByteArray(l), Mutability.Constant));
+                        toByteArray(l), f_cNumBits, Mutability.Constant));
                     }
 
                 break;

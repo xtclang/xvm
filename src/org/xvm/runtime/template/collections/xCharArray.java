@@ -67,6 +67,15 @@ public class xCharArray
         }
 
     @Override
+    protected ArrayHandle createCopy(ArrayHandle hArray, Mutability mutability)
+        {
+        CharArrayHandle hSrc = (CharArrayHandle) hArray;
+
+        return new CharArrayHandle(hSrc.getComposition(),
+            Arrays.copyOfRange(hSrc.m_achValue, 0, hSrc.m_cSize), mutability);
+        }
+
+    @Override
     protected void fill(ArrayHandle hArray, int cSize, ObjectHandle hValue)
         {
         CharArrayHandle ha = (CharArrayHandle) hArray;
@@ -326,7 +335,7 @@ public class xCharArray
             super(clzArray, mutability);
 
             m_achValue = achValue;
-            m_cSize = achValue.length;
+            m_cSize    = achValue.length;
             }
 
         protected CharArrayHandle(TypeComposition clzArray, int cCapacity, Mutability mutability)
@@ -334,6 +343,12 @@ public class xCharArray
             super(clzArray, mutability);
 
             m_achValue = new char[cCapacity];
+            }
+
+        @Override
+        public int getCapacity()
+            {
+            return m_achValue.length;
             }
 
         @Override

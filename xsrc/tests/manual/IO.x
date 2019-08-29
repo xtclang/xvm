@@ -8,15 +8,14 @@ module TestIO
 
     void run()
         {
-        console.println("*** IO tests ***");
-
         testInputStream();
         testJavaUTF();
         }
 
     void testInputStream()
         {
-        console.println("testInputStream()");
+        console.println("\n*** testInputStream()");
+
         File    file   = ./IO.x;
         Byte[]  raw    = file.contents;
         var     in     = new ByteArrayInputStream(raw);
@@ -39,7 +38,9 @@ module TestIO
 
     void testJavaUTF()
         {
-        var in = new @JavaDataInput ByteArrayInputStream([0x00, 0x03, 0x43, 0x41, 0x4e]);
+        console.println("\n*** testJavaUTF()");
+
+        JavaDataInput in = new @JavaDataInput ByteArrayInputStream([0x00, 0x03, 0x43, 0x61, 0x6D]);
         console.println($"string={in.readString()}");
         }
     }

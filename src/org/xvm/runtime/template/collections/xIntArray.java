@@ -66,6 +66,15 @@ public class xIntArray
         }
 
     @Override
+    protected ArrayHandle createCopy(ArrayHandle hArray, Mutability mutability)
+        {
+        IntArrayHandle hSrc = (IntArrayHandle) hArray;
+
+        return new IntArrayHandle(hSrc.getComposition(),
+            Arrays.copyOfRange(hSrc.m_alValue, 0, hSrc.m_cSize), mutability);
+        }
+
+    @Override
     protected void fill(ArrayHandle hArray, int cSize, ObjectHandle hValue)
         {
         IntArrayHandle ha = (IntArrayHandle) hArray;
@@ -307,7 +316,7 @@ public class xIntArray
             super(clzArray, mutability);
 
             m_alValue = alValue;
-            m_cSize = alValue.length;
+            m_cSize   = alValue.length;
             }
 
         protected IntArrayHandle(TypeComposition clzArray, int cCapacity, Mutability mutability)
@@ -315,6 +324,12 @@ public class xIntArray
             super(clzArray, mutability);
 
             m_alValue = new long[cCapacity];
+            }
+
+        @Override
+        public int getCapacity()
+            {
+            return m_alValue.length;
             }
 
         @Override

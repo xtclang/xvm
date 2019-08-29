@@ -188,7 +188,7 @@ public class xConst
             byte[] abValue = new byte[] {((UInt8Constant) constant).getValue().byteValue()};
 
             ObjectHandle[] ahArg = new ObjectHandle[NIBBLE_CONSTRUCT.getMaxVars()];
-            ahArg[0] = xBitArray.makeHandle(4, abValue, xArray.Mutability.Constant);
+            ahArg[0] = xBitArray.makeHandle(abValue, 4, xArray.Mutability.Constant);
 
             return construct(frame, NIBBLE_CONSTRUCT, ensureClass(constant.getType()), null, ahArg, Op.A_STACK);
             }

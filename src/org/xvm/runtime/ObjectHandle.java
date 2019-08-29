@@ -549,6 +549,8 @@ public abstract class ObjectHandle
             m_mutability = mutability;
             }
 
+        abstract public int getCapacity();
+
         @Override
         public void makeImmutable()
             {

@@ -83,6 +83,15 @@ public class xByteArray
         }
 
     @Override
+    protected ArrayHandle createCopy(ArrayHandle hArray, Mutability mutability)
+        {
+        ByteArrayHandle hSrc = (ByteArrayHandle) hArray;
+
+        return new ByteArrayHandle(hSrc.getComposition(),
+            Arrays.copyOfRange(hSrc.m_abValue, 0, hSrc.m_cSize), mutability);
+        }
+
+    @Override
     protected void fill(ArrayHandle hArray, int cSize, ObjectHandle hValue)
         {
         ByteArrayHandle ha = (ByteArrayHandle) hArray;
@@ -337,6 +346,12 @@ public class xByteArray
             super(clzArray, mutability);
 
             m_abValue = new byte[cCapacity];
+            }
+
+        @Override
+        public int getCapacity()
+            {
+            return m_abValue.length;
             }
 
         @Override
