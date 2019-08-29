@@ -1164,13 +1164,15 @@ public abstract class TypeConstant
     protected void setTypeInfo(TypeInfo info)
         {
         TypeInfo infoOld;
-        while (rankTypeInfo(info) > rankTypeInfo(infoOld = s_typeinfo.get(this)))
+        while (rankTypeInfo(info) > rankTypeInfo(infoOld = s_typeinfo.get(this))
+                || info.isPlaceHolder())
             {
             // update the TypeInfo
             if (s_typeinfo.compareAndSet(this, infoOld, info))
                 {
                 // update the invalidation count that we have caught up to at this point
                 setInvalidationCount(info.getInvalidationCount());
+                break;
                 }
             }
         }
