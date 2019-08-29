@@ -5,6 +5,7 @@ import java.util.Arrays;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -402,6 +403,11 @@ public class xByteArray
 
     public static ByteArrayHandle makeHandle(byte[] ab, Mutability mutability)
         {
-        return new ByteArrayHandle(INSTANCE.getCanonicalClass(), ab, mutability);
+        ConstantPool     pool = INSTANCE.pool();
+        ClassComposition clz  = mutability == Mutability.Constant
+            ? INSTANCE.ensureClass(pool.typeBinary())
+            : INSTANCE.ensureClass(pool.typeByteArray());
+
+        return new ByteArrayHandle(clz, ab, mutability);
         }
     }
