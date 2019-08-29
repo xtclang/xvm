@@ -17,4 +17,12 @@ package io
      */
     const EndOfFile(String? text = null, Exception? cause = null)
             extends IOException(text, cause);
+
+    interface DataInputStream
+            extends InputStream
+            extends DataInput;
+
+    interface DataOutputStream
+            extends OutputStream
+            extends DataOutput;
     }

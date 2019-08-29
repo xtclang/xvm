@@ -450,11 +450,23 @@ interface DataOutput
      * @param out  the DataOutput stream to write to
      * @param ch   the character to write to the stream in UTF-8 format
      *
-     * @throws IllegalUTF if there is a flaw in the UTF-8 encoding or in the resulting codepoint
+     * @throws IllegalUTF if the data cannot be written as valid UTF data
      */
     static void writeUTF8Char(DataOutput out, Char ch)
         {
-        UInt32 codepoint = ch.codepoint;
+        writeUTF8Codepoint(out, ch.codepoint);
+        }
+
+    /**
+     * Write a Unicode codepoint to the stream using the UTF-8 format.
+     *
+     * @param out        the DataOutput stream to write to
+     * @param codepoint  the Unicode codepoint to write to the stream in UTF-32 format
+      *
+     * @throws IllegalUTF if the data cannot be written as valid UTF data
+     */
+    static void writeUTF8Codepoint(DataOutput out, UInt32 codepoint)
+        {
         if (codepoint & ~0x7F == 0)
             {
             // ASCII - single byte 0xxxxxxx format
@@ -517,7 +529,7 @@ interface DataOutput
                 trail = 5;
                 break;
 
-            default: throw new OutOfBounds($"illegal character: '{ch}' ({codepoint})");
+            default: throw new IllegalUTF($"illegal character codepoint: {codepoint}");
             }
 
         // write out trailing bytes; each has the same "10xxxxxx" format with 6
@@ -534,11 +546,23 @@ interface DataOutput
      * @param out  the DataOutput stream to write to
      * @param ch   the character to write to the stream in UTF-16 format
      *
-     * @throws IllegalUTF if there is a flaw in the UTF-16 encoding or in the resulting codepoint
+     * @throws IllegalUTF if the data cannot be written as valid UTF data
      */
     static void writeUTF16Char(DataOutput out, Char ch)
         {
-        UInt32 codepoint = ch.codepoint;
+        writeUTF16Codepoint(out, ch.codepoint);
+        }
+
+    /**
+     * Write a Unicode codepoint to the stream using the UTF-16 format.
+     *
+     * @param out        the DataOutput stream to write to
+     * @param codepoint  the Unicode codepoint to write to the stream in UTF-32 format
+     *
+     * @throws IllegalUTF if the data cannot be written as valid UTF data
+     */
+    static void writeUTF16Codepoint(DataOutput out, UInt32 codepoint)
+        {
         if (codepoint > 0xFFFF)
             {
             // the high ten bits (in the range 0x000–0x3FF) are encoded in the range 0xD800–0xDBFF;
@@ -561,11 +585,24 @@ interface DataOutput
      * @param out  the DataOutput stream to write to
      * @param ch   the character to write to the stream in UTF-32 format
      *
-     * @throws IllegalUTF if there is a flaw in the resulting codepoint
+     * @throws IllegalUTF if the data cannot be written as valid UTF data
      */
     static void writeUTF32Char(DataOutput out, Char ch)
         {
-        out.writeBytes(ch.codepoint.toByteArray());
+        writeUTF32Codepoint(out, ch.codepoint);
+        }
+
+    /**
+     * Write a Unicode codepoint to the stream using the UTF-32 format.
+     *
+     * @param out        the DataOutput stream to write to
+     * @param codepoint  the Unicode codepoint to write to the stream in UTF-32 format
+     *
+     * @throws IllegalUTF if the data cannot be written as valid UTF data
+     */
+    static void writeUTF32Codepoint(DataOutput out, UInt32 codepoint)
+        {
+        out.writeBytes(codepoint.toByteArray());
         }
 
     /**

@@ -1,6 +1,8 @@
 module TestIO
     {
     import Ecstasy.io.ByteArrayInputStream;
+    import Ecstasy.io.DataInputStream;
+    import Ecstasy.io.JavaDataInput;
 
     @Inject Console console;
 
@@ -9,6 +11,7 @@ module TestIO
         console.println("*** IO tests ***");
 
         testInputStream();
+        testJavaUTF();
         }
 
     void testInputStream()
@@ -32,5 +35,11 @@ module TestIO
                 }
             }
         console.println("(eof)");
+        }
+
+    void testJavaUTF()
+        {
+        var in = new @JavaDataInput ByteArrayInputStream([0x00, 0x03, 0x43, 0x41, 0x4e]);
+        console.println($"string={in.readString()}");
         }
     }

@@ -420,6 +420,21 @@ interface DataInput
      */
     static Char readUTF8Char(DataInput in)
         {
+        return readUTF8Codepoint(in).toChar();
+        }
+
+    /**
+     * Read a sequence of bytes from the stream corresponding to a single Unicode character that is
+     * encoded in the UTF-8 format.
+     *
+     * @param in  the DataInput stream
+     *
+     * @return the codepoint read from the stream in UTF-8 format
+     *
+     * @throws IllegalUTF if there is a flaw in the UTF-8 encoding or in the resulting codepoint
+     */
+    static UInt32 readUTF8Codepoint(DataInput in)
+        {
         private static UInt32 trailing(DataInput in)
             {
             Byte b = in.readByte();
@@ -465,7 +480,7 @@ interface DataInput
                              | trailing(in) << 6
                              | trailing(in);
             default: throw new IllegalUTF($"initial byte: {b}");
-            }.toChar();
+            };
         }
 
     /**
@@ -479,6 +494,21 @@ interface DataInput
      * @throws IllegalUTF if there is a flaw in the UTF-16 encoding or in the resulting codepoint
      */
     static Char readUTF16Char(DataInput in)
+        {
+        return readUTF16Codepoint(in).toChar();
+        }
+
+    /**
+     * Read a sequence of bytes from the stream corresponding to a single Unicode character that is
+     * encoded in the UTF-16 format.
+     *
+     * @param in  the DataInput stream
+     *
+     * @return the codepoint read from the stream in UTF-16 format
+     *
+     * @throws IllegalUTF if there is a flaw in the UTF-16 encoding or in the resulting codepoint
+     */
+    static UInt32 readUTF16Codepoint(DataInput in)
         {
         UInt32 n = (in.readByte().toUInt32() <<  8)
                 |  (in.readByte().toUInt32()      );
@@ -510,7 +540,7 @@ interface DataInput
             n |= nLo & 0x3FF;
             }
 
-        return new Char(n);
+        return n;
         }
 
     /**
@@ -525,10 +555,25 @@ interface DataInput
      */
     static Char readUTF32Char(DataInput in)
         {
-        return new Char(in.readByte().toUInt32() << 8
-                      | in.readByte().toUInt32() << 8
-                      | in.readByte().toUInt32() << 8
-                      | in.readByte().toUInt32()     );
+        return readUTF32Codepoint(in).toChar();
+        }
+
+    /**
+     * Read a sequence of bytes from the stream corresponding to a single Unicode character that is
+     * encoded in the UTF-8 format.
+     *
+     * @param in  the DataInput stream
+     *
+     * @return the codepoint read from the stream in UTF-32 format
+     *
+     * @throws IllegalUTF if there is a flaw in the resulting codepoint
+     */
+    static UInt32 readUTF32Codepoint(DataInput in)
+        {
+        return in.readByte().toUInt32() << 8
+             | in.readByte().toUInt32() << 8
+             | in.readByte().toUInt32() << 8
+             | in.readByte().toUInt32();
         }
 
     /**
