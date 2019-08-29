@@ -157,3 +157,21 @@ foo()
     // what equals does it use? B1.equals() (NOT B2.equals, because B2 does NOT "implement" Hashable)
     // what hash does it use? B1.hash() is all we have ...
     }
+
+
+// ----- rotational operators ----
+
+x |<< 3
+x >>| 3
+
+x |<<| 3
+x |>>| 3
+
+x >^ 3
+x ^< 3
+
+x >>^ 3
+x ^<< 3;
+
+x %> 3
+x <% 3
