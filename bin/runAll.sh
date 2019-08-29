@@ -15,6 +15,7 @@ java -classpath ../classes/ org.xvm.runtime.TestConnector \
     TestGenerics.xqiz.it tests/manual/generics.x \
     TestInnerOuter.xqiz.it tests/manual/innerOuter.x \
     TestFiles.xqiz.it tests/manual/files.x \
+    TestIO tests/manual/IO.x \
     TestLambda.xqiz.it tests/manual/lambda.x \
     TestLiterals.xqiz.it tests/manual/literals.x \
     TestLoops.xqiz.it tests/manual/loop.x \

@@ -1,4 +1,4 @@
-module IO
+module TestIO
     {
     import Ecstasy.io.ByteArrayInputStream;
 
@@ -10,7 +10,6 @@ module IO
 
         testInputStream();
         }
-
 
     void testInputStream()
         {
