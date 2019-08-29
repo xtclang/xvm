@@ -15,9 +15,6 @@
 
 - a new VAR_D like op-code to provide additional parameters (e.g. injection name)
 
-- introduce stock exception (Bounds, IllegalState, etc.) and use current frame to
-  create exceptions
-
 - Type: by-method comparison
 
 - Move op-code: "safe wrapper" logic
@@ -48,26 +45,14 @@
 
 - compiler to verify "all or nothing" implementation for funky interfaces
 
-- formal types with .is() should be smarter at compile time; for example:
-    module TestSimple.xqiz.it
-        {
-        @Inject X.io.Console console;
-
-        void run()
-            {
-            import Ecstasy.collections.HashMap;
-            Map m = new HashMap<String, Int>();
-            // TODO GG SHOULD BE COMPILER ERROR (Type cannot be String)
-            console.print($"m.KeyType.is(String)={m.KeyType.is(String)}");
-            // TODO GG SHOULD BE COMPILER WARNING (right side is not Type)
-            console.print($"m.KeyType.is(Stringable)={m.KeyType.is(Stringable)}");
-            }
-        }
-
 - at module load time (e.g. template generation) synthesize native Const functions (hashCode, equals, compare)
   at the actual const structure; this will render unnecessary the relevant code:
     - OpCallable.getMethodStructure() ("typeParent.findCallable(idFunction.getSignature())" for classes)
     - InvocationExpression "if (fPreserveOrigin ...)"
+
+- introduce stock exception (Bounds, IllegalState, etc.) and use current frame to
+  create exceptions
+
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
