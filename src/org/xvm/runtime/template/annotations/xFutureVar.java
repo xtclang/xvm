@@ -55,7 +55,11 @@ public class xFutureVar
     @Override
     public void initDeclared()
         {
-        // FutureVar!<RefType> whenComplete(function void (RefType?, Exception?) notify)
+        xEnum enumCompletion = (xEnum) getChildTemplate("Completion");
+        Pending = enumCompletion.getEnumByName("Pending");
+        Result  = enumCompletion.getEnumByName("Result");
+        Error   = enumCompletion.getEnumByName("Error");
+
         markNativeMethod("whenComplete", new String[] {"Function"}, new String[] {"annotations.FutureVar!<RefType>"});
         markNativeMethod("thenDo", new String[] {"Function"}, new String[] {"annotations.FutureVar!<RefType>"});
         markNativeMethod("passTo", new String[] {"Function"}, new String[] {"annotations.FutureVar!<RefType>"});
@@ -65,10 +69,7 @@ public class xFutureVar
 
         markNativeMethod("completeExceptionally", new String[] {"Exception"}, VOID);
 
-        xEnum enumCompletion = (xEnum) getChildTemplate("Completion");
-        Pending = enumCompletion.getEnumByName("Pending");
-        Result = enumCompletion.getEnumByName("Result");
-        Error = enumCompletion.getEnumByName("Error");
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override

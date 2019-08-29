@@ -47,13 +47,16 @@ public class xNanosTimer
     @Override
     public void initDeclared()
         {
+        s_clzDuration = f_templates.getTemplate("Duration").getCanonicalClass();
+
         markNativeProperty("elapsed");
+
         markNativeMethod("start"   , new String[0], null);
         markNativeMethod("stop"    , new String[0], null);
         markNativeMethod("reset"   , new String[0], null);
         markNativeMethod("schedule", new String[]{"Duration", "Timer.Alarm"}, null);
 
-        s_clzDuration = f_templates.getTemplate("Duration").getCanonicalClass();
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override

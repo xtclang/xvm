@@ -38,6 +38,8 @@ public class xOSFileStore
 
         markNativeMethod("dirFor", STRING, null);
         markNativeMethod("fileFor", STRING, null);
+
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override

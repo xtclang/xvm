@@ -43,6 +43,8 @@ public class xException
         s_clzPathException   = f_templates.getTemplate("fs.PathException").getCanonicalClass();
 
         markNativeMethod("toString", VOID, STRING);
+
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override

@@ -45,6 +45,8 @@ public class xBit
         markNativeMethod("or" , THIS, THIS);
         markNativeMethod("xor", THIS, THIS);
         markNativeMethod("not", VOID, THIS);
+
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override

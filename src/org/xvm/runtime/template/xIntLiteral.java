@@ -64,6 +64,8 @@ public class xIntLiteral
         markNativeMethod("toVarUInt" , VOID, new String[]{"VarUInt"});
         markNativeMethod("toVarFloat", VOID, new String[]{"VarFloat"});
         markNativeMethod("toVarDec"  , VOID, new String[]{"VarDec"});
+
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override

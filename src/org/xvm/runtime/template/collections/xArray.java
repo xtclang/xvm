@@ -81,17 +81,6 @@ public class xArray
 
         ARRAY_TEMPLATES = mapTemplates;
 
-        // mark native properties and methods
-        markNativeProperty("size");
-        markNativeProperty("mutability");
-
-        markNativeMethod("getElement", INT, ELEMENT_TYPE);
-        markNativeMethod("setElement", new String[] {"Int64", "ElementType"}, VOID);
-        markNativeMethod("elementAt", INT, new String[] {"Var<ElementType>"});
-        markNativeMethod("add", ELEMENT_TYPE, ARRAY);
-        markNativeMethod("addAll", new String[] {"Iterable<ElementType>"}, ARRAY);
-        markNativeMethod("slice", new String[] {"Range<Int64>"}, ARRAY);
-
         // cache the constructors
         for (MethodStructure method :
                 ((MultiMethodStructure) f_struct.getChild("construct")).methods())
@@ -136,6 +125,19 @@ public class xArray
 
         // cache Mutability template
         MUTABILITY = (xEnum) f_templates.getTemplate("collections.VariablyMutable.Mutability");
+
+        // mark native properties and methods
+        markNativeProperty("size");
+        markNativeProperty("mutability");
+
+        markNativeMethod("getElement", INT, ELEMENT_TYPE);
+        markNativeMethod("setElement", new String[] {"Int64", "ElementType"}, VOID);
+        markNativeMethod("elementAt", INT, new String[] {"Var<ElementType>"});
+        markNativeMethod("add", ELEMENT_TYPE, ARRAY);
+        markNativeMethod("addAll", new String[] {"Iterable<ElementType>"}, ARRAY);
+        markNativeMethod("slice", new String[] {"Range<Int64>"}, ARRAY);
+
+        getCanonicalType().invalidateTypeInfo();
         }
 
     private void registerNative(xArray template)

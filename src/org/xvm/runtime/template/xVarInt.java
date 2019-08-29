@@ -26,5 +26,7 @@ public class xVarInt
     public void initDeclared()
         {
         markNativeMethod("abs", VOID, THIS);
+
+        getCanonicalType().invalidateTypeInfo();
         }
     }

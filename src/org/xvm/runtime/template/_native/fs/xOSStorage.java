@@ -53,6 +53,8 @@ public class xOSStorage
     @Override
     public void initDeclared()
         {
+        s_methodOnEvent = findMethod("onEvent", null, null);
+
         markNativeProperty("homeDir");
         markNativeProperty("curDir");
         markNativeProperty("tmpDir");
@@ -65,7 +67,7 @@ public class xOSStorage
         markNativeMethod("watch", STRING, VOID);
         markNativeMethod("unwatch", STRING, VOID);
 
-        s_methodOnEvent = findMethod("onEvent", null, null);
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override

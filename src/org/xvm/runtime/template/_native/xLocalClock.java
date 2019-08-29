@@ -48,7 +48,10 @@ public class xLocalClock
         {
         markNativeProperty("now");
         markNativeProperty("timezone");
+
         markNativeMethod("schedule", new String[]{"DateTime", "Clock.Alarm"}, null);
+
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override

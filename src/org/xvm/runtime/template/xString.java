@@ -51,9 +51,12 @@ public class xString
         {
         markNativeProperty("size");
         markNativeProperty("chars");
+
         markNativeMethod("construct", new String[]{"collections.Array<Char>"}, VOID);
         markNativeMethod("indexOf", new String[]{"Char", "Int64"}, new String[]{"Boolean", "Int64"});
         markNativeMethod("substring", INT, STRING);
+
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override

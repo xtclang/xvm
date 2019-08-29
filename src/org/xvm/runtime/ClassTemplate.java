@@ -1860,7 +1860,6 @@ public abstract class ClassTemplate
         else
             {
             method.setNative(true);
-            f_struct.getCanonicalType().invalidateTypeInfo();
             }
         }
 
@@ -1891,8 +1890,6 @@ public abstract class ClassTemplate
                 {
                 methSetter.setNative(true);
                 }
-
-            f_struct.getCanonicalType().invalidateTypeInfo();
             }
         }
 

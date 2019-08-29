@@ -35,6 +35,8 @@ public abstract class xUnconstrainedInteger
         markNativeMethod("div", THIS, THIS);
         markNativeMethod("mod", THIS, THIS);
         markNativeMethod("neg", VOID, THIS);
+
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override

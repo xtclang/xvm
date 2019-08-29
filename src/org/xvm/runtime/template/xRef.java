@@ -58,6 +58,8 @@ public class xRef
     public void initDeclared()
         {
         markNativeMethod("equals", null, BOOLEAN);
+
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override

@@ -54,6 +54,8 @@ public class xTerminalConsole
         markNativeMethod("println" , OBJECT , VOID   );
         markNativeMethod("readLine", VOID   , STRING );
         markNativeMethod("echo"    , BOOLEAN, BOOLEAN);
+
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override

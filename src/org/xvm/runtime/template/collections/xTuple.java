@@ -61,6 +61,8 @@ public class xTuple
         f_templates.f_adapter.addMethod(f_struct, "construct", new String[]{"collections.Sequence<Object>"}, VOID);
 
         markNativeMethod("construct", new String[]{"collections.Sequence<Object>"}, VOID);
+
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override

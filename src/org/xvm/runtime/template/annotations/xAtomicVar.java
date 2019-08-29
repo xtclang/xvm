@@ -43,6 +43,8 @@ public class xAtomicVar
         {
         markNativeMethod("replace", new String[]{"RefType", "RefType"}, BOOLEAN);
         markNativeMethod("replaceFailed", new String[]{"RefType", "RefType"}, new String[] {"Boolean", "RefType"});
+
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override

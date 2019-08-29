@@ -61,6 +61,8 @@ public abstract class xBaseInt128
         markNativeMethod("div", THIS, THIS);
         markNativeMethod("mod", THIS, THIS);
         markNativeMethod("neg", VOID, THIS);
+
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override
