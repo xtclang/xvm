@@ -261,16 +261,13 @@ public abstract class OpCallable extends Op
                     GenericTypeResolver resolver = frame.getGenericsResolver();
 
                     TypeConstant typeParent = idParent.getType().resolveGenerics(pool, resolver);
-                    m_function = function = (MethodStructure) idFunction.getComponent();
+                    m_function = function   = (MethodStructure) idFunction.getComponent();
                     if (function == null)
                         {
-                        m_function = function = typeParent.findCallable(idFunction.getSignature());
-                        if (function == null)
-                            {
-                            frame.raiseException(xException.makeHandle(
-                                "unresolvable or ambiguous function \"" + idFunction.getValueString() +
-                                "\" for " + typeParent.getValueString()));
-                            }
+                        frame.raiseException(xException.makeHandle(
+                            "unresolvable or ambiguous function \"" + idFunction.getValueString() +
+                            "\" for " + typeParent.getValueString()));
+                        return null;
                         }
                     m_template = frame.f_context.f_templates.getTemplate(typeParent);
                     }
@@ -291,6 +288,7 @@ public abstract class OpCallable extends Op
                         frame.raiseException(xException.makeHandle(
                             "unresolvable or ambiguous function \"" + idFunction.getValueString() +
                              "\" for " + typeParent.getValueString()));
+                        return null;
                         }
                     m_typeParent = typeParent;
                     m_template   = frame.f_context.f_templates.getTemplate(typeParent);

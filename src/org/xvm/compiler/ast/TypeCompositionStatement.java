@@ -1314,6 +1314,11 @@ public class TypeCompositionStatement
                     }
                 }
             }
+
+        if (format == Format.CONST)
+            {
+            component.synthesizeConstInterface();
+            }
         }
 
     @Override

@@ -360,7 +360,7 @@ public class xConst
     /**
      * Helper class for equals() implementation.
      */
-    protected class Equals
+    protected static class Equals
             implements Frame.Continuation
         {
         final private GenericHandle hValue1;
@@ -440,7 +440,7 @@ public class xConst
     /**
      * Helper class for compare() implementation.
      */
-    protected class Compare
+    protected static class Compare
             implements Frame.Continuation
         {
         final private GenericHandle hValue1;
