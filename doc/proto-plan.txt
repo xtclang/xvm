@@ -45,11 +45,6 @@
 
 - compiler to verify "all or nothing" implementation for funky interfaces
 
-- at module load time (e.g. template generation) synthesize native Const functions (hashCode, equals, compare)
-  at the actual const structure; this will render unnecessary the relevant code:
-    - OpCallable.getMethodStructure() ("typeParent.findCallable(idFunction.getSignature())" for classes)
-    - InvocationExpression "if (fPreserveOrigin ...)"
-
 - introduce stock exception (Bounds, IllegalState, etc.) and use current frame to
   create exceptions
 
