@@ -8,7 +8,7 @@ if [ "$1" = "-f" ]; then
     rm -f Ecstasy.xtc
 fi
 
-java -classpath ../classes/ org.xvm.runtime.TestConnector \
+java -Xms1024m -Xmx1024m -ea -classpath ../classes/ org.xvm.runtime.TestConnector \
     TestArray.xqiz.it tests/manual/array.x \
     TestDefAsn.xqiz.it tests/manual/defasn.x \
     TestTry.xqiz.it tests/manual/exceptions.x \
