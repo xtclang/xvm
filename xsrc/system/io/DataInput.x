@@ -357,7 +357,12 @@ interface DataInput
         }
 
     /**
-     * TODO doc
+     * Read an integer value that is formatted using the packed integer format, and return it as
+     * a `VarInt`.
+     *
+     * @param in  the DataInput stream containing the packed integer
+     *
+     * @return the resulting VarInt value
      */
     static VarInt readPackedVarInt(DataInput in)
         {
@@ -395,10 +400,10 @@ interface DataInput
 
         if (size <= 8)
             {
-            Int n = in.readByte().toInt();
+            Int n = in.readInt8().toInt();              // use sign extension on the first byte
             while (--size > 0)
                 {
-                n = n << 8 | in.readInt8().toInt();
+                n = n << 8 | in.readByte().toInt();     // additional bytes remain bitwise intact
                 }
             return n.toVarInt();
             }
@@ -412,13 +417,13 @@ interface DataInput
      * Read a sequence of bytes from the stream corresponding to a single Unicode character that is
      * encoded in the UTF-8 format.
      *
-     * @param in  the DataInput stream
+     * @param in  the BinaryInput stream
      *
      * @return the character read from the stream in UTF-8 format
      *
      * @throws IllegalUTF if there is a flaw in the UTF-8 encoding or in the resulting codepoint
      */
-    static Char readUTF8Char(DataInput in)
+    static Char readUTF8Char(BinaryInput in)
         {
         return readUTF8Codepoint(in).toChar();
         }
@@ -427,15 +432,15 @@ interface DataInput
      * Read a sequence of bytes from the stream corresponding to a single Unicode character that is
      * encoded in the UTF-8 format.
      *
-     * @param in  the DataInput stream
+     * @param in  the BinaryInput stream
      *
      * @return the codepoint read from the stream in UTF-8 format
      *
      * @throws IllegalUTF if there is a flaw in the UTF-8 encoding or in the resulting codepoint
      */
-    static UInt32 readUTF8Codepoint(DataInput in)
+    static UInt32 readUTF8Codepoint(BinaryInput in)
         {
-        private static UInt32 trailing(DataInput in)
+        private static UInt32 trailing(BinaryInput in)
             {
             Byte b = in.readByte();
             if (b & 0b11000000 != 0b10000000)
