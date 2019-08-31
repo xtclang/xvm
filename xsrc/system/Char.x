@@ -155,6 +155,35 @@ const Char
 
     // ----- helper methods ------------------------------------------------------------------------
 
+    /**
+     * Determine if the character acts as a line terminator.
+     *
+     * @param ch  the character to test
+     *
+     * @return True iff the character acts as a line terminator
+     */
+    Boolean isLineTerminator()
+        {
+        if (codepoint <= 0x7F)
+            {
+            // this handles the following cases:
+            //   U+000A  10  LF   Line Feed
+            //   U+000B  11  VT   Vertical Tab
+            //   U+000C  12  FF   Form Feed
+            //   U+000D  13  CR   Carriage Return
+            return codepoint >= 0x10 && codepoint <= 13;
+            }
+
+        // this handles the following cases:
+        //   U+0085    133   NEL    Next Line
+        //   U+2028   8232   LS     Line Separator
+        //   U+2029   8233   PS     Paragraph Separator
+        return codepoint == 0x0085 || codepoint == 0x2028 || codepoint == 0x2029;
+        }
+
+    /**
+     * @return the minimum number of bytes necessary to encode the character in UTF8 format
+     */
     Int calcUtf8Length()
         {
         if (codepoint <= 0x7f)
@@ -173,6 +202,14 @@ const Char
         return length;
         }
 
+    /**
+     * Encode this character into the passed byte array using the UTF8 format.
+     *
+     * @param bytes  the byte array to write the UTF8 bytes into
+     * @param of     the offset into the byte array to write the first byte
+     *
+     * @return the number of bytes used to encode the character in UTF8 format
+     */
     Int formatUtf8(Byte[] bytes, Int of)
         {
         UInt32 ch = codepoint;

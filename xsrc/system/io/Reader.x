@@ -5,8 +5,11 @@
  */
 interface Reader
         extends Iterator<Char>
+        extends Position
         extends Closeable
     {
+    // ----- Position interface --------------------------------------------------------------------
+
     /**
      * The position within the character stream. The implementation of the Position is opaque to the
      * caller, in order to hide the internal details that may be necessary for the implementation of
@@ -30,35 +33,19 @@ interface Reader
         @RO Int lineOffset;
         }
 
-    /**
-     * The current position within the character stream. This can be used to save off the current
-     * position and later restore it.
-     */
-    Position position;
+
+    // ----- general operations --------------------------------------------------------------------
 
     /**
-     * Move the current position to the beginning of the specified line.
-     *
-     * @param line  the zero-based line number to seek to the beginning of
-     *
-     * @throws EndOfFile  if an EOF condition is encountered while attempting to seek to the
-     *                    specified line
+     * The current position within the character stream. This property allows the caller to save off
+     * the current position, and also allows a previously saved position to be restored later.
      */
-    void seekLine(Int line);
+    Position position;
 
     /**
      * True iff the end of the stream has been reached.
      */
     @RO Boolean eof;
-
-    /**
-     * Test to see if the Reader contains at least the specified number of remaining characters.
-     *
-     * @param count  the number of remaining characters to test for
-     *
-     * @return True iff the Reader contains at least the specified number of remaining characters
-     */
-    Boolean peekAtLeast(Int count);
 
     /**
      * @return  a value of type Char read from the stream
@@ -67,6 +54,46 @@ interface Reader
      * @throws EndOfFile    if the end of the stream has been reached
      */
     Char nextChar();
+
+    /**
+     * Advance the Reader by the specified number of characters, but not past the end.
+     *
+     * @param count  the number of characters to skip over (optional)
+     *
+     * @return this Reader
+     */
+    Reader skip(Int count = 1)
+        {
+        assert:arg count >= 0;
+
+        while (count-- > 0 && next())
+            {
+            }
+
+        return this;
+        }
+
+    /**
+     * Rewind the Reader by the specified number of characters, but not past the beginning.
+     *
+     * @param count  the number of characters to rewind (optional)
+     *
+     * @return this Reader
+     */
+    Reader rewind(Int count = 1)
+        {
+        assert:arg count >= 0;
+
+        Int target = (offset - count).maxOf(0);
+        return reset().skip(target);
+        }
+
+    /**
+     * Rewinds the Reader to the beginning.
+     *
+     * @return this Reader
+     */
+    Reader reset();
 
 
     // ----- Iterator ------------------------------------------------------------------------------
@@ -83,7 +110,53 @@ interface Reader
         }
 
 
+    // ----- bulk read operators -------------------------------------------------------------------
+
+    /**
+     * Returns a portion of this Reader, as a String.
+     *
+     * @param range  specifies a starting and stopping position for the slice
+     *
+     * @return a slice of this Reader as a String, corresponding to the specified range of positions
+     *
+     * @throws IOException  represents the general category of input/output exceptions
+     */
+    @Op("[..]")
+    String slice(Range<Position> range)
+        {
+        String result;
+
+        // TODO GG - compiler fails if this isn't init'd (this line should not be necessary)
+        result = "";
+
+        try (Position current = position)
+            {
+            position = range.lowerBound;
+            result   = nextString(range.upperBound.offset - offset + 1);
+            if (range.reversed)
+                {
+                // TODO GG : result = result.reverse();
+                }
+            }
+        finally
+            {
+            position = current;
+            }
+
+        return result;
+        }
+
+
     // ----- bulk read operations ------------------------------------------------------------------
+
+    /**
+     * Test to see if the Reader contains at least the specified number of remaining characters.
+     *
+     * @param count  the number of remaining characters to test for
+     *
+     * @return True iff the Reader contains at least the specified number of remaining characters
+     */
+    Boolean hasAtLeast(Int count);
 
     /**
      * Read characters into the provided array.
@@ -129,21 +202,64 @@ interface Reader
      * @throws IOException  represents the general category of input/output exceptions
      * @throws EndOfFile    if the end of the stream has been reached
      */
-    Char[] nextChars(Int count)
+    immutable Char[] nextChars(Int count)
         {
         Char[] chars = new Char[count];
         nextChars(chars);
-        return chars;
+        return chars.ensureConst(True);
         }
 
     /**
      * Read the specified number of characters.
-
+     *
      * @return a String of the specified size
      */
     String nextString(Int count)
         {
         return new String(nextChars(count));
+        }
+
+
+    // ----- line oriented operations --------------------------------------------------------------
+
+    /**
+     * Move the current position to the beginning of the specified line.
+     *
+     * @param line  the zero-based line number to seek to the beginning of
+     *
+     * @return this Reader
+     *
+     * @throws EndOfFile  if an EOF condition is encountered while attempting to seek to the
+     *                    specified line
+     */
+    Reader seekLine(Int line)
+        {
+        switch (line <=> lineNumber)
+            {
+            case Equal:
+                rewind(lineOffset);
+                return this;
+
+            case Lesser:
+                reset();
+                continue;
+            case Greater:
+                // attempt to "fast forward" to the line
+                while (!eof && lineNumber + 1 < line)
+                    {
+                    skip(line - lineNumber);
+                    }
+                // now that we're close, advance until we reach that line
+                while (Char ch := next())
+                    {
+                    if (lineNumber >= line)
+                        {
+                        assert lineNumber == line;
+                        return this;
+                        }
+                    }
+                throw new EndOfFile();
+            }
         }
 
     /**
@@ -156,14 +272,33 @@ interface Reader
      */
     String nextLine()
         {
-        TODO
+        StringBuffer buf = new StringBuffer();
+        while (Char ch := next())
+            {
+            if (ch.isLineTerminator())
+                {
+                if (ch == '\r' && !eof && nextChar() != '\n')
+                    {
+                    rewind(1);
+                    }
+
+                break;
+                }
+            else
+                {
+                buf.add(ch);
+                }
+            }
+
+        return buf.toString();
         }
 
 
     // ----- redirection ---------------------------------------------------------------------------
 
     /**
-     * Pipe the remainder of the contents of this reader to the specified writer.
+     * Pipe the remainder of the contents of this reader to the specified appender, such as a
+     * Writer.
      *
      * @param out  the Writer or other `Appender<Char>` to pipe to
      *
@@ -205,7 +340,10 @@ interface Reader
     /**
      * @return the contents of this entire Reader, as an immutable Array of Char
      */
-    immutable Char[] toCharArray();
+    immutable Char[] toCharArray()
+        {
+        return toString().toCharArray();
+        }
 
     /**
      * @return the contents of this entire Reader, as a String
@@ -213,7 +351,44 @@ interface Reader
     @Override
     String toString()
         {
-        return new String(toCharArray());
+        // TODO GG - fix bug in try..finally (CP bug)
+        //Exception in thread "main" java.lang.ArrayIndexOutOfBoundsException: Index 28 out of bounds for length 28
+        //	at org.xvm.asm.MethodStructure$Code.follow(MethodStructure.java:2181)
+        //	at org.xvm.asm.MethodStructure$Code.follow(MethodStructure.java:2171)
+        //	at org.xvm.asm.MethodStructure$Code.eliminateDeadCode(MethodStructure.java:2124)
+        //	at org.xvm.asm.MethodStructure$Code.ensureAssembled(MethodStructure.java:2292)
+        //	at org.xvm.asm.MethodStructure.assemble(MethodStructure.java:1618)
+        //
+        // Position current = position;
+        // try
+        //     {
+        //     reset();
+        //     StringBuffer buf = new StringBuffer();
+        //     while (Char ch := next())
+        //         {
+        //         buf.add(ch);
+        //         }
+        //     return buf.toString();
+        //     }
+        // finally
+        //     {
+        //     position = current;
+        //     }
+
+        StringBuffer buf = new StringBuffer();
+        try (Position current = position)
+            {
+            reset();
+            while (Char ch := next())
+                {
+                buf.add(ch);
+                }
+            }
+        finally
+            {
+            position = current;
+            }
+        return buf.toString();
         }
 
 
