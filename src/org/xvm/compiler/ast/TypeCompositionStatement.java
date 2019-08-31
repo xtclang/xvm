@@ -1314,11 +1314,6 @@ public class TypeCompositionStatement
                     }
                 }
             }
-
-        if (format == Format.CONST)
-            {
-            component.synthesizeConstInterface();
-            }
         }
 
     @Override
@@ -1820,6 +1815,11 @@ public class TypeCompositionStatement
                 name.log(errs, getSource(), Severity.ERROR, Compiler.DEFAULT_CONSTRUCTOR_REQUIRED,
                         component.getName());
                 }
+            }
+
+        if (format == Format.CONST)
+            {
+            component.synthesizeConstInterface();
             }
         }
 
