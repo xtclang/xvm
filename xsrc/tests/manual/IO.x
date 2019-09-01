@@ -26,7 +26,7 @@ module TestIO
         loop: while (!in.eof)
             {
             Byte b = in.readByte();
-            if (loop.count <= 8 || in.remaining <= 2)
+            if (loop.count <= 12 || in.remaining <= 2)
                 {
                 console.println($"[{loop.count}] '{b.toChar()}' ({b})");
                 }
@@ -51,12 +51,12 @@ module TestIO
         {
         console.println("\n*** testUTF8Reader()");
 
-        InputStream inRaw = new ByteArrayInputStream(#./IO.x);
-        UTF8Reader  in    = new UTF8Reader(inRaw);
-        Boolean dotdot = False;
+        InputStream inRaw  = new ByteArrayInputStream(#./IO.x);
+        UTF8Reader  in     = new UTF8Reader(inRaw);
+        Boolean     dotdot = False;
         loop: while (Char ch := in.next())
             {
-            if (loop.count <= 10 || inRaw.remaining <= 10)
+            if (loop.count <= 12 || inRaw.remaining <= 2)
                 {
                 console.println($"[{loop.count}] '{ch}'");
                 }
