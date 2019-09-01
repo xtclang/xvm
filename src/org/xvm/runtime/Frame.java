@@ -393,9 +393,9 @@ public class Frame
             }
         }
 
-    private DeferredCallHandle makeDeferredException(String s)
+    private DeferredCallHandle makeDeferredException(String sMsg)
         {
-        return new DeferredCallHandle(xException.makeHandle(s));
+        return new DeferredCallHandle(xException.makeHandle(this, sMsg));
         }
 
     /**
@@ -937,6 +937,13 @@ public class Frame
         }
 
     // return R_EXCEPTION
+    public int raiseException(String sMsg)
+        {
+        m_hException = xException.makeHandle(this, sMsg);
+        return Op.R_EXCEPTION;
+        }
+
+    // return R_EXCEPTION
     public int raiseException(ExceptionHandle hException)
         {
         m_hException = hException;
@@ -1150,7 +1157,7 @@ public class Frame
                     }
                 else
                     {
-                    throw xException.makeHandle("Unassigned value").getException();
+                    throw xException.illegalState(this, "Unassigned value").getException();
                     }
                 }
 
@@ -1159,7 +1166,7 @@ public class Frame
                 Constant constValue = f_function.getParam(iArg).getDefaultValue();
                 if (constValue == null)
                     {
-                    throw xException.makeHandle("Unknown default value for argument \"" +
+                    throw xException.illegalState(this, "Unknown default value for argument \"" +
                         f_function.getParam(iArg).getName() + '"').getException();
                     }
                 return getConstHandle(constValue);

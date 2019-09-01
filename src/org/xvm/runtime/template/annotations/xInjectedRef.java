@@ -62,8 +62,7 @@ public class xInjectedRef
             hValue = frame.f_context.f_container.getInjectable(frame, hInjected.getName(), typeEl);
             if (hValue == null)
                 {
-                return frame.raiseException(
-                    xException.makeHandle("Unknown injectable property " + hInjected.getName()));
+                return frame.raiseException("Unknown injectable property " + hInjected.getName());
                 }
 
             if (hValue instanceof DeferredCallHandle)

@@ -394,8 +394,7 @@ public abstract class ClassTemplate
      */
     public int createConstHandle(Frame frame, Constant constant)
         {
-        frame.raiseException(xException.makeHandle("Unknown constant:" + constant));
-        return Op.R_EXCEPTION;
+        return frame.raiseException("Unknown constant:" + constant);
         }
 
     /**
@@ -463,12 +462,13 @@ public abstract class ClassTemplate
             List<String> listUnassigned;
             if ((listUnassigned = hStruct.validateFields()) != null)
                 {
-                return frameCaller.raiseException(xException.unassignedFields(listUnassigned));
+                return frameCaller.raiseException(
+                    xException.unassignedFields(frameCaller, listUnassigned));
                 }
 
             if (isConstructImmutable())
                 {
-                ExceptionHandle hEx = makeImmutable(hStruct);
+                ExceptionHandle hEx = makeImmutable(frameCaller, hStruct);
                 if (hEx != null)
                     {
                     return frame.raiseException(hEx);
@@ -523,11 +523,12 @@ public abstract class ClassTemplate
     /**
      * Make the specified object handle immutable.
      *
+     * @param frame    the current frame
      * @param hTarget  the object handle
      *
      * @return null if the operation succeeded, an exception to throw otherwise
      */
-    protected ExceptionHandle makeImmutable(ObjectHandle hTarget)
+    protected ExceptionHandle makeImmutable(Frame frame, ObjectHandle hTarget)
         {
         if (hTarget.isMutable())
             {
@@ -543,7 +544,7 @@ public abstract class ClassTemplate
                     ObjectHandle hValue = entry.getValue();
                     if (hValue != null && hValue.isMutable() && !clz.isLazy(nid))
                         {
-                        ExceptionHandle hEx = hValue.getTemplate().makeImmutable(hValue);
+                        ExceptionHandle hEx = hValue.getTemplate().makeImmutable(frame, hValue);
                         if (hEx != null)
                             {
                             return hEx;
@@ -939,7 +940,7 @@ public abstract class ClassTemplate
                         "Un-initialized property \"" : "Invalid property \"";
                 }
 
-            return frame.raiseException(xException.makeHandle(sErr + idProp + '"'));
+            return frame.raiseException(xException.illegalState(frame, sErr + idProp + '"'));
             }
 
         if (hTarget.isInflated(idProp))
@@ -977,7 +978,7 @@ public abstract class ClassTemplate
 
         if (!hTarget.isMutable())
             {
-            return frame.raiseException(xException.immutableObject());
+            return frame.raiseException(xException.immutableObject(frame));
             }
 
         CallChain chain = hTarget.getComposition().getPropertySetterChain(idProp);
@@ -1543,8 +1544,7 @@ public abstract class ClassTemplate
     protected int callCompareImpl(Frame frame,  ClassComposition clazz,
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        return frame.raiseException(xException.makeHandle(
-            "No implementation for \"compare()\" function at " + f_sName));
+        return frame.raiseException("No implementation for \"compare()\" function at " + f_sName);
         }
 
     /**

@@ -153,7 +153,7 @@ public class xFutureVar
                 CompletableFuture<ObjectHandle> cf = hThis.m_future;
                 if (cf.isDone())
                     {
-                    ObjectHandle[] ahArg = extractResult(cf);
+                    ObjectHandle[] ahArg = extractResult(frame, cf);
                     if (ahArg[1] != xNullable.NULL)
                         {
                         // the future terminated exceptionally; re-throw it
@@ -193,7 +193,7 @@ public class xFutureVar
                 CompletableFuture<ObjectHandle> cf = hThis.m_future;
                 if (cf.isDone())
                     {
-                    ObjectHandle[] ahArg = extractResult(cf);
+                    ObjectHandle[] ahArg = extractResult(frame, cf);
                     if (ahArg[1] != xNullable.NULL)
                         {
                         // the future terminated exceptionally; re-throw it
@@ -240,7 +240,7 @@ public class xFutureVar
                 CompletableFuture<ObjectHandle> cf = hThis.m_future;
                 if (cf.isDone())
                     {
-                    ObjectHandle[] ahArg = extractResult(cf);
+                    ObjectHandle[] ahArg = extractResult(frame, cf);
 
                     switch (hNotify.call1(frame, null, ahArg, Op.A_IGNORE))
                         {
@@ -276,11 +276,13 @@ public class xFutureVar
     /**
      * Extract the result of the completed future into an ObjectHandle array.
      *
-     * @param cf  the future
+     *
+     * @param frame  the current frame
+     * @param cf     the future
      *
      * @return an ObjectHandle array containing the result and the exception handles
      */
-    protected ObjectHandle[] extractResult(CompletableFuture<ObjectHandle> cf)
+    protected ObjectHandle[] extractResult(Frame frame, CompletableFuture<ObjectHandle> cf)
         {
         ObjectHandle[] ahArg = new ObjectHandle[2];
         try
@@ -297,11 +299,11 @@ public class xFutureVar
                 }
             else if (e instanceof CancellationException)
                 {
-                hException = xException.makeHandle("cancelled");
+                hException = xException.makeHandle(frame, "cancelled");
                 }
             else
                 {
-                hException = xException.makeHandle("interrupted");
+                hException = xException.makeHandle(frame, "interrupted");
                 }
             ahArg[0] = xNullable.NULL;
             ahArg[1] = hException;
@@ -341,7 +343,7 @@ public class xFutureVar
         CompletableFuture<ObjectHandle> cf = hFuture.m_future;
         if (cf == null)
             {
-            return frame.raiseException(xException.unassignedReference());
+            return frame.raiseException(xException.unassignedReference(frame));
             }
 
         if (cf.isDone())
@@ -382,8 +384,7 @@ public class xFutureVar
             // "handle" is a synthetic or dynamic one (see Frame.assignValue)
             if (hFuture.m_future != null)
                 {
-                return frame.raiseException(
-                    xException.makeHandle("FutureVar has already been assigned"));
+                return frame.raiseException("FutureVar has already been assigned");
                 }
 
             FutureHandle that = (FutureHandle) hValue;
@@ -400,8 +401,7 @@ public class xFutureVar
 
         if (cf.isDone())
             {
-            return frame.raiseException(
-                xException.makeHandle("FutureVar has already been set"));
+            return frame.raiseException("FutureVar has already been set");
             }
 
         cf.complete(hValue);

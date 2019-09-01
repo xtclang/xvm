@@ -266,7 +266,7 @@ public class xArray
                 if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
                     {
                     return frame.raiseException(
-                        xException.makeHandle("Invalid array size: " + cCapacity));
+                        xException.illegalArgument(frame, "Invalid array size: " + cCapacity));
                     }
 
                 xArray      template = (xArray) clzArray.getTemplate();
@@ -282,7 +282,7 @@ public class xArray
                 if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
                     {
                     return frame.raiseException(
-                        xException.makeHandle("Invalid array size: " + cCapacity));
+                        xException.illegalArgument(frame, "Invalid array size: " + cCapacity));
                     }
 
                 xArray      template = (xArray) clzArray.getTemplate();
@@ -561,14 +561,14 @@ public class xArray
         switch (hArray.m_mutability)
             {
             case Constant:
-                return frame.raiseException(xException.immutableObject());
+                return frame.raiseException(xException.immutableObject(frame));
 
             case FixedSize:
-                return frame.raiseException(xException.illegalOperation());
+                return frame.raiseException(xException.readOnly(frame));
 
             case Persistent:
                 // TODO: implement
-                return frame.raiseException(xException.unsupportedOperation());
+                return frame.raiseException(xException.unsupportedOperation(frame));
             }
 
         ObjectHandle[] ahValue = hArray.m_ahValue;
@@ -592,14 +592,14 @@ public class xArray
         switch (hArray.m_mutability)
             {
             case Constant:
-                return frame.raiseException(xException.immutableObject());
+                return frame.raiseException(xException.immutableObject(frame));
 
             case FixedSize:
-                return frame.raiseException(xException.illegalOperation());
+                return frame.raiseException(xException.readOnly(frame));
 
             case Persistent:
                 // TODO: implement
-                return frame.raiseException(xException.unsupportedOperation());
+                return frame.raiseException(xException.unsupportedOperation(frame));
             }
 
         GenericArrayHandle hArrayAdd = (GenericArrayHandle) hValue;
@@ -646,7 +646,7 @@ public class xArray
             {
             long c = ahValue.length;
             return frame.raiseException(
-                xException.outOfRange(ixFrom < 0 || ixFrom >= c ? ixFrom : ixTo, c));
+                xException.outOfBounds(frame, ixFrom < 0 || ixFrom >= c ? ixFrom : ixTo, c));
             }
         }
 
@@ -660,7 +660,7 @@ public class xArray
 
         if (lIndex < 0 || lIndex >= hArray.m_cSize)
             {
-            return frame.raiseException(xException.outOfRange(lIndex, hArray.m_cSize));
+            return frame.raiseException(xException.outOfBounds(frame, lIndex, hArray.m_cSize));
             }
 
         return frame.assignValue(iReturn, hArray.m_ahValue[(int) lIndex]);
@@ -674,16 +674,16 @@ public class xArray
 
         if (lIndex < 0 || lIndex > cSize)
             {
-            return frame.raiseException(xException.outOfRange(lIndex, cSize));
+            return frame.raiseException(xException.outOfBounds(frame, lIndex, cSize));
             }
 
         switch (hArray.m_mutability)
             {
             case Constant:
-                return frame.raiseException(xException.immutableObject());
+                return frame.raiseException(xException.immutableObject(frame));
 
             case Persistent:
-                return frame.raiseException(xException.illegalOperation());
+                return frame.raiseException(xException.readOnly(frame));
             }
 
         ObjectHandle[] ahValue = hArray.m_ahValue;
@@ -694,7 +694,7 @@ public class xArray
                 {
                 if (hArray.m_mutability == Mutability.FixedSize)
                     {
-                    return frame.raiseException(xException.illegalOperation());
+                    return frame.raiseException(xException.readOnly(frame));
                     }
 
                 ahValue = hArray.m_ahValue = grow(ahValue, cSize + 1);
@@ -707,7 +707,7 @@ public class xArray
         }
 
     @Override
-    public TypeConstant getElementType(ObjectHandle hTarget, long lIndex)
+    public TypeConstant getElementType(Frame frame, ObjectHandle hTarget, long lIndex)
         {
         return hTarget.getType().resolveGenericType("ElementType");
         }

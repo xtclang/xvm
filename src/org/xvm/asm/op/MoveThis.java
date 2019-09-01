@@ -185,7 +185,7 @@ public class MoveThis
             }
         catch (ClassCastException | NullPointerException e)
             {
-            return frame.raiseException(xException.makeHandle("Unknown outer"));
+            return frame.raiseException("Unknown outer");
             }
         }
 

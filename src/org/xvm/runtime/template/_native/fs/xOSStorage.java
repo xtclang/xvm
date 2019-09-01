@@ -71,7 +71,7 @@ public class xOSStorage
         }
 
     @Override
-    protected ExceptionHandle makeImmutable(ObjectHandle hTarget)
+    protected ExceptionHandle makeImmutable(Frame frame, ObjectHandle hTarget)
         {
         return null;
         }
@@ -295,7 +295,7 @@ public class xOSStorage
     protected int raisePathException(Frame frame, IOException e, String sPath)
         {
         // TODO: how to get the natural Path efficiently from sPath?
-        return frame.raiseException(xException.pathException(e.getMessage(), xNullable.NULL));
+        return frame.raiseException(xException.pathException(frame, e.getMessage(), xNullable.NULL));
         }
 
     protected static class WatchServiceDaemon

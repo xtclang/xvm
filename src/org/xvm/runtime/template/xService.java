@@ -93,9 +93,9 @@ public class xService
         }
 
     @Override
-    protected ExceptionHandle makeImmutable(ObjectHandle hTarget)
+    protected ExceptionHandle makeImmutable(Frame frame, ObjectHandle hTarget)
         {
-        return xException.unsupportedOperation();
+        return xException.unsupportedOperation(frame, "makeImmutable");
         }
 
     @Override
@@ -153,7 +153,7 @@ public class xService
             case "registerAsyncSection":
                 if (frame.f_context != hService.m_context)
                     {
-                    return frame.raiseException(xException.makeHandle("Call out of context"));
+                    return frame.raiseException("Call out of context");
                     }
                 return frame.f_fiber.registerAsyncSection(frame, hArg);
 

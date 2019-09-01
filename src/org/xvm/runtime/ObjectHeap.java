@@ -59,7 +59,7 @@ public class ObjectHeap
             hValue = ((SingletonConstant) constValue).getHandle();
             return hValue == null
                 ? new DeferredCallHandle(
-                    xException.makeHandle("Uninitialized singleton: " + constValue))
+                    xException.illegalState(frame, "Uninitialized singleton: " + constValue))
                 : saveConstHandle(constValue, hValue);
             }
 

@@ -93,8 +93,7 @@ public class xIntLiteral
             }
         catch (NumberFormatException e)
             {
-            return frame.raiseException(
-                xException.makeHandle("Invalid number \"" + sText + "\""));
+            return frame.raiseException(xException.illegalArgument(frame, "Invalid number \"" + sText + "\""));
             }
         }
 

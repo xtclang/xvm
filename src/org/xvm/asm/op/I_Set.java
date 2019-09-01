@@ -71,7 +71,7 @@ public class I_Set
             chain = template.findOpChain(hTarget, "[]=", new ObjectHandle[] {hIndex, hValue});
             if (chain == null)
                 {
-                return frame.raiseException(xException.makeHandle("Invalid op: \"[]=\""));
+                return frame.raiseException("Invalid op: \"[]=\"");
                 }
             saveOpChain(hTarget.getType(), chain);
             }

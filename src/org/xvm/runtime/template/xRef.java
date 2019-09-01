@@ -257,7 +257,7 @@ public class xRef
 
                 ObjectHandle hValue = frameRef.f_ahVar[nVar];
                 return hValue == null
-                    ? frame.raiseException(xException.unassignedReference())
+                    ? frame.raiseException(xException.unassignedReference(frame))
                     : frame.assignValue(iReturn, hValue);
                 }
             }
@@ -270,7 +270,7 @@ public class xRef
         {
         ObjectHandle hValue = hRef.getReferent();
         return hValue == null
-            ? frame.raiseException(xException.unassignedReference())
+            ? frame.raiseException(xException.unassignedReference(frame))
             : frame.assignValue(iReturn, hValue);
         }
 
@@ -375,7 +375,7 @@ public class xRef
 
     protected int readOnly(Frame frame)
         {
-        return frame.raiseException(xException.makeHandle("Ref cannot be assigned"));
+        return frame.raiseException("Ref cannot be assigned");
         }
 
     /**
@@ -400,7 +400,7 @@ public class xRef
                 return Op.R_CALL;
 
             case Op.R_BLOCK:
-                return frame.raiseException(xException.unassignedReference());
+                return frame.raiseException(xException.unassignedReference(frame));
 
             case Op.R_EXCEPTION:
                 return Op.R_EXCEPTION;
@@ -428,12 +428,12 @@ public class xRef
                 ((GenericHandle) hTarget).maskAs(frame, hType.getDataType());
 
             return hMasked == null
-                ? frame.raiseException(xException.illegalCast(hType.getDataType().getValueString()))
+                ? frame.raiseException(xException.illegalCast(frame, hType.getDataType().getValueString()))
                 : frame.assignValue(iReturn, hMasked);
             }
         else
             {
-            return frame.raiseException(xException.unsupportedOperation());
+            return frame.raiseException(xException.unsupportedOperation(frame, "maskAs"));
             }
         }
 
@@ -460,7 +460,7 @@ public class xRef
             }
         else
             {
-            return frame.raiseException(xException.unsupportedOperation());
+            return frame.raiseException(xException.unsupportedOperation(frame, "revealAs"));
             }
         }
 
@@ -615,7 +615,7 @@ public class xRef
                 List<String> listUnassigned;
                 return (listUnassigned = this.validateFields()) == null
                     ? Op.R_NEXT
-                    : frameCaller.raiseException(xException.unassignedFields(listUnassigned));
+                    : frameCaller.raiseException(xException.unassignedFields(frame, listUnassigned));
                 });
             return frame.callInitialized(frameID);
             }

@@ -176,7 +176,7 @@ public abstract class OpCallable extends Op
         ClassConstant     idParentR      = hParent.getTemplate().getClassConstant();
         SignatureConstant sigConstructor = getMethodStructure(frame).getIdentityConstant().getSignature();
 
-        return xException.makeHandle("Missing constructor \"" + sigConstructor.getValueString() +
+        return xException.makeHandle(frame, "Missing constructor \"" + sigConstructor.getValueString() +
                                      "\" at class " + idParentR.getValueString());
         }
 
@@ -264,9 +264,8 @@ public abstract class OpCallable extends Op
                     m_function = function   = (MethodStructure) idFunction.getComponent();
                     if (function == null)
                         {
-                        frame.raiseException(xException.makeHandle(
-                            "unresolvable or ambiguous function \"" + idFunction.getValueString() +
-                            "\" for " + typeParent.getValueString()));
+                        frame.raiseException("Unresolvable or ambiguous function \"" +
+                            idFunction.getValueString() + "\" for " + typeParent.getValueString());
                         return null;
                         }
                     m_template = frame.f_context.f_templates.getTemplate(typeParent);
@@ -285,9 +284,8 @@ public abstract class OpCallable extends Op
                     m_function = function = typeParent.findCallable(idFunction.getSignature());
                     if (function == null)
                         {
-                        frame.raiseException(xException.makeHandle(
-                            "unresolvable or ambiguous function \"" + idFunction.getValueString() +
-                             "\" for " + typeParent.getValueString()));
+                        frame.raiseException("Unresolvable or ambiguous function \"" +
+                            idFunction.getValueString() + "\" for " + typeParent.getValueString());
                         return null;
                         }
                     m_typeParent = typeParent;

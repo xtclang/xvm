@@ -146,7 +146,7 @@ public abstract class xBaseInt128
             {
             case "toUnchecked":
                 {
-                return frame.raiseException(xException.unsupportedOperation());
+                return frame.raiseException(xException.unsupportedOperation(frame, "toUnchecked"));
                 }
 
             case "toInt8":
@@ -474,7 +474,7 @@ public abstract class xBaseInt128
 
     protected int overflow(Frame frame)
         {
-        return frame.raiseException(xException.makeHandle("Int128 overflow"));
+        return frame.raiseException(xException.outOfBounds(frame, "Int128 overflow"));
         }
 
     @Override

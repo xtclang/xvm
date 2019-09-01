@@ -162,7 +162,7 @@ public abstract class xConstrainedInteger
             int cBytes = abVal.length;
             if (cBytes != f_cNumBits / 8)
                 {
-                return frame.raiseException(xException.illegalOperation()); // TODO: IllegalArgument
+                return frame.raiseException(xException.illegalArgument(frame, "Invalid byte count: " + cBytes));
                 }
 
             long lResult = 0;
@@ -175,7 +175,7 @@ public abstract class xConstrainedInteger
             }
         else
             {
-            return frame.raiseException(xException.unsupportedOperation());
+            return frame.raiseException(xException.unsupportedOperation(frame));
             }
         }
 
@@ -411,7 +411,7 @@ public abstract class xConstrainedInteger
                 long cBits  = ((JavaLong) ahArg[0]).getValue();
                 if (cBits < 0 || cBits > f_cNumBits)
                     {
-                    return frame.raiseException(xException.outOfRange(cBits, f_cNumBits));
+                    return frame.raiseException(xException.outOfBounds(frame, cBits, f_cNumBits));
                     }
 
                 if (cBits == 0)
@@ -717,7 +717,7 @@ public abstract class xConstrainedInteger
      */
     protected int overflow(Frame frame)
         {
-        return frame.raiseException(xException.makeHandle(f_struct.getName() + " overflow"));
+        return frame.raiseException(xException.outOfBounds(frame, f_struct.getName() + " overflow"));
         }
 
     /**
