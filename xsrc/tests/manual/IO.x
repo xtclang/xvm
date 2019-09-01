@@ -4,6 +4,7 @@ module TestIO
     import Ecstasy.io.DataInputStream;
     import Ecstasy.io.InputStream;
     import Ecstasy.io.JavaDataInput;
+    import Ecstasy.io.Reader;
     import Ecstasy.io.UTF8Reader;
 
     @Inject Console console;
@@ -51,21 +52,28 @@ module TestIO
         {
         console.println("\n*** testUTF8Reader()");
 
-        InputStream inRaw  = new ByteArrayInputStream(#./IO.x);
-        UTF8Reader  in     = new UTF8Reader(inRaw);
-        Boolean     dotdot = False;
+        static String posDesc(Reader.Position pos)
+            {
+            return $"@{pos.offset} {pos.lineNumber}:{pos.lineOffset}";
+            }
+
+        InputStream     inRaw  = new ByteArrayInputStream(#./IO.x);
+        UTF8Reader      in     = new UTF8Reader(inRaw);
+        Boolean         dotdot = False;
+        Reader.Position pos    = in.position;
         loop: while (Char ch := in.next())
             {
-            if (loop.count <= 12 || inRaw.remaining <= 2)
+            if (loop.count <= 20 || inRaw.remaining <= 10)
                 {
-                console.println($"[{loop.count}] '{ch}'");
+                console.println($"[{loop.count}] '{ch}' {posDesc(pos)}");
                 }
             else if (!dotdot)
                 {
                 console.println("...");
                 dotdot = True;
                 }
+            pos = in.position;
             }
-        console.println("(eof)");
+        console.println($"(eof) position={posDesc(pos)} line={in.lineNumber}");
         }
     }

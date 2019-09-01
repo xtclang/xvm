@@ -63,13 +63,19 @@ class UTF8Reader
     /**
      * Simple constant implementation of the Position interface.
      */
+    @Abstract
     private static const AbstractPos
             implements Position
         {
+        // TODO GG - it appears that this class has fields for the 3 Position properties (it should not)
+
         Int lineStartOffset.get()
             {
             return offset - lineOffset;
             }
+
+        @Abstract
+        @RO Int rawOffset;
         }
 
     /**
@@ -119,9 +125,16 @@ class UTF8Reader
             return combo >>> 12 & 0xFFFF;
             }
 
+        @Override
         Int rawOffset.get()
             {
             return offset + (combo & 0xFFF);
+            }
+
+        @Override
+        String toString() // TODO GG - this doesn't get called (the autogen gets used instead)
+            {
+            return $"@{offset}({rawOffset}) ({lineNumber}:{lineOffset})";
             }
         }
 
@@ -179,11 +192,12 @@ class UTF8Reader
             {
             if (ch == '\r' && !eof)
                 {
-                // there's a weird situation (thanks to a pretend software company named Microsoft)
-                // where a CR followed by an LF count as a single line terminator, so we are forced
-                // to peek at the next char, see if it is an LF, and if it is, then we have to
-                // ignore this CR as if it were a regular character, because it's followed by
-                // something that will actually act as a for-real line terminator
+                // there's a weird situation that hearkens back to the teletype (shortly after the
+                // invention of the wheel), where a CR was required before an LF in order to achieve
+                // the functionality of a "new line"; Microsoft retained this antiquated convention,
+                // so we are forced to peek at the next char, see if it is an LF, and if it is, then
+                // we have to ignore the preceding CR (as if it were a regular character), because
+                // it's followed by something that will actually act as a for-real line terminator
                 Int  ofNext = in.offset;
                 Char chNext = DataInput.readUTF8Char(in);
                 in.offset = ofNext;
