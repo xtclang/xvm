@@ -30,11 +30,13 @@ class UTF8Reader
      */
     protected/private Int rawOffset
         {
+        @Override
         Int get()
             {
             return in.offset - initOffset;
             }
 
+        @Override
         void set(Int offset)
             {
             in.offset = offset + initOffset;
@@ -173,9 +175,26 @@ class UTF8Reader
         Char ch = DataInput.readUTF8Char(in);
         ++offset;
 
-        if (ch.isLineTerminator())
+        HandleTerminator: if (ch.isLineTerminator())
             {
-            TODO update lineNumber and lineStartOffset, also handle the CR-followed-by-LF exception
+            if (ch == '\r' && !eof)
+                {
+                // there's a weird situation (thanks to a pretend software company named Microsoft)
+                // where a CR followed by an LF count as a single line terminator, so we are forced
+                // to peek at the next char, see if it is an LF, and if it is, then we have to
+                // ignore this CR as if it were a regular character, because it's followed by
+                // something that will actually act as a for-real line terminator
+                Int  ofNext = in.offset;
+                Char chNext = DataInput.readUTF8Char(in);
+                in.offset = ofNext;
+                if (chNext == '\n')
+                    {
+                    break HandleTerminator;
+                    }
+                }
+
+            ++lineNumber;
+            lineStartOffset = offset;
             }
 
         return ch;
@@ -257,11 +276,12 @@ class UTF8Reader
     @Override
     Reader seekLine(Int line)
         {
-        TODO use the underlying stream directly
+        // TODO use the underlying stream directly
         // for current line, use lineStartOffset
         // for line > current, seek forward
         // for line == 0 reset()
         // for line > 0 but line < current, could go forwards or backwards
+        return super(line);
         }
 
 
