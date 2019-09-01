@@ -11,7 +11,7 @@ mixin JavaDataInput
     @Override
     Char readChar()
         {
-        // Java's DataInputStream uses the UTF-16 format for individual characters; not that this
+        // Java's DataInputStream uses the UTF-16 format for individual characters; note that this
         // implementation will consume 32 bits if the first 16 bits are a surrogate codepoint (as
         // per the Unicode standard, since a surrogate codepoint by itself is an illegal character)
         return readUTF16Char(this);
