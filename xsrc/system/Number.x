@@ -60,13 +60,13 @@ const Number
     /**
      * An IllegalMath exception is raised when an assert fails.
      */
-    const IllegalMath(String? text = null, Exception? cause = null)
+    static const IllegalMath(String? text = null, Exception? cause = null)
             extends Exception(text, cause);
 
     /**
      * An Assertion exception is raised when an assert fails.
      */
-    const DivisionByZero(String? text = null, Exception? cause = null)
+    static const DivisionByZero(String? text = null, Exception? cause = null)
             extends IllegalMath(text, cause);
 
 

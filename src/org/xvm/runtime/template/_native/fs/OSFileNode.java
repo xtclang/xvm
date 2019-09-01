@@ -166,7 +166,7 @@ public abstract class OSFileNode
     protected int raisePathException(Frame frame, IOException e, NodeHandle hNode)
         {
         // TODO: how to get the natural Path efficiently from hNode.f_path?
-        return frame.raiseException(xException.pathException(e.getMessage(), xNullable.NULL));
+        return frame.raiseException(xException.pathException(frame, e.getMessage(), xNullable.NULL));
         }
 
 

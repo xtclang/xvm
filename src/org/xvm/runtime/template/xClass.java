@@ -88,8 +88,7 @@ public class xClass
             {
             }
 
-        return frame.raiseException(
-            xException.makeHandle("Not implemented property: "  + sProp));
+        return frame.raiseException("Not implemented property: "  + sProp);
         }
 
     @Override

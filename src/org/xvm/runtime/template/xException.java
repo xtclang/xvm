@@ -10,8 +10,6 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.ServiceContext;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
 
@@ -37,10 +35,16 @@ public class xException
     public void initDeclared()
         {
         // cache all the well-known exception classes
-        s_clzException       = INSTANCE.getCanonicalClass();
-        s_clzIllegalArgument = f_templates.getTemplate("IllegalArgument").getCanonicalClass();
-        s_clzIllegalState    = f_templates.getTemplate("IllegalState").getCanonicalClass();
-        s_clzPathException   = f_templates.getTemplate("fs.PathException").getCanonicalClass();
+        s_clzException            = INSTANCE.getCanonicalClass();
+        s_clzIllegalArgument      = f_templates.getTemplate("IllegalArgument").getCanonicalClass();
+        s_clzIllegalState         = f_templates.getTemplate("IllegalState").getCanonicalClass();
+        s_clzOutOfBounds          = f_templates.getTemplate("OutOfBounds").getCanonicalClass();
+        s_clzReadOnly             = f_templates.getTemplate("ReadOnly").getCanonicalClass();
+        s_clzTimedOut             = f_templates.getTemplate("TimedOut").getCanonicalClass();
+        s_clzTypeMismatch         = f_templates.getTemplate("TypeMismatch").getCanonicalClass();
+        s_clzUnsupportedOperation = f_templates.getTemplate("UnsupportedOperation").getCanonicalClass();
+        s_clzPathException        = f_templates.getTemplate("Number.DivisionByZero").getCanonicalClass();
+        s_clzPathException        = f_templates.getTemplate("fs.PathException").getCanonicalClass();
 
         markNativeMethod("toString", VOID, STRING);
 
@@ -50,70 +54,102 @@ public class xException
     @Override
     public ObjectHandle createStruct(Frame frame, ClassComposition clazz)
         {
-        return makeMutableStruct(clazz, null, null);
+        return makeMutableStruct(frame, clazz, null, null);
         }
 
-    // stock exception: TODO: use the actual exceptions
+    // ---- stock exceptions -----------------------------------------------------------------------
 
-    public static ExceptionHandle unassignedReference()
+    public static ExceptionHandle immutableObject(Frame frame)
         {
-        return makeHandle("Unassigned reference");
+        return makeHandle(frame, "Immutable object");
         }
 
-    public static ExceptionHandle unassignedFields(List<String> listNames)
+    public static ExceptionHandle illegalArgument(Frame frame, String sMsg)
         {
-        return makeHandle("Unassigned fields: " + listNames);
+        return makeHandle(frame, s_clzIllegalArgument, sMsg);
         }
 
-    public static ExceptionHandle immutableObject()
+    public static ExceptionHandle illegalCast(Frame frame, String sType)
         {
-        return makeHandle("Immutable object");
+        return makeHandle(frame, s_clzTypeMismatch, sType);
         }
 
-    public static ExceptionHandle mutableObject()
+    public static ExceptionHandle illegalState(Frame frame, String sMsg)
         {
-        return makeHandle("mutable object cannot be used for a service call");
+        return makeHandle(frame, s_clzIllegalState, sMsg);
         }
 
-    public static ExceptionHandle illegalOperation()
+    public static ExceptionHandle mutableObject(Frame frame)
         {
-        return makeHandle("IllegalOperation");
+        return illegalArgument(frame, "mutable object cannot be used for a service call");
         }
 
-    public static ExceptionHandle illegalCast(String sType)
+    public static ExceptionHandle outOfBounds(Frame frame, long lIndex, long cSize)
         {
-        return makeHandle("IllegalCast: " + sType);
-        }
-
-    public static ExceptionHandle unsupportedOperation()
-        {
-        return makeHandle("UnsupportedOperation");
-        }
-
-    public static ExceptionHandle pathException(String sMsg, ObjectHandle path)
-        {
-        ExceptionHandle hException = makeHandle(s_clzPathException, "IOException: " + sMsg);
-        hException.setField("path", path);
-        return hException;
-        }
-
-    public static ExceptionHandle outOfRange(long lIndex, long cSize)
-        {
-        return makeHandle(lIndex < 0 ?
+        return outOfBounds(frame, lIndex < 0 ?
                 "Negative index: " + lIndex :
                 "Array index " + lIndex + " out of range 0.." + (cSize-1));
         }
 
-    // ---- ObjectHandle helpers -----
-
-    public static ExceptionHandle makeHandle(String sMessage)
+    public static ExceptionHandle outOfBounds(Frame frame, String sMsg)
         {
-        return makeHandle(s_clzException, sMessage);
+        return makeHandle(frame, s_clzOutOfBounds, sMsg);
         }
 
-    public static ExceptionHandle makeHandle(ClassComposition clz, String sMessage)
+    public static ExceptionHandle readOnly(Frame frame)
         {
-        ExceptionHandle hException = makeMutableStruct(clz, null, null);
+        return makeHandle(frame, s_clzReadOnly, null);
+        }
+
+    public static ExceptionHandle timedOut(Frame frame, String sMs)
+        {
+        return makeHandle(frame, s_clzTimedOut, sMs);
+        }
+
+    public static ExceptionHandle unassignedFields(Frame frame, List<String> listNames)
+        {
+        return illegalState(frame, "Unassigned fields: " + listNames);
+        }
+
+    public static ExceptionHandle unassignedReference(Frame frame)
+        {
+        return illegalState(frame, "Unassigned reference");
+        }
+
+    public static ExceptionHandle unsupportedOperation(Frame frame)
+        {
+        return unsupportedOperation(frame, null);
+        }
+
+    public static ExceptionHandle unsupportedOperation(Frame frame, String sMsg)
+        {
+        return makeHandle(frame, s_clzUnsupportedOperation, sMsg);
+        }
+
+    // ---- class specific exceptions
+
+    public static ExceptionHandle divisionByZero(Frame frame)
+        {
+        return makeHandle(frame, s_clzDivisionByZero, null);
+        }
+
+    public static ExceptionHandle pathException(Frame frame, String sMsg, ObjectHandle path)
+        {
+        ExceptionHandle hException = makeHandle(frame, s_clzPathException, "IOException: " + sMsg);
+        hException.setField("path", path);
+        return hException;
+        }
+
+    // ---- ObjectHandle helpers -----
+
+    public static ExceptionHandle makeHandle(Frame frame, String sMessage)
+        {
+        return makeHandle(frame, s_clzException, sMessage);
+        }
+
+    public static ExceptionHandle makeHandle(Frame frame, ClassComposition clzEx, String sMessage)
+        {
+        ExceptionHandle hException = makeMutableStruct(frame, clzEx, null, null);
 
         hException.setField("text", xString.makeHandle(sMessage));
         hException.setField("cause", xNullable.NULL);
@@ -122,14 +158,12 @@ public class xException
         return (ExceptionHandle) hException.ensureAccess(Access.PUBLIC);
         }
 
-    private static ExceptionHandle makeMutableStruct(TypeComposition clazz,
+    private static ExceptionHandle makeMutableStruct(Frame frame, ClassComposition clxEx,
                                                      ExceptionHandle hCause, Throwable eCause)
         {
-        clazz = clazz.ensureAccess(Access.STRUCT);
+        clxEx = clxEx.ensureAccess(Access.STRUCT);
 
-        ExceptionHandle hException = new ExceptionHandle(clazz, true, eCause);
-
-        Frame frame = ServiceContext.getCurrentContext().getCurrentFrame();
+        ExceptionHandle hException = new ExceptionHandle(clxEx, true, eCause);
 
         hException.setField("stackTrace", xString.makeHandle(
                 frame == null ? "" : frame.getStackTrace()));
@@ -142,5 +176,11 @@ public class xException
     private static ClassComposition s_clzException;
     private static ClassComposition s_clzIllegalArgument;
     private static ClassComposition s_clzIllegalState;
+    private static ClassComposition s_clzOutOfBounds;
+    private static ClassComposition s_clzReadOnly;
+    private static ClassComposition s_clzTimedOut;
+    private static ClassComposition s_clzTypeMismatch;
+    private static ClassComposition s_clzUnsupportedOperation;
+    private static ClassComposition s_clzDivisionByZero;
     private static ClassComposition s_clzPathException;
     }

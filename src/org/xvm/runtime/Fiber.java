@@ -209,7 +209,7 @@ public class Fiber
         int iResult = Op.R_NEXT;
         if (isTimedOut())
             {
-            iResult = frame.raiseException(xException.makeHandle("The service has timed-out"));
+            iResult = frame.raiseException(xException.timedOut(frame, "The service has timed-out"));
             }
         else if (m_status == FiberStatus.Waiting)
             {

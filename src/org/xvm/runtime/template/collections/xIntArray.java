@@ -96,7 +96,7 @@ public class xIntArray
 
         if (lIndex < 0 || lIndex >= hArray.m_cSize)
             {
-            return frame.raiseException(xException.outOfRange(lIndex, hArray.m_cSize));
+            return frame.raiseException(xException.outOfBounds(frame, lIndex, hArray.m_cSize));
             }
         return frame.assignValue(iReturn, xInt64.makeHandle(hArray.m_alValue[(int) lIndex]));
         }
@@ -110,16 +110,16 @@ public class xIntArray
 
         if (lIndex < 0 || lIndex > cSize)
             {
-            return frame.raiseException(xException.outOfRange(lIndex, cSize));
+            return frame.raiseException(xException.outOfBounds(frame, lIndex, cSize));
             }
 
         switch (hArray.m_mutability)
             {
             case Constant:
-                return frame.raiseException(xException.immutableObject());
+                return frame.raiseException(xException.immutableObject(frame));
 
             case Persistent:
-                return frame.raiseException(xException.unsupportedOperation());
+                return frame.raiseException(xException.unsupportedOperation(frame));
             }
 
         long[] alValue = hArray.m_alValue;
@@ -127,7 +127,7 @@ public class xIntArray
             {
             if (hArray.m_mutability == Mutability.FixedSize)
                 {
-                return frame.raiseException(xException.illegalOperation());
+                return frame.raiseException(xException.readOnly(frame));
                 }
 
             // an array can only grow without any "holes"
@@ -149,7 +149,7 @@ public class xIntArray
 
         if (lIndex < 0 || lIndex >= hArray.m_cSize)
             {
-            return frame.raiseException(xException.outOfRange(lIndex, hArray.m_cSize));
+            return frame.raiseException(xException.outOfBounds(frame, lIndex, hArray.m_cSize));
             }
 
         return frame.assignValue(iReturn,
@@ -190,14 +190,14 @@ public class xIntArray
         switch (hArray.m_mutability)
             {
             case Constant:
-                return frame.raiseException(xException.immutableObject());
+                return frame.raiseException(xException.immutableObject(frame));
 
             case FixedSize:
-                return frame.raiseException(xException.illegalOperation());
+                return frame.raiseException(xException.readOnly(frame));
 
             case Persistent:
                 // TODO: implement
-                return frame.raiseException(xException.unsupportedOperation());
+                return frame.raiseException(xException.unsupportedOperation(frame));
             }
 
         long[] alValue = hArray.m_alValue;
@@ -219,14 +219,14 @@ public class xIntArray
         switch (hArray.m_mutability)
             {
             case Constant:
-                return frame.raiseException(xException.immutableObject());
+                return frame.raiseException(xException.immutableObject(frame));
 
             case FixedSize:
-                return frame.raiseException(xException.illegalOperation());
+                return frame.raiseException(xException.readOnly(frame));
 
             case Persistent:
                 // TODO: implement
-                return frame.raiseException(xException.unsupportedOperation());
+                return frame.raiseException(xException.unsupportedOperation(frame));
             }
 
         IntArrayHandle hArrayAdd = (IntArrayHandle) hValue;
@@ -264,7 +264,7 @@ public class xIntArray
             {
             long c = alValue.length;
             return frame.raiseException(
-                xException.outOfRange(ixFrom < 0 || ixFrom >= c ? ixFrom : ixTo, c));
+                xException.outOfBounds(frame, ixFrom < 0 || ixFrom >= c ? ixFrom : ixTo, c));
             }
         }
 

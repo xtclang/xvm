@@ -151,7 +151,7 @@ public class Invoke_TN
 
         if (ahArg.length != method.getParamCount())
             {
-            return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
+            return frame.raiseException("Invalid tuple argument");
             }
 
         checkReturnRegisters(frame, hTarget);

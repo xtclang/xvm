@@ -140,7 +140,7 @@ public class Invoke_T0
 
         if (ahArg.length != method.getParamCount())
             {
-            return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
+            return frame.raiseException("Invalid tuple argument");
             }
 
         return chain.isNative()

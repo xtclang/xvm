@@ -46,7 +46,7 @@ public interface IndexSupport
     /**
      * @return the [declared] element type at the specified index
      */
-     TypeConstant getElementType(ObjectHandle hTarget, long lIndex)
+     TypeConstant getElementType(Frame frame, ObjectHandle hTarget, long lIndex)
             throws ExceptionHandle.WrapperException;
 
     /**
@@ -68,7 +68,7 @@ public interface IndexSupport
         {
         try
             {
-            TypeConstant typeEl = getElementType(hTarget, lIndex);
+            TypeConstant typeEl = getElementType(frame, hTarget, lIndex);
 
             ClassComposition clzRef = fReadOnly
                 ? xRef.INSTANCE.ensureParameterizedClass(frame.poolContext(), typeEl)

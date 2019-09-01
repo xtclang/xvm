@@ -1105,7 +1105,7 @@ public class MethodStructure
                 if (!constSingleton.markInitializing())
                     {
                     // this can only happen if we are called recursively
-                    return frame.raiseException(xException.makeHandle("Circular initialization"));
+                    return frame.raiseException("Circular initialization");
                     }
 
                 IdentityConstant constValue = constSingleton.getValue();
@@ -1145,17 +1145,11 @@ public class MethodStructure
                             {
                             // the class must have a no-params constructor to call
                             MethodStructure constructor = clz.findMethod(getConstantPool().sigConstruct());
-                            if (constructor == null)
-                                {
-                                frame.raiseException(xException.makeHandle(
-                                    "Missing default constructor at " + clz.getSimpleName()));
-                                iResult = Op.R_EXCEPTION;
-                                }
-                            else
-                                {
-                                iResult = template.construct(frame, constructor,
+                            iResult = constructor == null
+                                ? frame.raiseException(
+                                    "Missing default constructor at " + clz.getSimpleName())
+                                : template.construct(frame, constructor,
                                     template.getCanonicalClass(), null, Utils.OBJECTS_NONE, Op.A_STACK);
-                                }
                             }
                         break;
                         }

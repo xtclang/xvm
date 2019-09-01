@@ -669,7 +669,7 @@ public class xFunction
 
             if (!validateImmutable(frame.f_context, getMethod(), ahVar))
                 {
-                return frame.raiseException(xException.mutableObject());
+                return frame.raiseException(xException.mutableObject(frame));
                 }
 
             int cReturns = iReturn == Op.A_IGNORE ? 0 : 1;
@@ -693,7 +693,7 @@ public class xFunction
 
             if (!validateImmutable(frame.f_context, getMethod(), ahVar))
                 {
-                return frame.raiseException(xException.mutableObject());
+                return frame.raiseException(xException.mutableObject(frame));
                 }
 
             if (true)
@@ -720,7 +720,7 @@ public class xFunction
 
             if (!validateImmutable(frame.f_context, getMethod(), ahVar))
                 {
-                return frame.raiseException(xException.mutableObject());
+                return frame.raiseException(xException.mutableObject(frame));
                 }
 
             int cReturns = aiReturn.length;
@@ -779,7 +779,7 @@ public class xFunction
 
             if (!validateImmutable(frame.f_context, getMethod(), ahVar))
                 {
-                return frame.raiseException(xException.mutableObject());
+                return frame.raiseException(xException.mutableObject(frame));
                 }
 
             int cReturns = iReturn == Op.A_IGNORE ? 0 : 1;
@@ -803,7 +803,7 @@ public class xFunction
 
             if (!validateImmutable(frame.f_context, getMethod(), ahVar))
                 {
-                return frame.raiseException(xException.mutableObject());
+                return frame.raiseException(xException.mutableObject(frame));
                 }
 
             if (true)
@@ -830,7 +830,7 @@ public class xFunction
 
             if (!validateImmutable(frame.f_context, getMethod(), ahVar))
                 {
-                return frame.raiseException(xException.mutableObject());
+                return frame.raiseException(xException.mutableObject(frame));
                 }
 
             int cReturns = aiReturn.length;

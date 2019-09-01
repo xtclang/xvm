@@ -20,7 +20,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.ObjectHeap;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
@@ -187,7 +186,7 @@ public class xTuple
 
         if (lIndex < 0 || lIndex >= cElements)
             {
-            return frame.raiseException(xException.outOfRange(lIndex, cElements));
+            return frame.raiseException(xException.outOfBounds(frame, lIndex, cElements));
             }
 
         return frame.assignValue(iReturn, hTuple.m_ahValue[(int) lIndex]);
@@ -202,12 +201,12 @@ public class xTuple
 
         if (lIndex < 0 || lIndex >= cElements)
             {
-            return frame.raiseException(xException.outOfRange(lIndex, cElements));
+            return frame.raiseException(xException.outOfBounds(frame, lIndex, cElements));
             }
 
         if (!hTuple.isMutable())
             {
-            return frame.raiseException(xException.immutableObject());
+            return frame.raiseException(xException.immutableObject(frame));
             }
 
         hTuple.m_ahValue[(int) lIndex] = hValue;
@@ -215,7 +214,7 @@ public class xTuple
         }
 
     @Override
-    public TypeConstant getElementType(ObjectHandle hTarget, long lIndex)
+    public TypeConstant getElementType(Frame frame, ObjectHandle hTarget, long lIndex)
                 throws ExceptionHandle.WrapperException
         {
         TupleHandle hTuple = (TupleHandle) hTarget;
@@ -224,7 +223,7 @@ public class xTuple
 
         if (lIndex < 0 || lIndex >= cElements)
             {
-            throw xException.outOfRange(lIndex, cElements).getException();
+            throw xException.outOfBounds(frame, lIndex, cElements).getException();
             }
 
         return hTuple.m_aType[(int) lIndex];

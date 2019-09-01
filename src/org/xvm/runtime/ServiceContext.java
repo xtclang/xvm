@@ -583,7 +583,7 @@ public class ServiceContext
                     hReturn = hReturn.getTemplate().createProxyHandle(frame.f_context, hReturn, null);
                     if (hReturn == null)
                         {
-                        hException = xException.mutableObject();
+                        hException = xException.mutableObject(frame);
                         }
                     }
                 fiberCaller.f_context.respond(new Response(fiberCaller, hReturn, hException, future));
@@ -605,7 +605,7 @@ public class ServiceContext
                             hReturn = hReturn.getTemplate().createProxyHandle(frame.f_context, hReturn, null);
                             if (hReturn == null)
                                 {
-                                hException = xException.mutableObject();
+                                hException = xException.mutableObject(frame);
                                 ahReturn   = null;
                                 break;
                                 }
