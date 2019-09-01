@@ -191,6 +191,22 @@ class CharArrayReader(immutable Char[] chars)
     @Override
     String toString()
         {
+// TODO GG
+//Failed to generate code for Compiler (Module=Ecstasy.xtclang.org, Stage=Emitting)
+//java.lang.NullPointerException
+//	at org.xvm.compiler.ast.StatementBlock$RootContext.isReservedNameReadable(StatementBlock.java:716)
+//	at org.xvm.compiler.ast.StatementBlock$RootContext.getVarAssignment(StatementBlock.java:662)
+//	at org.xvm.compiler.ast.Context.getVarAssignment(Context.java:764)
+//	at org.xvm.compiler.ast.Context.getVarAssignment(Context.java:764)
+//	at org.xvm.compiler.ast.StatementBlock.validateImpl(StatementBlock.java:322)
+//	at org.xvm.compiler.ast.Statement.validate(Statement.java:140)
+//	at org.xvm.compiler.ast.StatementBlock.compileMethod(StatementBlock.java:267)
+//        return str ?: () ->
+//            {
+//            String result = super();
+//            str = result;
+//            return result;
+//            }();
         return str ?:
             {
             String result = super();
