@@ -135,7 +135,7 @@ interface Reader
             result   = nextString(range.upperBound.offset - offset + 1);
             if (range.reversed)
                 {
-                // TODO GG : result = result.reverse();
+                result = result.reverse();
                 }
             }
         finally
