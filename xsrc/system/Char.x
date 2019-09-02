@@ -171,7 +171,7 @@ const Char
             //   U+000B  11  VT   Vertical Tab
             //   U+000C  12  FF   Form Feed
             //   U+000D  13  CR   Carriage Return
-            return codepoint >= 0x10 && codepoint <= 13;
+            return codepoint >= 0x0A && codepoint <= 0x0D;
             }
 
         // this handles the following cases:
