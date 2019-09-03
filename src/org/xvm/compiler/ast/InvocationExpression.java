@@ -1669,7 +1669,12 @@ public class InvocationExpression
                 }
             else
                 {
-                log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sName, ctx.getThisType().getValueString());
+                TypeConstant typeTarget = ctx.getThisType();
+                if (ctx.isConstructor())
+                    {
+                    typeTarget = pool.ensureAccessTypeConstant(typeTarget, Access.STRUCT);
+                    }
+                log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sName, typeTarget.getValueString());
                 }
             return null;
             }

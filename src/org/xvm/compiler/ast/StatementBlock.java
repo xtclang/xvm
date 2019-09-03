@@ -866,10 +866,18 @@ public class StatementBlock
                         }
                     else
                         {
-                        TypeConstant typeClz = typeThis == null || typeThis.isRelationalType()
-                                ? ((ClassStructure) idClz.getComponent()).getFormalType()
-                                : typeThis;
-                        typeClz  = pool.ensureAccessTypeConstant(typeClz, access);
+                        TypeConstant typeClz;
+                        if (typeThis == null || typeThis.isRelationalType())
+                            {
+                            typeClz = ((ClassStructure) idClz.getComponent()).getFormalType();
+                            typeClz = pool.ensureAccessTypeConstant(typeClz, access);
+                            }
+                        else
+                            {
+                            typeClz = pool.ensureAccessTypeConstant(typeThis,
+                                isConstructor() ? Access.STRUCT : Access.PRIVATE);
+                            }
+
                         infoPrev = info = typeClz.ensureTypeInfo(errs);
                         if (errs.isAbortDesired())
                             {
