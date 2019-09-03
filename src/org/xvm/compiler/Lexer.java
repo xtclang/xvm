@@ -707,9 +707,7 @@ public class Lexer
                     }
 
                 Id id = Id.valueByText(name);
-                return id == null
-                        ? new Token(lInitPos, source.getPosition(), Id.IDENTIFIER, name)
-                        : new Token(lInitPos, source.getPosition(), id);
+                return new Token(lInitPos, source.getPosition(), id == null ? Id.IDENTIFIER : id, name);
                 }
             }
         }
