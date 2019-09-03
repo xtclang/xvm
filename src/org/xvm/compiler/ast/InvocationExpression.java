@@ -1708,7 +1708,6 @@ public class InvocationExpression
                         }
 
                     TypeInfo infoLeft;
-                    boolean  fPreserveOrigin;
 
                     if (nameLeft.getMeaning() == NameExpression.Meaning.Type)
                         {
@@ -1720,13 +1719,11 @@ public class InvocationExpression
                             {
                             typeLeft = pool.ensureAccessTypeConstant(typeLeft, access);
                             }
-                        infoLeft         = typeLeft.ensureTypeInfo(errs);
-                        fPreserveOrigin  = false;
+                        infoLeft = typeLeft.ensureTypeInfo(errs);
                         }
                     else
                         {
-                        infoLeft         = idLeft.ensureTypeInfo(access, errs);
-                        fPreserveOrigin  = true;
+                        infoLeft = idLeft.ensureTypeInfo(access, errs);
                         }
 
                     MethodType methodType = fConstruct ? MethodType.Constructor
@@ -1744,15 +1741,6 @@ public class InvocationExpression
                             log(errs, Severity.ERROR, Compiler.ILLEGAL_FUNKY_CALL,
                                     idMethod.getValueString());
                             return null;
-                            }
-
-                        if (fPreserveOrigin && !idMethod.getNamespace().equals(idLeft))
-                            {
-                            // preserve the origin information on the function's MethodConstant;
-                            // for example, if there is a call "Point.hashCode(p)", the runtime
-                            // should know to use the Point's structure even though the "hashCode"
-                            // only declared on Const
-                            idMethod = pool.ensureMethodConstant(idLeft, idMethod.getSignature());
                             }
 
                         m_argMethod = idMethod;

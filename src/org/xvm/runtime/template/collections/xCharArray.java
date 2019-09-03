@@ -97,7 +97,7 @@ public class xCharArray
 
         if (lIndex < 0 || lIndex >= hArray.m_cSize)
             {
-            return frame.raiseException(xException.outOfRange(lIndex, hArray.m_cSize));
+            return frame.raiseException(xException.outOfBounds(frame, lIndex, hArray.m_cSize));
             }
         return frame.assignValue(iReturn, xChar.makeHandle(hArray.m_achValue[(int) lIndex]));
         }
@@ -111,16 +111,16 @@ public class xCharArray
 
         if (lIndex < 0 || lIndex > cSize)
             {
-            return frame.raiseException(xException.outOfRange(lIndex, cSize));
+            return frame.raiseException(xException.outOfBounds(frame, lIndex, cSize));
             }
 
         switch (hArray.m_mutability)
             {
             case Constant:
-                return frame.raiseException(xException.immutableObject());
+                return frame.raiseException(xException.immutableObject(frame));
 
             case Persistent:
-                return frame.raiseException(xException.unsupportedOperation());
+                return frame.raiseException(xException.unsupportedOperation(frame));
             }
 
         char[] achValue = hArray.m_achValue;
@@ -128,7 +128,7 @@ public class xCharArray
             {
             if (hArray.m_mutability == Mutability.FixedSize)
                 {
-                return frame.raiseException(xException.illegalOperation());
+                return frame.raiseException(xException.readOnly(frame));
                 }
 
             // an array can only grow without any "holes"
@@ -150,7 +150,7 @@ public class xCharArray
 
         if (lIndex < 0 || lIndex >= hArray.m_cSize)
             {
-            return frame.raiseException(xException.outOfRange(lIndex, hArray.m_cSize));
+            return frame.raiseException(xException.outOfBounds(frame, lIndex, hArray.m_cSize));
             }
 
         return frame.assignValue(iReturn,
@@ -191,14 +191,14 @@ public class xCharArray
         switch (hArray.m_mutability)
             {
             case Constant:
-                return frame.raiseException(xException.immutableObject());
+                return frame.raiseException(xException.immutableObject(frame));
 
             case FixedSize:
-                return frame.raiseException(xException.illegalOperation());
+                return frame.raiseException(xException.readOnly(frame));
 
             case Persistent:
                 // TODO: implement
-                return frame.raiseException(xException.unsupportedOperation());
+                return frame.raiseException(xException.unsupportedOperation(frame));
             }
 
         char[] achValue = hArray.m_achValue;
@@ -220,14 +220,14 @@ public class xCharArray
         switch (hArray.m_mutability)
             {
             case Constant:
-                return frame.raiseException(xException.immutableObject());
+                return frame.raiseException(xException.immutableObject(frame));
 
             case FixedSize:
-                return frame.raiseException(xException.illegalOperation());
+                return frame.raiseException(xException.readOnly(frame));
 
             case Persistent:
                 // TODO: implement
-                return frame.raiseException(xException.unsupportedOperation());
+                return frame.raiseException(xException.unsupportedOperation(frame));
             }
 
         int    cNew;
@@ -282,7 +282,7 @@ public class xCharArray
             {
             long c = achValue.length;
             return frame.raiseException(
-                xException.outOfRange(ixFrom < 0 || ixFrom >= c ? ixFrom : ixTo, c));
+                xException.outOfBounds(frame, ixFrom < 0 || ixFrom >= c ? ixFrom : ixTo, c));
             }
         }
 

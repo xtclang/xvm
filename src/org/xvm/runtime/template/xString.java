@@ -226,18 +226,18 @@ public class xString
             }
         catch (ArrayIndexOutOfBoundsException e)
             {
-            return frame.raiseException(xException.outOfRange(lIndex, ach.length));
+            return frame.raiseException(xException.outOfBounds(frame, lIndex, ach.length));
             }
         }
 
     @Override
     public int assignArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
         {
-        return frame.raiseException(xException.immutableObject());
+        return frame.raiseException(xException.immutableObject(frame));
         }
 
     @Override
-    public TypeConstant getElementType(ObjectHandle hTarget, long lIndex)
+    public TypeConstant getElementType(Frame frame, ObjectHandle hTarget, long lIndex)
         {
         return pool().typeChar();
         }

@@ -1,12 +1,17 @@
 package org.xvm.asm;
 
 
+import java.io.DataOutput;
+import java.io.IOException;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import java.util.stream.Collectors;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -53,19 +58,48 @@ public class MultiMethodStructure
         return (MultiMethodConstant) super.getIdentityConstant();
         }
 
+    protected void assembleChildren(DataOutput out)
+            throws IOException
+        {
+        if (getParent().getFormat() == Format.CONST && !m_tloIgnoreNative.get())
+            {
+            // ensure we don't persist the (funky) Const interface functions created by
+            // ClassStructure.synthesizeConstInterface();
+            // note that the super.assembleChildren() method uses just two virtual methods:
+            //      getChildrenCount(), and children()
+            // hence we only need to override those two and ignore native methods when necessary
+            m_tloIgnoreNative.set(true);
+            try
+                {
+                super.assembleChildren(out);
+                }
+            finally
+                {
+                m_tloIgnoreNative.set(false);
+                }
+            }
+        else
+            {
+            super.assembleChildren(out);
+            }
+        }
+
 
     // ----- Component methods ---------------------------------------------------------------------
 
     @Override
     public int getChildrenCount()
         {
-        return m_methodByConstant == null ? 0 : m_methodByConstant.size();
+        Map<MethodConstant, MethodStructure> map = m_methodByConstant;
+        return  map == null             ? 0
+              : m_tloIgnoreNative.get() ? (int) map.values().stream().filter(m -> !m.isNative()).count()
+              : map.size();
         }
 
     @Override
     public boolean hasChildren()
         {
-        return m_methodByConstant != null && !m_methodByConstant.isEmpty();
+        return getChildrenCount() > 0;
         }
 
     @Override
@@ -159,7 +193,10 @@ public class MultiMethodStructure
     @Override
     public Collection<? extends Component> children()
         {
-        return methods();
+        return m_tloIgnoreNative.get()
+                ? methods().stream().
+                    filter(method -> !method.isNative()).collect(Collectors.toList())
+                : methods();
         }
 
     @Override
@@ -404,4 +441,10 @@ public class MultiMethodStructure
      * This holds all of the method children. See the explanation of Component.m_childByName.
      */
     private Map<MethodConstant, MethodStructure> m_methodByConstant;
+
+    /**
+     * The flag used by the serialization logic.
+     */
+    private static ThreadLocal<Boolean> m_tloIgnoreNative =
+            ThreadLocal.withInitial(() -> Boolean.FALSE);
     }

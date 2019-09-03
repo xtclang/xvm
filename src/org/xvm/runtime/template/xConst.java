@@ -360,7 +360,7 @@ public class xConst
     /**
      * Helper class for equals() implementation.
      */
-    protected class Equals
+    protected static class Equals
             implements Frame.Continuation
         {
         final private GenericHandle hValue1;
@@ -405,8 +405,7 @@ public class xConst
 
                 if (h1 == null || h2 == null)
                     {
-                    return frameCaller.raiseException(
-                            xException.makeHandle("Unassigned property \"" + sProp +'"'));
+                    return frameCaller.raiseException("Unassigned property \"" + sProp +'"');
                     }
 
                 TypeConstant typeProp = clz.getFieldType(sProp).
@@ -440,7 +439,7 @@ public class xConst
     /**
      * Helper class for compare() implementation.
      */
-    protected class Compare
+    protected static class Compare
             implements Frame.Continuation
         {
         final private GenericHandle hValue1;
@@ -486,8 +485,7 @@ public class xConst
 
                 if (h1 == null || h2 == null)
                     {
-                    return frameCaller.raiseException(
-                            xException.makeHandle("Unassigned property \"" + sProp +'"'));
+                    return frameCaller.raiseException("Unassigned property \"" + sProp +'"');
                     }
 
                 TypeConstant typeProp = clz.getFieldType(sProp).
@@ -496,8 +494,7 @@ public class xConst
                 // this check is only to provide a better exception description
                 if (typeProp.findCallable(pool.sigCompare()) == null)
                     {
-                    return frameCaller.raiseException(
-                            xException.makeHandle("Property \"" + sProp + "\" is not Orderable"));
+                    return frameCaller.raiseException("Property \"" + sProp + "\" is not Orderable");
                     }
 
                 switch (typeProp.callCompare(frameCaller, h1, h2, Op.A_STACK))
@@ -659,8 +656,7 @@ public class xConst
                 ObjectHandle hProp = hConst.getField(sProp);
                 if (hProp == null)
                     {
-                    return frameCaller.raiseException(
-                            xException.makeHandle("Unassigned property: \"" + sProp + '"'));
+                    return frameCaller.raiseException("Unassigned property: \"" + sProp + '"');
                     }
 
                 TypeConstant typeProp = clz.getFieldType(sProp).

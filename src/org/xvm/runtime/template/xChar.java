@@ -140,7 +140,7 @@ public class xChar
 
     protected int overflow(Frame frame)
         {
-        return frame.raiseException(xException.makeHandle("Char overflow"));
+        return frame.raiseException(xException.outOfBounds(frame, "Char overflow"));
         }
 
     public static JavaLong makeHandle(long chValue)

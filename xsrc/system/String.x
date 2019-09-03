@@ -93,6 +93,7 @@ const String
      *
      * @return the reversed form of this String
      */
+    @Override
     String! reverse()
         {
         return size <= 1
@@ -303,7 +304,7 @@ const String
 
     @Override
     @Op("[..]")
-    String slice(Range<Int> range)
+    String! slice(Range<Int> range)
         {
         return new String(chars[range]);
         }

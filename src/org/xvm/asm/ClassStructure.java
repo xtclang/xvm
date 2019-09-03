@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import java.util.function.Predicate;
+
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -29,6 +31,9 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeConstant.Relation;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.TypeParameterConstant;
+import org.xvm.asm.constants.UnresolvedNameConstant;
+import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import org.xvm.asm.op.Call_01;
 import org.xvm.asm.op.Invoke_00;
@@ -1660,42 +1665,58 @@ public class ClassStructure
      * @param cArgs  the number of arguments
      * @param aType  (optional or partial) an array of parameter types to match
      *
-     * @return the specified MethodStructure; never null
-     *
-     * @throws IllegalStateException if the method cannot be found
+     * @return the specified MethodStructure of null if not found
      */
     public MethodStructure findMethod(String sName, int cArgs, TypeConstant... aType)
+        {
+        return findMethod(sName, method ->
+            {
+            if (method.getParamCount() != cArgs)
+                {
+                return false;
+                }
+
+            if (aType == null)
+                {
+                return true;
+                }
+
+            for (int i = 0, c = Math.min(method.getParamCount(), aType.length); i < c; i++)
+                {
+                TypeConstant typeParam = method.getParam(i).getType();
+                TypeConstant typeTest  = aType[i];
+                if (typeTest != null && !typeParam.equals(typeTest))
+                    {
+                    return false;
+                    }
+                }
+            return true;
+            });
+        }
+
+    /**
+     * Helper method to find a method by the name and a predicate.
+     *
+     * @param sName  the method name to find
+     * @param test   the predicate to check whether a method is a one to return
+     *
+     * @return the specified MethodStructure or null if not found
+     */
+    public MethodStructure findMethod(String sName, Predicate<MethodStructure> test)
         {
         MultiMethodStructure structMM = (MultiMethodStructure) getChild(sName);
         if (structMM != null)
             {
-            NextMethod:
             for (MethodStructure method : structMM.methods())
                 {
-                if (method.getParamCount() != cArgs)
-                    {
-                    continue;
-                    }
-
-                if (aType == null)
+                if (test.test(method))
                     {
                     return method;
                     }
-
-                for (int i = 0, c = Math.min(method.getParamCount(), aType.length); i < c; i++)
-                    {
-                    TypeConstant typeParam = method.getParam(i).getType();
-                    TypeConstant typeTest  = aType[i];
-                    if (typeTest != null && !typeParam.equals(typeTest))
-                        {
-                        continue NextMethod;
-                        }
-                    }
-                return method;
                 }
             }
 
-        throw new IllegalStateException("no method " + sName + " with " + cArgs + " params on " + this);
+        return null;
         }
 
     /**
@@ -2738,6 +2759,103 @@ public class ClassStructure
         return isInnerClass() && !isStatic();
         }
 
+    /**
+     * Ensure the method structures for the (funky) Const interface functions.
+     *
+     * All the methods that are created artificially will be marked as "native" and should not be
+     * assembled (persisted) during the serialization phase.
+     */
+    public void synthesizeConstInterface()
+        {
+        assert getFormat() == Format.CONST;
+
+        ConstantPool pool = getConstantPool();
+
+        addConstFunction("equals",   2, pool.typeBoolean());
+        addConstFunction("compare",  2, pool.typeOrdered());
+        addConstFunction("hashCode", 1, pool.typeInt());
+        }
+
+    private void addConstFunction(String sName, int cParams, TypeConstant typeReturn)
+        {
+        MethodStructure fnThis = findMethod(sName, method ->
+            {
+            if (    method.getTypeParamCount() != 1
+                 || method.getParamCount()     != 1  + cParams
+                 || method.getReturnCount()    != 1
+                 || !method.getReturnTypes()[0].equals(typeReturn))
+                {
+                return false;
+                }
+
+            for (int i = 1; i < cParams; i++)
+                {
+                TypeConstant typeParam = method.getParam(i).getType();
+                if (!typeParam.isTypeParameter())
+                    {
+                    return false;
+                    }
+                }
+            return true;
+            });
+
+
+        if (fnThis == null)
+            {
+            // 1) build parameters;
+            //  note that to instantiate type parameters we need to have the method constant,
+            //  which needs to be created UnresolvedTypeConstant first and resolved later
+            ConstantPool pool     = getConstantPool();
+            TypeConstant typeThis = pool.ensureThisTypeConstant(getIdentityConstant(), null);
+            TypeConstant typeType = pool.ensureParameterizedTypeConstant(pool.typeType(), typeThis);
+
+            Parameter[] aParam = new Parameter[1 + cParams];
+
+            aParam[0] = new Parameter(pool, typeType, "CompileType", null, false, 0, true);
+
+            if (cParams == 1)
+                {
+                aParam[1] = new Parameter(pool, new UnresolvedTypeConstant(pool,
+                        new UnresolvedNameConstant(pool, new String[]{"CompileType"}, false)),
+                        "value", null, false, 1, false);
+                }
+            else
+                {
+                for (int i = 1; i <= cParams; i++)
+                    {
+                    aParam[i] = new Parameter(pool, new UnresolvedTypeConstant(pool,
+                            new UnresolvedNameConstant(pool, new String[]{"CompileType"}, false)),
+                            "value" + i, null, false, i, false);
+                    }
+                }
+
+            Parameter[] aReturn = new Parameter[]
+                {
+                new Parameter(getConstantPool(), typeReturn, "", null, true, 0, false)
+                };
+
+            // 2) create the method structure and [yet unresolved] identity
+            fnThis = createMethod(/*function*/ true, Constants.Access.PUBLIC, null,
+                    aReturn, sName, aParam, /*hasCode*/ true, /*usesSuper*/false);
+            fnThis.setNative(true);
+
+            // 3) resolve the identity
+            MethodConstant idMethod    = fnThis.getIdentityConstant();
+            TypeConstant[] atypeParams = idMethod.getRawParams();
+
+            TypeParameterConstant constParam = pool.ensureRegisterConstant(idMethod, 0, "CompileType");
+            TypeConstant          typeFormal = constParam.getType();
+
+            for (int i = 1, c = atypeParams.length; i < c; i++)
+                {
+                ((UnresolvedTypeConstant) atypeParams[i]).resolve(typeFormal);
+                }
+
+            // 4) get rid of the unresolved constants
+            fnThis.resolveTypedefs();
+            }
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -2749,6 +2867,22 @@ public class ClassStructure
 
         // read in the type parameters
         m_mapParams = disassembleTypeParams(in);
+        }
+
+    @Override
+    protected void disassembleChildren(DataInput in, boolean fLazy) throws IOException
+        {
+        if (getFormat() == Format.CONST)
+            {
+            // load the children proactively and synthesize the funky interface
+            super.disassembleChildren(in, /*lazy*/ false);
+
+            synthesizeConstInterface();
+            }
+        else
+            {
+            super.disassembleChildren(in, fLazy);
+            }
         }
 
     @Override

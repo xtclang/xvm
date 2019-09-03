@@ -292,11 +292,6 @@ public abstract class xUnconstrainedInteger
 
     // ----- Object methods -----
 
-    protected int overflow(Frame frame)
-        {
-        return frame.raiseException(xException.makeHandle("Int overflow"));
-        }
-
     @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {

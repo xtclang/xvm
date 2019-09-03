@@ -175,7 +175,7 @@ public class Call_TN
         ObjectHandle[] ahArg = hArg.m_ahValue;
         if (ahArg.length != function.getParamCount())
             {
-            return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
+            return frame.raiseException("Invalid tuple argument");
             }
 
         if (function.isNative())
@@ -193,7 +193,7 @@ public class Call_TN
         ObjectHandle[] ahArg = hArg.m_ahValue;
         if (ahArg.length != hFunction.getParamCount())
             {
-            return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
+            return frame.raiseException("Invalid tuple argument");
             }
 
         ObjectHandle[] ahVar = Utils.ensureSize(ahArg, hFunction.getVarCount());

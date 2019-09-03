@@ -117,7 +117,7 @@ public class MoveCast
             return frame.assignValue(m_nToValue, hValue);
             }
 
-        return frame.raiseException(xException.illegalCast(typeFrom.getValueString()));
+        return frame.raiseException(xException.illegalCast(frame, typeFrom.getValueString()));
         }
 
     @Override
