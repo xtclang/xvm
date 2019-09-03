@@ -883,7 +883,32 @@ public class CommandLine
                 file = new File(file, sName + ".xtc");
                 }
 
-            if (!file.exists() || module.lastModified() > file.lastModified())
+            boolean fUseExisting = file.exists() && module.lastModified() <= file.lastModified();
+            if (fUseExisting)
+                {
+                try
+                    {
+                    FileStructure   structFile   = new FileStructure(file);
+                    ModuleStructure structModule = structFile.getModule();
+                    repoTemp.storeModule(structModule);
+                    listFiles.add(structFile);
+
+                    if (structModule.getName().equals(Constants.ECSTASY_MODULE))
+                        {
+                        fileRoot   = fileSrc;
+                        structRoot = structModule;
+                        }
+                    }
+                catch (Exception e)
+                    {
+                    deferred.add("xtc: Exception (" + e
+                        + ") occurred while attempting to read module file \""
+                        + file.getAbsolutePath() + "\"");
+                    fUseExisting = false;
+                    }
+                }
+
+            if (!fUseExisting)
                 {
                 if (structRoot != null)
                     {
@@ -892,27 +917,6 @@ public class CommandLine
                     modules.remove(fileRoot);
                     repoBuild.storeModule(structRoot);
                     }
-                return false;
-                }
-
-            try
-                {
-                FileStructure   structFile   = new FileStructure(file);
-                ModuleStructure structModule = structFile.getModule();
-                repoTemp.storeModule(structModule);
-                listFiles.add(structFile);
-
-                if (structModule.getName().equals(Constants.ECSTASY_MODULE))
-                    {
-                    fileRoot   = fileSrc;
-                    structRoot = structModule;
-                    }
-                }
-            catch (Exception e)
-                {
-                deferred.add("xtc: Exception (" + e
-                        + ") occurred while attempting to read module file \""
-                        + file.getAbsolutePath() + "\"");
                 return false;
                 }
             module.checkErrors();
