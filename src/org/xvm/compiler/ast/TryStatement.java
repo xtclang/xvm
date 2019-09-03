@@ -160,62 +160,66 @@ public class TryStatement
         ctx = ctxOrig.enter();
         block.validate(ctx, errs);
 
-        // instead of exiting the context, we simply collect all of the impact from the end of the
-        // "try" block, together with all of the impact from the end of each "catch" block
-        listAsn.add(ctx.prepareJump(ctxOrig));
-        ctx.discard();
-
-        for (int i = 0; i < cCatches; ++i)
+        if (cCatches > 0)
             {
-            ctx = ctxOrig.enter();
-
-            CatchStatement catchOld = catches.get(i);
-            CatchStatement catchNew = (CatchStatement) catchOld.validate(ctx, errs);
-            if (catchNew == null)
-                {
-                fValid = false;
-                }
-            else
-                {
-                if (catchNew != catchOld)
-                    {
-                    catches.set(i, catchNew);
-                    }
-
-                TypeConstant typeE = catchNew.getCatchType();
-                for (int iPrev = 0; iPrev < i; ++iPrev)
-                    {
-                    TypeConstant typeEPrev = catches.get(iPrev).target.getType();
-                    if (typeE.isA(typeEPrev))
-                        {
-                        catchNew.target.log(errs, Severity.ERROR, Compiler.CATCH_TYPE_ALREADY_CAUGHT,
-                                typeE.getValueString(), typeEPrev.getValueString());
-
-                        // only report this error once (but don't bother setting fValid to false
-                        // because this isn't an error bad enough to stop compilation at this
-                        // point)
-                        break;
-                        }
-                    }
-                }
-
+            // instead of exiting the context, we simply collect all of the impact from the end of the
+            // "try" block, together with all of the impact from the end of each "catch" block
             listAsn.add(ctx.prepareJump(ctxOrig));
             ctx.discard();
-            }
 
-        // collect the assignment impacts from the end of the "try" block and from the end of each
-        // "catch" block
-        ctx = ctxOrig;
-        for (Map<String, Assignment> mapAsn : listAsn)
-            {
-            ctx.merge(mapAsn);
+            for (int i = 0; i < cCatches; ++i)
+                {
+                ctx = ctxOrig.enter();
+
+                CatchStatement catchOld = catches.get(i);
+                CatchStatement catchNew = (CatchStatement) catchOld.validate(ctx, errs);
+                if (catchNew == null)
+                    {
+                    fValid = false;
+                    }
+                else
+                    {
+                    if (catchNew != catchOld)
+                        {
+                        catches.set(i, catchNew);
+                        }
+
+                    TypeConstant typeE = catchNew.getCatchType();
+                    for (int iPrev = 0; iPrev < i; ++iPrev)
+                        {
+                        TypeConstant typeEPrev = catches.get(iPrev).target.getType();
+                        if (typeE.isA(typeEPrev))
+                            {
+                            catchNew.target.log(errs, Severity.ERROR, Compiler.CATCH_TYPE_ALREADY_CAUGHT,
+                                    typeE.getValueString(), typeEPrev.getValueString());
+
+                            // only report this error once (but don't bother setting fValid to false
+                            // because this isn't an error bad enough to stop compilation at this
+                            // point)
+                            break;
+                            }
+                        }
+                    }
+
+                listAsn.add(ctx.prepareJump(ctxOrig));
+                ctx.discard();
+                }
+
+            // collect the assignment impacts from the end of the "try" block and from the end of each
+            // "catch" block
+            ctx = ctxOrig;
+            for (Map<String, Assignment> mapAsn : listAsn)
+                {
+                ctx.merge(mapAsn);
+                }
             }
 
         if (catchall != null)
             {
-            m_ctxValidatingFinally  = ctx;
+            // the context for finally clause is a continuation of the context prior to "try"
+            m_ctxValidatingFinally  = ctxOrig;
             m_errsValidatingFinally = errs;
-            StatementBlock catchallNew = (StatementBlock) catchall.validate(ctx, errs);
+            StatementBlock catchallNew = (StatementBlock) catchall.validate(ctxOrig, errs);
             m_ctxValidatingFinally  = null;
             m_errsValidatingFinally = null;
 
@@ -227,6 +231,11 @@ public class TryStatement
                 {
                 catchall = catchallNew;
                 }
+            }
+
+        if (cCatches == 0)
+            {
+            ctx = ctx.exit();
             }
 
         if (resources != null)

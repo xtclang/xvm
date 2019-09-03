@@ -126,9 +126,6 @@ interface Reader
         {
         String result;
 
-        // TODO GG - compiler fails if this isn't init'd (this line should not be necessary)
-        result = "";
-
         try (Position current = position)
             {
             position = range.lowerBound;
