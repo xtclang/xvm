@@ -624,7 +624,11 @@ public class Lexer
                     if (name.equals(Id.TODO.TEXT))
                         {
                         source.rewind();
-                        if (chNext != '(')
+                        if (chNext == '(')
+                            {
+                            return new Token(lInitPos, source.getPosition(), Id.TODO, null);
+                            }
+                        else
                             {
                             // parse the to-do statement in the same manner as a single line comment
                             Token comment = eatSingleLineComment(lInitPos);
@@ -707,9 +711,7 @@ public class Lexer
                     }
 
                 Id id = Id.valueByText(name);
-                return id == null
-                        ? new Token(lInitPos, source.getPosition(), Id.IDENTIFIER, name)
-                        : new Token(lInitPos, source.getPosition(), id);
+                return new Token(lInitPos, source.getPosition(), id == null ? Id.IDENTIFIER : id, name);
                 }
             }
         }

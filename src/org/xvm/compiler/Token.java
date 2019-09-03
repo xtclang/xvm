@@ -174,7 +174,7 @@ public class Token
             throw new IllegalStateException("missing context sensitive keyword for: " + getValue());
             }
 
-        return new Token(m_lStartPos, m_lEndPos, id);
+        return new Token(m_lStartPos, m_lEndPos, id, m_oValue);
         }
 
     /**
@@ -184,7 +184,7 @@ public class Token
      */
     public Token desensitize()
         {
-        return m_id.ContextSensitive ? new Token(m_lStartPos, m_lEndPos, Id.IDENTIFIER) : this;
+        return m_id.ContextSensitive ? new Token(m_lStartPos, m_lEndPos, Id.IDENTIFIER, m_oValue) : this;
         }
 
     /**
