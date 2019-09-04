@@ -217,6 +217,13 @@ public class LiteralConstant
         }
 
     /**
+     * @return the underlying string constant
+     */
+    public StringConstant getStringConstant()
+        {
+        return m_constStr;
+        }
+
      /**
      * Obtain the radix of the integer literal.
      * <p/>

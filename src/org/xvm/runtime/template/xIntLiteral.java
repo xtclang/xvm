@@ -9,6 +9,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.LiteralConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
@@ -27,13 +28,13 @@ import org.xvm.util.PackedInteger;
  * TODO:
  */
 public class xIntLiteral
-        extends ClassTemplate
+        extends xConst
     {
     public static xIntLiteral INSTANCE;
 
     public xIntLiteral(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(templates, structure, false);
 
         if (fInstance)
             {
@@ -72,7 +73,8 @@ public class xIntLiteral
     public int createConstHandle(Frame frame, Constant constant)
         {
         LiteralConstant constVal = (LiteralConstant) constant;
-        VarIntHandle hIntLiteral = makeIntLiteral(constVal.getPackedInteger());
+        StringHandle hText       = (StringHandle) frame.getConstHandle(constVal.getStringConstant());
+        VarIntHandle hIntLiteral = makeIntLiteral(constVal.getPackedInteger(), hText);
 
         return frame.assignValue(Op.A_STACK, hIntLiteral);
         }
@@ -81,20 +83,32 @@ public class xIntLiteral
     public int construct(Frame frame, MethodStructure constructor, ClassComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
-        String sText = ((StringHandle) ahVar[0]).getStringValue();
+        StringHandle hText = (StringHandle) ahVar[0];
 
         // TODO: large numbers
         try
             {
-            long lValue = Long.parseLong(sText);
+            long lValue = Long.parseLong(hText.getStringValue());
 
             return frame.assignValue(iReturn,
-                makeIntLiteral(new PackedInteger(lValue)));
+                makeIntLiteral(new PackedInteger(lValue), hText));
             }
         catch (NumberFormatException e)
             {
-            return frame.raiseException(xException.illegalArgument(frame, "Invalid number \"" + sText + "\""));
+            return frame.raiseException(
+                xException.illegalArgument(frame, "Invalid number \"" + hText.getStringValue() + "\""));
             }
+        }
+
+    @Override
+    public int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
+        {
+        switch (idProp.getName())
+            {
+            case "text":
+                return frame.assignValue(iReturn, ((VarIntHandle) hTarget).getText());
+            }
+        return frame.raiseException("not supported field: " + idProp.getName());
         }
 
     @Override
@@ -209,14 +223,19 @@ public class xIntLiteral
 
     protected VarIntHandle makeIntLiteral(PackedInteger piValue)
         {
-        return new VarIntHandle(getCanonicalClass(), piValue);
+        return new VarIntHandle(getCanonicalClass(), piValue, null);
+        }
+
+    protected VarIntHandle makeIntLiteral(PackedInteger piValue, StringHandle hText)
+        {
+        return new VarIntHandle(getCanonicalClass(), piValue, hText);
         }
 
     @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         VarIntHandle hLiteral = (VarIntHandle) hTarget;
-        return frame.assignValue(iReturn, xString.makeHandle(hLiteral.getValue().toString()));
+        return frame.assignValue(iReturn, hLiteral.getText());
         }
 
     /**
@@ -225,13 +244,23 @@ public class xIntLiteral
     public static class VarIntHandle
             extends ObjectHandle
         {
-        public VarIntHandle(TypeComposition clazz, PackedInteger piValue)
+        public VarIntHandle(TypeComposition clazz, PackedInteger piValue, StringHandle hText)
             {
             super(clazz);
 
             assert piValue != null;
 
             m_piValue = piValue;
+            }
+
+        public StringHandle getText()
+            {
+            StringHandle hText = m_hText;
+            if (hText == null)
+                {
+                m_hText = hText = xString.makeHandle(m_piValue.toString());
+                }
+            return hText;
             }
 
         public PackedInteger getValue()
@@ -255,5 +284,6 @@ public class xIntLiteral
             }
 
         protected PackedInteger m_piValue;
+        protected StringHandle  m_hText; // (optional) cached text handle
         }
     }

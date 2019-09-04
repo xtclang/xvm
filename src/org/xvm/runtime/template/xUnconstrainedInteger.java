@@ -305,6 +305,6 @@ public abstract class xUnconstrainedInteger
      */
     protected VarIntHandle makeInt(PackedInteger iValue)
         {
-        return new VarIntHandle(getCanonicalClass(), iValue);
+        return new VarIntHandle(getCanonicalClass(), iValue, null);
         }
     }
