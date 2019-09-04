@@ -865,6 +865,12 @@ public abstract class ClassTemplate
         TypeComposition clzTarget = hTarget.getComposition();
 
         CallChain chain = clzTarget.getPropertyGetterChain(idProp);
+
+        if (chain == null)
+            {
+            return frame.raiseException("Unknown property: " + idProp.getValueString());
+            }
+
         if (chain.isNative())
             {
             return invokeNativeGet(frame, idProp.getName(), hTarget, iReturn);
@@ -982,6 +988,11 @@ public abstract class ClassTemplate
             }
 
         CallChain chain = hTarget.getComposition().getPropertySetterChain(idProp);
+
+        if (chain == null)
+            {
+            return frame.raiseException("Unknown property: " + idProp.getValueString());
+            }
 
         if (chain.isNative())
             {

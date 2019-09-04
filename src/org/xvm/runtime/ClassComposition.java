@@ -307,8 +307,9 @@ public class ClassComposition
                 TypeInfo     info = f_typeInception.ensureTypeInfo();
                 PropertyInfo prop = info.findProperty(id);
 
-                assert prop != null;
-                return new CallChain(info.getOptimizedGetChain(prop.getIdentity()));
+                return prop == null
+                        ? null
+                        : new CallChain(info.getOptimizedGetChain(prop.getIdentity()));
                 });
         }
 
@@ -321,8 +322,9 @@ public class ClassComposition
                 TypeInfo     info = f_typeInception.ensureTypeInfo();
                 PropertyInfo prop = info.findProperty(id);
 
-                assert prop != null;
-                return new CallChain(info.getOptimizedSetChain(prop.getIdentity()));
+                return prop == null
+                        ? null
+                        : new CallChain(info.getOptimizedSetChain(prop.getIdentity()));
                 });
         }
 

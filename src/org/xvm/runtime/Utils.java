@@ -120,6 +120,11 @@ public abstract class Utils
         TypeComposition clzValue = hValue.getComposition();
         CallChain       chain    = clzValue.getPropertyGetterChain(idProp);
 
+        if (chain == null)
+            {
+            return frame.raiseException("Unknown property: " + idProp.getValueString());
+            }
+
         if (chain.isNative())
             {
             return clzValue.getTemplate().invokeNativeGet(frame, idProp.getName(), hValue, Op.A_STACK);
