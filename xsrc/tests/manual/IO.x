@@ -93,10 +93,11 @@ module TestIO
                 |   "married" : true,
                 |   "parent" : false,
                 |   "reason" : null,
-                |   "fav_nums" : [ 17, 42 ]
+                |   "fav_nums" : [ 17, 42 ],
+                |   "probability" : 0.10,
                 |   "dog" :
                 |      {
-                |      "name" : "Spot"
+                |      "name" : "Spot",
                 |      "age" : 7,
                 |      }
                 |}
