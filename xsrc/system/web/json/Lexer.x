@@ -415,8 +415,6 @@ class Lexer
                     throw new IOException($"expected digit; found '{ch}'");
                     }
                 }
-
-            --count;
             }
         while (False);
 

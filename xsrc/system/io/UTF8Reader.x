@@ -65,15 +65,9 @@ class UTF8Reader
      */
     @Abstract
     private static const AbstractPos
-            implements Position
+            extends Reader.AbstractPos
         {
         // TODO GG - it appears that this class has fields for the 3 Position properties (it should not)
-
-        Int lineStartOffset.get()
-            {
-            return offset - lineOffset;
-            }
-
         @Abstract
         @RO Int rawOffset;
         }
@@ -129,12 +123,6 @@ class UTF8Reader
         Int rawOffset.get()
             {
             return offset + (combo & 0xFFF);
-            }
-
-        @Override
-        String toString() // TODO GG - this doesn't get called (the autogen gets used instead)
-            {
-            return $"@{offset}({rawOffset}) ({lineNumber}:{lineOffset})";
             }
         }
 
