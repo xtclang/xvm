@@ -14,7 +14,7 @@ const String
      */
     construct(Char[] chars)
         {
-        this.chars = chars;
+        this.chars = chars.ensureConst(False); // TODO GG
         }
 
 
@@ -23,7 +23,7 @@ const String
     /**
      * The array of characters that form the content of the String.
      */
-    private Char[] chars;
+    private immutable Char[] chars; // TODO GG - should not need to specify immutable here
 
 
     // ----- operators -----------------------------------------------------------------------------

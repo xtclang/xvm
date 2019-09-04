@@ -16,19 +16,66 @@ class CharArrayReader(immutable Char[] chars)
         }
 
 
+    // ----- properties ----------------------------------------------------------------------------
+
+    /**
+     * The character contents.
+     */
+    protected/private immutable Char[] chars;
+
+    /**
+     * A cached String representing the contents.
+     */
+    protected/private String? str;
+
+    /**
+     * @return the total number of characters represented by the reader
+     */
+    Int size.get()
+        {
+        return chars.size;
+        }
+
+    /**
+     * @return the remaining (yet to be read) number of characters represented by the reader
+     */
+    Int remaining.get()
+        {
+        return size - offset;
+        }
+
+    /**
+     * The offset of the first character (if any) in the current line.
+     */
+    protected/private Int lineStartOffset;
+
+
     // ----- Position implementation ---------------------------------------------------------------
+
+    /**
+     * Abstract base class for the two Position implementations.
+     */
+    @Abstract
+    private static const AbstractPos
+            implements Position
+        {
+        Int lineStartOffset.get()
+            {
+            return offset - lineOffset;
+            }
+        }
 
     /**
      * Simple constant implementation of the Position interface.
      */
     private static const SimplePos(Int offset, Int lineNumber, Int lineOffset)
-            implements Position;
+            extends AbstractPos;
 
     /**
      * A Position implementation that packs all the data into a single Int.
      */
     private static const TinyPos
-            implements Position
+            extends AbstractPos
         {
         construct(Int offset, Int lineNumber, Int lineOffset)
             {
@@ -62,35 +109,6 @@ class CharArrayReader(immutable Char[] chars)
         }
 
 
-    // ----- properties ----------------------------------------------------------------------------
-
-    /**
-     * The character contents.
-     */
-    protected/private immutable Char[] chars;
-
-    /**
-     * A cached String representing the contents.
-     */
-    protected/private String? str;
-
-    /**
-     * @return the total number of characters represented by the reader
-     */
-    Int size.get()
-        {
-        return chars.size;
-        }
-
-    /**
-     * @return the remaining (yet to be read) number of characters represented by the reader
-     */
-    Int remaining.get()
-        {
-        return size - offset;
-        }
-
-
     // ----- Reader operations ---------------------------------------------------------------------
 
     @Override
@@ -100,13 +118,16 @@ class CharArrayReader(immutable Char[] chars)
     public/private Int lineNumber;
 
     @Override
-    public/private Int lineOffset;
+    Int lineOffset.get()
+        {
+        return offset - lineStartOffset;
+        }
 
     @Override
-    Position position
+    AbstractPos position
         {
         @Override
-        Position get()
+        AbstractPos get()
             {
             return offset <= 0xFFFFFF && lineNumber <= 0xFFFFF && lineOffset <= 0xFFFFF
                     ? new TinyPos(offset, lineNumber, lineOffset)
@@ -114,13 +135,13 @@ class CharArrayReader(immutable Char[] chars)
             }
 
         @Override
-        void set(Position position)
+        void set(AbstractPos position)
             {
-            assert:arg position.is(SimplePos) || position.is(TinyPos);
+            // TODO GG - assert:arg position.is(SimplePos) || position.is(TinyPos);
 
-            offset     = position.offset;
-            lineNumber = position.lineNumber;
-            lineOffset = position.lineOffset;
+            offset          = position.offset;
+            lineNumber      = position.lineNumber;
+            lineStartOffset = position.lineStartOffset;
             }
         }
 
@@ -133,21 +154,62 @@ class CharArrayReader(immutable Char[] chars)
     @Override
     Char nextChar()
         {
-        TODO
+        if (eof)
+            {
+            throw new EndOfFile();
+            }
+            
+        Char ch = chars[offset++];
+
+        HandleTerminator: if (ch.isLineTerminator())
+            {
+            if (ch == '\r' && !eof)
+                {
+                // there's a weird situation that hearkens back to the teletype (shortly after the
+                // invention of the wheel), where a CR was required before an LF in order to achieve
+                // the functionality of a "new line"; Microsoft retained this antiquated convention,
+                // so we are forced to peek at the next char, see if it is an LF, and if it is, then
+                // we have to ignore the preceding CR (as if it were a regular character), because
+                // it's followed by something that will actually act as a for-real line terminator
+                if (chars[offset] == '\n')
+                    {
+                    break HandleTerminator;
+                    }
+                }
+
+            ++lineNumber;
+            lineStartOffset = offset;
+            }
+
+        return ch;
         }
 
     @Override
     Reader rewind(Int count = 1)
         {
-        TODO
+        assert:arg count >= 0;
+        if (count > offset)
+            {
+            return reset();
+            }
+
+        if (count <= lineOffset)
+            {
+            // rewind within the current line
+            offset -= count;
+            return this;
+            }
+
+        // TODO this could be optimized further
+        return super(count);
         }
 
     @Override
     Reader reset()
         {
-        offset     = 0;
-        lineNumber = 0;
-        lineOffset = 0;
+        offset          = 0;
+        lineNumber      = 0;
+        lineStartOffset = 0;
 
         return this;
         }

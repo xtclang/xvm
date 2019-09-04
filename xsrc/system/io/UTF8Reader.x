@@ -61,7 +61,7 @@ class UTF8Reader
     // ----- Position implementation ---------------------------------------------------------------
 
     /**
-     * Simple constant implementation of the Position interface.
+     * Abstract base class for the two Position implementations.
      */
     @Abstract
     private static const AbstractPos
