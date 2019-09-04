@@ -3203,7 +3203,14 @@ public class Parser
                 return new ThrowExpression(expect(Id.THROW), parseTernaryExpression());
 
             case ASSERT:
-                return new ThrowExpression(expect(Id.ASSERT), null);
+            case ASSERT_RND:
+            case ASSERT_ARG:
+            case ASSERT_BOUNDS:
+            case ASSERT_TODO:
+            case ASSERT_ONCE:
+            case ASSERT_TEST:
+            case ASSERT_DBG:
+                return new ThrowExpression(current(), null);
 
             case TODO:
                 return parseTodoExpression();
@@ -5040,6 +5047,13 @@ public class Parser
                     return;
 
                 case ASSERT:
+                case ASSERT_RND:
+                case ASSERT_ARG:
+                case ASSERT_BOUNDS:
+                case ASSERT_TODO:
+                case ASSERT_ONCE:
+                case ASSERT_TEST:
+                case ASSERT_DBG:
                 case BREAK:
                 case CLASS:
                 case CONST:

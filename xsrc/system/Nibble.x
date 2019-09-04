@@ -30,7 +30,7 @@ const Nibble
             case '0'..'9': Nibble.of(ch - '0' + 0x0);
             case 'A'..'F': Nibble.of(ch - 'A' + 0xA);
             case 'a'..'f': Nibble.of(ch - 'a' + 0xa);
-            default: assert; // TODO GG assert:arg;
+            default: assert:arg;
             };
         }
 
