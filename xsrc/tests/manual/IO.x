@@ -1,11 +1,14 @@
 module TestIO
     {
     import Ecstasy.io.ByteArrayInputStream;
+    import Ecstasy.io.CharArrayReader;
     import Ecstasy.io.DataInputStream;
     import Ecstasy.io.InputStream;
     import Ecstasy.io.JavaDataInput;
     import Ecstasy.io.Reader;
     import Ecstasy.io.UTF8Reader;
+    import Ecstasy.web.json.Lexer;
+    import Ecstasy.web.json.Lexer.Token;
 
     @Inject Console console;
 
@@ -14,6 +17,7 @@ module TestIO
         testInputStream();
         testJavaUTF();
         testUTF8Reader();
+        testJSONLex();
         }
 
     void testInputStream()
@@ -48,14 +52,14 @@ module TestIO
         console.println($"string={in.readString()}");
         }
 
+    static String posDesc(Reader.Position pos)
+        {
+        return $"@{pos.offset} {pos.lineNumber}:{pos.lineOffset}";
+        }
+
     void testUTF8Reader()
         {
         console.println("\n*** testUTF8Reader()");
-
-        static String posDesc(Reader.Position pos)
-            {
-            return $"@{pos.offset} {pos.lineNumber}:{pos.lineOffset}";
-            }
 
         InputStream     inRaw  = new ByteArrayInputStream(#./IO.x);
         UTF8Reader      in     = new UTF8Reader(inRaw);
@@ -74,6 +78,36 @@ module TestIO
                 }
             pos = in.position;
             }
+
         console.println($"(eof) position={posDesc(pos)} line={in.lineNumber}");
+        }
+
+    void testJSONLex()
+        {
+        console.println("\n*** testJSONLex()");
+
+        Reader reader = new CharArrayReader(
+               `|{
+                |   "name" : "Bob",
+                |   "age" : 23,
+                |   "married" : true,
+                |   "parent" : false,
+                |   "reason" : null,
+                |   "fav_nums" : [ 17, 42 ]
+                |   "dog" :
+                |      {
+                |      "name" : "Spot"
+                |      "age" : 7,
+                |      }
+                |}
+                );
+
+        Lexer lexer = new Lexer(reader);
+        while (Token tok := lexer.next())
+            {
+            console.println($"token={tok}");
+            }
+
+        console.println($"(eof) position={posDesc(reader.position)}");
         }
     }
