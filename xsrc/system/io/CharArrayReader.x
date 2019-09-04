@@ -1,3 +1,5 @@
+import Reader.AbstractPos;
+
 /**
  * A CharArrayReader provides a Reader interface on top of a raw `Char[]` or a `String`. Because its
  * unit of storage is already in the form of a `Char`, its navigation both forwards and backwards
@@ -51,19 +53,6 @@ class CharArrayReader(immutable Char[] chars)
 
 
     // ----- Position implementation ---------------------------------------------------------------
-
-    /**
-     * Abstract base class for the two Position implementations.
-     */
-    @Abstract
-    private static const AbstractPos
-            implements Position
-        {
-        Int lineStartOffset.get()
-            {
-            return offset - lineOffset;
-            }
-        }
 
     /**
      * Simple constant implementation of the Position interface.
@@ -158,7 +147,7 @@ class CharArrayReader(immutable Char[] chars)
             {
             throw new EndOfFile();
             }
-            
+
         Char ch = chars[offset++];
 
         HandleTerminator: if (ch.isLineTerminator())
