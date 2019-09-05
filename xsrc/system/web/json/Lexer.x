@@ -123,7 +123,6 @@ class Lexer
     construct(Reader reader)
         {
         this.reader = reader;
-        // TODO GG: this should not compile: eatWhitespace();
         }
     finally
         {
