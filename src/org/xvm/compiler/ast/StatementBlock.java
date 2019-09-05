@@ -713,7 +713,7 @@ public class StatementBlock
                     TypeInfo       info       = typePro.ensureTypeInfo();
                     MethodConstant idMethod   = getMethod().getIdentityConstant();
                     MethodInfo     infoMethod = info.getMethodById(idMethod);
-                    return infoMethod.hasSuper(info);
+                    return infoMethod != null && infoMethod.hasSuper(info);
                     }
 
                 default:
