@@ -104,9 +104,9 @@ public class IsExpression
                 {
                 NameExpression exprName = (NameExpression) exprTarget;
 
-                ctx.narrowType(exprName, Branch.WhenTrue,
+                exprName.narrowType(ctx, Branch.WhenTrue,
                         RelationalTypeConstant.combineWith(pool, typeTarget, typeTest));
-                ctx.narrowType(exprName, Branch.WhenFalse,
+                exprName.narrowType(ctx, Branch.WhenFalse,
                         RelationalTypeConstant.combineWithout(pool, typeTarget, typeTest));
                 }
             }

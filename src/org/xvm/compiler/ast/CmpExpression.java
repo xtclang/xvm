@@ -337,8 +337,8 @@ public class CmpExpression
                 break;
             }
 
-        ctx.narrowType(exprTarget, Branch.WhenTrue,  typeTrue);
-        ctx.narrowType(exprTarget, Branch.WhenFalse, typeFalse);
+        exprTarget.narrowType(ctx, Branch.WhenTrue,  typeTrue);
+        exprTarget.narrowType(ctx, Branch.WhenFalse, typeFalse);
         return true;
         }
 

@@ -4,6 +4,7 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -359,6 +360,7 @@ public class IntersectionTypeConstant
         {
         Map<PropertyConstant, PropertyInfo> map = new HashMap<>();
 
+        NextEntry:
         for (Map.Entry<String, PropertyInfo> entry : info1.ensurePropertiesByName().entrySet())
             {
             String sName = entry.getKey();
@@ -367,11 +369,34 @@ public class IntersectionTypeConstant
             if (prop2 != null)
                 {
                 // the property exists in both maps;
-                // TODO: check for the type compatibility and maybe a "common" structure
-                //       and then choose/build the best PropertyInfo
+                // check for a "common" structure and build a "subset" info
 
                 PropertyInfo prop1 = entry.getValue();
-                map.put(prop1.getIdentity(), prop1);
+                if (prop1.equals(prop2))
+                    {
+                    // trivial "equality" scenario
+                    map.put(prop1.getIdentity(), prop1);
+                    continue;
+                    }
+
+                PropertyBody[] abody1 = prop1.getPropertyBodies();
+                PropertyBody[] abody2 = prop2.getPropertyBodies();
+
+                for (PropertyBody body1 : abody1)
+                    {
+                    PropertyConstant id1 = body1.getIdentity();
+
+                    for (PropertyBody body2 : abody2)
+                        {
+                        if (body2.getIdentity().equals(id1))
+                            {
+                            // for now we use just one body; may need to take a full chain
+                            // (e.g. Arrays.copyOfRange(abody1, i1, c1))
+                            map.put(id1, new PropertyInfo(body1, prop1.getRank()));
+                            continue NextEntry;
+                            }
+                        }
+                    }
                 }
             }
         return map;
@@ -381,6 +406,7 @@ public class IntersectionTypeConstant
         {
         Map<MethodConstant, MethodInfo> map = new HashMap<>();
 
+        NextEntry:
         for (Map.Entry<SignatureConstant, MethodInfo> entry : info1.ensureMethodsBySignature().entrySet())
             {
             SignatureConstant sig = entry.getKey();
@@ -389,10 +415,33 @@ public class IntersectionTypeConstant
             if (method2 != null && !method2.isConstructor())
                 {
                 // the method exists in both maps;
-                // TODO: check for the compatibility and choose the best MethodInfo
+                // check for a "common" structure and build a "subset" info
 
                 MethodInfo method1 = entry.getValue();
-                map.put(method1.getIdentity(), method1);
+                if (method1.equals(method2))
+                    {
+                    // trivial "equality" scenario
+                    map.put(method1.getIdentity(), method1);
+                    continue;
+                    }
+
+                MethodBody[] abody1 = method1.getChain();
+                MethodBody[] abody2 = method2.getChain();
+
+                for (int i1 = 0, c1 = abody1.length; i1 < c1; i1++)
+                    {
+                    MethodBody     body1 = abody1[i1];
+                    MethodConstant id1   = body1.getIdentity();
+
+                    for (MethodBody body2 : abody2)
+                        {
+                        if (body2.getIdentity().equals(id1))
+                            {
+                            map.put(id1, new MethodInfo(Arrays.copyOfRange(abody1, i1, c1)));
+                            continue NextEntry;
+                            }
+                        }
+                    }
                 }
             }
         return map;

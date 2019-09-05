@@ -27,10 +27,9 @@ import org.xvm.asm.Register;
 import org.xvm.asm.Assignment;
 
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.RelationalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.asm.op.MoveThis;
 
@@ -552,7 +551,7 @@ public class Context
         {
         if (branch == Branch.Always && !isVarDeclaredInThisScope(sName))
             {
-            getOuterContext().narrowLocalRegister(sName, arg);
+            getOuterContext().replaceArgument(sName, branch, arg);
             }
         }
 
@@ -568,7 +567,7 @@ public class Context
         {
         if (branch == Branch.Always)
             {
-            getOuterContext().narrowFormalType(sName, branch, typeNarrow);
+            getOuterContext().replaceFormalType(sName, branch, typeNarrow);
             }
         }
 
@@ -1217,109 +1216,6 @@ public class Context
         }
 
     /**
-     * Narrow the type of the specified variable in this context for this branch.
-     * <p/>
-     * Note: This can only be used during the validate() stage after the name expression
-     *       has been validated.
-     *
-     * @param exprName    the NameExpression representing the variable
-     * @param branch      the branch
-     * @param typeNarrow  the narrowing type
-     */
-    public void narrowType(NameExpression exprName, Branch branch, TypeConstant typeNarrow)
-        {
-        if (typeNarrow != null)
-            {
-            assert exprName.isValidated();
-
-            if (exprName.left != null)
-                {
-                // TODO: to allow an expression "a.b.c" to be narrowed, all parents have to be immutable
-                return;
-                }
-
-            String   sName = exprName.getName();
-            Argument arg   = exprName.resolveRawArgument(this, false, ErrorListener.BLACKHOLE);
-
-            // we are only concerned with registers and type parameters;
-            // properties and constants are ignored
-            if (arg instanceof Register)
-                {
-                narrowLocalRegister(sName, (Register) arg, branch, typeNarrow);
-                }
-            else
-                {
-                if (arg instanceof TargetInfo)
-                    {
-                    TargetInfo       info = (TargetInfo) arg;
-                    IdentityConstant id   = info.getId();
-                    if (id instanceof PropertyConstant)
-                        {
-                        PropertyConstant idProp = (PropertyConstant) arg;
-
-                        assert sName.equals(id.getName());
-
-                        if (idProp.isFormalType())
-                            {
-                            narrowFormalType(sName, branch, new TargetInfo(info, typeNarrow));
-                            }
-                        else  // allow narrowing for immutable properties
-                            {
-                            TypeConstant     typeTarget = info.getTargetType();
-                            IdentityConstant idTarget   = typeTarget.getSingleUnderlyingClass(false);
-                            if (idTarget.equals(getThisClass().getIdentityConstant()) &&
-                                    getMethod().isConstructor())
-                                {
-                                // no property narrowing in the constructor
-                                }
-                            else if (typeTarget.isImmutable())
-                                {
-                                narrowProperty(sName, idProp, branch, new TargetInfo(info, typeNarrow));
-                                }
-                            }
-                        }
-                    }
-                else if (arg instanceof PropertyConstant)
-                    {
-                    PropertyConstant idProp = (PropertyConstant) arg;
-
-                    assert sName.equals(idProp.getName());
-
-                    if (idProp.isFormalType())
-                        {
-                        assert typeNarrow.isTypeOfType();
-
-                        Register regFormal = new Register(typeNarrow);
-                        regFormal.markEffectivelyFinal();
-                        narrowFormalType(sName, branch, regFormal);
-                        }
-                    else // allow narrowing for immutable properties
-                        {
-                        if (getMethod().isConstructor())
-                            {
-                            // no property narrowing in the constructor
-                            }
-                        else if (getThisClass().isConst())
-                            {
-                            TargetInfo info = new TargetInfo(sName, idProp, true, getThisType(), 0);
-                            narrowProperty(sName, idProp, branch, new TargetInfo(info, typeNarrow));
-                            }
-                        }
-                    }
-                else if (arg instanceof TypeParameterConstant)
-                    {
-                    TypeParameterConstant contParam = (TypeParameterConstant) arg;
-                    MethodConstant        idMethod  = contParam.getMethod();
-                    int                   nParam    = contParam.getRegister();
-                    MethodStructure       method    = (MethodStructure) idMethod.getComponent();
-
-                    // narrowTypeParameter(sName, branch, typeNarrow);
-                    }
-                }
-            }
-        }
-
-    /**
      * Narrow the type of the specified variable in this context for the specified branch.
      */
     protected void narrowLocalRegister(String sName, Register reg,
@@ -1327,40 +1223,48 @@ public class Context
         {
         assert typeNarrow.isA(reg.getType()) || typeNarrow.isA(reg.getOriginalType());
 
-        Register regNarrow = reg.narrowType(typeNarrow);
+        replaceArgument(sName, branch, reg.narrowType(typeNarrow));
+        }
+
+    /**
+     * Replace the existing argument with the specified one for the given branch.
+     */
+    protected void replaceArgument(String sName, Branch branch, Argument argNew)
+        {
         if (branch == Branch.Always)
             {
-            narrowLocalRegister(sName, regNarrow);
+            if (argNew instanceof Register && isVarDeclaredInThisScope(sName))
+                {
+                // the narrowing register is replacing a local register; remember that fact
+                ((Register) argNew).markInPlace();
+                }
+            ensureNameMap().put(sName, argNew);
             }
         else
             {
-            ensureNarrowingMap(branch == Branch.WhenTrue).put(sName, regNarrow);
+            ensureNarrowingMap(branch == Branch.WhenTrue).put(sName, argNew);
             }
         }
 
     /**
-     * Narrow the type of the specified variable in this context for the "always" branch.
+     * Replace (narrow) the formal parameter's type in this context with the specified argument's type.
      */
-    protected void narrowLocalRegister(String sName, Argument argNarrow)
-        {
-        if (argNarrow instanceof Register && isVarDeclaredInThisScope(sName))
-            {
-            // the narrowing register is replacing a local register; remember that fact
-            ((Register) argNarrow).markInPlace();
-            }
-        ensureNameMap().put(sName, argNarrow);
-        }
-
-    /**
-     * Narrow the formal parameter's type in this context.
-     */
-    protected void narrowFormalType(String sName, Branch branch, Argument argNarrow)
+    protected void replaceFormalArgument(String sName, Branch branch, Argument argNew)
         {
         // place the argument with the narrowed formal type (used by NamedTypeExpression)
-        putLocalVar(sName, branch, argNarrow);
+        putLocalVar(sName, branch, argNew);
 
-        // keep the narrow type to resolve parameterized types coming from outer scopes
-        ensureFormalTypeMap(branch).put(sName, argNarrow.getType());
+        replaceFormalType(sName, branch, argNew.getType());
+        }
+
+    /**
+     * Replace (narrow) the formal parameter's type in this context.
+     */
+    protected void replaceFormalType(String sName, Branch branch, TypeConstant typeNew)
+        {
+        assert typeNew.isTypeOfType();
+
+        ensureFormalTypeMap(branch).put(sName, typeNew);
         }
 
     /**
@@ -1369,17 +1273,56 @@ public class Context
     protected void narrowProperty(String sName, PropertyConstant idProp,
                                   Branch branch, Argument argNarrow)
         {
-        TypeConstant typeProp = idProp.getType();
+        assert argNarrow.getType().isA(idProp.getType());
 
-        assert argNarrow.getType().isA(typeProp);
+        replaceArgument(sName, branch, argNarrow);
+        }
 
-        if (branch == Branch.Always)
+    /**
+     * Merge the types of the existing argument with the specified one for the given branch.
+     */
+    protected void joinArgument(String sName, Branch branch, Argument argNew)
+        {
+        Map<String, Argument> map = branch == Branch.Always
+            ? ensureNameMap()
+            : ensureNarrowingMap(branch == Branch.WhenTrue);
+
+        Argument argOld = map.get(sName);
+        if (argOld != null)
             {
-            ensureNameMap().put(sName, argNarrow);
+            if (argOld instanceof Register)
+                {
+                TypeConstant typeOld = argOld.getType();
+                TypeConstant typeNew = argNew.getType();
+
+                TypeConstant typeJoin = RelationalTypeConstant.intersect(pool(), typeNew, typeOld);
+                map.put(sName, ((Register) argOld).narrowType(typeJoin));
+                }
+            else
+                {
+                map.remove(sName);
+                }
+            }
+        }
+
+    /**
+     * Merge the types of the existing argument with the specified one for the given branch.
+     */
+    protected void joinFormalType(String sName, Branch branch, Argument argNew)
+        {
+        Map<String, TypeConstant> map = ensureFormalTypeMap(branch);
+
+        TypeConstant typeOld = map.get(sName);
+        if (typeOld != null)
+            {
+            TypeConstant typeNew = argNew.getType();
+
+            TypeConstant typeJoin = RelationalTypeConstant.intersect(pool(), typeNew, typeOld);
+            map.put(sName, typeJoin);
             }
         else
             {
-            ensureNarrowingMap(branch == Branch.WhenTrue).put(sName, argNarrow);
+            map.remove(sName);
             }
         }
 
@@ -1760,14 +1703,14 @@ public class Context
                         {
                         if (!typeTrue.equals(typeOrig))
                             {
-                            ctxOuter.narrowLocalRegister(sName, argTrue);
+                            ctxOuter.replaceArgument(sName, Branch.Always, argTrue);
                             }
                         }
                     else if (typeTrue.isA(typeFalse))
                         {
                         if (!typeFalse.equals(typeOrig))
                             {
-                            ctxOuter.narrowLocalRegister(sName, argFalse);
+                            ctxOuter.replaceArgument(sName, Branch.Always, argFalse);
                             }
                         }
                     }
@@ -1792,14 +1735,14 @@ public class Context
                         {
                         if (!typeTrue.equals(typeOrig))
                             {
-                            ctxOuter.ensureFormalTypeMap(Branch.Always).put(sName, typeTrue);
+                            ctxOuter.replaceFormalType(sName, Branch.Always, typeTrue);
                             }
                         }
                     else if (typeTrue.isA(typeFalse))
                         {
                         if (!typeFalse.equals(typeOrig))
                             {
-                            ctxOuter.ensureFormalTypeMap(Branch.Always).put(sName, typeFalse);
+                            ctxOuter.replaceFormalType(sName, Branch.Always, typeFalse);
                             }
                         }
                     }
@@ -1907,7 +1850,7 @@ public class Context
             // promote our "always" into the corresponding parent's branch
             if (branch == Branch.Always && !isVarDeclaredInThisScope(sName))
                 {
-                getOuterContext().ensureNarrowingMap(m_fWhenTrue).put(sName, arg);
+                getOuterContext().replaceArgument(sName, Branch.of(m_fWhenTrue), arg);
                 }
             }
 
@@ -1917,7 +1860,7 @@ public class Context
             // promote our "always" into the corresponding parent's branch
             if (branch == Branch.Always)
                 {
-                getOuterContext().ensureFormalTypeMap(Branch.of(m_fWhenTrue)).put(sName, typeNarrowed);
+                getOuterContext().replaceFormalType(sName, Branch.of(m_fWhenTrue), typeNarrowed);
                 }
             }
 
@@ -1980,9 +1923,16 @@ public class Context
             super.promoteNarrowedType(sName, arg, branch);
 
             // promote our "true" into the parent's "true" branch
-            if (branch == Branch.WhenTrue)
+            // join our "false" with the parent's "false"
+            switch (branch)
                 {
-                getOuterContext().ensureNarrowingMap(true).put(sName, arg);
+                case WhenTrue:
+                    getOuterContext().replaceArgument(sName, branch, arg);
+                    break;
+
+                case WhenFalse:
+                    getOuterContext().joinArgument(sName, branch, arg);
+                    break;
                 }
             }
 
@@ -1991,10 +1941,18 @@ public class Context
             {
             super.promoteNarrowedFormalType(sName, typeNarrowed, branch);
 
-            // promote our "true" into the parent's "true" branch
-            if (branch != Branch.WhenFalse)
+            // promote our "true" into the parent's "true" branch and
+            // join our "false" with the parent's "false"
+            switch (branch)
                 {
-                getOuterContext().ensureFormalTypeMap(branch).put(sName, typeNarrowed);
+                case WhenTrue:
+                case Always:
+                    getOuterContext().replaceFormalType(sName, branch, typeNarrowed);
+                    break;
+
+                case WhenFalse:
+                    getOuterContext().joinFormalType(sName, branch, typeNarrowed);
+                    break;
                 }
             }
         }
@@ -2054,10 +2012,17 @@ public class Context
             {
             super.promoteNarrowedType(sName, arg, branch);
 
-            // promote our "false" into the parent's "false" branch
-            if (branch == Branch.WhenFalse)
+            // promote our "false" into the parent's "false" branch and
+            // join our "true" with the parent's "true"
+            switch (branch)
                 {
-                getOuterContext().ensureNarrowingMap(false).put(sName, arg);
+                case WhenFalse:
+                    getOuterContext().replaceArgument(sName, branch, arg);
+                    break;
+
+                case WhenTrue:
+                    getOuterContext().joinArgument(sName, branch, arg);
+                    break;
                 }
             }
 
@@ -2066,10 +2031,18 @@ public class Context
             {
             super.promoteNarrowedFormalType(sName, typeNarrowed, branch);
 
-            // promote our "false" into the parent's "false" branch
-            if (branch == Branch.WhenFalse)
+            // promote our "false" into the parent's "false" branch and
+            // join our "true" with the parent's "true"
+            switch (branch)
                 {
-                getOuterContext().ensureFormalTypeMap(branch).put(sName, typeNarrowed);
+                case WhenFalse:
+                case Always:
+                    getOuterContext().replaceFormalType(sName, branch, typeNarrowed);
+                    break;
+
+                case WhenTrue:
+                    getOuterContext().joinFormalType(sName, branch, typeNarrowed);
+                    break;
                 }
             }
         }
@@ -2127,7 +2100,7 @@ public class Context
                 }
             else
                 {
-                getOuterContext().ensureNarrowingMap(branch != Branch.WhenTrue).put(sName, arg);
+                getOuterContext().replaceArgument(sName, branch.complement(), arg);
                 }
             }
 
@@ -2140,7 +2113,7 @@ public class Context
                 }
             else
                 {
-                getOuterContext().ensureFormalTypeMap(branch.complement()).put(sName, typeNarrowed);
+                getOuterContext().replaceFormalType(sName, branch.complement(), typeNarrowed);
                 }
             }
         }

@@ -130,6 +130,35 @@ public abstract class RelationalTypeConstant
         }
 
     /**
+     * Combine the specified types and attempt to produce a minimal representation of the
+     * type that both specified types are known to be assignable to.
+     *
+     * @return a reduction for the union of the specified types
+     */
+    public static TypeConstant intersect(ConstantPool pool, TypeConstant type1, TypeConstant type2)
+        {
+        type1 = type1.resolveTypedefs();
+        type2 = type2.resolveTypedefs();
+
+        if (type1.isA(type2))
+            {
+            return type2;
+            }
+        if (type2.isA(type1))
+            {
+            return type1;
+            }
+
+        // type Type is known to have a distributive property:
+        // Type<X> | Type<Y> == Type<X | Y>
+        return type1.isTypeOfType() && type1.getParamsCount() > 0 &&
+               type2.isTypeOfType() && type1.getParamsCount() > 0
+                ? pool.ensureParameterizedTypeConstant(pool.typeType(),
+                    intersect(pool, type1.getParamTypesArray()[0], type2.getParamTypesArray()[0]))
+                : pool.ensureIntersectionTypeConstant(type1, type2);
+        }
+
+    /**
      * Produce a minimal representation the type that is known to be assignable to the first but
      * is also known not to be the second.
      *

@@ -536,7 +536,7 @@ public class AssertStatement
             // promote our "true" into the parent's "always" branch
             if (branch == Branch.WhenTrue)
                 {
-                getOuterContext().narrowLocalRegister(sName, arg); // Always
+                getOuterContext().replaceArgument(sName, Branch.Always, arg);
                 }
             }
 
@@ -548,7 +548,7 @@ public class AssertStatement
             // promote our "true" into the parent's "always" branch
             if (branch == Branch.WhenTrue)
                 {
-                getOuterContext().ensureFormalTypeMap(Branch.Always).put(sName, typeNarrowed);
+                getOuterContext().replaceFormalType(sName, Branch.Always, typeNarrowed);
                 }
             }
         }

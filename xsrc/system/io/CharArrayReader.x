@@ -126,7 +126,7 @@ class CharArrayReader(immutable Char[] chars)
         @Override
         void set(AbstractPos position)
             {
-            // TODO GG - assert:arg position.is(SimplePos) || position.is(TinyPos);
+            assert:arg position.is(SimplePos) || position.is(TinyPos);
 
             offset          = position.offset;
             lineNumber      = position.lineNumber;

@@ -530,14 +530,14 @@ public class NameExpression
 
         TypeConstant typeThis = getType();
         TypeConstant typeNew  = aTypes[0];
-        Argument     arg     = ctx.getVar(name.getValueText());
-        TypeConstant typeOld = arg == null ? typeThis : arg.getType();
+        Argument     arg      = ctx.getVar(getName());
+        TypeConstant typeOld  = arg == null ? typeThis : arg.getType();
 
         if (!typeOld.equals(typeNew))
             {
             typeNew = RelationalTypeConstant.combineWith(pool(), typeNew, typeThis);
 
-            ctx.narrowType(this, Context.Branch.Always, typeNew);
+            narrowType(ctx, Context.Branch.Always, typeNew);
             }
         }
 
@@ -2283,6 +2283,109 @@ public class NameExpression
         return PropertyAccess.Left;
         }
 
+
+    /**
+     * Narrow the type of the variable represented by this expression for the specified context branch.
+     * <p/>
+     * Note: This can only be used during the validate() stage after this name expression
+     *       has been validated.
+     *
+     * @param ctx         the context
+     * @param branch      the branch
+     * @param typeNarrow  the narrowing type
+     */
+    public void narrowType(Context ctx, Context.Branch branch, TypeConstant typeNarrow)
+        {
+        if (typeNarrow != null)
+            {
+            assert isValidated();
+
+            if (left != null)
+                {
+                // TODO: to allow an expression "a.b.c" to be narrowed, all parents have to be immutable
+                return;
+                }
+
+            String   sName = getName();
+            Argument arg   = resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+
+            // we are only concerned with registers and type parameters;
+            // properties and constants are ignored
+            if (arg instanceof Register)
+                {
+                ctx.narrowLocalRegister(sName, (Register) arg, branch, typeNarrow);
+                }
+            else
+                {
+                if (arg instanceof TargetInfo)
+                    {
+                    TargetInfo       info = (TargetInfo) arg;
+                    IdentityConstant id   = info.getId();
+                    if (id instanceof PropertyConstant)
+                        {
+                        PropertyConstant idProp = (PropertyConstant) arg;
+
+                        assert sName.equals(id.getName());
+
+                        if (idProp.isFormalType())
+                            {
+                            ctx.replaceFormalArgument(sName, branch, new TargetInfo(info, typeNarrow));
+                            }
+                        else  // allow narrowing for immutable properties
+                            {
+                            TypeConstant     typeTarget = info.getTargetType();
+                            IdentityConstant idTarget   = typeTarget.getSingleUnderlyingClass(false);
+                            if (idTarget.equals(ctx.getThisClass().getIdentityConstant()) &&
+                                ctx.getMethod().isConstructor())
+                                {
+                                // no property narrowing in the constructor
+                                }
+                            else if (typeTarget.isImmutable())
+                                {
+                                ctx.narrowProperty(sName, idProp, branch, new TargetInfo(info, typeNarrow));
+                                }
+                            }
+                        }
+                    }
+                else if (arg instanceof PropertyConstant)
+                    {
+                    PropertyConstant idProp = (PropertyConstant) arg;
+
+                    assert sName.equals(idProp.getName());
+
+                    if (idProp.isFormalType())
+                        {
+                        assert typeNarrow.isTypeOfType();
+
+                        Register regFormal = new Register(typeNarrow);
+                        regFormal.markEffectivelyFinal();
+                        ctx.replaceFormalArgument(sName, branch, regFormal);
+                        }
+                    else // allow narrowing for immutable properties
+                        {
+                        if (ctx.getMethod().isConstructor())
+                            {
+                            // no property narrowing in the constructor
+                            }
+                        else if (ctx.getThisClass().isConst())
+                            {
+                            TargetInfo info = new TargetInfo(sName, idProp, true, ctx.getThisType(), 0);
+                            ctx.narrowProperty(sName, idProp, branch, new TargetInfo(info, typeNarrow));
+                            }
+                        }
+                    }
+                else if (arg instanceof TypeParameterConstant)
+                    {
+                    TypeParameterConstant contParam = (TypeParameterConstant) arg;
+                    MethodConstant        idMethod  = contParam.getMethod();
+                    int                   nParam    = contParam.getRegister();
+                    MethodStructure       method    = (MethodStructure) idMethod.getComponent();
+
+                    // ctx.narrowTypeParameter(sName, branch, typeNarrow);
+                    }
+                }
+            }
+        }
 
     // ----- debugging assistance ------------------------------------------------------------------
 
