@@ -3,14 +3,18 @@ package org.xvm.runtime.template.collections;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xBit;
+import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xUInt8;
 
 
 /**
@@ -34,6 +38,9 @@ public class xBitArray
     @Override
     public void initDeclared()
         {
+        ClassStructure mixin = f_templates.getClassStructure("collections.Array.BitArray");
+
+        mixin.findMethod("toByte", 0).setNative(true);
         }
 
     @Override
@@ -41,6 +48,24 @@ public class xBitArray
         {
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.ensureEcstasyTypeConstant("Bit"));
+        }
+
+    @Override
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
+        {
+        switch (method.getName())
+            {
+            case "toByte":
+                {
+                BitArrayHandle hBits = (BitArrayHandle) hTarget;
+                return hBits.m_cSize > 8
+                    ? frame.raiseException(xException.outOfBounds(frame, "Array is too big: " + hBits.m_cSize))
+                    : frame.assignValue(iReturn, xUInt8.INSTANCE.makeJavaLong(hBits.m_abValue[0]));
+                }
+            }
+
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
     @Override

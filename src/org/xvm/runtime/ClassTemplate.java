@@ -18,7 +18,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
@@ -275,69 +274,6 @@ public abstract class ClassTemplate
             if (prop != null)
                 {
                 return prop;
-                }
-            struct = struct.getSuper();
-            }
-        while (struct != null);
-
-        return null;
-        }
-
-    /**
-     * Find the specified method in this component or direct inheritance chain.
-     *
-     * @return the specified method of null
-     */
-    protected MethodStructure findMethod(String sName, TypeConstant[] atParam, TypeConstant[] atReturn)
-        {
-        ClassStructure struct = f_struct;
-        do
-            {
-            MultiMethodStructure mms = (MultiMethodStructure) struct.getChild(sName);
-            if (mms != null)
-                {
-                nextMethod:
-                for (MethodStructure method : mms.methods())
-                    {
-                    MethodConstant constMethod = method.getIdentityConstant();
-
-                    TypeConstant[] atParamTest = constMethod.getRawParams();
-                    TypeConstant[] atReturnTest = constMethod.getRawReturns();
-
-                    if (atParam != null)
-                        {
-                        int cParams = atParamTest.length;
-                        if (cParams != atParam.length)
-                            {
-                            continue;
-                            }
-
-                        for (int i = 0; i < cParams; i++)
-                            {
-                            if (!atParamTest[i].isA(atParam[i]))
-                                {
-                                continue nextMethod;
-                                }
-                            }
-                        }
-                    if (atReturn != null)
-                        {
-                        int cReturns = atReturnTest.length;
-                        if (cReturns != atReturn.length)
-                            {
-                            continue;
-                            }
-
-                        for (int i = 0; i < cReturns; i++)
-                            {
-                            if (!atReturnTest[i].isA(atReturn[i]))
-                                {
-                                continue nextMethod;
-                                }
-                            }
-                        }
-                    return method;
-                    }
                 }
             struct = struct.getSuper();
             }
@@ -1862,7 +1798,7 @@ public abstract class ClassTemplate
         TypeConstant[] atypeArg = f_templates.f_adapter.getTypeConstants(this, asParamType);
         TypeConstant[] atypeRet = f_templates.f_adapter.getTypeConstants(this, asRetType);
 
-        MethodStructure method = findMethod(sName, atypeArg, atypeRet);
+        MethodStructure method = f_struct.findMethod(sName, atypeArg, atypeRet);
         if (method == null)
             {
             System.err.println("Missing method " + f_sName + "." + sName +

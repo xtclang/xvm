@@ -1757,6 +1757,73 @@ public class ClassStructure
         }
 
     /**
+     * Helper method to find a method in this structure or the direct inheritance chain.
+     *
+     * @param sName        the method name
+     * @param atypeParam   the parameter types (optional)
+     * @param atypeReturn  the return types (optional)
+     *
+     * @return the first method that matches the specified types of null
+     */
+    public MethodStructure findMethod(String sName, TypeConstant[] atypeParam, TypeConstant[] atypeReturn)
+        {
+        ClassStructure struct = this;
+        do
+            {
+            MultiMethodStructure mms = (MultiMethodStructure) struct.getChild(sName);
+            if (mms != null)
+                {
+                nextMethod:
+                for (MethodStructure method : mms.methods())
+                    {
+                    MethodConstant constMethod = method.getIdentityConstant();
+
+                    TypeConstant[] atypeParamTest  = constMethod.getRawParams();
+                    TypeConstant[] atypeReturnTest = constMethod.getRawReturns();
+
+                    if (atypeParam != null)
+                        {
+                        int cParams = atypeParamTest.length;
+                        if (cParams != atypeParam.length)
+                            {
+                            continue;
+                            }
+
+                        for (int i = 0; i < cParams; i++)
+                            {
+                            if (!atypeParamTest[i].isA(atypeParam[i]))
+                                {
+                                continue nextMethod;
+                                }
+                            }
+                        }
+                    if (atypeReturn != null)
+                        {
+                        int cReturns = atypeReturnTest.length;
+                        if (cReturns != atypeReturn.length)
+                            {
+                            continue;
+                            }
+
+                        for (int i = 0; i < cReturns; i++)
+                            {
+                            if (!atypeReturnTest[i].isA(atypeReturn[i]))
+                                {
+                                continue nextMethod;
+                                }
+                            }
+                        }
+                    return method;
+                    }
+                }
+            struct = struct.getSuper();
+            }
+        while (struct != null);
+
+        return null;
+        }
+
+    /**
      * For this class structure representing an R-Value, find a contribution assignable to the
      * specified L-Value type.
      *
