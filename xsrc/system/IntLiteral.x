@@ -620,6 +620,11 @@ const IntLiteral(String text)
         return text;
         }
 
+    FPLiteral toFPLiteral()
+        {
+        return new FPLiteral(text);
+        }
+
 
     // ----- Stringable implementation -------------------------------------------------------------
 

@@ -142,11 +142,6 @@ class Lexer
     // ----- types ---------------------------------------------------------------------------------
 
     /**
-     * JSON primitive types are all JSON values except for arrays and objects.
-     */
-    typedef (Nullable | Boolean | IntLiteral | FPLiteral | String) Primitive;
-
-    /**
      * JSON is composed of these lexical elements.
      */
     enum Id
