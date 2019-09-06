@@ -1806,7 +1806,7 @@ public abstract class ClassTemplate
             }
         else
             {
-            method.setNative(true);
+            method.markNative();
             }
         }
 
@@ -1829,13 +1829,13 @@ public abstract class ClassTemplate
             MethodStructure methGetter = prop.getGetter();
             if (methGetter != null)
                 {
-                methGetter.setNative(true);
+                methGetter.markNative();
                 }
 
             MethodStructure methSetter = prop.getGetter();
             if (methSetter != null)
                 {
-                methSetter.setNative(true);
+                methSetter.markNative();
                 }
             }
         }

@@ -52,11 +52,6 @@ module TestIO
         console.println($"string={in.readString()}");
         }
 
-    static String posDesc(Reader.Position pos)
-        {
-        return $"@{pos.offset} {pos.lineNumber}:{pos.lineOffset}";
-        }
-
     void testUTF8Reader()
         {
         console.println("\n*** testUTF8Reader()");
@@ -69,7 +64,7 @@ module TestIO
             {
             if (loop.count <= 20 || inRaw.remaining <= 10)
                 {
-                console.println($"[{loop.count}] '{ch}' {posDesc(pos)}");
+                console.println($"[{loop.count}] '{ch}' {pos}");
                 }
             else if (!dotdot)
                 {
@@ -79,7 +74,7 @@ module TestIO
             pos = in.position;
             }
 
-        console.println($"(eof) position={posDesc(pos)} line={in.lineNumber}");
+        console.println($"(eof) position={pos} line={in.lineNumber}");
         }
 
     void testJSONLex()
@@ -109,6 +104,6 @@ module TestIO
             console.println($"token={tok}");
             }
 
-        console.println($"(eof) position={posDesc(reader.position)}");
+        console.println($"(eof) position={reader.position}");
         }
     }

@@ -92,7 +92,7 @@ public class MultiMethodStructure
         {
         Map<MethodConstant, MethodStructure> map = m_methodByConstant;
         return  map == null             ? 0
-              : m_tloIgnoreNative.get() ? (int) map.values().stream().filter(m -> !m.isNative()).count()
+              : m_tloIgnoreNative.get() ? (int) map.values().stream().filter(m -> !m.isTransient()).count()
               : map.size();
         }
 
@@ -195,7 +195,7 @@ public class MultiMethodStructure
         {
         return m_tloIgnoreNative.get()
                 ? methods().stream().
-                    filter(method -> !method.isNative()).collect(Collectors.toList())
+                    filter(method -> !method.isTransient()).collect(Collectors.toList())
                 : methods();
         }
 

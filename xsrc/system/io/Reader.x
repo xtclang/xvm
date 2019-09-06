@@ -46,25 +46,9 @@ interface Reader
             }
 
         @Override
-        String toString() // TODO GG - I want this stuff on Position or on AbstractPos (not the leaf)
+        String toString()
             {
             return $"({lineNumber}:{lineOffset})";
-            }
-
-        @Override
-        Int estimateStringLength() // TODO GG - I really did not want to have to write this method and the next one but const does not call toString()
-            {
-            return lineNumber.estimateStringLength() + lineOffset.estimateStringLength() + 3;
-            }
-
-        @Override
-        void appendTo(Appender<Char> appender)
-            {
-            appender.add('(');
-            lineNumber.appendTo(appender);
-            appender.add(':');
-            lineOffset.appendTo(appender);
-            appender.add(')');
             }
         }
 

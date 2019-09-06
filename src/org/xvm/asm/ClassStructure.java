@@ -2827,23 +2827,35 @@ public class ClassStructure
         }
 
     /**
-     * Ensure the method structures for the (funky) Const interface functions.
+     * Create necessary method structures for the Const interface functions and methods.
      *
-     * All the methods that are created artificially will be marked as "native" and should not be
-     * assembled (persisted) during the serialization phase.
+     * All the methods that are created artificially will be marked as "transient" and should not be
+     * persisted during the serialization phase.
+     *
+     * Note: we should not call "ensureAssembled" for generated code when called during the
+     *       compilation phase; it will be done by the compiler.
+     *
+     * @param fDisassemble  if true, indicates that this method is called during the "disassemble"
+     *                      phase, when the classes are constructed from it's persistent storage;
+     *                      false indicates that it's called during the compilation, when classes
+     *                      are created from the source code
      */
-    public void synthesizeConstInterface()
+    public void synthesizeConstInterface(boolean fDisassemble)
         {
         assert getFormat() == Format.CONST;
 
         ConstantPool pool = getConstantPool();
 
-        addConstFunction("equals",   2, pool.typeBoolean());
-        addConstFunction("compare",  2, pool.typeOrdered());
-        addConstFunction("hashCode", 1, pool.typeInt());
+        synthesizeConstFunction("equals",   2, pool.typeBoolean());
+        synthesizeConstFunction("compare",  2, pool.typeOrdered());
+        synthesizeConstFunction("hashCode", 1, pool.typeInt());
+        synthesizeAppendTo(fDisassemble);
         }
 
-    private void addConstFunction(String sName, int cParams, TypeConstant typeReturn)
+    /**
+     * Synthesize the function if it doesn't exist.
+     */
+    private void synthesizeConstFunction(String sName, int cParams, TypeConstant typeReturn)
         {
         MethodStructure fnThis = findMethod(sName, method ->
             {
@@ -2898,13 +2910,13 @@ public class ClassStructure
 
             Parameter[] aReturn = new Parameter[]
                 {
-                new Parameter(getConstantPool(), typeReturn, "", null, true, 0, false)
+                new Parameter(pool, typeReturn, "", null, true, 0, false)
                 };
 
             // 2) create the method structure and [yet unresolved] identity
             fnThis = createMethod(/*function*/ true, Constants.Access.PUBLIC, null,
-                    aReturn, sName, aParam, /*hasCode*/ true, /*usesSuper*/false);
-            fnThis.setNative(true);
+                    aReturn, sName, aParam, /*hasCode*/ true, /*usesSuper*/ false);
+            fnThis.markNative();
 
             // 3) resolve the identity
             MethodConstant idMethod    = fnThis.getIdentityConstant();
@@ -2920,6 +2932,80 @@ public class ClassStructure
 
             // 4) get rid of the unresolved constants
             fnThis.resolveTypedefs();
+            }
+        }
+
+    /**
+     * If explicit "toString()" exists and "appendTo()" does not, generate "appendTo()" to route to
+     * "toString" and a trivial "estimateStringLength".
+     */
+    private void synthesizeAppendTo(boolean fEnsureAssembled)
+        {
+        MethodStructure methToString = findMethod("toString", 0);
+        if (methToString != null)
+            {
+            ConstantPool pool         = getConstantPool();
+            TypeConstant typeAppender = pool.ensureParameterizedTypeConstant(
+                pool.ensureEcstasyTypeConstant("Appender"), pool.typeChar());
+
+            MethodStructure methAppendTo = findMethod("appendTo", 1, typeAppender);
+            if (methAppendTo == null)
+                {
+                Parameter[] aParam = new Parameter[]
+                    {
+                    new Parameter(pool, typeAppender, "appender", null, false, 0, false)
+                    };
+                Annotation[] aAnno = new Annotation[]
+                    {
+                    pool.ensureAnnotation(pool.clzOverride())
+                    };
+
+                methAppendTo = createMethod(/*function*/ false, Constants.Access.PUBLIC, aAnno,
+                        Parameter.NO_PARAMS, "appendTo", aParam, /*hasCode*/ true, /*usesSuper*/ false);
+                methAppendTo.markTransient();
+
+                MethodStructure.Code code = methAppendTo.ensureCode();
+
+                // void appendTo(Appender<Char> appender)
+                //    {
+                //    this.toString().appendTo(appender);
+                //    }
+                Register regThis     = new Register(typeAppender, Op.A_TARGET);
+                Register regAppender = new Register(typeAppender, 0);
+                Register regStack    = new Register(typeAppender, Op.A_STACK);
+
+                code.add(new Invoke_01(regThis, methToString.getIdentityConstant(), regStack));
+                code.add(new Invoke_10(regStack, methAppendTo.getIdentityConstant(), regAppender));
+                code.add(new Return_0());
+
+                if (fEnsureAssembled)
+                    {
+                    code.ensureAssembled();
+                    }
+
+                MethodStructure methEstimate = findMethod("estimateStringLength", 0);
+                if (methEstimate == null)
+                    {
+                    Parameter[] aReturn = new Parameter[]
+                        {
+                        new Parameter(pool, pool.typeInt(), "", null, true, 0, false)
+                        };
+                    methEstimate = createMethod(/*function*/ false, Constants.Access.PUBLIC, aAnno,
+                            aReturn, "estimateStringLength", Parameter.NO_PARAMS,
+                            /*hasCode*/ true, /*usesSuper*/ false);
+                    methEstimate.markTransient();
+
+                    code = methEstimate.ensureCode();
+
+                    // return 0;
+                    code.add(new Return_1(pool.val0()));
+
+                    if (fEnsureAssembled)
+                        {
+                        code.ensureAssembled();
+                        }
+                    }
+                }
             }
         }
 
@@ -2944,7 +3030,7 @@ public class ClassStructure
             // load the children proactively and synthesize the funky interface
             super.disassembleChildren(in, /*lazy*/ false);
 
-            synthesizeConstInterface();
+            synthesizeConstInterface(true);
             }
         else
             {

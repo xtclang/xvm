@@ -5,6 +5,8 @@ module TestSimple.xqiz.it
     void run()
         {
         import Ecstasy.collections.HashMap;
+
+        console.println("hello");
         }
 
     void testIn()

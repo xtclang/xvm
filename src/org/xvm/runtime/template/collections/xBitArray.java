@@ -40,7 +40,7 @@ public class xBitArray
         {
         ClassStructure mixin = f_templates.getClassStructure("collections.Array.BitArray");
 
-        mixin.findMethod("toByte", 0).setNative(true);
+        mixin.findMethod("toByte", 0).markNative();
         }
 
     @Override

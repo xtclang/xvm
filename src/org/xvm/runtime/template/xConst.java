@@ -61,9 +61,9 @@ public class xConst
             ConstantPool pool = pool();
 
             // equals and Comparable support
-            f_struct.findMethod("equals",   3).setNative(true);
-            f_struct.findMethod("compare",  3).setNative(true);
-            f_struct.findMethod("hashCode", 2).setNative(true);
+            f_struct.findMethod("equals",   3).markNative();
+            f_struct.findMethod("compare",  3).markNative();
+            f_struct.findMethod("hashCode", 2).markNative();
 
             // Stringable support
             ClassStructure clzHelper = f_templates.getClassStructure("_native.ConstHelper");
