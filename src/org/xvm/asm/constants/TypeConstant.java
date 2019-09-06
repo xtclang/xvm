@@ -4175,11 +4175,10 @@ public abstract class TypeConstant
                 }
             }
 
-        MethodConstant    idResult   = (MethodConstant) idBaseClass.appendNestedIdentity(pool, nidContrib);
-        SignatureConstant sigContrib = methodMixin.getSignature();
+        MethodConstant idResult = (MethodConstant) idBaseClass.appendNestedIdentity(pool, nidContrib);
 
         mapMethods.put(idResult, methodResult);
-        mapVirtMethods.put(sigContrib, methodResult);
+        mapVirtMethods.put(idResult.getNestedIdentity(), methodResult);
         }
 
 

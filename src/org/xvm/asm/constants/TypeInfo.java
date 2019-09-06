@@ -108,10 +108,10 @@ public class TypeInfo
 
         // pre-populate the method lookup caches
         // and determine if this type is implicitly abstract
-        f_cacheById  = new HashMap<>(f_mapMethods);
-        f_cacheByNid = new HashMap<>(f_mapVirtMethods);
+        f_cacheById  = new HashMap<>(mapMethods);
+        f_cacheByNid = new HashMap<>(mapVirtMethods);
 
-        for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet())
+        for (Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
             {
             MethodInfo info = entry.getValue();
 
