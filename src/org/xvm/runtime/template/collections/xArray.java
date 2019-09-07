@@ -26,7 +26,6 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.TemplateRegistry;
-import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.IndexSupport;
 import org.xvm.runtime.template.xBoolean;
@@ -533,23 +532,6 @@ public class xArray
         return true;
         }
 
-    @Override
-    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
-        int                c      = hArray.m_cSize;
-
-        if (c == 0)
-            {
-            return frame.assignValue(iReturn, xString.EMPTY_ARRAY);
-            }
-
-        StringBuilder sb = new StringBuilder(c*7); // a wild guess
-        sb.append('[');
-
-        return new ToString(hArray, sb, iReturn).doNext(frame);
-        }
-
     /**
      * addElement(TypeElement) implementation
      */
@@ -811,8 +793,8 @@ public class xArray
                 }
             return frameCaller.assignValue(iReturn, hArray);
             }
-
         }
+
     /**
      * Helper class for equals() implementation.
      */
@@ -875,88 +857,6 @@ public class xArray
                     }
                 }
             return frameCaller.assignValue(iReturn, xBoolean.TRUE);
-            }
-        }
-
-    /**
-     * Helper class for buildStringValue() implementation.
-     */
-    protected static class ToString
-            implements Frame.Continuation
-        {
-        final private GenericArrayHandle hArray;
-        final private StringBuilder sb;
-        final private int iReturn;
-        private int index = -1;
-
-        public ToString(GenericArrayHandle hArray, StringBuilder sb, int iReturn)
-            {
-            this.hArray = hArray;
-            this.sb = sb;
-            this.iReturn = iReturn;
-            }
-
-        @Override
-        public int proceed(Frame frameCaller)
-            {
-            updateResult(frameCaller);
-
-            return doNext(frameCaller);
-            }
-
-        protected void updateResult(Frame frameCaller)
-            {
-            sb.append(((StringHandle) frameCaller.popStack()).getValue())
-              .append(", ");
-            }
-
-        protected int doNext(Frame frameCaller)
-            {
-            ObjectHandle[] ahValue = hArray.m_ahValue;
-            int            cValues = hArray.m_cSize;
-            while (++index < cValues)
-                {
-                ObjectHandle hValue = ahValue[index];
-
-                if (hValue == null)
-                    {
-                    // be tolerant here, but this shouldn't happen
-                    sb.append("<unassigned>, ");
-                    continue;
-                    }
-
-                if (sb.length() > 1_000_000)
-                    {
-                    // cut it off
-                    sb.append("...");
-                    break;
-                    }
-
-                switch (Utils.callToString(frameCaller, hValue))
-                    {
-                    case Op.R_NEXT:
-                        updateResult(frameCaller);
-                        continue;
-
-                    case Op.R_CALL:
-                        frameCaller.m_frameNext.addContinuation(this);
-                        return Op.R_CALL;
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-                }
-
-            if (index > 0)
-                {
-                sb.setLength(sb.length() - 2); // remove the trailing ", "
-                }
-            sb.append(']');
-
-            return frameCaller.assignValue(iReturn, xString.makeHandle(sb.toString()));
             }
         }
 

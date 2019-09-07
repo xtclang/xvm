@@ -251,18 +251,6 @@ public class xConst
             clazz.getFieldNames().iterator(), iReturn).doNext(frame);
         }
 
-    @Override
-    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        GenericHandle hConst = (GenericHandle) hTarget;
-
-        StringBuilder sb = new StringBuilder()
-          .append(hConst.getComposition().toString())
-          .append('{');
-
-        return new ToString(hConst, sb, iReturn).doNext(frame);
-        }
-
     // build the hashValue and assign it to the specified register
     // returns R_NEXT, R_CALL or R_EXCEPTION
     protected int buildHashCode(Frame frame, ClassComposition clazz, ObjectHandle hTarget, int iReturn)
@@ -335,23 +323,16 @@ public class xConst
         StringHandle[] ahNames  = clz.getFieldNameArray();
         ObjectHandle[] ahFields = clz.getFieldValueArray(hConst);
 
-        if (ahNames.length > 0)
-            {
-            ArrayHandle hNames  = xArray.makeStringArrayHandle(ahNames);
-            ArrayHandle hValues = xArray.makeObjectArrayHandle(ahFields);
+        ArrayHandle hNames  = xArray.makeStringArrayHandle(ahNames);
+        ArrayHandle hValues = xArray.makeObjectArrayHandle(ahFields);
 
-            // appendTo(Appender<Char> appender, String[] names, Object[] fields)
-            ObjectHandle[] ahVars = new ObjectHandle[FN_APPEND_TO.getMaxVars()];
-            ahVars[0] = hAppender; // appender
-            ahVars[1] = hNames;
-            ahVars[2] = hValues;
+        // appendTo(Appender<Char> appender, String[] names, Object[] fields)
+        ObjectHandle[] ahVars = new ObjectHandle[FN_APPEND_TO.getMaxVars()];
+        ahVars[0] = hAppender; // appender
+        ahVars[1] = hNames;
+        ahVars[2] = hValues;
 
-            return frame.call1(FN_APPEND_TO, null, ahVars, iReturn);
-            }
-        else
-            {
-            return Op.R_NEXT;
-            }
+        return frame.call1(FN_APPEND_TO, null, ahVars, iReturn);
         }
 
 
@@ -519,92 +500,6 @@ public class xConst
                     }
                 }
             return frameCaller.assignValue(iReturn, xOrdered.EQUAL);
-            }
-        }
-
-    /**
-     * Helper class for buildStringValue() implementation.
-     */
-    protected static class ToString
-            implements Frame.Continuation
-        {
-        final private GenericHandle hConst;
-        final private StringBuilder sb;
-        final private Iterator<String> iterFields;
-        final private int iReturn;
-        private int cProps;
-
-        public ToString(GenericHandle hConst, StringBuilder sb, int iReturn)
-            {
-            this.hConst = hConst;
-            this.sb = sb;
-            this.iterFields = hConst.getComposition().getFieldNames().iterator();
-            this.iReturn = iReturn;
-            }
-
-        @Override
-        public int proceed(Frame frameCaller)
-            {
-            updateResult(frameCaller);
-
-            return doNext(frameCaller);
-            }
-
-        protected void updateResult(Frame frameCaller)
-            {
-            sb.append(((StringHandle) frameCaller.popStack()).getValue())
-              .append(", ");
-            }
-
-        protected int doNext(Frame frameCaller)
-            {
-            ClassComposition clz = (ClassComposition) hConst.getComposition();
-            while (iterFields.hasNext())
-                {
-                String sProp = iterFields.next();
-
-                if (!clz.isRegular(sProp))
-                    {
-                    continue;
-                    }
-
-                ObjectHandle hProp = hConst.getField(sProp);
-
-                sb.append(sProp).append('=');
-                cProps++;
-
-                if (hProp == null)
-                    {
-                    // be tolerant here
-                    sb.append("<unassigned>, ");
-                    continue;
-                    }
-
-                switch (Utils.callToString(frameCaller, hProp))
-                    {
-                    case Op.R_NEXT:
-                        updateResult(frameCaller);
-                        continue;
-
-                    case Op.R_CALL:
-                        frameCaller.m_frameNext.addContinuation(this);
-                        return Op.R_CALL;
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-                }
-
-            if (cProps > 0)
-                {
-                sb.setLength(sb.length() - 2); // remove the trailing ", "
-                }
-            sb.append('}');
-
-            return frameCaller.assignValue(iReturn, xString.makeHandle(sb.toString()));
             }
         }
 

@@ -278,32 +278,6 @@ public abstract class BitBasedArray
             }
         }
 
-    @Override
-    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        BitArrayHandle hArray = (BitArrayHandle) hTarget;
-        int            c      = hArray.m_cSize;
-
-        if (c == 0)
-            {
-            return frame.assignValue(iReturn, xString.EMPTY_ARRAY);
-            }
-
-        byte[]        ab = hArray.m_abValue;
-        StringBuilder sb = new StringBuilder(c*7); // on average 5-digit long values
-        sb.append('[');
-        for (int i = 0; i < c; i++)
-            {
-            if (i > 0)
-                {
-                sb.append(", ");
-                }
-            sb.append(getBit(ab, i) ? '1' : '0');
-            }
-        sb.append(']');
-        return frame.assignValue(iReturn, xString.makeHandle(sb.toString()));
-        }
-
     /**
      * @return true iff the specified value represents a "set" bit
      */

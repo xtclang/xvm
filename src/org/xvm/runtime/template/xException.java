@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.MethodStructure;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
@@ -14,7 +15,7 @@ import org.xvm.runtime.TemplateRegistry;
 
 
 /**
- * TODO:
+ * Native Exception implementation.
  */
 public class xException
         extends xConst
@@ -43,8 +44,10 @@ public class xException
         s_clzTimedOut             = f_templates.getTemplate("TimedOut").getCanonicalClass();
         s_clzTypeMismatch         = f_templates.getTemplate("TypeMismatch").getCanonicalClass();
         s_clzUnsupportedOperation = f_templates.getTemplate("UnsupportedOperation").getCanonicalClass();
-        s_clzPathException        = f_templates.getTemplate("Number.DivisionByZero").getCanonicalClass();
+        s_clzDivisionByZero       = f_templates.getTemplate("Number.DivisionByZero").getCanonicalClass();
         s_clzPathException        = f_templates.getTemplate("fs.PathException").getCanonicalClass();
+
+        METHOD_FORMAT_EXCEPTION = f_struct.findMethod("formatExceptionString", 2);
 
         markNativeMethod("toString", VOID, STRING);
 
@@ -56,6 +59,21 @@ public class xException
         {
         return makeMutableStruct(frame, clazz, null, null);
         }
+
+    @Override
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        ExceptionHandle hException = (ExceptionHandle) hTarget;
+
+        // String formatExceptionString(String exceptionName, String stackTrace)
+
+        ObjectHandle[] ahVars = new ObjectHandle[METHOD_FORMAT_EXCEPTION.getMaxVars()];
+        ahVars[0] = xString.makeHandle(f_struct.getIdentityConstant().getValueString()); // appender
+        ahVars[1] = hException.getField("stackTrace");
+
+        return frame.call1(METHOD_FORMAT_EXCEPTION, hException, ahVars, iReturn);
+        }
+
 
     // ---- stock exceptions -----------------------------------------------------------------------
 
@@ -183,4 +201,6 @@ public class xException
     private static ClassComposition s_clzUnsupportedOperation;
     private static ClassComposition s_clzDivisionByZero;
     private static ClassComposition s_clzPathException;
+
+    private static MethodStructure METHOD_FORMAT_EXCEPTION;
     }

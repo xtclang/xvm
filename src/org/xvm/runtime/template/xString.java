@@ -277,11 +277,6 @@ public class xString
         return frame.assignValue(iReturn, ((StringHandle) hTarget).getHashCode());
         }
 
-    @Override
-    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        return frame.assignValue(iReturn, (StringHandle) hTarget);
-        }
 
     // ----- helpers -----
 

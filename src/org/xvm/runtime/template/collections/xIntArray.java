@@ -268,32 +268,6 @@ public class xIntArray
             }
         }
 
-    @Override
-    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        IntArrayHandle hArray = (IntArrayHandle) hTarget;
-        int            c      = hArray.m_cSize;
-
-        if (c == 0)
-            {
-            return frame.assignValue(iReturn, xString.EMPTY_ARRAY);
-            }
-
-        long[]        al = hArray.m_alValue;
-        StringBuilder sb = new StringBuilder(c*7); // on average 5-digit long values
-        sb.append('[');
-        for (int i = 0; i < c; i++)
-            {
-            if (i > 0)
-                {
-                sb.append(", ");
-                }
-            sb.append(al[i]);
-            }
-        sb.append(']');
-        return frame.assignValue(iReturn, xString.makeHandle(sb.toString()));
-        }
-
 
     // ----- helper methods -----
 

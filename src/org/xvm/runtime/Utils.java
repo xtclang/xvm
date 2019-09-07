@@ -502,15 +502,15 @@ public abstract class Utils
 
     // ----- toString support -----
 
-    public static class ArrayToString
+    public static class TupleToString
             implements Frame.Continuation
         {
-        public ArrayToString(StringBuilder sb, ObjectHandle[] ahValue,
+        public TupleToString(StringBuilder sb, ObjectHandle[] ahValue,
                              String[] asLabel, Frame.Continuation nextStep)
             {
-            this.sb = sb;
-            this.ahValue = ahValue;
-            this.asLabel = asLabel;
+            this.sb       = sb;
+            this.ahValue  = ahValue;
+            this.asLabel  = asLabel;
             this.nextStep = nextStep;
             }
 

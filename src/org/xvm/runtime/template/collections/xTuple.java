@@ -252,8 +252,7 @@ public class xTuple
             Frame.Continuation stepNext = frameCaller ->
                 frameCaller.assignValue(iReturn, xString.makeHandle(sb.toString()));
 
-            return new Utils.ArrayToString(
-                sb, hTuple.m_ahValue, null, stepNext).doNext(frame);
+            return new Utils.TupleToString(sb, hTuple.m_ahValue, null, stepNext).doNext(frame);
             }
         else
             {

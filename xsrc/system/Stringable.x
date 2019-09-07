@@ -8,7 +8,10 @@ interface Stringable
      *
      * @return the number of characters that this object estimates it will need for its String form
      */
-    Int estimateStringLength();
+    Int estimateStringLength()
+        {
+        return 0;
+        }
 
     /**
      * Append the String form of this Stringable object to the provided character Appender.

@@ -1584,7 +1584,7 @@ public class Frame
 
         while (true)
             {
-            sb.append("\n  - ")
+            sb.append("\n\t")
               .append(formatFrameDetails(frame.f_context, frame.f_function, iPC, frame.f_aOp, frame.f_framePrev));
 
             iPC   = frame.f_iPCPrev;
@@ -1623,7 +1623,7 @@ public class Frame
     protected static String formatFrameDetails(ServiceContext ctx, MethodStructure function,
                                                int iPC, Op[] aOp, Frame framePrev)
         {
-        StringBuilder sb = new StringBuilder("Frame: ");
+        StringBuilder sb = new StringBuilder("at ");
 
         if (function == null)
             {

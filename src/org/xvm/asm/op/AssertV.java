@@ -123,7 +123,7 @@ public class AssertV
         }
 
     private static class MessageToString
-            extends Utils.ArrayToString
+            extends Utils.TupleToString
         {
         public MessageToString(
                 StringBuilder      sb,

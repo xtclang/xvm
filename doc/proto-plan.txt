@@ -45,9 +45,6 @@
 
 - compiler to verify "all or nothing" implementation for funky interfaces
 
-- introduce stock exception (Bounds, IllegalState, etc.) and use current frame to
-  create exceptions
-
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 

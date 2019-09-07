@@ -22,31 +22,41 @@ const Exception
     Exception!? cause;
     Iterable<StackFrame> stackTrace;
 
+    String getMessage()
+        {
+        return text ?: "";
+        }
+
     @Override
     String toString()
         {
-        return formatExceptionString(null);
+        (String name, String stackTrace) = formatStackTrace();
+        return formatExceptionString(name, stackTrace);
         }
 
-    // TODO pass in output stream of text instead of building and returning String
-    String formatExceptionString(StackFrame? lastFrame)
+    String formatExceptionString(String exceptionName, String stackTrace)
         {
-        // exception name / text
-        String strbuf = "";
+        StringBuffer buf = new StringBuffer();
 
-        (String s, StackFrame firstFrame) = formatStackTrace(stackTrace, lastFrame);
-        strbuf += s;
+        buf.append(exceptionName)
+           .append(' ')
+           .append(getMessage())
+           .append(stackTrace);
 
-        // caused by ...
         if (cause != null)
             {
-            TODO; // + cause.formatExceptionString(firstFrame);
+            buf.append("\nCaused by: ")
+               .append(cause.toString());
             }
 
-        return strbuf;
+        return buf.toString();
         }
 
-    // TODO pass in output stream of text instead of building and returning String
+    (String /*name*/, String /*stack*/) formatStackTrace()
+        {
+        TODO
+        }
+
     (String, StackFrame /* firstFrame */) formatStackTrace(Iterable<StackFrame> frames, StackFrame? lastFrame)
         {
         // stack trace
