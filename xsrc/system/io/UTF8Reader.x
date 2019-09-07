@@ -67,7 +67,6 @@ class UTF8Reader
     private static const AbstractPos
             extends Reader.AbstractPos
         {
-        // TODO GG - it appears that this class has fields for the 3 Position properties (it should not)
         @Abstract
         @RO Int rawOffset;
         }
@@ -91,10 +90,10 @@ class UTF8Reader
 
             // up to 20 bits for raw (byte) offset, 16 bits for line and line offset, and 12 bits
             // for the character offset vis-a-vis the byte offset
-            assert:arg offset           >= 0 && offset     <= 0xFFFFF;
-            assert:arg lineNumber       >= 0 && lineNumber <= 0xFFFF;
-            assert:arg lineOffset       >= 0 && lineOffset <= 0xFFFF;
-            assert:arg rawOffset        >= 0 && rawOffset  <= 0xFFF;
+            assert:arg offset     >= 0 && offset     <= 0xFFFFF;
+            assert:arg lineNumber >= 0 && lineNumber <= 0xFFFF;
+            assert:arg lineOffset >= 0 && lineOffset <= 0xFFFF;
+            assert:arg rawOffset  >= 0 && rawOffset  <= 0xFFF;
 
             combo = offset << 16 | lineNumber << 16 | lineOffset << 12 | rawOffset;
             }

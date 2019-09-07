@@ -123,6 +123,32 @@ public class ClassStructure
         }
 
     /**
+     * Check if this class is annotated as "Abstract".
+     *
+     * Note: class structures are never marked with the {@link #isAbstract abstract} flag and
+     * can only be made abstract via the annotation.
+     *
+     * @return true iff this class is annotated as Abstract
+     */
+    public boolean isExplicitlyAbstract()
+        {
+        for (Contribution contrib : getContributionsAsList())
+            {
+            if (contrib.getComposition() == Composition.Incorporates)
+                {
+                TypeConstant type = contrib.getTypeConstant();
+
+                if (type.isSingleUnderlyingClass(false) &&
+                    type.getSingleUnderlyingClass(false).equals(getConstantPool().clzAbstract()))
+                    {
+                    return true;
+                    }
+                }
+            }
+        return false;
+        }
+
+    /**
      * @return true iff this class is a module, package, or class whose immediate parent is a module
      *         or package
      */

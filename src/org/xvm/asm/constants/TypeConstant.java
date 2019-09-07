@@ -2535,7 +2535,7 @@ public abstract class TypeConstant
             // if there are any remaining declared-but-not-overridden properties originating from
             // an interface on a class once the "self" layer is applied, then those need to be
             // analyzed to determine if they require fields, etc.
-            if (fSelf && !isInterface(constId, struct))
+            if (fSelf && !isInterface(constId, struct) && !struct.isExplicitlyAbstract())
                 {
                 for (Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
                     {

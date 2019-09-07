@@ -119,7 +119,7 @@ public class TypeInfo
             }
 
         // REVIEW: consider calculating the "abstract" flags lazily
-        boolean fExplicitAbstract = fSynthetic || !isClass() ||
+        boolean fExplicitAbstract = fSynthetic || !isClass() || struct.isExplicitlyAbstract() ||
                 TypeInfo.containsAnnotation(aannoClass, "Abstract");
 
         boolean fImplicitAbstract = fExplicitAbstract ||
