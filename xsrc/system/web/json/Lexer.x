@@ -259,8 +259,7 @@ class Lexer
                 val = False;
                 break;
 
-            case '-':
-            case '0'..'9':
+            case '-', '0'..'9':
                 val = eatNumber(ch, start);
                 id  = val.is(FPLiteral) ? FPVal : IntVal;
                 break;
