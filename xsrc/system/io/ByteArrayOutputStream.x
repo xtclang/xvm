@@ -2,7 +2,7 @@
  * The ByteArrayOutputStream is an implementation of an OutputStream on top of a byte array.
  */
  class ByteArrayOutputStream
-        implements BinaryOutput
+        implements OutputStream
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -43,11 +43,13 @@
      */
     Int capacity
         {
+        @Override
         Int get()
             {
             return bytes.capacity;
             }
 
+        @Override
         void set(Int newCapacity)
             {
             bytes.capacity = newCapacity;
