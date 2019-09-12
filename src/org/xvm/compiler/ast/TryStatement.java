@@ -152,9 +152,8 @@ public class TryStatement
                 }
             }
 
-        Context                       ctxOrig  = ctx;
-        int                           cCatches = catches == null ? 0 : catches.size();
-        List<Map<String, Assignment>> listAsn  = new ArrayList<>(1 + cCatches);
+        Context ctxOrig  = ctx;
+        int     cCatches = catches == null ? 0 : catches.size();
 
         // validate the "try" block
         ctx = ctxOrig.enter();
@@ -164,6 +163,9 @@ public class TryStatement
             {
             // instead of exiting the context, we simply collect all of the impact from the end of the
             // "try" block, together with all of the impact from the end of each "catch" block
+            List<Map<String, Assignment>> listAsn    = new ArrayList<>(1 + cCatches);
+            boolean                       fReachable = ctx.isReachable();
+
             listAsn.add(ctx.prepareJump(ctxOrig));
             ctx.discard();
 
@@ -201,6 +203,7 @@ public class TryStatement
                         }
                     }
 
+                fReachable |= ctx.isReachable();
                 listAsn.add(ctx.prepareJump(ctxOrig));
                 ctx.discard();
                 }
@@ -208,16 +211,20 @@ public class TryStatement
             // collect the assignment impacts from the end of the "try" block and from the end of each
             // "catch" block
             ctx = ctxOrig;
-            for (Map<String, Assignment> mapAsn : listAsn)
+            if (fReachable)
                 {
-                ctx.merge(mapAsn);
+                for (Map<String, Assignment> mapAsn : listAsn)
+                    {
+                    ctx.merge(mapAsn);
+                    }
                 }
+            ctx.setReachable(fReachable);
             }
 
         if (catchall != null)
             {
             // the context for finally clause is a continuation of the context prior to "try"
-            m_ctxValidatingFinally  = ctxOrig;
+            m_ctxValidatingFinally  = ctxOrig; // TODO CP defNasn
             m_errsValidatingFinally = errs;
             StatementBlock catchallNew = (StatementBlock) catchall.validate(ctxOrig, errs);
             m_ctxValidatingFinally  = null;

@@ -79,6 +79,9 @@ module TestTry.xqiz.it
 
         testAssertSample();
 
+        testSwitch(0);
+        testSwitch(1);
+
         console.println("\nException tests: finished!");
         }
 
@@ -200,7 +203,7 @@ module TestTry.xqiz.it
 
     void testAssertOnce(Boolean firstTime)
         {
-        console.println("\n** testAssertOnce()");
+        console.println($"\n** testAssertOnce({firstTime})");
 
         Int x = 42;
         try
@@ -239,5 +242,32 @@ module TestTry.xqiz.it
             }
 
         console.println($"results: ok={ok}, errs={err} (should be ~10)");
+        }
+
+    void testSwitch(Int n)
+        {
+        console.println($"\n** testSwitch({n})");
+
+        switch (n)
+            {
+            default:
+                {
+                try
+                    {
+                    n = 10/n;
+                    break;
+                    }
+                 catch (Exception e)
+                     {
+                     console.println($"exception {e}");
+                     throw e;
+                     }
+                finally
+                    {
+                    console.println("finally");
+                    return;
+                    }
+                }
+            }
         }
     }
