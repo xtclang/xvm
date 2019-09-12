@@ -8,7 +8,7 @@ class NanosTimer
     void start();
 
     @Override
-    @Atomic @RO Duration elapsed;
+    @RO Duration elapsed;
 
     @Override
     Cancellable schedule(Duration delay, Alarm alarm);
