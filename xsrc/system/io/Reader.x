@@ -16,6 +16,7 @@ interface Reader
      * Reader to efficiently restore a previous position.
      */
     static interface Position
+            extends Orderable
         {
         /**
          * The character offset within the reader, starting with zero.
@@ -31,6 +32,18 @@ interface Reader
          * The offset within the current line, starting with zero.
          */
         @RO Int lineOffset;
+
+        // ----- Orderable interface (funky) implementation ----------------------------------------
+
+        static <CompileType extends Position> Ordered compare(CompileType value1, CompileType value2)
+            {
+            return value1.offset <=> value2.offset;
+            }
+
+        static <CompileType extends Position> Boolean equals(CompileType value1, CompileType value2)
+            {
+            return value1.offset == value2.offset;
+            }
         }
 
     /**
@@ -141,7 +154,7 @@ interface Reader
      * @throws IOException  represents the general category of input/output exceptions
      */
     @Op("[..]")
-    String slice(Range<Position> range)
+    String slice(Interval<Position> range)
         {
         String result;
 
