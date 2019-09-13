@@ -447,7 +447,9 @@ public class xArray
             case "ensureConst": // immutable Array ensureConst(Boolean inPlace = False)
                 {
                 ArrayHandle   hArray   = (ArrayHandle) hTarget;
-                BooleanHandle hInPlace = (BooleanHandle) hArg;
+                BooleanHandle hInPlace = hArg == ObjectHandle.DEFAULT
+                        ? xBoolean.FALSE
+                        : (BooleanHandle) hArg;
                 if (hInPlace.get())
                     {
                     hArray.makeImmutable();
