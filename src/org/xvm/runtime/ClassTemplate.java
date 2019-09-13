@@ -920,7 +920,8 @@ public abstract class ClassTemplate
 
         if (!hTarget.isMutable())
             {
-            return frame.raiseException(xException.immutableObject(frame));
+            return frame.raiseException("Attempt to set property \"" + idProp.getName()
+                + "\" for an immutable object");
             }
 
         CallChain chain = hTarget.getComposition().getPropertySetterChain(idProp);
