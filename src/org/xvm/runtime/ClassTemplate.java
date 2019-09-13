@@ -918,12 +918,6 @@ public abstract class ClassTemplate
             return setFieldValue(frame, hTarget, idProp, hValue);
             }
 
-        if (!hTarget.isMutable())
-            {
-            return frame.raiseException("Attempt to set property \"" + idProp.getName()
-                + "\" for an immutable object");
-            }
-
         CallChain chain = hTarget.getComposition().getPropertySetterChain(idProp);
 
         if (chain == null)
@@ -934,6 +928,12 @@ public abstract class ClassTemplate
         if (chain.isNative())
             {
             return invokeNativeSet(frame, hTarget, idProp.getName(), hValue);
+            }
+
+        if (!hTarget.isMutable())
+            {
+            return frame.raiseException("Attempt to modify property \"" + idProp.getName()
+                + "\" on an immutable \"" + hTarget.getType().getValueString() + '"');
             }
 
         if (chain.isField())

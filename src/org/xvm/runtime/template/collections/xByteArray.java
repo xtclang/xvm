@@ -22,7 +22,6 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xChar;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xUInt8;
 
 
