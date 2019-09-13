@@ -27,7 +27,7 @@ import org.xvm.runtime.template.xUInt8;
 
 
 /**
- * Native Array<Char> implementation.
+ * Native Array<Byte> implementation.
  */
 public class xByteArray
         extends xArray
