@@ -175,3 +175,13 @@ x ^<< 3;
 
 x %> 3
 x <% 3
+
+// ----- object input/output -----
+
+Object <-> JSON <-> Reader/Writer <-> String or Char[] or UTF8 byte[]
+
+Object <-> Protobuf <-> DataInput/DataOutput <-> byte[]
+
+ObjectOutput = Format.createOutput(???) // DataOutput? BinaryOutput? Writer? StringBuffer?
+
+
