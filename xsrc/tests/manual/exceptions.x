@@ -61,7 +61,7 @@ module TestTry.xqiz.it
             }
         catch (Exception e)
             {
-            console.println("TEST ERROR!!!  UNexpected throw in testAssert(): " + e);
+            console.println("TEST ERROR!!!  Unexpected throw in testAssert(): " + e);
             }
 
         try
@@ -125,6 +125,15 @@ module TestTry.xqiz.it
             console.println("ok");
             }
 
+         try (ByeBye bye = new ByeBye())
+            {
+            console.println(bye);
+            }
+        finally
+            {
+            console.println("in finally: " + bye);
+            }
+
         console.println("done");
         }
 
@@ -160,6 +169,7 @@ module TestTry.xqiz.it
                 else
                     {
                     console.println("not throwing exception inside try");
+                    continue;
                     }
                 }
             finally
@@ -248,25 +258,39 @@ module TestTry.xqiz.it
         {
         console.println($"\n** testSwitch({n})");
 
-        switch (n)
+        try
             {
-            default:
+            switch (n)
                 {
-                try
-                    {
-                    n = 10/n;
-                    break;
-                    }
-                 catch (Exception e)
-                     {
-                     console.println($"exception {e}");
-                     throw e;
-                     }
-                finally
-                    {
-                    console.println("finally");
+                case -1:
                     return;
+
+                default:
+                    {
+                    try
+                        {
+                        n = 10/n;
+                        break;
+                        }
+                     catch (Exception e)
+                         {
+                         console.println($"exception {e}");
+                         throw e;
+                         }
+                    finally
+                        {
+                        console.println("inner finally");
+                        }
                     }
+                }
+            }
+        finally
+            {
+            console.println("outer finally");
+            if (n == 0)
+                {
+                // eat the exception
+                return;
                 }
             }
         }

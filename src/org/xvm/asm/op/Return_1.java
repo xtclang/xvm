@@ -7,12 +7,11 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
+import org.xvm.asm.OpReturn;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
-
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -22,7 +21,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * RETURN_1 rvalue
  */
 public class Return_1
-        extends Op
+        extends OpReturn
     {
     /**
      * Construct a RETURN_1 op.
@@ -73,19 +72,20 @@ public class Return_1
 
         if (isDeferred(hValue))
             {
-            ObjectHandle[] ahValue = new ObjectHandle[]{hValue};
-            Frame.Continuation stepNext = frameCaller -> frameCaller.returnValue(ahValue[0], false);
+            ObjectHandle[]     ahValue  = new ObjectHandle[]{hValue};
+            Frame.Continuation stepNext = frameCaller -> complete(frameCaller, ahValue[0], false);
 
             return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
             }
 
-        return frame.returnValue(hValue, frame.isDynamicVar(m_nArg));
+        return complete(frame, hValue, frame.isDynamicVar(m_nArg));
         }
 
-    @Override
-    public boolean advances()
+    protected int complete(Frame frame, ObjectHandle hValue, boolean fDynamic)
         {
-        return false;
+        return m_fCallFinally
+            ? frame.processAllGuard(new Return1Action(hValue, fDynamic, m_ixAllGuard))
+            : frame.returnValue(hValue, fDynamic);
         }
 
     @Override
@@ -97,10 +97,30 @@ public class Return_1
     @Override
     public String toString()
         {
-        return super.toString()+ ' ' + Argument.toIdString(m_arg, m_nArg);
+        return super.toString() + ' ' + Argument.toIdString(m_arg, m_nArg);
         }
 
-    private int m_nArg;
+    protected static class Return1Action
+            extends Frame.DeferredGuardAction
+        {
+        public Return1Action(ObjectHandle hValue, boolean fDynamic, int ixAllGuard)
+            {
+            super(ixAllGuard);
 
+            this.m_hValue   = hValue;
+            this.m_fDynamic = fDynamic;
+            }
+
+        @Override
+        public int complete(Frame frame)
+            {
+            return frame.returnValue(m_hValue, m_fDynamic);
+            }
+
+        private final ObjectHandle m_hValue;
+        private final boolean      m_fDynamic;
+        }
+
+    private int      m_nArg;
     private Argument m_arg;
     }

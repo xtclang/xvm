@@ -1301,7 +1301,7 @@ public class MethodStructure
 
         // Nop() line count is zero based
         int nLine = 1;
-        for (int i = 0; i < iPC; i++)
+        for (int i = 0; i <= iPC; i++)
             {
             Op op = aOp[i].ensureOp();
             if (op instanceof Nop)
@@ -2280,7 +2280,7 @@ public class MethodStructure
             for (int i = 0, c = aop.length; i < c; ++i)
                 {
                 Op op = aop[i];
-                op.initInfo(i, scope.getCurDepth());
+                op.initInfo(i, scope.getCurDepth(), scope.getGuardDepth(), scope.getGuardAllDepth());
                 op.simulate(scope);
                 }
 

@@ -93,6 +93,38 @@ public class Scope
         }
 
     /**
+     * Indicate that a Guard block is entered.
+     */
+    public void enterGuard()
+        {
+        m_cGuardDepth++;
+        }
+
+    /**
+     * Indicate that a Guard block is exited.
+     */
+    public void exitGuard()
+        {
+        m_cGuardDepth--;
+        }
+
+    /**
+     * Indicate that a GuardAll block is entered.
+     */
+    public void enterGuardAll()
+        {
+        m_cGuardAllDepth++;
+        }
+
+    /**
+     * Indicate that a GuardAll block is exited.
+     */
+    public void exitGuardAll()
+        {
+        m_cGuardAllDepth--;
+        }
+
+    /**
      * Allocate a variable (a sequential register number).
      *
      * @return the variable identity
@@ -192,6 +224,22 @@ public class Scope
                 : Math.max(m_cMaxVars, this.m_cVars + m_scopeChild.getMaxVars());
         }
 
+    /**
+     * @return  the current Guard depth
+     */
+    public int getGuardDepth()
+        {
+        return m_cGuardDepth;
+        }
+
+    /**
+     * @return  the current GuardAll depth
+     */
+    public int getGuardAllDepth()
+        {
+        return m_cGuardAllDepth;
+        }
+
 
     // ----- internal ------------------------------------------------------------------------------
 
@@ -257,6 +305,16 @@ public class Scope
      * Tracks the max depth of scopes nested within this scope. (Does not count this scope.)
      */
     private int   m_cMaxDepth;
+
+    /**
+     * Tracks the Guard depth.
+     */
+    private int   m_cGuardDepth;
+
+    /**
+     * Tracks the GuardAll depth.
+     */
+    private int   m_cGuardAllDepth;
     }
 
 

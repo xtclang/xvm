@@ -265,7 +265,6 @@ public class TryStatement
 
         // using() or try()-with-resources
         FinallyStart[] aFinallyClose = null;
-        Register[]     aRegClose     = null;
         if (resources != null)
             {
             // the first resource is declared outside of any try/finally block, but it is not
@@ -274,7 +273,6 @@ public class TryStatement
 
             int c = resources.size();
             aFinallyClose = new FinallyStart[c];
-            aRegClose     = new Register[c];
             for (int i = 0; i < c; ++i)
                 {
                 fCompletes = resources.get(i).completes(ctx, fCompletes, code, errs);
@@ -328,15 +326,20 @@ public class TryStatement
             }
 
         // the "finally" block
-        boolean fFinallyCompletes = true;
+        boolean fTryCompletes = fBlockCompletes | fAnyCatchCompletes;
         if (catchall != null)
             {
             // the finally clause gets wrapped in FINALLY / FINALLY_E ops, which imply an enter/exit
             catchall.suppressScope();
 
             code.add(opFinallyBlock);
-            fFinallyCompletes = catchall.completes(ctx, fCompletes, code, errs);
-            code.add(new FinallyEnd());
+            boolean fFinallyCompletes = catchall.completes(ctx, fCompletes, code, errs);
+
+            fTryCompletes &= fFinallyCompletes;
+
+            FinallyEnd opFinallyEnd = new FinallyEnd();
+            opFinallyEnd.setCompletes(fTryCompletes);
+            code.add(opFinallyEnd);
             }
 
         if (resources != null)
@@ -387,14 +390,17 @@ public class TryStatement
                 code.add(labelSkipThrow);
                 code.add(new CatchEnd(labelFallThrough));
                 code.add(labelFallThrough);
-                code.add(new FinallyEnd());
+
+                FinallyEnd opFinallyEnd = new FinallyEnd();
+                opFinallyEnd.setCompletes(fTryCompletes);
+                code.add(opFinallyEnd);
                 }
 
             // no resources remain in scope after the try/using statement
             code.add(new Exit());
             }
 
-        return (fBlockCompletes | fAnyCatchCompletes) & fFinallyCompletes;
+        return fTryCompletes;
         }
 
 

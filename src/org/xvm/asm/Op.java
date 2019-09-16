@@ -90,17 +90,24 @@ public abstract class Op
     /**
      * Stores the address and the scope depth; also resets the reachability and redundant flags.
      *
-     * @param nAddress  the program counter ("iPC") for this op
-     * @param nDepth    the scope depth for this op
+     * @param nAddress        the program counter ("iPC") for this op
+     * @param nDepth          the scope depth for this op (one-based)
+     * @param nGuardDepth     the Guard depth (zero-based)
+     * @param nGuardAllDepth  the GuardAll depth (zero-based)
      */
-    public void initInfo(int nAddress, int nDepth)
+    public void initInfo(int nAddress, int nDepth, int nGuardDepth, int nGuardAllDepth)
         {
         assert nAddress >= 0;
         assert nAddress <= POSITION_BITS;
         assert nDepth > 0;
-        assert nDepth <= (SCOPEDEPTH_BITS >>> SCOPEDEPTH_SHIFT);
+        assert nDepth <= (SCOPE_DEPTH_BITS >>> SCOPE_DEPTH_SHIFT);
+        assert nGuardDepth <= (GUARD_DEPTH_BITS >>> GUARD_DEPTH_SHIFT);
+        assert nGuardAllDepth <= (GUARD_ALL_DEPTH_BITS >>> GUARD_ALL_DEPTH_SHIFT);
 
-        m_nStruct = nAddress | (nDepth << SCOPEDEPTH_SHIFT);
+        m_lStruct =    (long) nAddress
+                    | ((long) nDepth         << SCOPE_DEPTH_SHIFT)
+                    | ((long) nGuardDepth    << GUARD_DEPTH_SHIFT)
+                    | ((long) nGuardAllDepth << GUARD_ALL_DEPTH_SHIFT);
         }
 
     /**
@@ -108,15 +115,31 @@ public abstract class Op
      */
     public int getAddress()
         {
-        return m_nStruct & POSITION_BITS;
+        return (int) (m_lStruct & POSITION_BITS);
         }
 
     /**
-     * @return the scope depth of the op
+     * @return the scope depth of the op (one-based)
      */
     public int getDepth()
         {
-        return (m_nStruct & SCOPEDEPTH_BITS) >>> SCOPEDEPTH_SHIFT;
+        return (int) ((m_lStruct & SCOPE_DEPTH_BITS) >>> SCOPE_DEPTH_SHIFT);
+        }
+
+    /**
+     * @return the Guard depth of the op (zero-based)
+     */
+    public int getGuardDepth()
+        {
+        return (int) ((m_lStruct & GUARD_DEPTH_BITS) >>> GUARD_DEPTH_SHIFT);
+        }
+
+    /**
+     * @return the GuardAll depth of the op (zero-based)
+     */
+    public int getGuardAllDepth()
+        {
+        return (int) ((m_lStruct & GUARD_ALL_DEPTH_BITS) >>> GUARD_ALL_DEPTH_SHIFT);
         }
 
     /**
@@ -124,12 +147,12 @@ public abstract class Op
      */
     public boolean isReachable()
         {
-        return (m_nStruct & REACHABLE_BIT) != 0;
+        return (m_lStruct & REACHABLE_BIT) != 0;
         }
 
     public void markReachable(Op[] aop)
         {
-        m_nStruct |= REACHABLE_BIT;
+        m_lStruct |= REACHABLE_BIT;
         }
 
     /**
@@ -138,12 +161,12 @@ public abstract class Op
      */
     public boolean isNecessary()
         {
-        return (m_nStruct & NECESSARY_BIT) != 0;
+        return (m_lStruct & NECESSARY_BIT) != 0;
         }
 
     public void markNecessary()
         {
-        m_nStruct |= NECESSARY_BIT;
+        m_lStruct |= NECESSARY_BIT;
         }
 
     /**
@@ -159,12 +182,12 @@ public abstract class Op
      */
     public boolean isRedundant()
         {
-        return (m_nStruct & REDUNDANT_BIT) != 0;
+        return (m_lStruct & REDUNDANT_BIT) != 0;
         }
 
     public void markRedundant()
         {
-        m_nStruct |= REDUNDANT_BIT;
+        m_lStruct |= REDUNDANT_BIT;
         }
 
     /**
@@ -219,24 +242,39 @@ public abstract class Op
     /**
      * Find the "closing" op that corresponds to this op.
      *
-     * @param aop  the ops of this method
+     * @param aop    the ops of this method
+     * @param nThat  the "closing" op-code
      *
-     * @return the op that corresponds to this op
+     * @return the "closing" op that corresponds to this op
      */
     public Op findCorrespondingOp(Op[] aop, int nThat)
         {
-        int iPC   = getAddress();
-        int nThis = this.getOpCode();
-        int cReq  = 1;
+        return findFirstUnmatchedOp(aop, getOpCode(), nThat);
+        }
+
+    /**
+     * Find the first unmatched "closing" op that corresponds to the "opening" op, ignoring
+     * any matched pairs.
+     *
+     * @param aop     the ops of this method
+     * @param nOpen   the "opening" op-code
+     * @param nClose  the "closing" op-code
+     *
+     * @return the "closing" op that corresponds to "opening" op
+     */
+    public Op findFirstUnmatchedOp(Op[] aop, int nOpen, int nClose)
+        {
+        int iPC  = getAddress();
+        int cReq = 1;
         while (true)
             {
             Op  op  = aop[++iPC];
             int nOp = op.ensureOp().getOpCode();
-            if (nOp == nThis)
+            if (nOp == nOpen)
                 {
                 ++cReq;
                 }
-            else if (nOp == nThat)
+            else if (nOp == nClose)
                 {
                 if (--cReq == 0)
                     {
@@ -496,10 +534,10 @@ public abstract class Op
             }
 
         @Override
-        public void initInfo(int nAddress, int nDepth)
+        public void initInfo(int nAddress, int nDepth, int nGuardDepth, int nGuardAllDepth)
             {
-            super.initInfo(nAddress, nDepth);
-            m_op.initInfo(nAddress, nDepth);
+            super.initInfo(nAddress, nDepth, nGuardDepth, nGuardAllDepth);
+            m_op .initInfo(nAddress, nDepth, nGuardDepth, nGuardAllDepth);
             }
 
         @Override
@@ -1981,18 +2019,20 @@ public abstract class Op
      */
     public static final int CONSTANT_OFFSET = -21;
 
-    private static final int REACHABLE_BIT    = 0x80000000;
-    private static final int NECESSARY_BIT    = 0x40000000;
-    private static final int REDUNDANT_BIT    = 0x20000000;
-    private static final int RESERVED_BIT     = 0x10000000;
-    private static final int SCOPEDEPTH_BITS  = 0x0FF00000, SCOPEDEPTH_SHIFT = 20;
-    private static final int POSITION_BITS    = 0x000FFFFF;
+    private static final long REACHABLE_BIT        = 0x8000_0000_0000_0000L;
+    private static final long NECESSARY_BIT        = 0x4000_0000_0000_0000L;
+    private static final long REDUNDANT_BIT        = 0x2000_0000_0000_0000L;
+    private static final long RESERVED_BITS        = 0x1FFF_F000_0000_0000L;
+    private static final long GUARD_ALL_DEPTH_BITS = 0x0000_0FF0_0000_0000L, GUARD_ALL_DEPTH_SHIFT = 36;
+    private static final long GUARD_DEPTH_BITS     = 0x0000_000F_F000_0000L, GUARD_DEPTH_SHIFT     = 28;
+    private static final long SCOPE_DEPTH_BITS     = 0x0000_0000_0FF0_0000L, SCOPE_DEPTH_SHIFT     = 20;
+    private static final long POSITION_BITS        = 0x0000_0000_000F_FFFFL;
 
 
     // ----- data members --------------------------------------------------------------------------
 
     /**
-     * A bunch of internal info munged into an int.
+     * A bunch of internal info munged into a long.
      */
-    private int m_nStruct;
+    private long m_lStruct;
     }

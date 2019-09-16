@@ -6,8 +6,8 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
-
 import org.xvm.asm.OpJump;
+
 import org.xvm.runtime.Frame;
 
 
@@ -48,7 +48,31 @@ public class Jump
     @Override
     public int process(Frame frame, int iPC)
         {
-        return jump(frame, iPC + m_ofJmp, m_cExits);
+        return m_fCallFinally
+            ? frame.processAllGuard(
+                new JumpAction(iPC + m_ofJmp, m_nJumpToScope, m_ixAllGuard, m_ixBaseGuard))
+            : jump(frame, iPC + m_ofJmp, m_cExits);
+        }
+
+    @Override
+    public void resolveAddresses(Op[] aop)
+        {
+        super.resolveAddresses(aop);
+
+        int nGuardAllDepth = getGuardAllDepth();
+        if (nGuardAllDepth > 0)
+            {
+            Op opFinally = findFirstUnmatchedOp(aop, OP_GUARD_ALL, OP_FINALLY);
+            Op opJumpTo  = aop[getAddress() + m_ofJmp];
+
+            assert opFinally.getGuardAllDepth() == nGuardAllDepth; // GuardAllDepth drops right after OP_FINALLY
+            assert opJumpTo.getGuardAllDepth() <= nGuardAllDepth;
+
+            m_ixAllGuard   = opFinally.getGuardDepth() + nGuardAllDepth - 1;
+            m_ixBaseGuard  = opJumpTo.getGuardAllDepth() - 1;
+            m_nJumpToScope = opJumpTo.getDepth() - 1;
+            m_fCallFinally = true;
+            }
         }
 
     @Override
@@ -62,4 +86,34 @@ public class Jump
 
         return false;
         }
+
+    protected static class JumpAction
+            extends Frame.DeferredGuardAction
+        {
+        public JumpAction(int iPC, int nJumpScope, int ixAllGuard, int ixBaseGuard)
+            {
+            super(ixAllGuard, ixBaseGuard);
+
+            m_iPC        = iPC;
+            m_nJumpScope = nJumpScope;
+            }
+
+        @Override
+        public int complete(Frame frame)
+            {
+            while (frame.m_iScope > m_nJumpScope)
+                {
+                frame.exitScope();
+                }
+            return m_iPC;
+            }
+
+        private final int m_iPC;
+        private final int m_nJumpScope;
+        }
+
+    protected transient boolean m_fCallFinally;
+    protected transient int     m_ixAllGuard;
+    protected transient int     m_ixBaseGuard;
+    protected transient int     m_nJumpToScope;
     }

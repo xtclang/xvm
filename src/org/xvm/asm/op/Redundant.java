@@ -21,10 +21,10 @@ public class Redundant
         }
 
     @Override
-    public void initInfo(int nAddress, int nDepth)
+    public void initInfo(int nAddress, int nDepth, int nGuardDepth, int nGuardAllDepth)
         {
-        m_opDiscarded.initInfo(nAddress, nDepth);
-        super.initInfo(nAddress, nDepth);
+        m_opDiscarded.initInfo(nAddress, nDepth, nGuardDepth, nGuardAllDepth);
+        super.initInfo(nAddress, nDepth, nGuardDepth, nGuardAllDepth);
         }
 
     @Override

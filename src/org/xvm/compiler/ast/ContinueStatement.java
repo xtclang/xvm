@@ -13,7 +13,7 @@ import org.xvm.util.Severity;
 
 
 /**
- * A break statement represents the "continue" keyword.
+ * A continue statement represents the "continue" keyword.
  */
 public class ContinueStatement
         extends GotoStatement

@@ -5,6 +5,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.Frame.DeferredGuardAction;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
@@ -52,14 +53,20 @@ public class FinallyEnd
         ObjectHandle hException = frame.f_ahVar[nException];
         if (hException == xNullable.NULL)
             {
-            frame.exitScope();
-            return iPC + 1;
+            DeferredGuardAction deferred = frame.m_deferred;
+            if (deferred == null)
+                {
+                // the "finally" scope was entered naturally and exits naturally
+                frame.exitScope();
+                return iPC + 1;
+                }
+
+            // the "finally" scope was jumped to from a RETURN_* or JUMP op
+            return frame.processAllGuard(deferred);
             }
-        else
-            {
-            // re-throw
-            return frame.raiseException((ExceptionHandle) hException);
-            }
+
+        // re-throw
+        return frame.raiseException((ExceptionHandle) hException);
         }
 
     @Override
@@ -67,4 +74,21 @@ public class FinallyEnd
         {
         scope.exit(this);
         }
+
+    @Override
+    public boolean advances()
+        {
+        return m_fAdvances;
+        }
+
+    /**
+     * @param fCompletes  if true, indicates Whether this FinallyEnd op-code can proceed in a normal
+     *                    fashion (to the next op); otherwise, only via a throw or jump
+     */
+    public void setCompletes(boolean fCompletes)
+        {
+        m_fAdvances = fCompletes;
+        }
+
+    private transient boolean m_fAdvances = true;
     }

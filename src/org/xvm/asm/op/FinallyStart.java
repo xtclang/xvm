@@ -80,7 +80,7 @@ public class FinallyStart
 
         // this op-code can only be reached by the normal flow of execution,
         // while upon an exception, the GuardAll would jump to the very next op
-        // (called from Frame.findGuard) with an exception at anNextVar[iScope] + 1,
+        // (called from Frame.findGuard) with an exception handle at anNextVar[iScope] + 1,
         // so we need to initialize the exception slot (to Null) when coming in normally;
         // presence or absence of the exception will be checked by the FinallyEnd
         frame.introduceResolvedVar(m_nVar, frame.poolContext().typeException१(), null,
@@ -100,7 +100,10 @@ public class FinallyStart
     public void simulate(Scope scope)
         {
         scope.exit(this);
+        scope.exitGuardAll();
         scope.enter(this);
+
+        // super call allocates a var for the exception
         super.simulate(scope);
         }
     }

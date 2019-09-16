@@ -29,6 +29,7 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xFunction.FullyBoundHandle;
+import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xRef.RefHandle;
 
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
@@ -70,6 +71,7 @@ public class Frame
     private   Guard[]               m_aGuard;       // at index i, the guard for the guard index i
 
     public  ExceptionHandle         m_hException;   // an exception
+    public  DeferredGuardAction     m_deferred;     // a deferred action to be performed by FinallyEnd
     public  FullyBoundHandle        m_hfnFinally;   // a "finally" method for the constructors
     public  Frame                   m_frameNext;    // the next frame to call
     public  Continuation            m_continuation; // a function to call after this frame returns
@@ -284,6 +286,7 @@ public class Frame
         Guard[] aGuard = m_aGuard;
         if (aGuard == null)
             {
+            assert m_iGuard == -1;
             aGuard = m_aGuard = new Guard[f_anNextVar.length]; // # of scopes
             }
         aGuard[++m_iGuard] = guard;
@@ -306,7 +309,7 @@ public class Frame
                 {
                 Guard guard = aGuard[iGuard];
 
-                int iPC = guard.handle(this, hException, iGuard);
+                int iPC = guard.handleException(this, hException, iGuard);
                 if (iPC >= 0)
                     {
                     return iPC;
@@ -314,6 +317,29 @@ public class Frame
                 }
             }
         return Op.R_EXCEPTION;
+        }
+
+    // find the closest "AllGuard" and continue with execution of the corresponding code
+    public int processAllGuard(DeferredGuardAction deferredAction)
+        {
+        Guard[] aGuard = m_aGuard;
+        assert aGuard != null;
+
+        for (int iGuard = deferredAction.getGuardIndex(); iGuard >= 0; iGuard--)
+            {
+            Guard guard = aGuard[iGuard];
+            if (guard instanceof AllGuard)
+                {
+                deferredAction.setGuardIndex(iGuard - 1);
+                m_deferred = deferredAction;
+
+                return ((AllGuard) guard).handleJump(this, iGuard);
+                }
+            }
+
+        m_deferred = null;
+
+        return deferredAction.complete(this);
         }
 
     /**
@@ -1661,7 +1687,6 @@ public class Frame
                 {
                 sb.append(" (iPC=").append(iPC);
                 }
-            // TODO: remove printing the Op name (temporary for debugging purposes only)
             sb.append(", op=").append(aOp[iPC].getClass().getSimpleName());
             sb.append(')');
             }
@@ -1684,14 +1709,16 @@ public class Frame
         protected Guard(int nStartAddress, int nScope)
             {
             f_nStartAddress = nStartAddress;
-            f_nScope = nScope;
+            f_nScope        = nScope;
             }
 
-        abstract public int handle(Frame frame, ExceptionHandle hException, int iGuard);
+        abstract public int handleException(Frame frame, ExceptionHandle hException, int iGuard);
 
-        // drop down to the scope of the exception handler;
-        // implicit "enter" with an exception variable introduction
-        public void introduceException(Frame frame, int iGuard, ExceptionHandle hException, String sVarName)
+        /**
+         * Drop down to the scope of the exception/finally handler;
+         * perform an implicit "enter" with a variable introduction (exception or Null)
+         */
+        protected void introduceValue(Frame frame, int iGuard, ObjectHandle hValue, String sVarName)
             {
             int nScope = f_nScope;
 
@@ -1704,7 +1731,7 @@ public class Frame
 
             int nVar = frame.f_anNextVar[nScope]++;
 
-            frame.introduceResolvedVar(nVar, hException.getType(), sVarName, VAR_STANDARD, hException);
+            frame.introduceResolvedVar(nVar, hValue.getType(), sVarName, VAR_STANDARD, hValue);
 
             frame.m_hException = null;
             }
@@ -1713,21 +1740,30 @@ public class Frame
     public static class AllGuard
             extends Guard
         {
-        protected final int f_nFinallyRelAddress;
+        protected final int f_nFinallyStartAddress;
 
-        public AllGuard(int nStartAddress, int nScope, int nFinallyRelAddress)
+        public AllGuard(int nStartAddress, int nScope, int nFinallyStartOffset)
             {
             super(nStartAddress, nScope);
 
-            f_nFinallyRelAddress = nFinallyRelAddress;
+            f_nFinallyStartAddress = nStartAddress + nFinallyStartOffset;
             }
 
-        public int handle(Frame frame, ExceptionHandle hException, int iGuard)
+        @Override
+        public int handleException(Frame frame, ExceptionHandle hException, int iGuard)
             {
-            introduceException(frame, iGuard, hException, "");
+            introduceValue(frame, iGuard, hException, "");
 
             // need to jump to the instruction past the FinallyStart
-            return f_nStartAddress + f_nFinallyRelAddress + 1;
+            return f_nFinallyStartAddress + 1;
+            }
+
+        protected int handleJump(Frame frame, int iGuard)
+            {
+            introduceValue(frame, iGuard, xNullable.NULL, "");
+
+            // need to jump to the instruction past the FinallyStart
+            return f_nFinallyStartAddress + 1;
             }
         }
 
@@ -1743,12 +1779,13 @@ public class Frame
             {
             super(nStartAddress, nScope);
 
-            f_anClassConstId = anClassConstId;
-            f_anNameConstId = anNameConstId;
+            f_anClassConstId    = anClassConstId;
+            f_anNameConstId     = anNameConstId;
             f_anCatchRelAddress = anCatchAddress;
             }
 
-        public int handle(Frame frame, ExceptionHandle hException, int iGuard)
+        @Override
+        public int handleException(Frame frame, ExceptionHandle hException, int iGuard)
             {
             TypeComposition clzException = hException.getComposition();
 
@@ -1757,7 +1794,7 @@ public class Frame
                 ClassComposition clzCatch = frame.resolveClass(f_anClassConstId[iCatch]);
                 if (clzException.getType().isA(clzCatch.getType()))
                     {
-                    introduceException(frame, iGuard, hException,
+                    introduceValue(frame, iGuard, hException,
                         frame.getString(f_anNameConstId[iCatch]));
 
                     return f_nStartAddress + f_anCatchRelAddress[iCatch];
@@ -1765,6 +1802,50 @@ public class Frame
                 }
             return Op.R_EXCEPTION;
             }
+        }
+
+    /**
+     * A deferred action to be performed by the "FinallyEnd" op.
+     */
+    public static abstract class DeferredGuardAction
+        {
+        protected DeferredGuardAction(int ixGuard)
+            {
+            this(ixGuard, 0);
+            }
+
+        protected DeferredGuardAction(int ixGuardStart, int ixGuardBase)
+            {
+            assert ixGuardStart >= ixGuardBase;
+
+            m_ixGuard     = ixGuardStart;
+            m_ixGuardBase = ixGuardBase;
+            }
+
+        abstract public int complete(Frame frame);
+
+        /**
+         * @return the Guard index for this pseudo handle
+         */
+        public int getGuardIndex()
+            {
+            return m_ixGuard;
+            }
+
+        /**
+         * Set the guard index.
+         *
+         * @param iGuard  the Guard index
+         */
+        public void setGuardIndex(int iGuard)
+            {
+            m_ixGuard = iGuard > m_ixGuardBase
+                    ? iGuard
+                    : -1;
+            }
+
+        private int m_ixGuard;     // the index of the next AllGuard to proceed to
+        private int m_ixGuardBase; // the index of the AllGuard to stop at
         }
 
     // variable into (support for Refs and debugger)

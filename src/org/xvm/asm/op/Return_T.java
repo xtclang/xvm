@@ -7,12 +7,12 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
+import org.xvm.asm.OpReturn;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-
 import org.xvm.runtime.Utils;
+
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -27,7 +27,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * of return values and whose field types match the return types)
  */
 public class Return_T
-        extends Op
+        extends OpReturn
     {
     /**
      * Construct a RETURN_T op.
@@ -80,18 +80,19 @@ public class Return_T
             {
             ObjectHandle[] ahValue = new ObjectHandle[]{hArg};
             Frame.Continuation stepNext =
-                frameCaller -> frameCaller.returnTuple((TupleHandle) ahValue[0]);
+                frameCaller -> complete(frameCaller, (TupleHandle) ahValue[0]);
 
             return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
             }
 
-        return frame.returnTuple((TupleHandle) hArg);
+        return complete(frame, (TupleHandle) hArg);
         }
 
-    @Override
-    public boolean advances()
+    protected int complete(Frame frame, TupleHandle hValue)
         {
-        return false;
+        return m_fCallFinally
+            ? frame.processAllGuard(new ReturnTAction(hValue, m_ixAllGuard))
+            : frame.returnTuple(hValue);
         }
 
     @Override
@@ -100,7 +101,25 @@ public class Return_T
         m_argT = registerArgument(m_argT, registry);
         }
 
-    private int m_nArg;
+    protected static class ReturnTAction
+            extends Frame.DeferredGuardAction
+        {
+        public ReturnTAction(TupleHandle hValue, int ixAllGuard)
+            {
+            super(ixAllGuard);
 
+            this.m_hValue = hValue;
+            }
+
+        @Override
+        public int complete(Frame frame)
+            {
+            return frame.returnTuple(m_hValue);
+            }
+
+        private final TupleHandle m_hValue;
+        }
+
+    private int      m_nArg;
     private Argument m_argT;
     }

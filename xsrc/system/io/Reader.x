@@ -380,44 +380,21 @@ interface Reader
     @Override
     String toString()
         {
-        // TODO GG - fix bug in try..finally (CP bug)
-        //Exception in thread "main" java.lang.ArrayIndexOutOfBoundsException: Index 28 out of bounds for length 28
-        //	at org.xvm.asm.MethodStructure$Code.follow(MethodStructure.java:2181)
-        //	at org.xvm.asm.MethodStructure$Code.follow(MethodStructure.java:2171)
-        //	at org.xvm.asm.MethodStructure$Code.eliminateDeadCode(MethodStructure.java:2124)
-        //	at org.xvm.asm.MethodStructure$Code.ensureAssembled(MethodStructure.java:2292)
-        //	at org.xvm.asm.MethodStructure.assemble(MethodStructure.java:1618)
-        //
-        // Position current = position;
-        // try
-        //     {
-        //     reset();
-        //     StringBuffer buf = new StringBuffer();
-        //     while (Char ch := next())
-        //         {
-        //         buf.add(ch);
-        //         }
-        //     return buf.toString();
-        //     }
-        // finally
-        //     {
-        //     position = current;
-        //     }
-
-        StringBuffer buf = new StringBuffer();
-        try (Position current = position)
-            {
+        Position current = position;
+        try
+             {
             reset();
+            StringBuffer buf = new StringBuffer();
             while (Char ch := next())
                 {
                 buf.add(ch);
                 }
+            return buf.toString();
             }
         finally
             {
             position = current;
             }
-        return buf.toString();
         }
 
 

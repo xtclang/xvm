@@ -174,6 +174,7 @@ public class GuardStart
     @Override
     public void simulate(Scope scope)
         {
+        scope.enterGuard();
         scope.enter(this);
 
         m_nNextVar = scope.getCurVars();

@@ -2,10 +2,9 @@ package org.xvm.asm.op;
 
 
 import java.io.DataInput;
-import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
+import org.xvm.asm.OpReturn;
 
 import org.xvm.runtime.Frame;
 
@@ -14,7 +13,7 @@ import org.xvm.runtime.Frame;
  * RETURN_0 ; (no return value)
  */
 public class Return_0
-        extends Op
+        extends OpReturn
     {
     /**
      * Construct a RETURN_0 op.
@@ -30,7 +29,6 @@ public class Return_0
      * @param aconst  an array of constants used within the method
      */
     public Return_0(DataInput in, Constant[] aconst)
-            throws IOException
         {
         }
 
@@ -43,13 +41,24 @@ public class Return_0
     @Override
     public int process(Frame frame, int iPC)
         {
-        return R_RETURN;
+        return m_fCallFinally
+            ? frame.processAllGuard(new Return0Action(m_ixAllGuard))
+            : R_RETURN;
         }
 
-    @Override
-    public boolean advances()
+    protected static class Return0Action
+            extends Frame.DeferredGuardAction
         {
-        return false;
+        protected Return0Action(int ixAllGuard)
+            {
+            super(ixAllGuard);
+            }
+
+        @Override
+        public int complete(Frame frame)
+            {
+            return R_RETURN;
+            }
         }
 
     public static final Return_0 INSTANCE = new Return_0();

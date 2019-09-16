@@ -7,9 +7,9 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
-
+import org.xvm.asm.OpReturn;
 import org.xvm.asm.Register;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
@@ -19,7 +19,7 @@ import org.xvm.runtime.Utils;
  * RETURN_N #vals:(rvalue)
  */
 public class Return_N
-        extends Op
+        extends OpReturn
     {
     /**
      * Construct a RETURN_N op.
@@ -102,18 +102,19 @@ public class Return_N
         if (fAnyProp)
             {
             final boolean[] af = afDynamic;
-            Frame.Continuation stepNext = frameCaller -> frameCaller.returnValues(ahArg, af);
+            Frame.Continuation stepNext = frameCaller -> complete(frameCaller, ahArg, af);
 
             return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
             }
 
-        return frame.returnValues(ahArg, afDynamic);
+        return complete(frame, ahArg, afDynamic);
         }
 
-    @Override
-    public boolean advances()
+    protected int complete(Frame frame, ObjectHandle[] ahValue, boolean[] afDynamic)
         {
-        return false;
+        return m_fCallFinally
+            ? frame.processAllGuard(new ReturnNAction(ahValue, afDynamic, m_ixAllGuard))
+            : frame.returnValues(ahValue, afDynamic);
         }
 
     @Override
@@ -145,7 +146,27 @@ public class Return_N
         return sb.toString();
         }
 
-    private int[] m_anArg;
+    protected static class ReturnNAction
+            extends Frame.DeferredGuardAction
+        {
+        public ReturnNAction(ObjectHandle[] ahValue, boolean[] afDynamic, int ixAllGuard)
+            {
+            super(ixAllGuard);
 
+            this.m_ahValue   = ahValue;
+            this.m_afDynamic = afDynamic;
+            }
+
+        @Override
+        public int complete(Frame frame)
+            {
+            return frame.returnValues(m_ahValue, m_afDynamic);
+            }
+
+        private final ObjectHandle[] m_ahValue;
+        private final boolean[] m_afDynamic;
+        }
+
+    private int[]      m_anArg;
     private Argument[] m_aArg;
     }

@@ -71,6 +71,7 @@ public class GuardAll
     @Override
     public void simulate(Scope scope)
         {
+        scope.enterGuardAll();
         scope.enter(this);
 
         m_nNextVar = scope.getCurVars();
