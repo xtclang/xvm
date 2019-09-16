@@ -6,8 +6,10 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Op;
 import org.xvm.asm.OpMove;
 
+import org.xvm.asm.Register;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -89,5 +91,16 @@ public class Move
             {
             return frame.raiseException(e);
             }
+        }
+
+    @Override
+    public boolean checkRedundant(Op[] aop)
+        {
+        if (m_argFrom instanceof Register && m_argFrom.equals(m_argTo))
+            {
+            markRedundant();
+            return true;
+            }
+        return false;
         }
     }

@@ -86,6 +86,6 @@ public abstract class OpMove
     protected int m_nFromValue;
     protected int m_nToValue;
 
-    private Argument m_argFrom;
-    private Argument m_argTo;
+    protected Argument m_argFrom;
+    protected Argument m_argTo;
     }
