@@ -1033,7 +1033,7 @@ public abstract class TypeConstant
 
         // there is a place-holder that signifies that a type is busy building a TypeInfo;
         // mark the type as having its TypeInfo building "in progress"
-        setTypeInfo(pool.TYPEINFO_PLACEHOLDER);
+        setTypeInfo(pool.infoPlaceholder());
 
         // since this can only be used "from the outside", there should be no deferred TypeInfo
         // objects at this point
@@ -1140,7 +1140,7 @@ public abstract class TypeConstant
 
         if (info == null || !isUpToDate(info))
             {
-            setTypeInfo(getConstantPool().TYPEINFO_PLACEHOLDER);
+            setTypeInfo(getConstantPool().infoPlaceholder());
             info = buildTypeInfo(errs);
             if (info != null)
                 {

@@ -720,7 +720,7 @@ public class ConstantPool
      * @param sName       the (simple) name of the directory
      * @param ftCreated   the creation date/time of the directory, or null
      * @param ftModified  the last-modified date/time of the directory, or null
-     * @param afiles      the contents of the directory
+     * @param aFiles      the contents of the directory
      *
      * @return a directory FSNodeConstant
      */
@@ -728,9 +728,9 @@ public class ConstantPool
             String           sName,
             FileTime         ftCreated,
             FileTime         ftModified,
-            FSNodeConstant[] afiles)
+            FSNodeConstant[] aFiles)
         {
-        return new FSNodeConstant(this, sName, ftCreated, ftModified, afiles);
+        return new FSNodeConstant(this, sName, ftCreated, ftModified, aFiles);
         }
 
     /**
@@ -2216,6 +2216,31 @@ public class ConstantPool
     public SignatureConstant sigEquals()        {SignatureConstant c = m_sigEquals;       if (c == null) {m_sigEquals       = c = getSignature("Object",    "equals",    3)                   ;} return c;}
     public SignatureConstant sigCompare()       {SignatureConstant c = m_sigCompare;      if (c == null) {m_sigCompare      = c = getSignature("Orderable", "compare",   3)                   ;} return c;}
 
+    /**
+     * A special TypeInfo that acts as a place-holder for "this TypeInfo is currently being built".
+     */
+    public TypeInfo infoPlaceholder()
+        {
+        TypeInfo info = m_infoPlaceholder;
+        if (info == null)
+            {
+            m_infoPlaceholder = info = new TypeInfo(
+                typeObject(), 0, null, 0, true, Collections.EMPTY_MAP, Annotation.NO_ANNOTATIONS,
+                typeObject(), null, typeObject(),
+                Collections.EMPTY_LIST, new ListMap<>(), new ListMap<>(),
+                Collections.EMPTY_MAP, Collections.EMPTY_MAP,
+                Collections.EMPTY_MAP, Collections.EMPTY_MAP,
+                Progress.Building)
+                    {
+                    public String toString()
+                        {
+                        return "Placeholder";
+                        }
+                    };
+            }
+        return info;
+        }
+
     public SingletonConstant valOf(boolean f)
         {
         return f ? valTrue() : valFalse();
@@ -3015,6 +3040,7 @@ public class ConstantPool
         m_sigConstruct    = null;
         m_sigEquals       = null;
         m_sigCompare      = null;
+        m_infoPlaceholder = null;
 
         // sort the Constants by how often they are referred to within the FileStructure, with the
         // most frequently referred-to Constants appearing first
@@ -3076,17 +3102,8 @@ public class ConstantPool
      */
     private HashMap<Object, Constant> ensureLocatorLookup(Format format)
         {
-        final EnumMap<Format, HashMap<Object, Constant>> mapLocatorMaps = m_mapLocators;
-
-        HashMap<Object, Constant> mapLocators = mapLocatorMaps.get(format);
-        if (mapLocators == null)
-            {
-            // lazily instantiate the locator map for the specified type
-            mapLocators = new HashMap<>();
-            mapLocatorMaps.put(format, mapLocators);
-            }
-
-        return mapLocators;
+        // lazily instantiate the locator map for the specified type
+        return m_mapLocators.computeIfAbsent(format, _format -> new HashMap<>());
         }
 
     /**
@@ -3551,24 +3568,7 @@ public class ConstantPool
     private transient SignatureConstant m_sigConstruct;
     private transient SignatureConstant m_sigEquals;
     private transient SignatureConstant m_sigCompare;
-
-    /**
-     * A special TypeInfo that acts as a place-holder for "this TypeInfo is currently being built".
-     */
-    public final TypeInfo TYPEINFO_PLACEHOLDER = new TypeInfo(
-            typeObject(), 0, null, 0, true, Collections.EMPTY_MAP, Annotation.NO_ANNOTATIONS,
-            getConstantPool().typeObject(), null, getConstantPool().typeObject(),
-            Collections.EMPTY_LIST, new ListMap<>(), new ListMap<>(),
-            Collections.EMPTY_MAP, Collections.EMPTY_MAP,
-            Collections.EMPTY_MAP, Collections.EMPTY_MAP,
-            Progress.Building)
-        {
-        @Override
-        public String toString()
-            {
-            return "Placeholder";
-            }
-        };
+    private transient TypeInfo          m_infoPlaceholder;
 
     /**
      * A special "chicken and egg" list of TypeConstants that need to have their TypeInfos rebuilt.
