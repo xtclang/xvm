@@ -3,6 +3,7 @@ package org.xvm.runtime.template;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.CharConstant;
@@ -64,6 +65,21 @@ public class xChar
             }
 
         return super.createConstHandle(frame, constant);
+        }
+
+    @Override
+    public int construct(Frame frame, MethodStructure constructor, ClassComposition clazz,
+                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
+        {
+        // all three different constructors take a JavaLong parameter
+        long lCodepoint = ((JavaLong) ahVar[0]).getValue();
+        if (lCodepoint > 0x10FFFFL ||                       // unicode limit
+            lCodepoint > 0xD7FFL && lCodepoint < 0xE000L)   // surrogate values are illegal
+            {
+            return frame.raiseException("illegal code-point: " + lCodepoint);
+            }
+
+        return frame.assignValue(iReturn, makeHandle(lCodepoint));
         }
 
     @Override

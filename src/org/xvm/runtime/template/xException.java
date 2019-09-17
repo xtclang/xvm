@@ -169,7 +169,7 @@ public class xException
         {
         ExceptionHandle hException = makeMutableStruct(frame, clzEx, null, null);
 
-        hException.setField("text", xString.makeHandle(sMessage));
+        hException.setField("text", sMessage == null ? xNullable.NULL : xString.makeHandle(sMessage));
         hException.setField("cause", xNullable.NULL);
         hException.makeImmutable();
 

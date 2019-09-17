@@ -135,14 +135,14 @@ public abstract class BitBasedArray
         byte[] abValue = hArray.m_abValue;
         if (lIndex == cSize)
             {
-            if (hArray.m_mutability == Mutability.FixedSize)
-                {
-                return frame.raiseException(xException.readOnly(frame));
-                }
-
             // an array can only grow without any "holes"
-            if (storage(cSize) == abValue.length)
+            if (index(cSize) > abValue.length)
                 {
+                if (hArray.m_mutability == Mutability.FixedSize)
+                    {
+                    return frame.raiseException(xException.readOnly(frame));
+                    }
+
                 abValue = hArray.m_abValue = grow(abValue, storage(cSize) + 1);
                 }
 

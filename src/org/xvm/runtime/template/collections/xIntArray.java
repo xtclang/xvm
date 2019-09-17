@@ -125,14 +125,14 @@ public class xIntArray
         long[] alValue = hArray.m_alValue;
         if (lIndex == cSize)
             {
-            if (hArray.m_mutability == Mutability.FixedSize)
-                {
-                return frame.raiseException(xException.readOnly(frame));
-                }
-
             // an array can only grow without any "holes"
             if (cSize == alValue.length)
                 {
+                if (hArray.m_mutability == Mutability.FixedSize)
+                    {
+                    return frame.raiseException(xException.readOnly(frame));
+                    }
+
                 alValue = hArray.m_alValue = grow(alValue, cSize + 1);
                 }
 

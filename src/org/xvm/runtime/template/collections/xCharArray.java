@@ -126,14 +126,14 @@ public class xCharArray
         char[] achValue = hArray.m_achValue;
         if (lIndex == cSize)
             {
-            if (hArray.m_mutability == Mutability.FixedSize)
-                {
-                return frame.raiseException(xException.readOnly(frame));
-                }
-
             // an array can only grow without any "holes"
             if (cSize == achValue.length)
                 {
+                if (hArray.m_mutability == Mutability.FixedSize)
+                    {
+                    return frame.raiseException(xException.readOnly(frame));
+                    }
+
                 achValue = hArray.m_achValue = grow(achValue, cSize + 1);
                 }
 

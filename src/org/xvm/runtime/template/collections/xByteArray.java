@@ -143,14 +143,14 @@ public class xByteArray
         byte[] abValue = hArray.m_abValue;
         if (lIndex == cSize)
             {
-            if (hArray.m_mutability == Mutability.FixedSize)
-                {
-                return frame.raiseException(xException.readOnly(frame));
-                }
-
             // an array can only grow without any "holes"
             if (cSize == abValue.length)
                 {
+                if (hArray.m_mutability == Mutability.FixedSize)
+                    {
+                    return frame.raiseException(xException.readOnly(frame));
+                    }
+
                 abValue = hArray.m_abValue = grow(abValue, cSize + 1);
                 }
 

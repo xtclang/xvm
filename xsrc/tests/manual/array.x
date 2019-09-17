@@ -108,6 +108,18 @@ module TestArray.xqiz.it
 
         String[] list = new Array<String>(3, (i) -> ["one","two","three"][i]);
         console.println("list=" + list);
+
+        Char[] chars = new Array<Char>(3, (i) -> ('a' + i));
+        console.println("chars=" + chars);
+
+        Int[] ints = new Array<Int>(3, (i) -> -i);
+        console.println("ints=" + ints);
+
+        Byte[] bytes = new Array<Byte>(3, (i) -> i.toByte());
+        console.println("ints=" + bytes);
+
+        Boolean[] booleans = new Array<Boolean>(3, (i) -> i % 2 == 0);
+        console.println("booleans=" + booleans);
         }
 
     void testAssignSideEffects()
