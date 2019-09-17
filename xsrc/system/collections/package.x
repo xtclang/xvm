@@ -134,7 +134,7 @@ package collections
      * interface, allowing the runtime to obtain a `const` version of the data structure when
      * necessary, such as when crossing a service boundary.
      */
-    interface ConstAble
+    interface ImmutableAble
             extends VariablyMutable
         {
         /**
@@ -152,8 +152,10 @@ package collections
          * @param inPlace  (optional) specify that the object should convert itself to `const`
          *                 if it supports that form of variable mutability
          */
-        immutable ConstAble ensureConst(Boolean inPlace = false);
+        immutable ImmutableAble ensureImmutable(Boolean inPlace = false);
         }
+
+    typedef (ImmutableAble | immutable Object) Freezable;
 
     /**
      * An ConstantRequired exception is raised when an attempt is made to change mutability to

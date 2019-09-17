@@ -23,7 +23,7 @@
 interface Tuple<ElementTypes extends Tuple<ElementTypes>>
         extends FixedSizeAble
         extends PersistentAble
-        extends ConstAble
+        extends ImmutableAble
     {
     /**
      * The number of elements in the tuple. A tuple cannot change its size; a size change requires
@@ -151,8 +151,8 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * {@code const} tuple with the requested changes incorporated.
      *
      * @throws Exception if any of the values in the tuple are not {@code const} and are not
-     *         {@link ConstAble}
+     *         {@link ImmutableAble}
      */
     @Override
-    immutable Tuple ensureConst(Boolean inPlace = false);
+    immutable Tuple ensureImmutable(Boolean inPlace = false);
     }

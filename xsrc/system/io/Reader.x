@@ -235,7 +235,7 @@ interface Reader
         {
         Char[] chars = new Char[count];
         nextChars(chars);
-        return chars.ensureConst(True);
+        return chars.ensureImmutable(True);
         }
 
     /**

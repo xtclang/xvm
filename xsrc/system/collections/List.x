@@ -245,9 +245,9 @@ interface List<ElementType>
                 {
                 return temp.ensurePersistent(True);
                 }
-            else if (mutability == Constant && temp.is(ConstAble))
+            else if (mutability == Constant && temp.is(ImmutableAble))
                 {
-                return temp.ensureConst(True);
+                return temp.ensureImmutable(True);
                 }
             }
 

@@ -279,7 +279,7 @@ const Int16
     @Override
     immutable Boolean[] toBooleanArray()
         {
-        return new Array<Boolean>(bits.size, i -> bits[i].toBoolean()).ensureConst(True);
+        return new Array<Boolean>(bits.size, i -> bits[i].toBoolean()).ensureImmutable(True);
         }
 
     @Override

@@ -14,7 +14,7 @@ const String
      */
     construct(Char[] chars)
         {
-        this.chars = chars.ensureConst(False); // TODO GG
+        this.chars = chars.ensureImmutable();
         }
 
 

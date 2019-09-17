@@ -93,7 +93,7 @@ interface Iterable<ElementType>
             case Mutable   : result;
             case Fixed     : result.ensureFixedSize (True);
             case Persistent: result.ensurePersistent(True);
-            case Constant  : result.ensureConst     (True);
+            case Constant  : result.ensureImmutable (True);
             };
         }
     }

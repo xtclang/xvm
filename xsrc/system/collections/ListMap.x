@@ -16,7 +16,7 @@ import maps.ReifiedEntry;
  */
 class ListMap<KeyType, ValueType>
         implements Map<KeyType, ValueType>
-        implements MutableAble, FixedSizeAble, PersistentAble, ConstAble
+        implements MutableAble, FixedSizeAble, PersistentAble, ImmutableAble
         incorporates conditional ListMapIndex<KeyType extends immutable Hashable, ValueType>
         incorporates Stringer
     {
@@ -296,7 +296,7 @@ class ListMap<KeyType, ValueType>
         }
 
     @Override
-    immutable ListMap ensureConst(Boolean inPlace = False)
+    immutable ListMap ensureImmutable(Boolean inPlace = False)
         {
         TODO
         }

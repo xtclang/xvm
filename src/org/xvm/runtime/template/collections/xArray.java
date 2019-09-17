@@ -137,7 +137,7 @@ public class xArray
         markNativeMethod("add", ELEMENT_TYPE, ARRAY);
         markNativeMethod("addAll", new String[] {"Iterable<ElementType>"}, ARRAY);
         markNativeMethod("slice", new String[] {"Range<Int64>"}, ARRAY);
-        markNativeMethod("ensureConst", BOOLEAN, null);
+        markNativeMethod("ensureImmutable", BOOLEAN, null);
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -444,7 +444,7 @@ public class xArray
                 return slice(frame, hTarget, ixFrom, ixTo, iReturn);
                 }
 
-            case "ensureConst": // immutable Array ensureConst(Boolean inPlace = False)
+            case "ensureImmutable": // immutable Array ensureImmutable(Boolean inPlace = False)
                 {
                 ArrayHandle   hArray   = (ArrayHandle) hTarget;
                 BooleanHandle hInPlace = hArg == ObjectHandle.DEFAULT

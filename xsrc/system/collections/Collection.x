@@ -27,7 +27,7 @@
  * * A *const* collection is one that is immutable, whose size and contents are immutable, and which
  *   provides a new *const* collection as the result of any mutating request. If an implementation
  *   provides support for more than one mode, including a *const* mode, then it should implement the
- *   {@link ConstAble} interface.
+ *   {@link ImmutableAble} interface.
  */
 interface Collection<ElementType>
         extends Iterable<ElementType>

@@ -76,7 +76,7 @@ const Type<DataType>
                 }
             }
 
-        return map.ensureConst();
+        return map.ensureImmutable();
         }
 
     /**
@@ -144,7 +144,7 @@ const Type<DataType>
                 }
             }
 
-        return map.ensureConst();
+        return map.ensureImmutable();
         }
 
     /**
@@ -307,24 +307,4 @@ const Type<DataType>
         {
         appender.add("Methods: not implemented");
         }
-
-    // ----- ConstAble interface -------------------------------------------------------------------
-
-// REVIEW: Cam, this makes no sense since Type is const; did you mean to create an immutable Type?
-//
-//    @Override
-//    immutable Type<DataType> ensureConst()
-//        {
-//        return this instanceof immutable Object
-//                ? this
-//                : new Type<DataType>(allMethods, explicitlyImmutable).ensureConst();
-//        }
-//
-//    @Override
-//    immutable Type<DataType> ensureConst()
-//        {
-//        allMethods = allMethods.ensureConst();
-//        meta.isImmutable = true;
-//        return this;
-//        }
     }

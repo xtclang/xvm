@@ -4,7 +4,7 @@
  */
 class ListSet<ElementType extends Hashable>
          implements Set<ElementType>
-         implements MutableAble, PersistentAble, ConstAble
+         implements MutableAble, PersistentAble, ImmutableAble
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -69,7 +69,7 @@ class ListSet<ElementType extends Hashable>
         }
 
     @Override
-    immutable ListSet<ElementType> ensureConst(Boolean inPlace = false)
+    immutable ListSet<ElementType> ensureImmutable(Boolean inPlace = false)
         {
         TODO;
         }

@@ -9,7 +9,7 @@ interface FileWatcher
     enum Event {Created, Modified, Deleted}
 
     static Set<Event> ALL_EVENTS = new collections.ListSet<Event>(
-            [Created, Modified, Deleted]).ensureConst(true);
+            [Created, Modified, Deleted]).ensureImmutable(true);
     // TODO CP the ideal way to present it would be a "set" literal
     // static Set<Event> ALL_EVENTS = Set<Event>:[Created, Modified, Deleted];
 

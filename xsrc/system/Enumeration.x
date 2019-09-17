@@ -134,6 +134,6 @@ mixin Enumeration<EnumType extends Enum>
                 }
             }
 
-        return map.ensureConst();
+        return map.ensureImmutable();
         }
     }

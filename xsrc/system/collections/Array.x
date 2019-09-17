@@ -7,7 +7,7 @@
  */
 class Array<ElementType>
         implements List<ElementType>
-        implements MutableAble, FixedSizeAble, PersistentAble, ConstAble
+        implements MutableAble, FixedSizeAble, PersistentAble, ImmutableAble
         implements Stringable
         incorporates Stringer
         incorporates conditional BitArray<ElementType extends Bit>
@@ -87,7 +87,7 @@ class Array<ElementType>
         if (size > 0)
             {
             function ElementType (ElementType) transform = mutability == Constant
-                    ? e -> (e.is(Const) ? e : e.is(ConstAble) ? e.ensureConst() : assert)
+                    ? e -> (e.is(Const) ? e : e.is(ImmutableAble) ? e.ensureImmutable() : assert)
                     : e -> e;
 
             Int     index = size - 1;
@@ -269,7 +269,7 @@ class Array<ElementType>
             {
             Array result = new Array<ElementType>(size, i -> (range.contains(i) ? value : this[i]));
             return mutability == Constant
-                    ? result.ensureConst(true)
+                    ? result.ensureImmutable(true)
                     : result.ensurePersistent(true);
             }
         else
@@ -347,10 +347,10 @@ class Array<ElementType>
      * {@code const} array with the requested changes incorporated.
      *
      * @throws Exception if any of the values in the array are not {@code const} and are not
-     *         {@link ConstAble}
+     *         {@link ImmutableAble}
      */
     @Override
-    immutable Array ensureConst(Boolean inPlace = False)
+    immutable Array ensureImmutable(Boolean inPlace = False)
         {
         if (mutability == Constant)
             {
@@ -369,13 +369,13 @@ class Array<ElementType>
             return new Array(Constant, this).as(immutable ElementType[]);
             }
 
-        // all elements must be Const or Constable
+        // all elements must be immutable or ImmutableAble
         Boolean convert = False;
         loop: for (ElementType element : this)
             {
-            if (!element.is(Const))
+            if (!element.is(immutable Object))
                 {
-                if (element.is(ConstAble))
+                if (element.is(ImmutableAble))
                     {
                     convert = True;
                     }
@@ -390,10 +390,10 @@ class Array<ElementType>
             {
             loop2: for (ElementType element : this) // TODO CP - loop not loop2
                 {
-                if (!element.is(Const))
+                if (!element.is(immutable Object))
                     {
-                    assert element.is(ConstAble);
-                    this[loop2.count] = element.ensureConst(True);
+                    assert element.is(ImmutableAble);
+                    this[loop2.count] = element.ensureImmutable(True);
                     }
                 }
             }
@@ -567,7 +567,7 @@ class Array<ElementType>
                 Array result = new Array<ElementType>(size + 1, i -> (i < size ? this[i] : element));
                 return mutability == Persistent
                         ? result.ensurePersistent(true)
-                        : result.ensureConst(true);
+                        : result.ensureImmutable(true);
             }
         }
 
@@ -602,7 +602,7 @@ class Array<ElementType>
                 ElementType[] result = new Array<ElementType>(this.size + values.size, supply);
                 return mutability == Persistent
                         ? result.ensurePersistent(true)
-                        : result.ensureConst(true);
+                        : result.ensureImmutable(true);
             }
         }
 
@@ -650,7 +650,7 @@ class Array<ElementType>
             case Mutable   : result;
             case Fixed     : result.ensureFixedSize (True);
             case Persistent: result.ensurePersistent(True);
-            case Constant  : result.ensureConst     (True);
+            case Constant  : result.ensureImmutable (True);
             }, indexes.size;
         }
 
@@ -688,7 +688,7 @@ class Array<ElementType>
             ElementType[] result = new Array(size, i -> (i == index ? value : this[i]));
             return mutability == Persistent
                     ? result.ensurePersistent(true)
-                    : result.ensureConst(true);
+                    : result.ensureImmutable(true);
             }
         else
             {
@@ -727,7 +727,7 @@ class Array<ElementType>
                             });
                 return mutability == Persistent
                         ? result.ensurePersistent(true)
-                        : result.ensureConst(true);
+                        : result.ensureImmutable(true);
             }
         }
 
@@ -814,7 +814,7 @@ class Array<ElementType>
                 ElementType[] result = new Array<ElementType>(this.size + values.size, supply);
                 return mutability == Persistent
                         ? result.ensurePersistent(true)
-                        : result.ensureConst(true);
+                        : result.ensureImmutable(true);
             }
         }
 
@@ -848,7 +848,7 @@ class Array<ElementType>
                 ElementType[] result = new Array(size, i -> this[i < index ? i : i+1]);
                 return mutability == Persistent
                         ? result.ensurePersistent(true)
-                        : result.ensureConst(true);
+                        : result.ensureImmutable(true);
             }
         }
 
@@ -896,7 +896,7 @@ class Array<ElementType>
                 ElementType[] result = new Array(size, i -> this[i < lo ? i : i+gap]);
                 return mutability == Persistent
                         ? result.ensurePersistent(true)
-                        : result.ensureConst(true);
+                        : result.ensureImmutable(true);
             }
         }
 
@@ -1200,7 +1200,7 @@ class Array<ElementType>
          */
         immutable Boolean[] toBooleanArray()
             {
-            return new Array<Boolean>(size, i -> this[i].toBoolean()).ensureConst(true);
+            return new Array<Boolean>(size, i -> this[i].toBoolean()).ensureImmutable(true);
             }
 
         /**
@@ -1234,7 +1234,7 @@ class Array<ElementType>
                 bitnum += 4;
                 }
 
-            return nibbles.ensureConst(true);
+            return nibbles.ensureImmutable(true);
             }
 
         /**
@@ -1283,7 +1283,7 @@ class Array<ElementType>
 //                         bits[of-4], bits[of-5], bits[of-6], bits[of-7]].as(Bit[]));
 //                }
 //
-//            return bytes.ensureConst(true);
+//            return bytes.ensureImmutable(true);
             }
 
         /**
@@ -1519,7 +1519,7 @@ class Array<ElementType>
                     bits[index++] = bit;
                     }
                 }
-            return bits.ensureConst(true);
+            return bits.ensureImmutable(true);
             }
 
         /**
@@ -1541,7 +1541,7 @@ class Array<ElementType>
 //                    }
 //                }
 //
-//            return nibbles.ensureConst(true);
+//            return nibbles.ensureImmutable(true);
             TODO CP;
             }
 

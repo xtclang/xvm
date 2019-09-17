@@ -69,7 +69,7 @@ mixin ConditionalTuple
         }
 
     @Override
-    immutable Tuple<ElementTypes> ensureConst(Boolean inPlace = false)
+    immutable Tuple<ElementTypes> ensureImmutable(Boolean inPlace = false)
         {
         assert this[0];
         return super(inPlace);

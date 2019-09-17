@@ -29,7 +29,7 @@ interface Map<KeyType, ValueType>
      * * A **const** map is one that is immutable, whose size and contents are immutable, and which
      *   provides a new **const** map as the result of any mutating request. If an implementation
      *   provides support for more than one mode, including a **const** mode, then it should
-     *   implement the [ConstAble] interface.
+     *   implement the {@link ImmutableAble} interface.
      */
     @Override
     @RO Mutability mutability;
