@@ -52,17 +52,20 @@ module TestFiles.xqiz.it
 
         console.println($"readOnly={storage.readOnly}");
         console.println($"capacity={storage.capacity}");
-        console.println($"bytesFree={storage.bytesFree}");
-        console.println($"bytesUsed={storage.bytesUsed}");
+        assert storage.bytesFree <= storage.capacity;
+        assert storage.bytesUsed <= storage.capacity;
 
         @Inject Directory rootDir;
         console.println($"rootDir={rootDir} created {rootDir.created}");
 
         @Inject Directory homeDir;
-        console.println($"homeDir={homeDir} modified {homeDir.modified}");
+        console.println($"homeDir={homeDir}");
 
         @Inject Directory curDir;
-        console.println($"curDir={curDir} accessed {curDir.accessed}");
+        console.println($"curDir={curDir}");
+
+        @Inject Clock clock;
+        assert curDir.accessed.date == clock.now.date;
 
         console.println($"{curDir.name} content:");
         for (String name : curDir.names())
@@ -71,7 +74,7 @@ module TestFiles.xqiz.it
                 {
                 if (node.is(File))
                     {
-                    console.println($"\tf {name}\t{node.size}");
+                    console.println($"\tf {name}");
                     }
                 else
                     {
@@ -86,8 +89,6 @@ module TestFiles.xqiz.it
         console.println("\n** testModify()");
 
         @Inject Directory tmpDir;
-        console.println($"tmpDir={tmpDir} modified {tmpDir.modified}");
-
         @Inject Timer timer;
 
         FileWatcher watcher = new FileWatcher()
@@ -133,7 +134,10 @@ module TestFiles.xqiz.it
 
             timer.schedule(Duration.ofSeconds(wait), () ->
                 {
-                console.println($"[{this:service}]: tmpDir={tmpDir} modified {tmpDir.modified}");
+                @Inject Clock clock;
+                assert tmpDir.modified.date == clock.now.date;
+
+                console.println($"[{this:service}]: tmpDir={tmpDir}");
                 cancel();
                 });
             });

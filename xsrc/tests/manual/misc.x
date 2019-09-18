@@ -1,7 +1,6 @@
 module TestMisc.xqiz.it
     {
     @Inject Console console;
-    @Inject Clock clock;
 
     void run()
         {
@@ -600,7 +599,6 @@ module TestMisc.xqiz.it
     class Order(String id)
         {
         Int lineCount;
-        DateTime date = clock.now;
 
         @Override
         String toString()
@@ -633,7 +631,7 @@ module TestMisc.xqiz.it
             String toString()
                 {
                 return this.EnhancedOrder.toString() +
-                    ": " + lineNumber + ") " + descr + " @ " + date;
+                    ": " + lineNumber + ") " + descr;
                 }
             }
         }
