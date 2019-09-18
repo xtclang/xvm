@@ -3,8 +3,6 @@ package org.xvm.runtime.template;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.TemplateRegistry;
@@ -40,17 +38,5 @@ public class xObject
 
             getCanonicalType().invalidateTypeInfo();
             }
-        }
-
-    @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
-        switch (sPropName)
-            {
-            case "meta":
-                return frame.assignValue(iReturn, hTarget);
-            }
-
-        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
     }

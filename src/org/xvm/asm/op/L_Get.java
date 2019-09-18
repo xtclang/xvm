@@ -81,7 +81,6 @@ public class L_Get
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            // REVIEW GG this was A_THIS
             frame.introducePropertyVar(m_nRetValue, A_TARGET, constProperty);
             }
 
