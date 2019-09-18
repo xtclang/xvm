@@ -1928,7 +1928,6 @@ this.Map.put(k, v);
 // --- "value" class discussion
 
 const Order
-        // means: implements ConstAble, MutableAble
     {
     List<OrderLine> lines;
 

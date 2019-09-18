@@ -804,3 +804,38 @@ class B<T>
         B.C c3 = b3.new C(); // OK
         }
     }
+
+// ----- const run-time processing
+
+const Person(String name, List<Person> dependents, Runnable r);
+
+// the line above compiles as
+const Person()
+    {
+    String name;
+    List<Person> dependents;
+    Runnable r;
+
+    construct(String name, List<Person> dependents, Runnable r)
+        {
+        this.name = name;
+        this.dependents = dependents;
+        this.r = r;
+        }
+    }
+finally // <-- right at this point we do some internal processing that looks like:
+        {
+        if (!dependents.is(immutable Object) dependents.is(Freezable))
+            {
+            dependents = dependents.is(Freezable) ? dependents.ensureImmutable(false) : throw new WTF();
+            }
+        if (!r.is(immutable Object) r.is(Freezable))
+            {
+            r = r.is(Freezable) ? r.ensureImmutable(false) : throw new WTF();
+            }
+        }
+
+    {
+    // this is after construction
+    }
+
