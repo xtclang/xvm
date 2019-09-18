@@ -36,7 +36,7 @@ To run an individual test in IDEA, you will find that the Ecstasy source tests a
 
 * Main class=`org.xvm.runtime.TestConnector`
 * VM options=-`Xms256m -Xmx1g -ea`
-* Program arguments=`TestMisc.xqiz.it ./tests/testTemp/misc.x`
+* Program arguments=`TestMisc.xqiz.it ./tests/manual/misc.x`
 * Working directory=`~/Development/xvm/xsrc/`
 
 This pattern is repeated for the various test files. Note that the arguments specify the fully qualified module name first (as found in the module declaration in the file), followed by the file name.
