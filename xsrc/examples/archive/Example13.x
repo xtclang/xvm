@@ -185,3 +185,117 @@ Object <-> Protobuf <-> DataInput/DataOutput <-> byte[]
 ObjectOutput = Format.createOutput(???) // DataOutput? BinaryOutput? Writer? StringBuffer?
 
 
+// ----- JSON default schema .. what can it do??
+
+// assume ...
+ObjectInput  in  = json.createObjectInput(reader);
+ObjectOutput out = json.createObjectOutput(writer);
+
+// this writes an IntLiteral as ... a number
+out.write(3);
+// 3
+
+// this writes an FPLiteral as ... a number
+out.write(3.14);
+// 3.14
+
+// this writes a String as ... a string
+out.write("hello world")
+// "hello world"
+
+// these write each value as ... you would expect
+out.write(True);
+out.write(False);
+out.write(Null);
+// truefalsenull            <--- obviously this is shit
+
+
+// ----- circular typedefs
+
+typedef Int | Array<X> X;
+
+
+// ----- modules and packages and classes (oh my!)
+
+file Ecstasy.xtc
+    {
+    module Ecstasy.xtclang.org
+        {
+        package Ecstasy import Ecstasy.xtclang.org;
+
+        interface Module {}
+        interface Package {}
+        const Class {}
+        enum Nullable {}
+        enum Boolean {}
+        class Int64 {}
+        ...
+        }
+    }
+
+file "T.xtc"
+    {
+    module O
+        {
+        package Ecstasy import Ecstasy.xtclang.org;
+
+        package OP
+            {
+            class OC
+                {
+                }
+            }
+        }
+
+    module T
+        {
+        package Ecstasy import Ecstasy.xtclang.org;
+
+        package OI import:embedded O;
+
+        package TP
+            {
+            class TC
+                {
+                void foo()
+                    {
+                    OI.Ecstasy.Ecstasy.Ecstasy.Ecstasy.Ecstasy.Ecstasy.Int64 i = 0;
+
+                    Class clz = OC;
+
+                    OI.OP.OC oc = new OI.OP.OC();
+                    Class clz2 = oc.class;
+
+                    Type type = &oc.ActualType;
+                    bar(type);
+                    }
+
+                void bar(Type t)
+                    {
+                    if (Class clz := t.originClass())
+                        {
+                        ...
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+// a "classy type" is a type for which the conditional originClass() (name TBD) returns True (and a
+// class); it corresponds to a "class composition" in the proof of concept runtime
+
+Type
+ - RelationalType
+   - UnionType
+   - IntersectionType
+   - DifferenceType
+ - ClassyType
+
+ // might not need:
+ - AnnotatedType
+@Unchecked Int  <-- this has an origin class even though it is annotated (but not all annotated types are classy)
+
+String?         <-- this has two (!!!) origin classes, but it should still be deserializable,
+                    so there must be something in addition to originClass(), e.g. "@RO Boolean classy;"
+                    (GG calls it "class composable")

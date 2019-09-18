@@ -1,4 +1,5 @@
 interface Hashable
+        extends Comparable
     {
     /**
      * Calculate a hash code for an object of a given type.
@@ -13,5 +14,6 @@ interface Hashable
      *
      * @return true iff the objects are equivalent
      */
+    @Override
     static <CompileType extends Hashable> Boolean equals(CompileType value1, CompileType value2);
     }

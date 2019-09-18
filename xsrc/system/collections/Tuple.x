@@ -60,6 +60,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      */
     @Op Ref<Object> elementAt(Int index);
 
+
     // ----- tuple manipulations -------------------------------------------------------------------
 
     /**
@@ -96,7 +97,8 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * value, then the compile-time type of the returned tuple is known; otherwise, an explicit cast
      * to a compile-time type is required to regain the compile-time type.
      */
-    @Op Tuple!<> slice(Range<Int> range);
+    @Op("[..]")
+    Tuple!<> slice(Range<Int> range);
 
     /**
      * Creates and returns a new tuple that is a copy of this tuple, except with the specified

@@ -1213,6 +1213,7 @@ public class LambdaExpression
                         {
                         case "this":
                         case "this:struct":
+                        case "this:class":
                             fAllowConstructor = true;
                             // fall through
                         case "this:target":

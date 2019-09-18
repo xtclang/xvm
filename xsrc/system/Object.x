@@ -1,23 +1,26 @@
 /**
- * This class represents the capabilities that are common to every Ecstasy object; this class is the
- * single inheritance root for the Ecstasy type system. In other words, "everything is an object",
- * and every object is of a class that extends this Object class. An object is reachable through a
- * reference, and an object reference always includes the public portion of the interface of this
- * class. Some meta-information about the object is available through the reference to the object,
- * represented by the {@link Ref} interface; additional meta-information about an object is
- * available within the object itself, via its own protected {@link meta} property.
+ * This class represents the capabilities that are common to every Ecstasy object. This class is the
+ * single inheritance root for the Ecstasy type system; in other words, "everything is an object",
+ * and every object is "of a class" that extends this Object class.
+ *
+ * An object is reachable through a reference, and an object reference **always** includes the
+ * public portion of Object.
+ *
+ * Additional meta-information about the object is available through:
+ * * The reference to the object, represented by the {@link Ref} interface;
+ * * The {@link Type} of the object reference, which is provided by {@link Ref.RefType} and
+ *   {@link Ref.actualType}; and
+ * * The {@link Class} of the object, which is accessible via the Type, unless the type has been
+ *   masked by {@link Referent.maskAs<AsType>()}.
  */
 class Object
+        implements Comparable
     {
-    /**
-     * The meta-data for each object is represented by the Meta interface.
-     */
-    @Inject protected Meta<Object:public, Object:protected, Object:private, Object:struct> meta;
-
     /**
      * By default, comparing any two objects will only result in equality if they are the
      * same object, or if they are two constant objects with identical values.
      */
+    @Override
     static <CompileType extends Object> Boolean equals(CompileType o1, CompileType o2)
         {
         return &o1 == &o2;
@@ -31,7 +34,7 @@ class Object
     String toString()
         {
         // the Object's rudimentary toString() shows class information only
-        return meta.class_.toString();
+        return this:class.toString();
         }
 
     /**
@@ -39,9 +42,9 @@ class Object
      */
     immutable Object makeImmutable()
         {
-        if (!meta.isImmutable)
+        if (!this:struct.mutable)
             {
-            meta.isImmutable = true;
+            this:struct.mutable = False;
             }
 
         return this.as(immutable Object);

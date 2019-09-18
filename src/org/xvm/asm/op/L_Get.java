@@ -81,7 +81,8 @@ public class L_Get
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introducePropertyVar(m_nRetValue, A_THIS, constProperty);
+            // REVIEW GG this was A_THIS
+            frame.introducePropertyVar(m_nRetValue, A_TARGET, constProperty);
             }
 
         return hTarget.getTemplate().getPropertyValue(frame, hTarget, constProperty, m_nRetValue);
