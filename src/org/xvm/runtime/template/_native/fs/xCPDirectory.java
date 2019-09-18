@@ -58,11 +58,6 @@ public class xCPDirectory
         return super.createConstHandle(frame, constant);
         }
 
-    @Override
-    protected boolean isConstructImmutable()
-        {
-        return true;
-        }
 
     // ----- constants -----------------------------------------------------------------------------
 

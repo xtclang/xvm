@@ -412,10 +412,6 @@ public abstract class ClassTemplate
                 }
 
             ObjectHandle hPublic = hStruct.ensureAccess(Access.PUBLIC);
-            if (hPublic instanceof ServiceHandle)
-                {
-                frameCaller.f_context.setService((ServiceHandle) hPublic);
-                }
 
             return hFD.callChain(frameCaller, hPublic, frame0 ->
                 frame0.assignValue(iReturn, hPublic));

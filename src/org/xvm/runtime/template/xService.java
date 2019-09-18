@@ -71,7 +71,30 @@ public class xService
     public int constructSync(Frame frame, MethodStructure constructor,
                              ClassComposition clazz, ObjectHandle[] ahArg, int iReturn)
         {
-        return super.construct(frame, constructor, clazz, null, ahArg, iReturn);
+        switch (super.construct(frame, constructor, clazz, null, ahArg, Op.A_STACK))
+            {
+            case Op.R_NEXT:
+                {
+                ServiceHandle hService = (ServiceHandle) frame.popStack();
+                frame.f_context.setService(hService);
+                return frame.assignValue(iReturn, hService);
+                }
+
+            case Op.R_CALL:
+                frame.m_frameNext.addContinuation(frameCaller ->
+                    {
+                    ServiceHandle hService = (ServiceHandle) frameCaller.popStack();
+                    frame.f_context.setService(hService);
+                    return frame.assignValue(iReturn, hService);
+                    });
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
     @Override

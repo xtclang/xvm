@@ -139,11 +139,6 @@ public class xCPFileStore
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
-    @Override
-    protected boolean isConstructImmutable()
-        {
-        return true;
-        }
 
     // ----- helpers -------------------------------------------------------------------------------
 
