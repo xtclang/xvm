@@ -107,8 +107,8 @@ public class Context
 
     /**
      * @return true iff the containing MethodStructure is a constructor, which means that
-     *         "this" and "this:struct" are available, but other reserved registers that require
-     *         an instance of the class are not available
+     *         "this" and "this:struct" and "this:class" are available, but other reserved registers
+     *         that require an instance of the class are not available
      */
     public boolean isConstructor()
         {
@@ -1165,6 +1165,7 @@ public class Context
             case "this:protected":
             case "this:private":
             case "this:struct":
+            case "this:class":
             case "this:service":
             case "super":
             case "this:module":

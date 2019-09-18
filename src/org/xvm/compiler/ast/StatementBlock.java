@@ -694,6 +694,7 @@ public class StatementBlock
             switch (sName)
                 {
                 case "this":
+                case "this:class":
                 case "this:struct":
                     return isMethod() || isConstructor();
 
@@ -1140,8 +1141,20 @@ public class StatementBlock
                     break;
 
                 case "this:struct":
-                    type   = pool.ensureAccessTypeConstant(getThisType(), Access.STRUCT);
+                    type   = pool.ensureUnionTypeConstant(pool.typeStruct(),
+                            pool.ensureAccessTypeConstant(getThisType(), Access.STRUCT));
                     nReg   = Op.A_STRUCT;
+                    cSteps = getMethod().getThisSteps();
+                    break;
+
+                case "this:class":
+                    type   = pool.ensureParameterizedTypeConstant(pool.typeClass(),
+                            pool.ensureAccessTypeConstant(getThisType(), Access.PUBLIC),
+                            pool.ensureAccessTypeConstant(getThisType(), Access.PROTECTED),
+                            pool.ensureAccessTypeConstant(getThisType(), Access.PRIVATE),
+                            pool.ensureUnionTypeConstant(pool.typeStruct(),
+                                pool.ensureAccessTypeConstant(getThisType(), Access.STRUCT))); // TODO helpers for these all or getThisType passing access
+                    nReg   = Op.A_CLASS;
                     cSteps = getMethod().getThisSteps();
                     break;
 

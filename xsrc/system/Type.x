@@ -61,8 +61,6 @@ const Type<DataType>
      */
     @Lazy Map<String, MultiMethod> allMethodsByName.calc()
         {
-        assert meta.isImmutable;
-
         ListMap<String, MultiMethod> map = new ListMap();
         for (Method method : allMethods)
             {
@@ -84,8 +82,6 @@ const Type<DataType>
      */
     @Lazy Property[] properties.calc()
         {
-        assert meta.isImmutable;
-
         Property[] list = new Property[];
         for (Method method : allMethods)
             {
@@ -100,8 +96,6 @@ const Type<DataType>
 
     @Lazy Map<String, Property> propertiesByName.calc()
         {
-        assert meta.isImmutable;
-
         Map<String, Property> map = new ListMap();
         for (Property prop : properties)
             {
@@ -129,8 +123,6 @@ const Type<DataType>
 
     @Lazy Map<String, MultiMethod> methodsByName.calc()
         {
-        assert meta.isImmutable;
-
         ListMap<String, MultiMethod> map = new ListMap();
         for (Method method : methods)
             {

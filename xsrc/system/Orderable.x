@@ -3,6 +3,7 @@
  * for purposes of ordering.
  */
 interface Orderable
+        extends Comparable
     {
     /**
      * Create an Interval that represents the values between _this_ (inclusive) to _that_
@@ -46,5 +47,6 @@ interface Orderable
      *
      * @return true iff the objects are equivalent
      */
+    @Override
     static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
     }

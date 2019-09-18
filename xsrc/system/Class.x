@@ -211,8 +211,6 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      */
     @Lazy Map<String, TypeParameter> typeParamsByName.calc()
         {
-        assert meta.isImmutable;
-
         ListMap<String, TypeParameter> map = new ListMap();
         for (TypeParameter param : typeParams)
             {
@@ -356,8 +354,6 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      */
     @Lazy Map<String, NamedChild> childrenByName.calc()
         {
-        assert meta.isImmutable;
-
         ListMap<String, NamedChild> map = new ListMap();
         map.putAll(classesByName);
         map.putAll(propertiesByName);
@@ -377,8 +373,6 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      */
     @Lazy Map<String, Class!<>> classesByName.calc()
         {
-        assert meta.isImmutable;
-
         ListMap<String, Class<>> map = new ListMap();
         for (Class<> class_ : classes)
             {
@@ -394,8 +388,6 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      */
     @Lazy Map<String, Property> propertiesByName.calc()
         {
-        assert meta.isImmutable;
-
         ListMap<String, Property> map = new ListMap();
         for (Property property : properties)
             {
@@ -411,8 +403,6 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      */
     @Lazy Map<String, MultiMethod> methodsByName.calc()
         {
-        assert meta.isImmutable;
-
         ListMap<String, MultiMethod> map = new ListMap();
         for (Method method : methods)
             {
@@ -435,8 +425,6 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      */
     @Lazy Map<String, MultiFunction> functionsByName.calc()
         {
-        assert meta.isImmutable;
-
         ListMap<String, MultiFunction> map = new ListMap();
         for (Function function_ : functions)
             {

@@ -1919,41 +1919,43 @@ public abstract class Op
     public static final int A_STRUCT    = -8;
 
     /**
+     * Pre-defined argument: {@code this:class}
+     */
+    public static final int A_CLASS     = -9;
+
+    /**
      * Pre-defined argument: {@code this:service}
      */
-    public static final int A_SERVICE   = -9;
+    public static final int A_SERVICE   = -10;
 
     /**
      * Pre-defined argument: {@code super} (function).
      */
-    public static final int A_SUPER     = -10;
+    public static final int A_SUPER     = -11;
 
-    // TODO GG try to remove (or make "internal") all of the below
     /**
-     * Pre-defined argument: {@code this:module}
+     * Pre-defined argument: Reserved for future use.
      */
-    public static final int A_MODULE    = -12;
-    /**
-     * Pre-defined argument: {@code this:type}
-     */
-    public static final int A_TYPE      = -13;
-    /**
-     * Pre-defined argument: a target for local invocation
-     */
-    public static final int A_THIS      = -14;
+    public static final int A_RSVD_12   = -12;
+
     /**
      * Pre-defined argument: an indicator for "multiple return values" (internal)
      */
-    public final static int A_MULTI     = -15;
+    public final static int A_MULTI     = -13;
     /**
      * Pre-defined argument: an indicator for a "tuple return" (internal)
      */
-    public final static int A_TUPLE     = -16;
+    public final static int A_TUPLE     = -14;
     /**
      * Pre-defined and compile-time only argument: A label.
      */
-    public final static int A_LABEL     = -17;
+    public final static int A_LABEL     = -15;
 
+    /**
+     * The first constant, constant #0, is at this index (which is a negative). For a constant whose
+     * index is {@code i}, it is encoded as: {@code CONSTANT_OFFSET - i}
+     */
+    public static final int CONSTANT_OFFSET = -16;
 
 
     // ----- return values from the Op.process() method --------------------------------------------
@@ -2012,12 +2014,6 @@ public abstract class Op
      * An empty array of ops.
      */
     public static final Op[] NO_OPS = new Op[0];
-
-    /**
-     * The first constant, constant #0, is at this index (which is a negative). For a constant whose
-     * index is {@code i}, it is encoded as: {@code CONSTANT_OFFSET - i}
-     */
-    public static final int CONSTANT_OFFSET = -21;
 
     private static final long REACHABLE_BIT        = 0x8000_0000_0000_0000L;
     private static final long NECESSARY_BIT        = 0x4000_0000_0000_0000L;

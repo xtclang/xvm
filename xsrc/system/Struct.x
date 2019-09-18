@@ -10,6 +10,12 @@
 interface Struct
     {
     /**
+     * Represents the mutability of the structure. Once the property has been set to False, the
+     * Struct is no longer mutable, and as a result, the property cannot be set to True.
+     */
+    Boolean mutable;
+
+    /**
      * Obtain a Tuple that represents the fields of this Struct.
      */
     Tuple to<Tuple>();
@@ -19,19 +25,29 @@ interface Struct
      */
     Ref[] to<Ref[]>();
 
-    /**
-     * Dereference a name to obtain a field.
-     */
-    @Op Ref elementFor(String name)
-        {
-        for (Ref ref : to<Ref[]>())
-            {
-            if (ref.refName == name)
-                {
-                return ref;
-                }
-            }
+//    /**
+//     * Dereference a name to obtain a field.
+//     */
+//    Ref elementFor(String name) TODO not String, but Property (or property id)
+//        {
+//        for (Ref ref : to<Ref[]>())
+//            {
+//            if (ref.refName == name)
+//                {
+//                return ref;
+//                }
+//            }
+//
+//        throw new Exception("no such field: " + name);
+//        }
 
-        throw new Exception("no such field: " + name);
-        }
+    /**
+     * The actual amount of memory used by this object, including the object's header (if any) and
+     * any padding for memory alignment. The size includes the space required to hold all of the
+     * underlying property references that are visible through the {@link struct} property.
+     * Furthermore, the size includes the sizes of all of the {@link Ref.selfContained
+     * self-contained} property references, but explicitly does not include the sizes of the
+     * referents for references that are <b>not</b> self-contained.
+     */
+    @RO Int byteLength;
     }

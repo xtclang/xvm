@@ -244,11 +244,9 @@ public class Register
             case Op.A_PRIVATE:
             case Op.A_TARGET:
             case Op.A_STRUCT:
+            case Op.A_CLASS:
             case Op.A_SERVICE:
-            case Op.A_MODULE:
-            case Op.A_TYPE:
             case Op.A_SUPER:
-            case Op.A_THIS:
             case Op.A_LABEL:
                 return true;
 
@@ -442,11 +440,9 @@ public class Register
             case Op.A_PRIVATE:
             case Op.A_TARGET:
             case Op.A_STRUCT:
+            case Op.A_CLASS:
             case Op.A_SERVICE:
-            case Op.A_MODULE:
-            case Op.A_TYPE:
             case Op.A_SUPER:
-            case Op.A_THIS:
             case Op.A_LABEL:
                 return true;
 
@@ -493,6 +489,9 @@ public class Register
 
             case Op.A_STRUCT:
                 return "this:struct";
+
+            case Op.A_CLASS:
+                return "this:class";
 
             case Op.A_SERVICE:
                 return "this:service";

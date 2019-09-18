@@ -491,6 +491,7 @@ public class Token
         SUPER        ("super"          , true, true),
         SWITCH       ("switch"         ),
         THIS         ("this"           , true, true),
+        THIS_CLASS   ("this:class"     , true, true),
         THIS_MODULE  ("this:module"    , true, true),
         THIS_PRI     ("this:private"   , true, true),
         THIS_PRO     ("this:protected" , true, true),

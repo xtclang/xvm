@@ -400,20 +400,6 @@ public class Frame
                     : hService;
                 }
 
-            // TODO remove the rest of these?
-            case Op.A_THIS:
-                return f_hThis == null
-                    ? makeDeferredException("Run-time error: no target")
-                    : f_hThis;
-
-            case Op.A_TYPE:
-                return f_hThis == null
-                    ? makeDeferredException("Run-time error: no target")
-                    : f_hThis.getType().getTypeHandle();
-
-            case Op.A_MODULE:
-                return getConstHandle(f_context.f_module.getIdentityConstant());
-
             default:
                 throw new IllegalStateException("Invalid argument " + iArgId);
             }

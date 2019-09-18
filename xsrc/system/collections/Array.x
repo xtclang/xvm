@@ -401,7 +401,7 @@ class Array<ElementType>
         // the "mutability" property has to be set before calling makeImmutable(), since no changes
         // will be possible afterwards
         Mutability prev = mutability;
-        if (!meta.isImmutable)
+        if (this:struct.mutable)
             {
             mutability = Constant;
             }
@@ -412,7 +412,7 @@ class Array<ElementType>
             }
         catch (Exception e)
             {
-            if (!meta.isImmutable)
+            if (this:struct.mutable)
                 {
                 mutability = prev;
                 }
