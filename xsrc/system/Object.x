@@ -42,11 +42,7 @@ class Object
      */
     immutable Object makeImmutable()
         {
-        if (!this:struct.mutable)
-            {
-            this:struct.mutable = False;
-            }
-
+        this:struct.ensureImmutable();
         return this.as(immutable Object);
         }
     }
