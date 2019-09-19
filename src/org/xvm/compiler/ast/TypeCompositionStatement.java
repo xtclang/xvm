@@ -1976,10 +1976,10 @@ public class TypeCompositionStatement
             //
             //    enum Ordered(String symbol) { Lesser("<"), ... }
             //
-            //    Entry<KeyType, ValueType> entry = new KeyBasedEntry<KeyType, ValueType>(key)
+            //    Entry<Key, Value> entry = new KeyBasedEntry<Key, Value>(key)
             //          {
             //          @Override
-            //          ValueType getValue()
+            //          Value getValue()
             //              {
             //              ...
             //              }

@@ -1,25 +1,25 @@
 
-interface List<ElementType>
+interface List<Element>
     {
-    ElementType getElement(Int index);
+    Element getElement(Int index);
 
-    List<ElementType> subListStartingWith(Int index);
+    List<Element> subListStartingWith(Int index);
 
-    Void addAll(List<ElementType> elements);
+    Void addAll(List<Element> elements);
     }
 
-class SuperCoolList<ElementType>
+class SuperCoolList<Element>
     {
-    ElementType getElement(Int index);
+    Element getElement(Int index);
 
-    List<ElementType> subListStartingWith(Int index)
+    List<Element> subListStartingWith(Int index)
         {
         // I can't return a SuperCoolList to do the sub-list for some reason
         // ...
         return SomeOtherHandyHelperDelegatingList(this, index);
         }
 
-    Void addAll(List<ElementType> elements)
+    Void addAll(List<Element> elements)
         {
         // ...
         }
@@ -27,9 +27,9 @@ class SuperCoolList<ElementType>
 
 // conditional mix-ins
 
-class SuperList<ElementType>
-        extends SimpleList<ElementType>
-        incorporates conditional NumberCollectionHelper<ElementType extends Number>
+class SuperList<Element>
+        extends SimpleList<Element>
+        incorporates conditional NumberCollectionHelper<Element extends Number>
     {
     // ...
     }
@@ -271,9 +271,9 @@ class Derived
 
 // parameterized types
 
-interface Map<KeyType, ElementType>
+interface Map<Key, Element>
     {
-    KeyType first();        // return value type constant is Terminal(Property(ThisClass, "KeyType"))
+    Key first();        // return value type constant is Terminal(Property(ThisClass, "Key"))
     }
 
 
@@ -298,16 +298,16 @@ boolean replace(AtomicRef ref, GeneClass clz, ObjectHandle expected, ObjectHandl
 
 // ----- type resolution challenges
 
-interface Map<KeyType, ValueType> {...}
+interface Map<Key, Value> {...}
 
 class MyClass<MapType1 extends Map, MapType2 extends Map>
     {
-    Void process(MapType1.KeyType k1, MapType2.KeyType k2)  // TODO resolve both "KeyType" correctly
+    Void process(MapType1.Key k1, MapType2.Key k2)  // TODO resolve both "Key" correctly
         {
         // ...
         }
 
-    <MT3 extends MapType1, KT3 extends MapType1.KeyType> Void process(MT3.KeyType k, KT3 k3)  // TODO resolve both "KeyType" correctly
+    <MT3 extends MapType1, KT3 extends MapType1.Key> Void process(MT3.Key k, KT3 k3)  // TODO resolve both "Key" correctly
         {
         // ...
         }

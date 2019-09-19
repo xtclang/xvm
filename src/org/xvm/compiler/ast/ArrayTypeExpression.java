@@ -109,7 +109,7 @@ public class ArrayTypeExpression
 
     /**
      * @return the id of the two-argument array constructor with the following signature:
-     *         "construct(Int size, ElementType | function ElementType (Int) supply)"
+     *         "construct(Int size, Element | function Element (Int) supply)"
      */
     public MethodConstant getSupplyConstructor()
         {

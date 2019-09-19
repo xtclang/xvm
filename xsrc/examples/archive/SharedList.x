@@ -1,8 +1,8 @@
-class SharedListView<ElementType implements Const>
+class SharedListView<Element implements Const>
     {
-    private SharedListController<ElementType> service;
+    private SharedListController<Element> service;
 
-    construct(SharedListController<ElementType> service)
+    construct(SharedListController<Element> service)
         {
         this.service = service;
         }
@@ -13,7 +13,7 @@ class SharedListView<ElementType implements Const>
         return size == 0;
         }
 
-    @ro Boolean contains(function Boolean match(ElementType))
+    @ro Boolean contains(function Boolean match(Element))
         {
         if (&match.isConst)
             {
@@ -23,7 +23,7 @@ class SharedListView<ElementType implements Const>
 
         return iterator().forEach(match);
         }
-    @ro Boolean contains(ElementType element)
+    @ro Boolean contains(Element element)
         {
         return contains(el -> el == element);
         }
@@ -32,13 +32,13 @@ class SharedListView<ElementType implements Const>
     Boolean remove(ElType el) {return service.remove(el);}
     Void clear()              {return service.clear();}
 
-    Iterator<ElementType> iterator();
-    Stream<ElementType> stream();
+    Iterator<Element> iterator();
+    Stream<Element> stream();
     }
 
-async SharedListController<ElementType implements Const>
+async SharedListController<Element implements Const>
     {
-    private List<ElementType> model;
+    private List<Element> model;
 
     construct()
         {
@@ -50,7 +50,7 @@ async SharedListController<ElementType implements Const>
         return model.size;
         }
 
-    @ro Boolean contains(function Boolean match(ElementType))
+    @ro Boolean contains(function Boolean match(Element))
         {
         return model.iterator().forEach(match);
         }

@@ -21,7 +21,7 @@
  * dealing with cross-service invocation, continuations, and exception handling (e.g. an exception
  * indicating that the Queue was closed).
  */
-interface Queue<ElementType>
+interface Queue<Element>
     {
     /**
      * Test for the presence of an element in the queue, and take the first element if the queue
@@ -30,7 +30,7 @@ interface Queue<ElementType>
      * @return True iff the Queue was not empty
      * @return the next element (conditional)
      */
-    conditional ElementType next();
+    conditional Element next();
 
     /**
      * Take the first element in the queue, or wait for an element to be added to the Queue (if
@@ -65,9 +65,9 @@ interface Queue<ElementType>
      * @return the next element in the queue (or a `@Future` representing the next element if there
      *         is no element in the queue, but the queue will deliver an element when it is added)
      */
-    ElementType take();
+    Element take();
 
-    typedef function void (ElementType) Consumer;
+    typedef function void (Element) Consumer;
     typedef function void () Cancellable;
 
     /*

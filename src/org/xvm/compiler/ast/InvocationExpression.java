@@ -66,9 +66,9 @@ import org.xvm.util.Severity;
  *
  *   // on "List" type, find "add" method with one parameter (four alternatives shown)
  *   Method m = List.&add(?);
- *   Method m = List.&add(&lt;List.ElementType&gt;?);
+ *   Method m = List.&add(&lt;List.Element&gt;?);
  *   Method m = List.add(?);
- *   Method m = List.add(&lt;List.ElementType&gt;?);
+ *   Method m = List.add(&lt;List.Element&gt;?);
  *
  *    // bind target "list" to method "add", bind argument
  *   function void () fn = list.&add(item);
@@ -1766,13 +1766,13 @@ public class InvocationExpression
                         if (idProp.isFormalType())
                             {
                             // Example (NaturalHasher.x):
-                            //   Int hashOf(ValueType value)
+                            //   Int hashOf(Value value)
                             //     {
-                            //     return ValueType.hashCode(value);
+                            //     return Value.hashCode(value);
                             //     }
                             //
-                            // "this" is "ValueType.hashCode(value)"
-                            // idProp.getFormalType() is NaturalHasher.ValueType
+                            // "this" is "Value.hashCode(value)"
+                            // idProp.getFormalType() is NaturalHasher.Value
 
                             TypeInfo  infoType = idProp.getFormalType().ensureTypeInfo(errs);
                             ErrorList errsTemp = new ErrorList(1);
@@ -1798,14 +1798,14 @@ public class InvocationExpression
                         //   static <CompileType extends Hasher> Int hashCode(CompileType array)
                         //      {
                         //      Int hash = 0;
-                        //      for (CompileType.ElementType el : array)
+                        //      for (CompileType.Element el : array)
                         //          {
-                        //          hash += CompileType.ElementType.hashCode(el);
+                        //          hash += CompileType.Element.hashCode(el);
                         //          }
                         //      return hash;
                         //      }
-                        // "this" is "CompileType.ElementType.hashCode(el)"
-                        //  typeLeft is a type of "CompileType.ElementType" formal type child
+                        // "this" is "CompileType.Element.hashCode(el)"
+                        //  typeLeft is a type of "CompileType.Element" formal type child
 
                         TypeInfo  infoLeft = typeLeft.ensureTypeInfo(errs);
                         ErrorList errsTemp = new ErrorList(1);
@@ -2284,7 +2284,7 @@ public class InvocationExpression
                                                          // was Bjarne-transformed from x.f() to X.f(x)
     private transient FormalConstant  m_idFormal;        // if not null, indicates that the invocation
                                                          // expression applies to a function on a formal
-                                                         // type (e.g. ValueType.hashCode(value))
+                                                         // type (e.g. Value.hashCode(value))
     private transient Argument[]      m_aargTypeParams;  // "hidden" type parameters
     private transient int             m_cDefaults;       // number of default arguments
     private transient MethodConstant  m_idConvert;       // conversion method

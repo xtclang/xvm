@@ -4,13 +4,13 @@ import maps.ReifiedEntry;
 
 /**
  * HashMap is a hashed implementation of the Map interface. One of two conditions is required:
- * * If no [Hasher] is provided, then the KeyType must be immutable and must implement Hashable; or
- * * If a [Hasher] is provided, then the KeyType does not have to be immutable and does not have to
+ * * If no [Hasher] is provided, then the Key type must be immutable and must implement Hashable; or
+ * * If a [Hasher] is provided, then the Key type does not have to be immutable and does not have to
  *   implement Hashable.
  */
-class HashMap<KeyType, ValueType>
-        implements Map<KeyType, ValueType>
-        // TODO conditional incorporation of ... HashMap<KeyType extends immutable Hashable, ValueType>
+class HashMap<Key, Value>
+        implements Map<Key, Value>
+        // TODO conditional incorporation of ... HashMap<Key extends immutable Hashable, Value>
         // TODO VariablyMutable interfaces
         incorporates Stringer
     {
@@ -24,9 +24,9 @@ class HashMap<KeyType, ValueType>
      */
     construct(Int initCapacity = 0)
         {
-        assert(KeyType.is(Type<Hashable>));
+        assert(Key.is(Type<Hashable>));
 
-        this.hasher = new NaturalHasher<KeyType>();
+        this.hasher = new NaturalHasher<Key>();
 
         // allocate the initial capacity
         (Int bucketCount, this.growAt) = calcBucketCount(initCapacity);
@@ -40,7 +40,7 @@ class HashMap<KeyType, ValueType>
      * @param hasher
      * @param initCapacity  the number of expected entries
      */
-    construct(Hasher<KeyType> hasher, Int initCapacity = 0)
+    construct(Hasher<Key> hasher, Int initCapacity = 0)
         {
         this.hasher = hasher;
 
@@ -56,12 +56,12 @@ class HashMap<KeyType, ValueType>
      * The Hasher is the thing that knows how to take a key and provide a hash code, or compare two
      * keys for equality -- even if the keys don't know how to do that themselves.
      */
-    public/private Hasher<KeyType> hasher;
+    public/private Hasher<Key> hasher;
 
     /**
      * This is the Entry implementation used to store the HashMap's keys and values.
      */
-    protected static class HashEntry(KeyType key, Int keyhash, ValueType value, HashEntry? next = null);
+    protected static class HashEntry(Key key, Int keyhash, Value value, HashEntry? next = null);
 
     /**
      * An array of hash buckets.
@@ -96,7 +96,7 @@ class HashMap<KeyType, ValueType>
      * @return True iff the key is in the map
      * @return the HashEntry identified by the key
      */
-    protected conditional HashEntry find(KeyType key)
+    protected conditional HashEntry find(Key key)
         {
         Int        keyhash  = hasher.hashOf(key);
         Int        bucketId = keyhash % buckets.size;
@@ -124,13 +124,13 @@ class HashMap<KeyType, ValueType>
         }
 
     @Override
-    Boolean contains(KeyType key)
+    Boolean contains(Key key)
         {
         return find(key);
         }
 
     @Override
-    conditional ValueType get(KeyType key)
+    conditional Value get(Key key)
         {
         if (HashEntry entry := find(key))
             {
@@ -140,7 +140,7 @@ class HashMap<KeyType, ValueType>
         }
 
     @Override
-    HashMap put(KeyType key, ValueType value)
+    HashMap put(Key key, Value value)
         {
         Int        keyhash  = hasher.hashOf(key);
         Int        bucketId = keyhash % buckets.size;
@@ -164,7 +164,7 @@ class HashMap<KeyType, ValueType>
         }
 
     @Override
-    HashMap putAll(Map<KeyType, ValueType> that)
+    HashMap putAll(Map<Key, Value> that)
         {
         // check the capacity up front (to avoid multiple resizes); the worst case is that we end
         // up a bit bigger than we want
@@ -172,9 +172,9 @@ class HashMap<KeyType, ValueType>
 
         HashEntry?[] buckets     = this.buckets;
         Int          bucketCount = buckets.size;
-        NextPut: for (Map<KeyType, ValueType>.Entry entry : that.entries)
+        NextPut: for (Map<Key, Value>.Entry entry : that.entries)
             {
-            KeyType    key       = entry.key;
+            Key    key       = entry.key;
             Int        keyhash   = hasher.hashOf(key);
             Int        bucketId  = keyhash % bucketCount;
             HashEntry? currEntry = buckets[bucketId];
@@ -197,7 +197,7 @@ class HashMap<KeyType, ValueType>
         }
 
     @Override
-    HashMap remove(KeyType key)
+    HashMap remove(Key key)
         {
         Int        keyhash   = hasher.hashOf(key);
         Int        bucketId  = keyhash % buckets.size;
@@ -249,15 +249,15 @@ class HashMap<KeyType, ValueType>
         }
 
     @Override
-    @Lazy public/private Set<KeyType> keys.calc()
+    @Lazy public/private Set<Key> keys.calc()
         {
-        return new EntryKeys<KeyType, ValueType>(this);
+        return new EntryKeys<Key, Value>(this);
         }
 
     @Override
-    @Lazy public/private Collection<ValueType> values.calc()
+    @Lazy public/private Collection<Value> values.calc()
         {
-        return new EntryValues<KeyType, ValueType>(this);
+        return new EntryValues<Key, Value>(this);
         }
 
     @Override
@@ -267,10 +267,10 @@ class HashMap<KeyType, ValueType>
         }
 
     @Override
-    <ResultType> ResultType process(KeyType key,
-            function ResultType (Map<KeyType, ValueType>.Entry) compute)
+    <ResultType> ResultType process(Key key,
+            function ResultType (Map<Key, Value>.Entry) compute)
         {
-        return compute(new ReifiedEntry<KeyType, ValueType>(this, key));
+        return compute(new ReifiedEntry<Key, Value>(this, key));
         }
 
 
@@ -294,7 +294,7 @@ class HashMap<KeyType, ValueType>
             }
 
         @Override
-        KeyType key.get()
+        Key key.get()
             {
             return hashEntry.key;
             }
@@ -303,10 +303,10 @@ class HashMap<KeyType, ValueType>
         public/protected Boolean exists;
 
         @Override
-        ValueType value
+        Value value
             {
             @Override
-            ValueType get()
+            Value get()
                 {
                 if (exists)
                     {
@@ -319,7 +319,7 @@ class HashMap<KeyType, ValueType>
                 }
 
             @Override
-            void set(ValueType value)
+            void set(Value value)
                 {
                 verifyNotPersistent();
                 if (exists)
@@ -346,9 +346,9 @@ class HashMap<KeyType, ValueType>
             }
 
         @Override
-        Map<KeyType, ValueType>.Entry reify()
+        Map<Key, Value>.Entry reify()
             {
-            return new ReifiedEntry<KeyType, ValueType>(this.HashMap, key);
+            return new ReifiedEntry<Key, Value>(this.HashMap, key);
             }
         }
 

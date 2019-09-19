@@ -427,7 +427,7 @@ public class NewExpression
                             // fixed size array; we'll continue with the standard validation relying
                             // on the fact that Array has two constructors:
                             //      construct(Int capacity)
-                            //      construct(Int size, ElementType | function ElementType (Int) supply)
+                            //      construct(Int size, Element | function Element (Int) supply)
                             // since we know that the ArrayTypeExpression has successfully validated,
                             // we will emit the second constructor in leu of the first one
                             // using the default value for the element type as the second argument

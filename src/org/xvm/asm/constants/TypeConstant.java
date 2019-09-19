@@ -343,7 +343,7 @@ public abstract class TypeConstant
      * rather than a guaranteed run time one.
      *
      * For example: given a type: String[]? it's natural to decide at compile time that the type
-     * for the "ElementType" formal name is String. However, at run time the answer may differ.
+     * for the "Element" formal name is String. However, at run time the answer may differ.
      *
      * @param sName      the formal parameter name
      * @param listParams the list of actual generic parameters

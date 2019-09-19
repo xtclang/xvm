@@ -557,7 +557,7 @@ public class NamedTypeExpression
             case ERROR:
                 if (left == null && names.size() > 1 && access == null && immutable == null && paramTypes == null)
                     {
-                    // assume that the type is "dynamic", for example: "that.ElementType"
+                    // assume that the type is "dynamic", for example: "that.Element"
                     return;
                     }
 
@@ -578,7 +578,7 @@ public class NamedTypeExpression
         if (m_constId == null || m_constId.containsUnresolved())
             {
             // this can only mean that the name resolution ended in an error
-            // and has been deferred (e.g. "that.ElementType" or "that.KeyType.ElementType")
+            // and has been deferred (e.g. "that.Element" or "that.Key.Element")
             NameExpression exprOld = new NameExpression(names.get(0));
 
             for (int i = 1, cNames = names.size(); i < cNames; i++)

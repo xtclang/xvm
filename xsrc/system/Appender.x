@@ -6,9 +6,9 @@
  * * The structure may be able to optimize its implementation if it gets warning in advance about
  *   expected capacity demands.
  *
- * The interface is designed so that only one method add(ElementType) needs to be implemented.
+ * The interface is designed so that only one method add(Element) needs to be implemented.
  */
-interface Appender<ElementType>
+interface Appender<Element>
     {
     /**
      * Append the specified value.
@@ -17,7 +17,7 @@ interface Appender<ElementType>
      *
      * @return this
      */
-    Appender add(ElementType v);
+    Appender add(Element v);
 
     /**
      * Add the items from the passed Iterable container to this structure.
@@ -26,7 +26,7 @@ interface Appender<ElementType>
      *
      * @return this
      */
-    Appender add(Iterable<ElementType> iterable)
+    Appender add(Iterable<Element> iterable)
         {
         ensureCapacity(iterable.size);
         add(iterable.iterator());
@@ -40,9 +40,9 @@ interface Appender<ElementType>
      *
      * @return this
      */
-    Appender add(Iterator<ElementType> iter)
+    Appender add(Iterator<Element> iter)
         {
-        while (ElementType v := iter.next())
+        while (Element v := iter.next())
             {
             add(v);
             }

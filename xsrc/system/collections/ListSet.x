@@ -2,8 +2,8 @@
  * ListSet is an implementation of a Set on top of an Array to maintain the order of
  * insertion.
  */
-class ListSet<ElementType extends Hashable>
-         implements Set<ElementType>
+class ListSet<Element extends Hashable>
+         implements Set<Element>
          implements MutableAble, PersistentAble, ImmutableAble
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -13,7 +13,7 @@ class ListSet<ElementType extends Hashable>
         TODO
         }
 
-    construct(ElementType[] elements)
+    construct(Element[] elements)
         {
         TODO
         }
@@ -25,7 +25,7 @@ class ListSet<ElementType extends Hashable>
         }
 
     @Override
-    Iterator<ElementType> iterator()
+    Iterator<Element> iterator()
         {
         TODO;
         }
@@ -36,7 +36,7 @@ class ListSet<ElementType extends Hashable>
      * @return a Stream over the contents of this Collection
      */
     @Override
-    Stream<ElementType> stream()
+    Stream<Element> stream()
         {
         TODO;
         }
@@ -69,7 +69,7 @@ class ListSet<ElementType extends Hashable>
         }
 
     @Override
-    immutable ListSet<ElementType> ensureImmutable(Boolean inPlace = false)
+    immutable ListSet<Element> ensureImmutable(Boolean inPlace = false)
         {
         TODO;
         }

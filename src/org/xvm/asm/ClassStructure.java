@@ -543,7 +543,7 @@ public class ClassStructure
         }
 
     /**
-     * @return the formal type (e.g. Map<KeyType, ValueType>)
+     * @return the formal type (e.g. Map<Key, Value>)
      */
     public TypeConstant getFormalType()
         {

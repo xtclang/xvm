@@ -11,13 +11,13 @@ import maps.ReifiedEntry;
  *   are _extremely_ rare, and are allowed to be expensive.
  *
  * The ListMap uses a brute force, `O(N)` search. If the ListMap grows beyond an arbitrary size,
- * and if the `KeyType` is [Hashable], then the ListMap will automatically create a size-optimized
+ * and if the `Key` type is [Hashable], then the ListMap will automatically create a size-optimized
  * hashing lookup data structure when the first such search occurs.
  */
-class ListMap<KeyType, ValueType>
-        implements Map<KeyType, ValueType>
+class ListMap<Key, Value>
+        implements Map<Key, Value>
         implements MutableAble, FixedSizeAble, PersistentAble, ImmutableAble
-        incorporates conditional ListMapIndex<KeyType extends immutable Hashable, ValueType>
+        incorporates conditional ListMapIndex<Key extends immutable Hashable, Value>
         incorporates Stringer
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -41,7 +41,7 @@ class ListMap<KeyType, ValueType>
      * @param keys  the keys for the map
      * @param vals  the values for the map
      */
-    construct(KeyType[] keys, ValueType[] vals)
+    construct(Key[] keys, Value[] vals)
         {
         listKeys = keys;
         listVals = vals;
@@ -66,12 +66,12 @@ class ListMap<KeyType, ValueType>
     /**
      * The list of keys in the map, in order of insertion.
      */
-    protected KeyType[]   listKeys;
+    protected Key[]   listKeys;
 
     /**
      * The values in the map, corresponding by index to [listKeys].
      */
-    protected ValueType[] listVals;
+    protected Value[] listVals;
 
     /**
      * A counter of the number of items added to the map. Used to detect illegal concurrent
@@ -93,9 +93,9 @@ class ListMap<KeyType, ValueType>
      * @return True iff the key was found
      * @return the conditional index at which the key was found
      */
-    protected conditional Int indexOf(KeyType key)
+    protected conditional Int indexOf(Key key)
         {
-        loop: for (KeyType eachKey : listKeys)
+        loop: for (Key eachKey : listKeys)
             {
             if (eachKey == key)
                 {
@@ -123,7 +123,7 @@ class ListMap<KeyType, ValueType>
      * @param key    the key to append
      * @param value  the value to append
      */
-    protected void appendEntry(KeyType key, ValueType value)
+    protected void appendEntry(Key key, Value value)
         {
         listKeys += key;
         listVals += value;
@@ -176,13 +176,13 @@ class ListMap<KeyType, ValueType>
         }
 
     @Override
-    Boolean contains(KeyType key)
+    Boolean contains(Key key)
         {
         return indexOf(key);
         }
 
     @Override
-    conditional ValueType get(KeyType key)
+    conditional Value get(Key key)
         {
         if (Int index := indexOf(key))
             {
@@ -192,7 +192,7 @@ class ListMap<KeyType, ValueType>
         }
 
     @Override
-    @Lazy Set<KeyType> keys.calc()
+    @Lazy Set<Key> keys.calc()
         {
         return new Keys();
         }
@@ -204,13 +204,13 @@ class ListMap<KeyType, ValueType>
         }
 
     @Override
-    @Lazy Collection<ValueType> values.calc()
+    @Lazy Collection<Value> values.calc()
         {
         return new Values();
         }
 
     @Override
-    ListMap put(KeyType key, ValueType value)
+    ListMap put(Key key, Value value)
         {
         if (Int index := indexOf(key))
             {
@@ -225,7 +225,7 @@ class ListMap<KeyType, ValueType>
         }
 
     @Override
-    ListMap remove(KeyType key)
+    ListMap remove(Key key)
         {
         if (Int index := indexOf(key))
             {
@@ -236,7 +236,7 @@ class ListMap<KeyType, ValueType>
         }
 
     @Override
-    conditional ListMap remove(KeyType key, ValueType value)
+    conditional ListMap remove(Key key, Value value)
         {
         if (Int index := indexOf(key))
             {
@@ -265,7 +265,7 @@ class ListMap<KeyType, ValueType>
         }
 
     @Override
-    <ResultType> ResultType process(KeyType key, function ResultType (Entry) compute)
+    <ResultType> ResultType process(Key key, function ResultType (Entry) compute)
         {
         return compute(new CursorEntry(key));
         }
@@ -307,7 +307,7 @@ class ListMap<KeyType, ValueType>
      * A custom implementation of the [keys] property.
      */
     class Keys
-            implements Set<KeyType>
+            implements Set<Key>
         {
         @Override
         Mutability mutability.get()
@@ -322,17 +322,17 @@ class ListMap<KeyType, ValueType>
             }
 
         @Override
-        Iterator<KeyType> iterator()
+        Iterator<Key> iterator()
             {
             return new Iterator()
                 {
                 Int index       = 0;
                 Int limit       = size;
                 Int prevDeletes = deletes;
-                @Unassigned KeyType key;
+                @Unassigned Key key;
 
                 @Override
-                conditional KeyType next()
+                conditional Key next()
                     {
                     // the immediately previously iterated key is allowed to be deleted
                     if (deletes != prevDeletes)
@@ -361,7 +361,7 @@ class ListMap<KeyType, ValueType>
             }
 
         @Override
-        Keys remove(KeyType key)
+        Keys remove(Key key)
             {
             verifyMutable();
 
@@ -374,7 +374,7 @@ class ListMap<KeyType, ValueType>
             }
 
         @Override
-        (Keys, Int) removeIf(function Boolean (KeyType) shouldRemove)
+        (Keys, Int) removeIf(function Boolean (Key) shouldRemove)
             {
             verifyMutable();
 
@@ -400,13 +400,13 @@ class ListMap<KeyType, ValueType>
             }
 
         @Override
-        Stream<KeyType> stream()
+        Stream<Key> stream()
             {
             TODO
             }
 
         @Override
-        Set<KeyType> clone()
+        Set<Key> clone()
             {
             TODO could this just wrap a clone of the array of keys with a ListSet?
             }
@@ -431,7 +431,7 @@ class ListMap<KeyType, ValueType>
          *
          * @param key  the key for the entry
          */
-        protected construct(KeyType key)
+        protected construct(Key key)
             {
             this.key    = key;
             this.expect = appends + deletes;
@@ -488,7 +488,7 @@ class ListMap<KeyType, ValueType>
 
         @Override
         @Unassigned
-        public/private KeyType key;
+        public/private Key key;
 
         @Override
         public/private Boolean exists.get()
@@ -497,10 +497,10 @@ class ListMap<KeyType, ValueType>
             }
 
         @Override
-        ValueType value
+        Value value
             {
             @Override
-            ValueType get()
+            Value get()
                 {
                 if (exists)
                     {
@@ -511,7 +511,7 @@ class ListMap<KeyType, ValueType>
                 }
 
             @Override
-            void set(ValueType value)
+            void set(Value value)
                 {
                 verifyNotPersistent();
                 if (exists)
@@ -545,7 +545,7 @@ class ListMap<KeyType, ValueType>
             }
 
         @Override
-        Map<KeyType, ValueType>.Entry reify()
+        Map<Key, Value>.Entry reify()
             {
             return new ReifiedEntry(this.ListMap, key);
             }
@@ -685,7 +685,7 @@ class ListMap<KeyType, ValueType>
         protected conditional Int indexOf(Entry entry)
             {
             // first, see if the entry knows its own index
-            KeyType key   = entry.key;
+            Key     key   = entry.key;
             Int     index = -1;
             Boolean found = False;
             if (entry.is(CursorEntry))
@@ -717,7 +717,7 @@ class ListMap<KeyType, ValueType>
     // ----- Values Collection ---------------------------------------------------------------------
 
     class Values
-            implements Collection<ValueType>
+            implements Collection<Value>
         {
         @Override
         Mutability mutability.get()
@@ -732,17 +732,17 @@ class ListMap<KeyType, ValueType>
             }
 
         @Override
-        Iterator<ValueType> iterator()
+        Iterator<Value> iterator()
             {
             return new Iterator()
                 {
                 Int index       = 0;
                 Int limit       = size;
                 Int prevDeletes = deletes;
-                @Unassigned KeyType key;
+                @Unassigned Key key;
 
                 @Override
-                conditional ValueType next()
+                conditional Value next()
                     {
                     // the immediately previously iterated key is allowed to be deleted
                     if (deletes != prevDeletes)
@@ -771,7 +771,7 @@ class ListMap<KeyType, ValueType>
             }
 
         @Override
-        Values remove(ValueType value)
+        Values remove(Value value)
             {
             verifyMutable();
 
@@ -784,7 +784,7 @@ class ListMap<KeyType, ValueType>
             }
 
         @Override
-        (Values, Int) removeIf(function Boolean (ValueType) shouldRemove)
+        (Values, Int) removeIf(function Boolean (Value) shouldRemove)
             {
             verifyMutable();
 
@@ -810,13 +810,13 @@ class ListMap<KeyType, ValueType>
             }
 
         @Override
-        Stream<ValueType> stream()
+        Stream<Value> stream()
             {
             TODO
             }
 
         @Override
-        Collection<ValueType> clone()
+        Collection<Value> clone()
             {
             TODO
             }

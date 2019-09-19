@@ -666,8 +666,8 @@ Int n2 = t[1]; // compile time error (and obviously it would be a runtime error 
 
 // basically, it's some way to do non-uniform index of an "array" like structure
 // i.e. fields by index
-interface UniformIndexed<IndexType, ValueType>
-interface Indexed<ValueType...>
+interface UniformIndexed<IndexType, Value>
+interface Indexed<Value...>
 
 --
 
@@ -799,14 +799,14 @@ z = x.max(y);
 
 // ---
 
-Array<ElementType> : List<..>
+Array<Element> : List<..>
   {
   int length;
-  ElementType get(int)
-  void set(int, ElementType)
-  Element<ElementType> elementAt(int)
+  Element get(int)
+  void set(int, Element)
+  Element<Element> elementAt(int)
 
-  Element<ElementType> : Ref<..>
+  Element<Element> : Ref<..>
     {
     value = get()
     set(value)
@@ -873,9 +873,9 @@ Meta
 
 typedef Map<String, Person> People;
 
-Iterator<ElementType> iter =
+Iterator<Element> iter =
     {
-    conditional ElementType next()
+    conditional Element next()
         {
         if (...)
             {
@@ -1939,8 +1939,8 @@ s.makeString().transform(s -> new IntLiteral(s).to<Int>()).passTo(countSlowly);
         // TODO
         }
 
-    interface Map<KeyType, ValueType>
-            extends Indexed<KeyType>
+    interface Map<Key, Value>
+            extends Indexed<Key>
 
 // - equality
 
@@ -2243,14 +2243,14 @@ DataRecord[] people2 = functionThatReturnsArrayOfCustomerObjects();
 if (people1 == people2) {...}
 
 // the problem isn't the Array.equals function ...
-// the problem is that Array.equals has NO IDEA WHAT THE ElementType IS!!!!!!
+// the problem is that Array.equals has NO IDEA WHAT THE Element IS!!!!!!
 
-        // we can ask the runtime ElementType (Employee and Customer would be the answer), but we have
-        // no idea what the compile-time ElementType was .. was it Person? was it DataRecord? Was it
+        // we can ask the runtime Element (Employee and Customer would be the answer), but we have
+        // no idea what the compile-time Element was .. was it Person? was it DataRecord? Was it
         // Const? Was it Object? or whatever superclass or interface or type that these objects might
         // have in common?
 
-interface Array<ElementType>
+interface Array<Element>
     {
     // ...
 
@@ -2261,8 +2261,8 @@ interface Array<ElementType>
             return false;
             }
 
-        for (ArrayType.ElementType v1 : a1,
-             ArrayType.ElementType v2 : a2)
+        for (ArrayType.Element v1 : a1,
+             ArrayType.Element v2 : a2)
             {
             if (v1 != v2)
                 {
@@ -2274,7 +2274,7 @@ interface Array<ElementType>
         }
     }
 
-interface Map<KeyType, ValueType>
+interface Map<Key, Value>
     {
     // ...
 
@@ -2285,9 +2285,9 @@ interface Map<KeyType, ValueType>
             return false;
             }
 
-        for (Map.Entry<MapType.KeyType, MapType.ValueType>> entry : map1)
+        for (Map.Entry<MapType.Key, MapType.Value>> entry : map1)
             {
-            if (!(MapType.ValueType value : map2.get(entry.key) && entry.value == value))
+            if (!(MapType.Value value : map2.get(entry.key) && entry.value == value))
                 {
                 return false;
                 }
@@ -2299,10 +2299,10 @@ interface Map<KeyType, ValueType>
 
 // instead we need something like
 Arrays.equals(Array a1, Array a2, Type compileTimeType)
-// except that compileTimeType doesn't tell us what ElementType was... although we can figure that out
+// except that compileTimeType doesn't tell us what Element was... although we can figure that out
 // but even figuring that out doesn't tell us what the equals function is for the type, so maybe:
 
-Arrays.equals(Array<ElementType> a1, Array<ElementType> a2, Type ElementType, function Boolean(ElementType, ElementType))
+Arrays.equals(Array<Element> a1, Array<Element> a2, Type Element, function Boolean(Element, Element))
 
 // for any generic type C, it has some number of formal type parameters T1, T2, ...
 // for any compile time type CTT that the compiler allows to be compared with == or !=, there exists
@@ -2422,12 +2422,12 @@ const Type<DataType>
 
     // however, it has a number (0 or more) of other "type parameter" properties, one for each
     // unique type parameter of the type composition, e.g. for map:
-    Type KeyType;
-    Type ValueType;
+    Type Key;
+    Type Value;
 
-    // example for what this would look like for the type of a HashMap<KeyType, ValueType>
-    Type<Hashable>? KeyType;
-    Type<Object>? ValueType;
+    // example for what this would look like for the type of a HashMap<Key, Value>
+    Type<Hashable>? Key;
+    Type<Object>? Value;
 
     // the same information could be represented by a standard data structure, e.g. by name:
     Map<String, Type> typeParameterByName; // TODO type could be null, though .. if unresolved
@@ -2510,7 +2510,7 @@ Type t3 = t2 | String;
 print t3.class.name;                // "OrType"
 
 // back to the Type t of HashMap
-Type k = t.KeyType;             // exception!
+Type k = t.Key;             // exception!
 
 
 // ----- parameterized types
@@ -2538,10 +2538,10 @@ Class c3 = magicalInjectedContainerCreator.defineModule(...).giveMeAClass(...)
 // ---- classes and types
 
 Class c = HashMap;          // is that legal?
-                            // 1. No. KeyType and ValueType are required. (there is no allowance for
+                            // 1. No. Key and Value are required. (there is no allowance for
                             //    a class that represents HashMap without its type parameters being
                             //    specified)
-                            // 2. Yes. KeyType is assumed to be Hashable and ValueType is Object
+                            // 2. Yes. Key is assumed to be Hashable and Value is Object
 
 // then would THIS be necessary?
 Class c2 = HashMap<K,V>.Entry<K,V>;
@@ -2550,18 +2550,18 @@ Class pkg = x.collections;
 
 
 //
-interface Array<ElementType>
+interface Array<Element>
     {
     // "Array.Type" is not really using a ".Type" property on the "Array" class ... what this really
     // means is "Array", because when we say "Array" we actually mean "this:type" and NOT "Array"
-    Array.Type<ElementType> ensureMutable();
+    Array.Type<Element> ensureMutable();
     }
 
 //
-interface Array<ElementType>
+interface Array<Element>
     {
     // instead consider the use of "bang" to say "no, not this:type, but actually use (any) Array!"
-    Array!<ElementType> ensureMutable();
+    Array!<Element> ensureMutable();
     }
 
 
@@ -2950,7 +2950,7 @@ Orphan     o5 = BaseParent.Orphan.findConstructor(Void)();
 
 //--
 
-Class<HashMap<Int,String>> c = HashMap.narrow(new TypeParameter("KeyType", Int), new TypeParameter("ValueType", String));
+Class<HashMap<Int,String>> c = HashMap.narrow(new TypeParameter("Key", Int), new TypeParameter("Value", String));
 
 // -- class & type
 
@@ -2982,7 +2982,7 @@ function Int() fn2 = getter.bindTarget(p);
 
 // we have a few choices here if key is missing:
 // 1) throw an exception
-// 2) return null (return type is Nullable | ValueType)
+// 2) return null (return type is Nullable | Value)
 val = map[key];
 
 // same problem here:
@@ -2998,9 +2998,9 @@ if (val : map[key]) {...}
 val = map[key]; // could throw on miss
 val = map[key]; // returns null on miss
 
-conditional ValueType load(KeyType key)
-conditional Void store(KeyType key, ValueType val)
-ValueType? get(KeyType);
+conditional Value load(Key key)
+conditional Void store(Key key, Value val)
+Value? get(Key);
 
 // ----- entry processor
 
@@ -3008,5 +3008,5 @@ map.process(key, e -> e.remove());
 
 map.entries.stream().filter(...).map(...).produceANewMap().do
 
-    processor.ReturnTypes[0] process(KeyType key, EntryProcessor processor);
+    processor.ReturnTypes[0] process(Key key, EntryProcessor processor);
 

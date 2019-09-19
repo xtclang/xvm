@@ -1,23 +1,23 @@
 /**
  * An iterator over a sequence of elements.
  */
-interface Iterator<ElementType>
+interface Iterator<Element>
     {
     /**
      * Get a next element.
      *
      * @return a tuple of (true, nextValue) or (false) if no elements are available
      */
-    conditional ElementType next();
+    conditional Element next();
 
     /**
      * Perform the specified action for all remaining elements in the iterator.
      *
      * @param process  an action to perform on each element
      */
-    void forEach(function void (ElementType) process)
+    void forEach(function void (Element) process)
         {
-        while (ElementType value := next())
+        while (Element value := next())
             {
             process(value);
             }
@@ -34,9 +34,9 @@ interface Iterator<ElementType>
      * @return true iff the iteration completed without short-circuiting; otherwise false if the
      *         iterator was short-circuited
      */
-    Boolean whileEach(function Boolean process(ElementType))
+    Boolean whileEach(function Boolean process(Element))
         {
-        while (ElementType value := next())
+        while (Element value := next())
             {
             if (!process(value))
                 {
@@ -57,9 +57,9 @@ interface Iterator<ElementType>
      * @return true iff the iterator was short-circuited; otherwise false if the iteration
      *         completed without short-circuiting
      */
-    Boolean untilAny(function Boolean process(ElementType))
+    Boolean untilAny(function Boolean process(Element))
         {
-        while (ElementType value := next())
+        while (Element value := next())
             {
             if (process(value))
                 {

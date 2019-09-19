@@ -2,8 +2,8 @@
  * A Set is a container data structure that represents a group of _distinct values_. While the Set's
  * interface is identical to that of the Collection, its default behavior is subtly different.
  */
-interface Set<ElementType>
-        extends Collection<ElementType>
+interface Set<Element>
+        extends Collection<Element>
     {
     // ----- read operations -----------------------------------------------------------------------
 
@@ -21,21 +21,21 @@ interface Set<ElementType>
      */
     @Override
     @Op("|")
-    Set addAll(Iterable<ElementType> values);
+    Set addAll(Iterable<Element> values);
 
     /**
      * The "relative complement" operator.
      */
     @Override
     @Op("-")
-    Set removeAll(Iterable<ElementType> values);
+    Set removeAll(Iterable<Element> values);
 
     /**
      * The "intersection" operator.
      */
     @Override
     @Op("&")
-    Set retainAll(Iterable<ElementType> values);
+    Set retainAll(Iterable<Element> values);
 
     /**
      * The "symmetric difference" operator determines the elements that are present in only this
@@ -51,27 +51,27 @@ interface Set<ElementType>
      * @return the resultant set, which is the same as `this` for a mutable set
      */
     @Op("^")
-    Set symmetricDifference(Set!<ElementType> values)
+    Set symmetricDifference(Set!<Element> values)
         {
-        ElementType[]? remove = null;
-        for (ElementType value : this)
+        Element[]? remove = null;
+        for (Element value : this)
             {
             if (values.contains(value))
                 {
-                remove = (remove ?: new ElementType[]) + value;
+                remove = (remove ?: new Element[]) + value;
                 }
             }
 
-        ElementType[]? add = null;
-        for (ElementType value : values)
+        Element[]? add = null;
+        for (Element value : values)
             {
             if (!this.contains(value))
                 {
-                add = (add ?: new ElementType[]) + value;
+                add = (add ?: new Element[]) + value;
                 }
             }
 
-        Set<ElementType> result = this;
+        Set<Element> result = this;
         result -= remove?;
         result |= add?;
         return result;
@@ -83,7 +83,7 @@ interface Set<ElementType>
      * @return a new set that represents the complement of this set
      *
      * @throws UnsupportedOperation  if this set is incapable of determining its complement, which
-     *                               may be a reflection of a limitation of the ElementType itself
+     *                               may be a reflection of a limitation of the Element itself
      */
     @Op("~")
     Set! complement()

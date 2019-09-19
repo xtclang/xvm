@@ -1,5 +1,5 @@
 typedef function ResultType () Callable<ResultType>;
-typedef function Void (ValueType) Consumer<ValueType>;
+typedef function Void (Value) Consumer<Value>;
 
 String hello = "hello";
 Callable<String> getGreeting = () -> hello;
@@ -62,13 +62,13 @@ typedef List<Person> People;
 Collector<E, A, R> co = Collector.of(() -> new E(), (a, e) -> {a.add(e);}, (a, a2) -> {a.addAll(a2); return a;}, (a) -> a.toR());
 Collector<E, A, A> co = UniformCollector.of(() -> new E(), (a, e) -> {a.add(e);}, (a, a2) -> {a.addAll(a2); return a;});
 
-static Builder<ElementType> createBuilder(ElementType.Type type)
+static Builder<Element> createBuilder(Element.Type type)
 
-static Builder<ElementType> builderOf(Type A, A a)
+static Builder<Element> builderOf(Type A, A a)
     {
     Type t = Runnable.Type;
 
-    return new StreamBuilder<ElementType>();
+    return new StreamBuilder<Element>();
     }
 
 
@@ -107,7 +107,7 @@ Stage<InType, OutType> implements Stream
     conditional (ResultType) evaluateHead(TerminalOp<OutType, ResultType> op)
         {
         assert this.head == this;
-        for (ElementType el : iterator())
+        for (Element el : iterator())
             {
             if (!evaluate(op, this)
             }
@@ -150,28 +150,28 @@ Stage<InType, OutType> implements Stream
         return (op.process(iter));
         }
 
-    interface Step<ElementType, ResultType>
+    interface Step<Element, ResultType>
         {
         Void begin();
-        Boolean process(ElementType el);
+        Boolean process(Element el);
         ResultType finish();
         }
-    interface TerminalOp<ElementType, ResultType>
+    interface TerminalOp<Element, ResultType>
         {
         Void begin();
-        Boolean process(Iterator<ElementType> iter);
+        Boolean process(Iterator<Element> iter);
         ResultType finish();
         }
 
-    class CollectorOp<ElementType, AccumulatorType, ResultType)
-                (Collector<ElementType, AccumulatorType, ResultType) collector)
-            implements TerminalOp<ElementType, ResultType>
+    class CollectorOp<Element, AccumulatorType, ResultType)
+                (Collector<Element, AccumulatorType, ResultType) collector)
+            implements TerminalOp<Element, ResultType>
         {
         @Override
-        conditional ResultType process(Iterator<ElementType> iter)
+        conditional ResultType process(Iterator<Element> iter)
             {
             AccumulatorType container = collector.supply();
-            for (ElementType element : iter)
+            for (Element element : iter)
                 {
                 if (!collector.accumulate(container, element))
                     {
@@ -182,14 +182,14 @@ Stage<InType, OutType> implements Stream
             }
         }
 
-    class AnyMatchOp<ElementType, Boolean)
-                (function Boolean (ElementType) match)
-            implements TerminalOp<ElementType, ResultType>
+    class AnyMatchOp<Element, Boolean)
+                (function Boolean (Element) match)
+            implements TerminalOp<Element, ResultType>
         {
         @Override
-        conditional ResultType process(Iterator<ElementType> iter)
+        conditional ResultType process(Iterator<Element> iter)
             {
-            for (ElementType element : iter)
+            for (Element element : iter)
                 {
                 if (match(element))
                     {
@@ -416,13 +416,13 @@ class ObjectFileStream()
 
 new @ObjectStreaming FileStream()
 
-class C<ElementType, ListType extends List>
+class C<Element, ListType extends List>
     {
-    Void foo(ElementType elThis, ListType.ElementType elThat)
+    Void foo(Element elThis, ListType.Element elThat)
         {
         }
 
-    <T extends List> Void foo(T list, T.ElementType elExcept)
+    <T extends List> Void foo(T list, T.Element elExcept)
     }
 
 // isSubstitutableFor most generic examples
@@ -523,8 +523,8 @@ class B<T>
 //    <U> (U, List<U>)
 //        f2(U p1, List<U> p2);
 //
-//    <U extends List<Number>> (U.ElementType, List<U.ElementType>)
-//        f3(U.ElementType p1, List<U.ElementType> p2);
+//    <U extends List<Number>> (U.Element, List<U.Element>)
+//        f3(U.Element p1, List<U.Element> p2);
     }
 
 class D<T, U>

@@ -29,8 +29,8 @@
  *   provides support for more than one mode, including a *const* mode, then it should implement the
  *   {@link ImmutableAble} interface.
  */
-interface Collection<ElementType>
-        extends Iterable<ElementType>
+interface Collection<Element>
+        extends Iterable<Element>
         extends VariablyMutable
     {
     // ----- read operations -----------------------------------------------------------------------
@@ -47,7 +47,7 @@ interface Collection<ElementType>
      * Metadata: Is the collection maintained in an order that is a function of the elements in the
      * collection? And if so, what is the Comparator that represents that ordering?
      */
-    conditional Comparator<ElementType> sortedBy()
+    conditional Comparator<Element> sortedBy()
         {
         return False;
         }
@@ -72,7 +72,7 @@ interface Collection<ElementType>
      *
      * @return {@code True} iff the specified values all exist in this collection
      */
-    Boolean containsAll(Iterable<ElementType> values)
+    Boolean containsAll(Iterable<Element> values)
         {
         return values.iterator().whileEach(contains(_));
         }
@@ -105,7 +105,7 @@ interface Collection<ElementType>
      *                   this will occur if `mutability==Fixed`
      */
     @Op("+")
-    Collection add(ElementType value)
+    Collection add(Element value)
         {
         throw new ReadOnly();
         }
@@ -124,13 +124,13 @@ interface Collection<ElementType>
      *                   this will occur if `mutability==Fixed`
      */
     @Op("+")
-    Collection addAll(Iterable<ElementType> values)
+    Collection addAll(Iterable<Element> values)
         {
         // this naive implementation is likely to be overridden in cases where optimizations can be
         // made with knowledge of either this collection and/or the passed in values, for example
         // if both are ordered
         Collection result = this;
-        for (ElementType value : values)
+        for (Element value : values)
             {
             result = result.add(value);
             }
@@ -151,7 +151,7 @@ interface Collection<ElementType>
      * @throws ReadOnly  if the collection does not support element addition; among other reasons,
      *                   this will occur if `mutability==Fixed`
      */
-    conditional Collection addIfAbsent(ElementType value)
+    conditional Collection addIfAbsent(Element value)
         {
         if (contains(value))
             {
@@ -175,7 +175,7 @@ interface Collection<ElementType>
      *                   this will occur if `mutability==Fixed`
      */
     @Op("-")
-    Collection remove(ElementType value)
+    Collection remove(Element value)
         {
         throw new ReadOnly();
         }
@@ -195,13 +195,13 @@ interface Collection<ElementType>
      *                   this will occur if `mutability==Fixed`
      */
     @Op("-")
-    Collection removeAll(Iterable<ElementType> values)
+    Collection removeAll(Iterable<Element> values)
         {
         // this naive implementation is likely to be overridden in cases where optimizations can be
         // made with knowledge of either this collection and/or the passed in values, for example
         // if both are ordered; it must obviously be overridden for non-mutable collections
         Collection result = this;
-        for (ElementType value : values)
+        for (Element value : values)
             {
             result = result.remove(value);
             }
@@ -223,7 +223,7 @@ interface Collection<ElementType>
      * @throws ReadOnly  if the collection does not support element addition; among other reasons,
      *                   this will occur if `mutability==Fixed`
      */
-    conditional Collection removeIfPresent(ElementType value)
+    conditional Collection removeIfPresent(Element value)
         {
         if (contains(value))
             {
@@ -249,14 +249,14 @@ interface Collection<ElementType>
      * @throws ReadOnly  if the collection does not support element addition; among other reasons,
      *                   this will occur if `mutability==Fixed`
      */
-     (Collection, Int) removeIf(function Boolean (ElementType) shouldRemove)
+     (Collection, Int) removeIf(function Boolean (Element) shouldRemove)
         {
-        ElementType[]? values = Null;
-        for (ElementType value : this)
+        Element[]? values = Null;
+        for (Element value : this)
             {
             if (shouldRemove(value))
                 {
-                values = (values ?: new ElementType[]) + value;
+                values = (values ?: new Element[]) + value;
                 }
             }
 
@@ -282,7 +282,7 @@ interface Collection<ElementType>
      * @throws ReadOnly  if the collection does not support element addition; among other reasons,
      *                   this will occur if `mutability==Fixed`
      */
-    Collection retainAll(Iterable<ElementType> values)
+    Collection retainAll(Iterable<Element> values)
         {
         // this naive implementation is likely to be overridden in cases where optimizations can be
         // made with knowledge of either this collection and/or the passed in values, for example

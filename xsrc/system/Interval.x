@@ -1,12 +1,12 @@
 /**
  * An interval specifies a lower bound and an upper bound.
  */
-const Interval<ElementType extends Orderable>
-// TODO this should be: Interval<ElementType extends Orderable+Stringable>
+const Interval<Element extends Orderable>
+// TODO this should be: Interval<Element extends Orderable+Stringable>
 // and all casts to <Stringable> removed
-        incorporates conditional Range<ElementType extends Sequential>
+        incorporates conditional Range<Element extends Sequential>
     {
-    construct(ElementType first, ElementType last)
+    construct(Element first, Element last)
         {
         if (first > last)
             {
@@ -25,7 +25,7 @@ const Interval<ElementType extends Orderable>
     /**
      * The starting bound of the interval.
      */
-    ElementType first.get()
+    Element first.get()
         {
         return reversed ? upperBound : lowerBound;
         }
@@ -33,7 +33,7 @@ const Interval<ElementType extends Orderable>
     /**
      * The ending bound of the interval.
      */
-    ElementType last.get()
+    Element last.get()
         {
         return reversed ? lowerBound : upperBound;
         }
@@ -41,12 +41,12 @@ const Interval<ElementType extends Orderable>
     /**
      * The lower bound of the interval.
      */
-    ElementType lowerBound;
+    Element lowerBound;
 
     /**
      * The upper bound of the interval.
      */
-    ElementType upperBound;
+    Element upperBound;
 
     /**
      * Reversed is true if the interval was specified from its upper bound to its lower bound.
@@ -56,7 +56,7 @@ const Interval<ElementType extends Orderable>
     /**
      * Determine if the specified value exists within this interval.
      */
-    Boolean contains(ElementType value)
+    Boolean contains(Element value)
         {
         return lowerBound <= value && upperBound >= value;
         }

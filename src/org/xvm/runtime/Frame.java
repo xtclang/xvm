@@ -1432,7 +1432,7 @@ public class Frame
         }
 
     /**
-     * Introduce a new standard variable of the "ElementType" for the specified array variable.
+     * Introduce a new standard variable of the "Element" for the specified array variable.
      *
      * Note: this method increments the "nextVar" index.
      *

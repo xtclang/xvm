@@ -420,7 +420,7 @@ public class NameResolver
 
         // once we get into the domain of type parameters, the "resolving component to use next"
         // is not pre-loaded. the quintessential example is the type parameter "MapType extends
-        // Map", and then resolving "MapType.KeyType", where there is no actual type (or
+        // Map", and then resolving "MapType.Key", where there is no actual type (or
         // component) for MapType, but the "Map" component is used instead
         Constant id = m_constant;
         while (true)

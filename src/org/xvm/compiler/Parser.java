@@ -388,8 +388,8 @@ public class Parser
                         }
                     else
                         {
-                        // parse the type parameter list e.g. "<KeyType extends Int, ValueType>",
-                        // and turn it into a type parameter name list e.g. "<KeyType, ValueType>"
+                        // parse the type parameter list e.g. "<Key extends Int, Value>",
+                        // and turn it into a type parameter name list e.g. "<Key, Value>"
                         List<Token>          names       = parseQualifiedName();
                                              constraints = parseTypeParameterList(true);
                         List<TypeExpression> paramnames  = new ArrayList<>();

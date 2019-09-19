@@ -161,8 +161,8 @@ public class TypeSequenceTypeConstant
     protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
         {
         // since the formal type sequence is a Sequence of types (see above).
-        // we need to report the "ElementType" formal type
-        return sName.equals("ElementType")
+        // we need to report the "Element" formal type
+        return sName.equals("Element")
                 ? getConstantPool().typeType()
                 : null;
         }

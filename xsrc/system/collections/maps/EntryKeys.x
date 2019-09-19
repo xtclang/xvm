@@ -2,10 +2,10 @@
  * An implementation of the Set for the [Map.entries] property that delegates back to the map and
  * to the map's [Map.keys] set.
  */
-class EntryKeys<KeyType, ValueType>(Map<KeyType, ValueType> map)
-        implements Set<KeyType>
+class EntryKeys<Key, Value>(Map<Key, Value> map)
+        implements Set<Key>
     {
-    public/private Map<KeyType, ValueType> map;
+    public/private Map<Key, Value> map;
 
     @Override
     Mutability mutability.get()
@@ -26,16 +26,16 @@ class EntryKeys<KeyType, ValueType>(Map<KeyType, ValueType> map)
         }
 
     @Override
-    Iterator<KeyType> iterator()
+    Iterator<Key> iterator()
         {
         return new Iterator()
             {
-            Iterator<Map<KeyType, ValueType>.Entry> entryIterator = map.entries.iterator();
+            Iterator<Map<Key, Value>.Entry> entryIterator = map.entries.iterator();
 
             @Override
-            conditional KeyType next()
+            conditional Key next()
                 {
-                if (Map<KeyType, ValueType>.Entry entry := entryIterator.next())
+                if (Map<Key, Value>.Entry entry := entryIterator.next())
                     {
                     return True, entry.key;
                     }
@@ -46,7 +46,7 @@ class EntryKeys<KeyType, ValueType>(Map<KeyType, ValueType> map)
         }
 
     @Override
-    EntryKeys remove(KeyType key)
+    EntryKeys remove(Key key)
         {
         verifyMutable();
         map.remove(key);
@@ -54,7 +54,7 @@ class EntryKeys<KeyType, ValueType>(Map<KeyType, ValueType> map)
         }
 
     @Override
-    (EntryKeys, Int) removeIf(function Boolean (KeyType) shouldRemove)
+    (EntryKeys, Int) removeIf(function Boolean (Key) shouldRemove)
         {
         verifyMutable();
 
@@ -71,7 +71,7 @@ class EntryKeys<KeyType, ValueType>(Map<KeyType, ValueType> map)
         }
 
     @Override
-    Stream<KeyType> stream()
+    Stream<Key> stream()
         {
         TODO
         }

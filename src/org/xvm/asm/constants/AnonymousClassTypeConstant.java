@@ -28,9 +28,9 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Consider the scenario from Map.x:
  *
- *    Class Map<KeyType, ValueType>
+ *    Class Map<Key, Value>
  *        {
- *        Iterator<KeyType> iterator()
+ *        Iterator<Key> iterator()
  *           {
  *           return new Iterator()
  *                {
@@ -42,20 +42,20 @@ import static org.xvm.util.Handy.writePackedLong;
  *
  * During validation we create a synthetic (anonymous) TypeCompositionStatement
  *
- *  class Iterator:1<Iterator:1.KeyType>
- *          implements Iterator<Iterator:1.KeyType>
+ *  class Iterator:1<Iterator:1.Key>
+ *          implements Iterator<Iterator:1.Key>
  *      {
  *      ...
  *      }
  *
- * and the compile time type of the returned Iterator is Iterator:1<Map.KeyType>.
+ * and the compile time type of the returned Iterator is Iterator:1<Map.Key>.
  *
  * However, it's not enough to resolve the type of "entryIterator" at the run time, since
  * the iterator's type has no knowledge of the parent's actual formal type values.
  *
  * The {@link AnonymousClassTypeConstant} represents a type assigned to that statement,
  * carrying the "parent" type information as well - in the case of the example above it would be
- * Map<KeyType, ValueType>.Iterator:1<Map.KeyType>.
+ * Map<Key, Value>.Iterator:1<Map.Key>.
  */
 public class AnonymousClassTypeConstant
         extends AbstractDependantTypeConstant

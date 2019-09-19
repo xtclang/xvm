@@ -3,9 +3,9 @@
  * manipulated using a zero-based `Int` index. Sequences are one of the most common types of
  * basic data structures in programming; for example, arrays are sequences.
  */
-interface Sequence<ElementType>
-        extends UniformIndexed<Int, ElementType>
-        extends Iterable<ElementType>
+interface Sequence<Element>
+        extends UniformIndexed<Int, Element>
+        extends Iterable<Element>
         extends Stringable
     {
     /**
@@ -14,14 +14,14 @@ interface Sequence<ElementType>
      * @return a new Iterator that will iterate over the contents of this Sequence
      */
     @Override
-    Iterator<ElementType> iterator()
+    Iterator<Element> iterator()
         {
         return new Iterator()
             {
             private Int i = 0;
 
             @Override
-            conditional ElementType next()
+            conditional Element next()
                 {
                 if (i < this.Sequence.size)
                     {
@@ -41,7 +41,7 @@ interface Sequence<ElementType>
      * @return a conditional return of the location of the index of the specified value, or
      *         False if the value could not be found
      */
-    conditional Int indexOf(ElementType value, Int startAt = 0)
+    conditional Int indexOf(Element value, Int startAt = 0)
         {
         for (Int i = startAt.maxOf(0), Int last = size - 1; i < last; ++i)
             {
@@ -62,7 +62,7 @@ interface Sequence<ElementType>
      * @return a conditional return of the location of the index of the specified value, or
      *         False if the value could not be found
      */
-    conditional Int lastIndexOf(ElementType value, Int startAt = Int.maxvalue)
+    conditional Int lastIndexOf(Element value, Int startAt = Int.maxvalue)
         {
         for (Int i = (size-1).minOf(startAt); i >= 0; --i)
             {
@@ -92,7 +92,7 @@ interface Sequence<ElementType>
      * @return a conditional return of the location of the index of the specified value, or
      *         False if the value could not be found
      */
-    conditional Int indexOf(ElementType value, Range<Int> range)
+    conditional Int indexOf(Element value, Range<Int> range)
         {
         Int size  = this.size;
         Int first = range.lowerBound;
@@ -134,9 +134,9 @@ interface Sequence<ElementType>
      * @return an array of elements from this sequence
      */
     @Override
-    ElementType[] toArray(VariablyMutable.Mutability mutability = Persistent)
+    Element[] toArray(VariablyMutable.Mutability mutability = Persistent)
         {
-        return new Array<ElementType>(mutability, this);
+        return new Array<Element>(mutability, this);
         }
 
     /**
@@ -198,16 +198,16 @@ interface Sequence<ElementType>
     Int estimateStringLength()
         {
         Int capacity = 2; // allow for "[]"
-        if (ElementType.is(Type<Stringable>))
+        if (Element.is(Type<Stringable>))
             {
-            for (ElementType v : this)
+            for (Element v : this)
                 {
                 capacity += v.estimateStringLength() + 2; // allow for ", "
                 }
             }
         else
             {
-            for (ElementType v : this)
+            for (Element v : this)
                 {
                 if (v.is(Stringable))
                     {
@@ -228,10 +228,10 @@ interface Sequence<ElementType>
         {
         appender.add('[');
 
-        if (ElementType.is(Type<Stringable>))
+        if (Element.is(Type<Stringable>))
             {
             Append:
-            for (ElementType v : this)
+            for (Element v : this)
                 {
                 if (!Append.first)
                     {
@@ -244,7 +244,7 @@ interface Sequence<ElementType>
         else
             {
             Append:
-            for (ElementType v : this)
+            for (Element v : this)
                 {
                 if (!Append.first)
                     {

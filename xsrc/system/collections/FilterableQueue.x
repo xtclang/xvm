@@ -4,10 +4,10 @@
  *
  * REVIEW this interface is for evaluation and discussion, and has not been finalized/approved
  */
-interface FilterableQueue<ElementType>
-        extends Queue<ElementType>
+interface FilterableQueue<Element>
+        extends Queue<Element>
     {
-    typedef function Boolean (ElementType) Filter;
+    typedef function Boolean (Element) Filter;
 
     /**
      * If a filter is provided, then this method scans the queue for an element that matches the
@@ -16,7 +16,7 @@ interface FilterableQueue<ElementType>
      * If a filter is not provided, then this method works as described by [Queue.next].
      */
     @Override
-    conditional ElementType next(Filter? matches = Null);
+    conditional Element next(Filter? matches = Null);
 
     /**
      * If a filter is provided, then this method scans the queue for an element that matches the
@@ -27,7 +27,7 @@ interface FilterableQueue<ElementType>
      * If a filter is not provided, then this method works as described by [Queue.take].
      */
     @Override
-    ElementType take(Filter? matches = Null);
+    Element take(Filter? matches = Null);
 
     /**
      * If a filter is provided, then this method scans the queue for an element that matches the
@@ -54,5 +54,3 @@ interface FilterableQueue<ElementType>
     @Override
     Cancellable pipeAll(Consumer pipe, Filter? matches = Null);
     }
-
-    

@@ -2,10 +2,10 @@
  * An implementation of the Set for the [Map.entries] property that delegates back to the map and
  * to the map's [Map.keys] set.
  */
-class KeyEntries<KeyType, ValueType>(Map<KeyType, ValueType> map)
-        implements Set<Map<KeyType, ValueType>.Entry>
+class KeyEntries<Key, Value>(Map<Key, Value> map)
+        implements Set<Map<Key, Value>.Entry>
     {
-    public/private Map<KeyType, ValueType> map;
+    public/private Map<Key, Value> map;
 
     @Override
     Mutability mutability.get()
@@ -26,18 +26,18 @@ class KeyEntries<KeyType, ValueType>(Map<KeyType, ValueType> map)
         }
 
     @Override
-    Iterator<Map<KeyType, ValueType>.Entry> iterator()
+    Iterator<Map<Key, Value>.Entry> iterator()
         {
         return new Iterator()
             {
-            Iterator<KeyType> keyIterator = map.keys.iterator();
+            Iterator<Key> keyIterator = map.keys.iterator();
 
             @Override
-            conditional Map<KeyType, ValueType>.Entry next()
+            conditional Map<Key, Value>.Entry next()
                 {
-                if (KeyType key := keyIterator.next())
+                if (Key key := keyIterator.next())
                     {
-                    private CursorEntry<KeyType, ValueType> entry = new CursorEntry(map);
+                    private CursorEntry<Key, Value> entry = new CursorEntry(map);
                     return true, entry.advance(key);
                     }
 
@@ -47,7 +47,7 @@ class KeyEntries<KeyType, ValueType>(Map<KeyType, ValueType> map)
         }
 
     @Override
-    KeyEntries remove(Map<KeyType, ValueType>.Entry entry)
+    KeyEntries remove(Map<Key, Value>.Entry entry)
         {
         verifyMutable();
         map.remove(entry.key, entry.value);
@@ -56,11 +56,11 @@ class KeyEntries<KeyType, ValueType>(Map<KeyType, ValueType> map)
 
     @Override
     (KeyEntries, Int) removeIf(
-            function Boolean (Map<KeyType, ValueType>.Entry) shouldRemove)
+            function Boolean (Map<Key, Value>.Entry) shouldRemove)
         {
         verifyMutable();
 
-        CursorEntry<KeyType, ValueType> entry = new CursorEntry(map);
+        CursorEntry<Key, Value> entry = new CursorEntry(map);
         (_, Int removed) = map.keys.removeIf(key -> shouldRemove(entry.advance(key)));
 
         return this, removed;
@@ -75,7 +75,7 @@ class KeyEntries<KeyType, ValueType>(Map<KeyType, ValueType> map)
         }
 
     @Override
-    Stream<Map<KeyType, ValueType>.Entry> stream()
+    Stream<Map<Key, Value>.Entry> stream()
         {
         TODO
         }

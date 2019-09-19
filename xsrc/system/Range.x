@@ -2,15 +2,15 @@
  * A range is an interval whose values are known to be sequential. A range adds some capabilities,
  * including the ability to union two adjoining ranges, and to iterate over the values in the range.
  */
-mixin Range<ElementType extends immutable Sequential>
-        into Interval<ElementType>
-        implements Iterable<ElementType>
+mixin Range<Element extends immutable Sequential>
+        into Interval<Element>
+        implements Iterable<Element>
     {
     /**
      * A RangeIterator is an Iterator that knows when it is reaching the end of its range.
      */
     interface RangeIterator
-            extends Iterator<ElementType>
+            extends Iterator<Element>
         {
         @RO Boolean hasNext;
         }
@@ -41,17 +41,17 @@ mixin Range<ElementType extends immutable Sequential>
             {
             return new RangeIterator()
                 {
-                private ElementType nextValue = upperBound;
+                private Element nextValue = upperBound;
 
                 @Override
                 public/private Boolean hasNext = true;
 
                 @Override
-                conditional ElementType next()
+                conditional Element next()
                     {
                     if (hasNext)
                         {
-                        ElementType value = nextValue;
+                        Element value = nextValue;
                         if (value == lowerBound)
                             {
                             hasNext = false;
@@ -73,17 +73,17 @@ mixin Range<ElementType extends immutable Sequential>
             {
             return new RangeIterator()
                 {
-                private ElementType nextValue = lowerBound;
+                private Element nextValue = lowerBound;
 
                 @Override
                 public/private Boolean hasNext = true;
 
                 @Override
-                conditional ElementType next()
+                conditional Element next()
                     {
                     if (hasNext)
                         {
-                        ElementType value = nextValue;
+                        Element value = nextValue;
                         if (value == upperBound)
                             {
                             hasNext = false;
@@ -103,11 +103,11 @@ mixin Range<ElementType extends immutable Sequential>
             }
         }
 
-    void forEach(function void(ElementType) process)
+    void forEach(function void(Element) process)
         {
         if (reversed)
             {
-            ElementType value = upperBound;
+            Element value = upperBound;
             do
                 {
                 process(value);
@@ -117,7 +117,7 @@ mixin Range<ElementType extends immutable Sequential>
             }
         else
             {
-            ElementType value = lowerBound;
+            Element value = lowerBound;
             do
                 {
                 process(value);
@@ -134,11 +134,11 @@ mixin Range<ElementType extends immutable Sequential>
      *
      * @param process  the function to call with each value from the range
      */
-    void forEachExclusive(function void(ElementType) process)
+    void forEachExclusive(function void(Element) process)
         {
         if (reversed)
             {
-            ElementType value = upperBound;
+            Element value = upperBound;
             while (value > lowerBound)
                 {
                 process(value);
@@ -147,7 +147,7 @@ mixin Range<ElementType extends immutable Sequential>
             }
         else
             {
-            ElementType value = lowerBound;
+            Element value = lowerBound;
             while (value < upperBound)
                 {
                 process(value);

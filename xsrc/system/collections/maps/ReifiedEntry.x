@@ -2,26 +2,26 @@
  * An implementation of Map Entry that delegates back to its originating map on behalf of a
  * specific key.
  */
-class ReifiedEntry<KeyType, ValueType>
-        implements Map<KeyType, ValueType>.Entry
+class ReifiedEntry<Key, Value>
+        implements Map<Key, Value>.Entry
         incorporates Stringer
     {
-    public construct(Map<KeyType, ValueType> map, KeyType key)
+    public construct(Map<Key, Value> map, Key key)
         {
         this.map = map;
         this.key = key;
         }
 
-    protected construct(Map<KeyType, ValueType> map)
+    protected construct(Map<Key, Value> map)
         {
         this.map = map;
         }
 
-    protected/private Map<KeyType, ValueType> map;
+    protected/private Map<Key, Value> map;
 
     @Override
     @Unassigned
-    public/protected KeyType key;
+    public/protected Key key;
 
     @Override
     Boolean exists.get()
@@ -30,12 +30,12 @@ class ReifiedEntry<KeyType, ValueType>
         }
 
     @Override
-    ValueType value
+    Value value
         {
         @Override
-        ValueType get()
+        Value get()
             {
-            if (ValueType value := map.get(key))
+            if (Value value := map.get(key))
                 {
                 return value;
                 }
@@ -43,7 +43,7 @@ class ReifiedEntry<KeyType, ValueType>
             }
 
         @Override
-        void set(ValueType value)
+        void set(Value value)
             {
             verifyNotPersistent();
             map.put(key, value);

@@ -3,18 +3,18 @@
  *
  * Array implements all four VariablyMutable forms: Mutable, Fixed, Persistent, and Constant.
  * To construct an Array with a specific form of mutability, use the
- * [construct(Mutability, ElementType...)] constructor.
+ * [construct(Mutability, Element...)] constructor.
  */
-class Array<ElementType>
-        implements List<ElementType>
+class Array<Element>
+        implements List<Element>
         implements MutableAble, FixedSizeAble, PersistentAble, ImmutableAble
         implements Stringable
         incorporates Stringer
-        incorporates conditional BitArray<ElementType extends Bit>
-        incorporates conditional ByteArray<ElementType extends Byte>
-        incorporates conditional Orderer<ElementType extends Orderable>
-        incorporates conditional Hasher<ElementType extends Hashable>
-        // TODO have to implement Const (at least conditionally if ElementType extends Const)
+        incorporates conditional BitArray<Element extends Bit>
+        incorporates conditional ByteArray<Element extends Byte>
+        incorporates conditional Orderer<Element extends Orderable>
+        incorporates conditional Hasher<Element extends Hashable>
+        // TODO have to implement Const (at least conditionally if Element extends Const)
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -35,10 +35,10 @@ class Array<ElementType>
 
         if (capacity > 0)
             {
-            Element cur = new Element();
+            ElementImpl cur = new ElementImpl();
             while (--capacity > 0)
                 {
-                cur = new Element(cur);
+                cur = new ElementImpl(cur);
                 }
             head = cur;
             }
@@ -52,20 +52,20 @@ class Array<ElementType>
      * @param size    the size of the fixed size array
      * @param supply  the value or the supply function for initializing the elements of the array
      */
-    construct(Int size, ElementType | function ElementType (Int) supply)
+    construct(Int size, Element | function Element (Int) supply)
         {
         if (size > 0)
             {
-            function ElementType (Int) valueFor = supply.is(ElementType) ? (_) -> supply : supply;
+            function Element (Int) valueFor = supply.is(Element) ? (_) -> supply : supply;
 
-            Element cur = new Element(valueFor(0));
+            ElementImpl cur = new ElementImpl(valueFor(0));
             head = cur;
 
             if (size > 1)
                 {
                 for (Int i : 1..size-1)
                     {
-                    Element next = new Element(valueFor(i));
+                    ElementImpl next = new ElementImpl(valueFor(i));
                     cur.next = next;
                     cur      = next;
                     }
@@ -81,20 +81,20 @@ class Array<ElementType>
      * @param mutability  the mutability setting for the array
      * @param elements    the elements to use to initialize the contents of the array
      */
-    construct(Mutability mutability, ElementType... elements)
+    construct(Mutability mutability, Element... elements)
         {
         Int size = elements.size;
         if (size > 0)
             {
-            function ElementType (ElementType) transform = mutability == Constant
+            function Element (Element) transform = mutability == Constant
                     ? e -> (e.is(Const) ? e : e.is(ImmutableAble) ? e.ensureImmutable() : assert)
                     : e -> e;
 
-            Int     index = size - 1;
-            Element cur   = new Element(transform(elements[index]));
+            Int         index = size - 1;
+            ElementImpl cur   = new ElementImpl(transform(elements[index]));
             while (--index >= 0)
                 {
-                cur = new Element(transform(elements[index]), cur);
+                cur = new ElementImpl(transform(elements[index]), cur);
                 }
             head = cur;
             }
@@ -115,9 +115,9 @@ class Array<ElementType>
      * @param array    the array that this slice delegates to (which could itself be a slice)
      * @param section  the range that defines the section of the array that the slice represents
      */
-    construct(Array<ElementType> array, Range<Int> section)
+    construct(Array<Element> array, Range<Int> section)
         {
-        ArrayDelegate<ElementType> delegate = new ArrayDelegate<ElementType>()
+        ArrayDelegate<Element> delegate = new ArrayDelegate<Element>()
             {
             @Override
             Int size.get()
@@ -133,20 +133,20 @@ class Array<ElementType>
 
             @Override
             @Op("[]")
-            ElementType getElement(Int index)
+            Element getElement(Int index)
                 {
                 return array[translateIndex(index)];
                 }
 
             @Override
             @Op("[]=")
-            void setElement(Int index, ElementType value)
+            void setElement(Int index, Element value)
                 {
                 array[translateIndex(index)] = value;
                 }
 
             @Override
-            Var<ElementType> elementAt(Int index)
+            Var<Element> elementAt(Int index)
                 {
                 return array.elementAt(translateIndex(index));
                 }
@@ -175,7 +175,7 @@ class Array<ElementType>
      *
      * @param delegate  an ArrayDelegate object that allows this array to delegate its functionality
      */
-    protected construct(ArrayDelegate<ElementType> delegate)
+    protected construct(ArrayDelegate<Element> delegate)
         {
         this.delegate = delegate;
         }
@@ -204,7 +204,7 @@ class Array<ElementType>
                 }
 
             Int count = 0;
-            for (Element? cur = head; cur != null; cur = cur.next)
+            for (ElementImpl? cur = head; cur != null; cur = cur.next)
                 {
                 ++count;
                 }
@@ -226,10 +226,10 @@ class Array<ElementType>
             assert newCap >= size;
             assert mutability == Mutable;
 
-            Element cur = new Element();
+            ElementImpl cur = new ElementImpl();
             while (--capacity > 0)
                 {
-                cur = new Element(cur);
+                cur = new ElementImpl(cur);
                 }
 
             if (head == null)
@@ -254,7 +254,7 @@ class Array<ElementType>
      *
      * @throws ReadOnly  if the array mutability is not Mutable or Fixed
      */
-    Array fill(ElementType value, Range<Int>? range = Null)
+    Array fill(Element value, Range<Int>? range = Null)
         {
         if (range == Null)
             {
@@ -267,7 +267,7 @@ class Array<ElementType>
 
         if (mutability.persistent)
             {
-            Array result = new Array<ElementType>(size, i -> (range.contains(i) ? value : this[i]));
+            Array result = new Array<Element>(size, i -> (range.contains(i) ? value : this[i]));
             return mutability == Constant
                     ? result.ensureImmutable(true)
                     : result.ensurePersistent(true);
@@ -361,17 +361,17 @@ class Array<ElementType>
                 makeImmutable();
                 }
 
-            return this.as(immutable ElementType[]);
+            return this.as(immutable Element[]);
             }
 
         if (!inPlace || delegate != null)
             {
-            return new Array(Constant, this).as(immutable ElementType[]);
+            return new Array(Constant, this).as(immutable Element[]);
             }
 
         // all elements must be immutable or ImmutableAble
         Boolean convert = False;
-        loop: for (ElementType element : this)
+        loop: for (Element element : this)
             {
             if (!element.is(immutable Object))
                 {
@@ -388,7 +388,7 @@ class Array<ElementType>
 
         if (convert)
             {
-            loop2: for (ElementType element : this) // TODO CP - loop not loop2
+            loop2: for (Element element : this) // TODO CP - loop not loop2
                 {
                 if (!element.is(immutable Object))
                     {
@@ -425,14 +425,14 @@ class Array<ElementType>
 
     @Override
     @Op("[]")
-    ElementType getElement(Int index)
+    Element getElement(Int index)
         {
         return elementAt(index).get();
         }
 
     @Override
     @Op("[]=")
-    void setElement(Int index, ElementType value)
+    void setElement(Int index, Element value)
         {
         if (mutability.persistent)
             {
@@ -442,7 +442,7 @@ class Array<ElementType>
         }
 
     @Override
-    Var<ElementType> elementAt(Int index)
+    Var<Element> elementAt(Int index)
         {
         if (delegate != null)
             {
@@ -454,10 +454,10 @@ class Array<ElementType>
             throw new OutOfBounds("index=" + index + ", size=" + size);
             }
 
-        Element element = head.as(Element);
+        ElementImpl element = head.as(ElementImpl);
         while (index-- > 0)
             {
-            element = element.next.as(Element);
+            element = element.next.as(ElementImpl);
             }
 
         return element;
@@ -474,8 +474,8 @@ class Array<ElementType>
             return delegate?.size : assert; // TODO
             }
 
-        Int count = 0;
-        Element? cur = head;
+        Int          count = 0;
+        ElementImpl? cur   = head;
         while (cur?.valueRef.assigned)
             {
             ++count;
@@ -492,7 +492,7 @@ class Array<ElementType>
             return this;
             }
 
-        Array<ElementType> result = new Array(this, range);
+        Array<Element> result = new Array(this, range);
 
         // a slice of an immutable array is also immutable
         return this.is(immutable Object)
@@ -512,14 +512,14 @@ class Array<ElementType>
     // ----- Collection interface ------------------------------------------------------------------
 
     @Override
-    Boolean contains(ElementType value)
+    Boolean contains(Element value)
         {
         // use the default implementation from the Sequence interface
         return indexOf(value);
         }
 
     @Override
-    ElementType[] toArray(VariablyMutable.Mutability? mutability = Null)
+    Element[] toArray(VariablyMutable.Mutability? mutability = Null)
         {
         return mutability == null || mutability == this.mutability
                 ? this
@@ -527,7 +527,7 @@ class Array<ElementType>
         }
 
     @Override
-    Stream<ElementType> stream()
+    Stream<Element> stream()
         {
         TODO Array Stream implementation
         }
@@ -543,12 +543,12 @@ class Array<ElementType>
 
     @Override
     @Op("+")
-    Array add(ElementType element)
+    Array add(Element element)
         {
         switch (mutability)
             {
             case Mutable:
-                Element el = new Element(element);
+                ElementImpl el = new ElementImpl(element);
                 if (head == null)
                     {
                     head = el;
@@ -564,7 +564,7 @@ class Array<ElementType>
 
             case Persistent:
             case Constant:
-                Array result = new Array<ElementType>(size + 1, i -> (i < size ? this[i] : element));
+                Array result = new Array<Element>(size + 1, i -> (i < size ? this[i] : element));
                 return mutability == Persistent
                         ? result.ensurePersistent(true)
                         : result.ensureImmutable(true);
@@ -573,12 +573,12 @@ class Array<ElementType>
 
     @Override
     @Op("+")
-    Array addAll(Iterable<ElementType> values)
+    Array addAll(Iterable<Element> values)
         {
         switch (mutability)
             {
             case Mutable:
-                for (ElementType value : values)
+                for (Element value : values)
                     {
                     add(value);
                     }
@@ -589,17 +589,17 @@ class Array<ElementType>
 
             case Persistent:
             case Constant:
-                Iterator<ElementType> iter = values.iterator();
-                function ElementType (Int) supply = i ->
+                Iterator<Element> iter = values.iterator();
+                function Element (Int) supply = i ->
                     {
                     if (i < size)
                         {
                         return this[i];
                         }
-                    assert ElementType value := iter.next();
+                    assert Element value := iter.next();
                     return value;
                     };
-                ElementType[] result = new Array<ElementType>(this.size + values.size, supply);
+                Element[] result = new Array<Element>(this.size + values.size, supply);
                 return mutability == Persistent
                         ? result.ensurePersistent(true)
                         : result.ensureImmutable(true);
@@ -607,10 +607,10 @@ class Array<ElementType>
         }
 
     @Override
-    (Array, Int) removeIf(function Boolean (ElementType) shouldRemove)
+    (Array, Int) removeIf(function Boolean (Element) shouldRemove)
         {
         Int[]? indexes = null;
-        loop: for (ElementType value : this)
+        loop: for (Element value : this)
             {
             if (shouldRemove(value))
                 {
@@ -629,10 +629,10 @@ class Array<ElementType>
             }
 
         // copy everything except the "shouldRemove" elements to a new array
-        Int                newSize = size - indexes.size;
-        Array<ElementType> result  = new Array(newSize);
-        Int                delete  = indexes[0];
-        Int                next    = 1;
+        Int            newSize = size - indexes.size;
+        Array<Element> result  = new Array(newSize);
+        Int            delete  = indexes[0];
+        Int            next    = 1;
         for (Int index = 0; index < size; ++index)
             {
             if (index == delete)
@@ -673,7 +673,7 @@ class Array<ElementType>
 
             case Persistent:
             case Constant:
-                return new Array<ElementType>(mutability, []);
+                return new Array<Element>(mutability, []);
             }
         }
 
@@ -681,11 +681,11 @@ class Array<ElementType>
     // ----- List interface ------------------------------------------------------------------------
 
     @Override
-    Array replace(Int index, ElementType value)
+    Array replace(Int index, Element value)
         {
         if (mutability.persistent)
             {
-            ElementType[] result = new Array(size, i -> (i == index ? value : this[i]));
+            Element[] result = new Array(size, i -> (i == index ? value : this[i]));
             return mutability == Persistent
                     ? result.ensurePersistent(true)
                     : result.ensureImmutable(true);
@@ -698,7 +698,7 @@ class Array<ElementType>
         }
 
     @Override
-    Array insert(Int index, ElementType value)
+    Array insert(Int index, Element value)
         {
         if (index == size)
             {
@@ -708,8 +708,8 @@ class Array<ElementType>
         switch (mutability)
             {
             case Mutable:
-                Element node = elementAt(index).as(Element);
-                node.next  = new Element(node.value, node.next);
+                ElementImpl node = elementAt(index).as(ElementImpl);
+                node.next  = new ElementImpl(node.value, node.next);
                 node.value = value;
                 return this;
 
@@ -718,7 +718,7 @@ class Array<ElementType>
 
             case Persistent:
             case Constant:
-                ElementType[] result = new Array(size + 1,
+                Element[] result = new Array(size + 1,
                         i -> switch (i <=> index)
                             {
                             case Lesser : this[i];
@@ -732,7 +732,7 @@ class Array<ElementType>
         }
 
     @Override
-    Array insertAll(Int index, Iterable<ElementType> values)
+    Array insertAll(Int index, Iterable<Element> values)
         {
         if (values.size == 0)
             {
@@ -741,7 +741,7 @@ class Array<ElementType>
 
         if (values.size == 1)
             {
-            assert ElementType value := values.iterator().next();
+            assert Element value := values.iterator().next();
             return insert(index, value);
             }
 
@@ -758,14 +758,14 @@ class Array<ElementType>
         switch (mutability)
             {
             case Mutable:
-                Iterator<ElementType> iter = values.iterator();
-                assert ElementType value := iter.next();
-                Element  first = new Element(value);
-                Element  last  = first;
-                Element? head  = this.head;
+                Iterator<Element> iter = values.iterator();
+                assert Element value := iter.next();
+                ElementImpl  first = new ElementImpl(value);
+                ElementImpl  last  = first;
+                ElementImpl? head  = this.head;
                 while (value := iter.next())
                     {
-                    last.next = new Element(value);
+                    last.next = new ElementImpl(value);
                     }
                 if (index == 0)
                     {
@@ -781,7 +781,7 @@ class Array<ElementType>
                     }
                 else
                     {
-                    Element node = elementAt(index-1).as(Element);
+                    ElementImpl node = elementAt(index-1).as(ElementImpl);
                     last.next = node.next;
                     node.next = first;
                     }
@@ -793,9 +793,9 @@ class Array<ElementType>
 
             case Persistent:
             case Constant:
-                Iterator<ElementType> iter  = values.iterator();
-                Int                   wedge = values.size;
-                function ElementType (Int) supply = i ->
+                Iterator<Element> iter  = values.iterator();
+                Int               wedge = values.size;
+                function Element (Int) supply = i ->
                     {
                     if (i < index)
                         {
@@ -803,7 +803,7 @@ class Array<ElementType>
                         }
                     else if (i < index + wedge)
                         {
-                        assert ElementType value := iter.next();
+                        assert Element value := iter.next();
                         return value;
                         }
                     else
@@ -811,7 +811,7 @@ class Array<ElementType>
                         return this[i-wedge];
                         }
                     };
-                ElementType[] result = new Array<ElementType>(this.size + values.size, supply);
+                Element[] result = new Array<Element>(this.size + values.size, supply);
                 return mutability == Persistent
                         ? result.ensurePersistent(true)
                         : result.ensureImmutable(true);
@@ -831,12 +831,12 @@ class Array<ElementType>
             case Mutable:
                 if (index == 0)
                     {
-                    head = head.as(Element).next;
+                    head = head.as(ElementImpl).next;
                     }
                 else
                     {
-                    Element node = elementAt(index-1).as(Element);
-                    node.next = node.next.as(Element).next;
+                    ElementImpl node = elementAt(index-1).as(ElementImpl);
+                    node.next = node.next.as(ElementImpl).next;
                     }
                 return this;
 
@@ -845,7 +845,7 @@ class Array<ElementType>
 
             case Persistent:
             case Constant:
-                ElementType[] result = new Array(size, i -> this[i < index ? i : i+1]);
+                Element[] result = new Array(size, i -> this[i < index ? i : i+1]);
                 return mutability == Persistent
                         ? result.ensurePersistent(true)
                         : result.ensureImmutable(true);
@@ -877,13 +877,13 @@ class Array<ElementType>
             case Mutable:
                 if (lo == 0)
                     {
-                    head = elementAt(hi+1).as(Element);
+                    head = elementAt(hi+1).as(ElementImpl);
                     }
                 else
                     {
-                    elementAt(lo-1).as(Element).next = (hi == size-1)
+                    elementAt(lo-1).as(ElementImpl).next = (hi == size-1)
                             ? null
-                            : elementAt(hi+1).as(Element);
+                            : elementAt(hi+1).as(ElementImpl);
                     }
                 return this;
 
@@ -892,8 +892,8 @@ class Array<ElementType>
 
             case Persistent:
             case Constant:
-                Int           gap    = range.size;
-                ElementType[] result = new Array(size, i -> this[i < lo ? i : i+gap]);
+                Int       gap    = range.size;
+                Element[] result = new Array(size, i -> this[i < lo ? i : i+gap]);
                 return mutability == Persistent
                         ? result.ensurePersistent(true)
                         : result.ensureImmutable(true);
@@ -906,23 +906,23 @@ class Array<ElementType>
     /**
      * Linked list head.
      */
-    private Element? head;
+    private ElementImpl? head;
 
     /**
      * Linked list tail.
      */
-    private Element? tail.get()
+    private ElementImpl? tail.get()
         {
-        Element? head = this.head;
+        ElementImpl? head = this.head;
         if (head == Null)
             {
             return Null;
             }
 
-        Element cur = head;
+        ElementImpl cur = head;
         while (True)
             {
-            Element? next = cur.next;
+            ElementImpl? next = cur.next;
             if (next == Null)
                 {
                 return cur;
@@ -934,15 +934,15 @@ class Array<ElementType>
     /**
      * A node in the linked list.
      */
-    private class Element
-            delegates Var<ElementType>(valueRef)
+    private class ElementImpl
+            delegates Var<Element>(valueRef)
         {
         /**
          * Construct an empty element.
          *
          * @param next   the next element in the array (optional)
          */
-        construct(Element? next = null)
+        construct(ElementImpl? next = null)
             {
             this.next = next;
             }
@@ -953,7 +953,7 @@ class Array<ElementType>
          * @param value  the initial value for the element
          * @param next   the next element in the array (optional)
          */
-        construct(ElementType value, Element? next = null)
+        construct(Element value, ElementImpl? next = null)
             {
             this.value = value;
             this.next  = next;
@@ -963,7 +963,7 @@ class Array<ElementType>
          * The value stored in the element.
          */
         @Unassigned
-        ElementType value.set(ElementType value)
+        Element value.set(Element value)
             {
             if (this.Array.mutability.persistent)
                 {
@@ -975,12 +975,12 @@ class Array<ElementType>
         /**
          * The next element in the linked list.
          */
-        Element? next = null;
+        ElementImpl? next = null;
 
         /**
          * The reference to the storage for the `value` property.
          */
-        Var<ElementType> valueRef.get()
+        Var<Element> valueRef.get()
             {
             return &value;
             }
@@ -990,8 +990,8 @@ class Array<ElementType>
      * An interface to which an Array can delegate its operations, iff the array is simply a
      * representation of some other structure (such as another array).
      */
-    protected static interface ArrayDelegate<ElementType>
-            extends UniformIndexed<Int, ElementType>
+    protected static interface ArrayDelegate<Element>
+            extends UniformIndexed<Int, Element>
             extends VariablyMutable
         {
         @RO Int size;
@@ -1001,7 +1001,7 @@ class Array<ElementType>
      * If the array is simply a representation of some other structure (such as another array), then
      * this is the object to which this Array will delegate its operations.
      */
-    private ArrayDelegate<ElementType>? delegate;
+    private ArrayDelegate<Element>? delegate;
 
 
     // ----- Stringable methods --------------------------------------------------------------------
@@ -1010,9 +1010,9 @@ class Array<ElementType>
     Int estimateStringLength()
         {
         Int capacity = 2; // allow for "[]"
-        if (ElementType.is(Type<Stringable>))
+        if (Element.is(Type<Stringable>))
             {
-            for (ElementType v : this)
+            for (Element v : this)
                 {
                 capacity += v.estimateStringLength() + 2; // allow for ", "
                 }
@@ -1030,9 +1030,9 @@ class Array<ElementType>
         {
         appender.add('[');
 
-        if (ElementType.is(Type<Stringable>))
+        if (Element.is(Type<Stringable>))
             {
-            loop: for (ElementType v : this)
+            loop: for (Element v : this)
                 {
                 if (!loop.first)
                     {
@@ -1044,7 +1044,7 @@ class Array<ElementType>
             }
         else
             {
-            loop: for (ElementType v : this)
+            loop: for (Element v : this)
                 {
                 if (!loop.first)
                     {
@@ -1071,8 +1071,8 @@ class Array<ElementType>
     /**
      * Functionality specific to arrays of bits.
      */
-    static mixin BitArray<ElementType extends Bit>
-            into Array<ElementType>
+    static mixin BitArray<Element extends Bit>
+            into Array<Element>
         {
         // REVIEW CP+GG &= etc. for mutable bit array
         // REVIEW CP+GG mutability of returned arrays
@@ -1489,8 +1489,8 @@ class Array<ElementType>
     /**
      * Functionality specific to arrays of bytes.
      */
-    static mixin ByteArray<ElementType extends Byte>
-            into Array<ElementType>
+    static mixin ByteArray<Element extends Byte>
+            into Array<Element>
         {
         /**
          * Obtain a view of this array as an array of bits. The array is immutable if this array is
@@ -1887,9 +1887,9 @@ class Array<ElementType>
 
     // ----- Orderable mixin -----------------------------------------------------------------------
 
-    static mixin Orderer<ElementType extends Orderable>
-            into Array<ElementType>
-            extends Comparator<ElementType>
+    static mixin Orderer<Element extends Orderable>
+            into Array<Element>
+            extends Comparator<Element>
             implements Orderable
         {
         /**
@@ -1914,9 +1914,9 @@ class Array<ElementType>
 
     // ----- Hashable mixin ------------------------------------------------------------------------
 
-    static mixin Hasher<ElementType extends Hashable>
-            into Array<ElementType>
-            extends Comparator<ElementType>
+    static mixin Hasher<Element extends Hashable>
+            into Array<Element>
+            extends Comparator<Element>
             implements Hashable
         {
         /**
@@ -1925,9 +1925,9 @@ class Array<ElementType>
         static <CompileType extends Hasher> Int hashCode(CompileType array)
             {
             Int hash = 0;
-            for (CompileType.ElementType el : array)
+            for (CompileType.Element el : array)
                 {
-                hash += CompileType.ElementType.hashCode(el);
+                hash += CompileType.Element.hashCode(el);
                 }
             return hash;
             }
@@ -1935,8 +1935,8 @@ class Array<ElementType>
 
     // ----- the base mixin for Orderable and Hashable ---------------------------------------------
 
-    static mixin Comparator<ElementType>
-            into Array<ElementType>
+    static mixin Comparator<Element>
+            into Array<Element>
         {
         /**
          * Compare two arrays of the same type for equality.

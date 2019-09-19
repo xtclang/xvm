@@ -1,7 +1,7 @@
 /**
  * A Matrix represents a two-dimensional container of values.
  */
-interface Matrix<ElementType>
+interface Matrix<Element>
     {
     /**
      * The width of the Matrix, which is the number of columns.
@@ -17,13 +17,13 @@ interface Matrix<ElementType>
      * Obtain the value of the specified element of the matrix.
      */
     @Op("[]")
-    ElementType getElement(Int col, Int row);
+    Element getElement(Int col, Int row);
 
     /**
      * Modify the value in the specified element of the matrix.
      */
     @Op("[]=")
-    void setElement(Int col, Int row, ElementType value)
+    void setElement(Int col, Int row, Element value)
         {
         throw new ReadOnly();
         }
@@ -32,13 +32,13 @@ interface Matrix<ElementType>
      * Obtain a column vector from the matrix.
      */
     @Op("[_,?]")
-    ElementType[] getCol(Int col);
+    Element[] getCol(Int col);
 
     /**
      * Modify the specified column vector in the matrix.
      */
     @Op("[_,?]=")
-    void setCol(Int col, ElementType[] vector)
+    void setCol(Int col, Element[] vector)
         {
         throw new ReadOnly();
         }
@@ -47,13 +47,13 @@ interface Matrix<ElementType>
      * Obtain a row vector from the matrix.
      */
     @Op("[?,_]")
-    ElementType[] getRow(Int row);
+    Element[] getRow(Int row);
 
     /**
      * Modify the specified row vector in the matrix.
      */
     @Op("[?,_]=")
-    void setRow(Int row, ElementType[] vector)
+    void setRow(Int row, Element[] vector)
         {
         throw new ReadOnly();
         }

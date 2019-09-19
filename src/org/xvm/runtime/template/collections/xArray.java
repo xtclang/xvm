@@ -96,15 +96,15 @@ public class xArray
                     }
                 else
                     {
-                    // protected construct(ArrayDelegate<ElementType> delegate)
+                    // protected construct(ArrayDelegate<Element> delegate)
                     // must not be called
                     }
                 }
             else
                 {
-                // 1) construct(Int size, ElementType | function ElementType (Int) supply)
-                // 2) construct(Mutability mutability, ElementType... elements)
-                // 3) construct(Array<ElementType> array, Range<Int> section)
+                // 1) construct(Int size, Element | function Element (Int) supply)
+                // 2) construct(Mutability mutability, Element... elements)
+                // 3) construct(Array<Element> array, Range<Int> section)
                 if (typeParam0.equals(pool.typeInt()))
                     {
                     CONSTRUCTORS[1] = method;
@@ -132,10 +132,10 @@ public class xArray
         markNativeProperty("size");
 
         markNativeMethod("getElement", INT, ELEMENT_TYPE);
-        markNativeMethod("setElement", new String[] {"Int64", "ElementType"}, VOID);
-        markNativeMethod("elementAt", INT, new String[] {"Var<ElementType>"});
+        markNativeMethod("setElement", new String[] {"Int64", "Element"}, VOID);
+        markNativeMethod("elementAt", INT, new String[] {"Var<Element>"});
         markNativeMethod("add", ELEMENT_TYPE, ARRAY);
-        markNativeMethod("addAll", new String[] {"Iterable<ElementType>"}, ARRAY);
+        markNativeMethod("addAll", new String[] {"Iterable<Element>"}, ARRAY);
         markNativeMethod("slice", new String[] {"Range<Int64>"}, ARRAY);
         markNativeMethod("ensureImmutable", BOOLEAN, null);
 
@@ -273,7 +273,7 @@ public class xArray
                 return frame.assignValue(iReturn, hArray);
                 }
 
-            case 1: // construct(Int size, ElementType | function ElementType (Int) supply)
+            case 1: // construct(Int size, Element | function Element (Int) supply)
                 {
                 JavaLong hCapacity = (JavaLong) ahVar[0];
                 long     cCapacity = hCapacity.getValue();
@@ -311,9 +311,9 @@ public class xArray
                 return frame.assignValue(iReturn, hArray);
                 }
 
-            case 2: // construct(Mutability mutability, ElementType... elements)
+            case 2: // construct(Mutability mutability, Element... elements)
                 {
-                // call Iterable.to<ElementType> naturally
+                // call Iterable.to<Element> naturally
                 ObjectHandle   hMutability = ahVar[0];
                 ObjectHandle   hSequence  = ahVar[1];
                 ObjectHandle[] ahVars     = new ObjectHandle[ITERABLE_TO_ARRAY.getMaxVars()];
@@ -322,7 +322,7 @@ public class xArray
                 return frame.call1(ITERABLE_TO_ARRAY, hSequence, ahVars, iReturn);
                 }
 
-            case 3: // construct(Array<ElementType> array, Range<Int> section)
+            case 3: // construct(Array<Element> array, Range<Int> section)
                 {
                 ArrayHandle   hArray = (ArrayHandle) ahVar[0];
                 GenericHandle hRange = (GenericHandle) ahVar[1];
@@ -376,7 +376,7 @@ public class xArray
     @Override
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        // hArg is either Iterable<ElementType> or ElementType
+        // hArg is either Iterable<Element> or Element
         return hArg.getType().isA(hTarget.getType().getParamTypesArray()[0])
                 ? addElement(frame, hTarget, hArg, iReturn)
                 : addElements(frame, hTarget, hArg, iReturn);
@@ -693,7 +693,7 @@ public class xArray
     @Override
     public TypeConstant getElementType(Frame frame, ObjectHandle hTarget, long lIndex)
         {
-        return hTarget.getType().resolveGenericType("ElementType");
+        return hTarget.getType().resolveGenericType("Element");
         }
 
     @Override
@@ -941,8 +941,8 @@ public class xArray
     private static MethodStructure[] CONSTRUCTORS = new MethodStructure[4];
     private static MethodStructure ITERABLE_TO_ARRAY;
 
-    protected static final String[] ELEMENT_TYPE = new String[] {"ElementType"};
-    protected static final String[] ARRAY = new String[]{"collections.Array!<ElementType>"};
+    protected static final String[] ELEMENT_TYPE = new String[] {"Element"};
+    protected static final String[] ARRAY        = new String[] {"collections.Array!<Element>"};
 
     private static ClassComposition s_clzStringArray;
     private static ClassComposition s_clzObjectArray;

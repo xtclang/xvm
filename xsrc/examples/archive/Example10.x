@@ -194,19 +194,19 @@ Kernel
 
 // -- more assignability
 
-interface Bag<ElementType>
+interface Bag<Element>
     {
-    Void add(ElementType e);
-    Iterator<ElementType> iterate();
+    Void add(Element e);
+    Iterator<Element> iterate();
     }
 
-mixin Summer<ElementType extends Number>
-        into Iterable<ElementType>
+mixin Summer<Element extends Number>
+        into Iterable<Element>
     {
-    ElementType sum(ElementType zero)       // note: there must be a better way to implement zero
+    Element sum(Element zero)       // note: there must be a better way to implement zero
         {
-        ElementType nSum = zero;
-        for (ElementType n : this)
+        Element nSum = zero;
+        for (Element n : this)
             {
             nSum += n;
             }
@@ -214,9 +214,9 @@ mixin Summer<ElementType extends Number>
         }
     }
 
-class SimpleBag<ElementType>
-        implements Bag<ElementType>
-        incorporates conditional Summer<ElementType extends Number>
+class SimpleBag<Element>
+        implements Bag<Element>
+        incorporates conditional Summer<Element extends Number>
     {
     // ...
     }

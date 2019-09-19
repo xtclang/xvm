@@ -8,8 +8,8 @@ import org.xvm.asm.GenericTypeResolver;
 
 /**
  * FormalConstant is a Constant that represents a formal type, which could be generic class level
- * type parameter, such as Map.KeyType, a method type parameter (such as Object.equals.CompileType)
- * or a formal type child constant, such as Map.equals.CompileType.KeyType)
+ * type parameter, such as Map.Key, a method type parameter (such as Object.equals.CompileType)
+ * or a formal type child constant, such as Map.equals.CompileType.Key)
  */
 public abstract class FormalConstant
         extends NamedConstant

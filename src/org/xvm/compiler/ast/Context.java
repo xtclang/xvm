@@ -2187,7 +2187,7 @@ public class Context
             {
             TypeConstant typeCtx = m_typeLeft;
             TypeConstant typeEl  = typeCtx.isA(pool().typeSequence())
-                    ? typeCtx.resolveGenericType("ElementType")
+                    ? typeCtx.resolveGenericType("Element")
                     : null;
             return typeEl == null
                     ? new Context(this, true)

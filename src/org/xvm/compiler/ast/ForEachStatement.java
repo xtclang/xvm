@@ -127,35 +127,35 @@ public class ForEachStatement
         }
 
     /**
-     * @return the type of the ElementType type parameter if the plan is not "Map"
+     * @return the type of the Element type parameter if the plan is not "Map"
      */
     private TypeConstant getElementType()
         {
         assert m_plan != Plan.MAP;
         assert m_exprRValue != null;
 
-        TypeConstant type = m_exprRValue.getType().resolveGenericType("ElementType");
+        TypeConstant type = m_exprRValue.getType().resolveGenericType("Element");
         return type == null ? pool().typeObject() : type;
         }
 
     /**
-     * @return the type of the KeyType type parameter if the plan is "Map"
+     * @return the type of the Key type parameter if the plan is "Map"
      */
     private TypeConstant getKeyType()
         {
-        return getFormalMapType("KeyType");
+        return getFormalMapType("Key");
         }
 
     /**
-     * @return the type of the ValueType type parameter if the plan is "Map"
+     * @return the type of the Value type parameter if the plan is "Map"
      */
     private TypeConstant getValueType()
         {
-        return getFormalMapType("ValueType");
+        return getFormalMapType("Value");
         }
 
     /**
-     * @return the type of the ValueType type parameter if the plan is "Map"
+     * @return the type of the Value type parameter if the plan is "Map"
      */
     private TypeConstant getFormalMapType(String sProp)
         {
@@ -230,8 +230,8 @@ public class ForEachStatement
                 return m_plan == Plan.RANGE || m_plan == Plan.SEQUENCE;
 
             case "entry":
-            case "KeyType":
-            case "ValueType":
+            case "Key":
+            case "Value":
                 return m_plan == Plan.MAP;
 
             default:
@@ -251,8 +251,8 @@ public class ForEachStatement
             case "last"     : reg = m_regLast   ; break;
             case "count"    : reg = m_regCount  ; break;
             case "entry"    : reg = m_regEntry  ; break;
-            case "KeyType"  : reg = m_regKeyType; break;
-            case "ValueType": reg = m_regValType; break;
+            case "Key"  : reg = m_regKeyType; break;
+            case "Value": reg = m_regValType; break;
             default:
                 throw new IllegalStateException();
             }
@@ -273,8 +273,8 @@ public class ForEachStatement
                 case "last"     : type = pool.typeBoolean()      ; break;
                 case "count"    : type = pool.typeInt()          ; break;
                 case "entry"    : type = getEntryType()          ; break;
-                case "KeyType"  : type = getKeyType().getType()  ; break;
-                case "ValueType": type = getValueType().getType(); break;
+                case "Key"  : type = getKeyType().getType()  ; break;
+                case "Value": type = getValueType().getType(); break;
                 default:
                     throw new IllegalStateException();
                 }
@@ -288,8 +288,8 @@ public class ForEachStatement
                 case "last"     : m_regLast    = reg; break;
                 case "count"    : m_regCount   = reg; break;
                 case "entry"    : m_regEntry   = reg; break;
-                case "KeyType"  : m_regKeyType = reg; break;
-                case "ValueType": m_regValType = reg; break;
+                case "Key"  : m_regKeyType = reg; break;
+                case "Value": m_regValType = reg; break;
                 default:
                     throw new IllegalStateException();
                 }
@@ -527,11 +527,11 @@ public class ForEachStatement
             }
         if (m_regKeyType != null)
             {
-            code.add(new Var_N(m_regKeyType, toConst(getLabelName() + ".KeyType")));
+            code.add(new Var_N(m_regKeyType, toConst(getLabelName() + ".Key")));
             }
         if (m_regValType != null)
             {
-            code.add(new Var_N(m_regValType, toConst(getLabelName() + ".ValueType")));
+            code.add(new Var_N(m_regValType, toConst(getLabelName() + ".Value")));
             }
 
         switch (m_plan)
@@ -870,8 +870,8 @@ public class ForEachStatement
             //
             // VAR     cond Boolean             ; hidden variable that holds the conditional result
             // VAR     entry Entry              ; the entry
-            // VAR     key KeyType              ; the key
-            // VAR     value ValueType          ; the value
+            // VAR     key Key                  ; the key
+            // VAR     value Value              ; the value
             // Repeat:
             // NVOK_0N iter Iterator.next() -> cond, entry ; assign the conditional result and the value
             // JMP_F   cond, Exit               ; exit when the conditional result is false
@@ -942,7 +942,7 @@ public class ForEachStatement
             // NVOK_01 set iterator() -> iter   ; get the iterator
             //
             // VAR     cond Boolean             ; hidden variable that holds the conditional result
-            // VAR     key KeyType              ; the key
+            // VAR     key Key                  ; the key
             // Repeat:
             // NVOK_0N iter Iterator.next() -> cond, key ; assign the conditional result and the value
             // JMP_F   cond, Exit               ; exit when the conditional result is false

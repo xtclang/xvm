@@ -10,9 +10,9 @@
  * interface provided by the ArrayDeque is the corresponding FIFO queue. To prepend to the queue,
  * obtain the [prepender]. To use LIFO instead of FIFO, obtain the [lifoQueue].
  */
-class ArrayDeque<ElementType>
-        implements Appender<ElementType>
-        implements Queue<ElementType>
+class ArrayDeque<Element>
+        implements Appender<Element>
+        implements Queue<Element>
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -36,7 +36,7 @@ class ArrayDeque<ElementType>
     /**
      * A circular array that holds the elements of the ArrayDeque
      */
-    protected/private CircularArray<ElementType | Consumer> array;
+    protected/private CircularArray<Element | Consumer> array;
 
     /**
      * True iff the ArrayDeque is in piping mode, which means that it has pending requests for
@@ -99,16 +99,16 @@ class ArrayDeque<ElementType>
         return False;
         }
 
-    protected ElementType takeFirst()
+    protected Element takeFirst()
         {
-        ElementType value = array[0].as(ElementType);
+        Element value = array[0].as(Element);
         array.delete(0);
         return value;
         }
 
-    protected ElementType takeLast()
+    protected Element takeLast()
         {
-        ElementType value = array[size-1].as(ElementType);
+        Element value = array[size-1].as(Element);
         array.delete(size-1);
         return value;
         }
@@ -169,7 +169,7 @@ class ArrayDeque<ElementType>
     /**
      * A LIFO view of the dequeue; it takes from the tail.
      */
-    @Lazy Queue<ElementType> lifoQueue.calc()
+    @Lazy Queue<Element> lifoQueue.calc()
         {
         return new LifoQueue();
         }
@@ -177,7 +177,7 @@ class ArrayDeque<ElementType>
     /**
      * An "appender" that prepends to the dequeue; it adds to the head.
      */
-    @Lazy Appender<ElementType> prepender.calc()
+    @Lazy Appender<Element> prepender.calc()
         {
         return new Prepender();
         }
@@ -186,7 +186,7 @@ class ArrayDeque<ElementType>
     // ----- Appender interface ------------------------------------------------------------------
 
     @Override
-    ArrayDeque add(ElementType v)
+    ArrayDeque add(Element v)
         {
         if (Consumer consume := pendingPipe())
             {
@@ -202,7 +202,7 @@ class ArrayDeque<ElementType>
         }
 
     @Override
-    ArrayDeque add(Iterable<ElementType> iterable)
+    ArrayDeque add(Iterable<Element> iterable)
         {
         if (piping)
             {
@@ -238,7 +238,7 @@ class ArrayDeque<ElementType>
     // ----- Queue interface -----------------------------------------------------------------------
 
     @Override
-    conditional ElementType next()
+    conditional Element next()
         {
         if (empty)
             {
@@ -249,7 +249,7 @@ class ArrayDeque<ElementType>
         }
 
     @Override
-    ElementType take()
+    Element take()
         {
         if (empty)
             {
@@ -263,7 +263,7 @@ class ArrayDeque<ElementType>
 
             // when something shows up in the queue, we will fulfill the take()
             // we make a note of this by storing the fulfillment function into the queue itself
-            @Future ElementType promisedElement;
+            @Future Element promisedElement;
             array.add(element -> {promisedElement = element;});
 
             // if (for whatever reason) the future doesn't survive (for example, as the result of
@@ -341,10 +341,10 @@ class ArrayDeque<ElementType>
      * order.
      */
     protected class Prepender
-            implements Appender<ElementType>
+            implements Appender<Element>
         {
         @Override
-        Prepender add(ElementType v)
+        Prepender add(Element v)
             {
             if (Consumer consume := pendingPipe())
                 {
@@ -374,10 +374,10 @@ class ArrayDeque<ElementType>
      * A LIFO queue is one that takes from the end of the underlying array.
      */
     protected class LifoQueue
-            implements Queue<ElementType>
+            implements Queue<Element>
         {
         @Override
-        conditional ElementType next()
+        conditional Element next()
             {
             if (empty)
                 {
@@ -389,7 +389,7 @@ class ArrayDeque<ElementType>
             }
 
         @Override
-        ElementType take()
+        Element take()
             {
             if (empty)
                 {

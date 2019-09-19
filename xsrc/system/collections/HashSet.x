@@ -1,14 +1,14 @@
-class HashSet<ElementType>
-        implements Set<ElementType>
+class HashSet<Element>
+        implements Set<Element>
     {
     construct()
         {
-        assert(ElementType.is(Type<Hashable>));
+        assert(Element.is(Type<Hashable>));
 
-        this.hasher = new NaturalHasher<ElementType>();
+        this.hasher = new NaturalHasher<Element>();
         }
 
-    construct(Collection<ElementType> elements)
+    construct(Collection<Element> elements)
         {
         construct HashSet();
         }
@@ -17,12 +17,12 @@ class HashSet<ElementType>
         addAll(elements);
         }
 
-    construct(Hasher<ElementType> hasher)
+    construct(Hasher<Element> hasher)
         {
         this.hasher = hasher;
         }
 
-    construct(Hasher<ElementType> hasher, Collection<ElementType> elements)
+    construct(Hasher<Element> hasher, Collection<Element> elements)
         {
         construct HashSet(hasher);
         }
@@ -31,9 +31,9 @@ class HashSet<ElementType>
         addAll(elements);
         }
 
-    public/private Hasher<ElementType> hasher;
+    public/private Hasher<Element> hasher;
 
-    private class Entry(ElementType value, Entry? next);
+    private class Entry(Element value, Entry? next);
 
     private Entry?[] buckets;
 
@@ -41,7 +41,7 @@ class HashSet<ElementType>
     public/private Int size;
 
     @Override
-    Boolean contains(ElementType value)
+    Boolean contains(Element value)
         {
         Int nHash   = hasher.hashOf(value);
         Int nBucket = nHash % buckets.size;
@@ -60,13 +60,13 @@ class HashSet<ElementType>
         }
 
     @Override
-    Iterator<ElementType> iterator()
+    Iterator<Element> iterator()
         {
         TODO
         }
 
     @Override
-    Stream<ElementType> stream()
+    Stream<Element> stream()
         {
         TODO
         }

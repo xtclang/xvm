@@ -87,8 +87,8 @@ module MyApp.xqiz.it
             Int result3 = a("test", "args");
             Int result = a.b.c().d.e(1).f("test", "args");
             }
-        class SuperMap<KeyType, ValueType>
-            implements Map<KeyType, ValueType>
+        class SuperMap<Key, Value>
+            implements Map<Key, Value>
             {
             Int size.get()
                 {

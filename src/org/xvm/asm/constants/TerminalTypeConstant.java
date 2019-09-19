@@ -657,7 +657,7 @@ public class TerminalTypeConstant
                         //   Int[] array = ...
                         //   Int   hash = Array<Int>.hashCode(array);
                         // requires having the the actual type of "Array<Int>" to resolve the type
-                        // parameter "CompileType" with the constraint type (Hasher<ElementType>)
+                        // parameter "CompileType" with the constraint type (Hasher<Element>)
                         // to the resolved type of "Hasher<Int>"
                         //
                         // To do that, first let's pretend that the types match and resolve

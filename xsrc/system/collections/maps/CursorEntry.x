@@ -2,15 +2,15 @@
  * An implementation of Entry that can be used as a cursor over any number of keys, and
  * delegates back to the map for its functionality.
  */
-class CursorEntry<KeyType, ValueType>
-        extends ReifiedEntry<KeyType, ValueType>
+class CursorEntry<Key, Value>
+        extends ReifiedEntry<Key, Value>
     {
-    construct(Map<KeyType, ValueType> map)
+    construct(Map<Key, Value> map)
         {
         construct ReifiedEntry(map);
         }
 
-    construct(Map<KeyType, ValueType> map, KeyType key)
+    construct(Map<Key, Value> map, Key key)
         {
         construct ReifiedEntry(map, key);
         }
@@ -22,14 +22,14 @@ class CursorEntry<KeyType, ValueType>
      *
      * @return this Entry
      */
-    CursorEntry advance(KeyType key)
+    CursorEntry advance(Key key)
         {
         this.key = key;
         return this;
         }
 
     @Override
-    Map<KeyType, ValueType>.Entry reify()
+    Map<Key, Value>.Entry reify()
         {
         return new ReifiedEntry(map, key);
         }

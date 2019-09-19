@@ -80,7 +80,7 @@ public class FileStructureTest
                 "collections", null);
         ClassStructure structclz = structpkg.createClass(Constants.Access.PUBLIC,
                 Component.Format.INTERFACE, "List", null);
-        structclz.addTypeParam("ElementType", ((ClassConstant) structobj.getIdentityConstant()).getType());
+        structclz.addTypeParam("Element", ((ClassConstant) structobj.getIdentityConstant()).getType());
         testFileStructure(structfile);
         }
 
@@ -94,11 +94,11 @@ public class FileStructureTest
         PackageStructure pkgColl = module.createPackage(Constants.Access.PUBLIC, "collections", null);
         ClassStructure   clzHash = pkgColl.createClass(Constants.Access.PUBLIC, Component.Format.INTERFACE, "Hashable", null);
         ClassStructure   clzMap  = pkgColl.createClass(Constants.Access.PUBLIC, Component.Format.INTERFACE, "Map", null);
-        clzMap.addTypeParam("KeyType", ((ClassConstant) clzObj.getIdentityConstant()).getType());
-        clzMap.addTypeParam("ValueType", ((ClassConstant) clzObj.getIdentityConstant()).getType());
+        clzMap.addTypeParam("Key", ((ClassConstant) clzObj.getIdentityConstant()).getType());
+        clzMap.addTypeParam("Value", ((ClassConstant) clzObj.getIdentityConstant()).getType());
         ClassStructure clzHashMap = pkgColl.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "HashMap", null);
-        clzHashMap.addTypeParam("KeyType", ((ClassConstant) clzHash.getIdentityConstant()).getType());
-        clzHashMap.addTypeParam("ValueType", ((ClassConstant) clzObj.getIdentityConstant()).getType());
+        clzHashMap.addTypeParam("Key", ((ClassConstant) clzHash.getIdentityConstant()).getType());
+        clzHashMap.addTypeParam("Value", ((ClassConstant) clzObj.getIdentityConstant()).getType());
         clzHashMap.addContribution(ClassStructure.Composition.Implements, clzMap.getIdentityConstant().getType());
 
         testFileStructure(file);

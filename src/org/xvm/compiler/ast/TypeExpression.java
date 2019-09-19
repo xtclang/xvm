@@ -136,7 +136,7 @@ public abstract class TypeExpression
 
     /**
      * @return true iff this is a dynamic type expression representing a type that can only
-     *         be calculated at run-time (for example map.KeyType, where "map" is a local variable)
+     *         be calculated at run-time (for example map.Key, where "map" is a local variable)
      */
     public boolean isDynamic()
         {

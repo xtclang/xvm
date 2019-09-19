@@ -1582,14 +1582,14 @@ public class NameExpression
                         //   static <CompileType extends Hasher> Int hashCode(CompileType array)
                         //       {
                         //       Int hash = 0;
-                        //       for (CompileType.ElementType el : array)
+                        //       for (CompileType.Element el : array)
                         //           {
-                        //           hash += CompileType.ElementType.hashCode(el);
+                        //           hash += CompileType.Element.hashCode(el);
                         //           }
                         //       return hash;
                         //       }
                         //
-                        // "this" is "CompileType.ElementType"
+                        // "this" is "CompileType.Element"
                         // typeLeft is a type of the "CompileType" type parameter
 
                         TypeConstant typeFormal = typeLeft.getParamType(0);

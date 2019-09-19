@@ -2,10 +2,10 @@
  * An implementation of the Collection for the [Map.values] property that delegates back
  * to the map and to the map's [Map.keys].
  */
-class KeyValues<KeyType, ValueType>(Map<KeyType, ValueType> map)
-        implements Collection<ValueType>
+class KeyValues<Key, Value>(Map<Key, Value> map)
+        implements Collection<Value>
     {
-    public/private Map<KeyType, ValueType> map;
+    public/private Map<Key, Value> map;
 
     @Override
     Int size.get()
@@ -20,16 +20,16 @@ class KeyValues<KeyType, ValueType>(Map<KeyType, ValueType> map)
         }
 
     @Override
-    Iterator<ValueType> iterator()
+    Iterator<Value> iterator()
         {
         return new Iterator()
             {
-            Iterator<KeyType> keyIterator = map.keys.iterator();
+            Iterator<Key> keyIterator = map.keys.iterator();
 
             @Override
-            conditional ValueType next()
+            conditional Value next()
                 {
-                if (KeyType key := keyIterator.next())
+                if (Key key := keyIterator.next())
                     {
                     return map.get(key);
                     }
@@ -40,13 +40,13 @@ class KeyValues<KeyType, ValueType>(Map<KeyType, ValueType> map)
         }
 
     @Override
-    KeyValues remove(ValueType value)
+    KeyValues remove(Value value)
         {
         verifyMutable();
 
         map.keys.iterator().untilAny(key ->
             {
-            if (ValueType test := map.get(key))
+            if (Value test := map.get(key))
                 {
                 if (test == value)
                     {
@@ -61,13 +61,13 @@ class KeyValues<KeyType, ValueType>(Map<KeyType, ValueType> map)
         }
 
     @Override
-    (KeyValues, Int) removeIf(function Boolean (ValueType) shouldRemove)
+    (KeyValues, Int) removeIf(function Boolean (Value) shouldRemove)
         {
         verifyMutable();
 
         (_, Int removed) = map.keys.removeIf(key ->
                 {
-                assert ValueType value := map.get(key);
+                assert Value value := map.get(key);
                 return shouldRemove(value);
                 });
         return this, removed;

@@ -4,7 +4,7 @@
  * Stream interface is to allow a caller to compose a complex sequence of operations against the
  * Stream, all of which are deferrable until a terminal operation is requested.
  */
-interface Stream<ElementType>
+interface Stream<Element>
     {
     // ----- intermediate operations ---------------------------------------------------------------
 
@@ -28,7 +28,7 @@ interface Stream<ElementType>
      *
      * @return a new stream representing the filtered contents of this stream
      */
-    Stream filter(function Boolean (ElementType) include);
+    Stream filter(function Boolean (Element) include);
 
     /**
      * Returns a stream consisting of the results of applying the given function to the elements of
@@ -43,7 +43,7 @@ interface Stream<ElementType>
      * @return a new stream representing the results of applying the specified function to each
      *         element in this stream
      */
-    <MappedType> Stream<MappedType> map(function MappedType (ElementType) apply);
+    <MappedType> Stream<MappedType> map(function MappedType (Element) apply);
 
     /**
      * Returns a stream consisting of the the concatenation of all of the streams resulting from
@@ -58,7 +58,7 @@ interface Stream<ElementType>
      * @return a new stream representing the concatenated results of applying the specified function
      *         to each element in this stream
      */
-    <MappedType> Stream<MappedType> flatMap(function Stream!<MappedType> (ElementType) flatten);
+    <MappedType> Stream<MappedType> flatMap(function Stream!<MappedType> (Element) flatten);
 
     /**
      * Returns a stream representing the _distinct_ elements of this stream.
@@ -77,7 +77,7 @@ interface Stream<ElementType>
      *
      * @return a new stream representing the same elements from this stream in a sorted order
      */
-    Stream sort(Comparator<ElementType>? comparator = null);
+    Stream sort(Comparator<Element>? comparator = null);
 
     /**
      * Returns a stream representing the same elements of this stream, but in reverse order. (A
@@ -100,7 +100,7 @@ interface Stream<ElementType>
      *
      * @return a new stream with the specified functionality attached to it
      */
-    Stream peek(function void accept(ElementType));
+    Stream peek(function void accept(Element));
 
     /**
      * Returns a stream representing only the first {@code count} elements of this stream.
@@ -148,7 +148,7 @@ interface Stream<ElementType>
      *
      * @return an Iterator over the contents of the Stream
      */
-    Iterator<ElementType> iterator();
+    Iterator<Element> iterator();
 
     /**
      * Perform the specified action on all of the elements of this stream. There is no guarantee of
@@ -158,7 +158,7 @@ interface Stream<ElementType>
      *
      * @param process  an action to perform on each element
      */
-    void forEach(function void (ElementType) process)
+    void forEach(function void (Element) process)
         {
         iterator().forEach(process);
         }
@@ -176,7 +176,7 @@ interface Stream<ElementType>
      * @return {@code true} if all elements of the stream match the provided predicate, otherwise
      *         {@code false}
      */
-    Boolean anyMatch(function Boolean (ElementType) match)
+    Boolean anyMatch(function Boolean (Element) match)
         {
         return iterator().untilAny(match);
         }
@@ -194,7 +194,7 @@ interface Stream<ElementType>
      * @return {@code true} if all elements of the stream match the provided predicate, otherwise
      *         {@code false}
      */
-    Boolean allMatch(function Boolean (ElementType) match)
+    Boolean allMatch(function Boolean (Element) match)
         {
         return iterator().whileEach(match);
         }
@@ -212,7 +212,7 @@ interface Stream<ElementType>
      * @return {@code true} if no elements of the stream match the provided predicate, otherwise
      *         {@code false}
      */
-    Boolean noneMatch(function Boolean (ElementType) match)
+    Boolean noneMatch(function Boolean (Element) match)
         {
         return !anyMatch(match);
         }
@@ -226,7 +226,7 @@ interface Stream<ElementType>
      *
      * @return a conditional result providing the first element of this stream, iff any
      */
-    conditional ElementType first()
+    conditional Element first()
         {
         // the default behavior delegates to the Iterator, but an implementation that is aware of
         // the underlying data structure could short-cut the processing
@@ -243,16 +243,16 @@ interface Stream<ElementType>
      *                   to compare elements of this stream
      * @return a conditional result describing the minimum element of this stream
      */
-    conditional ElementType min(Comparator<ElementType>? comparator = null)
+    conditional Element min(Comparator<Element>? comparator = null)
         {
-        Iterator<ElementType> iter = iterator();
-        if (ElementType minValue := iter.next())
+        Iterator<Element> iter = iterator();
+        if (Element minValue := iter.next())
             {
             if (comparator == null)
                 {
-                assert ElementType.is(Type<Orderable>);
+                assert Element.is(Type<Orderable>);
 
-                for (ElementType el : iter)
+                for (Element el : iter)
                     {
                     if (el < minValue)
                         {
@@ -262,7 +262,7 @@ interface Stream<ElementType>
                 }
             else
                 {
-                for (ElementType el : iter)
+                for (Element el : iter)
                     {
                     if (comparator.compareForOrder(el, minValue) == Lesser)
                         {
@@ -285,16 +285,16 @@ interface Stream<ElementType>
      *                   to compare elements of this stream
      * @return a conditional result describing the maximum element of this stream
      */
-    conditional ElementType max(Comparator<ElementType>? comparator = null)
+    conditional Element max(Comparator<Element>? comparator = null)
         {
-        Iterator<ElementType> iter = iterator();
-        if (ElementType maxValue := iter.next())
+        Iterator<Element> iter = iterator();
+        if (Element maxValue := iter.next())
             {
             if (comparator == null)
                 {
-                assert ElementType.is(Type<Orderable>);
+                assert Element.is(Type<Orderable>);
 
-                for (ElementType el : iter)
+                for (Element el : iter)
                     {
                     if (el > maxValue)
                         {
@@ -304,7 +304,7 @@ interface Stream<ElementType>
                 }
             else
                 {
-                for (ElementType el : iter)
+                for (Element el : iter)
                     {
                     if (comparator.compareForOrder(el, maxValue) == Greater)
                         {
@@ -330,7 +330,7 @@ interface Stream<ElementType>
         // additional metadata (like the "size" property of a Collection) could short-cut the
         // processing
         Int n = 0;
-        for (ElementType el : iterator())
+        for (Element el : iterator())
             {
             ++n;
             }
@@ -346,13 +346,13 @@ interface Stream<ElementType>
      *
      * @return an array containing the elements of this stream
      */
-    ElementType[] toArray()
+    Element[] toArray()
         {
         // the default behavior delegates to the Iterator, but an implementation that is aware of
         // additional metadata (like the "size" property and the contents of a Collection) could
         // short-cut the processing
-        ElementType[] elements = new ElementType[];
-        for (ElementType el : iterator())
+        Element[] elements = new Element[];
+        for (Element el : iterator())
             {
             elements += el;
             }
@@ -381,10 +381,10 @@ interface Stream<ElementType>
      *                    combining two values
      * @return the result of the reduction
      */
-    ElementType reduce(ElementType identity, function ElementType accumulate(ElementType, ElementType))
+    Element reduce(Element identity, function Element accumulate(Element, Element))
         {
-        ElementType result = identity;
-        for (ElementType element : iterator())
+        Element result = identity;
+        for (Element element : iterator())
             {
             result = accumulate(result, element);
             }
@@ -406,12 +406,12 @@ interface Stream<ElementType>
      *
      * @return a conditional result of the reduction
      */
-    conditional ElementType reduce(function ElementType accumulate(ElementType, ElementType))
+    conditional Element reduce(function Element accumulate(Element, Element))
         {
-        Iterator<ElementType> iter = iterator();
-        if (ElementType result := iter.next())
+        Iterator<Element> iter = iterator();
+        if (Element result := iter.next())
             {
-            for (ElementType element : iter)
+            for (Element element : iter)
                 {
                 result = accumulate(result, element);
                 }
@@ -431,7 +431,7 @@ interface Stream<ElementType>
      * This method produces a result equivalent to:
      *
      *   ResultType result = supply();
-     *   for (ElementType element : iterator())
+     *   for (Element element : iterator())
      *       {
      *       if (!accumulate(result, element))
      *           {
@@ -455,7 +455,7 @@ interface Stream<ElementType>
      */
     <ResultType> ResultType collect(
                     function ResultType supply(),
-                    function Boolean accumulate(ResultType, ElementType),
+                    function Boolean accumulate(ResultType, Element),
                     function ResultType combine(ResultType, ResultType))
         {
         return collect(Collector.of(supply, accumulate, combine));
@@ -474,7 +474,7 @@ interface Stream<ElementType>
      * @return the result of the reduction
      */
     <ResultType, AccumulationType>
-    ResultType collect(Collector<ElementType, AccumulationType, ResultType> collector)
+    ResultType collect(Collector<Element, AccumulationType, ResultType> collector)
         {
         AccumulationType container = collector.supply();
         iterator().whileEach(element -> collector.accumulate(container, element));

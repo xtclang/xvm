@@ -24,7 +24,7 @@
  *
  * @see NaturalHasher
  */
-interface Hasher<ValueType>
+interface Hasher<Value>
     {
     /**
      * Calculate the hash value for the specified value.
@@ -35,8 +35,8 @@ interface Hasher<ValueType>
      * (The opposite is not true: Two objects that have the same {@code hashOf} value are not
      * required to evaluate as {@code areEqual} of {@code true}.)
      */
-    Int hashOf(ValueType value);
-    
+    Int hashOf(Value value);
+
     /**
      * Determine the equality (the sameness) of two specified values.
      *
@@ -45,5 +45,5 @@ interface Hasher<ValueType>
      * {@code areEqual} by the determination of this Hasher, then both object *must* have the same
      * {@code hashOf} value.
      */
-    Boolean areEqual(ValueType value1, ValueType value2);
+    Boolean areEqual(Value value1, Value value2);
     }

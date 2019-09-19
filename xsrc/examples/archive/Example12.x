@@ -1470,12 +1470,12 @@ mixin SimpleSorter<SortType>
 // GG thinks this should be illegal:
 mixin Sorter
         into List
-        extends SimpleSorter<ElementType>
+        extends SimpleSorter<Element>
 
 // GG thinks this (or some other specificity) should be required:
-mixin Sorter<ElementType>
-        into List<ElementType>
-        extends SimpleSorter<ElementType>
+mixin Sorter<Element>
+        into List<Element>
+        extends SimpleSorter<Element>
 
 // ----- parameterized types
 
@@ -1885,7 +1885,7 @@ static returnType foo(Type1 arg1, Type2 arg2) {}
 // ecstasy - 5 parameters, including 2 (hidden, i.e. auto)
 // type params, 1 required param, and 2 optional params,
 // returning 3 values
-static <TP1 extends Map<Int, String>, TP2 extends TP1.KeyType> (TP1, TP2, TP1.ValueType) bar(TP1 map, TP2 key = 0, Boolean opt = true) {}
+static <TP1 extends Map<Int, String>, TP2 extends TP1.Key> (TP1, TP2, TP1.Value) bar(TP1 map, TP2 key = 0, Boolean opt = true) {}
 
 Map<Int, String> m = ...;
 Int x;
@@ -1893,18 +1893,18 @@ Int x;
 
 //
 
-interface Map<KeyType, ValueType>
+interface Map<Key, Value>
     {
     static interface Entry
         {
-        @RO KeyType key;
-        ValueType value;
+        @RO Key key;
+        Value value;
         }
     }
 
 // note: this class can only exist outside of a class that implements Map because Entry is declared
 //       as static
-class SimpleEntry<X, Y> // could be KeyType, ValueType
+class SimpleEntry<X, Y> // could be Key, Value
         implements Map<X, Y>.Entry
     {
     // ...

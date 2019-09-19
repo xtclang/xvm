@@ -71,8 +71,8 @@ public class MapExpression
                 {
                 return null;
                 }
-            typeKey = typeExplicit.resolveGenericType("KeyType");
-            typeVal = typeExplicit.resolveGenericType("ValueType");
+            typeKey = typeExplicit.resolveGenericType("Key");
+            typeVal = typeExplicit.resolveGenericType("Value");
             if (typeKey != null && typeVal != null)
                 {
                 return typeExplicit;
@@ -140,8 +140,8 @@ public class MapExpression
             {
             // if there are required key/value types, then we'll use them to force the expressions
             // to convert to those types if necessary
-            typeKey = typeRequired.resolveGenericType("KeyType");
-            typeVal = typeRequired.resolveGenericType("ValueType");
+            typeKey = typeRequired.resolveGenericType("Key");
+            typeVal = typeRequired.resolveGenericType("Value");
             }
 
         // determine type from the explicitly stated type
@@ -163,13 +163,13 @@ public class MapExpression
                     }
                 typeActual = exprNewType.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool);
 
-                TypeConstant typeKeyTemp = typeActual.resolveGenericType("KeyType");
+                TypeConstant typeKeyTemp = typeActual.resolveGenericType("Key");
                 if (typeKeyTemp != null)
                     {
                     typeKey = typeKeyTemp;
                     }
 
-                TypeConstant typeValTemp = typeActual.resolveGenericType("ValueType");
+                TypeConstant typeValTemp = typeActual.resolveGenericType("Value");
                 if (typeValTemp != null)
                     {
                     typeVal = typeValTemp;
@@ -204,8 +204,8 @@ public class MapExpression
             }
 
         // build actual type from map type, key type, value type
-        if (typeKey != null && (!typeKey.equals(typeActual.resolveGenericType("KeyType")) ||
-                typeVal != null && !typeVal.equals(typeActual.resolveGenericType("ValueType"))))
+        if (typeKey != null && (!typeKey.equals(typeActual.resolveGenericType("Key")) ||
+                typeVal != null && !typeVal.equals(typeActual.resolveGenericType("Value"))))
             {
             typeActual = typeActual.adoptParameters(pool, typeVal == null
                     ? new TypeConstant[] {typeKey}

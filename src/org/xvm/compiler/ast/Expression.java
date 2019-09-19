@@ -2578,7 +2578,7 @@ public abstract class Expression
                         {
                         Assignable LValTemp = LValResult != null && LValResult.isLocalArgument()
                                 ? LValResult
-                                : createTempVar(code, getType().resolveGenericType("ElementType"), fUsedOnce, errs);
+                                : createTempVar(code, getType().resolveGenericType("Element"), fUsedOnce, errs);
 
                         Argument argReturn = LValTemp.getLocalArgument();
                         code.add(seq.isPre()

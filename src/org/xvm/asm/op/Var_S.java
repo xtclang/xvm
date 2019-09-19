@@ -113,7 +113,7 @@ public class Var_S
 
             if (clzArray == null)
                 {
-                TypeConstant typeEl = typeSequence.resolveGenericType("ElementType");
+                TypeConstant typeEl = typeSequence.resolveGenericType("Element");
                 m_clzArray = clzArray = xArray.INSTANCE.
                     ensureParameterizedClass(frame.poolContext(), typeEl);
                 }

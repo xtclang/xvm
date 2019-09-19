@@ -13,8 +13,8 @@
  * around" to the front of the array, once again appearing to chase the tail. At the point when the
  * tail catches up to the head, the underlying array size must be increased.
  */
-class CircularArray<ElementType>
-        implements List<ElementType>
+class CircularArray<Element>
+        implements List<Element>
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -26,7 +26,7 @@ class CircularArray<ElementType>
     construct(Int initialCapacity = 0)
         {
         // calculate the smallest power of 2 greater than the specified initial capacity
-        contents = new ElementType?[minCapacityFor(initialCapacity)];
+        contents = new Element?[minCapacityFor(initialCapacity)];
         }
 
 
@@ -35,7 +35,7 @@ class CircularArray<ElementType>
     /**
      * An array that holds the elements of the CircularArray
      */
-    protected/private ElementType?[] contents.set(ElementType?[] array)
+    protected/private Element?[] contents.set(Element?[] array)
         {
         assert array.size.bitCount == 1;
         super(array);
@@ -71,8 +71,8 @@ class CircularArray<ElementType>
         {
         assert newSize.bitCount == 1;
 
-        ElementType?[] newContents = new ElementType?[newSize];
-        ElementType?[] oldContents = contents;
+        Element?[] newContents = new Element?[newSize];
+        Element?[] oldContents = contents;
         Int oldSize = contents.size;
         assert newSize != oldSize;
 
@@ -193,22 +193,22 @@ class CircularArray<ElementType>
 
     @Override
     @Op("[]")
-    ElementType getElement(Int index)
+    Element getElement(Int index)
         {
         validateIndex(index);
-        return contents[indexFor(head+index)].as(ElementType);
+        return contents[indexFor(head+index)].as(Element);
         }
 
     @Override
     @Op("[]=")
-    void setElement(Int index, ElementType value)
+    void setElement(Int index, Element value)
         {
         validateIndex(index);
         contents[indexFor(head+index)] = value;
         }
 
     @Override
-    Var<ElementType> elementAt(Int index)
+    Var<Element> elementAt(Int index)
         {
         TODO
         }
@@ -233,7 +233,7 @@ class CircularArray<ElementType>
     // ----- List interface ------------------------------------------------------------------------
 
     @Override
-    CircularArray insert(Int index, ElementType value)
+    CircularArray insert(Int index, Element value)
         {
         if (index == size)
             {
@@ -274,7 +274,7 @@ class CircularArray<ElementType>
         }
 
     @Override
-    CircularArray insertAll(Int index, Iterable<ElementType> values)
+    CircularArray insertAll(Int index, Iterable<Element> values)
         {
         if (index == size)
             {
@@ -288,7 +288,7 @@ class CircularArray<ElementType>
             }
         else if (additional == 1)
             {
-            assert ElementType value := values.iterator().next();
+            assert Element value := values.iterator().next();
             return insert(index, value);
             }
 
@@ -297,7 +297,7 @@ class CircularArray<ElementType>
         if (index == 0)
             {
             Int insertAt = head - additional;
-            for (ElementType value : values)
+            for (Element value : values)
                 {
                 contents[insertAt++ & mask] = value;
                 }
@@ -327,7 +327,7 @@ class CircularArray<ElementType>
                 }
 
             Int insertAt = head + index;
-            for (ElementType value : values)
+            for (Element value : values)
                 {
                 contents[insertAt++ & mask] = value;
                 }
@@ -457,7 +457,7 @@ class CircularArray<ElementType>
         }
 
     @Override
-    Iterator<ElementType> iterator()
+    Iterator<Element> iterator()
         {
         return new Iterator()
             {
@@ -466,7 +466,7 @@ class CircularArray<ElementType>
             Int index    = head;
 
             @Override
-            conditional ElementType next()
+            conditional Element next()
                 {
                 // adjust for a single deletion
                 if (prevHead != head || prevTail != tail)
@@ -497,7 +497,7 @@ class CircularArray<ElementType>
 
     @Override
     @Op("+")
-    CircularArray add(ElementType value)
+    CircularArray add(Element value)
         {
         ensureCapacity(1);
         contents[indexFor(tail++)] = value;
@@ -506,10 +506,10 @@ class CircularArray<ElementType>
 
     @Override
     @Op("+")
-    CircularArray addAll(Iterable<ElementType> values)
+    CircularArray addAll(Iterable<Element> values)
         {
         ensureCapacity(values.size);
-        for (ElementType value : values)
+        for (Element value : values)
             {
             contents[indexFor(tail++)] = value;
             }
@@ -531,7 +531,7 @@ class CircularArray<ElementType>
         else
             {
             // create a new, empty storage
-            contents = new ElementType?[minCapacityFor(0)];
+            contents = new Element?[minCapacityFor(0)];
             }
 
         head = 0;

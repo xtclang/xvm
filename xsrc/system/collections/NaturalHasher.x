@@ -6,18 +6,18 @@
  * to easily switch between working with objects that provide their own hashing and equality, and
  * with objects whose hashing and equality is known (or overloaded) by a separate implementation.
  */
-const NaturalHasher<ValueType extends Hashable>
-        implements Hasher<ValueType>
+const NaturalHasher<Value extends Hashable>
+        implements Hasher<Value>
     {
     @Override
-    Int hashOf(ValueType value)
+    Int hashOf(Value value)
         {
-        return ValueType.hashCode(value);
+        return Value.hashCode(value);
         }
 
     @Override
-    Boolean areEqual(ValueType value1, ValueType value2)
+    Boolean areEqual(Value value1, Value value2)
         {
-        return ValueType.equals(value1, value2);
+        return Value.equals(value1, value2);
         }
     }

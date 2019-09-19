@@ -114,7 +114,7 @@ public class ArrayAccessExpression
             {
             // while we could test the expression to find out if it could be UniformIndexed, or
             // Array, or whatever, the information that we truly need is not the form (Array, Tuple,
-            // etc.) but rather the content, e.g. the ElementType, and it is simply not conceivable
+            // etc.) but rather the content, e.g. the Element, and it is simply not conceivable
             // to test for that
             return null;
             }
@@ -203,7 +203,7 @@ public class ArrayAccessExpression
                     pool.ensureParameterizedTypeConstant(pool.typeInterval(), pool.typeInt()), null).isFit())
                 {
                 // REVIEW this might not be quite right .. assemble the type and then find the result of the [..] and see if that isA(typeRequired)
-                TypeConstant typeElement = typeRequired.resolveGenericType("ElementType");
+                TypeConstant typeElement = typeRequired.resolveGenericType("Element");
                 return typeElement == null
                         ? TypeFit.Fit
                         : expr.testFit(ctx, pool.ensureParameterizedTypeConstant(
@@ -248,7 +248,7 @@ public class ArrayAccessExpression
                                                     && exprRow.testFit(ctx, typeInterval, null).isFit())
                 {
                 // REVIEW same issue as array above
-                TypeConstant typeElement = typeRequired.resolveGenericType("ElementType");
+                TypeConstant typeElement = typeRequired.resolveGenericType("Element");
                 return typeElement == null
                         ? TypeFit.Fit
                         : expr.testFit(ctx, pool.ensureParameterizedTypeConstant(
@@ -297,7 +297,7 @@ public class ArrayAccessExpression
                         pool.ensureParameterizedTypeConstant(pool.typeInterval(), pool.typeInt()), null).isFit())
                     {
                     // REVIEW keep this in sync with testFit()
-                    typeElement = typeRequired.resolveGenericType("ElementType");
+                    typeElement = typeRequired.resolveGenericType("Element");
                     }
 
                 if (typeElement != null)
@@ -367,7 +367,7 @@ public class ArrayAccessExpression
                         exprRow.testFit(ctx, typeIntInterval, null).isFit())
                         {
                         // REVIEW keep this in sync with testFit()
-                        typeElement = typeRequired.resolveGenericType("ElementType");
+                        typeElement = typeRequired.resolveGenericType("Element");
                         }
                     }
 

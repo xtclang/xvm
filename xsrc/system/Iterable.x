@@ -6,7 +6,7 @@ import collections.VariablyMutable;
  * for consumption by the caller or by inversion of control by passing an element-consuming
  * function.
  */
-interface Iterable<ElementType>
+interface Iterable<Element>
     {
     /**
      * Determine the size of the Iterable object, which is the number of elements that an iterator
@@ -19,7 +19,7 @@ interface Iterable<ElementType>
      *
      * @return an Iterator
      */
-    Iterator<ElementType> iterator();
+    Iterator<Element> iterator();
 
     /**
      * Obtain an iterator over a portion of the contents of the Iterable object.
@@ -28,16 +28,16 @@ interface Iterable<ElementType>
      *
      * @return an iterator that produces elements that match the specified predicate
      */
-    Iterator<ElementType> iterator(function Boolean (ElementType) match)
+    Iterator<Element> iterator(function Boolean (Element) match)
         {
-        return new Iterator<ElementType>()
+        return new Iterator<Element>()
             {
-            Iterator<ElementType> iter = iterator();
+            Iterator<Element> iter = iterator();
 
             @Override
-            conditional ElementType next()
+            conditional Element next()
                 {
-                while (ElementType value := iter.next())
+                while (Element value := iter.next())
                     {
                     if (match(value))
                         {
@@ -57,7 +57,7 @@ interface Iterable<ElementType>
      *
      * @return {@code True} iff the specified value exists in this iterable source
      */
-    Boolean contains(ElementType value)
+    Boolean contains(Element value)
         {
         // this should be overridden by any implementation that has a structure that can do better
         // than an O(n) search, such as a sorted structure (binary search) or a hashed structure
@@ -67,7 +67,7 @@ interface Iterable<ElementType>
     /**
      * @return a Stream over the contents of this iterable source
      */
-    Stream<ElementType> stream()
+    Stream<Element> stream()
         {
         TODO return new SimpleStream(this);
         }
@@ -79,11 +79,11 @@ interface Iterable<ElementType>
      *
      * @return an array of elements from this iterable source
      */
-    ElementType[] toArray(VariablyMutable.Mutability mutability = Persistent)
+    Element[] toArray(VariablyMutable.Mutability mutability = Persistent)
         {
-        ElementType[] result = new Array<ElementType>(size); // mutable
+        Element[] result = new Array<Element>(size); // mutable
 
-        loop: for (ElementType element : this)
+        loop: for (Element element : this)
             {
             result[loop.count] = element;
             }

@@ -15,9 +15,9 @@ module TestGenerics.xqiz.it
         String[] list = new String[];
         list += "one";
 
-        console.println("type=" + list.ElementType);
+        console.println("type=" + list.Element);
 
-        list.ElementType el0 = list[0];
+        list.Element el0 = list[0];
         console.println("el0=" + el0);
         }
 

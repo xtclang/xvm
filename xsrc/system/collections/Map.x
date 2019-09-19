@@ -5,7 +5,7 @@
  * The Map is one of the most commonly used data structures, because it allows information to be
  * easily _related to_ other information.
  */
-interface Map<KeyType, ValueType>
+interface Map<Key, Value>
         extends VariablyMutable
         extends Stringable
     {
@@ -60,7 +60,7 @@ interface Map<KeyType, ValueType>
      *
      * @return the True iff the specified key exists in the map
      */
-    Boolean contains(KeyType key)
+    Boolean contains(Key key)
         {
         return get(key);
         }
@@ -74,7 +74,7 @@ interface Map<KeyType, ValueType>
      * @return a True iff the value associated with the specified key exists in the map
      * @return the value associated with the specified key (conditional)
      */
-    conditional ValueType get(KeyType key);
+    conditional Value get(Key key);
 
     /**
      * Obtain the value associated with the specified key, or the value `Null` if the key is
@@ -85,9 +85,9 @@ interface Map<KeyType, ValueType>
      * @return the value for the associated key if it exists in the map; otherwise Null
      */
     @Op("[]")
-    ValueType? getOrNull(KeyType key)
+    Value? getOrNull(Key key)
         {
-        if (ValueType value := get(key))
+        if (Value value := get(key))
             {
             return value;
             }
@@ -106,9 +106,9 @@ interface Map<KeyType, ValueType>
      *
      * @return the value for the specified key if it exists in the map; otherwise, the default value
      */
-    ValueType getOrDefault(KeyType key, ValueType dftval)
+    Value getOrDefault(Key key, Value dftval)
         {
-        if (ValueType value := get(key))
+        if (Value value := get(key))
             {
             return value;
             }
@@ -128,9 +128,9 @@ interface Map<KeyType, ValueType>
      * @return the value associated with the specified key iff the key exists in the map; otherwise,
      *         the result from the provided function
      */
-    ValueType getOrCompute(KeyType key, function ValueType () compute)
+    Value getOrCompute(Key key, function Value () compute)
         {
-        if (ValueType value := get(key))
+        if (Value value := get(key))
             {
             return value;
             }
@@ -148,7 +148,7 @@ interface Map<KeyType, ValueType>
      * The returned set is expected to support mutation operations iff the map is _mutable_; the
      * returned set is not expected to support the `add` or `addAll` operations.
      */
-    @RO Set<KeyType> keys;
+    @RO Set<Key> keys;
 
     /**
      * Obtain the collection of all values (one for each key) in the map.
@@ -156,7 +156,7 @@ interface Map<KeyType, ValueType>
      * The returned collection is expected to support mutation operations iff the map is _mutable_;
      * the returned collection is _not_ expected to support the `add` or `addAll` operations.
      */
-    @RO Collection<ValueType> values;
+    @RO Collection<Value> values;
 
     /**
      * Obtain the set of all entries (key/value pairs) in the map.
@@ -183,13 +183,13 @@ interface Map<KeyType, ValueType>
      *
      * @throws ReadOnly  if the map is _fixed size_ and the key does not already exist in the map
      */
-     Map put(KeyType key, ValueType value)
+     Map put(Key key, Value value)
         {
         TODO entry addition and modification is not supported
         }
 
     @Op("[]=")
-    void putInPlace(KeyType key, ValueType value)
+    void putInPlace(Key key, Value value)
         {
         assert !mutability.persistent;
         put(key, value);
@@ -235,7 +235,7 @@ interface Map<KeyType, ValueType>
      *
      * @throws ReadOnly  if the map is _fixed size_
      */
-    conditional Map putIfAbsent(KeyType key, ValueType value)
+    conditional Map putIfAbsent(Key key, Value value)
         {
         if (keys.contains(key))
             {
@@ -256,11 +256,11 @@ interface Map<KeyType, ValueType>
      * @return True iff the key did exist in the map and was associated with `valueOld`
      * @return the resultant map, which is the same as `this` for a non-persistent map
      */
-    conditional Map replace(KeyType key, ValueType valueOld, ValueType valueNew)
+    conditional Map replace(Key key, Value valueOld, Value valueNew)
         {
         if (valueOld != valueNew)
             {
-            if (ValueType valueCur := get(key), valueOld == valueCur)
+            if (Value valueCur := get(key), valueOld == valueCur)
                 {
                 return True, put(key, valueNew);
                 }
@@ -278,7 +278,7 @@ interface Map<KeyType, ValueType>
      *
      * @throws ReadOnly  if the map is _fixed size_
      */
-    Map remove(KeyType key)
+    Map remove(Key key)
         {
         TODO entry removal is not supported
         }
@@ -295,9 +295,9 @@ interface Map<KeyType, ValueType>
      *
      * @throws ReadOnly  if the map is _fixed size_
      */
-    conditional Map remove(KeyType key, ValueType value)
+    conditional Map remove(Key key, Value value)
         {
-        if (ValueType valueOld := get(key), value == valueOld)
+        if (Value valueOld := get(key), value == valueOld)
             {
             return True, remove(key);
             }
@@ -337,7 +337,7 @@ interface Map<KeyType, ValueType>
      *                  _mutable_, or to modify an entry in a map that is not _mutable_ or
      *                  _fixed size_
      */
-    <ResultType> ResultType process(KeyType key, function ResultType (Entry) compute);
+    <ResultType> ResultType process(Key key, function ResultType (Entry) compute);
 
     /**
      * Apply the specified function to the Entry objects for the specified keys.
@@ -352,11 +352,11 @@ interface Map<KeyType, ValueType>
      *                  _mutable_, or to modify an entry in a map whose [mutability] is not
      *                  `Mutable` or `Fixed`
      */
-    <ResultType> Map!<KeyType, ResultType> project(Iterable<KeyType> keys,
+    <ResultType> Map!<Key, ResultType> project(Iterable<Key> keys,
             function ResultType (Entry) compute)
         {
-        ListMap<KeyType, ResultType> result = new ListMap(keys.size);
-        for (KeyType key : keys)
+        ListMap<Key, ResultType> result = new ListMap(keys.size);
+        for (Key key : keys)
             {
             result.put(key, process(key, compute));
             }
@@ -377,8 +377,7 @@ interface Map<KeyType, ValueType>
      * @throws ReadOnly if an attempt is made to modify an entry in a map that is not
      *                  _mutable_ or _fixed size_
      */
-    <ResultType> conditional ResultType processIfPresent(
-            KeyType key, function ResultType (Entry) compute)
+    <ResultType> conditional ResultType processIfPresent(Key key, function ResultType (Entry) compute)
         {
         // this implementation can be overridden to combine the contains() and process() into
         // a single step
@@ -410,7 +409,7 @@ interface Map<KeyType, ValueType>
      *
      * @throws ReadOnly if an attempt is made to add an entry in a map that is not _mutable_
      */
-    ValueType computeIfAbsent(KeyType key, function ValueType () compute)
+    Value computeIfAbsent(Key key, function Value () compute)
         {
         return process(key, entry ->
             {
@@ -424,7 +423,7 @@ interface Map<KeyType, ValueType>
                 throw new ReadOnly();
                 }
 
-            ValueType value = compute();
+            Value value = compute();
             entry.value = value;
             return value;
             });
@@ -449,7 +448,7 @@ interface Map<KeyType, ValueType>
         /**
          * The key represented by the entry.
          */
-        @RO KeyType key;
+        @RO Key key;
 
         /**
          * True iff the entry is existent in its map. An entry does not exist in its map before its
@@ -471,7 +470,7 @@ interface Map<KeyType, ValueType>
          * @throws ReadOnly    if an attempt is made to write the value of the entry when
          *                     the map is _persistent_ or `const`
          */
-        ValueType value;
+        Value value;
 
         /**
          * Remove the entry from its map.
@@ -524,9 +523,9 @@ interface Map<KeyType, ValueType>
             return False;
             }
 
-        for (CompileType.KeyType key1, CompileType.ValueType value1 : map1)
+        for (CompileType.Key key1, CompileType.Value value1 : map1)
             {
-            if (CompileType.ValueType value2 := map2.get(key1), value2 == value1)
+            if (CompileType.Value value2 := map2.get(key1), value2 == value1)
                 {
                 continue;
                 }
@@ -558,7 +557,7 @@ interface Map<KeyType, ValueType>
                 }
             else
                 {
-                for (coll.ElementType element : coll)
+                for (coll.Element element : coll)
                     {
                     if (element.is(Stringable))
                         {
@@ -580,7 +579,7 @@ interface Map<KeyType, ValueType>
         {
         appender.add('[');
 
-        if (KeyType.is(Type<Stringable>) && ValueType.is(Type<Stringable>))
+        if (Key.is(Type<Stringable>) && Value.is(Type<Stringable>))
             {
             Append:
             for (Entry entry : entries)
@@ -603,7 +602,7 @@ interface Map<KeyType, ValueType>
                     {
                     appender.add(", ");
                     }
-                KeyType key = entry.key;
+                Key key = entry.key;
                 if (key.is(Stringable))
                     {
                     key.appendTo(appender);
@@ -615,7 +614,7 @@ interface Map<KeyType, ValueType>
 
                 appender.add('=');
 
-                ValueType value = entry.value;
+                Value value = entry.value;
                 if (value.is(Stringable))
                     {
                     value.appendTo(appender);

@@ -7,9 +7,9 @@
  * TODO functions for different sort implementations; default sort() to pick one based on size etc.
  * TODO use binary search for contains/indexOf if there is a Comparator
  */
-interface List<ElementType>
-        extends Sequence<ElementType>
-        extends Collection<ElementType>
+interface List<Element>
+        extends Sequence<Element>
+        extends Collection<Element>
     {
     /**
      * Obtain the first element in the list.
@@ -17,7 +17,7 @@ interface List<ElementType>
      * @return True iff the list is not empty
      * @return the first element in the list
      */
-    conditional ElementType first()
+    conditional Element first()
         {
         if (empty)
             {
@@ -32,7 +32,7 @@ interface List<ElementType>
      * @return True iff the list is not empty
      * @return the last element in the list
      */
-    conditional ElementType last()
+    conditional Element last()
         {
         if (empty)
             {
@@ -53,7 +53,7 @@ interface List<ElementType>
      * @throws OutOfBounds  if the specified index is outside of range `0` (inclusive) to
      *                      `size` (inclusive)
      */
-    List replace(Int index, ElementType value)
+    List replace(Int index, Element value)
         {
         if (mutability.persistent)
             {
@@ -81,13 +81,13 @@ interface List<ElementType>
      *                      `size` (inclusive), or if the specified index plus the size of the
      *                      provided Iterable is greater than the size of this array
      */
-    List replaceAll(Int index, Iterable<ElementType> values)
+    List replaceAll(Int index, Iterable<Element> values)
         {
         // this implementation should be overridden by any non-mutable implementation of List, and
         // by any implementation that is able to replace multiple elements efficiently
         Int  i      = index;
         List result = this;
-        for (ElementType value : values)
+        for (Element value : values)
             {
             result = result.replace(i++, value);
             }
@@ -111,7 +111,7 @@ interface List<ElementType>
      * @throws OutOfBounds  if the specified index is outside of range `0` (inclusive) to
      *                      `size` (inclusive)
      */
-    List insert(Int index, ElementType value)
+    List insert(Int index, Element value)
         {
         TODO element addition is not supported
         }
@@ -133,13 +133,13 @@ interface List<ElementType>
      * @throws OutOfBounds  if the specified index is outside of range `0` (inclusive) to
      *                      `size` (inclusive)
      */
-    List insertAll(Int index, Iterable<ElementType> values)
+    List insertAll(Int index, Iterable<Element> values)
         {
         // this implementation should be overridden by any non-mutable implementation of List, and
         // by any implementation that is able to insert multiple elements efficiently
         Int  i      = index;
         List result = this;
-        for (ElementType value : values)
+        for (Element value : values)
             {
             result = result.insert(i++, value);
             }
@@ -199,11 +199,11 @@ interface List<ElementType>
      * Sort the contents of this list in the order specified by the optional Comparator.
      *
      * @param comparator  the Comparator to use to sort the list; (optional, defaulting to using the
-     *                    "natural" sort order of the ElementType)
+     *                    "natural" sort order of the Element type)
      *
      * @return the resultant list, which is the same as `this` for a mutable list
      */
-    List sort(Comparator<ElementType>? comparator = null)
+    List sort(Comparator<Element>? comparator = null)
         {
         if (size <= 1)
             {
@@ -212,7 +212,7 @@ interface List<ElementType>
 
         // eventual to-do is to should pick a better sort impl based on some heuristics, such as
         // size of list and how many elements are out-of-order
-        function void (List<ElementType>, Comparator<ElementType>?) sortimpl = bubbleSort;
+        function void (List<Element>, Comparator<Element>?) sortimpl = bubbleSort;
 
         Mutability mutability = this.mutability;
         if (!mutability.persistent)
@@ -260,9 +260,9 @@ interface List<ElementType>
      *
      * @param list        a Mutable or Fixed list
      * @param comparator  the Comparator to use to sort the list; (optional, defaulting to using the
-     *                    "natural" sort order of the ElementType)
+     *                    "natural" sort order of the Element type)
      */
-    static <ElementType> void bubbleSort(List<ElementType> list, Comparator<ElementType>? comparator = null)
+    static <Element> void bubbleSort(List<Element> list, Comparator<Element>? comparator = null)
         {
         assert !list.mutability.persistent;
 
@@ -272,11 +272,11 @@ interface List<ElementType>
             return;
             }
 
-        function Ordered (ElementType, ElementType) compare;
+        function Ordered (Element, Element) compare;
 
         if (comparator == null)
             {
-            assert ElementType.is(Type<Orderable>);
+            assert Element.is(Type<Orderable>);
             compare = (v1, v2) -> v1 <=> v2;
             }
         else
@@ -288,10 +288,10 @@ interface List<ElementType>
         do
             {
             Boolean     sorted = true;
-            ElementType bubble = list[last];
+            Element bubble = list[last];
             for (Int i = last-1; i >= first; --i)
                 {
-                ElementType prev = list[i];
+                Element prev = list[i];
                 if (compare(prev, bubble) == Greater)
                     {
                     list[i  ] = bubble;
@@ -388,7 +388,7 @@ interface List<ElementType>
          * @throws OutOfBounds  if an attempt is made to access the value when the cursor is
          *                      beyond the end of the list
          */
-        ElementType value;
+        Element value;
 
         /**
          * Insert the specified element at the current index, shifting the contents of the entire
@@ -400,7 +400,7 @@ interface List<ElementType>
          *
          * @throws ReadOnly  if the List is not _mutable_
          */
-        void insert(ElementType value);
+        void insert(Element value);
 
         /**
          * Delete the element at the current index, shifting the contents of the entire remainder of
@@ -442,7 +442,7 @@ interface List<ElementType>
             }
 
         @Override
-        List<ElementType> list.get()
+        List<Element> list.get()
             {
             return this.List;
             }
@@ -494,17 +494,17 @@ interface List<ElementType>
             }
 
         @Override
-        ElementType value
+        Element value
             {
             @Override
-            ElementType get()
+            Element get()
                 {
                 // may throw OutOfBounds
                 return list[index];
                 }
 
             @Override
-            void set(ElementType value)
+            void set(Element value)
                 {
                 Int index = this.index;
                 if (index < size)
@@ -525,7 +525,7 @@ interface List<ElementType>
             }
 
         @Override
-        void insert(ElementType value)
+        void insert(Element value)
             {
             if (mutability != Mutable)
                 {
@@ -564,7 +564,7 @@ interface List<ElementType>
 
     @Override
     @Op("-")
-    List remove(ElementType value)
+    List remove(Element value)
         {
         if (Int index := indexOf(value))
             {
@@ -575,7 +575,7 @@ interface List<ElementType>
         }
 
     @Override
-    conditional List removeIfPresent(ElementType value)
+    conditional List removeIfPresent(Element value)
         {
         if (Int index := indexOf(value))
             {
@@ -586,9 +586,9 @@ interface List<ElementType>
         }
 
     @Override
-    (List, Int) removeIf(function Boolean (ElementType) shouldRemove)
+    (List, Int) removeIf(function Boolean (Element) shouldRemove)
         {
-        List<ElementType> result = this;
+        List<Element> result = this;
 
         Int index = 0;
         Int size  = this.size;

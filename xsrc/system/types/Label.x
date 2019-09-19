@@ -17,7 +17,7 @@
  *
  *   0=Bob, 1=Sue, 2=Amit
  */
-interface Label<KeyType, ValueType>
+interface Label<Key, Value>
     {
     /**
      * True on the first iteration of the loop (do, while, or for).
@@ -61,7 +61,7 @@ interface Label<KeyType, ValueType>
      * For a non-loop Label, or a Label that identifies a loop in which there is no current Entry,
      * an attempt to access this property is illegal.
      */
-    @RO Map<KeyType, ValueType>.Entry entry;
+    @RO Map<Key, Value>.Entry entry;
 
     /**
      * In the "finally" block of a "try" statement, this property provides the Exception that

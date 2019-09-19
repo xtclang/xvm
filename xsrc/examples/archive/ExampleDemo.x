@@ -70,7 +70,7 @@ mapSD.format().format1();
 
 // ----
 
-interface DataStore<KeyType, ValueType>
+interface DataStore<Key, Value>
     {
     }
 

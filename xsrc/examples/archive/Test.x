@@ -137,19 +137,19 @@ module Test
 //        }
 //
 //    // problem #5 - not sure what this problem was, but it compiles now (the T0D0 was an issue)
-//    interface List<ElementType>
+//    interface List<Element>
 //        {
-//        ElementType first;
+//        Element first;
 //
-//        void add(ElementType value);
+//        void add(Element value);
 //
-//        Iterator<ElementType> iterator();
+//        Iterator<Element> iterator();
 //        }
 //
-//    class MyList<ElementType extends Int>
-//            implements List<ElementType>
+//    class MyList<Element extends Int>
+//            implements List<Element>
 //        {
-//        void add(ElementType value)
+//        void add(Element value)
 //            {
 //            TODO
 //            }
@@ -158,12 +158,12 @@ module Test
 //    // problem #6
 //    class MyClass<MapType1 extends Map, MapType2 extends Map>
 //        {
-//        void process(MapType1.KeyType k1, MapType2.KeyType k2)  // TODO resolve both "KeyType" correctly
+//        void process(MapType1.Key k1, MapType2.Key k2)  // TODO resolve both "Key" correctly
 //            {
 //            // ...
 //            }
 //
-//        <MT3 extends MapType1, KT3 extends MapType1.KeyType> void process(MT3.KeyType k, KT3 k3)  // TODO resolve both "KeyType" correctly
+//        <MT3 extends MapType1, KT3 extends MapType1.Key> void process(MT3.Key k, KT3 k3)  // TODO resolve both "Key" correctly
 //            {
 //            // ...
 //            }
@@ -620,7 +620,7 @@ module Test
 //            }
 //        }
 
-//    class MyMap<KeyType, ValueType> implements Map<KeyType, ValueType>
+//    class MyMap<Key, Value> implements Map<Key, Value>
 //        {
 //        void foo();
 //        @Auto Int size();
@@ -628,7 +628,7 @@ module Test
 //
 //    mixin M into MyMap {}
 //
-//    class MyMap2<KeyType, ValueType> extends MyMap<KeyType, ValueType>
+//    class MyMap2<Key, Value> extends MyMap<Key, Value>
 //        {
 //        public/private @Unchecked Int x
 //            {

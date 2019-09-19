@@ -2,10 +2,10 @@
  * The Collector interface encapsulates the functionality of all of the various stages of
  * reduction, including support for parallelization.
  */
-interface Collector<ElementType, AccumulationType, ResultType>
+interface Collector<Element, AccumulationType, ResultType>
     {
     typedef function AccumulationType () Supplier;
-    typedef function Boolean (AccumulationType, ElementType) Accumulator;
+    typedef function Boolean (AccumulationType, Element) Accumulator;
     typedef function AccumulationType (AccumulationType, AccumulationType) Combiner;
     typedef function ResultType (AccumulationType) Finisher;
 
@@ -42,10 +42,10 @@ interface Collector<ElementType, AccumulationType, ResultType>
      *         {@code accumulate}, and {@code combine} functions assuming that
      *         the ResultType is the same as the AccumulationType
      */
-    static <ElementType, AccumulationType>
-        Collector<ElementType, AccumulationType, AccumulationType> of(
+    static <Element, AccumulationType>
+        Collector<Element, AccumulationType, AccumulationType> of(
             function AccumulationType ()                                   supply,     // Supplier
-            function Boolean (AccumulationType, ElementType)               accumulate, // Accumulator
+            function Boolean (AccumulationType, Element)                   accumulate, // Accumulator
             function AccumulationType (AccumulationType, AccumulationType) combine)    // Combiner
         {
         return of(supply, accumulate, combine, result -> result);
@@ -63,10 +63,10 @@ interface Collector<ElementType, AccumulationType, ResultType>
      * @return a new {@code Collector} described by the given {@code supply},
      *         {@code accumulate}, {@code combine} and {@code finish} functions
      */
-    static <ElementType, AccumulationType, ResultType>
-        Collector<ElementType, AccumulationType, ResultType> of(
+    static <Element, AccumulationType, ResultType>
+        Collector<Element, AccumulationType, ResultType> of(
             function AccumulationType ()                                   supply,
-            function Boolean (AccumulationType, ElementType)               accumulate,
+            function Boolean (AccumulationType, Element)                   accumulate,
             function AccumulationType (AccumulationType, AccumulationType) combine,
             function ResultType (AccumulationType)                         finish)
         {

@@ -1,15 +1,15 @@
 /**
  * A TypeParameter is a "generic-type parameter" for a Class or Type.
  *
- * For example, the following declares an interface with two type parameters "KeyType" and
- * "ValueType":
+ * For example, the following declares an interface with two type parameters "Key" and
+ * "Value":
  *
- *   interface Map<KeyType, ValueType> {...}
+ *   interface Map<Key, Value> {...}
  *
  * And the following declares a class that narrows those type parameters:
  *
- *   class HashMap<KeyType extends Hashable, Value>
- *           implements Map<KeyType, ValueType> {...}
+ *   class HashMap<Key extends Hashable, Value>
+ *           implements Map<Key, Value> {...}
  */
 const TypeParameter(String name, Type type = Object)
     {
