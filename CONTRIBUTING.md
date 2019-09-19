@@ -20,6 +20,10 @@ _(Our apologies in advance for the hassle, but we need to be very careful about 
 
 We recognize that the present stage of the project is going to be fairly challenging for most sane developers to contribute to. We apologize for that, and ask for your patience -- or better yet, please help us to improve this!
 
+We have an example published for getting started with Ecstasy, using the ubiquitous "Hello World" cliché: [Hello World](https://xtclang.blogspot.com/2019/08/hello-world.html).
+
+Alternatively, you can follow these steps: 
+
 From within your development directory (such as `~/Development/`) where you want to create the `./xvm/` project directory, run:
 
 > `git clone https://github.com/xtclang/xvm.git`
@@ -30,7 +34,7 @@ IDEA also has built-in Git support, and that is included in the community editio
 
 You will need JDK 8 or later installed. You can download the JDK from: <https://aws.amazon.com/corretto/> or <https://developers.redhat.com/products/openjdk/download>. (Oracle JDK and OpenJDK are both supported, but the former has licensing issues and the latter is purposefully kept out-of-date with security updates to drive business to the former.)
 
-Creating a "xvm" project in IDEA for the `./xvm/` directory. Build the project, which compiles the Java sources. After the build completes, you should be able to run the shell script `./bin/runAll.sh` that runs various "tests" (we use the term loosely here, since we have not yet incorporated a CI model).
+Create an "xvm" project in IDEA for the `./xvm/` directory. Build the project, which compiles the Java sources. After the build completes, you should be able to run the shell-based test script from the `./xsrc` directory: `../bin/runAll.sh`; this will run various "tests" (we use the term loosely here, since we have not yet incorporated a CI model).
 
 To run an individual test in IDEA, you will find that the Ecstasy source tests are located under `./xvm/xsrc/tests`. The following instructions assume that your local repository is located at `~/Development/xvm/`, and that you are trying to compile and run `misc.x`. To compile and run the Ecstasy `misc.x` test in JetBrains IntelliJ IDEA, create a "Run/Debug Configuration" as follows:
 

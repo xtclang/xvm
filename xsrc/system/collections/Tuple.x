@@ -38,7 +38,8 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * value, then the compile-time type of the returned value is known; otherwise, an explicit cast
      * to a compile-time type is required to regain the compile-time type.
      */
-    @Op Object getElement(Int index);
+    @Op("[]")
+    Object getElement(Int index);
 
     /**
      * Modify the value in the specified element in the tuple.
@@ -49,7 +50,8 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      *
      * This operation will throw an exception if the tuple is either persistent or {@code const}.
      */
-    @Op void setElement(Int index, Object newValue);
+    @Op("[]=")
+    void setElement(Int index, Object newValue);
 
     /**
      * Obtain the Ref for the specified element.
@@ -58,7 +60,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * value, then the compile-time type of the returned Ref is known; otherwise, an explicit cast
      * to a compile-time type is required to regain the compile-time type.
      */
-    @Op Ref<Object> elementAt(Int index);
+    Ref<Object> elementAt(Int index);
 
 
     // ----- tuple manipulations -------------------------------------------------------------------
@@ -72,7 +74,8 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * compile-time type of the returned tuple is known; otherwise, an explicit cast to a
      * compile-time type is required to regain the compile-time type.
      */
-    @Op Tuple!<> add(Tuple!<> that);
+    @Op("+")
+    Tuple!<> add(Tuple!<> that);
 
     /**
      * Modify the value of the specified element in the tuple, returning the resultant tuple.
