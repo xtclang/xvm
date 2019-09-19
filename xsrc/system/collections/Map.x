@@ -337,7 +337,7 @@ interface Map<Key, Value>
      *                  _mutable_, or to modify an entry in a map that is not _mutable_ or
      *                  _fixed size_
      */
-    <ResultType> ResultType process(Key key, function ResultType (Entry) compute);
+    <Result> Result process(Key key, function Result (Entry) compute);
 
     /**
      * Apply the specified function to the Entry objects for the specified keys.
@@ -352,10 +352,10 @@ interface Map<Key, Value>
      *                  _mutable_, or to modify an entry in a map whose [mutability] is not
      *                  `Mutable` or `Fixed`
      */
-    <ResultType> Map!<Key, ResultType> project(Iterable<Key> keys,
-            function ResultType (Entry) compute)
+    <Result> Map!<Key, Result> project(Iterable<Key> keys,
+            function Result (Entry) compute)
         {
-        ListMap<Key, ResultType> result = new ListMap(keys.size);
+        ListMap<Key, Result> result = new ListMap(keys.size);
         for (Key key : keys)
             {
             result.put(key, process(key, compute));
@@ -377,7 +377,7 @@ interface Map<Key, Value>
      * @throws ReadOnly if an attempt is made to modify an entry in a map that is not
      *                  _mutable_ or _fixed size_
      */
-    <ResultType> conditional ResultType processIfPresent(Key key, function ResultType (Entry) compute)
+    <Result> conditional Result processIfPresent(Key key, function Result (Entry) compute)
         {
         // this implementation can be overridden to combine the contains() and process() into
         // a single step

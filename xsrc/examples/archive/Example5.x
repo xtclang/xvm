@@ -1,4 +1,4 @@
-typedef function ResultType () Callable<ResultType>;
+typedef function Result () Callable<Result>;
 typedef function Void (Value) Consumer<Value>;
 
 String hello = "hello";
@@ -104,7 +104,7 @@ Stage<InType, OutType> implements Stream
         return next;
         }
 
-    conditional (ResultType) evaluateHead(TerminalOp<OutType, ResultType> op)
+    conditional (Result) evaluateHead(TerminalOp<OutType, Result> op)
         {
         assert this.head == this;
         for (Element el : iterator())
@@ -113,7 +113,7 @@ Stage<InType, OutType> implements Stream
             }
         }
 
-    conditional (ResultType) evaluate(TerminalOp<OutType, ResultType> op, InType el)
+    conditional (Result) evaluate(TerminalOp<OutType, Result> op, InType el)
         {
         Stage head = this.head;
 
@@ -150,27 +150,27 @@ Stage<InType, OutType> implements Stream
         return (op.process(iter));
         }
 
-    interface Step<Element, ResultType>
+    interface Step<Element, Result>
         {
         Void begin();
         Boolean process(Element el);
-        ResultType finish();
+        Result finish();
         }
-    interface TerminalOp<Element, ResultType>
+    interface TerminalOp<Element, Result>
         {
         Void begin();
         Boolean process(Iterator<Element> iter);
-        ResultType finish();
+        Result finish();
         }
 
-    class CollectorOp<Element, AccumulatorType, ResultType)
-                (Collector<Element, AccumulatorType, ResultType) collector)
-            implements TerminalOp<Element, ResultType>
+    class CollectorOp<Element, Cumulative, Result)
+                (Collector<Element, Cumulative, Result) collector)
+            implements TerminalOp<Element, Result>
         {
         @Override
-        conditional ResultType process(Iterator<Element> iter)
+        conditional Result process(Iterator<Element> iter)
             {
-            AccumulatorType container = collector.supply();
+            Cumulative container = collector.supply();
             for (Element element : iter)
                 {
                 if (!collector.accumulate(container, element))
@@ -184,10 +184,10 @@ Stage<InType, OutType> implements Stream
 
     class AnyMatchOp<Element, Boolean)
                 (function Boolean (Element) match)
-            implements TerminalOp<Element, ResultType>
+            implements TerminalOp<Element, Result>
         {
         @Override
-        conditional ResultType process(Iterator<Element> iter)
+        conditional Result process(Iterator<Element> iter)
             {
             for (Element element : iter)
                 {

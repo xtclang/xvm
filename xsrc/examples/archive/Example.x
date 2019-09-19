@@ -666,7 +666,7 @@ Int n2 = t[1]; // compile time error (and obviously it would be a runtime error 
 
 // basically, it's some way to do non-uniform index of an "array" like structure
 // i.e. fields by index
-interface UniformIndexed<IndexType, Value>
+interface UniformIndexed<Index, Value>
 interface Indexed<Value...>
 
 --

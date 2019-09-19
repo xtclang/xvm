@@ -265,7 +265,7 @@ class ListMap<Key, Value>
         }
 
     @Override
-    <ResultType> ResultType process(Key key, function ResultType (Entry) compute)
+    <Result> Result process(Key key, function Result (Entry) compute)
         {
         return compute(new CursorEntry(key));
         }

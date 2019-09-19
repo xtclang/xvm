@@ -93,7 +93,7 @@ service Container
          * a provider to return a resource (throwing an exception) will fail to load or
          * terminate the requesting container.
          */
-        <ResourceType> ResourceType getResource(Type<ResourceType> type, String name);
+        <Resource> Resource getResource(Type<Resource> type, String name);
         }
 
     /**

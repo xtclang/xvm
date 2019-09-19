@@ -2,19 +2,19 @@
  * UniformIndexed is an interface that allows the square bracket operators to be used with a
  * container data type that contains elements of a specified type, indexed by a specified type.
  */
-interface UniformIndexed<IndexType, Element>
+interface UniformIndexed<Index, Element>
     {
     /**
      * Obtain the value of the specified element.
      */
     @Op("[]")
-    Element getElement(IndexType index);
+    Element getElement(Index index);
 
     /**
      * Modify the value in the specified element.
      */
     @Op("[]=")
-    void setElement(IndexType index, Element value)
+    void setElement(Index index, Element value)
         {
         throw new ReadOnly();
         }
@@ -22,15 +22,15 @@ interface UniformIndexed<IndexType, Element>
     /**
      * Obtain a Ref for the specified element.
      */
-    Var<Element> elementAt(IndexType index)
+    Var<Element> elementAt(Index index)
         {
-        return new SimpleVar<IndexType, Element>(this, index);
+        return new SimpleVar<Index, Element>(this, index);
 
         /**
          * An implementation of Var that delegates all of the complicated Ref responsibilities to
          * the return value from the {@link UniformIndexed.get} method.
          */
-        class SimpleVar<IndexType, Element>(UniformIndexed<IndexType, Element> indexed, IndexType index)
+        class SimpleVar<Index, Element>(UniformIndexed<Index, Element> indexed, Index index)
                 delegates Var<Element>(ref)
             {
             @Override

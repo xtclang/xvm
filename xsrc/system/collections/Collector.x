@@ -2,12 +2,12 @@
  * The Collector interface encapsulates the functionality of all of the various stages of
  * reduction, including support for parallelization.
  */
-interface Collector<Element, AccumulationType, ResultType>
+interface Collector<Element, Cumulative, Result>
     {
-    typedef function AccumulationType () Supplier;
-    typedef function Boolean (AccumulationType, Element) Accumulator;
-    typedef function AccumulationType (AccumulationType, AccumulationType) Combiner;
-    typedef function ResultType (AccumulationType) Finisher;
+    typedef function Cumulative () Supplier;
+    typedef function Boolean (Cumulative, Element) Accumulator;
+    typedef function Cumulative (Cumulative, Cumulative) Combiner;
+    typedef function Result (Cumulative) Finisher;
 
     /**
      * A function which returns a new, mutable result container.
@@ -32,7 +32,7 @@ interface Collector<Element, AccumulationType, ResultType>
     /**
      * Create a Collector from a Supplier function, an Accumulator function, and a Combiner
      * function; use an identity function as the Finisher function. This method is only
-     * appropriate for cases in which the AccumulationType is the same as the ResultType.
+     * appropriate for cases in which the Cumulative is the same as the Result.
      *
      * @param supply      the supplier function for the new collector
      * @param accumulate  the accumulator function for the new collector
@@ -40,13 +40,13 @@ interface Collector<Element, AccumulationType, ResultType>
      *
      * @return a new {@code Collector} described by the given {@code supply},
      *         {@code accumulate}, and {@code combine} functions assuming that
-     *         the ResultType is the same as the AccumulationType
+     *         the Result is the same as the Cumulative
      */
-    static <Element, AccumulationType>
-        Collector<Element, AccumulationType, AccumulationType> of(
-            function AccumulationType ()                                   supply,     // Supplier
-            function Boolean (AccumulationType, Element)                   accumulate, // Accumulator
-            function AccumulationType (AccumulationType, AccumulationType) combine)    // Combiner
+    static <Element, Cumulative>
+        Collector<Element, Cumulative, Cumulative> of(
+            function Cumulative ()                       supply,     // Supplier
+            function Boolean (Cumulative, Element)       accumulate, // Accumulator
+            function Cumulative (Cumulative, Cumulative) combine)    // Combiner
         {
         return of(supply, accumulate, combine, result -> result);
         }
@@ -63,12 +63,12 @@ interface Collector<Element, AccumulationType, ResultType>
      * @return a new {@code Collector} described by the given {@code supply},
      *         {@code accumulate}, {@code combine} and {@code finish} functions
      */
-    static <Element, AccumulationType, ResultType>
-        Collector<Element, AccumulationType, ResultType> of(
-            function AccumulationType ()                                   supply,
-            function Boolean (AccumulationType, Element)                   accumulate,
-            function AccumulationType (AccumulationType, AccumulationType) combine,
-            function ResultType (AccumulationType)                         finish)
+    static <Element, Cumulative, Result>
+        Collector<Element, Cumulative, Result> of(
+            function Cumulative ()                       supply,
+            function Boolean (Cumulative, Element)       accumulate,
+            function Cumulative (Cumulative, Cumulative) combine,
+            function Result (Cumulative)                 finish)
         {
         const SimpleCollector<EType, AType, RType>
                 (

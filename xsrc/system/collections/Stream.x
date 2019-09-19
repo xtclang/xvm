@@ -36,14 +36,14 @@ interface Stream<Element>
      *
      * This is an intermediate operation.
      *
-     * @param <MappedType>  the element type of the new stream
+     * @param <Result>  the element type of the new stream
      *
      * @param apply  a function to apply to each element of this stream
      *
      * @return a new stream representing the results of applying the specified function to each
      *         element in this stream
      */
-    <MappedType> Stream<MappedType> map(function MappedType (Element) apply);
+    <Result> Stream<Result> map(function Result (Element) apply);
 
     /**
      * Returns a stream consisting of the the concatenation of all of the streams resulting from
@@ -51,14 +51,13 @@ interface Stream<Element>
      *
      * This is an intermediate operation.
      *
-     * @param <MappedType>  the element type of the new stream
-     * @param flatten       a function to apply to each element, resulting in a
-     *                      {@code Stream<MappedType>}
+     * @param <Result>  the element type of the new stream
+     * @param flatten   a function to apply to each element, resulting in a {@code Stream<Result>}
      *
      * @return a new stream representing the concatenated results of applying the specified function
      *         to each element in this stream
      */
-    <MappedType> Stream<MappedType> flatMap(function Stream!<MappedType> (Element) flatten);
+    <Result> Stream<Result> flatMap(function Stream!<Result> (Element) flatten);
 
     /**
      * Returns a stream representing the _distinct_ elements of this stream.
@@ -430,7 +429,7 @@ interface Stream<Element>
      *f
      * This method produces a result equivalent to:
      *
-     *   ResultType result = supply();
+     *   Result result = supply();
      *   for (Element element : iterator())
      *       {
      *       if (!accumulate(result, element))
@@ -453,10 +452,10 @@ interface Stream<Element>
      *
      * @return the result of the reduction
      */
-    <ResultType> ResultType collect(
-                    function ResultType supply(),
-                    function Boolean accumulate(ResultType, Element),
-                    function ResultType combine(ResultType, ResultType))
+    <Result> Result collect(
+                    function Result supply(),
+                    function Boolean accumulate(Result, Element),
+                    function Result combine(Result, Result))
         {
         return collect(Collector.of(supply, accumulate, combine));
         }
@@ -473,10 +472,10 @@ interface Stream<Element>
      *
      * @return the result of the reduction
      */
-    <ResultType, AccumulationType>
-    ResultType collect(Collector<Element, AccumulationType, ResultType> collector)
+    <Result, Cumulative>
+    Result collect(Collector<Element, Cumulative, Result> collector)
         {
-        AccumulationType container = collector.supply();
+        Cumulative container = collector.supply();
         iterator().whileEach(element -> collector.accumulate(container, element));
         return collector.finish(container);
         }

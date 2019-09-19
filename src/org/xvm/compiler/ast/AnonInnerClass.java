@@ -421,14 +421,14 @@ public class AnonInnerClass
         //      ...
         //      }
         //
-        // which requires creation of a special type, e.g. C<ElType>.foo().Map:1 to be handled
+        // which requires creation of a special type, e.g. C<Element>.foo().Map:1 to be handled
         // correctly by the run-time.
         //
         // The idea behind this method is to transform the original expression to another
         // synthetic TypeCompositionStatement that looks like this:
         //
-        //  class Map:1<Map:1.ElType>
-        //          implements Map<Map:1.ElType, Int>
+        //  class Map:1<Map:1.Element>
+        //          implements Map<Map:1.Element, Int>
         //      {
         //      ...
         //      }
@@ -437,7 +437,7 @@ public class AnonInnerClass
         //
         // This approach also solves the issue with formal type parameters:
         //
-        // static <ElType> Map<ElType, Int> foo(Set<ElType> keys)
+        // static <Key> Map<Key, Int> foo(Set<Key> keys)
         //    {
         //    return new Map()
         //         {

@@ -216,7 +216,7 @@ public class ArrayAccessExpression
             // figure out the index type
             TypeConstant typeIndex = typeArray == null
                     ? null
-                    : typeArray.resolveGenericType("IndexType");
+                    : typeArray.resolveGenericType("Index");
             if (typeIndex == null || !indexes.get(0).testFit(ctx, typeIndex, null).isFit())
                 {
                 typeIndex = indexes.get(0).getImplicitType(ctx);
@@ -314,7 +314,7 @@ public class ArrayAccessExpression
             // figure out the index type
             TypeConstant typeIndex = typeArray == null
                     ? null
-                    : typeArray.resolveGenericType("IndexType");
+                    : typeArray.resolveGenericType("Index");
             if (typeIndex == null || !aexprIndexes[0].testFit(ctx, typeIndex, null).isFit())
                 {
                 typeIndex = aexprIndexes[0].getImplicitType(ctx);

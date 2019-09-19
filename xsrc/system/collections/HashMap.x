@@ -267,8 +267,8 @@ class HashMap<Key, Value>
         }
 
     @Override
-    <ResultType> ResultType process(Key key,
-            function ResultType (Map<Key, Value>.Entry) compute)
+    <Result> Result process(Key key,
+            function Result (Map<Key, Value>.Entry) compute)
         {
         return compute(new ReifiedEntry<Key, Value>(this, key));
         }
