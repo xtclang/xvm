@@ -3,16 +3,19 @@
 # install the .x source code syntax highlighting into the IntelliJ IDEA
 
 binDir=$(dirname "$BASH_SOURCE")
-ideaDir=~/Library/Preferences/IdeaIC2018.3
 
+ideaDir=~/Library/Preferences/IdeaIC2019.2
 if [ ! -d ${ideaDir} ]
 then
   ideaDir=~/Library/Preferences/IdeaIC2019.1
-
   if [ ! -d ${ideaDir} ]
   then
-    echo "***" Intellij IDEA is not installed "***"
-    exit
+    ideaDir=~/Library/Preferences/IdeaIC2018.3
+    if [ ! -d ${ideaDir} ]
+    then
+      echo "***" Intellij IDEA is not installed "***"
+      exit
+    fi
   fi
 fi
 

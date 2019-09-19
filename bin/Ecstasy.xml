@@ -10,10 +10,10 @@
       <option name="HAS_BRACKETS" value="true" />
       <option name="HAS_PARENS" value="true" />
     </options>
-    <keywords keywords="as;class;const;construct;enum;extends;function;implements;immutable;import;incorporates;interface;into;is;module;mixin;package;private;protected;public;service;static" ignore_case="false" />
-    <keywords2 keywords="TODO;assert;case;catch;default;else;false;finally;for;if;instanceof;new;null;return;super;switch;true;try;using;while;do;break;continue;throw" />
-    <keywords3 keywords="conditional;typedef;void;val;var" />
-    <keywords4 keywords="@Auto;@Atomic;@Future;@Inject;@Lazy;@Op;@Override;@RO;@Soft;@Watch;@Weak" />
+    <keywords keywords="class;const;construct;enum;extends;implements;immutable;import;incorporates;interface;into;module;mixin;package;private;protected;public;service;static;typedef" ignore_case="false" />
+    <keywords2 keywords="assert;assert:arg;assert:bounds;assert:TODO;assert:once;assert:rnd;assert:test;assert:debug;case;catch;default;else;finally;for;if;new;return;switch;try;using;while;do;break;continue;throw;TODO" ignore_case="false" />
+    <keywords3 keywords="as;conditional;False;false;function;is;Null;null;super;True;true;val;var;void" ignore_case="false" />
+    <keywords4 keywords="@Abstract;@Atomic;@Auto;@Conditional;@Future;@Inject;@Lazy;@Op;@Override;@RO;@Soft;@Unchecked;@Unassigned;@Watch;@Weak" ignore_case="false" />
   </highlighting>
   <extensionMap>
     <mapping ext="x" />
