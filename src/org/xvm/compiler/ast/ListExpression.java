@@ -221,15 +221,16 @@ public class ListExpression
             TypeConstant typeImpl = pool.ensureImmutableTypeConstant(
                     pool.ensureParameterizedTypeConstant(pool.typeArray(),
                     typeElement == null ? pool.typeObject() : typeElement));
-            assert typeRequired == null || typeImpl.isA(typeRequired); // Array<ElType> or List<ElType>
-
-            Constant[] aconstVal = new Constant[cExprs];
-            for (int i = 0; i < cExprs; ++i)
+            if (typeRequired == null || typeImpl.isA(typeRequired)) // Array<ElType> or List<ElType>
                 {
-                aconstVal[i] = listExprs.get(i).toConstant();
-                }
+                Constant[] aconstVal = new Constant[cExprs];
+                for (int i = 0; i < cExprs; ++i)
+                    {
+                    aconstVal[i] = listExprs.get(i).toConstant();
+                    }
 
-            constVal = pool.ensureArrayConstant(typeImpl, aconstVal);
+                constVal = pool.ensureArrayConstant(typeImpl, aconstVal);
+                }
             }
 
         return finishValidation(typeRequired, typeActual, fit, constVal, errs);
