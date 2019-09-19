@@ -66,12 +66,6 @@ class HashSet<Element>
         }
 
     @Override
-    Stream<Element> stream()
-        {
-        TODO
-        }
-
-    @Override
     HashSet clone()
         {
         return new HashSet(this);

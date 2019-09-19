@@ -31,17 +31,6 @@ class ListSet<Element extends Hashable>
         }
 
     /**
-     * Obtain a Stream over the contents of this Collection.
-     *
-     * @return a Stream over the contents of this Collection
-     */
-    @Override
-    Stream<Element> stream()
-        {
-        TODO;
-        }
-
-    /**
      * Obtain a shallow clone of the Collection. The definition of "shallow clone" is that the new
      * collection will contain the same element references, but changes made to this collection
      * through the Collection interface will not appear in the returned collection, nor will changes

@@ -33,7 +33,6 @@ class SharedListView<Element implements Const>
     Void clear()              {return service.clear();}
 
     Iterator<Element> iterator();
-    Stream<Element> stream();
     }
 
 async SharedListController<Element implements Const>

@@ -527,12 +527,6 @@ class Array<Element>
         }
 
     @Override
-    Stream<Element> stream()
-        {
-        TODO Array Stream implementation
-        }
-
-    @Override
     Array clone()
         {
         return mutability.persistent && delegate == null

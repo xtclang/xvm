@@ -1,4 +1,3 @@
-import collections.Stream;
 import collections.VariablyMutable;
 
 /**
@@ -62,14 +61,6 @@ interface Iterable<Element>
         // this should be overridden by any implementation that has a structure that can do better
         // than an O(n) search, such as a sorted structure (binary search) or a hashed structure
         return iterator().untilAny(element -> element == value);
-        }
-
-    /**
-     * @return a Stream over the contents of this iterable source
-     */
-    Stream<Element> stream()
-        {
-        TODO return new SimpleStream(this);
         }
 
     /**

@@ -71,12 +71,6 @@ class EntryKeys<Key, Value>(Map<Key, Value> map)
         }
 
     @Override
-    Stream<Key> stream()
-        {
-        TODO
-        }
-
-    @Override
     EntryKeys clone()
         {
         TODO

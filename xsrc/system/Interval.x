@@ -2,8 +2,6 @@
  * An interval specifies a lower bound and an upper bound.
  */
 const Interval<Element extends Orderable>
-// TODO this should be: Interval<Element extends Orderable+Stringable>
-// and all casts to <Stringable> removed
         incorporates conditional Range<Element extends Sequential>
     {
     construct(Element first, Element last)
@@ -117,15 +115,36 @@ const Interval<Element extends Orderable>
     @Override
     Int estimateStringLength()
         {
-        return lowerBound.as(Stringable).estimateStringLength() +
-               upperBound.as(Stringable).estimateStringLength() + 2;
+        Int estimate = 2;
+        if (Element.is(Type<Stringable>))
+            {
+            estimate += lowerBound.estimateStringLength()
+                      + upperBound.estimateStringLength();
+            }
+        else
+            {
+// TODO GG : COMPILER-56: Could not find a matching method or function "estimateStringLength" for type "Ecstasy:Interval.Element + Ecstasy:Stringable". ("x.estimateStringLength()")
+//            estimate += lowerBound.is(Stringable) ? lowerBound.estimateStringLength() : 4;
+//            estimate += upperBound.is(Stringable) ? upperBound.estimateStringLength() : 4;
+            estimate += 8;
+            }
+        return estimate;
         }
 
     @Override
     void appendTo(Appender<Char> appender)
         {
-        lowerBound.as(Stringable).appendTo(appender);
-        appender.add("..");
-        upperBound.as(Stringable).appendTo(appender);
+        if (Element.is(Type<Stringable>))
+            {
+            lowerBound.appendTo(appender);
+            appender.add("..");
+            upperBound.appendTo(appender);
+            }
+        else
+            {
+            (lowerBound.is(Stringable) ? lowerBound : lowerBound.toString()).appendTo(appender);
+            appender.add("..");
+            (upperBound.is(Stringable) ? upperBound : upperBound.toString()).appendTo(appender);
+            }
         }
     }

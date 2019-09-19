@@ -30,5 +30,5 @@ const Comparator<DataType>
      * @throws UnsupportedOperation if the Comparator does not support comparison of the
      *                              {@code DataType} for the purpose of determining order
      */
-    public/private function Ordered (DataType, DataType) compareForOrder;
+    function Ordered (DataType, DataType) compareForOrder;
     }

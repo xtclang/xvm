@@ -501,12 +501,6 @@ class HashMap<Key, Value>
             }
 
         @Override
-        Stream<Entry> stream()
-            {
-            TODO
-            }
-
-        @Override
         EntrySet clone()
             {
             TODO

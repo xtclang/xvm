@@ -75,12 +75,6 @@ class KeyEntries<Key, Value>(Map<Key, Value> map)
         }
 
     @Override
-    Stream<Map<Key, Value>.Entry> stream()
-        {
-        TODO
-        }
-
-    @Override
     KeyEntries clone()
         {
         TODO
