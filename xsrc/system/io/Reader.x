@@ -94,6 +94,7 @@ interface Reader
      *
      * @return this Reader
      */
+    @Override
     Reader skip(Int count = 1)
         {
         assert:arg count >= 0;

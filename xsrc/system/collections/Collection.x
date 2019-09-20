@@ -45,9 +45,9 @@ interface Collection<Element>
 
     /**
      * Metadata: Is the collection maintained in an order that is a function of the elements in the
-     * collection? And if so, what is the Comparator that represents that ordering?
+     * collection? And if so, what is the Orderer that represents that ordering?
      */
-    conditional Comparator<Element> sortedBy()
+    conditional Orderer sortedBy()
         {
         return False;
         }

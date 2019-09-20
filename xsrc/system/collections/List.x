@@ -5,7 +5,7 @@
  * TODO "class ReverseList(List list)"
  * TODO "class RandomizedList(List list)"
  * TODO functions for different sort implementations; default sort() to pick one based on size etc.
- * TODO use binary search for contains/indexOf if there is a Comparator
+ * TODO use binary search for contains/indexOf if there is a Orderer
  */
 interface List<Element>
         extends Sequence<Element>
@@ -196,14 +196,14 @@ interface List<Element>
         }
 
     /**
-     * Sort the contents of this list in the order specified by the optional Comparator.
+     * Sort the contents of this list in the order specified by the optional Orderer.
      *
-     * @param comparator  the Comparator to use to sort the list; (optional, defaulting to using the
-     *                    "natural" sort order of the Element type)
+     * @param order  the Orderer to use to sort the list; (optional, defaulting to using the
+     *               "natural" sort order of the Element type)
      *
      * @return the resultant list, which is the same as `this` for a mutable list
      */
-    List sort(Comparator<Element>? comparator = null)
+    List sort(Orderer? order = Null)
         {
         if (size <= 1)
             {
@@ -212,12 +212,12 @@ interface List<Element>
 
         // eventual to-do is to should pick a better sort impl based on some heuristics, such as
         // size of list and how many elements are out-of-order
-        function void (List<Element>, Comparator<Element>?) sortimpl = bubbleSort;
+        function void (List<Element>, Orderer?) sortimpl = bubbleSort;
 
         Mutability mutability = this.mutability;
         if (!mutability.persistent)
             {
-            sortimpl(this, comparator);
+            sortimpl(this, order);
             return this;
             }
 
@@ -237,7 +237,7 @@ interface List<Element>
             inPlace = False;
             }
 
-        sortimpl(temp, comparator);
+        sortimpl(temp, order);
 
         if (inPlace)
             {
@@ -255,14 +255,14 @@ interface List<Element>
         }
 
     /**
-     * Bubble-sort the contents of the passed list using an optional Comparator. The loop is
+     * Bubble-sort the contents of the passed list using an optional Orderer. The loop is
      * optimized for an almost-sorted list, with the most-likely-to-be-unsorted items at the end.
      *
-     * @param list        a Mutable or Fixed list
-     * @param comparator  the Comparator to use to sort the list; (optional, defaulting to using the
-     *                    "natural" sort order of the Element type)
+     * @param list   a Mutable or Fixed list
+     * @param order  the Orderer to use to sort the list; (optional, defaulting to using the
+     *               "natural" sort order of the Element type)
      */
-    static <Element> void bubbleSort(List<Element> list, Comparator<Element>? comparator = null)
+    static <Element> void bubbleSort(List<Element> list, Orderer? order = Null)
         {
         assert !list.mutability.persistent;
 
@@ -272,16 +272,12 @@ interface List<Element>
             return;
             }
 
-        function Ordered (Element, Element) compare;
-
-        if (comparator == null)
+        if (order == Null)
             {
             assert Element.is(Type<Orderable>);
-            compare = (v1, v2) -> v1 <=> v2;
-            }
-        else
-            {
-            compare = comparator.compareForOrder;
+            // TODO GG java.lang.NullPointerException at org.xvm.compiler.ast.LambdaExpression.collectParamNamesAndTypes(LambdaExpression.java:661)
+            // order = (Element v1, Element v2) -> v1 <=> v2;
+            order = (v1, v2) -> v1.as(Element) <=> v2.as(Element);
             }
 
         Int first = 0;
@@ -292,7 +288,7 @@ interface List<Element>
             for (Int i = last-1; i >= first; --i)
                 {
                 Element prev = list[i];
-                if (compare(prev, bubble) == Greater)
+                if (order(prev, bubble) == Greater)
                     {
                     list[i  ] = bubble;
                     list[i+1] = prev;

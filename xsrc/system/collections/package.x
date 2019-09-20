@@ -1,6 +1,11 @@
 package collections
     {
     /**
+     * An Orderer is a function that compares two objects for order.
+     */
+    typedef function Ordered (Object, Object) Orderer;
+
+    /**
      * Some data structures are capable of mutating their data in-place, while others (called
      * "persistent" data structures) create a new copy (or representation) of the data structure
      * when a mutating operation is executed. (The use of the term "persistent" in this context is

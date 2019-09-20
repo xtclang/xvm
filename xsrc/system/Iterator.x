@@ -1,17 +1,72 @@
+import collections.Orderer;
+
 /**
  * An iterator over a sequence of elements.
  */
 interface Iterator<Element>
+        extends Closeable
     {
     /**
-     * Get a next element.
+     * Get the next element.
      *
-     * @return a tuple of (true, nextValue) or (false) if no elements are available
+     * It is expected that the Iterator will close itself when it exhausts its supply of elements.
+     *
+     * @return True iff an element is available
+     * @return (conditional) an Element value
      */
     conditional Element next();
 
     /**
+     * Perform the specified action for all remaining elements in the iterator, allowing for
+     * a possibility to stop the iteration at any time.
+     *
+     * @param process  an action to perform on each element; if the action returns False, the
+     *               iterator is considered "short-circuited", the method returns immediately
+     *               and no more elements are iterated over
+     *
+     * @return True iff the iteration completed without short-circuiting; otherwise False if the
+     *         iterator was short-circuited
+     */
+    Boolean whileEach(function Boolean process(Element))
+        {
+        while (Element value := next())
+            {
+            if (!process(value))
+                {
+                return False;
+                }
+            }
+        return True;
+        }
+
+    /**
+     * Perform the specified action for all remaining elements in the iterator, allowing for
+     * a possibility to stop the iteration at any time.
+     *
+     * @param process  an action to perform on each element; if the action returns True, the
+     *                 iterator is considered "short-circuited", the method returns immediately
+     *                 and no more elements are iterated over
+     *
+     * @return True iff the iterator was short-circuited; otherwise False if the iteration
+     *         completed without short-circuiting
+     * @return (conditional) the element that caused the iterator to short-circuit
+     */
+    conditional Element untilAny(function Boolean process(Element))
+        {
+        while (Element value := next())
+            {
+            if (process(value))
+                {
+                return True, value;
+                }
+            }
+        return False;
+        }
+
+    /**
      * Perform the specified action for all remaining elements in the iterator.
+     *
+     * This iterator must not be used after this operation.
      *
      * @param process  an action to perform on each element
      */
@@ -24,48 +79,796 @@ interface Iterator<Element>
         }
 
     /**
-     * Perform the specified action for all remaining elements in the iterator, allowing for
-     * a possibility to stop the iteration at any time.
+     * Determine the minimum value contained in this iterator.
      *
-     * @param process  an action to perform on each element; if the action returns false, the
-     *               iterator is considered "short-circuited", the method returns immediately
-     *               and no more elements are iterated over
+     * This iterator must not be used after this operation.
      *
-     * @return true iff the iteration completed without short-circuiting; otherwise false if the
-     *         iterator was short-circuited
+     * @param order  (optional) the Orderer to use to compare elements of this iterator; if
+     *               none is provided, the Element type must be Orderable
+     *
+     * @return True iff the iterator is not empty and a minimum value was determined
+     * @return (conditional) the minimum element from this iterator
      */
-    Boolean whileEach(function Boolean process(Element))
+    conditional Element min(Orderer? order = Null)
         {
-        while (Element value := next())
+        if (order != Null, Orderer actual := sortedBy(), order == actual)
             {
-            if (!process(value))
-                {
-                return false;
-                }
+            return next();
             }
-        return true;
+
+        if (Element minValue := next())
+            {
+            if (order == Null)
+                {
+                assert Element.is(Type<Orderable>);
+
+                while (Element el := next())
+                    {
+                    if (el < minValue)
+                        {
+                        minValue = el;
+                        }
+                    }
+                }
+            else
+                {
+                while (Element el := next())
+                    {
+                    if (order(el, minValue) == Lesser)
+                        {
+                        minValue = el;
+                        }
+                    }
+                }
+            return True, minValue;
+            }
+        return False;
         }
 
     /**
-     * Perform the specified action for all remaining elements in the iterator, allowing for
-     * a possibility to stop the iteration at any time.
+     * Determine the maximum value contained in this iterator.
      *
-     * @param process  an action to perform on each element; if the action returns true, the
-     *                 iterator is considered "short-circuited", the method returns immediately
-     *                 and no more elements are iterated over
+     * This iterator must not be used after this operation.
      *
-     * @return true iff the iterator was short-circuited; otherwise false if the iteration
-     *         completed without short-circuiting
+     * @param order  (optional) the Orderer to use to compare elements of this iterator; if
+     *               none is provided, the Element type must be Orderable
+     *
+     * @return True iff the iterator is not empty and a minimum value was determined
+     * @return (conditional) the minimum element from this iterator
      */
-    Boolean untilAny(function Boolean process(Element))
+    conditional Element max(Orderer? order = Null)
         {
-        while (Element value := next())
+        if (Element maxValue := next())
             {
-            if (process(value))
+            if (order == Null)
                 {
-                return true;
+                assert Element.is(Type<Orderable>);
+
+                while (Element el := next())
+                    {
+                    if (el > maxValue)
+                        {
+                        maxValue = el;
+                        }
+                    }
+                }
+            else
+                {
+                while (Element el := next())
+                    {
+                    if (order(el, maxValue) == Greater)
+                        {
+                        maxValue = el;
+                        }
+                    }
+                }
+            return True, maxValue;
+            }
+        return False;
+        }
+
+    /**
+     * Returns the range defining the minimum and maximum elements of this iterator.
+     *
+     * This iterator must not be used after this operation.
+     *
+     * @param order  (optional) the Orderer to use to compare elements of this iterator; if
+     *               none is provided, the Element type must be Orderable
+     *
+     * @return True iff the iterator is not empty and the range of values was determined
+     * @return (conditional) the range of elements from this iterator
+     */
+    conditional Interval<Element> range(Orderer? order = Null) // TODO CP **global** swap "range" and "interval" names (!!!)
+        {
+        assert Element.is(Type<Orderable>);
+
+        if (Element minValue := next())
+            {
+            Element maxValue = minValue;
+            if (order == Null)
+                {
+                while (Element el := next())
+                    {
+                    switch (el <=> maxValue)
+                        {
+                        case Lesser:
+                            minValue = el;
+                            break;
+                        case Greater:
+                            maxValue = el;
+                            break;
+                        }
+                    }
+                }
+            else
+                {
+                while (Element el := next())
+                    {
+                    switch (order(el, maxValue))
+                        {
+                        case Lesser:
+                            minValue = el;
+                            break;
+                        case Greater:
+                            maxValue = el;
+                            break;
+                        }
+                    }
+                }
+            return True, minValue..maxValue;
+            }
+        return False;
+        }
+
+    /**
+     * Determine the actual number of elements in this iterator, as if the iterator has to count
+     * them.
+     *
+     * This iterator must not be used after this operation.
+     *
+     * @return the count of elements in this iterator
+     */
+    Int count()
+        {
+        if (knownEmpty())
+            {
+            return 0;
+            }
+
+        if (Int size := knownSize())
+            {
+            return size;
+            }
+
+        Int n = 0;
+        while (Element el := next())
+            {
+            ++n;
+            }
+        return n;
+        }
+
+    /**
+     * Obtain an array that contains all of the elements in this iterator. The contents will be
+     * ordered if the iterator is ordered. There is no guarantee as to whether the returned array is
+     * _mutable_, _fixed-size_, _persistent_, or `const`.
+     *
+     * This iterator must not be used after this operation.
+     *
+     * @return an array containing the elements of this iterator
+     */
+    Element[] toArray()
+        {
+        if (knownEmpty())
+            {
+            return [];
+            }
+
+        Element[] elements;
+        if (Int size := knownSize())
+            {
+            elements = new Array<Element>(size, _ -> {assert Element el := next(); return el;});
+            }
+        else
+            {
+            elements = new Element[];
+            while (Element el := next())
+                {
+                elements += el;
                 }
             }
-        return false;
+
+        return elements;
+        }
+
+
+    // ----- metadata -----------------------------------------------------------------------------
+    /**
+     * Metadata: Are the elements of the iterator known to be distinct?
+     */
+    @RO Boolean distinct.get()
+        {
+        return False;
+        }
+
+    /**
+     * Metadata: Is the iterator in an order that is a function of its elements? And if so, what is
+     * the Orderer that represents that ordering?
+     *
+     * @return True iff the iterator in an order that is a function of its elements
+     * @return (conditional) the Orderer that represents the order
+     */
+    conditional Orderer sortedBy()
+        {
+        return False;
+        }
+
+    /**
+     * Metadata: Is the iterator known to be empty?
+     *
+     * @return True iff the iterator is known to be empty; False if the iterator is not known to be
+     *         empty (which means that it still _could_ be empty)
+     */
+    Boolean knownEmpty()
+        {
+        if (Int size := knownSize())
+            {
+            return size == 0;
+            }
+
+        return False;
+        }
+
+    /**
+     * Metadata: Is the iterator of a known size?
+     *
+     * @return True iff the iterator size is efficiently known
+     * @return (conditional) the number of elements in the iterator
+     */
+    conditional Int knownSize()
+        {
+        return False;
+        }
+
+
+    // ----- intermediate operations ---------------------------------------------------------------
+
+    /**
+     * Concatenate another iterator to this iterator, producing a new iterator.
+     *
+     * This iterator must not be used after this operation.
+     *
+     * @param that  the iterator to concatenate to this iterator
+     *
+     * @return a new iterator representing the concatenation of the two iterators
+     */
+    Iterator concat(Iterator! that)
+        {
+        if (that.knownEmpty())
+            {
+            return this;
+            }
+
+        if (this.knownEmpty())
+            {
+            return that;
+            }
+
+        TODO return new CompoundIterator(this, that);
+        }
+
+    /**
+     * Returns a iterator consisting of the elements of this iterator that match the given predicate.
+     *
+     * This iterator must not be used after this operation.
+     *
+     * @param include  a predicate function to check if an element should be included
+     *
+     * @return a new iterator representing the filtered contents of this iterator
+     */
+    Iterator filter(function Boolean (Element) include)
+        {
+        if (knownEmpty())
+            {
+            return this;
+            }
+
+        TODO return new FilteredIterator<Element>(this, include);
+        }
+
+    /**
+     * Returns a iterator consisting of the results of applying the given function to the elements of
+     * this iterator.
+     *
+     * This iterator must not be used after this operation.
+     *
+     * @param <Result>  the element type of the new iterator
+     *
+     * @param apply  a function to apply to each element of this iterator
+     *
+     * @return a new iterator representing the results of applying the specified function to each
+     *         element in this iterator
+     */
+    <Result> Iterator<Result> map(function Result (Element) apply)
+        {
+        TODO return new MappedIterator<Result, Element>(this, apply);
+        }
+
+    /**
+     * Returns a iterator consisting of the the concatenation of all of the streams resulting from
+     * applying the provided mapping function to each element of this iterator.
+     *
+     * This iterator must not be used after this operation.
+     *
+     * @param <Result>  the element type of the new iterator
+     * @param flatten   a function to apply to each element, resulting in a `Iterator<Result>`
+     *
+     * @return a new iterator representing the concatenated results of applying the specified function
+     *         to each element in this iterator
+     */
+    <Result> Iterator<Result> flatMap(function Iterator!<Result> (Element) flatten)
+        {
+        TODO return new FlatMappedIterator<Result, Element>(this, flatten);
+        }
+
+    /**
+     * Returns a iterator representing the _distinct_ elements of this iterator.
+     *
+     * This iterator must not be used after this operation.
+     *
+     * @return a new iterator representing only the distinct set of elements from this iterator
+     */
+    Iterator dedup()
+        {
+        if (knownEmpty() || distinct)
+            {
+            return this;
+            }
+
+        TODO return new DistinctIterator<Result, Element>(this, flatten);
+        }
+
+    /**
+     * Returns a iterator representing the same elements of this iterator, but in a sorted order.
+     *
+     * This iterator must not be used after this operation.
+     *
+     * @param order  the `Orderer` to use to sort the iterator's elements, or Null
+     *               (the default) to indicate the natural sort order
+     *
+     * @return a new iterator representing the same elements from this iterator in a sorted order
+     */
+    Iterator sort(Orderer? order = Null)
+        {
+        assert order != Null || Element.is(Type<Orderable>);
+
+        if (knownEmpty())
+            {
+            return this;
+            }
+
+        TODO return new SortedIterator<Element>(this, order);
+        }
+
+    /**
+     * Returns a iterator representing the same elements of this iterator, but in reverse order.
+     *
+     * **Warning:** This is likely to be an expensive operation.
+     *
+     * This iterator must not be used after this operation.
+     *
+     * @return a new iterator representing the same elements from this iterator, but in reverse order
+     */
+    Iterator reverse()
+        {
+        if (knownEmpty())
+            {
+            return this;
+            }
+
+        TODO return new ReversedIterator<Element>(this);
+        }
+
+    /**
+     * Returns a iterator representing the same elements as exist in this iterator, but additionally
+     * performing the provided action on each element of the resulting iterator as elements are
+     * consumed from it. This capability is considered particularly useful for debugging purposes.
+     *
+     * This iterator must not be used after this operation.
+     *
+     * @param accept  a function to perform on the elements as they are consumed from the resulting
+     *                iterator
+     *
+     * @return a new iterator with the specified functionality attached to it
+     */
+    Iterator peek(function void accept(Element))
+        {
+        if (knownEmpty())
+            {
+            return this;
+            }
+
+        return new iterators.PeekingIterator<Element>(this, accept);
+        }
+
+    /**
+     * Returns a iterator representing only the remaining elements of this iterator after discarding
+     * the first `count` elements of this iterator. If the iterator does not have enough elements
+     * to skip the requested number of elements, then it simply skips as many as it holds, resulting
+     * in an exhausted iterator.
+     *
+     * This iterator must not be used after this operation.
+     *
+     * @param count  the number of leading elements to skip in this iterator
+     *
+     * @return a new iterator that does not include the first `count` elements of this iterator
+     */
+    Iterator skip(Int count)
+        {
+        assert:bounds count >= 0;
+
+        if (count == 0 || knownEmpty())
+            {
+            return this;
+            }
+
+        if (Int size := knownSize(), size <= count)
+            {
+            return new iterators.ExhaustedIterator();
+            }
+
+        for (Int i = 0; i < count && next(); ++i)
+            {
+            }
+
+        return this;
+        }
+
+    /**
+     * Returns a iterator representing only the first `count` elements of this iterator.
+     *
+     * This iterator must not be used after this operation.
+     *
+     * @param count  the number of elements the resulting iterator should be limited to
+     *
+     * @return a new iterator that only includes up to the first `count` elements of this iterator
+     */
+    Iterator limit(Int count)
+        {
+        assert:bounds count >= 0;
+
+        if (knownEmpty())
+            {
+            return this;
+            }
+
+        if (count == 0)
+            {
+            return new iterators.ExhaustedIterator();
+            }
+
+        if (Int size := knownSize(), size <= count)
+            {
+            return this;
+            }
+
+        TODO return new LimitedIterator<Element>(this, count);
+        }
+
+    /**
+     * Returns a iterator representing only the specified range of elements of this iterator. If the
+     * range extends beyond the scope of this iterator, then the missing elements are silently
+     * omitted from the resulting iterator.
+     *
+     * This iterator must not be used after this operation.
+     *
+     * @param count  the number of leading elements to skip in this iterator
+     *
+     * @return a new iterator that does not include the first `count` elements of this iterator
+     */
+    Iterator extract(Range<Int> range)
+        {
+        if (knownEmpty())
+            {
+            return this;
+            }
+
+        if (Int size := knownSize(), size < range.lowerBound)
+            {
+            return new iterators.ExhaustedIterator();
+            }
+
+        if (range.reversed)
+            {
+            return reverse().extract(range.reverse());
+            }
+
+        return range.lowerBound == 0
+                ? limit(range.upperBound)
+                : skip(range.lowerBound).limit(range.size);
+        }
+
+    /**
+     * Returns two independent copies of this iterator.
+     *
+     * **Warning:** This is likely to be an expensive operation.
+     *
+     * This iterator must not be used after this operation.
+     *
+     * @return a first clone of this iterator
+     * @return a second clone of this iterator
+     */
+    (Iterator, Iterator) duplicate()
+        {
+        if (knownEmpty())
+            {
+            return this, this;
+            }
+
+        Element[] snapshot = toArray();
+        return snapshot.iterator(), snapshot.iterator();
+        }
+
+
+    // ----- advanced terminal operations ----------------------------------------------------------
+
+    /**
+     * Performs a reduction on the elements of this iterator, using the provided identity value and an
+     * associative accumulation function, and returns the reduced value.
+     *
+     * The `identity` value must be an identity for the accumulator function. This means that
+     * for all `el`, `accumulate(identity, el)` is equal to `el`.
+     *
+     * For example, to sum a iterator of Int values:
+     *
+     *   Iterator<Int> ints = ...
+     *   Int sum = ints.reduce(0, (n1, n2) -> n1 + n2);
+     *
+     * This is a terminal operation.
+     *
+     * @param identity    the identity value for the accumulating function
+     * @param accumulate  an associative, non-interfering, stateless function for
+     *                    combining two values
+     * @return the result of the reduction
+     */
+    Element reduce(Element identity, function Element accumulate(Element, Element))
+        {
+        Element result = identity;
+        while (Element element := next())
+            {
+            result = accumulate(result, element);
+            }
+        return result;
+        }
+
+    /**
+     * Performs a reduction on the elements of this iterator, using an associative accumulation
+     * function, and returns a conditional reduced value, if any.
+     *
+     * For example, to concatenate a iterator of String values:
+     *
+     *   Iterator<String> strings = ...
+     *   String concat = strings.reduce((s1, s2) -> s1 + s2);
+     *
+     * This is a terminal operation.
+     *
+     * @param accumulate  an associative function for combining two values
+     *
+     * @return a conditional result of the reduction
+     */
+    conditional Element reduce(function Element accumulate(Element, Element))
+        {
+        if (Element result := next())
+            {
+            while (Element element := next())
+                {
+                result = accumulate(result, element);
+                }
+            return True, result;
+            }
+        else
+            {
+            return False;
+            }
+        }
+
+//    typedef function Cumulative () Initializer;
+//    typedef function Boolean (Cumulative, Element) Accumulator;
+//    typedef function Cumulative (Cumulative, Cumulative) Combiner;
+//    typedef function Result (Cumulative) Finisher;
+//
+//    <Partial, Result> conditional Result aggregate(
+//            function Partial(Element)          initial,
+//            function conditional Partial(Partial, Element) accumulate,
+//            function Partial(Partial, Partial) combine,
+//            function Result(Partial))          finish;
+//        {
+//        if (Element first := next())
+//            {
+//            Partial partial = initial(first);
+//            while (Element cur := next(), partial := accumulate(partial, cur))
+//                {
+//                }
+//            return True, finish(partial);
+//            }
+//
+//        return False;
+//        }
+//
+//    <Key> Map<Key, Result> groupBy(function Key(Element) discriminator, )
+//        {
+//        Map map = new HashMap<Key, Result>();
+//
+//        }
+//    // ----- Accumulator interface -----------------------------------------------------------------
+//
+//    static interface Aggregator<Element, Result, Partial>
+//        {
+//        conditional Aggregator<Element, Partial, Partial> split()
+//            {
+//            return False;
+//            }
+//
+//        void process(Element element);
+//
+//        void merge(Partial... parts)
+//            {
+//            TODO
+//            }
+//
+//        Result finish();
+//        }
+//
+//    /**
+//     * An Accumulator represents independent stages of incremental accumulation of a result.
+//     */
+//    static interface Accumulator<Element, Cumulative, Result>
+//        {
+//        typedef function Cumulative () Initializer;
+//        typedef function Boolean (Cumulative, Element) Accumulator;
+//        typedef function Cumulative (Cumulative, Cumulative) Combiner;
+//        typedef function Result (Cumulative) Finisher;
+//
+//        /**
+//         * A function which provides an initial intermediate result.
+//         */
+//        @RO Initializer initial;
+//
+//        /**
+//         * A function accumulates a value into an intermediate result.
+//         */
+//        @RO Accumulator accumulate;
+//
+//        /**
+//         * A function which combines two intermediate results into a combined intermediate result.
+//         */
+//        @RO Combiner combine;
+//
+//        /**
+//         * A function which transforms an intermediate result to a final result.
+//         */
+//        @RO Finisher finish;
+//
+//        /**
+//         * Create a Accumulator from a Initializer function, an Accumulator function, and a Combiner
+//         * function; use an identity function as the Finisher function. This method is only
+//         * appropriate for cases in which the Cumulative type is the same as the Result type.
+//         *
+//         * @param initial     the initializer function for the new collector
+//         * @param accumulate  the accumulator function for the new collector
+//         * @param combine     the combiner function for the new collector
+//         *
+//         * @return a new `Accumulator` described by the given `supply`,
+//         *         `accumulate`, and `combine` functions assuming that
+//         *         the Result is the same as the Cumulative
+//         */
+//        static <Element, Cumulative>
+//            Accumulator<Element, Cumulative, Cumulative> of(
+//                function Cumulative ()                       initial,    // Initializer
+//                function Boolean (Cumulative, Element)       accumulate, // Accumulator
+//                function Cumulative (Cumulative, Cumulative) combine)    // Combiner
+//            {
+//            return of(supply, accumulate, combine, result -> result);
+//            }
+//
+//        /**
+//         * Create a Accumulator from a Initializer function, an Accumulator function, a Combiner
+//         * function, and a Finisher function.
+//         *
+//         * @param supply      the supplier function for the new collector
+//         * @param accumulate  the accumulator function for the new collector
+//         * @param combine     the combiner function for the new collector
+//         * @param finish      the finisher function for the new collector
+//         *
+//         * @return a new `Accumulator` described by the given `supply`,
+//         *         `accumulate`, `combine` and `finish` functions
+//         */
+//        static <Element, Cumulative, Result>
+//            Accumulator<Element, Cumulative, Result> of(
+//                function Cumulative ()                       supply,
+//                function Boolean (Cumulative, Element)       accumulate,
+//                function Cumulative (Cumulative, Cumulative) combine,
+//                function Result (Cumulative)                 finish)
+//            {
+//            const SimpleAccumulator<EType, AType, RType>
+//                    (
+//                    function AType ()               supply,
+//                    function Boolean (AType, EType) accumulate,
+//                    function AType (AType, AType)   combine,
+//                    function RType (AType)          finish
+//                    )
+//                implements Accumulator<EType, AType, RType>;
+//
+//            return new SimpleAccumulator(supply, accumulate, combine, finish);
+//            }
+//        }
+//
+//
+//    // ----- Accumulator interface -------------------------------------------------------------------
+//
+//     /**
+//     * Performs a mutable reduction operation on the elements of this iterator. A mutable reduction
+//     * is one in which the reduced value is a mutable result container, such as a List, and elements
+//     * are incorporated by updating the state of the result rather than by replacing the result.
+//     *f
+//     * This method produces a result equivalent to:
+//     *
+//     *   Result result = supply();
+//     *   while (Element element := next())
+//     *       {
+//     *       if (!accumulate(result, element))
+//     *           {
+//     *           break;
+//     *           }
+//     *       }
+//     *   return result;
+//     *
+//     * This is a terminal operation.
+//     *
+//     * @param supply      a function that creates a new result container; if called more than once,
+//     *                    this function must return a fresh value each time
+//     * @param accumulate  an associative, non-interfering, stateless function for incorporating an
+//     *                    additional element into a result
+//     * @param combine     when the collection process is performed in two or more units, such as
+//     *                    when performed concurrently, this function merges any two results into
+//     *                    one result; it may be called more than once such that each of the partial
+//     *                    results will ultimately be combined into a single result
+//     *
+//     * @return the result of the reduction
+//     */
+//    <Result> Result collect(
+//                    function Result supply(),
+//                    function Boolean accumulate(Result, Element),
+//                    function Result combine(Result, Result))
+//        {
+//        return collect(Accumulator.of(supply, accumulate, combine));
+//        }
+//
+//    /**
+//     * Performs a mutable reduction operation on the elements of this iterator using a
+//     * `Accumulator`. The Accumulator encapsulates the functionality of all of the various stages
+//     * of reduction.
+//     *
+//     * This is a terminal operation.
+//     *
+//     * @param collector the `Accumulator` that defines the functions to utilize for the various
+//     *        stages of the reduction
+//     *
+//     * @return the result of the reduction
+//     */
+//    <Result, Cumulative>
+//    Result collect(Accumulator<Element, Cumulative, Result> collector)
+//        {
+//        Cumulative container = collector.supply();
+//        whileEach(element -> collector.accumulate(container, element));
+//        return collector.finish(container);
+//        }
+
+
+    // ----- Closeable interface -------------------------------------------------------------------
+
+    @Override
+    void close()
+        {
         }
     }

@@ -19,6 +19,8 @@ module TestArray.xqiz.it
         testBits();
 
         testComparable();
+
+        testIterators();
         }
 
     void testSimple()
@@ -196,5 +198,48 @@ module TestArray.xqiz.it
 
         Bit[] bits = [0, 1, 1, 0];
         console.println($"Array<Bit>.hashCode(bits)={Array<Bit>.hashCode(bits)}");
+        }
+
+    void testIterators()
+        {
+        console.println("\n** testIterators()");
+
+        String[]         strs = ["goodbye", "cruel", "world"];
+
+        for (Int i : 1..2)
+            {
+            Iterator<String> iter = strs.iterator();
+            switch(i)
+                {
+                case 1:
+                    console.println("\n   --> peeking test");
+                    // TODO GG #1 iter = iter.peek(s -> console.println($"peeking at {s}"));
+                    // TODO GG #2 - throws
+                    // private static void foo(String s)
+                    //     {
+                    //     @Inject Ecstasy.io.Console console;
+                    //     console.println($"peeking at {s}");
+                    //     }
+                    iter = iter.peek(foo);
+                    break;
+
+                case 2:
+                    console.println("\n   --> skipping test");
+                    iter = iter.skip(2);
+                    break;
+                }
+
+            while (String s := iter.next())
+                {
+                console.println($"s={s}");
+                }
+            }
+        }
+
+    // TODO GG get rid of this after fixing above problem
+    private static void foo(String s)
+        {
+        @Inject Ecstasy.io.Console console;
+        console.println($"peeking at {s}");
         }
     }

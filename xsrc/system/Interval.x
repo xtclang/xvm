@@ -52,6 +52,14 @@ const Interval<Element extends Orderable>
     Boolean reversed;
 
     /**
+     * Create a new interval in the reverse order of this interval.
+     */
+    Interval! reverse()
+        {
+        return reversed ? lowerBound..upperBound : upperBound..lowerBound;
+        }
+
+    /**
      * Determine if the specified value exists within this interval.
      */
     Boolean contains(Element value)

@@ -24,14 +24,14 @@ class KeyValues<Key, Value>(Map<Key, Value> map)
         {
         return new Iterator()
             {
-            Iterator<Key> keyIterator = map.keys.iterator();
+            Iterator<Key> keyIterator = this.KeyValues.map.keys.iterator();
 
             @Override
             conditional Value next()
                 {
                 if (Key key := keyIterator.next())
                     {
-                    return map.get(key);
+                    return this.KeyValues.map.get(key);
                     }
 
                 return False;

@@ -30,14 +30,14 @@ class KeyEntries<Key, Value>(Map<Key, Value> map)
         {
         return new Iterator()
             {
-            Iterator<Key> keyIterator = map.keys.iterator();
+            Iterator<Key> keyIterator = this.KeyEntries.map.keys.iterator();
 
             @Override
             conditional Map<Key, Value>.Entry next()
                 {
                 if (Key key := keyIterator.next())
                     {
-                    private CursorEntry<Key, Value> entry = new CursorEntry(map);
+                    private CursorEntry<Key, Value> entry = new CursorEntry(this.KeyEntries.map);
                     return true, entry.advance(key);
                     }
 
