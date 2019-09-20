@@ -206,7 +206,7 @@ module TestArray.xqiz.it
 
         String[]         strs = ["goodbye", "cruel", "world"];
 
-        for (Int i : 1..2)
+        for (Int i : 1..4)
             {
             Iterator<String> iter = strs.iterator();
             switch(i)
@@ -226,6 +226,17 @@ module TestArray.xqiz.it
                 case 2:
                     console.println("\n   --> skipping test");
                     iter = iter.skip(2);
+                    break;
+
+                case 3:
+                    console.println("\n   --> compound test");
+                    iter = iter.concat(strs.iterator());
+                    break;
+
+                case 4:
+                    console.println("\n   --> duplicate test");
+                    (Iterator<String> iter1, Iterator<String> iter2) = iter.duplicate();
+                    iter = iter1.concat(iter2);
                     break;
                 }
 

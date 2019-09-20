@@ -354,7 +354,7 @@ interface Iterator<Element>
             return that;
             }
 
-        TODO return new CompoundIterator(this, that);
+        return new iterators.CompoundIterator(this, that);
         }
 
     /**
