@@ -149,14 +149,18 @@ public class ImportStatement
         {
         setStage(Stage.Resolving);
 
-        // as global visibility is resolved, each import statement registers itself so that anything
-        // following it can see the import, but anything preceding it does not
-        AstNode parent = getParent();
-        while (!(parent instanceof StatementBlock))
+        if (!m_fImportRegistered)
             {
-            parent = parent.getParent();
+            // as global visibility is resolved, each import statement registers itself so that anything
+            // following it can see the import, but anything preceding it does not
+            AstNode parent = getParent();
+            while (!(parent instanceof StatementBlock))
+                {
+                parent = parent.getParent();
+                }
+            ((StatementBlock) parent).registerImport(this, errs);
+            m_fImportRegistered = true;
             }
-        ((StatementBlock) parent).registerImport(this, errs);
 
         NameResolver resolver = getNameResolver();
         switch (resolver.resolve(errs))
@@ -265,6 +269,8 @@ public class ImportStatement
     protected List<Token> qualifiedName;
 
     private NameResolver  resolver;
+
+    private transient boolean m_fImportRegistered;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ImportStatement.class, "cond");
     }

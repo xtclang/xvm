@@ -519,7 +519,6 @@ public class Compiler
         public boolean isAtLeast(Stage that)
             {
             ensureValid();
-            assert that.isTargetable();
             return this.compareTo(that) >= 0;
             }
 
