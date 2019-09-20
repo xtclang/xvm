@@ -35,13 +35,13 @@
  * * The {@link assigned} property on a FutureVar indicates whether the future has completed, either
  *   successfully or exceptionally.
  * * The {@link peek} method performs a non-blocking examination of the future:
- * * * {@code peek} returns negatively iff the future has not completed.
- * * * {@code peek} throws an exception iff the future completed exceptionally.
- * * * {@code peek} returns positively with the result iff the future has completed successfully.
+ * * * `peek` returns negatively iff the future has not completed.
+ * * * `peek` throws an exception iff the future completed exceptionally.
+ * * * `peek` returns positively with the result iff the future has completed successfully.
  * * The {@link get} method performs a blocking examination of the future:
- * * * {@code get} blocks until the future completes.
- * * * {@code get} throws an exception iff the future completed exceptionally.
- * * * {@code get} returns the result iff the future has completed successfully.
+ * * * `get` blocks until the future completes.
+ * * * `get` throws an exception iff the future completed exceptionally.
+ * * * `get` returns the result iff the future has completed successfully.
  * * The {@link set} method can only be invoked by completing the future; the future's value cannot
  *   be modified once it is set.
  */
@@ -402,7 +402,7 @@ mixin FutureVar<RefType>
      *
      * An exceptional completion causes both the {@link peek} and {@link get} methods to re-throw
      * the exception that the future completed with. This method provides a means to obtain that
-     * exception without having to {@code catch} it.
+     * exception without having to `catch` it.
      *
      * In much the same way that {@link peek} corresponds to {@link complete}, this {@code
      * peekException} method corresponds to {@link completeExceptionally}.

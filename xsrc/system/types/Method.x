@@ -31,7 +31,7 @@ const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
     // -----
 
     /**
-     * If this method represents a property, return that information, otherwise {@code null}.
+     * If this method represents a property, return that information, otherwise `Null`.
      *
      * TODO note about compile time types
      */
@@ -66,10 +66,10 @@ const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
      * 3. _m_ has a return type that _"consumes T"_;
      *
      * There is a notable exception to the above rule #3 for a method on a type corresponding to a
-     * property, which returns a {@code Ref}) to represent the property type, and thus (due to the
-     * the methods on {@code Ref<T>}) appears to _"consume T"_; however, if the type containing
-     * the property is explicitly immutable, or the method returning the {@code Ref<T>}) is
-     * annotated with {@code @RO}, then _m_ is assumed to not _"consume T"_.
+     * property, which returns a `Ref`) to represent the property type, and thus (due to the
+     * the methods on `Ref<T>`}) appears to _"consume T"_; however, if the type containing
+     * the property is explicitly immutable, or the method returning the `Ref<T>`}) is
+     * annotated with `@RO`, then _m_ is assumed to not _"consume T"_.
      */
     Boolean consumesFormalType(String typeName, Boolean ignoreImmediateProduction = false)
         {

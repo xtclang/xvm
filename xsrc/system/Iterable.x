@@ -54,7 +54,7 @@ interface Iterable<Element>
      *
      * @param value  the value to search for in this iterable source
      *
-     * @return {@code True} iff the specified value exists in this iterable source
+     * @return `True` iff the specified value exists in this iterable source
      */
     Boolean contains(Element value)
         {

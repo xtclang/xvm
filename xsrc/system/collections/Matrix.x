@@ -65,10 +65,10 @@ interface Matrix<Element>
      * value returned from this method.
      *
      * @param colRange  the range of columns of this Matrix to obtain a slice for; note that the top
-     *                  end of the range is _inclusive_, such that the range {@code 0..cols-1}
+     *                  end of the range is _inclusive_, such that the range `0..cols-1`
      *                  represents the entirety of the Matrix
      * @param rowRange  the range of rows of this Matrix to obtain a slice for; note that the top
-     *                  end of the range is _inclusive_, such that the range {@code 0..rows-1}
+     *                  end of the range is _inclusive_, such that the range `0..rows-1`
      *                  represents the entirety of the Matrix
      *
      * @return a slice of this Matrix corresponding to the specified ranges of columns and rows

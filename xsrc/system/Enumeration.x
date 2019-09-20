@@ -28,12 +28,12 @@ import collections.ListMap;
  *   // "Ordered" is referring to the class, while "Lesser" is referring to a singleton value
  *   Ordered value = Lesser;
  *
- * The syntax for declaring an Enumeration uses the {@code enum} keyword:
+ * The syntax for declaring an Enumeration uses the `enum` keyword:
  *
  *   enum RGB {Red, Green, Blue}
  *
  * There are a number of rules and constraints related to Enumerations:
- * * Each Enum value is a singleton and a {@code const}, with an implicitly defined name and ordinal
+ * * Each Enum value is a singleton and a `const`, with an implicitly defined name and ordinal
  *   value. The name comes from the declaration of the Enum value, and the zero-based ordinal comes
  *   from its location in the list of declared Enum values for the Enumeration.
  * * The Enum values (and their classes, if they override the base Enumeration class) are contained
@@ -42,7 +42,7 @@ import collections.ListMap;
  *   from {@link Object}.
  * * The Enum values do _not_ implement (are not instances of, nor castable to) Enumeration; the
  *   Enum values do implement the {@link Enum} interface.
- * * The class of Enumeration values (such as {@code Ordered} in the examples above) is not
+ * * The class of Enumeration values (such as `Ordered` in the examples above) is not
  *   instantiable (as if it were an abstract class), nor can any class explicitly extend it. Each of
  *   its Enum values are instances of the class of Enumeration values (or a subclass thereof), and
  *   no class can extend the class of any Enum.

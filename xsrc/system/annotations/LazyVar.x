@@ -1,7 +1,7 @@
 /**
  * The LazyVar mixin allows a reference (such as a property) to be lazily populated with a value on
  * demand. Specifically, the first time that an attempt is made to de-reference the reference by
- * invoking {@code get()}, the LazyVar will invoke the deferred calculation of the value and store
+ * invoking `get()`, the LazyVar will invoke the deferred calculation of the value and store
  * that value in the reference for subsequent use, before returning that same value.
  *
  * A LazyVar cannot be set, except by its own lazy calculation. A LazyVar is immutable for all
@@ -15,7 +15,7 @@
  *       @Lazy(() -> x ^ y) Int hash;
  *       }
  *
- * Alternatively, the {@code calc()} method can be overridden:
+ * Alternatively, the `calc()` method can be overridden:
  *
  *   const Point(Int x, Int y)
  *       {
@@ -26,7 +26,7 @@
  *       }
  *
  * (Note that the above examples are for illustrative purposes only; it is not necessary to
- * implement the hash code calculation for a {@code const} class, as a default implementation is
+ * implement the hash code calculation for a `const` class, as a default implementation is
  * provided.)
  */
 mixin LazyVar<RefType>(function RefType ()? calculate = null)

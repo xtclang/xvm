@@ -19,7 +19,7 @@ const ContextToken<TokenType extends immutable Object>
         }
 
     /**
-     * The {@code ContextToken} that this contextToken replaced, if any.
+     * The `ContextToken` that this contextToken replaced, if any.
      */
     ContextToken!<>? previousContextToken;
 
@@ -71,8 +71,8 @@ const ContextToken<TokenType extends immutable Object>
         }
 
     /**
-     * Close the contextToken. This method is invoked automatically by the {@code using} or
-     * {@code try} with-resources keywords.
+     * Close the contextToken. This method is invoked automatically by the `using` or
+     * `try` with-resources keywords.
      */
     @Override
     void close()

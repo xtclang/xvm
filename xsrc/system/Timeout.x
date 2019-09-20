@@ -14,7 +14,7 @@
  *
  * The timeout is stored on the current service and exposed as {@link Service.timeout}. When a new
  * timeout is created, it automatically registers itself with the current service using the {@link
- * Service.registerTimeout} method. Employing either a {@code using} or {@code try}-with-resources
+ * Service.registerTimeout} method. Employing either a `using` or `try`-with-resources
  * block will automatically unregister the timeout at the conclusion of the block, causing all
  * of the potentially-asynchronous service invocations that occurred within the block to be infected
  * by the timeout. When the timeout unregisters itself, it re-registers whatever previous timeout it
@@ -97,7 +97,7 @@ const Timeout
     @Inject Timer timer;
 
     /**
-     * The {@code Timeout} that this timeout replaced, if any.
+     * The `Timeout` that this timeout replaced, if any.
      */
     Timeout? previousTimeout;
 
@@ -184,7 +184,7 @@ const Timeout
         }
 
     /**
-     * Close the timeout. This method is invoked automatically by the {@code using} or {@code try}
+     * Close the timeout. This method is invoked automatically by the `using` or `try`
      * with-resources keywords.
      */
     @Override

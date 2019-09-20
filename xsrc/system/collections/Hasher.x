@@ -6,7 +6,7 @@
  *
  * A broad range of Ecstasy types provide their own built-in hashing and equality implementations,
  * and most of the time that is the implementation that a developer will want to use. For example,
- * all {@code const} types automatically provide both a {@code hash} property and an {@code equals}
+ * all `const` types automatically provide both a `hash` property and an `equals`
  * implementation. Given that many types are already hashable and comparable, the purpose a Hasher
  * is two-fold:
  * * A Hasher allows a developer to override the hashing calculation and the equality operator for
@@ -19,8 +19,7 @@
  * The expected implementation pattern with Hasher is that a hashed data structure will accept a
  * Hasher that supports the type of the hashed value that the data structure is managing, and that
  * a sub-class of the data structure will narrow the supported type of value to an
- * {@code immutable Hashable} or {@code const} type, simply by internally utilizing a {@link
- * NaturalHasher}.
+ * `immutable Hashable` or `const` type, simply by internally utilizing a {@link NaturalHasher}.
  *
  * @see NaturalHasher
  */
@@ -30,20 +29,20 @@ interface Hasher<Value>
      * Calculate the hash value for the specified value.
      *
      * The general contract is that this method is idempotent and stable, always providing the same
-     * hash value for the same specified value. Further, if two objects {@code areEqual} by the
-     * determination of this Hasher, then both object *must* have the same {@code hashOf} value.
-     * (The opposite is not true: Two objects that have the same {@code hashOf} value are not
-     * required to evaluate as {@code areEqual} of {@code true}.)
+     * hash value for the same specified value. Further, if two objects `areEqual` by the
+     * determination of this Hasher, then both object **must** have the same `hashOf` value.
+     * (The opposite is not true: Two objects that have the same `hashOf` value are not
+     * required to evaluate as `areEqual` of `True`.
      */
     Int hashOf(Value value);
 
     /**
      * Determine the equality (the sameness) of two specified values.
      *
-     * The general contract is that this method determines the equality of {@code value1} and
-     * {@code value2} in a reflexive, commutative, and transitive manner. Further, if two objects
-     * {@code areEqual} by the determination of this Hasher, then both object *must* have the same
-     * {@code hashOf} value.
+     * The general contract is that this method determines the equality of `value1` and
+     * `value2` in a reflexive, commutative, and transitive manner. Further, if two objects
+     * `areEqual` by the determination of this Hasher, then both object **must** have the same
+     * `hashOf` value.
      */
     Boolean areEqual(Value value1, Value value2);
     }

@@ -20,7 +20,7 @@ module Ecstasy.xtclang.org
     /**
      * The Nullable type is the only type that can contain the value Null.
      *
-     * Nullable is an Enumeration whose only value is the singleton enum value {@code Null}.
+     * Nullable is an Enumeration whose only value is the singleton enum value `Null`.
      */
     enum Nullable { Null }
 
@@ -107,8 +107,8 @@ module Ecstasy.xtclang.org
             extends IllegalState(text, cause);
 
     /**
-     * The interface associated with objects that are automatically closed by the {@code using} and
-     * {@code try}-with-resources blocks.
+     * The interface associated with objects that are automatically closed by the `using` and
+     * `try`-with-resources blocks.
      */
     interface Closeable
         {

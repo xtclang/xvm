@@ -1,6 +1,6 @@
 /**
  * A Property represents a property of a particular class or type. A property has a type, a name,
- * and a value. At runtime, a property is itself of type {@code Ref}.
+ * and a value. At runtime, a property is itself of type `Ref`.
  */
 const Property<TargetType, PropertyType>(Method<TargetType, Tuple<>, Tuple<Ref<PropertyType>>> method)
     {

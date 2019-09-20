@@ -8,7 +8,7 @@
  *
  * In order to avoid the possibility of an unassigned reference becoming visible, the SoftVar must
  * be of a {@link RefType} that has a default value (such as {@link Nullable}, with its default
- * value of {@code null}), or it must be combined with {@link LazyVar} so that the value is
+ * value of `Null`), or it must be combined with {@link LazyVar} so that the value is
  * calculable on-demand.
  *
  * A SoftVar can have a {@link notify} notification function provided in its construction that is

@@ -12,7 +12,7 @@ import types.TypeParameter;
  *   within the module hierarchical structure, and provides the class with a name that is unique
  *   within its localized namespace in that hierarchy.
  * * A class can be a _parameterized type_.
- * * If the class is a {@code mixin}, a class is defined to which the {@code mixin} can apply.
+ * * If the class is a `mixin`, a class is defined to which the `mixin` can apply.
  * * A class is composed through a series of steps, each of which identifies another class that is
  *   _extended by_, _implemented by_, or _mixed into_ this class.
  * * A class is further defined by the inclusion of child classes, properties, methods, functions,
@@ -22,16 +22,16 @@ import types.TypeParameter;
  *
  * A number of operations can be used to obtain a new class from an existing class:
  * * A class with type parameters can _narrow_ those type parameters to form a new class.
- * * A class can incorporate an applicable {@code mixin} to form a new class.
+ * * A class can incorporate an applicable `mixin` to form a new class.
  *
  * The class is also the source of instances (objects) of the class:
  * * A class can be used to create a new instance (an object) of a non-singleton class.
  * * A class can be used to obtain the one instance (an object) of a singleton class.
  *
- * Unfortunately, Class cannot be declared as a {@code const} because of the potential for circular
- * references. (The property values of a {@code const} are fully known and immutable before the
- * {@code const} object even has a "`this`"; as a result, it is impossible to create circular
- * references using {@code const} classes.)
+ * Unfortunately, Class cannot be declared as a `const` because of the potential for circular
+ * references. (The property values of a `const` are fully known and immutable before the
+ * `const` object even has a "`this`"; as a result, it is impossible to create circular
+ * references using `const` classes.)
  */
 const Class<PublicType, ProtectedType extends PublicType, PrivateType extends ProtectedType, StructType extends Struct>
         incorporates conditional Enumeration<PublicType extends Enum>
@@ -224,11 +224,11 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     /**
      * Determine the super-class of this class, if any.
      *
-     * * Other than the Class for {@code Object}, a Class whose category is Class will *always* have
+     * * Other than the Class for `Object`, a Class whose category is Class will **always** have
      *   a super-class.
-     * * A Class whose category is Module, Package, Const, Enum, or Service will *always* have a
+     * * A Class whose category is Module, Package, Const, Enum, or Service will **always** have a
      *   super-class.
-     * * A Mixin _may_ have a super-class, which must be a {@code mixin}.
+     * * A Mixin _may_ have a super-class, which must be a `mixin`.
      * * An Interface will *never* have a super-class.
      */
     @Lazy Class!<>? superClass.calc()

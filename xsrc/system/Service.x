@@ -61,7 +61,7 @@
  *   {@link Reentrancy.Forbidden}. Runtime events include only:
  * * * Timeout notification for the currently executing service invocation, although the runtime
  *     may temporarily suppress these notifications within a {@link CriticalSection}.
- * * * {@code @Soft} and {@code @Weak} reference-cleared notifications.
+ * * * `@Soft` and `@Weak` reference-cleared notifications.
  */
 interface Service()
     {
@@ -205,8 +205,8 @@ interface Service()
      * continuation at some specified later time.
      *
      * Limitations:
-     * * {@code yield} has no effect on the backlog if reentrancy is set to Forbidden;
-     * * {@code yield} has no effect if it is invoked from outside of the service.
+     * * `yield` has no effect on the backlog if reentrancy is set to Forbidden;
+     * * `yield` has no effect if it is invoked from outside of the service.
      */
     void yield();
 
@@ -218,10 +218,10 @@ interface Service()
      * respect to calls from outside of the service, all such calls are treated similarly _as if_
      * they were queued in the backlog via this method.
      *
-     * Note, that the {@code doLater} function has access to the service instance via
-     * (@code this:service} reserved variable.
+     * Note, that the `doLater` function has access to the service instance via the `this:service`
+     * reserved variable.
      *
-     * Exceptions raised by the {@code doLater} function are ignored and lost by the runtime.
+     * Exceptions raised by the `doLater` function are ignored and lost by the runtime.
      */
     void callLater(function void doLater());
 
@@ -288,14 +288,14 @@ interface Service()
      * Register a function to invoke when the service is shutting down. This notification is not
      * invoked if the service is killed.
      *
-     * Exceptions raised by the {@code notify} function are ignored and lost by the runtime.
+     * Exceptions raised by the `notify` function are ignored and lost by the runtime.
      */
     void registerShuttingDownNotification(function void notify());
 
     /**
      * Register an AsyncSection to process unhandled exceptions. An unhandled exception can occur
      * when an unguarded asynchronous call originates from within this service, and the result
-     * is not explicitly captured using a {@code @Future} reference. An exception resulting from
+     * is not explicitly captured using a `@Future` reference. An exception resulting from
      * such a call will trigger an invocation of the `notify` function of the AsyncSection, passing
      * the exception as the argument.
      *
@@ -310,7 +310,7 @@ interface Service()
     /**
      * Register a function to invoke when an unhandled exception occurs. An unhandled exception can
      * occur when an unguarded asynchronous call originates from within this service, and the result
-     * is not explicitly captured using a {@code @Future} or explicitly registered AsyncSection.
+     * is not explicitly captured using a `@Future` or explicitly registered AsyncSection.
      * An exception resulting from such a call will trigger an invocation of the specified function,
      * on a new execution thread passing the exception as the argument. No ordering guarantees of
      * any kind are provided.

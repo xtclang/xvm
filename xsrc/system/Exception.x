@@ -1,6 +1,6 @@
 /**
- * The Exception class represents a class of objects that can be _thrown_ by the {@code throw}
- * keyword, and _caught_ by the {@code catch} keyword.
+ * The Exception class represents a class of objects that can be _thrown_ by the `throw`
+ * keyword, and _caught_ by the `catch` keyword.
  *
  * An exception is injected with stack trace information by the runtime when it is instantiated.
  * The stack trace information adapts to the service context within which it is examined, always

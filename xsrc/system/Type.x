@@ -16,15 +16,15 @@ import types.MultiMethod;
  * type that is associated with the name. A type parameter whose value is unknown is _unresolved_,
  * and a type that has one or more unresolved type parameters is an _unresolved type_.
  *
- * A type also provides runtime support for relational operators, such as equality ({@code ==}),
- * inequality ({@code !=}), less-than ({@code <}), less-than-or-equal ({@code <=}), greater-than
- * ({@code >}), greater-than-or-equal ({@code >=}), assignability testing ({@code instanceof}), and
- * the ordering operator ({@code <=>}, also known as _the spaceship operator_). Equality (and thus
+ * A type also provides runtime support for relational operators, such as equality (`==`),
+ * inequality (`!=`), less-than (`<`), less-than-or-equal (`<=`), greater-than (`>`),
+ * greater-than-or-equal (`>=`), assignability testing (`is`), and
+ * the ordering operator (`<=>`, also known as _the spaceship operator_). Equality (and thus
  * inequality) for a particular type can be determined using the function provided by the {@link
  * compareForEquality} property. In addition to also providing information on equality and
  * inequality, the {@link compareForOrder} property provides a function that supports all of the
  * ordering-related operators. Lastly, the type's {@link isInstance} method  supports the
- * {@code instanceof} relational operator, answering the question of whether or not the specified
+ * `is` relational operator, answering the question of whether or not the specified
  * object is either assignable to (i.e. _assignment-compatible with_) or castable to this type.
  *
  * A type can also represent an option (a selection) of two of more types, as if the type were
@@ -33,10 +33,10 @@ import types.MultiMethod;
  * # A set of methods that reflects the intersection of the sets of methods from each of those
  *   types.
  *
- * Unfortunately, Type cannot be declared as a {@code const} because of the potential for circular
- * references. (The property values of a {@code const} are fully known and immutable before the
- * {@code const} object even has a "`this`"; as a result, it is impossible to create circular
- * references using {@code const} classes.)
+ * Unfortunately, Type cannot be declared as a `const` because of the potential for circular
+ * references. (The property values of a `const` are fully known and immutable before the
+ * `const` object even has a "`this`"; as a result, it is impossible to create circular
+ * references using `const` classes.)
  */
 const Type<DataType>
     {
@@ -229,7 +229,7 @@ const Type<DataType>
         }
 
     /**
-     * Test whether the specified object is an {@code instanceof} this type.
+     * Test whether the specified object is an instance of this type.
      */
     Boolean isInstance(Object o)
         {

@@ -7,7 +7,7 @@
  * using the {@link Service.registerAsyncSection} method, storing off the previously registered
  * AsyncSection.
  *
- * Employing either a {@code using} or {@code try}-with-resources block will automatically
+ * Employing either a `using` or `try`-with-resources block will automatically
  * re-register whatever previous AsyncSection it replaced (if any) at the conclusion of the block,
  * potentially blocking until all the unguarded asynchronous service invocations that occurred
  * within the block have been completed or timed-out.
@@ -54,7 +54,7 @@ const AsyncSection
     function void (Exception) notify;
 
     /**
-     * The {@code AsyncSection} that this AsyncSection replaced, if any.
+     * The `AsyncSection` that this AsyncSection replaced, if any.
      */
     AsyncSection? previousAsyncSection;
 
@@ -87,8 +87,8 @@ const AsyncSection
         }
 
     /**
-     * Close the AsyncSection. This method is invoked automatically by the {@code using} or
-     * {@code try} with-resources keywords.
+     * Close the AsyncSection. This method is invoked automatically by the `using` or
+     * `try` with-resources keywords.
      */
     @Override
     void close()

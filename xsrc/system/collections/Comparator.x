@@ -16,7 +16,7 @@ const Comparator<DataType>
      * the purpose of determining equality.
      *
      * @throws UnsupportedOperation if the Comparator does not support comparison of the
-     *                              {@code DataType} for the purpose of determining equality
+     *                              `DataType` for the purpose of determining equality
      */
     @RO function Boolean (DataType, DataType) compareForEquality.get()
         {
@@ -28,7 +28,7 @@ const Comparator<DataType>
      * the purpose of determining order.
      *
      * @throws UnsupportedOperation if the Comparator does not support comparison of the
-     *                              {@code DataType} for the purpose of determining order
+     *                              `DataType` for the purpose of determining order
      */
     function Ordered (DataType, DataType) compareForOrder;
     }

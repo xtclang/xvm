@@ -11,7 +11,7 @@ const NaturalComparator<DataType extends Orderable>
      * the purpose of determining equality.
      *
      * @throws UnsupportedOperation  if the Comparator does not support comparison of the
-     *                               {@code DataType} for the purpose of determining equality
+     *                               `DataType` for the purpose of determining equality
      */
     @RO function Boolean (DataType, DataType) compareForEquality.get()
         {
@@ -23,7 +23,7 @@ const NaturalComparator<DataType extends Orderable>
      * the purpose of determining order.
      *
      * @throws UnsupportedOperation  if the Comparator does not support comparison of the
-     *                               {@code DataType} for the purpose of determining order
+     *                               `DataType` for the purpose of determining order
      */
     @RO function Ordered (DataType, DataType) compareForOrder.get()
         {

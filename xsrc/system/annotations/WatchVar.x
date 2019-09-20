@@ -1,5 +1,5 @@
 /**
- * The WatchVar ({@code @Watch}) mixin is used to create event notifications whenever the value of
+ * The WatchVar (`@Watch`) mixin is used to create event notifications whenever the value of
  * the reference changes.
  *
  *   @Watch(n -> console.print("new value=" + n)) Int n = 0;
@@ -57,7 +57,7 @@ mixin WatchVar<RefType>
         }
 
     /**
-     * The {@code normalize} method is used to turn the "either" of a no-parameter function and a
+     * The `normalize` method is used to turn the "either" of a no-parameter function and a
      * one-parameter function, into the "always" of a one-parameter function.
      */
     static function void (RefType) normalize(function void () | function void (RefType) notify)

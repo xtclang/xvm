@@ -152,7 +152,7 @@ const String
         }
 
     /**
-     * Look for the specified {@code that} starting at the specified index.
+     * Look for the specified `that` starting at the specified index.
      *
      * @param that     the substring to search for
      * @param startAt  the first index to search from (optional)

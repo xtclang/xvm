@@ -5,7 +5,7 @@
  *
  * In order to avoid the possibility of an unassigned reference becoming visible, the WeakVar must
  * be of a {@link RefType} that has a default value (such as {@link Nullable}, with its default
- * value of {@code null}).
+ * value of `Null`).
  *
  * A WeakVar can have a {@link notify} notification function provided in its construction that is
  * enqueued into the service's runtime event queue each time that the weak reference is cleared by

@@ -13,7 +13,7 @@
  * The CriticalSection is stored on the current service and exposed as {@link
  * Service.criticalSection}. When a new CriticalSection is created, it automatically registers
  * itself with the current service using the {@link Service.registerCriticalSection} method.
- * Employing either a {@code using} or {@code try}-with-resources block will automatically
+ * Employing either a `using` or `try`-with-resources block will automatically
  * unregister the CriticalSection at the conclusion of the block, restoring the previous reentrancy
  * setting for the service. When the CriticalSection unregisters itself, it re-registers whatever
  * previous CriticalSection it replaced (if any).
@@ -70,17 +70,17 @@ const CriticalSection
     @Inject Timer timer;
 
     /**
-     * The service {@code Reentrancy} setting that this CriticalSection replaced, if any.
+     * The service `Reentrancy` setting that this CriticalSection replaced, if any.
      */
     Service.Reentrancy reentrancy;
 
     /**
-     * The service {@code Reentrancy} setting that this CriticalSection replaced, if any.
+     * The service `Reentrancy` setting that this CriticalSection replaced, if any.
      */
     Service.Reentrancy previousReentrancy;
 
     /**
-     * The {@code CriticalSection} that this CriticalSection replaced, if any.
+     * The CriticalSection that this CriticalSection replaced, if any.
      */
     CriticalSection? previousCriticalSection;
 
@@ -126,8 +126,8 @@ const CriticalSection
         }
 
     /**
-     * Close the CriticalSection. This method is invoked automatically by the {@code using} or
-     * {@code try} with-resources keywords.
+     * Close the CriticalSection. This method is invoked automatically by the `using` or
+     * `try` with-resources keywords.
      */
     @Override
     void close()

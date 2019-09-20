@@ -323,7 +323,7 @@ class Array<Element>
 
     /**
      * Return a persistent array of the same element types and values as are present in this array.
-     * If this array is already persistent or {@code const}, then _this_ is returned.
+     * If this array is already persistent or `const`, then _this_ is returned.
      *
      * A _persistent_ array does not support replacing the contents of the elements in this array
      * using the {@link replace} method; instead, calls to {@link replace} will return a new array.
@@ -341,12 +341,12 @@ class Array<Element>
         }
 
     /**
-     * Return a {@code const} array of the same type and contents as this array.
+     * Return a `const` array of the same type and contents as this array.
      *
-     * All mutating calls to a {@code const} array will result in the creation of a new
-     * {@code const} array with the requested changes incorporated.
+     * All mutating calls to a `const` array will result in the creation of a new
+     * `const` array with the requested changes incorporated.
      *
-     * @throws Exception if any of the values in the array are not {@code const} and are not
+     * @throws Exception if any of the values in the array are not `const` and are not
      *         {@link ImmutableAble}
      */
     @Override

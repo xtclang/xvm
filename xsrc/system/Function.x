@@ -43,7 +43,7 @@ interface Function<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tup
 
     /**
      * Invokes the function passing the specified arguments as a Tuple that matches the function's
-     * {@code ParamTypes}, and returns a Tuple that matches the function's {@code ReturnTypes}.
+     * `ParamTypes`, and returns a Tuple that matches the function's `ReturnTypes`.
      */
     ReturnTypes invoke(ParamTypes args);
 

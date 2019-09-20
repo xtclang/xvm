@@ -70,7 +70,7 @@ interface Collection<Element>
      *
      * @param values  another collection containing values to search for in this collection
      *
-     * @return {@code True} iff the specified values all exist in this collection
+     * @return `True` iff the specified values all exist in this collection
      */
     Boolean containsAll(Iterable<Element> values)
         {
@@ -235,7 +235,7 @@ interface Collection<Element>
 
     /**
      * For each value in the collection, evaluate it using the specified function, removing each
-     * value for which the specified function evaluates to {@code True}.
+     * value for which the specified function evaluates to `True`.
      *
      * A `Mutable` collection will perform the operation in place; persistent collections will
      * return a new collection that reflects the requested changes.

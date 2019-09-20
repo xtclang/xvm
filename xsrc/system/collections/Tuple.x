@@ -10,11 +10,11 @@
  * Because tuple values are defined using parenthesis, and parenthesis are also used for method
  * invocations and to explicitly denote order of precedence, a number of conventions are used:
  * * The empty tuple and a tuple with a single value must use an explicit type literal declaration:
- *   {@code Tuple:()} or {@code Tuple:(a)}
+ *   `Tuple:()` or `Tuple:(a)`
  * * The return statement can return multiple comma-delimited values _without_ the use of
- *   parenthesis: {@code return a, b, c;}
+ *   parenthesis: `return a, b, c;`
  * * All other cases should use a comma-delimited set of values within a matching pair of
- *   parenthesis: {@code (Int i, String s) = (0, "hello");}
+ *   parenthesis: `(Int i, String s) = (0, "hello");`
  *
  * Due to the complexity of the non-uniform element type, Tuple is not intended to be implemented by
  * the developer; rather, it is a data type provided by the runtime, and whose type safety is
@@ -48,7 +48,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * value, then the compile-time type of the parameter is known and checked by the compiler;
      * otherwise, a type mismatch will raise a runtime type assertion.
      *
-     * This operation will throw an exception if the tuple is either persistent or {@code const}.
+     * This operation will throw an exception if the tuple is either persistent or `const`.
      */
     @Op("[]=")
     void setElement(Int index, Object newValue);
@@ -140,7 +140,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
 
     /**
      * Return a persistent tuple of the same element types and values as are present in this tuple.
-     * If this tuple is already persistent or {@code const}, then _this_ is returned.
+     * If this tuple is already persistent or `const`, then _this_ is returned.
      *
      * A _persistent_ tuple does not support replacing the contents of the elements in this tuple
      * using the {@link replace} method; instead, calls to {@link replace} will return a new tuple.
@@ -149,13 +149,13 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
     Tuple ensurePersistent(Boolean inPlace = false);
 
     /**
-     * Return a {@code const} tuple of the same element types and values as are present in this
+     * Return a `const` tuple of the same element types and values as are present in this
      * tuple.
      *
-     * All mutating calls to a {@code const} tuple will result in the creation of a new
-     * {@code const} tuple with the requested changes incorporated.
+     * All mutating calls to a `const` tuple will result in the creation of a new
+     * `const` tuple with the requested changes incorporated.
      *
-     * @throws Exception if any of the values in the tuple are not {@code const} and are not
+     * @throws Exception if any of the values in the tuple are not `const` and are not
      *         {@link ImmutableAble}
      */
     @Override
