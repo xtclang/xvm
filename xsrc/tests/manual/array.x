@@ -204,7 +204,7 @@ module TestArray.xqiz.it
         {
         console.println("\n** testIterators()");
 
-        String[]         strs = ["goodbye", "cruel", "world"];
+        String[] strs = ["goodbye", "cruel", "world"];
 
         for (Int i : 1..4)
             {
@@ -220,7 +220,7 @@ module TestArray.xqiz.it
                     //     @Inject Ecstasy.io.Console console;
                     //     console.println($"peeking at {s}");
                     //     }
-                    iter = iter.peek(foo);
+                    iter = iter.peek(console.println);
                     break;
 
                 case 2:
@@ -245,12 +245,35 @@ module TestArray.xqiz.it
                 console.println($"s={s}");
                 }
             }
-        }
 
-    // TODO GG get rid of this after fixing above problem
-    private static void foo(String s)
-        {
-        @Inject Ecstasy.io.Console console;
-        console.println($"peeking at {s}");
+        console.println("\n   --> metadata tests");
+        Iterator<String> iter = strs.iterator();
+        console.println($"distinct={iter.knownDistinct()}");
+        console.println($"sorted={iter.knownOrder()}");
+        if (Function f := iter.knownOrder())
+            {
+            console.println($"order={f}");
+            }
+        console.println($"knownEmpty={iter.knownEmpty()}");
+        console.println($"knownSize={iter.knownSize()}");
+        if (Int size := iter.knownSize())
+            {
+            console.println($"size={size}");
+            }
+
+        console.println("\n   --> misc tests");
+        console.println($"count={strs.iterator().count()}");
+        console.println($"array={strs.iterator().toArray()}");
+        // TODO GG console.println($"min={strs.iterator().min()}");
+        // 2019-09-20 17:53:35.761 Service "TestArray.xqiz.it" (id=0), fiber 0: Unhandled exception at at Iterator.min(Ecstasy:Nullable | Ecstasy:Function<Ecstasy:collections.Tuple<Ecstasy:Object, Ecstasy:Object>, Ecstasy:collections.Tuple<Ecstasy:Ordered>>); line=94
+        // java.lang.ArrayIndexOutOfBoundsException: Index -1 out of bounds for length 6
+        // 	at org.xvm.runtime.Frame.exitScope(Frame.java:449)
+        // 	at org.xvm.asm.Op.jump(Op.java:1057)
+        // 	at org.xvm.asm.op.JumpEq.completeBinaryOp(JumpEq.java:71)
+        // 	at org.xvm.asm.OpCondJump.processBinaryOp(OpCondJump.java:180)
+        // 	at org.xvm.asm.OpCondJump.process(OpCondJump.java:130)
+        // 	at org.xvm.runtime.ServiceContext.execute(ServiceContext.java:246)
+        // TODO GG console.println($"max={strs.iterator().max()}");
+        // TODO GG console.println($"range={strs.iterator().range()}");
         }
     }

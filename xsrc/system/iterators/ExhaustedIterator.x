@@ -11,7 +11,7 @@ const ExhaustedIterator<Element>
         }
 
     @Override
-    @RO Boolean distinct.get()
+    Boolean knownDistinct()
         {
         return True;
         }

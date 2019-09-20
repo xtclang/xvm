@@ -19,7 +19,7 @@ class CompoundIterator<Element>
      *
      * @param iterator  the Iterator to add
      */
-    void add(Iterator<Element> iter)
+    protected void add(Iterator<Element> iter)
         {
         if (tail == Null)
             {
@@ -51,22 +51,20 @@ class CompoundIterator<Element>
             {
             return False;
             }
-        else
-            {
-            iter = tail ?: assert;  // TODO CP assumptions project - get rid of assert
-            tail = Null;
-            return iter.next();
-            }
+
+        iter = tail ?: assert;  // TODO CP assumptions project - get rid of assert
+        tail = Null;
+        return iter.next();
         }
 
     @Override
-    @RO Boolean distinct.get()
+    Boolean knownDistinct()
         {
-        return tail == Null && iter.distinct;
+        return tail == Null && iter.knownDistinct();
         }
 
     @Override
-    conditional collections.Orderer sortedBy()
+    conditional collections.Orderer knownOrder()
         {
         // TODO GG - assertion failure
         // return tail == Null
@@ -75,7 +73,7 @@ class CompoundIterator<Element>
 
         if (tail == Null)
             {
-            return iter.sortedBy();
+            return iter.knownOrder();
             }
 
         return False;

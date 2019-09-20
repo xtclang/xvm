@@ -91,7 +91,7 @@ interface Iterator<Element>
      */
     conditional Element min(Orderer? order = Null)
         {
-        if (order != Null, Orderer actual := sortedBy(), order == actual)
+        if (order != Null, Orderer actual := knownOrder(), order == actual)
             {
             return next();
             }
@@ -286,7 +286,7 @@ interface Iterator<Element>
     /**
      * Metadata: Are the elements of the iterator known to be distinct?
      */
-    @RO Boolean distinct.get()
+    Boolean knownDistinct()
         {
         return False;
         }
@@ -298,7 +298,7 @@ interface Iterator<Element>
      * @return True iff the iterator in an order that is a function of its elements
      * @return (conditional) the Orderer that represents the order
      */
-    conditional Orderer sortedBy()
+    conditional Orderer knownOrder()
         {
         return False;
         }
@@ -420,7 +420,7 @@ interface Iterator<Element>
      */
     Iterator dedup()
         {
-        if (knownEmpty() || distinct)
+        if (knownEmpty() || knownDistinct())
             {
             return this;
             }
@@ -481,14 +481,14 @@ interface Iterator<Element>
      *
      * @return a new iterator with the specified functionality attached to it
      */
-    Iterator peek(function void accept(Element))
+    Iterator peek(function void observe(Element))
         {
         if (knownEmpty())
             {
             return this;
             }
 
-        return new iterators.PeekingIterator<Element>(this, accept);
+        return new iterators.PeekingIterator<Element>(this, observe);
         }
 
     /**

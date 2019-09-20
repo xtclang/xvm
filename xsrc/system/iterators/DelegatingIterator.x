@@ -15,15 +15,15 @@ class DelegatingIterator<Element>(Iterator<Element> iter)
         }
 
     @Override
-    @RO Boolean distinct.get()
+    Boolean knownDistinct() // TODO GG if method has "@RO" it should give an intelligent error msg
         {
-        return iter.distinct;
+        return iter.knownDistinct();
         }
 
     @Override
-    conditional collections.Orderer sortedBy()
+    conditional collections.Orderer knownOrder()
         {
-        return iter.sortedBy();
+        return iter.knownOrder();
         }
 
     @Override
