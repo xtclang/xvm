@@ -1235,8 +1235,10 @@ public abstract class Component
         assert access != null;
 
         MultiMethodStructure multimethod = ensureMultiMethodStructure(sName);
-        return multimethod.createMethod(fFunction, access, annotations, returnTypes, paramTypes,
-                fHasCode, fUsesSuper);
+        return multimethod == null
+                ? null
+                : multimethod.createMethod(fFunction, access, annotations, returnTypes, paramTypes,
+                        fHasCode, fUsesSuper);
         }
 
     public MultiMethodStructure ensureMultiMethodStructure(String sName)
