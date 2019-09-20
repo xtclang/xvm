@@ -130,6 +130,11 @@ public class IfStatement
                 }
             else
                 {
+                if (c > 1)
+                    {
+                    ctx = ctx.enterAnd();
+                    }
+
                 Expression exprOld = (Expression) cond;
                 Expression exprNew = exprOld.validate(ctx, pool().typeBoolean(), errs);
                 if (exprNew == null)
@@ -140,6 +145,11 @@ public class IfStatement
                     {
                     cond = exprNew;
                     conds.set(i, cond);
+                    }
+
+                if (c > 1)
+                    {
+                    ctx = ctx.exit();
                     }
                 }
             }
