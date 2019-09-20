@@ -183,6 +183,7 @@ public class MultiMethodStructure
     @Override
     public Component getChild(Constant constId)
         {
+        // TODO GG this assertion happens when you override a property with a method (same name, but the "super" is a prop and the "this" is a method)
         assert constId instanceof MethodConstant;
 
         MethodStructure firstSibling = getMethodByConstantMap().get(constId);
