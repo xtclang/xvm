@@ -206,7 +206,7 @@ module TestArray.xqiz.it
 
         String[] strs = ["goodbye", "cruel", "world"];
 
-        for (Int i : 1..4)
+        for (Int i : 1..10)
             {
             Iterator<String> iter = strs.iterator();
             switch(i)
@@ -237,6 +237,66 @@ module TestArray.xqiz.it
                     console.println("\n   --> duplicate test");
                     (Iterator<String> iter1, Iterator<String> iter2) = iter.duplicate();
                     iter = iter1.concat(iter2);
+                    break;
+
+                case 5:
+                    console.println("\n   --> filter test");
+                    iter = iter.filter(e -> e[0] != 'c');
+                    break;
+
+                case 6:
+                    console.println("\n   --> map test");
+                    iter = iter.map(e -> e.size.toString());
+                    break;
+
+                case 7:
+                    console.println("\n   --> sort test");
+                    // TODO GG - this blows up: iter = iter.sort();
+                    // 2019-09-20 21:49:50.661 Service "TestArray.xqiz.it" (id=0), fiber 4: Unhandled exception: Ecstasy:TypeMismatch Ecstasy:String
+                    // 	at Iterator.sort(Ecstasy:Nullable | Ecstasy:Function<Ecstasy:collections.Tuple<Ecstasy:Object, Ecstasy:Object>, Ecstasy:collections.Tuple<Ecstasy:Ordered>>).->(Ecstasy:Object, Ecstasy:Object) (line=447, op=MoveCast)
+                    // 	at collections.List.bubbleSort(Ecstasy:Type<Ecstasy:Object>, this:class(Ecstasy:collections.List)<bubbleSort(?)#Element>, Ecstasy:Nullable | Ecstasy:Function<Ecstasy:collections.Tuple<Ecstasy:Object, Ecstasy:Object>, Ecstasy:collections.Tuple<Ecstasy:Ordered>>) (line=291, op=Call_N1)
+                    // 	at collections.List.sort(Ecstasy:Nullable | Ecstasy:Function<Ecstasy:collections.Tuple<Ecstasy:Object, Ecstasy:Object>, Ecstasy:collections.Tuple<Ecstasy:Ordered>>) (line=220, op=Call_N0)
+                    // 	at Iterator.sort(Ecstasy:Nullable | Ecstasy:Function<Ecstasy:collections.Tuple<Ecstasy:Object, Ecstasy:Object>, Ecstasy:collections.Tuple<Ecstasy:Ordered>>) (line=455, op=Invoke_11)
+                    // 	at testIterators() (line=255, op=Invoke_11)
+                    // 	at run() (line=23, op=Invoke_00)
+                    // 	at <TestArray.xqiz.it> (iPC=0, op=)
+
+                    // TODO GG - this should also work but does not compile: iter = iter.sort((e1,e2)->e1.size<=>e2.size);
+                    // [1] /Users/cameron/Development/xvm/xsrc/./tests/manual/array.x [254:50..254:54] COMPILER-36: Could not find name "size" within "Ecstasy:Object". ("size")
+                    // [2] /Users/cameron/Development/xvm/xsrc/./tests/manual/array.x [254:60..254:64] COMPILER-36: Could not find name "size" within "Ecstasy:Object". ("size")
+                    break;
+
+                case 8:
+                    console.println("\n   --> reverse test");
+                    // TODO GG BUGBUG - does not seem to reverse() .. native impl?
+                    iter = iter.reverse();
+                    break;
+
+                case 9:
+                    console.println("\n   --> flatmap test");
+                    // TODO GG iter = iter.flatMap(e -> e.iterator().map(ch -> ch.toString()));  // err: [1] /Users/cameron/Development/xvm/xsrc/./tests/manual/array.x [277:46..277:83] COMPILER-56: Could not find a matching method or function "map" for type "Ecstasy:Iterator<Ecstasy:Char>". ("e.iterator().map(ch -> ch.toString())")
+
+                    // TODO GG - attempted to break it down but it still didn't compile
+                    // Iterator<Char> iterCh = iter.flatMap(s2chiter);
+                    // iter = iterCh.map(ch2s);
+                    break;
+
+                case 10:
+                    console.println("\n   --> dedup test");
+                    (Iterator<String> iter1, Iterator<String> iter2) = iter.duplicate();
+                    iter = iter1.concat(iter2);
+                    // TODO GG: iter = iter.dedup();
+                    //2019-09-20 22:37:05.079 Service "TestArray.xqiz.it" (id=0), fiber 0: Unhandled exception at at Iterable.contains(Ecstasy:Iterable.Element).->(Ecstasy:Iterable.Element, Ecstasy:Iterable.Element); line=63
+                    //java.lang.ClassCastException: class org.xvm.asm.PropertyStructure cannot be cast to class org.xvm.asm.ClassStructure (org.xvm.asm.PropertyStructure and org.xvm.asm.ClassStructure are in unnamed module of loader 'app')
+                    //	at org.xvm.runtime.TemplateRegistry.lambda$getTemplate$1(TemplateRegistry.java:222)
+                    //	at java.base/java.util.concurrent.ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1705)
+                    //	at org.xvm.runtime.TemplateRegistry.getTemplate(TemplateRegistry.java:219)
+                    //	at org.xvm.runtime.TemplateRegistry.getTemplate(TemplateRegistry.java:205)
+                    //	at org.xvm.runtime.TemplateRegistry.resolveClass(TemplateRegistry.java:267)
+                    //	at org.xvm.runtime.Frame.ensureClass(Frame.java:1115)
+                    //	at org.xvm.asm.constants.TypeConstant.callEquals(TypeConstant.java:5271)
+                    //	at org.xvm.asm.op.IsEq.completeBinaryOp(IsEq.java:78)
+                    //	at org.xvm.asm.OpTest.processBinaryOp(OpTest.java:167)
                     break;
                 }
 
@@ -275,5 +335,15 @@ module TestArray.xqiz.it
         // 	at org.xvm.runtime.ServiceContext.execute(ServiceContext.java:246)
         // TODO GG console.println($"max={strs.iterator().max()}");
         // TODO GG console.println($"range={strs.iterator().range()}");
+        }
+
+    // temporary / TODO remove after debugging
+    static Iterator<Char> s2chiter(String s)
+        {
+        return s.iterator();
+        }
+    static String ch2s(Char ch)
+        {
+        return ch.toString();
         }
     }

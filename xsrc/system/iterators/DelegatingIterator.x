@@ -6,6 +6,9 @@
 class DelegatingIterator<Element>(Iterator<Element> iter)
         implements Iterator<Element>
     {
+    /**
+     * The iterator to delegate to.
+     */
     protected/private Iterator<Element> iter;
 
     @Override

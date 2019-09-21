@@ -373,7 +373,7 @@ interface Iterator<Element>
             return this;
             }
 
-        TODO return new FilteredIterator<Element>(this, include);
+        return new iterators.FilteredIterator<Element>(this, include);
         }
 
     /**
@@ -391,7 +391,7 @@ interface Iterator<Element>
      */
     <Result> Iterator<Result> map(function Result (Element) apply)
         {
-        TODO return new MappedIterator<Result, Element>(this, apply);
+        return new iterators.MappedIterator<Result, Element>(this, apply);
         }
 
     /**
@@ -408,7 +408,7 @@ interface Iterator<Element>
      */
     <Result> Iterator<Result> flatMap(function Iterator!<Result> (Element) flatten)
         {
-        TODO return new FlatMappedIterator<Result, Element>(this, flatten);
+        return new iterators.FlatMappedIterator<Result, Element>(this, flatten);
         }
 
     /**
@@ -425,7 +425,7 @@ interface Iterator<Element>
             return this;
             }
 
-        TODO return new DistinctIterator<Result, Element>(this, flatten);
+        return new iterators.DistinctIterator<Element>(this);
         }
 
     /**
@@ -440,14 +440,19 @@ interface Iterator<Element>
      */
     Iterator sort(Orderer? order = Null)
         {
-        assert order != Null || Element.is(Type<Orderable>);
+        if (order == Null)
+            {
+            assert Element.is(Type<Orderable>);
+            // TODO GG - this throws exception: order = (Element el1, Element el2) -> el1 <=> el2;
+            order = (el1, el2) -> el1.as(Element+Orderable) <=> el2.as(Element+Orderable);
+            }
 
         if (knownEmpty())
             {
             return this;
             }
 
-        TODO return new SortedIterator<Element>(this, order);
+        return toArray().sort(order).iterator();
         }
 
     /**
@@ -466,7 +471,7 @@ interface Iterator<Element>
             return this;
             }
 
-        TODO return new ReversedIterator<Element>(this);
+        return toArray().reverse().iterator();
         }
 
     /**
@@ -552,7 +557,7 @@ interface Iterator<Element>
             return this;
             }
 
-        TODO return new LimitedIterator<Element>(this, count);
+        return new iterators.LimitedIterator<Element>(this, count);
         }
 
     /**
