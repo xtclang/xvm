@@ -104,7 +104,7 @@ public class xArray
                 {
                 // 1) construct(Int size, Element | function Element (Int) supply)
                 // 2) construct(Mutability mutability, Element... elements)
-                // 3) construct(Array<Element> array, Range<Int> section)
+                // 3) construct(Array<Element> array, Interval<Int> section)
                 if (typeParam0.equals(pool.typeInt()))
                     {
                     CONSTRUCTORS[1] = method;
@@ -136,7 +136,7 @@ public class xArray
         markNativeMethod("elementAt", INT, new String[] {"Var<Element>"});
         markNativeMethod("add", ELEMENT_TYPE, ARRAY);
         markNativeMethod("addAll", new String[] {"Iterable<Element>"}, ARRAY);
-        markNativeMethod("slice", new String[] {"Range<Int64>"}, ARRAY);
+        markNativeMethod("slice", new String[] {"Interval<Int64>"}, ARRAY);
         markNativeMethod("ensureImmutable", BOOLEAN, null);
 
         getCanonicalType().invalidateTypeInfo();
@@ -322,12 +322,12 @@ public class xArray
                 return frame.call1(ITERABLE_TO_ARRAY, hSequence, ahVars, iReturn);
                 }
 
-            case 3: // construct(Array<Element> array, Range<Int> section)
+            case 3: // construct(Array<Element> array, Interval<Int> section)
                 {
-                ArrayHandle   hArray = (ArrayHandle) ahVar[0];
-                GenericHandle hRange = (GenericHandle) ahVar[1];
-                JavaLong      hLower = (JavaLong) hRange.getField("lowerBound");
-                JavaLong      hUpper = (JavaLong) hRange.getField("upperBound");
+                ArrayHandle   hArray    = (ArrayHandle) ahVar[0];
+                GenericHandle hInterval = (GenericHandle) ahVar[1];
+                JavaLong      hLower    = (JavaLong) hInterval.getField("lowerBound");
+                JavaLong      hUpper    = (JavaLong) hInterval.getField("upperBound");
 
                 long lLower = hLower.getValue();
                 long lUpper = hUpper.getValue();
@@ -437,9 +437,9 @@ public class xArray
 
             case "slice":
                 {
-                GenericHandle hRange = (GenericHandle) hArg;
-                long ixFrom = ((JavaLong) hRange.getField("lowerBound")).getValue();
-                long ixTo   = ((JavaLong) hRange.getField("upperBound")).getValue();
+                GenericHandle hInterval = (GenericHandle) hArg;
+                long ixFrom = ((JavaLong) hInterval.getField("lowerBound")).getValue();
+                long ixTo   = ((JavaLong) hInterval.getField("upperBound")).getValue();
 
                 return slice(frame, hTarget, ixFrom, ixTo, iReturn);
                 }
@@ -605,7 +605,7 @@ public class xArray
         }
 
     /**
-     * slice(Range<Int>) implementation
+     * slice(Interval<Int>) implementation
      */
     protected int slice(Frame frame, ObjectHandle hTarget, long ixFrom, long ixTo, int iReturn)
         {

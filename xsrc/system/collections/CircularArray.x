@@ -218,7 +218,7 @@ class CircularArray<Element>
 
     @Override
     @Op("[..]")
-    CircularArray slice(Range<Int> range)
+    CircularArray slice(Interval<Int> interval)
         {
         TODO
         }
@@ -376,12 +376,12 @@ class CircularArray<Element>
         }
 
     @Override
-    CircularArray delete(Range<Int> range)
+    CircularArray delete(Interval<Int> interval)
         {
-        validateIndex(range.lowerBound);
-        validateIndex(range.upperBound);
+        validateIndex(interval.lowerBound);
+        validateIndex(interval.upperBound);
 
-        Int removing = range.size;
+        Int removing = interval.size;
         if (removing == size)
             {
             clear();
@@ -389,26 +389,26 @@ class CircularArray<Element>
             }
         else if (removing == 1)
             {
-            return delete(range.lowerBound);
+            return delete(interval.lowerBound);
             }
 
         Int     mask = contents.size - 1;
         Boolean fromTail;
-        if (range.lowerBound == 0)
+        if (interval.lowerBound == 0)
             {
             fromTail = True;
             }
-        else if (range.upperBound == size-1)
+        else if (interval.upperBound == size-1)
             {
             fromTail = False;
             }
         else
             {
-            fromTail = range.lowerBound < (size - removing >>> 1);
+            fromTail = interval.lowerBound < (size - removing >>> 1);
             if (fromTail)
                 {
                 // move the head forward
-                for (Int iCopy = head + range.lowerBound - 1; iCopy >= head; --iCopy)
+                for (Int iCopy = head + interval.lowerBound - 1; iCopy >= head; --iCopy)
                     {
                     contents[iCopy+removing & mask] = contents[iCopy & mask];
                     }
@@ -416,7 +416,7 @@ class CircularArray<Element>
             else
                 {
                 // move the tail backwards
-                for (Int iCopy = head + range.upperBound + 1, Int iLast = tail - 1; iCopy <= iLast; ++iCopy)
+                for (Int iCopy = head + interval.upperBound + 1, Int iLast = tail - 1; iCopy <= iLast; ++iCopy)
                     {
                     contents[iCopy-1 & mask] = contents[iCopy & mask];
                     }

@@ -688,17 +688,17 @@ public class ConstantPool
         }
 
     /**
-     * Create an Interval constant, which is also a Range constant for Sequential types.
+     * Create a Range constant, which is also an Interval constant for Sequential types.
      *
-     * @param const1  the start value for the Interval
-     * @param const2  the end value for the Interval
+     * @param const1  the start value for the Range
+     * @param const2  the end value for the Range
      *
-     * @return the IntervalConstant representing the interval or range
+     * @return the RangeConstant representing the range or interval
      */
-    public IntervalConstant ensureIntervalConstant(Constant const1, Constant const2)
+    public RangeConstant ensureIntervalConstant(Constant const1, Constant const2)
         {
         // TODO validations
-        return new IntervalConstant(this, const1, const2);
+        return new RangeConstant(this, const1, const2);
         }
 
     /**
@@ -2476,8 +2476,8 @@ public class ConstantPool
                     constant = new MapConstant(this, format, in);
                     break;
 
-                case Interval:
-                    constant = new IntervalConstant(this, format, in);
+                case Range:
+                    constant = new RangeConstant(this, format, in);
                     break;
 
                 case Any:

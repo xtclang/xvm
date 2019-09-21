@@ -34,10 +34,10 @@ mixin ConditionalTuple
         }
 
     @Override
-    @Op Tuple slice(Range<Int> range)
+    @Op Tuple slice(Interval<Int> interval)
         {
-        assert range.upperBound == 0 || this[0] == true;
-        return super(range);
+        assert interval.upperBound == 0 || this[0] == true;
+        return super(interval);
         }
 
     @Override
@@ -48,10 +48,10 @@ mixin ConditionalTuple
         }
 
     @Override
-    Tuple remove(Range<Int> range)
+    Tuple remove(Interval<Int> interval)
         {
         assert this[0];
-        return super(range);
+        return super(interval);
         }
 
     @Override

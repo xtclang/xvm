@@ -9,7 +9,7 @@ public interface Notifier
      * Block the caller's thread until it is signalled, interrupted or the
      * specified time period has elapsed.
      *
-     * @param cMillis the maximum time interval to wait in millisecond
+     * @param cMillis the maximum time interval to wait, in milliseconds
      *
      * @throws InterruptedException if the current thread is interrupted
      *         (and interruption of thread suspension is supported)

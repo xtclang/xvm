@@ -75,10 +75,10 @@ interface Sequence<Element>
         }
 
     /**
-     * Look for the specified `value` (in the optional `range`, if specified), and
-     * return the index of the value if it is found.
+     * Look for the specified `value` (in the optional `interval`, if specified), and return the
+     * index of the value if it is found.
      *
-     * To search backwards for the "last index" of a value, use the optional range parameter to
+     * To search backwards for the "last index" of a value, use the optional interval parameter to
      * indicate the search direction, for example:
      *
      *   if (sequence.size > 0 && (Int index : sequence.indexOf(value, sequence.size-1 .. 0)))
@@ -86,23 +86,23 @@ interface Sequence<Element>
      *       // found the last occurrence of "value" at location "index"
      *       }
      *
-     * @param value  the value to search for
-     * @param range  the range (inclusive) of the sequence to search within
+     * @param value     the value to search for
+     * @param interval  the interval (inclusive) of the sequence to search within
      *
      * @return a conditional return of the location of the index of the specified value, or
      *         False if the value could not be found
      */
-    conditional Int indexOf(Element value, Range<Int> range)
+    conditional Int indexOf(Element value, Interval<Int> interval)
         {
         Int size  = this.size;
-        Int first = range.lowerBound;
-        Int last  = range.upperBound;
+        Int first = interval.lowerBound;
+        Int last  = interval.upperBound;
         if (first < 0 || last >= size)
             {
             throw new OutOfBounds();
             }
 
-        if (range.reversed)
+        if (interval.reversed)
             {
             for (Int i = last; i >= first; --i)
                 {
@@ -145,9 +145,9 @@ interface Sequence<Element>
      * visible through the new Sequence, and vice versa; if that behavior is not desired, [reify]
      * the value returned from this method.
      *
-     * @param range  the range of indexes of this sequence to obtain a slice for; note that the top
-     *               end of the range is _inclusive_, such that the range `0..size-1` represents
-     *               the entirety of the Sequence
+     * @param interval  the range of indexes of this sequence to obtain a slice for; note that
+     *                  the top end of the interval is _inclusive_, such that the interval
+     *                  `0..size-1` represents the entirety of the Sequence
      *
      * @return a slice of this sequence corresponding to the specified range of indexes
      *
@@ -155,7 +155,7 @@ interface Sequence<Element>
      *                      this sequence
      */
     @Op("[..]")
-    Sequence slice(Range<Int> range);
+    Sequence slice(Interval<Int> interval);
 
     /**
      * Obtain a Sequence that represents the revers order of this Sequence. This is likely to create

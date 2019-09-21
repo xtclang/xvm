@@ -168,7 +168,7 @@ public interface OpSupport
     int invokeDivMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn);
 
     /**
-     * Perform an "interval" / "range" operation.
+     * Perform a "range" / "interval" operation.
      *
      * @param frame    the current frame
      * @param hTarget  the target handle

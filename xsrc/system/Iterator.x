@@ -168,7 +168,7 @@ interface Iterator<Element>
         }
 
     /**
-     * Returns the range defining the minimum and maximum elements of this iterator.
+     * Returns the interval defining the minimum and maximum elements of this iterator.
      *
      * This iterator must not be used after this operation.
      *
@@ -178,7 +178,7 @@ interface Iterator<Element>
      * @return True iff the iterator is not empty and the range of values was determined
      * @return (conditional) the range of elements from this iterator
      */
-    conditional Interval<Element> range(Orderer? order = Null) // TODO CP **global** swap "range" and "interval" names (!!!)
+    conditional Range<Element> range(Orderer? order = Null)
         {
         assert Element.is(Type<Orderable>);
 
@@ -571,26 +571,26 @@ interface Iterator<Element>
      *
      * @return a new iterator that does not include the first `count` elements of this iterator
      */
-    Iterator extract(Range<Int> range)
+    Iterator extract(Interval<Int> interval)
         {
         if (knownEmpty())
             {
             return this;
             }
 
-        if (Int size := knownSize(), size < range.lowerBound)
+        if (Int size := knownSize(), size < interval.lowerBound)
             {
             return new iterators.ExhaustedIterator();
             }
 
-        if (range.reversed)
+        if (interval.reversed)
             {
-            return reverse().extract(range.reverse());
+            return reverse().extract(interval.reverse());
             }
 
-        return range.lowerBound == 0
-                ? limit(range.upperBound)
-                : skip(range.lowerBound).limit(range.size);
+        return interval.lowerBound == 0
+                ? limit(interval.upperBound)
+                : skip(interval.lowerBound).limit(interval.size);
         }
 
     /**

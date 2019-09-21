@@ -106,7 +106,7 @@ service Container
          * example `memory`, `time interval`, `cpu cycles` `network bandwidth`.
          * TODO: there has to be a full section on the names and valid ranges
          */
-        void addConstraint(String name, Range<Int> range);
+        void addConstraint(String name, Interval<Int> interval);
 
         /**
          * Invoke the method with a given name and arguments.

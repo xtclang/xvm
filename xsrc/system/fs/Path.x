@@ -326,10 +326,10 @@ const Path
 
     @Override
     @Op("[..]")
-    Path slice(Range<Int> range)
+    Path slice(Interval<Int> interval)
         {
-        Int lower = range.lowerBound;
-        Int upper = range.upperBound;
+        Int lower = interval.lowerBound;
+        Int upper = interval.upperBound;
         if (lower < 0)
             {
             throw new OutOfBounds(lower.toString() + " < 0");
@@ -342,7 +342,7 @@ const Path
 
         if (lower == 0)
             {
-            if (range.reversed)
+            if (interval.reversed)
                 {
                 assert relative;
                 }
@@ -353,7 +353,7 @@ const Path
             }
 
         Path? slice = null;
-        for (Int index : range)
+        for (Int index : interval)
             {
             Path part = this[index];
             slice = new Path(slice, part.form, part.name);

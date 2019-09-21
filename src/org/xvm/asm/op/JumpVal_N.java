@@ -24,7 +24,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
-import org.xvm.runtime.ObjectHeap;
 import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -36,7 +35,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * JMP_VAL_N #:(rvalue), #:(CONST, addr), addr-default ; if value equals a constant, jump to address, otherwise default
  * <ul>
  *     <li>with support for wildcard field matches (using MatchAnyConstant)</li>
- *     <li>with support for interval matches (using IntervalConstant)</li>
+ *     <li>with support for range matches (using RangeConstant)</li>
  * </ul>
  */
 public class JumpVal_N
@@ -212,12 +211,12 @@ public class JumpVal_N
             long         ixColumn = 0; // matching cases in this column
             switch (aAlg[iC])
                 {
-                case NativeInterval:
+                case NativeRange:
                     {
-                    List<Object[]> listInterval = m_alistIntervalSmall[iC];
-                    for (int iR = 0, cR = listInterval.size(); iR < cR; iR++)
+                    List<Object[]> listRange = m_alistRangeSmall[iC];
+                    for (int iR = 0, cR = listRange.size(); iR < cR; iR++)
                         {
-                        Object[] ao = listInterval.get(iR);
+                        Object[] ao = listRange.get(iR);
 
                         long lBits = (Long) ao[2];
 
@@ -337,10 +336,10 @@ public class JumpVal_N
                         }
                     else
                         {
-                        // this must be an interval of native values
-                        m_aAlgorithm[iC] = Algorithm.NativeInterval;
+                        // this must be a range of native values
+                        m_aAlgorithm[iC] = Algorithm.NativeRange;
 
-                        addInterval((GenericHandle) hCase, lCaseBit, cColumns, iC);
+                        addRange((GenericHandle) hCase, lCaseBit, cColumns, iC);
                         }
                     }
                 else // natural comparison
@@ -352,10 +351,10 @@ public class JumpVal_N
                         }
                     else
                         {
-                        // this must be an interval of native values
-                        m_aAlgorithm[iC] = Algorithm.NaturalInterval;
+                        // this must be a range of native values
+                        m_aAlgorithm[iC] = Algorithm.NaturalRange;
 
-                        addInterval((GenericHandle) hCase, lCaseBit, cColumns, iC);
+                        addRange((GenericHandle) hCase, lCaseBit, cColumns, iC);
                         }
                     }
                 m_algorithm = m_algorithm.worstOf(m_aAlgorithm[iC]);
@@ -364,29 +363,29 @@ public class JumpVal_N
         }
 
     /**
-     * Add an interval definition for the specified column.
+     * Add a range definition for the specified column.
      *
-     * @param hInterval the Interval value
+     * @param hRange    the Range value
      * @param lCaseBit  the case index bit
      * @param cColumns  the total number of columns
-     * @param iC        the current column to add an interval to
+     * @param iC        the current column to add a range to
      */
-    private void addInterval(GenericHandle hInterval, long lCaseBit, int cColumns, int iC)
+    private void addRange(GenericHandle hRange, long lCaseBit, int cColumns, int iC)
         {
-        ObjectHandle hLow  = hInterval.getField("lowerBound");
-        ObjectHandle hHigh = hInterval.getField("upperBound");
+        ObjectHandle hLow  = hRange.getField("lowerBound");
+        ObjectHandle hHigh = hRange.getField("upperBound");
 
-        // TODO: if the interval is small, replace it with the exact hits for native values
-        ensureIntervalList(cColumns, iC).add(
+        // TODO: if the range is small, replace it with the exact hits for native values
+        ensureRangeList(cColumns, iC).add(
                 new Object[]{hLow, hHigh, Long.valueOf(lCaseBit)});
         }
 
-    private List<Object[]> ensureIntervalList(int cColumns, int iCol)
+    private List<Object[]> ensureRangeList(int cColumns, int iCol)
         {
-        List<Object[]>[] alist = m_alistIntervalSmall;
+        List<Object[]>[] alist = m_alistRangeSmall;
         if (alist == null)
             {
-            alist = m_alistIntervalSmall = new List[cColumns];
+            alist = m_alistRangeSmall = new List[cColumns];
             }
         List<Object[]> list = alist[iCol];
         if (list == null)
@@ -448,16 +447,16 @@ public class JumpVal_N
      */
     private transient long[] m_alWildcardSmall;
     /**
-     * A list of intervals per column;
+     * A list of ranges per column;
      *  a[0] - lower bound (ObjectHandle);
      *  a[1] - upper bound (ObjectHandle);
      *  a[2] - the case mask (Long)
      */
-    private transient List<Object[]>[] m_alistIntervalSmall;
+    private transient List<Object[]>[] m_alistRangeSmall;
 
     // cached array of jump maps; for # cases >= 64
     private transient Map<ObjectHandle, BitSet>[] m_amapJumpLarge; // maps per column keyed by constant handle
-    private transient BitSet[] m_lDefaultLarge; // bitmask of default cases per column
+    private transient BitSet[] m_lDefaultLarge; // bitmask of default cases per column // TODO GG this is not used ... can we remove?
 
     private transient Algorithm[] m_aAlgorithm; // algorithm per column
     private transient Algorithm   m_algorithm;  // the "worst" of the column algorithms

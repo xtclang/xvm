@@ -17,21 +17,21 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * Represent an interval of two constant values.
+ * Represent a range of two constant values.
  */
-public class IntervalConstant
+public class RangeConstant
         extends ValueConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a constant whose value is an interval or range.
+     * Construct a constant whose value is a range or interval.
      *
      * @param pool    the ConstantPool that will contain this Constant
      * @param const1  the value of the first constant
      * @param const2  the value of the second constant
      */
-    public IntervalConstant(ConstantPool pool, Constant const1, Constant const2)
+    public RangeConstant(ConstantPool pool, Constant const1, Constant const2)
         {
         super(pool);
 
@@ -61,7 +61,7 @@ public class IntervalConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public IntervalConstant(ConstantPool pool, Format format, DataInput in)
+    public RangeConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool);
@@ -83,7 +83,7 @@ public class IntervalConstant
     // ----- type-specific methods -----------------------------------------------------------------
 
     /**
-     * @return  the first constant in the interval
+     * @return  the first constant in the range
      */
     public Constant getFirst()
         {
@@ -91,7 +91,7 @@ public class IntervalConstant
         }
 
     /**
-     * @return  the last constant in the interval
+     * @return  the last constant in the range
      */
     public Constant getLast()
         {
@@ -99,12 +99,12 @@ public class IntervalConstant
         }
 
     /**
-     * For a value of the type of the values defining the extent of this interval, determine if that
-     * value would be found inside of this interval.
+     * For a value of the type of the values defining the extent of this range, determine if that
+     * value would be found inside of this range.
      *
-     * @param value  a value that might be found within this interval
+     * @param value  a value that might be found within this range
      *
-     * @return true iff the value is found within this interval
+     * @return true iff the value is found within this range
      */
     public boolean contains(Constant value)
         {
@@ -128,8 +128,8 @@ public class IntervalConstant
         }
 
     /**
-     * @return  true iff the last constant in the interval is ordered before the first constant in
-     *          the interval
+     * @return  true iff the last constant in the range is ordered before the first constant in
+     *          the range
      */
     public boolean isReverse()
         {
@@ -145,7 +145,7 @@ public class IntervalConstant
     public TypeConstant getType()
         {
         ConstantPool pool = getConstantPool();
-        return pool.ensureParameterizedTypeConstant(pool.typeInterval(), m_const1.getType());
+        return pool.ensureParameterizedTypeConstant(pool.typeRange(), m_const1.getType());
         }
 
     /**
@@ -164,7 +164,7 @@ public class IntervalConstant
     @Override
     public Format getFormat()
         {
-        return Format.Interval;
+        return Format.Range;
         }
 
     @Override
@@ -181,7 +181,7 @@ public class IntervalConstant
         }
 
     @Override
-    public IntervalConstant resolveTypedefs()
+    public RangeConstant resolveTypedefs()
         {
         Constant constOld1 = m_const1;
         Constant constOld2 = m_const2;
@@ -195,14 +195,14 @@ public class IntervalConstant
     @Override
     protected int compareDetails(Constant that)
         {
-        if (!(that instanceof IntervalConstant))
+        if (!(that instanceof RangeConstant))
             {
             return -1;
             }
-        int nResult = this.m_const1.compareTo(((IntervalConstant) that).m_const1);
+        int nResult = this.m_const1.compareTo(((RangeConstant) that).m_const1);
         if (nResult == 0)
             {
-            nResult = this.m_const2.compareTo(((IntervalConstant) that).m_const2);
+            nResult = this.m_const2.compareTo(((RangeConstant) that).m_const2);
             }
         return nResult;
         }
@@ -261,12 +261,12 @@ public class IntervalConstant
     private transient int m_iVal2;
 
     /**
-     * The first value of the interval.
+     * The first value of the range.
      */
     private Constant m_const1;
 
     /**
-     * The second value of the interval.
+     * The second value of the range.
      */
     private Constant m_const2;
     }

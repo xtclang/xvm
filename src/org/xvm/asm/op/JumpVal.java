@@ -27,7 +27,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * JMP_VAL rvalue, #:(CONST, addr), addr-default ; if value equals a constant, jump to address, otherwise default
  * <p/>
- * Note: No support for wild-cards or intervals.
+ * Note: No support for wild-cards or ranges.
  */
 public class JumpVal
         extends OpSwitch
@@ -153,15 +153,15 @@ public class JumpVal
                 Index = mapJump.get(hValue);
                 break;
 
-            case NativeInterval:
+            case NativeRange:
                 {
                 // check the exact match first
                 Index = mapJump.get(hValue);
 
-                List<Object[]> listInterval = m_listIntervals;
-                for (int iR = 0, cR = listInterval.size(); iR < cR; iR++)
+                List<Object[]> listRanges = m_listRanges;
+                for (int iR = 0, cR = listRanges.size(); iR < cR; iR++)
                     {
-                    Object[] ao = listInterval.get(iR);
+                    Object[] ao = listRanges.get(iR);
 
                     int index = (Integer) ao[2];
 
@@ -221,10 +221,10 @@ public class JumpVal
                     }
                 else
                     {
-                    // this must be an interval of native values
-                    m_algorithm = Algorithm.NativeInterval;
+                    // this must be a range of native values
+                    m_algorithm = Algorithm.NativeRange;
 
-                    addInterval((GenericHandle) hCase, aofCase[i]);
+                    addRange((GenericHandle) hCase, aofCase[i]);
                     }
                 }
             else // natural comparison
@@ -237,31 +237,31 @@ public class JumpVal
                     }
                 else
                     {
-                    // this must be an interval of native values
-                    m_algorithm = Algorithm.NaturalInterval;
+                    // this must be a range of native values
+                    m_algorithm = Algorithm.NaturalRange;
 
-                    addInterval((GenericHandle) hCase, i);
+                    addRange((GenericHandle) hCase, i);
                     }
                 }
             }
         }
 
     /**
-     * Add an interval definition for the specified column.
+     * Add a range definition for the specified column.
      *
-     * @param hInterval the Interval value
-     * @param index     the case index
+     * @param hRange  the Range value
+     * @param index   the case index
      */
-    private void addInterval(GenericHandle hInterval, int index)
+    private void addRange(GenericHandle hRange, int index)
         {
-        ObjectHandle hLow  = hInterval.getField("lowerBound");
-        ObjectHandle hHigh = hInterval.getField("upperBound");
+        ObjectHandle hLow  = hRange.getField("lowerBound");
+        ObjectHandle hHigh = hRange.getField("upperBound");
 
-        // TODO: if the interval is small, replace it with the exact hits for native values
-        List<Object[]> list = m_listIntervals;
+        // TODO: if the range is small and sequential (an interval), replace it with the exact hits for native values
+        List<Object[]> list = m_listRanges;
         if (list == null)
             {
-            list = m_listIntervals = new ArrayList<>();
+            list = m_listRanges = new ArrayList<>();
             }
         list.add(new Object[]{hLow, hHigh, Integer.valueOf(index)});
         }
@@ -296,12 +296,12 @@ public class JumpVal
     private Map<ObjectHandle, Integer> m_mapJump;
 
     /**
-     * A list of intervals;
+     * A list of ranges;
      *  a[0] - lower bound (ObjectHandle);
      *  a[1] - upper bound (ObjectHandle);
      *  a[2] - the case index (Integer)
      */
-    private transient List<Object[]> m_listIntervals;
+    private transient List<Object[]> m_listRanges;
 
     private transient Algorithm m_algorithm;  // the algorithm
     }

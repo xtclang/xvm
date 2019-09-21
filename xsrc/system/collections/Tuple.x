@@ -96,12 +96,12 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * size, persistent, or const; in all cases, changes to the returned tuple will not affect this
      * tuple.
      *
-     * If the compile-time type of this tuple is known, and if the range is a compile-time constant
+     * If the compile-time type of this tuple is known, and if the interval is a compile-time constant
      * value, then the compile-time type of the returned tuple is known; otherwise, an explicit cast
      * to a compile-time type is required to regain the compile-time type.
      */
     @Op("[..]")
-    Tuple!<> slice(Range<Int> range);
+    Tuple!<> slice(Interval<Int> interval);
 
     /**
      * Creates and returns a new tuple that is a copy of this tuple, except with the specified
@@ -125,11 +125,11 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * size, persistent, or const; in all cases, changes to the returned tuple will not affect this
      * tuple.
      *
-     * If the compile-time type of this tuple is known, and if the range is a compile-time constant
+     * If the compile-time type of this tuple is known, and if the interval is a compile-time constant
      * value, then the compile-time type of the returned tuple is known; otherwise, an explicit cast
      * to a compile-time type is required to regain the compile-time type.
      */
-    Tuple!<> remove(Range<Int> range);
+    Tuple!<> remove(Interval<Int> interval);
 
     /**
      * Return a fixed-size tuple (whose values are mutable) of the same type and with the same

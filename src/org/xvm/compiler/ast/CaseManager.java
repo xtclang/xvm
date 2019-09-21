@@ -14,7 +14,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.ArrayConstant;
-import org.xvm.asm.constants.IntervalConstant;
+import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.MatchAnyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.ValueConstant;
@@ -125,7 +125,7 @@ public class CaseManager<CookieType>
         }
 
     /**
-     * @return true iff any of the case expressions use an interval or range value match
+     * @return true iff any of the case expressions use a range or interval value match
      */
     public boolean usesNonExactMatching()
         {
@@ -413,7 +413,7 @@ public class CaseManager<CookieType>
                     else if (!exprField.testFit(ctx, m_atypeCond[i], null).isFit())
                         {
                         TypeConstant typeInterval = pool.ensureParameterizedTypeConstant(
-                                pool.typeInterval(), m_atypeCond[i]);
+                                pool.typeRange(), m_atypeCond[i]);
                         if (exprField.testFit(ctx, typeInterval, null).isFit())
                             {
                             lRange |= 1 << i;
@@ -436,7 +436,7 @@ public class CaseManager<CookieType>
                 else if (!exprCase.testFit(ctx, m_typeCase, null).isFit())
                     {
                     TypeConstant typeInterval = pool.ensureParameterizedTypeConstant(
-                            pool.typeInterval(), m_typeCase);
+                            pool.typeRange(), m_typeCase);
                     if (exprCase.testFit(ctx, typeInterval, null).isFit())
                         {
                         lRange    = 1;
@@ -467,7 +467,7 @@ public class CaseManager<CookieType>
                 }
 
             // if the validation type changes for this particular case expression
-            // (because of an interval match), then create the type that will apply to
+            // (because of a range match), then create the type that will apply to
             // this particular case expression
             if (atypeAlt != null)
                 {
@@ -523,10 +523,10 @@ public class CaseManager<CookieType>
                                     {
                                     // treated as "default:", so ignore
                                     }
-                                else if (constCase instanceof IntervalConstant)
+                                else if (constCase instanceof RangeConstant)
                                     {
-                                    incorporateInt(((IntervalConstant) constCase).getFirst().getIntValue());
-                                    incorporateInt(((IntervalConstant) constCase).getLast().getIntValue());
+                                    incorporateInt(((RangeConstant) constCase).getFirst().getIntValue());
+                                    incorporateInt(((RangeConstant) constCase).getLast().getIntValue());
                                     }
                                 else
                                     {
@@ -674,10 +674,10 @@ public class CaseManager<CookieType>
                     {
                     Label    label     = aLabelCase[i];
                     Constant constCase = aConstCase[i];
-                    if (constCase instanceof IntervalConstant)
+                    if (constCase instanceof RangeConstant)
                         {
-                        int iFirst = ((IntervalConstant) constCase).getFirst().getIntValue().sub(m_pintMin).getInt();
-                        int iLast  = ((IntervalConstant) constCase).getLast().getIntValue().sub(m_pintMin).getInt();
+                        int iFirst = ((RangeConstant) constCase).getFirst().getIntValue().sub(m_pintMin).getInt();
+                        int iLast  = ((RangeConstant) constCase).getLast().getIntValue().sub(m_pintMin).getInt();
                         if (iFirst > iLast)
                             {
                             int iTemp = iFirst;
@@ -835,11 +835,11 @@ public class CaseManager<CookieType>
         Object oThisLo, oThisHi;
         if (fRangeThis)
             {
-            if (constThis instanceof IntervalConstant)
+            if (constThis instanceof RangeConstant)
                 {
-                IntervalConstant interval = (IntervalConstant) constThis;
-                oThisLo = interval.getFirst();
-                oThisHi = interval.getLast();
+                RangeConstant range = (RangeConstant) constThis;
+                oThisLo = range.getFirst();
+                oThisHi = range.getLast();
                 if (oThisLo instanceof ValueConstant && oThisHi instanceof ValueConstant)
                     {
                     oThisLo = ((ValueConstant) oThisLo).getValue();
@@ -868,11 +868,11 @@ public class CaseManager<CookieType>
         Object oThatLo, oThatHi;
         if (fRangeThat)
             {
-            if (constThat instanceof IntervalConstant)
+            if (constThat instanceof RangeConstant)
                 {
-                IntervalConstant interval = (IntervalConstant) constThat;
-                oThatLo = interval.getFirst();
-                oThatHi = interval.getLast();
+                RangeConstant range = (RangeConstant) constThat;
+                oThatLo = range.getFirst();
+                oThatHi = range.getLast();
                 if (oThatLo instanceof ValueConstant && oThatHi instanceof ValueConstant)
                     {
                     oThatLo = ((ValueConstant) oThatLo).getValue();

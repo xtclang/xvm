@@ -1913,7 +1913,7 @@ public class NameExpression
                         if (clz != prop.getParent())
                             {
                             // the property may originate in a contribution
-                            // (e.g. Range.x refers to Interval.upperBound)
+                            // (e.g. Interval.x refers to Range.upperBound)
                             PropertyInfo infoProp = clz.getFormalType().
                                     ensureTypeInfo(errs).findProperty(id);
                             if (infoProp != null)

@@ -216,17 +216,17 @@ const Number
         }
 
     /**
-     * Obtain an interval beginning with this number and proceeding to the specified number.
+     * Obtain a range beginning with this number and proceeding to the specified number.
      *
-     * @param n  the number representing the `last` value in the interval
+     * @param n  the number representing the `last` value in the range
      *
-     * @return the resulting Interval
+     * @return the resulting Range
      */
     @Override
     @Op("..")
-    Interval<Number> through(Number n)
+    Range<Number> through(Number n)
         {
-        return new Interval<Number>(this, n);
+        return new Range<Number>(this, n);
         }
 
 

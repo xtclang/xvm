@@ -161,7 +161,7 @@ public class ObjectHeap
             case Time:
             case DateTime:
             case Duration:
-            case Interval:
+            case Range:
             case Version:
                 return constValue.getType();
 

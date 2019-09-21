@@ -1,158 +1,201 @@
 /**
- * An interval specifies a lower bound and an upper bound.
+ * An interval is a range whose values are known to be sequential. An interval adds some
+ * capabilities, including the ability to union two adjoining ranges, and to iterate over the
+ * values in the interval.
  */
-const Interval<Element extends Orderable>
-        incorporates conditional Range<Element extends Sequential>
+mixin Interval<Element extends immutable Sequential>
+        into Range<Element>
+        implements Iterable<Element>
     {
-    construct(Element first, Element last)
+    /**
+     * A IntervalIterator is an Iterator that knows when it is reaching the end of its interval.
+     */
+    interface IntervalIterator
+            extends Iterator<Element>
         {
-        if (first > last)
+        @RO Boolean hasNext;
+        }
+
+    /**
+     * The size of an Interval is defined as the number of Sequential elements represented by the
+     * interval.
+     *
+     * Consider these examples:
+     * * The size of ['a'..'a'] is 1
+     * * The size of ['a'..'z'] is 26
+     * * The size of ['z'..'a'] is 26
+     */
+    @Override
+    Int size.get()
+        {
+        return lowerBound.stepsTo(upperBound) + 1;
+        }
+
+    /**
+     * Obtain an iterator over all of the values in the interval. Note that the values are iterated
+     * in the order that the interval was specified, so if the interval was specified with a higher
+     * value first, then the values from the iterator will be in descending order.
+     */
+    @Override
+    IntervalIterator iterator()
+        {
+        if (reversed)
             {
-            lowerBound = last;
-            upperBound = first;
-            reversed   = true;
+            return new IntervalIterator()
+                {
+                private Element nextValue = upperBound;
+
+                @Override
+                public/private Boolean hasNext = true;
+
+                @Override
+                conditional Element next()
+                    {
+                    if (hasNext)
+                        {
+                        Element value = nextValue;
+                        if (value == lowerBound)
+                            {
+                            hasNext = false;
+                            }
+                        else
+                            {
+                            nextValue = value.prevValue();
+                            }
+                        return true, value;
+                        }
+                    else
+                        {
+                        return false;
+                        }
+                    }
+                };
             }
         else
             {
-            lowerBound = first;
-            upperBound = last;
-            reversed   = false;
+            return new IntervalIterator()
+                {
+                private Element nextValue = lowerBound;
+
+                @Override
+                public/private Boolean hasNext = true;
+
+                @Override
+                conditional Element next()
+                    {
+                    if (hasNext)
+                        {
+                        Element value = nextValue;
+                        if (value == upperBound)
+                            {
+                            hasNext = false;
+                            }
+                        else
+                            {
+                            nextValue = value.nextValue();
+                            }
+                        return true, value;
+                        }
+                    else
+                        {
+                        return false;
+                        }
+                    }
+                };
             }
         }
 
     /**
-     * The starting bound of the interval.
+     * Execute the specified function for each element in the Interval.
+     *
+     * @param process  the function to execute on each element in the Interval
      */
-    Element first.get()
+    void forEach(function void(Element) process)
         {
-        return reversed ? upperBound : lowerBound;
-        }
-
-    /**
-     * The ending bound of the interval.
-     */
-    Element last.get()
-        {
-        return reversed ? lowerBound : upperBound;
-        }
-
-    /**
-     * The lower bound of the interval.
-     */
-    Element lowerBound;
-
-    /**
-     * The upper bound of the interval.
-     */
-    Element upperBound;
-
-    /**
-     * Reversed is true if the interval was specified from its upper bound to its lower bound.
-     */
-    Boolean reversed;
-
-    /**
-     * Create a new interval in the reverse order of this interval.
-     */
-    Interval! reverse()
-        {
-        return reversed ? lowerBound..upperBound : upperBound..lowerBound;
-        }
-
-    /**
-     * Determine if the specified value exists within this interval.
-     */
-    Boolean contains(Element value)
-        {
-        return lowerBound <= value && upperBound >= value;
-        }
-
-    /**
-     * This interval contains that interval iff every value within that interval is also in this interval.
-     */
-    Boolean contains(Interval that)
-        {
-        return this.lowerBound <= that.lowerBound && this.upperBound >= that.upperBound;
-        }
-
-    /**
-     * That interval contains this interval iff every value within this interval is also in that interval.
-     */
-    Boolean isContainedBy(Interval that)
-        {
-        return that.contains(this);
-        }
-
-    /**
-     * Two intervals overlap iff there exists at least one value that is within both intervals.
-     */
-    Boolean overlaps(Interval that)
-        {
-        return this.upperBound >= that.lowerBound && this.lowerBound <= that.upperBound;
-        }
-
-    /**
-     * The intersection of this interval and that interval is the interval that contains all of the values
-     * that exist within both this interval and that interval.
-     */
-    conditional Interval intersection(Interval that)
-        {
-        if (!this.overlaps(that))
+        if (reversed)
             {
-            return false;
+            Element value = upperBound;
+            do
+                {
+                process(value);
+                value = value.prevValue();
+                }
+            while (value >= lowerBound);
             }
-
-        return true, new Interval(this.lowerBound.maxOf(that.lowerBound), this.upperBound.minOf(that.upperBound));
+        else
+            {
+            Element value = lowerBound;
+            do
+                {
+                process(value);
+                value = value.nextValue();
+                }
+            while (value <= upperBound);
+            }
         }
 
     /**
-     * Two intervals that are contiguous or overlap can be joined together to form a larger interval.
+     * This is the same as the {@link forEach} method, except that the last value in the Interval is
+     * considered to be exclusive of the interval. This means that a hypothetical interval of `0..0`
+     * would not have any values processed by this method.
+     *
+     * @param process  the function to call with each value from the interval
+     */
+    void forEachExclusive(function void(Element) process)
+        {
+        if (reversed)
+            {
+            Element value = upperBound;
+            while (value > lowerBound)
+                {
+                process(value);
+                value = value.prevValue();
+                }
+            }
+        else
+            {
+            Element value = lowerBound;
+            while (value < upperBound)
+                {
+                process(value);
+                value = value.nextValue();
+                }
+            }
+        }
+
+    /**
+     * Two intervals adjoin iff the union of all of the values from both intervals forms a single
+     * contiguous Interval.
+     */
+    Boolean adjoins(Interval that)
+        {
+        if (this.upperBound < that.lowerBound)
+            {
+            // this interval precedes that interval
+            return this.upperBound.nextValue() == that.lowerBound;
+            }
+        else if (this.lowerBound > that.upperBound)
+            {
+            // this interval follows that interval
+            return this.lowerBound.prevValue() == that.upperBound;
+            }
+        else
+            {
+            return true;
+            }
+        }
+
+    /**
+     * Two intervals that are contiguous or overlap can be joined together to form a larger
+     * interval.
      */
     conditional Interval union(Interval that)
         {
-        if (!this.overlaps(that))
+        if (!this.adjoins(that))
             {
             return false;
             }
 
-        return true, new Interval(this.lowerBound.minOf(that.lowerBound), this.upperBound.maxOf(that.upperBound));
-        }
-
-    // ----- Stringable methods --------------------------------------------------------------------
-
-    @Override
-    Int estimateStringLength()
-        {
-        Int estimate = 2;
-        if (Element.is(Type<Stringable>))
-            {
-            estimate += lowerBound.estimateStringLength()
-                      + upperBound.estimateStringLength();
-            }
-        else
-            {
-// TODO GG : COMPILER-56: Could not find a matching method or function "estimateStringLength" for type "Ecstasy:Interval.Element + Ecstasy:Stringable". ("x.estimateStringLength()")
-//            estimate += lowerBound.is(Stringable) ? lowerBound.estimateStringLength() : 4;
-//            estimate += upperBound.is(Stringable) ? upperBound.estimateStringLength() : 4;
-            estimate += 8;
-            }
-        return estimate;
-        }
-
-    @Override
-    void appendTo(Appender<Char> appender)
-        {
-        if (Element.is(Type<Stringable>))
-            {
-            lowerBound.appendTo(appender);
-            appender.add("..");
-            upperBound.appendTo(appender);
-            }
-        else
-            {
-            (lowerBound.is(Stringable) ? lowerBound : lowerBound.toString()).appendTo(appender);
-            appender.add("..");
-            (upperBound.is(Stringable) ? upperBound : upperBound.toString()).appendTo(appender);
-            }
+        return true, this.lowerBound.minOf(that.lowerBound) .. this.upperBound.maxOf(that.upperBound);
         }
     }

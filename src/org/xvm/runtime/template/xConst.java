@@ -10,7 +10,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.IntervalConstant;
+import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -71,8 +71,8 @@ public class xConst
             FN_ESTIMATE_LENGTH = clzHelper.findMethod("estimateStringLength", 2);
             FN_APPEND_TO       = clzHelper.findMethod("appendTo", 3);
 
-            // Interval support
-            INTERVAL_CONSTRUCT = f_templates.getClassStructure("Interval").
+            // Range support
+            RANGE_CONSTRUCT = f_templates.getClassStructure("Range").
                 findMethod("construct", 2);
 
             // Nibble support
@@ -110,16 +110,16 @@ public class xConst
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof IntervalConstant)
+        if (constant instanceof RangeConstant)
             {
-            IntervalConstant constInterval = (IntervalConstant) constant;
+            RangeConstant constRange = (RangeConstant) constant;
 
-            ObjectHandle h1 = frame.getConstHandle(constInterval.getFirst());
-            ObjectHandle h2 = frame.getConstHandle(constInterval.getLast());
+            ObjectHandle h1 = frame.getConstHandle(constRange.getFirst());
+            ObjectHandle h2 = frame.getConstHandle(constRange.getLast());
 
-            TypeConstant     typeInterval = constInterval.getType();
-            ClassComposition clzInterval  = f_templates.resolveClass(typeInterval);
-            MethodStructure  constructor  = INTERVAL_CONSTRUCT;
+            TypeConstant     typeRange   = constRange.getType();
+            ClassComposition clzRange    = f_templates.resolveClass(typeRange);
+            MethodStructure  constructor = RANGE_CONSTRUCT;
 
             ObjectHandle[] ahArg = new ObjectHandle[constructor.getMaxVars()];
             ahArg[0] = h1;
@@ -128,12 +128,12 @@ public class xConst
             if (Op.anyDeferred(ahArg))
                 {
                 Frame.Continuation stepNext = frameCaller ->
-                    clzInterval.getTemplate().construct(
-                        frameCaller, constructor, clzInterval, null, ahArg, Op.A_STACK);
+                    clzRange.getTemplate().construct(
+                        frameCaller, constructor, clzRange, null, ahArg, Op.A_STACK);
                 return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
-            return clzInterval.getTemplate().construct(
-                frame, constructor, clzInterval, null, ahArg, Op.A_STACK);
+            return clzRange.getTemplate().construct(
+                frame, constructor, clzRange, null, ahArg, Op.A_STACK);
             }
 
         Literal:
@@ -613,7 +613,7 @@ public class xConst
 
     private static MethodStructure FN_ESTIMATE_LENGTH;
     private static MethodStructure FN_APPEND_TO;
-    private static MethodStructure INTERVAL_CONSTRUCT;
+    private static MethodStructure RANGE_CONSTRUCT;
     private static MethodStructure NIBBLE_CONSTRUCT;
     private static MethodStructure DATETIME_CONSTRUCT;
     private static MethodStructure DATE_CONSTRUCT;

@@ -472,10 +472,10 @@ const Version
 
     @Override
     @Op("[..]")
-    Version slice(Range<Int> range)
+    Version slice(Interval<Int> interval)
         {
-        Int lower = range.lowerBound;
-        Int upper = range.upperBound;
+        Int lower = interval.lowerBound;
+        Int upper = interval.upperBound;
         if (lower < 0)
             {
             throw new OutOfBounds(lower.toString() + " < 0");
@@ -485,7 +485,7 @@ const Version
             throw new OutOfBounds(upper.toString() + " >= " + size);
             }
         assert lower <= upper;
-        assert !range.reversed;
+        assert !interval.reversed;
 
         if (lower == 0)
             {
@@ -493,7 +493,7 @@ const Version
             }
 
         Version? slice = null;
-        for (Int index : range)
+        for (Int index : interval)
             {
             Version part = this[index];
             slice = new Version(slice, part.form, part.number, part.build);

@@ -1441,7 +1441,7 @@ public class Parser
         if (keyword.getId() == Id.ASSERT_RND)
             {
             // for readability / clarity, whitespace after the "assert:rnd" and before the "(..)"
-            // is forbidden, because the sample interval "(..)" belongs to the assert, and is not
+            // is forbidden, because the sample range "(..)" belongs to the assert, and is not
             // a condition that follows the assert
             if (keyword.hasTrailingWhitespace())
                 {
@@ -1914,7 +1914,7 @@ public class Parser
      * #    (b) a constant expression of a compatible tuple type
      * # 5) each "case" expression may be any of:
      * #    (a) the type of the corresponding expression (or tuple field value) in the SwitchCondition;
-     * #    (b) an Interval of that type; or
+     * #    (b) a Range of that type; or
      * #    (c) the wild-card "_" (compiled as the "blackhole" constant)
      * #    a CaseExpressionList of all wild-cards is semantically equivalent to the use of a "default"
      * #    label, and would predictably conflict with the same if both were specified.
@@ -2761,7 +2761,7 @@ public class Parser
         }
 
     /**
-     * Parse a range or interval expression.
+     * Parse an interval or range expression.
      *
      * <p/><code><pre>
      * RangeExpression
@@ -3761,7 +3761,7 @@ public class Parser
      *
      * # each "case" expression may be any of:
      * #    (a) the type of the corresponding expression (or tuple field value) in the SwitchCondition;
-     * #    (b) an Interval of that type; or
+     * #    (b) a Range of that type; or
      * #    (c) the wild-card "_" (compiled as the "blackhole" constant)
      * # a CaseExpressionList of all wild-cards is semantically equivalent to the use of a "default"
      * # label, and would predictably conflict with the same if both were specified.

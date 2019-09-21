@@ -1,181 +1,108 @@
 /**
- * A range is an interval whose values are known to be sequential. A range adds some capabilities,
- * including the ability to union two adjoining ranges, and to iterate over the values in the range.
+ * A range specifies a lower bound and an upper bound.
  */
-mixin Range<Element extends immutable Sequential>
-        into Interval<Element>
-        implements Iterable<Element>
+const Range<Element extends Orderable>
+        incorporates conditional Interval<Element extends Sequential>
     {
-    /**
-     * A RangeIterator is an Iterator that knows when it is reaching the end of its range.
-     */
-    interface RangeIterator
-            extends Iterator<Element>
+    construct(Element first, Element last)
         {
-        @RO Boolean hasNext;
-        }
-
-    /**
-     * The size of a Range is defined as the number of Sequential elements represented by the range.
-     *
-     * Consider these examples:
-     * * The size of ['a'..'a'] is 1
-     * * The size of ['a'..'z'] is 26
-     * * The size of ['z'..'a'] is 26
-     */
-    @Override
-    Int size.get()
-        {
-        return lowerBound.stepsTo(upperBound) + 1;
-        }
-
-    /**
-     * Obtain an iterator over all of the values in the range. Note that the values are iterated
-     * in the order that the range was specified, so if the range was specified with a higher
-     * value first, then the values from the iterator will be in descending order.
-     */
-    @Override
-    RangeIterator iterator()
-        {
-        if (reversed)
+        if (first > last)
             {
-            return new RangeIterator()
-                {
-                private Element nextValue = upperBound;
-
-                @Override
-                public/private Boolean hasNext = true;
-
-                @Override
-                conditional Element next()
-                    {
-                    if (hasNext)
-                        {
-                        Element value = nextValue;
-                        if (value == lowerBound)
-                            {
-                            hasNext = false;
-                            }
-                        else
-                            {
-                            nextValue = value.prevValue();
-                            }
-                        return true, value;
-                        }
-                    else
-                        {
-                        return false;
-                        }
-                    }
-                };
+            lowerBound = last;
+            upperBound = first;
+            reversed   = true;
             }
         else
             {
-            return new RangeIterator()
-                {
-                private Element nextValue = lowerBound;
-
-                @Override
-                public/private Boolean hasNext = true;
-
-                @Override
-                conditional Element next()
-                    {
-                    if (hasNext)
-                        {
-                        Element value = nextValue;
-                        if (value == upperBound)
-                            {
-                            hasNext = false;
-                            }
-                        else
-                            {
-                            nextValue = value.nextValue();
-                            }
-                        return true, value;
-                        }
-                    else
-                        {
-                        return false;
-                        }
-                    }
-                };
-            }
-        }
-
-    void forEach(function void(Element) process)
-        {
-        if (reversed)
-            {
-            Element value = upperBound;
-            do
-                {
-                process(value);
-                value = value.prevValue();
-                }
-            while (value >= lowerBound);
-            }
-        else
-            {
-            Element value = lowerBound;
-            do
-                {
-                process(value);
-                value = value.nextValue();
-                }
-            while (value <= upperBound);
+            lowerBound = first;
+            upperBound = last;
+            reversed   = false;
             }
         }
 
     /**
-     * This is the same as the {@link forEach} method, except that the last value in the Range is
-     * considered to be exclusive of the range. This means that a hypothetical range of `0..0`
-     * would not have any values processed by this method.
-     *
-     * @param process  the function to call with each value from the range
+     * The starting bound of the range.
      */
-    void forEachExclusive(function void(Element) process)
+    Element first.get()
         {
-        if (reversed)
-            {
-            Element value = upperBound;
-            while (value > lowerBound)
-                {
-                process(value);
-                value = value.prevValue();
-                }
-            }
-        else
-            {
-            Element value = lowerBound;
-            while (value < upperBound)
-                {
-                process(value);
-                value = value.nextValue();
-                }
-            }
+        return reversed ? upperBound : lowerBound;
         }
 
     /**
-     * Two ranges adjoin iff the union of all of the values from both ranges forms a single
-     * contiguous Range.
+     * The ending bound of the range.
      */
-    Boolean adjoins(Range that)
+    Element last.get()
         {
-        if (this.upperBound < that.lowerBound)
+        return reversed ? lowerBound : upperBound;
+        }
+
+    /**
+     * The lower bound of the range.
+     */
+    Element lowerBound;
+
+    /**
+     * The upper bound of the range.
+     */
+    Element upperBound;
+
+    /**
+     * Reversed is true if the range was specified from its upper bound to its lower bound.
+     */
+    Boolean reversed;
+
+    /**
+     * Create a new range in the reverse order of this range.
+     */
+    Range! reverse()
+        {
+        return reversed ? lowerBound..upperBound : upperBound..lowerBound;
+        }
+
+    /**
+     * Determine if the specified value exists within this range.
+     */
+    Boolean contains(Element value)
+        {
+        return lowerBound <= value && upperBound >= value;
+        }
+
+    /**
+     * This range contains that range iff every value within that range is also in this range.
+     */
+    Boolean contains(Range that)
+        {
+        return this.lowerBound <= that.lowerBound && this.upperBound >= that.upperBound;
+        }
+
+    /**
+     * That range contains this range iff every value within this range is also in that range.
+     */
+    Boolean isContainedBy(Range that)
+        {
+        return that.contains(this);
+        }
+
+    /**
+     * Two ranges overlap iff there exists at least one value that is within both ranges.
+     */
+    Boolean overlaps(Range that)
+        {
+        return this.upperBound >= that.lowerBound && this.lowerBound <= that.upperBound;
+        }
+
+    /**
+     * The intersection of this range and that range is the range that contains all of the values
+     * that exist within both this range and that range.
+     */
+    conditional Range intersection(Range that)
+        {
+        if (!this.overlaps(that))
             {
-            // this range precedes that range
-            return this.upperBound.nextValue() == that.lowerBound;
+            return false;
             }
-        else if (this.lowerBound > that.upperBound)
-            {
-            // this range follows that range
-            return this.lowerBound.prevValue() == that.upperBound;
-            }
-        else
-            {
-            return true;
-            }
+
+        return true, new Range(this.lowerBound.maxOf(that.lowerBound), this.upperBound.minOf(that.upperBound));
         }
 
     /**
@@ -183,11 +110,49 @@ mixin Range<Element extends immutable Sequential>
      */
     conditional Range union(Range that)
         {
-        if (!this.adjoins(that))
+        if (!this.overlaps(that))
             {
             return false;
             }
 
-        return true, this.lowerBound.minOf(that.lowerBound) .. this.upperBound.maxOf(that.upperBound);
+        return true, new Range(this.lowerBound.minOf(that.lowerBound), this.upperBound.maxOf(that.upperBound));
+        }
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        Int estimate = 2;
+        if (Element.is(Type<Stringable>))
+            {
+            estimate += lowerBound.estimateStringLength()
+                      + upperBound.estimateStringLength();
+            }
+        else
+            {
+// TODO GG : COMPILER-56: Could not find a matching method or function "estimateStringLength" for type "Ecstasy:Range.Element + Ecstasy:Stringable". ("x.estimateStringLength()")
+//            estimate += lowerBound.is(Stringable) ? lowerBound.estimateStringLength() : 4;
+//            estimate += upperBound.is(Stringable) ? upperBound.estimateStringLength() : 4;
+            estimate += 8;
+            }
+        return estimate;
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        if (Element.is(Type<Stringable>))
+            {
+            lowerBound.appendTo(appender);
+            appender.add("..");
+            upperBound.appendTo(appender);
+            }
+        else
+            {
+            (lowerBound.is(Stringable) ? lowerBound : lowerBound.toString()).appendTo(appender);
+            appender.add("..");
+            (upperBound.is(Stringable) ? upperBound : upperBound.toString()).appendTo(appender);
+            }
         }
     }

@@ -13,7 +13,7 @@ import org.xvm.runtime.ObjectHandle;
 
 
 /**
- * GP_DOTDOT rvalue1, rvalue2, lvalue ; T .. T -> Interval<T>
+ * GP_DOTDOT rvalue1, rvalue2, lvalue ; T .. T -> Range<T>
  */
 public class GP_DotDot
         extends OpGeneral

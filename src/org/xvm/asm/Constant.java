@@ -812,7 +812,7 @@ public abstract class Constant
         Set,
         MapEntry,
         Map,
-        Interval,
+        Range,
         Any,
         Path,
         FileStore,

@@ -15,7 +15,7 @@ import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IntConstant;
-import org.xvm.asm.constants.IntervalConstant;
+import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.MapConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -200,7 +200,7 @@ public class ArrayAccessExpression
 
             // array[index..index]
             if (typeRequired.isA(pool.typeSequence()) && indexes.get(0).testFit(ctx,
-                    pool.ensureParameterizedTypeConstant(pool.typeInterval(), pool.typeInt()), null).isFit())
+                    pool.ensureParameterizedTypeConstant(pool.typeRange(), pool.typeInt()), null).isFit())
                 {
                 // REVIEW this might not be quite right .. assemble the type and then find the result of the [..] and see if that isA(typeRequired)
                 TypeConstant typeElement = typeRequired.resolveGenericType("Element");
@@ -243,7 +243,7 @@ public class ArrayAccessExpression
                 }
 
             // matrix[index..index,index..index]
-            TypeConstant typeInterval = pool.ensureParameterizedTypeConstant(pool.typeInterval(), pool.typeInt());
+            TypeConstant typeInterval = pool.ensureParameterizedTypeConstant(pool.typeRange(), pool.typeInt());
             if (typeRequired.isA(pool.typeMatrix()) && exprCol.testFit(ctx, typeInterval, null).isFit()
                                                     && exprRow.testFit(ctx, typeInterval, null).isFit())
                 {
@@ -294,7 +294,7 @@ public class ArrayAccessExpression
                     }
                 // array[index..index]
                 else if (typeRequired.isA(pool.typeSequence()) && aexprIndexes[0].testFit(ctx,
-                        pool.ensureParameterizedTypeConstant(pool.typeInterval(), pool.typeInt()), null).isFit())
+                        pool.ensureParameterizedTypeConstant(pool.typeRange(), pool.typeInt()), null).isFit())
                     {
                     // REVIEW keep this in sync with testFit()
                     typeElement = typeRequired.resolveGenericType("Element");
@@ -362,7 +362,7 @@ public class ArrayAccessExpression
                 // array[index..index]
                 else if (typeRequired.isA(pool.typeInterval()))
                     {
-                    TypeConstant typeIntInterval = pool.ensureParameterizedTypeConstant(pool.typeInterval(), pool.typeInt());
+                    TypeConstant typeIntInterval = pool.ensureParameterizedTypeConstant(pool.typeRange(), pool.typeInt());
                     if (exprCol.testFit(ctx, typeIntInterval, null).isFit() &&
                         exprRow.testFit(ctx, typeIntInterval, null).isFit())
                         {
@@ -484,7 +484,7 @@ public class ArrayAccessExpression
                 if (fSlice)
                     {
                     constVal = evalConst((ArrayConstant) exprArray.toConstant(),
-                            (IntervalConstant) aexprIndexes[0].toConstant(), typeElement, errs);
+                            (RangeConstant) aexprIndexes[0].toConstant(), typeElement, errs);
                     }
                 else
                     {
@@ -927,9 +927,9 @@ public class ArrayAccessExpression
         int nHi;
         try
             {
-            IntervalConstant interval = (IntervalConstant) index.convertTo(pool.typeInterval());
-            nLo = interval.getFirst().convertTo(pool.typeInt()).getIntValue().getInt();
-            nHi = interval.getLast().convertTo(pool.typeInt()).getIntValue().getInt();
+            RangeConstant range = (RangeConstant) index.convertTo(pool.typeInterval());
+            nLo = range.getFirst().convertTo(pool.typeInt()).getIntValue().getInt();
+            nHi = range.getLast().convertTo(pool.typeInt()).getIntValue().getInt();
             }
         catch (RuntimeException e)
             {
@@ -984,7 +984,7 @@ public class ArrayAccessExpression
             // type of "tup[lo..hi]" is a tuple
             try
                 {
-                IntervalConstant interval = (IntervalConstant) index.convertTo(pool.typeInterval());
+                RangeConstant interval = (RangeConstant) index.convertTo(pool.typeInterval());
                 nLo    = interval.getFirst().convertTo(pool.typeInt()).getIntValue().getInt();
                 nHi    = interval.getLast().convertTo(pool.typeInt()).getIntValue().getInt();
                 fSlice = true;
@@ -1050,7 +1050,7 @@ public class ArrayAccessExpression
             Constant     constIndex = convertConstant(constRaw, pool.typeInt());
             return constIndex == null
                     ? convertConstant(constRaw, pool.ensureParameterizedTypeConstant(
-                                      pool.typeInterval(), pool.typeInt()))
+                                      pool.typeRange(), pool.typeInt()))
                     : constIndex;
             }
         else
@@ -1201,13 +1201,13 @@ public class ArrayAccessExpression
      * Extract a constant slice from a constant array.
      *
      * @param constArray  the array to extract a slice from
-     * @param constIndex  the interval of indexes to extract in the slice
+     * @param constIndex  the range of indexes to extract in the slice
      * @param typeResult  the type of the resulting constant slice
      * @param errs        the error list to log to
      *
      * @return the extracted slice
      */
-    private Constant evalConst(ArrayConstant constArray, IntervalConstant constIndex, TypeConstant typeResult, ErrorListener errs)
+    private Constant evalConst(ArrayConstant constArray, RangeConstant constIndex, TypeConstant typeResult, ErrorListener errs)
         {
         Constant[]    aOldVals = constArray.getValue();
         int           cOldVals = aOldVals.length;

@@ -275,12 +275,12 @@ const IntLiteral(String text)
         }
 
     /**
-     * Obtain an interval beginning with this number and proceeding to the specified number.
+     * Obtain a range beginning with this number and proceeding to the specified number.
      */
     @Op("..")
-    Interval<Int> through(Int n)
+    Range<Int> through(Int n)
         {
-        return new Interval<Int>(this.toInt(), n);
+        return new Range<Int>(this.toInt(), n);
         }
 
 

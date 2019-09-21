@@ -393,10 +393,10 @@ module TestMisc.xqiz.it
         Int a = 2;
         Int b = 5;
         Object c = a..b;
-        console.println("range=" + c);
+        console.println("interval=" + c);
 
-        Range<Int> r = a+1..b+1;
-        console.println("range=" + r);
+        Interval<Int> r = a+1..b+1;
+        console.println("interval=" + r);
         }
 
     void testException()

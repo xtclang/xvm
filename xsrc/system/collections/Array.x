@@ -113,9 +113,9 @@ class Array<Element>
      * Construct a slice of another array.
      *
      * @param array    the array that this slice delegates to (which could itself be a slice)
-     * @param section  the range that defines the section of the array that the slice represents
+     * @param section  the interval that defines the section of the array that the slice represents
      */
-    construct(Array<Element> array, Range<Int> section)
+    construct(Array<Element> array, Interval<Int> section)
         {
         ArrayDelegate<Element> delegate = new ArrayDelegate<Element>()
             {
@@ -249,32 +249,32 @@ class Array<Element>
     /**
      * Fill the specified elements of this array with the specified value.
      *
-     * @param value  the value to use to fill the array
-     * @param range  an optional range of element indexes, defaulting to the entire array
+     * @param value     the value to use to fill the array
+     * @param interval  an optional interval of element indexes, defaulting to the entire array
      *
      * @throws ReadOnly  if the array mutability is not Mutable or Fixed
      */
-    Array fill(Element value, Range<Int>? range = Null)
+    Array fill(Element value, Interval<Int>? interval = Null)
         {
-        if (range == Null)
+        if (interval == Null)
             {
             if (empty)
                 {
                 return this;
                 }
-            range = 0..size-1;
+            interval = 0..size-1;
             }
 
         if (mutability.persistent)
             {
-            Array result = new Array<Element>(size, i -> (range.contains(i) ? value : this[i]));
+            Array result = new Array<Element>(size, i -> (interval.contains(i) ? value : this[i]));
             return mutability == Constant
                     ? result.ensureImmutable(true)
                     : result.ensurePersistent(true);
             }
         else
             {
-            for (Int i : range)
+            for (Int i : interval)
                 {
                 this[i] = value;
                 }
@@ -485,14 +485,14 @@ class Array<Element>
 
     @Override
     @Op("[..]")
-    Array slice(Range<Int> range)
+    Array slice(Interval<Int> interval)
         {
-        if (range.lowerBound == 0 && range.upperBound == size-1 && !range.reversed)
+        if (interval.lowerBound == 0 && interval.upperBound == size-1 && !interval.reversed)
             {
             return this;
             }
 
-        Array<Element> result = new Array(this, range);
+        Array<Element> result = new Array(this, interval);
 
         // a slice of an immutable array is also immutable
         return this.is(immutable Object)
@@ -847,13 +847,13 @@ class Array<Element>
         }
 
     @Override
-    Array delete(Range<Int> range)
+    Array delete(Interval<Int> interval)
         {
-        Int lo = range.lowerBound;
-        Int hi = range.upperBound;
+        Int lo = interval.lowerBound;
+        Int hi = interval.upperBound;
         if (lo < 0 || hi >= size)
             {
-            throw new OutOfBounds("range=" + range + ", size=" + size);
+            throw new OutOfBounds("interval=" + interval + ", size=" + size);
             }
 
         if (lo == hi)
@@ -886,7 +886,7 @@ class Array<Element>
 
             case Persistent:
             case Constant:
-                Int       gap    = range.size;
+                Int       gap    = interval.size;
                 Element[] result = new Array(size, i -> this[i < lo ? i : i+gap]);
                 return mutability == Persistent
                         ? result.ensurePersistent(true)

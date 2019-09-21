@@ -213,14 +213,14 @@ public abstract class OpSwitch
 
     enum Algorithm
         {
-        NativeSimple, NativeInterval, NaturalSimple, NaturalInterval;
+        NativeSimple, NativeRange, NaturalSimple, NaturalRange;
 
         boolean isNative()
             {
             switch (this)
                 {
                 case NativeSimple:
-                case NativeInterval:
+                case NativeRange:
                     return true;
 
                 default:
@@ -228,12 +228,12 @@ public abstract class OpSwitch
                 }
             }
 
-        boolean isInterval()
+        boolean isRange()
             {
             switch (this)
                 {
-                case NativeInterval:
-                case NaturalInterval:
+                case NativeRange:
+                case NaturalRange:
                     return true;
 
                 default:

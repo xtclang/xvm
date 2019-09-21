@@ -19,7 +19,7 @@ import org.xvm.runtime.template.xString.StringHandle;
 
 /**
  * TypeComposition represents a fully resolved class (e.g. ArrayList<String> or
- * @Range Interval<Date>).
+ * @Interval Range<Date>).
  */
 public interface TypeComposition
     {

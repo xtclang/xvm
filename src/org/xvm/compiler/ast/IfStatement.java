@@ -169,12 +169,12 @@ public class IfStatement
         // create a context for "else" even if there is no statement, thus facilitating a merge;
         // for example (see Array.x):
         //
-        //   if (range == Null)
+        //   if (interval == Null)
         //     {
-        //     range = 0..size-1;
+        //     interval = 0..size-1;
         //     }
         //
-        // at this point "range" should be known to be not Null
+        // at this point "interval" should be known to be not Null
 
         ctx = ctx.enterFork(false);
         if (stmtElse != null)

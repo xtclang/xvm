@@ -6,13 +6,13 @@ interface Orderable
         extends Comparable
     {
     /**
-     * Create an Interval that represents the values between _this_ (inclusive) to _that_
+     * Create a Range that represents the values between _this_ (inclusive) to _that_
      * (inclusive).
      */
-    @Op Interval<Orderable> through(Orderable that)
+    @Op Range<Orderable> through(Orderable that)
         {
         assert this.is(immutable Object) && that.is(immutable Object);
-        return new Interval<immutable Orderable>(this, that);
+        return new Range<immutable Orderable>(this, that);
         }
 
     /**

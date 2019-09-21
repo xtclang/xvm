@@ -28,8 +28,8 @@ module TestReflection.xqiz.it
         Point3 p3 = new Point3(1, 1, 1);
         assert &p3.extends_(Point);
 
-        Interval<Int> range = 0..5;
-        assert &range.incorporates_(Range);
+        Range<Int> interval = 0..5;
+        assert &interval.incorporates_(Interval);
         }
 
     void testMaskReveal()

@@ -16,7 +16,7 @@ interface Reader
      * Reader to efficiently restore a previous position.
      */
     static interface Position
-            extends Orderable
+            extends immutable Orderable
         {
         /**
          * The character offset within the reader, starting with zero.
@@ -148,22 +148,23 @@ interface Reader
     /**
      * Returns a portion of this Reader, as a String.
      *
-     * @param range  specifies a starting and stopping position for the slice
+     * @param interval  specifies a starting and stopping position for the slice
      *
-     * @return a slice of this Reader as a String, corresponding to the specified range of positions
+     * @return a slice of this Reader as a String, corresponding to the specified interval of
+     *         positions
      *
      * @throws IOException  represents the general category of input/output exceptions
      */
     @Op("[..]")
-    String slice(Interval<Position> range)
+    String slice(Range<Position> interval)
         {
         String result;
 
         try (Position current = position)
             {
-            position = range.lowerBound;
-            result   = nextString(range.upperBound.offset - offset + 1);
-            if (range.reversed)
+            position = interval.lowerBound;
+            result   = nextString(interval.upperBound.offset - offset + 1);
+            if (interval.reversed)
                 {
                 result = result.reverse();
                 }

@@ -33,7 +33,7 @@ import org.xvm.util.ListMap;
 
 /**
  * TypeComposition represents a fully resolved class (e.g. ArrayList<String> or
- * @Range Interval<Date>).
+ * @Interval Range<Date>).
  */
 public class ClassComposition
         implements TypeComposition

@@ -507,8 +507,8 @@ public class RelOpExpression
         //    (possibly) performance:
         //
         //    a) determine an implied type from the required type; for example, if the required type
-        //       is Range<Int> and the operator is DOTDOT, then the type implies "Int", while if the
-        //       required type is String and the operator is ADD, then the type implies "String".
+        //       is Interval<Int> and the operator is DOTDOT, then the type implies "Int", while if
+        //       the required type is String and the operator is ADD, then the type implies "String"
         //
         //       * in most cases, the implied type is the same as the required type, with the
         //         possible exceptions being the DOTDOT (uses first type parameter) and DIVMOD

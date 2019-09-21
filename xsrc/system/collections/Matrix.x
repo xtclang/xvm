@@ -64,11 +64,11 @@ interface Matrix<Element>
      * through the new Matrix, and vice versa; if that behavior is not desired, {@link reify} the
      * value returned from this method.
      *
-     * @param colRange  the range of columns of this Matrix to obtain a slice for; note that the top
-     *                  end of the range is _inclusive_, such that the range `0..cols-1`
+     * @param colRange  the range of columns of this Matrix to obtain a slice for; note that the
+     *                  top end of the interval is _inclusive_, such that the interval `0..cols-1`
      *                  represents the entirety of the Matrix
      * @param rowRange  the range of rows of this Matrix to obtain a slice for; note that the top
-     *                  end of the range is _inclusive_, such that the range `0..rows-1`
+     *                  end of the interval is _inclusive_, such that the interval `0..rows-1`
      *                  represents the entirety of the Matrix
      *
      * @return a slice of this Matrix corresponding to the specified ranges of columns and rows
@@ -76,7 +76,8 @@ interface Matrix<Element>
      * @throws OutOfBounds  if the specified ranges exceed either the lower or upper bounds of
      *                      the dimensions of this Matrix
      */
-    @Op("[..]") Matrix slice(Range<Int> colRange, Range<Int> rowRange);
+    @Op("[..]")
+    Matrix slice(Interval<Int> colRange, Interval<Int> rowRange);
 
     /**
      * Obtain a Matrix of the same dimensions and that contains the same values as this Matrix, but

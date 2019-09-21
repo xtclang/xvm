@@ -304,9 +304,9 @@ const String
 
     @Override
     @Op("[..]")
-    String! slice(Range<Int> range)
+    String! slice(Interval<Int> interval)
         {
-        return new String(chars[range]);
+        return new String(chars[interval]);
         }
 
     @Override
