@@ -13,6 +13,7 @@ import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ArrayConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
@@ -35,7 +36,6 @@ import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xInt64;
-import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xString.StringHandle;
 
 
@@ -393,9 +393,16 @@ public class xArray
                 return frame.assignValue(iReturn, xInt64.makeHandle(hArray.getCapacity()));
 
             case "mutability":
-                return frame.assignValue(iReturn,
-                    MUTABILITY.getEnumByOrdinal(hArray.m_mutability.ordinal()));
-
+                {
+                EnumHandle hEnum = MUTABILITY.getEnumByOrdinal(hArray.m_mutability.ordinal());
+                if (hEnum.isStruct())
+                    {
+                    // turn the struct into the "public" value
+                    IdentityConstant idValue = (IdentityConstant) hEnum.getType().getDefiningConstant();
+                    hEnum = (EnumHandle) frame.getConstHandle(pool().ensureSingletonConstConstant(idValue));
+                    }
+                return frame.assignValue(iReturn, hEnum);
+                }
             case "size":
                 return frame.assignValue(iReturn, xInt64.makeHandle(hArray.m_cSize));
             }
