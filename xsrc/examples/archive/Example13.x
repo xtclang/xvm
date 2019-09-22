@@ -176,6 +176,22 @@ x ^<< 3;
 x %> 3
 x <% 3
 
+x ~> 3
+x <~ 3
+
+x ~>^ 3
+x ^<~ 3
+
+x ~>> 3         // i like this one
+x <<~ 3
+
+x ↱<<↲ 3        // too bad it's unicode
+
+x ⤷>>⤴ 3        // too bad it's unicode
+
+x ↺ 3           // too bad it's unicode
+x ↻ 3
+
 // ----- object input/output -----
 
 Object <-> JSON <-> Reader/Writer <-> String or Char[] or UTF8 byte[]
