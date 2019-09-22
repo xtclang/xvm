@@ -1162,6 +1162,10 @@ public class Compiler
      */
     public static final String TYPE_MATCHES_ALWAYS                = "COMPILER-137";
     /**
+     * Possible name collision: an attempt to use function {0} defined at {1} as an invocation target.
+     */
+    public static final String SUSPICIOUS_FUNCTION_USE            = "COMPILER-138";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

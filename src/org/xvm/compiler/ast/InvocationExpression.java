@@ -1894,6 +1894,17 @@ public class InvocationExpression
                     }
                 }
 
+            if (exprLeft instanceof NameExpression && typeLeft.isA(pool.typeFunction()))
+                {
+                // it appears that they try to use a variable or property, but have a function instead
+                List<ErrorList.ErrorInfo> errors = errsTemp.getErrors();
+                if (errors.size() == 1 && errors.get(0).getCode().equals(Compiler.MISSING_METHOD))
+                    {
+                    NameExpression exprFn = (NameExpression) exprLeft;
+                    log(errsTemp, Severity.ERROR, Compiler.SUSPICIOUS_FUNCTION_USE,
+                            exprFn.getName(), exprFn.getIdentity(ctx).getNamespace().getValueString());
+                    }
+                }
             errsTemp.logTo(errs);
             }
 
