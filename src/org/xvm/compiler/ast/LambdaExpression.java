@@ -658,7 +658,7 @@ public class LambdaExpression
                     if (typeReq != null && !typeReq.isA(typeParam))
                         {
                         param.log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                                m_typeRequired.getValueString(), typeParam.getValueString());
+                                typeReq.getValueString(), typeParam.getValueString());
                         fValid = false;
                         }
                     }
