@@ -534,6 +534,12 @@ public class LambdaExpression
             // the lambda is a void function that is missing a closing return; the statement block
             // will automatically add a trailing "return" when it is compiled
             atypeRets = TypeConstant.NO_TYPES;
+
+            if (cReqReturns > 0)
+                {
+                log(errs, Severity.ERROR, Compiler.RETURN_EXPECTED);
+                fit = TypeFit.NoFit;
+                }
             }
         else
             {
