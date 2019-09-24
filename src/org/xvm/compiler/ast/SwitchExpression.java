@@ -199,6 +199,12 @@ public class SwitchExpression
         }
 
     @Override
+    protected boolean allowsConditional(Expression exprChild)
+        {
+        return false;
+        }
+
+    @Override
     public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
         if (isConstant())

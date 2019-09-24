@@ -86,6 +86,35 @@ public class ReturnStatement
 
 
     @Override
+    protected boolean allowsConditional(Expression exprChild)
+        {
+        if (exprs.size() > 1)
+            {
+            // for now we don't allow any conditional parts of a multi-return statement
+            return false;
+            }
+
+        AstNode container = getCodeContainer();
+        if (container.isReturnConditional())
+            {
+            return true;
+            }
+
+        TypeConstant[] atypeRet = container.getReturnTypes();
+        switch (atypeRet.length)
+            {
+            case 0:
+                return true;
+
+            case 1:
+                return atypeRet[0].equals(pool().typeBoolean());
+
+            default:
+                return false;
+            }
+        }
+
+    @Override
     protected boolean allowsShortCircuit(AstNode nodeChild)
         {
         return true;

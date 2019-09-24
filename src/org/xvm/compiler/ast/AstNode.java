@@ -501,6 +501,20 @@ public abstract class AstNode
         }
 
     /**
+     * Test if the specified child is allowed to produce a conditional result. For example, certain
+     * types of assignment support conditional r-value expressions, and the "return" statement can
+     * disallow a conditional r-value.
+     *
+     * @param exprChild  an expression that is a child of this node
+     *
+     * @return true iff the child is allowed to produce a conditional result
+     */
+    protected boolean allowsConditional(Expression exprChild)
+        {
+        return true;
+        }
+
+    /**
      * Test if the specified child is allowed to short-circuit.
      *
      * @param nodeChild  an AstNode (typically, an expression) that is a child of this node

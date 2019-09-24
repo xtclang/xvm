@@ -1166,6 +1166,10 @@ public class Compiler
      */
     public static final String SUSPICIOUS_FUNCTION_USE            = "COMPILER-138";
     /**
+     * Illegal usage of the method {0} with a conditional return type.
+     */
+    public static final String CONDITIONAL_RETURN_NOT_ALLOWED      = "COMPILER-139";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

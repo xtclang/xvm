@@ -885,6 +885,23 @@ public abstract class Expression
         }
 
     /**
+     * (Post-validation) Determine if the expression represents a {@code conditional} result. A
+     * conditional result is one in which there are multiple results, the first of which is a
+     * boolean, and the remainder of which cannot be safely accessed if the runtime value of that
+     * first boolean is {@code false}.
+     * <p/>
+     * This method must be overridden by any expression that represents or could represent a
+     * conditional result, including as the result of composition of other expressions that could
+     * represent a conditional result.
+     *
+     * @return true iff the Expression represents a conditional value
+     */
+    public boolean isConditionalResult()
+        {
+        return false;
+        }
+
+    /**
      * @return the TypeFit that was determined during validation
      */
     public TypeFit getTypeFit()

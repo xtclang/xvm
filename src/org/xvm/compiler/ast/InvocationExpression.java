@@ -684,8 +684,9 @@ public class InvocationExpression
                     ValidateMethod:
                     if (argMethod instanceof MethodConstant)
                         {
-                        MethodConstant  idMethod = (MethodConstant) argMethod;
-                        MethodStructure method   = m_method;
+                        MethodConstant  idMethod    = (MethodConstant) argMethod;
+                        MethodStructure method      = m_method;
+                        boolean         fCondReturn = method.isConditionalReturn();
 
                         if (typeLeft != null && !typeLeft.isFormalType() && typeLeft.getParamsCount() == 0 &&
                                 !method.isFunction() && !method.isConstructor())
@@ -812,9 +813,30 @@ public class InvocationExpression
                                     sigRet = sigRet.resolveGenericTypes(pool, mapTypeParams::get);
                                     }
                                 atypeResult = sigRet.getRawReturns();
+
+                                if (fCondReturn)
+                                    {
+                                    if (getParent().allowsConditional(this))
+                                        {
+                                        m_fCondResult = true;
+                                        }
+                                    else
+                                        {
+                                        log(errs, Severity.ERROR, Compiler.CONDITIONAL_RETURN_NOT_ALLOWED,
+                                            method.getIdentityConstant().getValueString());
+                                        break ValidateMethod;
+                                        }
+                                    }
                                 }
                             else
                                 {
+                                if (fCondReturn)
+                                    {
+                                    log(errs, Severity.ERROR, Compiler.CONDITIONAL_RETURN_NOT_ALLOWED,
+                                        method.getIdentityConstant().getValueString());
+                                    break ValidateMethod;
+                                    }
+
                                 TypeConstant typeFn = m_fBindTarget
                                     ? idMethod.getType()
                                     : idMethod.getRefType(typeLeft);
@@ -942,6 +964,12 @@ public class InvocationExpression
     protected boolean allowsShortCircuit(AstNode nodeChild)
         {
         return nodeChild == expr || args.contains(nodeChild);
+        }
+
+    @Override
+    public boolean isConditionalResult()
+        {
+        return m_fCondResult;
         }
 
     @Override
@@ -2291,6 +2319,8 @@ public class InvocationExpression
     private transient Argument        m_argMethod;
     private transient MethodStructure m_method;          // if m_argMethod is a MethodConstant,
                                                          // this holds the corresponding structure
+    private transient boolean         m_fCondResult;     // indicates that the invocation expression
+                                                         // produces a conditional result
     private transient boolean         m_fBjarne;         // indicates that the invocation expression
                                                          // was Bjarne-transformed from x.f() to X.f(x)
     private transient FormalConstant  m_idFormal;        // if not null, indicates that the invocation

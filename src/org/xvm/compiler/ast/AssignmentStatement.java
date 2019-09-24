@@ -376,6 +376,8 @@ public class AssignmentStatement
 
         AstNode    nodeLeft     = lvalue;
         Expression exprLeftCopy = null;
+        boolean    fConditional = isConditional();
+
         switch (getCategory())
             {
             case CondLeft:
@@ -429,7 +431,7 @@ public class AssignmentStatement
                     {
                     atypeTest = new TypeConstant[] {atypeLeft[0].ensureNullable(pool)};
                     }
-                else if (isConditional())
+                else if (fConditional)
                     {
                     int cLeft = atypeLeft.length;
                     atypeTest = new TypeConstant[cLeft + 1];
@@ -498,10 +500,10 @@ public class AssignmentStatement
                     exprRightNew = exprRight.validateMulti(ctx, exprLeft.getTypes(), errs);
                     }
 
-                exprLeft.markAssignment(ctx, false, errs);
-
                 if (exprRightNew != null)
                     {
+                    exprLeft.markAssignment(ctx, exprRightNew.isConditionalResult(), errs);
+
                     atypeRight = exprRightNew.getTypes();
                     }
                 break;
@@ -524,10 +526,12 @@ public class AssignmentStatement
                         }
 
                     exprRightNew = exprRight.validate(ctx, typeReq, errs);
-                    exprLeft.markAssignment(ctx, true, errs);
 
                     if (exprRightNew != null)
                         {
+                        exprLeft.markAssignment(ctx,
+                                !fConditional && exprRight.isConditionalResult(), errs);
+
                         atypeRight = exprRightNew.getTypes();
                         if (atypeRight.length == 1)
                             {
@@ -546,24 +550,29 @@ public class AssignmentStatement
                     atypeReq[0] = pool.typeBoolean();
                     System.arraycopy(atypeLVals, 0, atypeReq, 1, cLVals);
                     exprRightNew = exprRight.validateMulti(ctx, atypeReq, errs);
-                    exprLeft.markAssignment(ctx, true, errs);
 
                     // conditional expressions can update the LVal type from the RVal type, but the
                     // initial boolean is discarded
-                    if (exprRightNew != null && isConditional())
+                    if (exprRightNew != null)
                         {
-                        TypeConstant[] atypeAll = exprRightNew.getTypes();
-                        int            cTypes   = atypeAll.length - 1;
-                        if (cTypes >= 1)
+                        exprLeft.markAssignment(ctx,
+                            !fConditional && exprRight.isConditionalResult(), errs);
+
+                        if (fConditional)
                             {
-                            atypeRight = new TypeConstant[cTypes];
-                            System.arraycopy(atypeAll, 1, atypeRight, 0, cTypes);
+                            TypeConstant[] atypeAll = exprRightNew.getTypes();
+                            int            cTypes   = atypeAll.length - 1;
+                            if (cTypes >= 1)
+                                {
+                                atypeRight = new TypeConstant[cTypes];
+                                System.arraycopy(atypeAll, 1, atypeRight, 0, cTypes);
+                                }
                             }
                         }
                     }
 
                 // the LValues must NOT be declarations!!! (they wouldn't be assigned)
-                if (hasDeclarations() && !isConditional())
+                if (hasDeclarations() && !fConditional)
                     {
                     log(errs, Severity.ERROR, Compiler.VAR_DECL_COND_ASN_ILLEGAL);
                     }
