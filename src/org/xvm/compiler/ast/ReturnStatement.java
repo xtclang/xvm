@@ -348,14 +348,9 @@ public class ReturnStatement
 
                 case 1:
                     {
-                    Expression expr = listExprs.get(0);
-                    if (expr.isVoid())
-                        {
-                        code.add(new Return_0());
-                        }
-
                     // we need to get all the arguments the expression can provide. but
                     // return only as many as the caller expects
+                    Expression expr   = listExprs.get(0);
                     boolean    fCheck = fConditional && !expr.isConditionalResult();
                     Argument[] aArgs  = expr.generateArguments(ctx, code, true, !fCheck, errs);
                     int        cArgs  = aArgs.length;

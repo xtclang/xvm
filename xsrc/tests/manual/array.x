@@ -213,14 +213,7 @@ module TestArray.xqiz.it
                 {
                 case 1:
                     console.println("\n   --> peeking test");
-                    // TODO GG #1 iter = iter.peek(s -> console.println($"peeking at {s}"));
-                    // TODO GG #2 - throws
-                    // private static void foo(String s)
-                    //     {
-                    //     @Inject Ecstasy.io.Console console;
-                    //     console.println($"peeking at {s}");
-                    //     }
-                    iter = iter.peek(console.println);
+                    iter = iter.peek(s -> console.println($"peeking at {s}"));
                     break;
 
                 case 2:

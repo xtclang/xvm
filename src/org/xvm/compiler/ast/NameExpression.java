@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -19,6 +20,7 @@ import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Argument;
 import org.xvm.asm.PropertyStructure;
@@ -1441,27 +1443,19 @@ public class NameExpression
                         //      (i) save off the TargetInfo
                         //      (ii) use it in code gen
                         //      (iii) mark the this (and out this's) as being used
-                        MultiMethodConstant idMM   = (MultiMethodConstant) id;
-                        ClassStructure      clzTop = (ClassStructure) idMM.getNamespace().getComponent();
+                        MultiMethodConstant  idMM = (MultiMethodConstant) id;
+                        MultiMethodStructure mms  = (MultiMethodStructure) idMM.getComponent();
 
-                        // we will use the private access info here since the access restrictions
-                        // must have been already checked by the "resolveName"
-                        TypeInfo infoClz = pool.ensureAccessTypeConstant(clzTop.getFormalType(),
-                                Access.PRIVATE).ensureTypeInfo(errs);
+                        Collection<MethodStructure> methods = mms.methods();
 
-                        // only include methods if this context is a method
-                        Set<MethodConstant> setMethods = infoClz.findMethods(sName, -1,
-                                ctx.isFunction() ? MethodType.Function : MethodType.Either);
-                        assert !setMethods.isEmpty();
-
-                        if (setMethods.size() == 1)
+                        if (methods.size() == 1)
                             {
-                            m_arg = setMethods.iterator().next();
+                            m_arg = methods.iterator().next().getIdentityConstant();
                             }
                         else
                             {
                             // return the MultiMethod; the caller will decide which to use
-                            m_arg = setMethods.iterator().next().getParentConstant();
+                            m_arg = idMM;
                             }
                         break;
                         }
