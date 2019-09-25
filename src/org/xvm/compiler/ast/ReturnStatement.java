@@ -14,6 +14,8 @@ import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.JumpFalse;
+import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Return_0;
 import org.xvm.asm.op.Return_1;
 import org.xvm.asm.op.Return_N;
@@ -197,10 +199,11 @@ public class ReturnStatement
             Expression exprOld = listExprs.get(0);
             Expression exprNew;
 
-            TypeConstant typeRequired = cRets == 1 ? aRetTypes[0] : null;
+            TypeConstant typeRequired = cRets >= 1 ? aRetTypes[0] : null;
             if (fConditional && exprOld instanceof TernaryExpression)
                 {
                 // ternary expression needs to know the fact that it returns a conditional type
+                m_fConditionalTernary = true;
                 ((TernaryExpression) exprOld).markConditional();
                 typeRequired = cRets == 2 ? aRetTypes[1] : null;
                 }
@@ -236,14 +239,7 @@ public class ReturnStatement
                     if (exprOld.testFit(ctx, typeTuple, null).isFit())
                         {
                         exprNew = exprOld.validate(ctx, typeTuple, errs);
-                        if (fConditional)
-                            {
-                            m_fConditionalTernary = true;
-                            }
-                        else
-                            {
-                            m_fTupleReturn = true;
-                            }
+                        m_fTupleReturn = true;
                         }
                     // 4) otherwise it's most probably an error and the validation will log it
                     //   (except cases when testFit() implementation doesn't fully match the validate
@@ -271,7 +267,7 @@ public class ReturnStatement
 
             if (fValid)
                 {
-                atypeActual = m_fTupleReturn || m_fConditionalTernary
+                atypeActual = m_fTupleReturn
                         ? exprNew.getType().getParamTypesArray()
                         : exprNew.getTypes();
                 }
@@ -293,9 +289,13 @@ public class ReturnStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        AstNode container = getCodeContainer();
+        AstNode container    = getCodeContainer();
+        boolean fConditional = container.isReturnConditional();
+
         if (container instanceof StatementExpression)
             {
+            assert !fConditional;
+
             // emit() for a return inside a StatementExpression produces an assignment from the
             // expression
             // TODO m_fTupleReturn
@@ -338,6 +338,8 @@ public class ReturnStatement
             }
         else
             {
+            // Note: it's a responsibility of the conditional return to *not* return anything else
+            //       if the value at index 0 is "False"
             switch (cExprs)
                 {
                 case 0:
@@ -354,8 +356,9 @@ public class ReturnStatement
 
                     // we need to get all the arguments the expression can provide. but
                     // return only as many as the caller expects
-                    Argument[] args  = expr.generateArguments(ctx, code, true, true, errs);
-                    int        cArgs = args.length;
+                    boolean    fCheck = fConditional && !expr.isConditionalResult();
+                    Argument[] aArgs  = expr.generateArguments(ctx, code, true, !fCheck, errs);
+                    int        cArgs  = aArgs.length;
 
                     switch (cRets)
                         {
@@ -364,24 +367,37 @@ public class ReturnStatement
                             break;
 
                         case 1:
-                            code.add(new Return_1(args[0]));
+                            code.add(new Return_1(aArgs[0]));
                             break;
 
                         default:
                             if (cArgs > 1)
                                 {
+                                Label labelFalse = fCheck ? new Label("false") : null;
+
+                                if (fCheck)
+                                    {
+                                    code.add(new JumpFalse(aArgs[0], labelFalse));
+                                    }
+
                                 if (cArgs == cRets)
                                     {
-                                    code.add(new Return_N(args));
+                                    code.add(new Return_N(aArgs));
                                     }
                                 else
                                     {
-                                    code.add(new Return_N(Arrays.copyOfRange(args, 0, cRets)));
+                                    code.add(new Return_N(Arrays.copyOfRange(aArgs, 0, cRets)));
+                                    }
+
+                                if (fCheck)
+                                    {
+                                    code.add(labelFalse);
+                                    code.add(new Return_1(pool().valFalse()));
                                     }
                                 }
                             else
                                 {
-                                assert container.isReturnConditional();
+                                assert fConditional;
 
                                 Constant valFalse = pool().valFalse();
                                 if (expr.isConstant() && expr.toConstant().equals(valFalse))
@@ -399,13 +415,32 @@ public class ReturnStatement
                     }
 
                 default:
-                    Argument[] args = new Argument[cExprs];
-                    for (int i = 0; i < cExprs; ++i)
+                    {
+                    assert cRets == cExprs;
+
+                    boolean fCheck = fConditional;
+
+                    Argument[] aArgs = new Argument[cRets];
+                    for (int i = 0; i < cRets; ++i)
                         {
-                        args[i] = listExprs.get(i).generateArgument(ctx, code, true, true, errs);
+                        aArgs[i] = listExprs.get(i).generateArgument(ctx, code, true, i > 0 || !fCheck, errs);
                         }
-                    code.add(new Return_N(args));
+
+                    Label labelFalse = fCheck ? new Label("false") : null;
+                    if (fCheck)
+                        {
+                        code.add(new JumpFalse(aArgs[0], labelFalse));
+                        }
+
+                    code.add(new Return_N(aArgs));
+
+                    if (fCheck)
+                        {
+                        code.add(labelFalse);
+                        code.add(new Return_1(pool().valFalse()));
+                        }
                     break;
+                    }
                 }
             }
 

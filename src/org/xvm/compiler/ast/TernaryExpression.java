@@ -12,9 +12,10 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Jump;
+import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Return_1;
-import org.xvm.asm.op.Return_T;
+import org.xvm.asm.op.Return_N;
 
 
 /**
@@ -67,37 +68,52 @@ public class TernaryExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getImplicitType(Context ctx)
+    protected boolean hasSingleValueImpl()
         {
-        TypeConstant typeThen = exprThen.getImplicitType(ctx);
-        TypeConstant typeElse = exprElse.getImplicitType(ctx);
-
-        TypeConstant typeCommon = Op.selectCommonType(typeThen, typeElse, ErrorListener.BLACKHOLE);
-        return typeCommon == null && typeThen != null && typeElse != null
-                ? pool().ensureIntersectionTypeConstant(typeThen, typeElse)
-                : typeCommon;
+        return false;
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    protected boolean hasMultiValueImpl()
+        {
+        return true;
+        }
+
+    @Override
+    public TypeConstant[] getImplicitTypes(Context ctx)
+        {
+        TypeConstant[] atypeThen = exprThen.getImplicitTypes(ctx);
+        TypeConstant[] atypeElse = exprElse.getImplicitTypes(ctx);
+
+        int c = atypeThen.length;
+        if (c != atypeElse.length)
+            {
+            return TypeConstant.NO_TYPES;
+            }
+
+        return selectCommonTypes(atypeThen, atypeElse, true, ErrorListener.BLACKHOLE);
+        }
+
+    @Override
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         switch (generatePlan(ctx))
             {
             case ThenIsFalse:
-                return exprElse.testFit(ctx, typeRequired, errs);
+                return exprElse.testFitMulti(ctx, atypeRequired, errs);
 
             case ElseIsFalse:
-                return exprThen.testFit(ctx, typeRequired, errs);
+                return exprThen.testFitMulti(ctx, atypeRequired, errs);
 
             default:
             case Symmetrical:
-                return exprThen.testFit(ctx, typeRequired, errs).combineWith(
-                       exprElse.testFit(ctx, typeRequired, errs));
+                return exprThen.testFitMulti(ctx, atypeRequired, errs).combineWith(
+                       exprElse.testFitMulti(ctx, atypeRequired, errs));
             }
         }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         TypeFit      fit  = TypeFit.Fit;
         ConstantPool pool = pool();
@@ -115,30 +131,30 @@ public class TernaryExpression
             // TODO check if it is short circuiting
             }
 
-        TypeConstant typeThen, typeElse;
+        TypeConstant[] atypeThen, atypeElse;
         Plan plan;
         switch (plan = generatePlan(ctx))
             {
             case ThenIsFalse:
-                typeThen = pool.typeFalse();
-                typeElse = typeRequired;
+                atypeThen = new TypeConstant[] {pool.typeFalse()};
+                atypeElse = atypeRequired;
                 break;
 
             case ElseIsFalse:
-                typeThen = typeRequired;
-                typeElse = pool.typeFalse();
+                atypeThen = atypeRequired;
+                atypeElse = new TypeConstant[] {pool.typeFalse()};
                 break;
 
             default:
             case Symmetrical:
-                typeThen = typeElse = typeRequired == null
-                        ? getImplicitType(ctx)
-                        : typeRequired;
+                atypeThen = atypeElse = atypeRequired == null
+                        ? getImplicitTypes(ctx)
+                        : atypeRequired;
                 break;
             }
 
         ctx = ctx.enterFork(true);
-        Expression exprNewThen = exprThen.validate(ctx, typeThen, errs);
+        Expression exprNewThen = exprThen.validateMulti(ctx, atypeThen, errs);
         ctx = ctx.exit();
 
         if (exprNewThen == null)
@@ -147,18 +163,18 @@ public class TernaryExpression
             }
         else
             {
-            exprThen = exprNewThen;
-            typeThen = exprNewThen.getType();
+            exprThen  = exprNewThen;
+            atypeThen = exprNewThen.getTypes();
             // TODO check if it is short circuiting
 
-            if (typeElse == null)
+            if (atypeElse.length == 0)
                 {
-                typeElse = Op.selectCommonType(typeThen, null, errs);
+                atypeElse = selectCommonTypes(atypeThen, TypeConstant.NO_TYPES, false, errs);
                 }
             }
 
         ctx = ctx.enterFork(false);
-        Expression exprNewElse = exprElse.validate(ctx, typeElse, errs);
+        Expression exprNewElse = exprElse.validateMulti(ctx, atypeElse, errs);
         ctx = ctx.exit();
 
         if (exprNewElse == null)
@@ -167,8 +183,8 @@ public class TernaryExpression
             }
         else
             {
-            exprElse = exprNewElse;
-            typeElse = exprNewElse.getType();
+            exprElse  = exprNewElse;
+            atypeElse = exprNewElse.getTypes();
             // TODO check if it is short circuiting
             }
 
@@ -181,15 +197,15 @@ public class TernaryExpression
                     : replaceThisWith(exprNewElse);
             }
 
-        TypeConstant typeResult;
+        TypeConstant[] atypeResult;
         switch (plan)
             {
             case ThenIsFalse:
-                typeResult = ensureConditionalType(pool, typeElse);
+                atypeResult = ensureConditionalType(pool, atypeElse);
                 break;
 
             case ElseIsFalse:
-                typeResult = ensureConditionalType(pool, typeThen);
+                atypeResult = ensureConditionalType(pool, atypeThen);
                 break;
 
             default:
@@ -197,41 +213,50 @@ public class TernaryExpression
                 // we know by now that both typeThen and typeElse are assignable to
                 // typeRequired (if not null). Let's try to find a common type for them
                 // that is narrower than the required type
-                typeResult = Op.selectCommonType(typeThen, typeElse, errs);
-                if (typeResult == null)
+                atypeResult = selectCommonTypes(atypeThen, atypeElse, false, errs);
+                for (int i = 0, c = atypeResult.length; i < c; i++)
                     {
-                    // try to resolve formal types
-                    boolean fFormalThen = typeThen.containsFormalType();
-                    boolean fFormalElse = typeElse.containsFormalType();
+                    TypeConstant typeResult = atypeResult[i];
 
-                    if (fFormalThen || fFormalElse)
+                    if (typeResult == null)
                         {
-                        if (fFormalThen)
-                            {
-                            typeThen = typeThen.resolveConstraints(pool);
-                            }
-                        if (fFormalElse)
-                            {
-                            typeElse = typeElse.resolveConstraints(pool);
-                            }
-                        // since it's guaranteed that neither type contains formal, we can recurse
-                        typeResult = Op.selectCommonType(typeThen, typeElse, errs);
-                        }
-                    }
+                        TypeConstant typeThen = atypeThen[i];
+                        TypeConstant typeElse = atypeElse[i];
 
-                if (typeResult == null)
-                    {
-                    typeResult = pool.ensureIntersectionTypeConstant(typeThen, typeElse);
-                    if (typeRequired != null && !typeResult.isA(typeRequired))
-                        {
-                        // leave as is
-                        typeResult = typeRequired;
+                        // try to resolve formal types
+                        boolean fFormalThen = typeThen.containsFormalType();
+                        boolean fFormalElse = typeElse.containsFormalType();
+
+                        if (fFormalThen || fFormalElse)
+                            {
+                            if (fFormalThen)
+                                {
+                                typeThen = typeThen.resolveConstraints(pool);
+                                }
+                            if (fFormalElse)
+                                {
+                                typeElse = typeElse.resolveConstraints(pool);
+                                }
+                            // since it's guaranteed that neither type contains formal, we can recurse
+                            typeResult = Op.selectCommonType(typeThen, typeElse, errs);
+                            }
+
+                        if (typeResult == null)
+                            {
+                            typeResult = pool.ensureIntersectionTypeConstant(typeThen, typeElse);
+                            if (atypeRequired.length > i && !typeResult.isA(atypeRequired[i]))
+                                {
+                                // leave as is
+                                typeResult = atypeRequired[i];
+                                }
+                            }
+                        atypeResult[i] = typeResult;
                         }
                     }
                 break;
             }
 
-        return finishValidation(typeRequired, typeResult, fit, null, errs);
+        return finishValidations(atypeRequired, atypeResult, fit, null, errs);
         }
 
     @Override
@@ -253,16 +278,16 @@ public class TernaryExpression
         }
 
     @Override
-    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
         Label labelElse = new Label("else");
         Label labelEnd  = new Label("end");
 
         cond.generateConditionalJump(ctx, code, labelElse, false, errs);
-        exprThen.generateAssignment(ctx, code, LVal, errs);
+        exprThen.generateAssignments(ctx, code, aLVal, errs);
         code.add(new Jump(labelEnd));
         code.add(labelElse);
-        exprElse.generateAssignment(ctx, code, LVal, errs);
+        exprElse.generateAssignments(ctx, code, aLVal, errs);
         code.add(labelEnd);
         }
 
@@ -271,19 +296,28 @@ public class TernaryExpression
      *
      * @param ctx   the compilation context for the statement
      * @param code  the code block
-     * @param errs  the error list to log any errors to
+     * @param errs  the error listener to log any errors to
      */
     public void generateConditionalReturn(Context ctx, Code code, ErrorListener errs)
         {
+        // Note: it's a responsibility of the conditional return to *not* return anything else
+        //       if the value at index 0 is "False"
+        Label labelElse = new Label("else");
         switch (m_plan)
             {
             case ThenIsFalse:
                 {
-                Label labelElse = new Label("else");
+                boolean fCheck = !exprElse.isConditionalResult();
 
                 cond.generateConditionalJump(ctx, code, labelElse, true, errs);
-                Argument arg = exprElse.generateArgument(ctx, code, true, true, errs);
-                code.add(new Return_T(arg));
+
+                Argument[] aArg = exprElse.generateArguments(ctx, code, true, !fCheck, errs);
+
+                if (fCheck)
+                    {
+                    code.add(new JumpFalse(aArg[0], labelElse));
+                    }
+                code.add(new Return_N(aArg));
                 code.add(labelElse);
                 code.add(new Return_1(pool().valFalse()));
                 break;
@@ -291,11 +325,17 @@ public class TernaryExpression
 
             case ElseIsFalse:
                 {
-                Label labelElse = new Label("else");
+                boolean fCheck = !exprThen.isConditionalResult();
 
                 cond.generateConditionalJump(ctx, code, labelElse, false, errs);
-                Argument arg = exprThen.generateArgument(ctx, code, true, true, errs);
-                code.add(new Return_T(arg));
+
+                Argument[] aArg = exprThen.generateArguments(ctx, code, true, !fCheck, errs);
+
+                if (fCheck)
+                    {
+                    code.add(new JumpFalse(aArg[0], labelElse));
+                    }
+                code.add(new Return_N(aArg));
                 code.add(labelElse);
                 code.add(new Return_1(pool().valFalse()));
                 break;
@@ -304,8 +344,34 @@ public class TernaryExpression
             default:
             case Symmetrical:
                 {
-                Argument arg = generateArgument(ctx, code, true, true, errs);
-                code.add(new Return_T(arg));
+                boolean fCheckThen = !exprThen.isConditionalResult();
+                boolean fCheckElse = !exprElse.isConditionalResult();
+                Label   labelFalse = fCheckThen || fCheckElse ? new Label("false") : null;
+
+                cond.generateConditionalJump(ctx, code, labelElse, false, errs);
+
+                Argument[] aArgThen = exprThen.generateArguments(ctx, code, true, !fCheckThen, errs);
+
+                if (fCheckThen)
+                    {
+                    code.add(new JumpFalse(aArgThen[0], labelFalse));
+                    }
+                code.add(new Return_N(aArgThen));
+                code.add(labelElse);
+
+                Argument[] aArgElse = exprElse.generateArguments(ctx, code, true, !fCheckElse, errs);
+
+                if (fCheckElse)
+                    {
+                    code.add(new JumpFalse(aArgElse[0], labelFalse));
+                    }
+                code.add(new Return_N(aArgElse));
+
+                if (fCheckThen || fCheckElse)
+                    {
+                    code.add(labelFalse);
+                    code.add(new Return_1(pool().valFalse()));
+                    }
                 break;
                 }
             }
@@ -313,6 +379,33 @@ public class TernaryExpression
 
 
     // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * A helper method to create an array of common types for two arrays.
+     *
+     * @param atype1      the first type array
+     * @param atype2      the second type array
+     * @param fIntersect  if true, in an absence of common type generate an intersection type
+     * @param errs        the error listener to log any errors to
+     * @return            an array of common types (of the minimum of the two array sizes)
+     */
+    private TypeConstant[] selectCommonTypes(TypeConstant[] atype1, TypeConstant[] atype2,
+                                             boolean fIntersect, ErrorListener errs)
+        {
+        int            cTypes      = Math.min(atype1.length, atype2.length);
+        TypeConstant[] atypeCommon = new TypeConstant[cTypes];
+        for (int i = 0; i < cTypes; i++)
+            {
+            TypeConstant typeThen = atype1[i];
+            TypeConstant typeElse = atype2[i];
+
+            TypeConstant typeCommon = Op.selectCommonType(typeThen, typeElse, errs);
+            atypeCommon[i] = typeCommon == null && atype1 != null && typeElse != null && fIntersect
+                    ? pool().ensureIntersectionTypeConstant(typeThen, typeElse)
+                    : typeCommon;
+            }
+        return atypeCommon;
+        }
 
     private Plan generatePlan(Context ctx)
         {
@@ -335,20 +428,32 @@ public class TernaryExpression
         return m_plan = Plan.Symmetrical;
         }
 
-    private static TypeConstant ensureConditionalType(ConstantPool pool, TypeConstant typeTuple)
+    private static TypeConstant[] ensureConditionalType(ConstantPool pool, TypeConstant[] atypeCond)
         {
-        assert typeTuple.isA(pool.typeTuple()) && typeTuple.getParamsCount() > 0;
-
-        TypeConstant[] atypeResult = typeTuple.getParamTypesArray();
-        if (atypeResult[0].equals(pool.typeBoolean()))
+        switch (atypeCond.length)
             {
-            return typeTuple;
+            case 0:
+                return atypeCond;
+
+            case 1:
+                {
+                TypeConstant typeTuple = atypeCond[0];
+                if (!typeTuple.isA(pool.typeTuple()) || typeTuple.getParamsCount() == 0)
+                    {
+                    return TypeConstant.NO_TYPES;
+                    }
+
+                TypeConstant[] atypeResult = typeTuple.getParamTypesArray();
+                return atypeResult[0].isA(pool.typeBoolean())
+                         ? atypeResult
+                         : TypeConstant.NO_TYPES;
+                }
+
+            default:
+                return atypeCond[0].isA(pool.typeBoolean())
+                         ? atypeCond
+                         : TypeConstant.NO_TYPES;
             }
-
-        atypeResult    = atypeResult.clone();
-        atypeResult[0] = pool.typeBoolean();
-
-        return pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeResult);
         }
 
 

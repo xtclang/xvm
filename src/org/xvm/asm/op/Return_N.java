@@ -78,7 +78,8 @@ public class Return_N
         boolean[]  afDynamic = null;
         boolean    fAnyProp  = false;
 
-        for (int i = 0; i < cArgs; i++)
+        // retrieve in the reverse order to allow ReturnStatement to use stack collecting the arguments
+        for (int i = cArgs - 1; i >= 0; --i)
             {
             int          nArg = m_anArg[i];
             ObjectHandle hArg = frame.getReturnValue(nArg);

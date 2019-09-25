@@ -66,17 +66,9 @@ class CompoundIterator<Element>
     @Override
     conditional collections.Orderer knownOrder()
         {
-        // TODO GG - assertion failure
-        // return tail == Null
-        //         ? iter.sortedBy()
-        //         : False;
-
-        if (tail == Null)
-            {
-            return iter.knownOrder();
-            }
-
-        return False;
+        return tail == Null
+                 ? iter.knownOrder()
+                 : False;
         }
 
     @Override
