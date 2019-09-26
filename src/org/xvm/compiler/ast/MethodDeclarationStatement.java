@@ -20,6 +20,7 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -552,6 +553,30 @@ public class MethodDeclarationStatement
             if (poolId != poolStmt)
                 {
                 poolId.invalidateTypeInfos(idClz);
+                }
+            }
+
+        // validate annotations added to the return type by MethodStructure.resolveAnnotations() call
+        org.xvm.asm.Parameter[] aReturns = method.getReturnArray();
+        if (aReturns.length > 0)
+            {
+            TypeConstant typeRet = (aReturns[0].isConditionalReturn()
+                    ? aReturns[1]
+                    : aReturns[0]).getType();
+            while (typeRet instanceof AnnotatedTypeConstant)
+                {
+                AnnotatedTypeConstant  typeAnno = (AnnotatedTypeConstant) typeRet;
+                org.xvm.asm.Annotation anno     = typeAnno.getAnnotation();
+                TypeConstant           typeInto = anno.getAnnotationType().getExplicitClassInto();
+
+                if (typeInto.isIntoClassType()    ||
+                    typeInto.isIntoPropertyType() ||
+                    typeInto.isIntoVariableType())
+                    {
+                    log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE, anno.getValueString());
+                    break;
+                    }
+                typeRet = typeAnno.getUnderlyingType();
                 }
             }
         }

@@ -18,7 +18,7 @@ class DelegatingIterator<Element>(Iterator<Element> iter)
         }
 
     @Override
-    Boolean knownDistinct() // TODO GG if method has "@RO" it should give an intelligent error msg
+    Boolean knownDistinct()
         {
         return iter.knownDistinct();
         }

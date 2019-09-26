@@ -1170,6 +1170,10 @@ public class Compiler
      */
     public static final String CONDITIONAL_RETURN_NOT_ALLOWED      = "COMPILER-139";
     /**
+     * Annotation {0} is not applicable.
+     */
+    public static final String ANNOTATION_NOT_APPLICABLE           = "COMPILER-140";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";
