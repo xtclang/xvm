@@ -38,7 +38,6 @@ class FlatMappedIterator<Element, Original>
 
             if (Original el := iterOrig.next())
                 {
-                val transform = this.transform; // TODO GG this line should not be required
                 iterCur = transform(el);
                 }
             else

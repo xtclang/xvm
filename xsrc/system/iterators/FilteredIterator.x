@@ -15,8 +15,6 @@ class FilteredIterator<Element>
     @Override
     conditional Element next()
         {
-        val include = this.include; // TODO GG this line should not be required
-
         while (Element el := iter.next())
             {
             if (include(el))

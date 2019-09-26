@@ -20,8 +20,6 @@ class PeekingIterator<Element>
         {
         if (Element el := iter.next())
             {
-            // TODO GG this line should not be required
-            val observe = this.observe;
             observe(el);
             return True, el;
             }

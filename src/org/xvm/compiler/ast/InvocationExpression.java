@@ -1233,16 +1233,9 @@ public class InvocationExpression
             else // it is a NameExpression but _NOT_ a MethodConstant
                 {
                 assert !m_fBindTarget;
-                if (exprLeft == null || !exprLeft.hasSideEffects())
-                    {
-                    // take the argument (e.g. "super") & drop through to the function handling
-                    argFn = m_argMethod;
-                    }
-                else
-                    {
-                    // evaluate to find the argument (e.g. "var.prop", where prop holds a function)
-                    argFn = expr.generateArgument(ctx, code, fLocalPropOk, fTargetOnStack, errs);
-                    }
+
+                // evaluate to find the argument (e.g. "var.prop", where prop holds a function)
+                argFn = expr.generateArgument(ctx, code, fLocalPropOk, fTargetOnStack, errs);
                 }
             }
         else // _NOT_ an InvocationExpression of a NameExpression (i.e. it's just a function)
@@ -1262,6 +1255,12 @@ public class InvocationExpression
             Register regFn = createRegister(typeFn, true);
             code.add(new Invoke_01(argFn, m_idConvert, regFn));
             argFn = regFn;
+            }
+
+        if (argFn instanceof PropertyConstant)
+            {
+            // the function is a property value
+            Register regFn = createRegister(typeFn, true);
             }
 
         if (!m_fCall && !m_fBindParams)

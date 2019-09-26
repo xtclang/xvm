@@ -25,7 +25,6 @@ class MappedIterator<Element, Original>
         {
         if (Original el := iter.next())
             {
-            val transform = this.transform; // TODO GG this line should not be required
             return True, transform(el);
             }
 
