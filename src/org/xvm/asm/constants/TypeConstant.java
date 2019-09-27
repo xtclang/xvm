@@ -4055,12 +4055,14 @@ public abstract class TypeConstant
 
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapMixinProps.entrySet())
             {
-            layerOnMixinProp(pool, idBase, mapProps, mapVirtProps, entry.getKey(), entry.getValue(), errs);
+            layerOnMixinProp(pool, infoSource, idBase, mapProps, mapVirtProps,
+                    entry.getKey(), entry.getValue(), errs);
             }
 
         for (Map.Entry<MethodConstant, MethodInfo> entry : mapMixinMethods.entrySet())
             {
-            layerOnMixinMethod(pool, idBase, mapMethods, mapVirtMethods, entry.getKey(), entry.getValue(), errs);
+            layerOnMixinMethod(pool, infoSource, idBase, mapMethods, mapVirtMethods,
+                    entry.getKey(), entry.getValue(), errs);
             }
 
         return new TypeInfo(typeOrigin, cInvalidations, structBase, 0, false, mapMixinParams,
@@ -4075,6 +4077,7 @@ public abstract class TypeConstant
      * Layer on the passed mixin's property contributions onto the base properties.
      *
      * @param pool          the constant pool to use
+     * @param infoBase      the TypeInfo for the type that is being mixed into
      * @param idBaseClass   the identity of the class (etc) that is being mixed into
      * @param mapProps      properties already collected from the base
      * @param mapVirtProps  virtual properties already collected from the base
@@ -4084,6 +4087,7 @@ public abstract class TypeConstant
      */
     protected void layerOnMixinProp(
             ConstantPool                        pool,
+            TypeInfo                            infoBase,
             IdentityConstant                    idBaseClass,
             Map<PropertyConstant, PropertyInfo> mapProps,
             Map<Object, PropertyInfo>           mapVirtProps,
@@ -4099,7 +4103,7 @@ public abstract class TypeConstant
 
         Object           nidContrib = idMixinProp.resolveNestedIdentity(pool, this);
         PropertyConstant idResult   = (PropertyConstant) idBaseClass.appendNestedIdentity(pool, nidContrib);
-        PropertyInfo     propBase   = mapVirtProps.get(nidContrib);
+        PropertyInfo     propBase   = infoBase.findPropertyByNid(nidContrib);
         if (propBase != null && infoProp.getIdentity().equals(propBase.getIdentity()))
             {
             // keep whatever the base has got
@@ -4124,6 +4128,7 @@ public abstract class TypeConstant
      * Layer on the passed mixin method contributions onto the base methods.
      *
      * @param pool            the constant pool to use
+     * @param infoBase        the TypeInfo for the type that is being mixed into
      * @param idBaseClass     the identity of the class (etc) that is being mixed into
      * @param mapMethods      methods already collected from the base
      * @param mapVirtMethods  virtual methods already collected from the base
@@ -4133,6 +4138,7 @@ public abstract class TypeConstant
      */
     private void layerOnMixinMethod(
             ConstantPool                    pool,
+            TypeInfo                        infoBase,
             IdentityConstant                idBaseClass,
             Map<MethodConstant, MethodInfo> mapMethods,
             Map<Object, MethodInfo>         mapVirtMethods,
@@ -4158,7 +4164,7 @@ public abstract class TypeConstant
             }
 
         Object     nidContrib = idMixinMethod.resolveNestedIdentity(pool, this);
-        MethodInfo methodBase = mapVirtMethods.get(nidContrib);
+        MethodInfo methodBase = infoBase.getMethodByNestedId(nidContrib);
         if (methodBase != null && methodBase.getIdentity().equals(methodMixin.getIdentity()))
             {
             // keep whatever the base has got

@@ -189,6 +189,7 @@ mixin Interval<Element extends immutable Sequential>
      * Two intervals that are contiguous or overlap can be joined together to form a larger
      * interval.
      */
+    @Override
     conditional Interval union(Interval that)
         {
         if (!this.adjoins(that))
