@@ -4224,7 +4224,7 @@ public abstract class TypeConstant
      */
     public Relation calculateRelation(TypeConstant typeLeft)
         {
-        ConstantPool pool = getConstantPool();
+        ConstantPool pool = ConstantPool.getCurrentPool();
         if (this.equals(typeLeft) || typeLeft.equals(pool.typeObject()))
             {
             return Relation.IS_A;
