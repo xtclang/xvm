@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Set;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.Component;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
@@ -587,6 +589,13 @@ public class PropertyInfo
                     {
                     return true;
                     }
+                }
+            // there is a possibility that the property has been "duck-typable", which is only
+            // allowable for interfaces
+            Component parent = constId.getNamespace().getComponent();
+            if (parent != null && parent.getFormat() == Format.INTERFACE)
+                {
+                return true;
                 }
             }
 
