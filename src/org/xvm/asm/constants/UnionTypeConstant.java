@@ -380,7 +380,7 @@ public class UnionTypeConstant
             PropertyInfo prop2 = entry.getValue();
             assert prop2 != null;
 
-            PropertyInfo prop1 = info2.findProperty(sName);
+            PropertyInfo prop1 = info1.findProperty(sName);
             if (prop1 == null)
                 {
                 // the property is only in the second map
