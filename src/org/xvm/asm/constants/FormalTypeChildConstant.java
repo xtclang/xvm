@@ -12,7 +12,7 @@ import org.xvm.asm.GenericTypeResolver;
  * Represent a formal child of a generic property, type parameter or formal child constant.
  */
 public class FormalTypeChildConstant
-        extends FormalConstant
+        extends PropertyConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -42,22 +42,26 @@ public class FormalTypeChildConstant
     public FormalTypeChildConstant(ConstantPool pool, IdentityConstant constParent, String sName)
         {
         super(pool, constParent, sName);
+        }
 
-        switch (constParent.getFormat())
+    @Override
+    protected void checkParent(IdentityConstant idParent)
+        {
+        switch (idParent.getFormat())
             {
             case FormalTypeChild:
             case TypeParameter:
                 break;
 
             case Property:
-                if (((PropertyConstant) constParent).isFormalType())
+                if (((PropertyConstant) idParent).isFormalType())
                     {
                     break;
                     }
                 // fall through
             default:
                 throw new IllegalArgumentException(
-                    "parent does not represent a formal constant: " + constParent);
+                    "parent does not represent a formal constant: " + idParent);
             }
         }
 
@@ -115,6 +119,12 @@ public class FormalTypeChildConstant
 
 
     // ----- IdentityConstant methods --------------------------------------------------------------
+
+    @Override
+    public TypeConstant getType()
+        {
+        return getConstantPool().ensureTerminalTypeConstant(this);
+        }
 
     @Override
     public IdentityConstant appendTrailingSegmentTo(IdentityConstant that)

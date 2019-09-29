@@ -56,7 +56,7 @@ public class TodoExpression
         }
 
     @Override
-    public boolean isAssignable()
+    public boolean isAssignable(Context ctx)
         {
         // sure, you can use this where an assignable is required
         return true;

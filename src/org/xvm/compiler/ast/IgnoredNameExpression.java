@@ -65,7 +65,7 @@ public class IgnoredNameExpression
         }
 
     @Override
-    public boolean isAssignable()
+    public boolean isAssignable(Context ctx)
         {
         return true;
         }

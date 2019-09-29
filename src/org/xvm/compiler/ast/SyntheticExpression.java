@@ -68,9 +68,9 @@ public abstract class SyntheticExpression
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
-    public boolean isAssignable()
+    public boolean isAssignable(Context ctx)
         {
-        return expr.isAssignable();
+        return expr.isAssignable(ctx);
         }
 
     @Override

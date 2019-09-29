@@ -1032,7 +1032,7 @@ public abstract class Expression
      *
      * @return true iff the Expression represents an "L-value" to which a value can be assigned
      */
-    public boolean isAssignable()
+    public boolean isAssignable(Context ctx)
         {
         return false;
         }
@@ -1046,7 +1046,7 @@ public abstract class Expression
      */
     public void requireAssignable(Context ctx, ErrorListener errs)
         {
-        if (!isAssignable())
+        if (!isAssignable(ctx))
             {
             log(errs, Severity.ERROR, Compiler.ASSIGNABLE_REQUIRED);
             }
@@ -1543,7 +1543,7 @@ public abstract class Expression
         {
         checkDepth();
 
-        if (!isAssignable() || isVoid())
+        if (!isAssignable(ctx) || isVoid())
             {
             throw new IllegalStateException();
             }
@@ -1585,7 +1585,7 @@ public abstract class Expression
             }
 
         // a sub-class should have overridden this method
-        assert isAssignable();
+        assert isAssignable(ctx);
         throw hasMultiValueImpl()
                 ? notImplemented()
                 : new IllegalStateException();

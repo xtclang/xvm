@@ -434,9 +434,9 @@ public class MultipleLValueStatement
             }
 
         @Override
-        public boolean isAssignable()
+        public boolean isAssignable(Context ctx)
             {
-            return super.isAssignable();
+            return super.isAssignable(ctx);
             }
 
         @Override

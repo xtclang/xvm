@@ -547,7 +547,7 @@ public class ArrayAccessExpression
         }
 
     @Override
-    public boolean isAssignable()
+    public boolean isAssignable(Context ctx)
         {
         assert isValidated();
         return m_idSet != null;

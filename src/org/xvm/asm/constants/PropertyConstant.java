@@ -34,19 +34,7 @@ public class PropertyConstant
         {
         super(pool, constParent, sName);
 
-        switch (constParent.getFormat())
-            {
-            case Module:
-            case Package:
-            case Class:
-            case NativeClass:
-            case Property:
-            case Method:
-                break;
-
-            default:
-                throw new IllegalArgumentException("invalid parent: " + constParent.getFormat());
-            }
+        checkParent(constParent);
         }
 
     /**
@@ -62,6 +50,28 @@ public class PropertyConstant
             throws IOException
         {
         super(pool, format, in);
+        }
+
+    /**
+     * Validate the parent's format.
+     *
+     * @param idParent  the parent's id
+     */
+    protected void checkParent(IdentityConstant idParent)
+        {
+        switch (idParent.getFormat())
+            {
+            case Module:
+            case Package:
+            case Class:
+            case NativeClass:
+            case Property:
+            case Method:
+                break;
+
+            default:
+                throw new IllegalArgumentException("invalid parent: " + idParent.getFormat());
+            }
         }
 
     @Override

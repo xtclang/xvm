@@ -260,9 +260,9 @@ public class TernaryExpression
         }
 
     @Override
-    public boolean isAssignable()
+    public boolean isAssignable(Context ctx)
         {
-        return exprThen.isAssignable() && exprElse.isAssignable();
+        return exprThen.isAssignable(ctx) && exprElse.isAssignable(ctx);
         }
 
     @Override

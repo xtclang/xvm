@@ -1745,7 +1745,7 @@ public class InvocationExpression
 
                     TypeInfo infoLeft;
 
-                    if (nameLeft.getMeaning() == NameExpression.Meaning.Type)
+                    if (nameLeft.getMeaning(ctx) == NameExpression.Meaning.Type)
                         {
                         // "Class" meaning in IdentityMode can only indicate a "type-of-class" scenario
                         assert typeLeft.isTypeOfType();
@@ -1785,7 +1785,7 @@ public class InvocationExpression
                         }
                     }
 
-                switch (nameLeft.getMeaning())
+                switch (nameLeft.getMeaning(ctx))
                     {
                     case Property:
                         {

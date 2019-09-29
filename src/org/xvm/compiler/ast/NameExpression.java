@@ -654,7 +654,7 @@ public class NameExpression
 
             if (typeRequired == null || type.isAssignableTo(typeRequired))
                 {
-                switch (getMeaning())
+                switch (getMeaning(ctx))
                     {
                     case Class:
                         // other than "Outer.this", class is ALWAYS a constant; it results in a
@@ -720,7 +720,7 @@ public class NameExpression
         //      even if we are not de-referencing the variable (i.e. the markVarRead() API is wrong)
         if (left == null && !isSuppressDeref() && isRValue())
             {
-            switch (getMeaning())
+            switch (getMeaning(ctx))
                 {
                 case Reserved:
                 case Variable:
@@ -738,7 +738,7 @@ public class NameExpression
                 }
             } // TODO else account for ".this"???
 
-        if (left instanceof NameExpression && ((NameExpression) left).getMeaning() == Meaning.Label)
+        if (left instanceof NameExpression && ((NameExpression) left).getMeaning(ctx) == Meaning.Label)
             {
             LabelVar labelVar = (LabelVar) ctx.getVar(((NameExpression) left).getNameToken(), errs);
             String   sVar     = getName();
@@ -777,10 +777,11 @@ public class NameExpression
             return false;
             }
 
-        switch (getMeaning())
+        switch (getMeaning(null))
             {
             case Variable:
             case Property:
+            case FormalType:
                 return true;
 
             case Reserved: // TODO - some of these are traceworthy, right?
@@ -795,7 +796,7 @@ public class NameExpression
         }
 
     @Override
-    public boolean isAssignable()
+    public boolean isAssignable(Context ctx)
         {
         if (m_fAssignable)
             {
@@ -807,7 +808,7 @@ public class NameExpression
             // ------------  -----------------  -------------------  ------------------    -------------------
             // Local var     T                  <- Var               T                     <- Var
             // Property      T                  <- Ref/Var           PropertyConstant*[1]  PropertyConstant*
-            switch (getMeaning())
+            switch (getMeaning(ctx))
                 {
                 case Variable:
                     return m_plan == Plan.None;
@@ -823,11 +824,11 @@ public class NameExpression
     @Override
     public void requireAssignable(Context ctx, ErrorListener errs)
         {
-        if (isAssignable())
+        if (isAssignable(ctx))
             {
             if (left == null)
                 {
-                switch (getMeaning())
+                switch (getMeaning(ctx))
                     {
                     case Reserved:
                     case Variable:
@@ -854,11 +855,11 @@ public class NameExpression
     @Override
     public void markAssignment(Context ctx, boolean fCond, ErrorListener errs)
         {
-        if (isAssignable())
+        if (isAssignable(ctx))
             {
             if (left == null)
                 {
-                switch (getMeaning())
+                switch (getMeaning(ctx))
                     {
                     case Reserved:
                     case Variable:
@@ -886,7 +887,7 @@ public class NameExpression
                 {
                 case OuterThis:
                     {
-                    assert getMeaning() == Meaning.Class;
+                    assert getMeaning(ctx) == Meaning.Class;
 
                     // TODO: the instanceof ParenClassConstant check will go away (p.this for property p on Map will become this.Map.&p)
                     if (argRaw instanceof ParentClassConstant)
@@ -909,7 +910,7 @@ public class NameExpression
 
                 case OuterRef:
                     {
-                    assert getMeaning() == Meaning.Class;
+                    assert getMeaning(ctx) == Meaning.Class;
 
                     int cSteps = argRaw instanceof ThisClassConstant
                             ? 0
@@ -927,7 +928,7 @@ public class NameExpression
                 case PropertyDeref:
                     {
                     if (left instanceof NameExpression &&
-                            ((NameExpression) left).getMeaning() == Meaning.Label)
+                            ((NameExpression) left).getMeaning(ctx) == Meaning.Label)
                         {
                         break;
                         }
@@ -1032,7 +1033,7 @@ public class NameExpression
         switch (m_plan)
             {
             case None:
-                assert getMeaning() != Meaning.Label;
+                assert getMeaning(ctx) != Meaning.Label;
 
                 if (m_mapTypeParams != null)
                     {
@@ -1109,7 +1110,7 @@ public class NameExpression
                 if (left instanceof NameExpression)
                     {
                     NameExpression nameLeft = (NameExpression) left;
-                    if (nameLeft.getMeaning() == Meaning.Label)
+                    if (nameLeft.getMeaning(ctx) == Meaning.Label)
                         {
                         LabelVar labelVar = (LabelVar) nameLeft.m_arg;
                         return labelVar.getPropRegister(getName());
@@ -1200,6 +1201,17 @@ public class NameExpression
                 assert isConstant();
                 return toConstant();
 
+            case FormalChildType:
+                {
+                FormalTypeChildConstant idChild = (FormalTypeChildConstant) argRaw;
+
+                Argument argTarget = left.generateArgument(ctx, code, true, true, errs);
+
+                Register regType = createRegister(idChild.getType(), fUsedOnce);
+                code.add(new P_Get(idChild, argTarget, regType));
+                return regType;
+                }
+
             case BindTarget:
                 {
                 MethodConstant idMethod  = (MethodConstant) argRaw;
@@ -1270,7 +1282,7 @@ public class NameExpression
     @Override
     public Assignable generateAssignable(Context ctx, Code code, ErrorListener errs)
         {
-        if (isAssignable())
+        if (isAssignable(ctx))
             {
             TargetInfo target = m_targetInfo;
             Argument   arg    = m_arg;
@@ -1570,7 +1582,8 @@ public class NameExpression
                 if (typeLeft != null)
                     {
                     FormalConstant constFormal = null;
-                    if (typeLeft.isFormalTypeType())
+                    if (typeLeft.isTypeOfType() && left instanceof NameExpression &&
+                            ((NameExpression) left).getMeaning(ctx) == Meaning.FormalType)
                         {
                         // Example (Array.x):
                         //   static <CompileType extends Hasher> Int hashCode(CompileType array)
@@ -1583,13 +1596,31 @@ public class NameExpression
                         //       return hash;
                         //       }
                         //
-                        // "this" is "CompileType.Element"
-                        // typeLeft is a type of the "CompileType" type parameter
+                        // typeLeft is a type of the "CompileType" type parameter and we need to
+                        // produce "CompileType.Element" formal child constant
+                        //
+                        // Another example is:
+                        //  Boolean f = CompileType.is(Type<Array>) && CompileType.Element.is(Type<Int>);
+                        //
+                        // in that case, "typeLeft" for the second expression is a union
+                        // (CompileType + Array), but we still need to produce "CompileType.Element"
+                        // formal child constant
 
-                        TypeConstant typeFormal = typeLeft.getParamType(0);
+                        Argument argLeft = ((NameExpression) left).m_arg;
+                        if (argLeft instanceof Register)
+                            {
+                            TypeConstant typeFormal = ((Register) argLeft).getOriginalType().getParamType(0);
+                            if (typeFormal.isSingleDefiningConstant())
+                                {
+                                argLeft = typeFormal.getDefiningConstant();
+                                }
+                            }
 
-                        constFormal = (FormalConstant) typeFormal.getDefiningConstant();
-                        typeLeft    = constFormal.getConstraintType();
+                        if (argLeft instanceof FormalConstant)
+                            {
+                            constFormal = (FormalConstant) argLeft;
+                            typeLeft    = typeLeft.getParamType(0);
+                            }
                         }
                     else if (typeLeft.isFormalType() && !typeLeft.isFormalTypeSequence())
                         {
@@ -1618,6 +1649,7 @@ public class NameExpression
                             typeLeft = pool.ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
                             }
                         }
+
                     TypeInfo     infoType = typeLeft.ensureTypeInfo(errs);
                     PropertyInfo infoProp = infoType.findProperty(sName);
                     if (infoProp == null)
@@ -1745,20 +1777,6 @@ public class NameExpression
                 // there is a possibility that the register type in this context is narrower than
                 // its original type; we can return it only if it fits the desired type
                 TypeConstant typeLocal = reg.getType();
-                if (!reg.isUnknown())
-                    {
-                    MethodStructure method = ctx.getMethod();
-                    int             iReg   = reg.getIndex();
-                    if (method.isTypeParameter(iReg))
-                        {
-                        TypeConstant typeParam = method.getParam(iReg).
-                            asTypeParameterType(method.getIdentityConstant());
-
-                        TypeConstant typeConstraint = typeLocal.getParamType(0);
-                        assert typeParam.isA(typeConstraint);
-                        typeLocal = typeParam.getType(); // type of type
-                        }
-                    }
                 return isRValue() || typeDesired != null && typeLocal.isA(typeDesired)
                         ? typeLocal
                         : reg.getOriginalType();
@@ -1969,6 +1987,7 @@ public class NameExpression
             case FormalTypeChild:
                 {
                 FormalTypeChildConstant idFormal = (FormalTypeChildConstant) constant;
+                m_plan = Plan.FormalChildType;
                 return idFormal.getType();
                 }
 
@@ -2053,7 +2072,7 @@ public class NameExpression
      * @return the meaning of the name (after resolveRawArgument has finished), or null if it cannot be
      *         determined
      */
-    protected Meaning getMeaning()
+    protected Meaning getMeaning(Context ctx)
         {
         Argument arg = m_arg;
         if (arg == null)
@@ -2068,7 +2087,9 @@ public class NameExpression
                     ? reg.isLabel()
                             ? Meaning.Label
                             : Meaning.Reserved
-                    : Meaning.Variable;
+                    : !reg.isUnknown() && ctx != null && ctx.getMethod().isTypeParameter(reg.getIndex())
+                            ? Meaning.FormalType
+                            : Meaning.Variable;
             }
 
         if (arg instanceof TypeConstant)
@@ -2130,7 +2151,7 @@ public class NameExpression
             return false;
             }
 
-        switch (getMeaning())
+        switch (getMeaning(ctx))
             {
             case Class:
             case Type:
@@ -2456,7 +2477,7 @@ public class NameExpression
      * assignment.
      */
     enum Plan {None, OuterThis, OuterRef, RegisterRef, PropertyDeref, PropertyRef, TypeOfClass,
-               TypeOfTypedef, Singleton, BindTarget}
+               TypeOfTypedef, Singleton, FormalChildType, BindTarget}
 
     /**
      * If the plan is None or BindTarget, and this expression represents a method or function,

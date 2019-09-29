@@ -13,6 +13,8 @@ module TestArray.xqiz.it
         testArrayListAdd();
         testFixedArray();
 
+        testFormalTypes();
+
         testAssignSideEffects();
         testNew();
         testNibble();
@@ -122,6 +124,20 @@ module TestArray.xqiz.it
 
         Boolean[] booleans = new Array<Boolean>(3, (i) -> i % 2 == 0);
         console.println("booleans=" + booleans);
+        }
+
+    void testFormalTypes()
+        {
+        Array<Int> a1 = [1, 2];
+        assert checkElementType(a1);
+
+        Array<String> a2 = ["1", "2"];
+        assert !checkElementType(a2);
+        }
+
+    private static <Value> Boolean checkElementType(Value o)
+        {
+        return Value.is(Type<Array>) && Value.Element.is(Type<Int>);
         }
 
     void testAssignSideEffects()

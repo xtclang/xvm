@@ -7,6 +7,8 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.FormalTypeChildConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
@@ -94,6 +96,25 @@ public class xType
             ahMethods[i] = xMethod.makeHandle(aMethods[i], typeTarget);
             }
         return null; // TODO xArray.createArrayHandle(frame, xMethod.TYPE, ahMethods);
+        }
+
+    @Override
+    public int getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
+        {
+        TypeHandle hThis = (TypeHandle) hTarget;
+
+        if (idProp instanceof FormalTypeChildConstant)
+            {
+            TypeConstant typeTarget = hThis.getDataType();
+            String       sName      = idProp.getName();
+            TypeConstant typeValue  = typeTarget.resolveGenericType(sName);
+
+            return typeValue == null
+                ? frame.raiseException("Unknown formal type: " + sName)
+                : frame.assignValue(iReturn, typeValue.getTypeHandle());
+            }
+
+        return super.getPropertyValue(frame, hTarget, idProp, iReturn);
         }
 
     public static TypeHandle makeHandle(TypeConstant type)
