@@ -1745,7 +1745,7 @@ public class InvocationExpression
 
                     TypeInfo infoLeft;
 
-                    if (nameLeft.getMeaning(ctx) == NameExpression.Meaning.Type)
+                    if (nameLeft.getMeaning() == NameExpression.Meaning.Type)
                         {
                         // "Class" meaning in IdentityMode can only indicate a "type-of-class" scenario
                         assert typeLeft.isTypeOfType();
@@ -1785,11 +1785,11 @@ public class InvocationExpression
                         }
                     }
 
-                switch (nameLeft.getMeaning(ctx))
+                switch (nameLeft.getMeaning())
                     {
                     case Property:
                         {
-                        PropertyConstant idProp = (PropertyConstant) nameLeft.getIdentity(ctx);
+                        PropertyConstant idProp = (PropertyConstant) nameLeft.resolveRawArgument(ctx, false, errs);
                         if (idProp.isFormalType())
                             {
                             // Example (NaturalHasher.x):
@@ -1801,7 +1801,7 @@ public class InvocationExpression
                             // "this" is "Value.hashCode(value)"
                             // idProp.getFormalType() is NaturalHasher.Value
 
-                            TypeInfo  infoType = idProp.getFormalType().ensureTypeInfo(errs);
+                            TypeInfo  infoType = nameLeft.getImplicitType(ctx).getParamType(0).ensureTypeInfo(errs);
                             ErrorList errsTemp = new ErrorList(1);
 
                             Argument arg = findCallable(ctx, infoType, sName, MethodType.Function, false,
@@ -1819,7 +1819,7 @@ public class InvocationExpression
                         break;
                         }
 
-                    case FormalType:
+                    case FormalChildType:
                         {
                         // Example:
                         //   static <CompileType extends Hasher> Int hashCode(CompileType array)
@@ -1860,10 +1860,7 @@ public class InvocationExpression
                             MethodStructure method = ctx.getMethod();
                             if (method.isTypeParameter(iReg))
                                 {
-                                TypeParameterConstant idParam = method.getParam(iReg).
-                                        asTypeParameterConstant(method.getIdentityConstant());
-
-                                TypeInfo  infoLeft = idParam.getType().ensureTypeInfo(errs);
+                                TypeInfo  infoLeft = reg.getType().getParamType(0).ensureTypeInfo(errs);
                                 ErrorList errsTemp = new ErrorList(1);
                                 Argument  arg      = findCallable(ctx, infoLeft, sName, MethodType.Function, false,
                                                         atypeReturn, errsTemp);
@@ -1872,7 +1869,8 @@ public class InvocationExpression
                                     m_argMethod   = arg;
                                     m_method      = getMethod(infoLeft, arg);
                                     m_fBindTarget = false;
-                                    m_idFormal    = idParam;
+                                    m_idFormal    = method.getParam(iReg).
+                                            asTypeParameterConstant(method.getIdentityConstant());
                                     errsTemp.logTo(errs);
                                     return arg;
                                     }

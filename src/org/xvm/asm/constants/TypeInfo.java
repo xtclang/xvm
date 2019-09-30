@@ -1153,7 +1153,6 @@ public class TypeInfo
         return f_mapVirtMethods;
         }
 
-    // TODO this should be the "virt map" from Object to MethodInfo
     /**
      * @return all of the methods for this type that can be identified by just a signature, indexed
      *         by that signature

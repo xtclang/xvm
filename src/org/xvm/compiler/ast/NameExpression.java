@@ -654,7 +654,7 @@ public class NameExpression
 
             if (typeRequired == null || type.isAssignableTo(typeRequired))
                 {
-                switch (getMeaning(ctx))
+                switch (getMeaning())
                     {
                     case Class:
                         // other than "Outer.this", class is ALWAYS a constant; it results in a
@@ -720,7 +720,7 @@ public class NameExpression
         //      even if we are not de-referencing the variable (i.e. the markVarRead() API is wrong)
         if (left == null && !isSuppressDeref() && isRValue())
             {
-            switch (getMeaning(ctx))
+            switch (getMeaning())
                 {
                 case Reserved:
                 case Variable:
@@ -738,7 +738,7 @@ public class NameExpression
                 }
             } // TODO else account for ".this"???
 
-        if (left instanceof NameExpression && ((NameExpression) left).getMeaning(ctx) == Meaning.Label)
+        if (left instanceof NameExpression && ((NameExpression) left).getMeaning() == Meaning.Label)
             {
             LabelVar labelVar = (LabelVar) ctx.getVar(((NameExpression) left).getNameToken(), errs);
             String   sVar     = getName();
@@ -777,11 +777,11 @@ public class NameExpression
             return false;
             }
 
-        switch (getMeaning(null))
+        switch (getMeaning())
             {
             case Variable:
             case Property:
-            case FormalType:
+            case FormalChildType:
                 return true;
 
             case Reserved: // TODO - some of these are traceworthy, right?
@@ -808,7 +808,7 @@ public class NameExpression
             // ------------  -----------------  -------------------  ------------------    -------------------
             // Local var     T                  <- Var               T                     <- Var
             // Property      T                  <- Ref/Var           PropertyConstant*[1]  PropertyConstant*
-            switch (getMeaning(ctx))
+            switch (getMeaning())
                 {
                 case Variable:
                     return m_plan == Plan.None;
@@ -828,7 +828,7 @@ public class NameExpression
             {
             if (left == null)
                 {
-                switch (getMeaning(ctx))
+                switch (getMeaning())
                     {
                     case Reserved:
                     case Variable:
@@ -859,7 +859,7 @@ public class NameExpression
             {
             if (left == null)
                 {
-                switch (getMeaning(ctx))
+                switch (getMeaning())
                     {
                     case Reserved:
                     case Variable:
@@ -887,7 +887,7 @@ public class NameExpression
                 {
                 case OuterThis:
                     {
-                    assert getMeaning(ctx) == Meaning.Class;
+                    assert getMeaning() == Meaning.Class;
 
                     // TODO: the instanceof ParenClassConstant check will go away (p.this for property p on Map will become this.Map.&p)
                     if (argRaw instanceof ParentClassConstant)
@@ -910,7 +910,7 @@ public class NameExpression
 
                 case OuterRef:
                     {
-                    assert getMeaning(ctx) == Meaning.Class;
+                    assert getMeaning() == Meaning.Class;
 
                     int cSteps = argRaw instanceof ThisClassConstant
                             ? 0
@@ -928,7 +928,7 @@ public class NameExpression
                 case PropertyDeref:
                     {
                     if (left instanceof NameExpression &&
-                            ((NameExpression) left).getMeaning(ctx) == Meaning.Label)
+                            ((NameExpression) left).getMeaning() == Meaning.Label)
                         {
                         break;
                         }
@@ -1033,7 +1033,7 @@ public class NameExpression
         switch (m_plan)
             {
             case None:
-                assert getMeaning(ctx) != Meaning.Label;
+                assert getMeaning() != Meaning.Label;
 
                 if (m_mapTypeParams != null)
                     {
@@ -1110,7 +1110,7 @@ public class NameExpression
                 if (left instanceof NameExpression)
                     {
                     NameExpression nameLeft = (NameExpression) left;
-                    if (nameLeft.getMeaning(ctx) == Meaning.Label)
+                    if (nameLeft.getMeaning() == Meaning.Label)
                         {
                         LabelVar labelVar = (LabelVar) nameLeft.m_arg;
                         return labelVar.getPropRegister(getName());
@@ -1201,7 +1201,7 @@ public class NameExpression
                 assert isConstant();
                 return toConstant();
 
-            case FormalChildType:
+            case TypeOfFormalChild:
                 {
                 FormalTypeChildConstant idChild = (FormalTypeChildConstant) argRaw;
 
@@ -1583,7 +1583,7 @@ public class NameExpression
                     {
                     FormalConstant constFormal = null;
                     if (typeLeft.isTypeOfType() && left instanceof NameExpression &&
-                            ((NameExpression) left).getMeaning(ctx) == Meaning.FormalType)
+                            ((NameExpression) left).getMeaning() == Meaning.Variable)
                         {
                         // Example (Array.x):
                         //   static <CompileType extends Hasher> Int hashCode(CompileType array)
@@ -1606,20 +1606,16 @@ public class NameExpression
                         // (CompileType + Array), but we still need to produce "CompileType.Element"
                         // formal child constant
 
-                        Argument argLeft = ((NameExpression) left).m_arg;
-                        if (argLeft instanceof Register)
+                        Argument     argLeft    = ((NameExpression) left).m_arg;
+                        TypeConstant typeFormal = ((Register) argLeft).getOriginalType().getParamType(0);
+                        if (typeFormal.isSingleDefiningConstant())
                             {
-                            TypeConstant typeFormal = ((Register) argLeft).getOriginalType().getParamType(0);
-                            if (typeFormal.isSingleDefiningConstant())
+                            argLeft = typeFormal.getDefiningConstant();
+                            if (argLeft instanceof FormalConstant)
                                 {
-                                argLeft = typeFormal.getDefiningConstant();
+                                constFormal = (FormalConstant) argLeft;
+                                typeLeft    = typeLeft.getParamType(0);
                                 }
-                            }
-
-                        if (argLeft instanceof FormalConstant)
-                            {
-                            constFormal = (FormalConstant) argLeft;
-                            typeLeft    = typeLeft.getParamType(0);
                             }
                         }
                     else if (typeLeft.isFormalType() && !typeLeft.isFormalTypeSequence())
@@ -1987,7 +1983,7 @@ public class NameExpression
             case FormalTypeChild:
                 {
                 FormalTypeChildConstant idFormal = (FormalTypeChildConstant) constant;
-                m_plan = Plan.FormalChildType;
+                m_plan = Plan.TypeOfFormalChild;
                 return idFormal.getType();
                 }
 
@@ -2072,7 +2068,7 @@ public class NameExpression
      * @return the meaning of the name (after resolveRawArgument has finished), or null if it cannot be
      *         determined
      */
-    protected Meaning getMeaning(Context ctx)
+    protected Meaning getMeaning()
         {
         Argument arg = m_arg;
         if (arg == null)
@@ -2087,9 +2083,7 @@ public class NameExpression
                     ? reg.isLabel()
                             ? Meaning.Label
                             : Meaning.Reserved
-                    : !reg.isUnknown() && ctx != null && ctx.getMethod().isTypeParameter(reg.getIndex())
-                            ? Meaning.FormalType
-                            : Meaning.Variable;
+                    : Meaning.Variable;
             }
 
         if (arg instanceof TypeConstant)
@@ -2120,7 +2114,7 @@ public class NameExpression
                     return Meaning.Property;
 
                 case FormalTypeChild:
-                    return Meaning.FormalType;
+                    return Meaning.FormalChildType;
 
                 case Method:
                 case MultiMethod:
@@ -2151,7 +2145,7 @@ public class NameExpression
             return false;
             }
 
-        switch (getMeaning(ctx))
+        switch (getMeaning())
             {
             case Class:
             case Type:
@@ -2215,6 +2209,16 @@ public class NameExpression
             }
 
         return false;
+        }
+
+    /**
+     * This method is not currently used.
+     *
+     * @return true iff the specified register represents a type parameter
+     */
+    protected boolean isTypeParameter(Context ctx, Register reg)
+        {
+        return !reg.isUnknown() && ctx.getMethod().isTypeParameter(reg.getIndex());
         }
 
     /**
@@ -2372,9 +2376,8 @@ public class NameExpression
                         {
                         assert typeNarrow.isTypeOfType();
 
-                        Register regFormal = new Register(typeNarrow);
-                        regFormal.markEffectivelyFinal();
-                        ctx.replaceFormalArgument(sName, branch, regFormal);
+                        TargetInfo info = new TargetInfo(sName, idProp, true, idProp.getNamespace().getType(), 0);
+                        ctx.replaceFormalArgument(sName, branch, new TargetInfo(info, typeNarrow));
                         }
                     else // allow narrowing for immutable properties
                         {
@@ -2469,7 +2472,7 @@ public class NameExpression
     /**
      * Represents the category of argument that the expression yields.
      */
-    enum Meaning {Unknown, Reserved, Variable, Property, FormalType, Method, Class, Type, Typedef, Label}
+    enum Meaning {Unknown, Reserved, Variable, Property, FormalChildType, Method, Class, Type, Typedef, Label}
 
     /**
      * Represents the necessary argument/assignable transformation that the expression will have to
@@ -2477,7 +2480,7 @@ public class NameExpression
      * assignment.
      */
     enum Plan {None, OuterThis, OuterRef, RegisterRef, PropertyDeref, PropertyRef, TypeOfClass,
-               TypeOfTypedef, Singleton, FormalChildType, BindTarget}
+               TypeOfTypedef, Singleton, TypeOfFormalChild, BindTarget}
 
     /**
      * If the plan is None or BindTarget, and this expression represents a method or function,

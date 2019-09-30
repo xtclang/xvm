@@ -96,14 +96,21 @@ public class FormalTypeChildConstant
         FormalConstant idParent       = (FormalConstant) getParentConstant();
         TypeConstant   typeConstraint = idParent.getConstraintType();
 
-        assert typeConstraint.containsGenericParam(getName());
+        // there is a possibility that this constant was constructed with some extra assumptions
+        // during the compile time that are not "encoded" into the constant itself;
+        // for example, the compiler may know that "CompileType" is an "Array", therefore
+        // "CompileType.Element" is represented by a FormalTypeChildConstant, but that knowledge
+        // is not encoded into the constant itself
+        if (typeConstraint.containsGenericParam(getName()))
+            {
+            TypeConstant type = typeConstraint.getSingleUnderlyingClass(true).getFormalType().
+                                    resolveGenericType(getName());
+            assert type.isGenericType();
 
-        TypeConstant type = typeConstraint.getSingleUnderlyingClass(true).getFormalType().
-                                resolveGenericType(getName());
-        assert type.isGenericType();
-
-        PropertyConstant idProp = (PropertyConstant) type.getDefiningConstant();
-        return idProp.getConstraintType();
+            PropertyConstant idProp = (PropertyConstant) type.getDefiningConstant();
+            return idProp.getConstraintType();
+            }
+        return getConstantPool().typeObject();
         }
 
     @Override
