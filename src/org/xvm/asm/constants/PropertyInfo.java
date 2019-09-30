@@ -87,7 +87,7 @@ public class PropertyInfo
         PropertyConstant constId = getIdentity();
         assert constId.getName().equals(that.getName());
 
-        if (this.isTypeParam() ^ that.isTypeParam())
+        if (this.isFormalType() ^ that.isFormalType())
             {
             constId.log(errs, Severity.ERROR, VE_PROPERTY_ILLEGAL,
                     constId.getValueString());
@@ -170,8 +170,8 @@ public class PropertyInfo
         Collections.addAll(listMerge, aBase);
         PropertyBody[] aResult = listMerge.toArray(new PropertyBody[0]);
 
-        // check @Override (type parameters are naturally exempt)
-        if (fSelf && !isTypeParam())
+        // check @Override (formal types are naturally exempt)
+        if (fSelf && !isFormalType())
             {
             // should only have one layer (or zero layers, in which case we wouldn't have been
             // called) of property body for the "self" layer
@@ -328,7 +328,7 @@ public class PropertyInfo
         {
         // only modify normal properties that originate from interfaces and have not been
         // subsequently "layered on"
-        if (isConstant() || isTypeParam() || getExistence() != Existence.Interface)
+        if (isConstant() || isFormalType() || getExistence() != Existence.Interface)
             {
             return this;
             }
@@ -492,9 +492,9 @@ public class PropertyInfo
      */
     public PropertyInfo asInto()
         {
-        // basically, if the property is a constant or type parameter, it stays as-is; otherwise, it
+        // basically, if the property is a constant or formal type, it stays as-is; otherwise, it
         // needs to be "flattened" into a single implicit entry with the right signature
-        if (isConstant() || isTypeParam())
+        if (isConstant() || isFormalType())
             {
             return this;
             }
@@ -690,19 +690,11 @@ public class PropertyInfo
         }
 
     /**
-     * @return true iff this property represents a type parameter type
+     * @return true iff this property represents a formal type
      */
-    public boolean isTypeParam()
+    public boolean isFormalType()
         {
-        return getHead().isTypeParam();
-        }
-
-    /**
-     * @return the type param info
-     */
-    public ParamInfo getParamInfo()
-        {
-        return getHead().getTypeParamInfo();
+        return getHead().isFormalType();
         }
 
     /**
@@ -739,7 +731,7 @@ public class PropertyInfo
      */
     public boolean isVar()
         {
-        if (m_fSuppressVar || isConstant() || isTypeParam() || isInjected())
+        if (m_fSuppressVar || isConstant() || isFormalType() || isInjected())
             {
             return false;
             }
@@ -772,7 +764,7 @@ public class PropertyInfo
      */
     public boolean requiresNativeRef()
         {
-        return isVar() || isTypeParam() || isInjected() || isRefAnnotated();
+        return isVar() || isFormalType() || isInjected() || isRefAnnotated();
         }
 
     /**

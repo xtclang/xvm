@@ -1474,7 +1474,7 @@ public abstract class TypeConstant
             // we also need to retain both type params and constants, even though they technically
             // are not "in" the structure itself
             PropertyInfo prop = entry.getValue();
-            if (prop.isTypeParam() || prop.isConstant() || prop.hasField())
+            if (prop.isFormalType() || prop.isConstant() || prop.hasField())
                 {
                 PropertyConstant id = entry.getKey();
                 if (prop.isVirtual())
@@ -1530,7 +1530,7 @@ public abstract class TypeConstant
                         for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoContrib.getProperties().entrySet())
                             {
                             PropertyInfo prop = entry.getValue();
-                            if (prop.isTypeParam()
+                            if (prop.isFormalType()
                                     || (prop.isConstant() && prop.getRefAccess().isAsAccessibleAs(Access.PROTECTED))
                                     || prop.hasField())
                                 {
@@ -2826,7 +2826,7 @@ public abstract class TypeConstant
                         : propBase.layerOn(propContrib, fSelf, false, errs);
 
         // formal properties don't delegate
-        if (idDelegate != null && !propResult.isTypeParam())
+        if (idDelegate != null && !propResult.isFormalType())
             {
             PropertyBody head = propResult.getHead();
             TypeConstant type = propResult.getType();
@@ -3960,7 +3960,7 @@ public abstract class TypeConstant
                 log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_MISSING,
                         this.getValueString(), sParam);
                 }
-            else if (!info.isTypeParam() ||
+            else if (!info.isFormalType() ||
                      !info.getType().getParamTypesArray()[0].isA(param.getConstraintType()))
                 {
                 log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_INCOMPATIBLE,

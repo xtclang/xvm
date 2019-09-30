@@ -541,14 +541,14 @@ public class AssertStatement
             }
 
         @Override
-        protected void promoteNarrowedFormalType(String sName, TypeConstant typeNarrowed, Branch branch)
+        protected void promoteNarrowedGenericType(String sName, TypeConstant typeNarrowed, Branch branch)
             {
-            super.promoteNarrowedFormalType(sName, typeNarrowed, branch);
+            super.promoteNarrowedGenericType(sName, typeNarrowed, branch);
 
             // promote our "true" into the parent's "always" branch
             if (branch == Branch.WhenTrue)
                 {
-                getOuterContext().replaceFormalType(sName, Branch.Always, typeNarrowed);
+                getOuterContext().replaceGenericType(sName, Branch.Always, typeNarrowed);
                 }
             }
         }

@@ -826,7 +826,7 @@ public class NamedTypeExpression
 
                 if (ctx != null && typeTarget != null)
                     {
-                    typeTarget = typeTarget.resolveGenerics(pool, ctx.getGenericTypeResolver());
+                    typeTarget = typeTarget.resolveGenerics(pool, ctx.getFormalTypeResolver());
                     }
                 }
             else if (clzTarget.isVirtualChild())

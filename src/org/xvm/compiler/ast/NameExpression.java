@@ -2348,7 +2348,7 @@ public class NameExpression
 
                         if (idProp.isFormalType())
                             {
-                            ctx.replaceFormalArgument(sName, branch, new TargetInfo(info, typeNarrow));
+                            ctx.replaceGenericArgument(sName, branch, new TargetInfo(info, typeNarrow));
                             }
                         else  // allow narrowing for immutable properties
                             {
@@ -2377,7 +2377,7 @@ public class NameExpression
                         assert typeNarrow.isTypeOfType();
 
                         TargetInfo info = new TargetInfo(sName, idProp, true, idProp.getNamespace().getType(), 0);
-                        ctx.replaceFormalArgument(sName, branch, new TargetInfo(info, typeNarrow));
+                        ctx.replaceGenericArgument(sName, branch, new TargetInfo(info, typeNarrow));
                         }
                     else // allow narrowing for immutable properties
                         {

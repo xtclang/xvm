@@ -181,7 +181,7 @@ public class CmpExpression
                 if (typeCommon == null)
                     {
                     // try to resolve the types using the current context
-                    GenericTypeResolver resolver = ctx.getGenericTypeResolver();
+                    GenericTypeResolver resolver = ctx.getFormalTypeResolver();
                     TypeConstant        type1R   = type1.resolveGenerics(pool, resolver);
                     TypeConstant        type2R   = type2.resolveGenerics(pool, resolver);
 

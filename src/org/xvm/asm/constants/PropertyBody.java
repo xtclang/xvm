@@ -78,7 +78,7 @@ public class PropertyBody
         m_structProp    = struct;
         m_impl          = impl;
         m_constDelegate = constDelegate;
-        m_paraminfo     = null;
+        m_infoFormal    = null;
         m_type          = type;
         m_fRO           = fRO;
         m_fRW           = fRW;
@@ -92,19 +92,19 @@ public class PropertyBody
         }
 
     /**
-     * Construct a PropertyBody that represents the specified type parameter.
+     * Construct a PropertyBody that represents the specified formal type parameter.
      *
-     * @param pool    the ConstantPool to place any new constants into
-     * @param struct  the property structure that this body is derived from
-     * @param param   the type parameter information
+     * @param pool        the ConstantPool to place any new constants into
+     * @param struct      the property structure that this body is derived from
+     * @param infoFormal  the formal type parameter information
      */
-    public PropertyBody(ConstantPool pool, PropertyStructure struct, ParamInfo param)
+    public PropertyBody(ConstantPool pool, PropertyStructure struct, ParamInfo infoFormal)
         {
-        assert param  != null;
-        assert struct == null || struct.getName().equals(param.getName());
-        assert struct != null || param.getNestedIdentity() instanceof NestedIdentity;
+        assert infoFormal != null;
+        assert struct == null || struct.getName().equals(infoFormal.getName());
+        assert struct != null || infoFormal.getNestedIdentity() instanceof NestedIdentity;
 
-        TypeConstant typeActual = param.getActualType();
+        TypeConstant typeActual = infoFormal.getActualType();
         TypeConstant typeType   = struct != null && struct.getIdentityConstant().isTypeSequenceTypeParameter()
                 ? struct.getType() // for the turtle type property, the actual type is ignored
                 : pool.ensureParameterizedTypeConstant(pool.typeType(), typeActual);
@@ -112,7 +112,7 @@ public class PropertyBody
         m_structProp    = struct;
         m_impl          = Implementation.Native;
         m_constDelegate = null;
-        m_paraminfo     = param;
+        m_infoFormal    = infoFormal;
         m_type          = typeType;
         m_fRO           = true;
         m_fRW           = false;
@@ -139,7 +139,7 @@ public class PropertyBody
     public PropertyConstant getIdentity()
         {
         return m_structProp == null
-                ? (PropertyConstant) ((NestedIdentity) m_paraminfo.getNestedIdentity()).getIdentityConstant()
+                ? (PropertyConstant) ((NestedIdentity) m_infoFormal.getNestedIdentity()).getIdentityConstant()
                 : m_structProp.getIdentityConstant();
         }
 
@@ -157,7 +157,7 @@ public class PropertyBody
     public String getName()
         {
         return m_structProp == null
-                ? m_paraminfo.getName()
+                ? m_infoFormal.getName()
                 : m_structProp.getName();
         }
 
@@ -210,19 +210,11 @@ public class PropertyBody
         }
 
     /**
-     * @return true iff this property represents a type parameter type
+     * @return true iff this property represents a formal type
      */
-    public boolean isTypeParam()
+    public boolean isFormalType()
         {
-        return m_paraminfo != null;
-        }
-
-    /**
-     * @return the type param info
-     */
-    public ParamInfo getTypeParamInfo()
-        {
-        return m_paraminfo;
+        return m_infoFormal != null;
         }
 
     /**
@@ -482,7 +474,7 @@ public class PropertyBody
             && this.m_fCustom   == that.m_fCustom
             && this.m_fField    == that.m_fField
             && this.m_fConstant == that.m_fConstant
-            && Handy.equals(this.m_paraminfo    , that.m_paraminfo    )
+            && Handy.equals(this.m_infoFormal   , that.m_infoFormal)
             && Handy.equals(this.m_constDelegate, that.m_constDelegate)
             && Handy.equals(this.m_constInitVal , that.m_constInitVal )
             && Handy.equals(this.m_constInitFunc, that.m_constInitFunc);
@@ -501,9 +493,9 @@ public class PropertyBody
           .append(", impl=")
           .append(m_impl);
 
-        if (m_paraminfo != null)
+        if (m_infoFormal != null)
             {
-            sb.append(", type-param");
+            sb.append(", formal");
             }
         if (m_fRO)
             {
@@ -585,9 +577,9 @@ public class PropertyBody
     private final PropertyConstant m_constDelegate;
 
     /**
-     * Type parameter information.
+     * Formal type parameter information.
      */
-    private final ParamInfo m_paraminfo;
+    private final ParamInfo m_infoFormal;
 
     /**
      * Type of the property, including any annotations on the type.
