@@ -328,13 +328,14 @@ public class xArray
                 GenericHandle hInterval = (GenericHandle) ahVar[1];
                 JavaLong      hLower    = (JavaLong) hInterval.getField("lowerBound");
                 JavaLong      hUpper    = (JavaLong) hInterval.getField("upperBound");
+                boolean       fReverse  = ((BooleanHandle) hInterval.getField("reversed")).get();
 
                 long lLower = hLower.getValue();
                 long lUpper = hUpper.getValue();
 
                 return lLower <= lUpper
-                    ? slice(frame, hArray, lLower, lUpper, iReturn)
-                    : slice(frame, hArray, lUpper, lLower, iReturn);
+                    ? slice(frame, hArray, lLower, lUpper, fReverse, iReturn)
+                    : slice(frame, hArray, lUpper, lLower, fReverse, iReturn);
                 }
 
             default:
@@ -445,10 +446,11 @@ public class xArray
             case "slice":
                 {
                 GenericHandle hInterval = (GenericHandle) hArg;
-                long ixFrom = ((JavaLong) hInterval.getField("lowerBound")).getValue();
-                long ixTo   = ((JavaLong) hInterval.getField("upperBound")).getValue();
+                long    ixFrom   = ((JavaLong) hInterval.getField("lowerBound")).getValue();
+                long    ixTo     = ((JavaLong) hInterval.getField("upperBound")).getValue();
+                boolean fReverse = ((BooleanHandle) hInterval.getField("reversed")).get();
 
-                return slice(frame, hTarget, ixFrom, ixTo, iReturn);
+                return slice(frame, hTarget, ixFrom, ixTo, fReverse, iReturn);
                 }
 
             case "ensureImmutable": // immutable Array ensureImmutable(Boolean inPlace = False)
@@ -614,23 +616,32 @@ public class xArray
     /**
      * slice(Interval<Int>) implementation
      */
-    protected int slice(Frame frame, ObjectHandle hTarget, long ixFrom, long ixTo, int iReturn)
+    protected int slice(Frame frame, ObjectHandle hTarget, long ixFrom, long ixTo, boolean fReverse, int iReturn)
         {
         GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
 
         ObjectHandle[] ahValue = hArray.m_ahValue;
         try
             {
-            ObjectHandle[] ahNew     = Arrays.copyOfRange(ahValue, (int) ixFrom, (int) ixTo + 1);
-            ArrayHandle    hArrayNew = new GenericArrayHandle(hTarget.getComposition(), ahNew, hArray.m_mutability);
-
-            if (false) // TODO: add a parameter
+            ObjectHandle[] ahNew;
+            if (fReverse)
                 {
-                if (!hArray.isMutable())
+                int cNew = (int) (ixTo - ixFrom + 1);
+
+                ahNew = new ObjectHandle[cNew];
+                for (int i = 0; i < cNew; i++)
                     {
-                    hArrayNew.makeImmutable();
+                    ahNew[i] = ahValue[(int) ixTo - i];
                     }
                 }
+            else
+                {
+                ahNew = Arrays.copyOfRange(ahValue, (int) ixFrom, (int) ixTo + 1);
+                }
+
+            ArrayHandle hArrayNew = new GenericArrayHandle(
+                hArray.getComposition(), ahNew, hArray.m_mutability);
+
             return frame.assignValue(iReturn, hArrayNew);
             }
         catch (ArrayIndexOutOfBoundsException e)

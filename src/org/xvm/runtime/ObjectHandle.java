@@ -545,7 +545,7 @@ public abstract class ObjectHandle
             {
             super(clzArray);
 
-            m_fMutable   = true;
+            m_fMutable   = mutability != Mutability.Constant;
             m_mutability = mutability;
             }
 

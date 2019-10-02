@@ -20,7 +20,6 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xInt64;
-import org.xvm.runtime.template.xString;
 
 
 /**
@@ -244,19 +243,37 @@ public class xIntArray
             hArray.m_cSize = cNew;
             System.arraycopy(hArrayAdd.m_alValue, 0, alThis, cThis, cAdd);
             }
+
         return frame.assignValue(iReturn, hArray);
         }
 
     @Override
-    protected int slice(Frame frame, ObjectHandle hTarget, long ixFrom, long ixTo, int iReturn)
+    protected int slice(Frame frame, ObjectHandle hTarget, long ixFrom, long ixTo, boolean fReverse, int iReturn)
         {
         IntArrayHandle hArray = (IntArrayHandle) hTarget;
 
         long[] alValue = hArray.m_alValue;
         try
             {
-            long[]          alNew     = Arrays.copyOfRange(alValue, (int) ixFrom, (int) ixTo + 1);
-            IntArrayHandle  hArrayNew = new IntArrayHandle(hTarget.getComposition(), alNew, Mutability.Mutable);
+            long[] alNew;
+
+            if (fReverse)
+                {
+                int cNew = (int) (ixTo - ixFrom + 1);
+
+                alNew = new long[cNew];
+                for (int i = 0; i < cNew; i++)
+                    {
+                    alNew[i] = alNew[(int) ixTo - i];
+                    }
+                }
+            else
+                {
+                alNew = Arrays.copyOfRange(alValue, (int) ixFrom, (int) ixTo + 1);
+                }
+
+            IntArrayHandle hArrayNew = new IntArrayHandle(
+                hArray.getComposition(), alNew, hArray.m_mutability);
 
             return frame.assignValue(iReturn, hArrayNew);
             }

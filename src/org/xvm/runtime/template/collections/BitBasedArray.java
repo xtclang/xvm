@@ -16,7 +16,6 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xString;
 
 
 /**
@@ -246,11 +245,12 @@ public abstract class BitBasedArray
                 setBit(abThis, cThis + iBit, getBit(abAdd, iBit));
                 }
             }
+
         return frame.assignValue(iReturn, hArray);
         }
 
     @Override
-    protected int slice(Frame frame, ObjectHandle hTarget, long ixFrom, long ixTo, int iReturn)
+    protected int slice(Frame frame, ObjectHandle hTarget, long ixFrom, long ixTo, boolean fReverse, int iReturn)
         {
         BitArrayHandle hArray = (BitArrayHandle) hTarget;
 
@@ -260,9 +260,19 @@ public abstract class BitBasedArray
             int    cBits = (int) (ixTo - ixFrom + 1);
             byte[] abNew = new byte[storage(cBits)];
 
-            for (int iBit = 0; iBit <= cBits; iBit++)
+            if (fReverse)
                 {
-                setBit(abNew, iBit, getBit(abValue, (int) ixFrom + iBit));
+                for (int iBit = 0; iBit <= cBits; iBit++)
+                    {
+                    setBit(abNew, iBit, getBit(abValue, (int) ixTo - iBit));
+                    }
+                }
+            else
+                {
+                for (int iBit = 0; iBit <= cBits; iBit++)
+                    {
+                    setBit(abNew, iBit, getBit(abValue, (int) ixFrom + iBit));
+                    }
                 }
 
             BitArrayHandle hArrayNew = new BitArrayHandle(hTarget.getComposition(),

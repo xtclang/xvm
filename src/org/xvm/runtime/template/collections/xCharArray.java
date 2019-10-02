@@ -20,7 +20,6 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xChar;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xString.StringHandle;
 
 
@@ -266,15 +265,32 @@ public class xCharArray
         }
 
     @Override
-    protected int slice(Frame frame, ObjectHandle hTarget, long ixFrom, long ixTo, int iReturn)
+    protected int slice(Frame frame, ObjectHandle hTarget, long ixFrom, long ixTo, boolean fReverse, int iReturn)
         {
         CharArrayHandle hArray = (CharArrayHandle) hTarget;
 
         char[] achValue = hArray.m_achValue;
         try
             {
-            char[]           achNew    = Arrays.copyOfRange(achValue, (int) ixFrom, (int) ixTo + 1);
-            CharArrayHandle  hArrayNew = new CharArrayHandle(hTarget.getComposition(), achNew, Mutability.Mutable);
+            char[] achNew;
+
+            if (fReverse)
+                {
+                int cNew = (int) (ixTo - ixFrom + 1);
+
+                achNew = new char[cNew];
+                for (int i = 0; i < cNew; i++)
+                    {
+                    achNew[i] = achNew[(int) ixTo - i];
+                    }
+                }
+            else
+                {
+                achNew = Arrays.copyOfRange(achValue, (int) ixFrom, (int) ixTo + 1);
+                }
+
+            CharArrayHandle  hArrayNew = new CharArrayHandle(
+                hArray.getComposition(), achNew, hArray.m_mutability);
 
             return frame.assignValue(iReturn, hArrayNew);
             }

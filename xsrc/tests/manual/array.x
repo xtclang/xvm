@@ -263,7 +263,6 @@ module TestArray.xqiz.it
 
                 case 8:
                     console.println("\n   --> reverse test");
-                    // TODO GG BUGBUG - does not seem to reverse() .. native impl?
                     iter = iter.reverse();
                     break;
 

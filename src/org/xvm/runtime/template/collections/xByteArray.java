@@ -268,15 +268,32 @@ public class xByteArray
         }
 
     @Override
-    protected int slice(Frame frame, ObjectHandle hTarget, long ixFrom, long ixTo, int iReturn)
+    protected int slice(Frame frame, ObjectHandle hTarget, long ixFrom, long ixTo, boolean fReverse, int iReturn)
         {
         ByteArrayHandle hArray = (ByteArrayHandle) hTarget;
 
         byte[] abValue = hArray.m_abValue;
         try
             {
-            byte[]           abNew    = Arrays.copyOfRange(abValue, (int) ixFrom, (int) ixTo + 1);
-            ByteArrayHandle hArrayNew = new ByteArrayHandle(hTarget.getComposition(), abNew, Mutability.Mutable);
+            byte[] abNew;
+
+            if (fReverse)
+                {
+                int cNew = (int) (ixTo - ixFrom + 1);
+
+                abNew = new byte[cNew];
+                for (int i = 0; i < cNew; i++)
+                    {
+                    abNew[i] = abNew[(int) ixTo - i];
+                    }
+                }
+            else
+                {
+                abNew = Arrays.copyOfRange(abValue, (int) ixFrom, (int) ixTo + 1);
+                }
+
+            ByteArrayHandle hArrayNew = new ByteArrayHandle(
+                hArray.getComposition(), abNew, hArray.m_mutability);
 
             return frame.assignValue(iReturn, hArrayNew);
             }
