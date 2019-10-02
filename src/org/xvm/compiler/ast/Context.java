@@ -954,15 +954,15 @@ public class Context
     /**
      * Mark the specified generic type as being used within this context.
      *
-     * @param name  the generic type name
-     * @param errs  the error list to log to (optional)
+     * @param sName  the generic type name
+     * @param errs   the error list to log to (optional)
      */
-    public void useGenericType(Token name, ErrorListener errs)
+    public void useGenericType(String sName, ErrorListener errs)
         {
         Context ctxOuter = getOuterContext();
         if (ctxOuter != null)
             {
-            ctxOuter.useGenericType(name, errs);
+            ctxOuter.useGenericType(sName, errs);
             }
         }
 
@@ -2292,13 +2292,13 @@ public class Context
             }
 
         @Override
-        public void useGenericType(Token name, ErrorListener errs)
+        public void useGenericType(String sName, ErrorListener errs)
             {
-            super.useGenericType(name, errs);
+            super.useGenericType(sName, errs);
 
-            TargetInfo info = (TargetInfo) resolveName(name, errs);
+            TargetInfo info = (TargetInfo) resolveName(sName);
             assert info != null;
-            ensureGenericMap().putIfAbsent(name.getValueText(), info);
+            ensureGenericMap().putIfAbsent(sName, info);
             }
 
         /**

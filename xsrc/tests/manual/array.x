@@ -279,18 +279,7 @@ module TestArray.xqiz.it
                     console.println("\n   --> dedup test");
                     (Iterator<String> iter1, Iterator<String> iter2) = iter.duplicate();
                     iter = iter1.concat(iter2);
-                    // TODO GG: iter = iter.dedup();
-                    //2019-09-20 22:37:05.079 Service "TestArray.xqiz.it" (id=0), fiber 0: Unhandled exception at at Iterable.contains(Ecstasy:Iterable.Element).->(Ecstasy:Iterable.Element, Ecstasy:Iterable.Element); line=63
-                    //java.lang.ClassCastException: class org.xvm.asm.PropertyStructure cannot be cast to class org.xvm.asm.ClassStructure (org.xvm.asm.PropertyStructure and org.xvm.asm.ClassStructure are in unnamed module of loader 'app')
-                    //	at org.xvm.runtime.TemplateRegistry.lambda$getTemplate$1(TemplateRegistry.java:222)
-                    //	at java.base/java.util.concurrent.ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1705)
-                    //	at org.xvm.runtime.TemplateRegistry.getTemplate(TemplateRegistry.java:219)
-                    //	at org.xvm.runtime.TemplateRegistry.getTemplate(TemplateRegistry.java:205)
-                    //	at org.xvm.runtime.TemplateRegistry.resolveClass(TemplateRegistry.java:267)
-                    //	at org.xvm.runtime.Frame.ensureClass(Frame.java:1115)
-                    //	at org.xvm.asm.constants.TypeConstant.callEquals(TypeConstant.java:5271)
-                    //	at org.xvm.asm.op.IsEq.completeBinaryOp(IsEq.java:78)
-                    //	at org.xvm.asm.OpTest.processBinaryOp(OpTest.java:167)
+                    iter = iter.dedup();
                     break;
                 }
 

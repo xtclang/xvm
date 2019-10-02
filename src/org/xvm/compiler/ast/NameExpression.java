@@ -725,6 +725,11 @@ public class NameExpression
                 case Reserved:
                 case Variable:
                     ctx.markVarRead(getNameToken(), errs);
+                    if (type.isGenericType())
+                        {
+                        PropertyConstant idProp = (PropertyConstant) type.getDefiningConstant();
+                        ctx.useGenericType(idProp.getName(), errs);
+                        }
                     break;
 
                 case Property:
@@ -733,7 +738,7 @@ public class NameExpression
 
                     if (idProp.isFormalType())
                         {
-                        ctx.useGenericType(getNameToken(), errs);
+                        ctx.useGenericType(getName(), errs);
                         }
                     else if (!idProp.getComponent().isStatic())
                         {
@@ -1586,132 +1591,160 @@ public class NameExpression
                 {
                 // the name can refer to either a property or a typedef
                 TypeConstant typeLeft = left.getImplicitType(ctx);
-                if (typeLeft != null)
+                if (typeLeft == null)
                     {
-                    FormalConstant constFormal = null;
-                    if (typeLeft.isTypeOfType() && left instanceof NameExpression &&
-                            ((NameExpression) left).getMeaning() == Meaning.Variable)
-                        {
-                        // Example (Array.x):
-                        //   static <CompileType extends Hasher> Int hashCode(CompileType array)
-                        //       {
-                        //       Int hash = 0;
-                        //       for (CompileType.Element el : array)
-                        //           {
-                        //           hash += CompileType.Element.hashCode(el);
-                        //           }
-                        //       return hash;
-                        //       }
-                        //
-                        // typeLeft is a type of the "CompileType" type parameter and we need to
-                        // produce "CompileType.Element" formal child constant
-                        //
-                        // Another example is:
-                        //  Boolean f = CompileType.is(Type<Array>) && CompileType.Element.is(Type<Int>);
-                        //
-                        // in that case, "typeLeft" for the second expression is a union
-                        // (CompileType + Array), but we still need to produce "CompileType.Element"
-                        // formal child constant
+                    return null;
+                    }
 
-                        Argument     argLeft    = ((NameExpression) left).m_arg;
-                        TypeConstant typeFormal = ((Register) argLeft).getOriginalType().getParamType(0);
-                        if (typeFormal.isSingleDefiningConstant())
+                FormalConstant constFormal = null;
+                if (typeLeft.isTypeOfType() && left instanceof NameExpression)
+                    {
+                    Argument argLeft = ((NameExpression) left).m_arg;
+
+                    switch (((NameExpression) left).getMeaning())
+                        {
+                        case Variable:
                             {
-                            argLeft = typeFormal.getDefiningConstant();
-                            if (argLeft instanceof FormalConstant)
+                            // Example (Array.x):
+                            //   static <CompileType extends Hasher> Int hashCode(CompileType array)
+                            //       {
+                            //       Int hash = 0;
+                            //       for (CompileType.Element el : array)
+                            //           {
+                            //           hash += CompileType.Element.hashCode(el);
+                            //           }
+                            //       return hash;
+                            //       }
+                            //
+                            // typeLeft is a type of the "CompileType" type parameter and we need to
+                            // produce "CompileType.Element" formal child constant
+                            //
+                            // Another example is:
+                            //  Boolean f = CompileType.is(Type<Array>) && CompileType.Element.is(Type<Int>);
+                            //
+                            // in that case, "typeLeft" for the second expression is a union
+                            // (CompileType + Array), but we still need to produce "CompileType.Element"
+                            // formal child constant
+
+                            TypeConstant typeFormal = ((Register) argLeft).getOriginalType().getParamType(0);
+                            if (typeFormal.isSingleDefiningConstant())
                                 {
-                                constFormal = (FormalConstant) argLeft;
+                                argLeft = typeFormal.getDefiningConstant();
+                                if (argLeft instanceof FormalConstant)
+                                    {
+                                    constFormal = (FormalConstant) argLeft;
+                                    typeLeft    = typeLeft.getParamType(0);
+                                    }
+                                }
+                            break;
+                            }
+
+                        case Property:
+                            {
+                            // Example:
+                            //   class C<Element extends Array>
+                            //       {
+                            //       construct()
+                            //           {
+                            //           assert Element.Element.is(Type<Orderable>);
+                            //           }
+                            //       }
+                            PropertyConstant idProp = (PropertyConstant) argLeft;
+                            if (idProp.isFormalType())
+                                {
+                                constFormal = idProp;
                                 typeLeft    = typeLeft.getParamType(0);
                                 }
+                            break;
                             }
                         }
-                    else if (typeLeft.isFormalType() && !typeLeft.isFormalTypeSequence())
-                        {
-                        // Example (Enum.x):
-                        //   static <CompileType extends Enum> Ordered compare(CompileType value1, CompileType value2)
-                        //   {
-                        //   return value1.ordinal <=> value2.ordinal;
-                        //   }
-                        //
-                        // "this" is value1.ordinal
-                        // typeLeft is the "CompileType" type parameter
+                    }
+                else if (typeLeft.isFormalType() && !typeLeft.isFormalTypeSequence())
+                    {
+                    // Example (Enum.x):
+                    //   static <CompileType extends Enum> Ordered compare(CompileType value1, CompileType value2)
+                    //   {
+                    //   return value1.ordinal <=> value2.ordinal;
+                    //   }
+                    //
+                    // "this" is value1.ordinal
+                    // typeLeft is the "CompileType" type parameter
 
-                        typeLeft = ((FormalConstant) typeLeft.getDefiningConstant()).getConstraintType();
+                    typeLeft = ((FormalConstant) typeLeft.getDefiningConstant()).getConstraintType();
+                    }
+
+                // TODO support or properties nested under something other than a class (need nested type infos?)
+                if (left instanceof NameExpression)
+                    {
+                    Argument arg = ((NameExpression) left).m_arg;
+
+                    // "this:target" has private access in this context
+                    // as well as a "nest mate" (a class that is collocated with the context class)
+                    if (arg instanceof Register &&
+                            ((Register) arg).isTarget() || isNestMate(ctx, typeLeft))
+                        {
+                        typeLeft = pool.ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
                         }
+                    }
 
-                    // TODO support or properties nested under something other than a class (need nested type infos?)
-                    if (left instanceof NameExpression)
+                TypeInfo     infoType = typeLeft.ensureTypeInfo(errs);
+                PropertyInfo infoProp = infoType.findProperty(sName);
+                if (infoProp == null)
+                    {
+                    Set<MethodConstant> setMethods = infoType.findMethods(sName, -1, MethodType.Either);
+                    switch (setMethods.size())
                         {
-                        Argument arg = ((NameExpression) left).m_arg;
+                        case 0:
+                            // TODO check if the name refers to a typedef
 
-                        // "this:target" has private access in this context
-                        // as well as a "nest mate" (a class that is collocated with the context class)
-                        if (arg instanceof Register &&
-                                ((Register) arg).isTarget() || isNestMate(ctx, typeLeft))
-                            {
-                            typeLeft = pool.ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
-                            }
-                        }
-
-                    TypeInfo     infoType = typeLeft.ensureTypeInfo(errs);
-                    PropertyInfo infoProp = infoType.findProperty(sName);
-                    if (infoProp == null)
-                        {
-                        Set<MethodConstant> setMethods = infoType.findMethods(sName, -1, MethodType.Either);
-                        switch (setMethods.size())
-                            {
-                            case 0:
-                                // TODO check if the name refers to a typedef
-
-                                // process the "this.OuterName" construct
-                                if (!fIdMode)
+                            // process the "this.OuterName" construct
+                            if (!fIdMode)
+                                {
+                                Constant constTarget = new NameResolver(this, sName)
+                                        .forceResolve(ErrorListener.BLACKHOLE);
+                                if (constTarget instanceof IdentityConstant && constTarget.isClass())
                                     {
-                                    Constant constTarget = new NameResolver(this, sName)
-                                            .forceResolve(ErrorListener.BLACKHOLE);
-                                    if (constTarget instanceof IdentityConstant && constTarget.isClass())
+                                    // if the left is a class, then the result is a sequence of at
+                                    // least one (recursive) ParentClassConstant around a
+                                    // ThisClassConstant; from this (context) point, walk up looking
+                                    // for the specified class, counting the number of "parent
+                                    // class" steps to get there
+                                    PseudoConstant idRelative = getRelativeIdentity(typeLeft, (IdentityConstant) constTarget);
+                                    if (idRelative != null)
                                         {
-                                        // if the left is a class, then the result is a sequence of at
-                                        // least one (recursive) ParentClassConstant around a
-                                        // ThisClassConstant; from this (context) point, walk up looking
-                                        // for the specified class, counting the number of "parent
-                                        // class" steps to get there
-                                        PseudoConstant idRelative = getRelativeIdentity(typeLeft, (IdentityConstant) constTarget);
-                                        if (idRelative != null)
-                                            {
-                                            m_arg = idRelative;
-                                            return idRelative;
-                                            }
+                                        m_arg = idRelative;
+                                        return idRelative;
                                         }
                                     }
+                                }
 
-                                name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_MISSING,
-                                    sName, typeLeft.getValueString());
-                                break;
+                            name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_MISSING,
+                                sName, typeLeft.getValueString());
+                            break;
 
-                            case 1:
-                                // there's just a single method by that name
-                                m_arg = setMethods.iterator().next();
-                                break;
+                        case 1:
+                            // there's just a single method by that name
+                            m_arg = setMethods.iterator().next();
+                            break;
 
-                            default:
-                                // there are more then one method by that name;
-                                // return the MultiMethod; let the caller decide
-                                m_arg = setMethods.iterator().next().getParentConstant();
-                                break;
-                            }
+                        default:
+                            // there are more then one method by that name;
+                            // return the MultiMethod; let the caller decide
+                            m_arg = setMethods.iterator().next().getParentConstant();
+                            break;
+                        }
+                    }
+                else
+                    {
+                    if (constFormal == null)
+                        {
+                        m_arg         = infoProp.getIdentity();
+                        m_fAssignable = infoProp.isVar();
                         }
                     else
                         {
-                        if (constFormal == null)
-                            {
-                            m_arg         = infoProp.getIdentity();
-                            m_fAssignable = infoProp.isVar();
-                            }
-                        else
-                            {
-                            m_arg         = pool.ensureFormalTypeChildConstant(constFormal, sName);
-                            m_fAssignable = false;
-                            }
+                        m_arg         = pool.ensureFormalTypeChildConstant(constFormal, sName);
+                        m_fAssignable = false;
                         }
                     }
                 }
