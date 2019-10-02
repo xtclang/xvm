@@ -4901,12 +4901,16 @@ public abstract class TypeConstant
         }
 
     /**
-     * @return true iff the TypeConstant contains a "formal type", which could be either
-     *         generic type or type parameter
+     * Check if this type contains a formal type, which could be either a generic type or a
+     * type parameter.
+     *
+     * @param fAllowParams  true if type parameters are acceptable
+     *
+     * @return true iff the TypeConstant contains a "formal type"
      */
-    public boolean containsFormalType()
+    public boolean containsFormalType(boolean fAllowParams)
         {
-        return getUnderlyingType().containsFormalType();
+        return getUnderlyingType().containsFormalType(fAllowParams);
         }
 
     /**
@@ -4931,11 +4935,15 @@ public abstract class TypeConstant
         }
 
     /**
+     * Check if this type contains a generic type.
+     *
+     * @param fAllowParams  true if type parameters are acceptable
+     *
      * @return true iff the TypeConstant contains a generic type
      */
-    public boolean containsGenericType()
+    public boolean containsGenericType(boolean fAllowParams)
         {
-        return getUnderlyingType().containsGenericType();
+        return getUnderlyingType().containsGenericType(fAllowParams);
         }
 
     /**
@@ -4960,31 +4968,15 @@ public abstract class TypeConstant
         }
 
     /**
+     * Check if this TypeConstant contains a formal type parameter type.
+     *
+     * @param fAllowParams  true if type parameters are acceptable
+     *
      * @return true iff the TypeConstant contains a type parameter type
      */
-    public boolean containsTypeParameter()
+    public boolean containsTypeParameter(boolean fAllowParams)
         {
-        return getUnderlyingType().containsTypeParameter();
-        }
-
-    /**
-     * @return true iff the TypeConstant represents a type of "formal type"
-     */
-    public boolean isFormalTypeType()
-        {
-        if (isTypeOfType() && getParamsCount() == 1)
-            {
-            TypeConstant typeParam = getParamTypesArray()[0];
-            if (typeParam.isFormalType())
-                {
-                // we need to make sure *not* to include the Type<DataType>
-                Constant constant = typeParam.getDefiningConstant();
-                return constant.getFormat() != Format.Property ||
-                    !((PropertyConstant) constant).getParentConstant().equals(
-                        getConstantPool().clzType());
-                }
-            }
-        return false;
+        return getUnderlyingType().containsTypeParameter(fAllowParams);
         }
 
     /**
@@ -5348,7 +5340,7 @@ public abstract class TypeConstant
     @Override
     public boolean isValueCacheable()
         {
-        return !containsFormalType();
+        return !containsFormalType(true);
         }
 
     @Override

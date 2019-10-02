@@ -436,7 +436,7 @@ public class RelOpExpression
         if (idOp == null)
             {
             // try to resolve the formal types and see if there is an op that matches
-            if (type1Act.containsFormalType() || type2Act.containsFormalType())
+            if (type1Act.containsFormalType(true) || type2Act.containsFormalType(true))
                 {
                 ConstantPool pool = pool();
 

@@ -845,19 +845,19 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public boolean containsFormalType()
+    public boolean containsFormalType(boolean fAllowParams)
         {
         return isFormalType();
         }
 
     @Override
-    public boolean containsGenericType()
+    public boolean containsGenericType(boolean fAllowParams)
         {
         return isGenericType();
         }
 
     @Override
-    public boolean containsTypeParameter()
+    public boolean containsTypeParameter(boolean fAllowParams)
         {
         return isTypeParameter();
         }

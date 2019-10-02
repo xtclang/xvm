@@ -75,7 +75,7 @@ public class IsExpression
             {
             TypeConstant typeTarget = exprTarget.getType();
             TypeConstant typeTest   = exprTest.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool);
-            boolean      fFormal    = typeTest.containsFormalType();
+            boolean      fFormal    = typeTest.containsFormalType(true);
 
             if (typeTarget.isTypeOfType() && !typeTest.isFormalType())
                 {

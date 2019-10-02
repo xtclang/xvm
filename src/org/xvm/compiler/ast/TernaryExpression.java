@@ -224,8 +224,8 @@ public class TernaryExpression
                         TypeConstant typeElse = atypeElse[i];
 
                         // try to resolve formal types
-                        boolean fFormalThen = typeThen.containsFormalType();
-                        boolean fFormalElse = typeElse.containsFormalType();
+                        boolean fFormalThen = typeThen.containsFormalType(true);
+                        boolean fFormalElse = typeElse.containsFormalType(true);
 
                         if (fFormalThen || fFormalElse)
                             {

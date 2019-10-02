@@ -326,13 +326,16 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public boolean containsFormalType()
+    public boolean containsFormalType(boolean fAllowParams)
         {
-        for (int i = 0, c = m_atypeParams.length; i < c; ++i)
+        if (fAllowParams)
             {
-            if (m_atypeParams[i].containsFormalType())
+            for (int i = 0, c = m_atypeParams.length; i < c; ++i)
                 {
-                return true;
+                if (m_atypeParams[i].containsFormalType(true))
+                    {
+                    return true;
+                    }
                 }
             }
 
@@ -340,13 +343,16 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public boolean containsGenericType()
+    public boolean containsGenericType(boolean fAllowParams)
         {
-        for (int i = 0, c = m_atypeParams.length; i < c; ++i)
+        if (fAllowParams)
             {
-            if (m_atypeParams[i].containsGenericType())
+            for (int i = 0, c = m_atypeParams.length; i < c; ++i)
                 {
-                return true;
+                if (m_atypeParams[i].containsGenericType(fAllowParams))
+                    {
+                    return true;
+                    }
                 }
             }
 
@@ -354,13 +360,16 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public boolean containsTypeParameter()
+    public boolean containsTypeParameter(boolean fAllowParams)
         {
-        for (int i = 0, c = m_atypeParams.length; i < c; ++i)
+        if (fAllowParams)
             {
-            if (m_atypeParams[i].containsTypeParameter())
+            for (int i = 0, c = m_atypeParams.length; i < c; ++i)
                 {
-                return true;
+                if (m_atypeParams[i].containsTypeParameter(true))
+                    {
+                    return true;
+                    }
                 }
             }
 

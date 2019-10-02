@@ -607,7 +607,7 @@ public class NamedTypeExpression
                 type = calculateDefaultType(ctx, m_constId);
                 }
 
-            if (type.containsGenericType())
+            if (type.containsGenericType(false))
                 {
                 ctx.useGenericType(names.get(0), errs);
                 }

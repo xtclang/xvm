@@ -290,8 +290,8 @@ public class CmpExpression
                 }
 
             // try to resolve formal types
-            boolean fFormal1 = type1.containsFormalType();
-            boolean fFormal2 = type2.containsFormalType();
+            boolean fFormal1 = type1.containsFormalType(true);
+            boolean fFormal2 = type2.containsFormalType(true);
 
             if (fFormal1 || fFormal2)
                 {

@@ -137,21 +137,21 @@ public abstract class AbstractDependantTypeConstant
         }
 
     @Override
-    public boolean containsFormalType()
+    public boolean containsFormalType(boolean fAllowParams)
         {
-        return getParentType().containsFormalType();
+        return getParentType().containsFormalType(fAllowParams);
         }
 
     @Override
-    public boolean containsGenericType()
+    public boolean containsGenericType(boolean fAllowParams)
         {
-        return getParentType().containsGenericType();
+        return getParentType().containsGenericType(fAllowParams);
         }
 
     @Override
-    public boolean containsTypeParameter()
+    public boolean containsTypeParameter(boolean fAllowParams)
         {
-        return getParentType().containsTypeParameter();
+        return getParentType().containsTypeParameter(fAllowParams);
         }
 
     @Override
