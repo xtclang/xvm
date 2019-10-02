@@ -2341,9 +2341,9 @@ public class Context
          */
         public Map<String, TargetInfo> getGenericMap()
             {
-            return m_mapGeneric == null
+            return m_mapGenericInfo == null
                     ? Collections.EMPTY_MAP
-                    : m_mapGeneric;
+                    : m_mapGenericInfo;
             }
 
         /**
@@ -2399,12 +2399,12 @@ public class Context
          */
         protected Map<String, TargetInfo> ensureGenericMap()
             {
-            Map<String, TargetInfo> map = m_mapGeneric;
+            Map<String, TargetInfo> map = m_mapGenericInfo;
             if (map == null)
                 {
                 // use a tree map, to keep the captures in alphabetical order, which will
                 // help to produce lambdas with a "predictable" signature
-                m_mapGeneric = map = new TreeMap<>();
+                m_mapGenericInfo = map = new TreeMap<>();
                 }
 
             return map;
@@ -2424,7 +2424,7 @@ public class Context
         /**
          * A map of generic types, built by useGenericType().
          */
-        private Map<String, TargetInfo> m_mapGeneric;
+        private Map<String, TargetInfo> m_mapGenericInfo;
 
         /**
          * Set to true iff "this" is captured.

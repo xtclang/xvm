@@ -569,7 +569,7 @@ public class LambdaExpression
             // effectively final data that will only get reported (via exit() on the context) as
             // the variables go out of scope in the method body that contains this lambda, so we need
             // to store off the data from the capture context, and defer the signature creation to the
-            // generateAssignment() method;
+            // generateAssignment() method
             m_mapCapture      = ctxLambda.getCaptureMap();
             m_mapRegisters    = ctxLambda.ensureRegisterMap();
             m_fLambdaIsMethod = ctxLambda.isLambdaMethod();
