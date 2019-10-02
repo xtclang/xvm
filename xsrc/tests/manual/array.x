@@ -98,8 +98,6 @@ module TestArray.xqiz.it
         console.println("\n** testArrayListAdd()");
 
         String[] list = new String[];
-//        list = list + "one";
-//        list = list + ["two", "three"];
         list += "one";
         list += ["two", "three"];
 
@@ -260,19 +258,7 @@ module TestArray.xqiz.it
 
                 case 7:
                     console.println("\n   --> sort test");
-                    // TODO GG - this blows up: iter = iter.sort();
-                    // 2019-09-20 21:49:50.661 Service "TestArray.xqiz.it" (id=0), fiber 4: Unhandled exception: Ecstasy:TypeMismatch Ecstasy:String
-                    // 	at Iterator.sort(Ecstasy:Nullable | Ecstasy:Function<Ecstasy:collections.Tuple<Ecstasy:Object, Ecstasy:Object>, Ecstasy:collections.Tuple<Ecstasy:Ordered>>).->(Ecstasy:Object, Ecstasy:Object) (line=447, op=MoveCast)
-                    // 	at collections.List.bubbleSort(Ecstasy:Type<Ecstasy:Object>, this:class(Ecstasy:collections.List)<bubbleSort(?)#Element>, Ecstasy:Nullable | Ecstasy:Function<Ecstasy:collections.Tuple<Ecstasy:Object, Ecstasy:Object>, Ecstasy:collections.Tuple<Ecstasy:Ordered>>) (line=291, op=Call_N1)
-                    // 	at collections.List.sort(Ecstasy:Nullable | Ecstasy:Function<Ecstasy:collections.Tuple<Ecstasy:Object, Ecstasy:Object>, Ecstasy:collections.Tuple<Ecstasy:Ordered>>) (line=220, op=Call_N0)
-                    // 	at Iterator.sort(Ecstasy:Nullable | Ecstasy:Function<Ecstasy:collections.Tuple<Ecstasy:Object, Ecstasy:Object>, Ecstasy:collections.Tuple<Ecstasy:Ordered>>) (line=455, op=Invoke_11)
-                    // 	at testIterators() (line=255, op=Invoke_11)
-                    // 	at run() (line=23, op=Invoke_00)
-                    // 	at <TestArray.xqiz.it> (iPC=0, op=)
-
-                    // TODO GG - this should also work but does not compile: iter = iter.sort((e1,e2)->e1.size<=>e2.size);
-                    // [1] /Users/cameron/Development/xvm/xsrc/./tests/manual/array.x [254:50..254:54] COMPILER-36: Could not find name "size" within "Ecstasy:Object". ("size")
-                    // [2] /Users/cameron/Development/xvm/xsrc/./tests/manual/array.x [254:60..254:64] COMPILER-36: Could not find name "size" within "Ecstasy:Object". ("size")
+                    iter = iter.sort();
                     break;
 
                 case 8:

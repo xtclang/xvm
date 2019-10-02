@@ -326,14 +326,16 @@ public class MethodStructure
      * is first created.)
      *
      * @param aParams   an array of parameter information
+     * @param cFormal   the number of formal type parameters
      * @param aReturns  an array of return type information
      */
-    public void configureLambda(Parameter[] aParams, Parameter[] aReturns)
+    public void configureLambda(Parameter[] aParams, int cFormal, Parameter[] aReturns)
         {
         assert getIdentityConstant().isLambda() && getIdentityConstant().isNascent();
 
-        m_aParams  = aParams;
-        m_aReturns = aReturns;
+        m_aParams     = aParams;
+        m_cTypeParams = cFormal;
+        m_aReturns    = aReturns;
         }
 
     /**

@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -107,6 +108,37 @@ public class BiTypeExpression
             default:
                 throw new IllegalStateException("unsupported operator: " + operator);
             }
+        }
+
+    @Override
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+        {
+        boolean        fValid = true;
+        TypeExpression exprNew;
+
+        exprNew = (TypeExpression) type1.validate(ctx, null, errs);
+        if (exprNew == null)
+            {
+            fValid = false;
+            }
+        else
+            {
+            type1 = exprNew;
+            }
+
+        exprNew = (TypeExpression) type2.validate(ctx, null, errs);
+        if (exprNew == null)
+            {
+            fValid = false;
+            }
+        else
+            {
+            type2 = exprNew;
+            }
+
+        return fValid
+                ? super.validate(ctx, typeRequired, errs)
+                : null;
         }
 
 

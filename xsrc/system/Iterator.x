@@ -443,8 +443,7 @@ interface Iterator<Element>
         if (order == Null)
             {
             assert Element.is(Type<Orderable>);
-            // TODO GG - this throws exception: order = (Element el1, Element el2) -> el1 <=> el2;
-            order = (el1, el2) -> el1.as(Element+Orderable) <=> el2.as(Element+Orderable);
+            order = (el1, el2) -> el1.as(Element) <=> el2.as(Element);
             }
 
         if (knownEmpty())

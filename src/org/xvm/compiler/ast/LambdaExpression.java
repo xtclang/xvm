@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -23,14 +24,18 @@ import org.xvm.asm.Assignment;
 
 import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.FBind;
+import org.xvm.asm.op.L_Get;
 import org.xvm.asm.op.MBind;
 import org.xvm.asm.op.MoveRef;
+import org.xvm.asm.op.MoveThis;
 import org.xvm.asm.op.MoveVar;
+import org.xvm.asm.op.P_Get;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
@@ -38,6 +43,7 @@ import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.Context.CaptureContext;
+import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
 import org.xvm.util.Severity;
 
@@ -563,17 +569,22 @@ public class LambdaExpression
             // effectively final data that will only get reported (via exit() on the context) as
             // the variables go out of scope in the method body that contains this lambda, so we need
             // to store off the data from the capture context, and defer the signature creation to the
-            // generateAssignment() method
+            // generateAssignment() method;
             m_mapCapture      = ctxLambda.getCaptureMap();
             m_mapRegisters    = ctxLambda.ensureRegisterMap();
             m_fLambdaIsMethod = ctxLambda.isLambdaMethod();
 
+            // if the lambda requires "this", there is no need to capture the generic types
+            m_mapGenerics = m_fLambdaIsMethod
+                    ? Collections.EMPTY_MAP
+                    : ctxLambda.getGenericMap();
+
             typeActual = pool.buildFunctionType(atypeParams, atypeRets);
 
-            if (m_mapCapture.isEmpty() && !m_fLambdaIsMethod)
+            if (m_mapCapture.isEmpty() && m_mapGenerics.isEmpty() && !m_fLambdaIsMethod)
                 {
                 // there are no bindings, so the lambda is a constant i.e. the function is the value
-                configureLambda(atypeParams, asParams, null, atypeRets);
+                configureLambda(atypeParams, asParams, 0, null, atypeRets);
                 constVal = m_lambda.getIdentityConstant();
                 }
             }
@@ -933,35 +944,34 @@ public class LambdaExpression
      */
     protected Argument[] calculateBindings(Context ctx, Code code, ErrorListener errs)
         {
-        assert m_lambda != null && m_lambda.getIdentityConstant().isLambda();
+        MethodStructure lambda = m_lambda;
+        assert lambda != null && lambda.getIdentityConstant().isLambda();
         assert m_mapCapture != null;
 
-        if (m_lambda.getIdentityConstant().isNascent())
+        if (lambda.getIdentityConstant().isNascent())
             {
             // this is the first time that we have a chance to put together the signature, because
             // this is the first time that we are being called after validate()
-            TypeConstant   typeFn          = getType();
-            ConstantPool   pool            = ctx.pool();
-            TypeConstant[] atypeParams     = pool.extractFunctionParams(typeFn);
-            String[]       asParams        = getParamNames();
-            TypeConstant[] atypeReturns    = pool.extractFunctionReturns(typeFn);
-            boolean        fBindTarget     = m_fLambdaIsMethod;
-            boolean        fBindParams     = !m_mapCapture.isEmpty();
-            Argument[]     aBindArgs       = NO_RVALUES;
-            boolean[]      afImplicitDeref = null;
+            ConstantPool            pool            = ctx.pool();
+            TypeConstant            typeFn          = getType();
+            String[]                asParams        = getParamNames();
+            TypeConstant[]          atypeParams     = pool.extractFunctionParams(typeFn);
+            TypeConstant[]          atypeReturns    = pool.extractFunctionReturns(typeFn);
+            Map<String, TargetInfo> mapGenerics     = m_mapGenerics;
+            Map<String, Boolean>    mapCapture      = m_mapCapture;
+            int                     cGenerics       = mapGenerics.size();
+            int                     cCaptures       = mapCapture.size();
+            int                     cBindArgs       = cGenerics + cCaptures;
+            Argument[]              aBindArgs       = NO_RVALUES;
+            boolean[]               afImplicitDeref = null;
 
             // MBIND is indicated by the method structure *NOT* being static
-            if (fBindTarget)
-                {
-                m_lambda.setStatic(false);
-                }
+            lambda.setStatic(!m_fLambdaIsMethod);
 
             // FBIND is indicated by >0 bind arguments being returned from this method
-            if (fBindParams)
+            if (cBindArgs > 0)
                 {
-                Map<String, Boolean>  mapCapture     = m_mapCapture;
                 Map<String, Register> mapRegisters   = m_mapRegisters;
-                int                   cBindArgs      = mapCapture.size();
                 int                   cLambdaParams  = atypeParams.length;
                 int                   cAllParams     = cBindArgs + cLambdaParams;
                 TypeConstant[]        atypeAllParams = new TypeConstant[cAllParams];
@@ -970,6 +980,32 @@ public class LambdaExpression
                 List<Op>              listMoveOp     = new ArrayList(cBindArgs);
 
                 aBindArgs = new Argument[cBindArgs];
+
+                for (Entry<String, TargetInfo> entry : mapGenerics.entrySet())
+                    {
+                    String       sCapture    = entry.getKey();
+                    TargetInfo   infoGeneric = mapGenerics.get(sCapture);
+                    TypeConstant typeGeneric = infoGeneric.getType(); // type of type
+                    Register     regFormal   = new Register(typeGeneric, Op.A_STACK);
+
+                    if (infoGeneric.getStepsOut() > 0)
+                        {
+                        Register regTarget = new Register(infoGeneric.getTargetType(), Op.A_STACK);
+                        code.add(new MoveThis(infoGeneric.getStepsOut(), regTarget));
+                        code.add(new P_Get((PropertyConstant) infoGeneric.getId(), regTarget, regFormal));
+                        }
+                    else
+                        {
+                        code.add(new L_Get((PropertyConstant) infoGeneric.getId(), regFormal));
+                        }
+
+                    asAllParams   [iParam] = sCapture;
+                    atypeAllParams[iParam] = typeGeneric;
+                    aBindArgs     [iParam] = regFormal;
+
+                    iParam++;
+                    }
+
                 for (Entry<String, Boolean> entry : mapCapture.entrySet())
                     {
                     String       sCapture    = entry.getKey();
@@ -1029,7 +1065,7 @@ public class LambdaExpression
             m_aBindArgs = aBindArgs;
 
             // store the resulting signature for the lambda
-            configureLambda(atypeParams, asParams, afImplicitDeref, atypeReturns);
+            configureLambda(atypeParams, asParams, cGenerics, afImplicitDeref, atypeReturns);
             }
 
         return m_aBindArgs;
@@ -1040,10 +1076,11 @@ public class LambdaExpression
      *
      * @param atypeParams     the type of each lambda parameter
      * @param asParams        the name of each lambda parameter
+     * @param cFormal         the number of formal type parameters
      * @param afImpliedDeref  indicates whether each lambda parameter needs an implicit de-reference
      * @param atypeRets       the type of each lambda return value
      */
-    protected void configureLambda(TypeConstant[] atypeParams, String[] asParams,
+    protected void configureLambda(TypeConstant[] atypeParams, String[] asParams, int cFormal,
             boolean[] afImpliedDeref, TypeConstant[] atypeRets)
         {
         MethodStructure   lambda = m_lambda;
@@ -1056,7 +1093,7 @@ public class LambdaExpression
         for (int i = 0; i < cParams; ++i)
             {
             String sName = i < cNames ? asParams[i] : null;
-            aparamParams[i] = new org.xvm.asm.Parameter(pool, atypeParams[i], sName, null, false, i, false);
+            aparamParams[i] = new org.xvm.asm.Parameter(pool, atypeParams[i], sName, null, false, i, i < cFormal);
 
             // check if the parameter needs to be marked as being an implicit de-reference
             if (afImpliedDeref != null && afImpliedDeref.length > i && afImpliedDeref[i])
@@ -1073,7 +1110,7 @@ public class LambdaExpression
             aparamRets[i] = new org.xvm.asm.Parameter(pool, atypeRets[i], null, null, true, i, false);
             }
 
-        lambda.configureLambda(aparamParams, aparamRets);
+        lambda.configureLambda(aparamParams, cFormal, aparamRets);
         lambda.getIdentityConstant().setSignature(sig);
         }
 
@@ -1333,6 +1370,10 @@ public class LambdaExpression
      * A map from variable name to register, built by the lambda context.
      */
     private Map<String, Register>          m_mapRegisters;
+    /**
+     * A map from variable name to generic type, built by the lambda context.
+     */
+    private Map<String, TargetInfo>        m_mapGenerics;
     /**
      * The reserved names captured by the lambda.
      */

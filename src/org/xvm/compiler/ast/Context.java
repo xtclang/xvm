@@ -690,29 +690,6 @@ public class Context
         }
 
     /**
-     * Place the variable definition into this context.
-     *
-     * @param sName  the name to look up
-     * @param branch the branch to look at
-     *
-     * @return the old argument for the variable, or null if the local var didn't exist
-     */
-    protected Argument putLocalVar(String sName, Branch branch, Argument arg)
-        {
-        switch (branch)
-            {
-            case WhenTrue:
-                return ensureNarrowingMap(true).put(sName, arg);
-
-            case WhenFalse:
-                return ensureNarrowingMap(false).put(sName, arg);
-
-            default:
-                return ensureNameMap().put(sName, arg);
-            }
-        }
-
-    /**
      * Determine if the specified variable name is already declared in the current scope.
      * <p/>
      * Note: This can only be used during the validate() stage.
@@ -971,6 +948,21 @@ public class Context
         else
             {
             throw new IllegalStateException("illegal var write: name=" + sName);
+            }
+        }
+
+    /**
+     * Mark the specified generic type as being used within this context.
+     *
+     * @param name  the generic type name
+     * @param errs  the error list to log to (optional)
+     */
+    public void useGenericType(Token name, ErrorListener errs)
+        {
+        Context ctxOuter = getOuterContext();
+        if (ctxOuter != null)
+            {
+            ctxOuter.useGenericType(name, errs);
             }
         }
 
@@ -1258,7 +1250,17 @@ public class Context
     protected void replaceGenericArgument(String sName, Branch branch, TargetInfo infoNew)
         {
         // place the info with the narrowed generic type (used by NamedTypeExpression)
-        putLocalVar(sName, branch, infoNew);
+        switch (branch)
+            {
+            case WhenTrue:
+                ensureNarrowingMap(true).put(sName, infoNew);
+
+            case WhenFalse:
+                ensureNarrowingMap(false).put(sName, infoNew);
+
+            default:
+                ensureNameMap().put(sName, infoNew);
+            }
 
         replaceGenericType(sName, branch, infoNew.getType());
         }
@@ -2289,6 +2291,16 @@ public class Context
             super.markVarRead(fNested, sName, tokName, errs);
             }
 
+        @Override
+        public void useGenericType(Token name, ErrorListener errs)
+            {
+            super.useGenericType(name, errs);
+
+            TargetInfo info = (TargetInfo) resolveName(name, errs);
+            assert info != null;
+            ensureGenericMap().putIfAbsent(name.getValueText(), info);
+            }
+
         /**
          * @return a map of variable name to a Boolean representing if the capture is read-only
          *         (false) or read/write (true)
@@ -2322,6 +2334,16 @@ public class Context
                 }
 
             return map;
+            }
+
+        /**
+         * @return a map of names to generic type info
+         */
+        public Map<String, TargetInfo> getGenericMap()
+            {
+            return m_mapGeneric == null
+                    ? Collections.EMPTY_MAP
+                    : m_mapGeneric;
             }
 
         /**
@@ -2369,6 +2391,26 @@ public class Context
             }
 
         /**
+         * Obtain the map of names to generic type info, if it has been built.
+         * <p/>
+         * Note: built by exit()
+         *
+         * @return a non-null map of variable name to TargetInfo for all generic types to capture
+         */
+        protected Map<String, TargetInfo> ensureGenericMap()
+            {
+            Map<String, TargetInfo> map = m_mapGeneric;
+            if (map == null)
+                {
+                // use a tree map, to keep the captures in alphabetical order, which will
+                // help to produce lambdas with a "predictable" signature
+                m_mapGeneric = map = new TreeMap<>();
+                }
+
+            return map;
+            }
+
+        /**
          * A map from variable name to read/write flag (false is read-only, true is read-write) for
          * the variables to capture.
          */
@@ -2378,6 +2420,11 @@ public class Context
          * A map from variable name to register, built by exit().
          */
         private Map<String, Register> m_mapRegisters;
+
+        /**
+         * A map of generic types, built by useGenericType().
+         */
+        private Map<String, TargetInfo> m_mapGeneric;
 
         /**
          * Set to true iff "this" is captured.

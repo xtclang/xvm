@@ -728,13 +728,20 @@ public class NameExpression
                     break;
 
                 case Property:
-                    // "this" is used only if the property is not a constant
-                    if (!((PropertyConstant) argRaw).getComponent().isStatic())
+                    {
+                    PropertyConstant idProp = (PropertyConstant) argRaw;
+
+                    if (idProp.isFormalType())
+                        {
+                        ctx.useGenericType(getNameToken(), errs);
+                        }
+                    else if (!idProp.getComponent().isStatic())
                         {
                         // there is a read of the implicit "this" variable
                         ctx.requireThis(getStartPosition(), errs);
                         }
                     break;
+                    }
                 }
             } // TODO else account for ".this"???
 

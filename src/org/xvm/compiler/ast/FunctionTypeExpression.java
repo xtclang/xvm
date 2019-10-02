@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -70,6 +71,30 @@ public class FunctionTypeExpression
         return pool.ensureClassTypeConstant(pool.clzFunction(), null,
                 toTupleType(toTypeConstantArray(paramTypes)),
                 toTupleType(toParamTypeConstantArray(returnValues)));
+        }
+
+    @Override
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+        {
+        List<TypeExpression> listTypes = paramTypes;
+        boolean              fValid    = true;
+        for (int i = 0, c = listTypes.size(); i < c; i++)
+            {
+            TypeExpression exprOld = listTypes.get(i);
+            TypeExpression exprNew = (TypeExpression) exprOld.validate(ctx, null, errs);
+            if (exprNew == null)
+                {
+                fValid = false;
+                }
+            else if (exprNew != exprOld)
+                {
+                listTypes.set(i, exprNew);
+                }
+            }
+
+        return fValid
+                ? super.validate(ctx, typeRequired, errs)
+                : null;
         }
 
     private TypeConstant toTupleType(TypeConstant[] aconstTypes)

@@ -609,7 +609,7 @@ public class NamedTypeExpression
 
             if (type.containsGenericType())
                 {
-                ctx.requireThis(getStartPosition(), errs);
+                ctx.useGenericType(names.get(0), errs);
                 }
             }
         else

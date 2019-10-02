@@ -262,7 +262,7 @@ interface List<Element>
      * @param order  the Orderer to use to sort the list; (optional, defaulting to using the
      *               "natural" sort order of the Element type)
      */
-    static <Element> void bubbleSort(List<Element> list, Orderer? order = Null)
+    static void bubbleSort(List list, Orderer? order = Null)
         {
         assert !list.mutability.persistent;
 
@@ -274,20 +274,18 @@ interface List<Element>
 
         if (order == Null)
             {
-            assert Element.is(Type<Orderable>);
-            // TODO GG java.lang.NullPointerException at org.xvm.compiler.ast.LambdaExpression.collectParamNamesAndTypes(LambdaExpression.java:661)
-            // order = (Element v1, Element v2) -> v1 <=> v2;
-            order = (v1, v2) -> v1.as(Element) <=> v2.as(Element);
+            assert list.Element.is(Type<Orderable>);
+            order = (v1, v2) -> v1.as(Orderable) <=> v2.as(Orderable);
             }
 
         Int first = 0;
         do
             {
-            Boolean     sorted = true;
-            Element bubble = list[last];
+            Boolean      sorted = true;
+            list.Element bubble = list[last];
             for (Int i = last-1; i >= first; --i)
                 {
-                Element prev = list[i];
+                list.Element prev = list[i];
                 if (order(prev, bubble) == Greater)
                     {
                     list[i  ] = bubble;
