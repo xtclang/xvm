@@ -268,11 +268,11 @@ module TestArray.xqiz.it
 
                 case 9:
                     console.println("\n   --> flatmap test");
-                    // TODO GG iter = iter.flatMap(e -> e.iterator().map(ch -> ch.toString()));  // err: [1] /Users/cameron/Development/xvm/xsrc/./tests/manual/array.x [277:46..277:83] COMPILER-56: Could not find a matching method or function "map" for type "Ecstasy:Iterator<Ecstasy:Char>". ("e.iterator().map(ch -> ch.toString())")
+                    // REVIEW CP: can this really compile?
+                    // iter = iter.flatMap(s -> s.iterator()).map(ch -> ch.toString());
 
-                    // TODO GG - attempted to break it down but it still didn't compile
-                    // Iterator<Char> iterCh = iter.flatMap(s2chiter);
-                    // iter = iterCh.map(ch2s);
+                    Iterator<Char> iterCh = iter.flatMap(s -> s.iterator());
+                    iter = iterCh.map(ch -> ch.toString());
                     break;
 
                 case 10:
@@ -313,15 +313,5 @@ module TestArray.xqiz.it
         assert Range<String> range := strs.iterator().range();
         console.println($"min={min}; max={max}");
         console.println($"range={range}");
-        }
-
-    // temporary / TODO remove after debugging
-    static Iterator<Char> s2chiter(String s)
-        {
-        return s.iterator();
-        }
-    static String ch2s(Char ch)
-        {
-        return ch.toString();
         }
     }
