@@ -6,8 +6,10 @@ import java.util.concurrent.CompletableFuture;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -295,7 +297,7 @@ public class xFunction
             }
         }
 
-    public static class DelegatingHandle
+    protected abstract static class DelegatingHandle
             extends FunctionHandle
         {
         protected FunctionHandle m_hDelegate;
@@ -416,10 +418,6 @@ public class xFunction
     public static class SingleBoundHandle
             extends DelegatingHandle
         {
-        protected int m_iArg; // the bound argument index; -1 stands for the target binding
-        protected ObjectHandle m_hArg;
-        protected TypeConstant m_type; // cached resolved type
-
         protected SingleBoundHandle(TypeComposition clazz, FunctionHandle hDelegate,
                                     int iArg, ObjectHandle hArg)
             {
@@ -427,6 +425,41 @@ public class xFunction
 
             m_iArg = iArg;
             m_hArg = hArg;
+            }
+
+        /**
+         * Calculate a real (against the underlying function) index for a parameter that this
+         * handle binds.
+         *
+         * @return the parameter index at the underlying function
+         */
+        protected int calculateParameterIndex()
+            {
+            int ix = m_iArg;
+            if (m_hDelegate instanceof SingleBoundHandle)
+                {
+                ix += ((SingleBoundHandle) m_hDelegate).calculateShift(ix);
+                }
+            return ix;
+            }
+
+        /**
+         * Calculate a shift for a given argument index indicating the difference between
+         * the specified argument index and the actual index of the function parameter that
+         * corresponds to this argument.
+         *
+         * @param iArg the argument to calculate the shift of
+         *
+         * @return the shift
+         */
+        protected int calculateShift(int iArg)
+            {
+            int nShift = m_iArg == -1 || iArg < m_iArg ? 0 : 1;
+            if (m_hDelegate instanceof SingleBoundHandle)
+                {
+                nShift += ((SingleBoundHandle) m_hDelegate).calculateShift(iArg);
+                }
+            return nShift;
             }
 
         @Override
@@ -446,7 +479,22 @@ public class xFunction
                 int iArg = m_iArg;
                 if (iArg >= 0)
                     {
-                    type = ConstantPool.getCurrentPool().bindFunctionParam(type, iArg);
+                    GenericTypeResolver resolver = null;
+                    MethodStructure     method   = getMethod();
+                    if (method != null)
+                        {
+                        Parameter parameter = method.getParam(calculateParameterIndex());
+                        if (parameter.isTypeParameter())
+                            {
+                            xType.TypeHandle hType = (xType.TypeHandle) m_hArg;
+                            resolver = sName ->
+                                sName.equals(parameter.getName())
+                                ? hType.getDataType()
+                                : null;
+                            }
+                        }
+
+                    type = ConstantPool.getCurrentPool().bindFunctionParam(type, iArg, resolver);
                     }
                 m_type = type;
                 }
@@ -497,7 +545,7 @@ public class xFunction
             {
             if (m_iArg >= 0)
                 {
-                int cMove = getVarCount() - (m_iArg + 1); // number of args to move to the right
+                int cMove = getParamCount() - (m_iArg + 1); // number of args to move to the right
                 if (cMove > 0)
                     {
                     System.arraycopy(ahVar, m_iArg, ahVar, m_iArg + 1, cMove);
@@ -521,6 +569,23 @@ public class xFunction
                 }
             return false;
             }
+
+        /**
+         * The bound argument index indicating what position to inject the argument value at
+         * during the {@link #addBoundArguments} call.
+         * Value of -1 indicates the target binding.
+         */
+        protected int m_iArg;
+
+        /**
+         * The bound argument value.
+         */
+        protected ObjectHandle m_hArg;
+
+        /**
+         * Cached resolved type of a partially bound function represented by this handler.
+         */
+        protected TypeConstant m_type;
         }
 
     // all parameter bound method or function (the target is not bound)

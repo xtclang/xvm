@@ -2224,7 +2224,7 @@ public class InvocationExpression
             Expression expr = listArgs.get(i);
             if (!expr.isNonBinding())
                 {
-                typeFn = pool.bindFunctionParam(typeFn, i);
+                typeFn = pool.bindFunctionParam(typeFn, i, null);
                 }
             }
         return typeFn;
