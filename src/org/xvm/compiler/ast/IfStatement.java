@@ -279,12 +279,16 @@ public class IfStatement
         boolean fFirst         = true;
         for (AstNode cond : conds)
             {
-            if (!fScope && cond instanceof AssignmentStatement && ((AssignmentStatement) cond).hasDeclarations())
+            if (cond instanceof AssignmentStatement && ((AssignmentStatement) cond).hasDeclarations())
                 {
                 code.add(new Enter());
                 fScope = true;
+                break;
                 }
+            }
 
+        for (AstNode cond : conds)
+            {
             boolean fCompletes;
             if (cond instanceof AssignmentStatement)
                 {
