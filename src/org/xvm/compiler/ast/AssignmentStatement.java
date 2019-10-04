@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.Assignment;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -388,13 +389,17 @@ public class AssignmentStatement
                 exprLeftCopy = (Expression) nodeLeft.getLValueExpression().clone();
             }
 
+        Context ctxLValue = ctx;
+
         // a LValue represented by a statement indicates one or more variable declarations
         if (nodeLeft instanceof Statement)
             {
             assert nodeLeft instanceof VariableDeclarationStatement ||
                    nodeLeft instanceof MultipleLValueStatement;
+            ctxLValue = new LValueContext(ctx);
+
             Statement lvalueOld = (Statement) nodeLeft;
-            Statement lvalueNew = lvalueOld.validate(ctx, errs);
+            Statement lvalueNew = lvalueOld.validate(ctxLValue, errs);
             if (lvalueNew != lvalueOld)
                 {
                 fValid &= lvalueNew != null;
@@ -413,11 +418,11 @@ public class AssignmentStatement
             // the type of l-value may have been narrowed in the current context, so let's try to
             // extract it and test the r-value with it; to prevent the lvalue from dropping that
             // narrowed information, we temporarily need to forget it's an lvalue
-            TypeConstant[] atypeLeft = null;
+            TypeConstant[] atypeLeft;
             m_fSuppressLValue = true;
             try
                 {
-                atypeLeft = exprLeft.getImplicitTypes(ctx);
+                atypeLeft = exprLeft.getImplicitTypes(ctxLValue);
                 }
             finally
                 {
@@ -441,9 +446,11 @@ public class AssignmentStatement
 
                 // allow the r-value to resolve names based on the l-value type's
                 // contributions
-                ctx = ctx.enterInferring(atypeLeft[0]);
-                TypeFit fit = rvalue.testFitMulti(ctx, atypeTest, null);
-                ctx = ctx.exit();
+                Context ctxInfer = ctx.enterInferring(atypeLeft[0]);
+
+                TypeFit fit = rvalue.testFitMulti(ctxInfer, atypeTest, null);
+
+                ctxInfer.discard();
 
                 if (!fit.isFit())
                     {
@@ -452,7 +459,7 @@ public class AssignmentStatement
                     }
                 }
 
-            Expression exprNew = exprLeft.validateMulti(ctx, atypeLeft, errs);
+            Expression exprNew = exprLeft.validateMulti(ctxLValue, atypeLeft, errs);
             if (exprNew == null)
                 {
                 fValid = false;
@@ -467,7 +474,7 @@ public class AssignmentStatement
                 }
             }
         lvalueExpr = exprLeft;
-        exprLeft.requireAssignable(ctx, errs);
+        exprLeft.requireAssignable(ctxLValue, errs);
 
         Expression     exprRight    = rvalue;
         Expression     exprRightNew = null;
@@ -500,6 +507,8 @@ public class AssignmentStatement
                     exprRightNew = exprRight.validateMulti(ctx, exprLeft.getTypes(), errs);
                     }
 
+                merge(ctx, ctxLValue);
+
                 if (exprRightNew != null)
                     {
                     exprLeft.markAssignment(ctx, exprRightNew.isConditionalResult(), errs);
@@ -527,6 +536,8 @@ public class AssignmentStatement
 
                     exprRightNew = exprRight.validate(ctx, typeReq, errs);
 
+                    merge(ctx, ctxLValue);
+
                     if (exprRightNew != null)
                         {
                         exprLeft.markAssignment(ctx,
@@ -549,7 +560,10 @@ public class AssignmentStatement
                     TypeConstant[] atypeReq   = new TypeConstant[cReq];
                     atypeReq[0] = pool.typeBoolean();
                     System.arraycopy(atypeLVals, 0, atypeReq, 1, cLVals);
+
                     exprRightNew = exprRight.validateMulti(ctx, atypeReq, errs);
+
+                    merge(ctx, ctxLValue);
 
                     // conditional expressions can update the LVal type from the RVal type, but the
                     // initial boolean is discarded
@@ -604,6 +618,8 @@ public class AssignmentStatement
                     {
                     ctx = ctx.exit();
                     }
+
+                merge(ctx, ctxLValue);
 
                 exprLeft.markAssignment(ctx, false, errs);
                 break;
@@ -852,6 +868,55 @@ public class AssignmentStatement
 
         exprResult.setParent(this);
         return exprResult;
+        }
+
+    private void merge(Context ctx, Context ctxLvalue)
+        {
+        if (ctx != ctxLvalue)
+            {
+            assert ctxLvalue.getOuterContext() == ctx;
+            ctxLvalue.exit();
+            }
+        }
+
+    /**
+     * A branching context that temporary holds the declarations made by the LValue.
+     */
+    protected static class LValueContext
+            extends Context
+        {
+        protected LValueContext(Context ctxOuter)
+            {
+            super(ctxOuter, false);
+            }
+
+        @Override
+        public Context exit()
+            {
+            Context ctxOuter = getOuterContext();
+
+            // copy variable assignment information from this scope to outer scope
+            for (Map.Entry<String, Assignment> entry : getDefiniteAssignments().entrySet())
+                {
+                String sName = entry.getKey();
+
+                if (isVarDeclaredInThisScope(sName))
+                    {
+                    ctxOuter.setVarAssignment(sName, entry.getValue());
+                    }
+                }
+
+            for (Map.Entry<String, Argument> entry : getNameMap().entrySet())
+                {
+                String sName = entry.getKey();
+
+                if (isVarDeclaredInThisScope(sName))
+                    {
+                    ctxOuter.replaceArgument(sName, Branch.Always, entry.getValue());
+                    }
+                }
+            return super.exit();
+            }
         }
 
 

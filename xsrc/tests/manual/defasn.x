@@ -6,6 +6,7 @@ module TestDefAsn.xqiz.it
         {
         testDefAssignment();
         testShort();
+        testNameHiding();
         }
 
     Boolean gimmeTrue()
@@ -61,5 +62,18 @@ module TestDefAsn.xqiz.it
             }
 
         console.println("i=" + i);
+        }
+
+    void testNameHiding()
+        {
+        static conditional (String, Int) name()
+            {
+            return True, "hello", 5;
+            }
+
+        if ((String name, Int count) := name())
+            {
+            assert name.size == count;
+            }
         }
     }
