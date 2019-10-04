@@ -134,7 +134,7 @@ interface Iterator<Element>
      *               none is provided, the Element type must be Orderable
      *
      * @return True iff the iterator is not empty and a minimum value was determined
-     * @return (conditional) the minimum element from this iterator
+     * @return (conditional) the maximum element from this iterator
      */
     conditional Element max(Orderer? order = Null)
         {

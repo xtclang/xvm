@@ -247,10 +247,10 @@ public class ForEachStatement
         Register reg;
         switch (sName)
             {
-            case "first"    : reg = m_regFirst  ; break;
-            case "last"     : reg = m_regLast   ; break;
-            case "count"    : reg = m_regCount  ; break;
-            case "entry"    : reg = m_regEntry  ; break;
+            case "first": reg = m_regFirst  ; break;
+            case "last" : reg = m_regLast   ; break;
+            case "count": reg = m_regCount  ; break;
+            case "entry": reg = m_regEntry  ; break;
             case "Key"  : reg = m_regKeyType; break;
             case "Value": reg = m_regValType; break;
             default:
@@ -269,10 +269,10 @@ public class ForEachStatement
             TypeConstant type;
             switch (sName)
                 {
-                case "first"    : type = pool.typeBoolean()      ; break;
-                case "last"     : type = pool.typeBoolean()      ; break;
-                case "count"    : type = pool.typeInt()          ; break;
-                case "entry"    : type = getEntryType()          ; break;
+                case "first": type = pool.typeBoolean()      ; break;
+                case "last" : type = pool.typeBoolean()      ; break;
+                case "count": type = pool.typeInt()          ; break;
+                case "entry": type = getEntryType()          ; break;
                 case "Key"  : type = getKeyType().getType()  ; break;
                 case "Value": type = getValueType().getType(); break;
                 default:
@@ -284,10 +284,10 @@ public class ForEachStatement
 
             switch (sName)
                 {
-                case "first"    : m_regFirst   = reg; break;
-                case "last"     : m_regLast    = reg; break;
-                case "count"    : m_regCount   = reg; break;
-                case "entry"    : m_regEntry   = reg; break;
+                case "first": m_regFirst   = reg; break;
+                case "last" : m_regLast    = reg; break;
+                case "count": m_regCount   = reg; break;
+                case "entry": m_regEntry   = reg; break;
                 case "Key"  : m_regKeyType = reg; break;
                 case "Value": m_regValType = reg; break;
                 default:
