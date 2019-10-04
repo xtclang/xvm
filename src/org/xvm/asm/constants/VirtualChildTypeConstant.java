@@ -33,26 +33,27 @@ import static org.xvm.util.Handy.writePackedLong;
 
 /**
  * A TypeConstant that represents an instance child of a class; for example:
+ *
  * <pre>
- * class Parent<ParentType>
+ * class Parent&lt;ParentType>
  *     {
- *     class Child <ChildType>
+ *     class Child&lt;ChildType>
  *         {
  *         }
  *     static void test()
  *         {
- *         Parent<String> p = new Parent();
- *         Child<Int>     c = p.new Child();
+ *         Parent&lt;String> p = new Parent();
+ *         Child&lt;Int>     c = p.new Child();
  *         ...
  *         }
  *     }
  * </pre>
  *
  * The type of the variable "c" above is:
- *    ParameterizedTypeConstant(T1, Int),
- *      where T1 is VirtualChildTypeConstant(T2, "Child"),
- *      where T2 is ParameterizedTypeConstant(T3, String),
- *      where T3 is TerminalTypeConstant(Parent)
+ *   {@code ParameterizedTypeConstant(T1, Int)}
+ * <br/>where T1 is {@code VirtualChildTypeConstant(T2, "Child")},
+ * <br/>where T2 is {@code ParameterizedTypeConstant(T3, String)},
+ * <br/>where T3 is {@code TerminalTypeConstant(Parent)}
  */
 public class VirtualChildTypeConstant
         extends AbstractDependantTypeConstant

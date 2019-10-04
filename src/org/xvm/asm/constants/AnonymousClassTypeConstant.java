@@ -26,36 +26,41 @@ import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
 
 /**
- * Consider the scenario from Map.x:
+ * Consider a scenario from Map.x:
  *
- *    Class Map<Key, Value>
+ * <pre><code>
+ *    interface Map&lt;Key, Value>
  *        {
- *        Iterator<Key> iterator()
+ *        Iterator&lt;Key> iterator()
  *           {
  *           return new Iterator()
  *                {
- *                Iterator<Entry> entryIterator = Map.this.entries.iterator();
+ *                Iterator&lt;Entry> entryIterator = Map.this.entries.iterator();
  *                ...
  *                }
  *           }
  *        }
+ * </code></pre>
  *
  * During validation we create a synthetic (anonymous) TypeCompositionStatement
  *
- *  class Iterator:1<Iterator:1.Key>
- *          implements Iterator<Iterator:1.Key>
+ * <pre><code>
+ *  class Iterator:1&lt;Iterator:1.Key>
+ *          implements Iterator&lt;Iterator:1.Key>
  *      {
  *      ...
  *      }
+ * </code></pre>
  *
- * and the compile time type of the returned Iterator is Iterator:1<Map.Key>.
- *
- * However, it's not enough to resolve the type of "entryIterator" at the run time, since
- * the iterator's type has no knowledge of the parent's actual formal type values.
- *
- * The {@link AnonymousClassTypeConstant} represents a type assigned to that statement,
- * carrying the "parent" type information as well - in the case of the example above it would be
- * Map<Key, Value>.Iterator:1<Map.Key>.
+ * and the compile time type of the returned Iterator is Iterator:1&lt;Map.Key>.
+ * <p/>
+ * However, that information is insufficient to resolve the runtime type of the "entryIterator"
+ * property inside Iterator:1, because doing so requires knowledge of the parent's (the Map's)
+ * formal type values.
+ * <p/>
+ * The {@link AnonymousClassTypeConstant} represents a type assigned to the anonymous class itself,
+ * carrying the "parent" type information. In the example above, it would be
+ * {@code Map<Key, Value>.iterator().Iterator:1<Map.Key>}.
  */
 public class AnonymousClassTypeConstant
         extends AbstractDependantTypeConstant
