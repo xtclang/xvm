@@ -2696,7 +2696,7 @@ public class ConstantPool
      */
     protected boolean postValidate(ErrorListener errlist)
         {
-        if (System.getProperties().containsKey("CP"))
+        if (System.getProperties().containsKey("DEBUG"))
             {
             NextConst: for (int i = 0, c = m_listConst.size(); i < c; ++i)
                 {

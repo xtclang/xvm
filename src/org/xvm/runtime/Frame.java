@@ -623,8 +623,11 @@ public class Frame
                         //      lo = ls;
                         // "add(Object o)" method needs to be wrapped on "lo" reference, to ensure the
                         // run-time type of "String"
-                        System.err.println("WARNING: wrapping required from: " + typeFrom.getValueString()
-                            + " to: " + typeTo.getValueString());
+                        if (REPORT_WRAPPING)
+                            {
+                            System.err.println("WARNING: wrapping required from: " + typeFrom.getValueString()
+                                + " to: " + typeTo.getValueString());
+                            }
                         break;
 
                     default:
@@ -2104,4 +2107,8 @@ public class Frame
             return typeRef.resolveGenericType("RefType");
             }
         };
+
+    // ----- TEMPORARY ------
+
+    static final boolean REPORT_WRAPPING = System.getProperties().containsKey("DEBUG");
     }

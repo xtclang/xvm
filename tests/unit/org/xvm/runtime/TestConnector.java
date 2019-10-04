@@ -49,7 +49,7 @@ public class TestConnector
 
         ModuleRepository repository = cmd.build();
 
-        if (System.getProperty("CP") != null)
+        if (System.getProperties().containsKey("DEBUG"))
             {
             out("Code dump:");
             dump(repository.loadModule(asModule[0]));
