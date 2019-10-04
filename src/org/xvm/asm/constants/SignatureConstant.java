@@ -260,9 +260,15 @@ public class SignatureConstant
                 }
             }
 
-        return fDiff
-                ? pool.ensureSignatureConstant(getName(), aconstParamResolved, aconstReturnResolved)
-                : this;
+        if (fDiff)
+            {
+            SignatureConstant that = pool.ensureSignatureConstant(
+                    getName(), aconstParamResolved, aconstReturnResolved);
+            that.m_fProperty = this.m_fProperty;
+            return that;
+            }
+
+        return this;
         }
 
     /**
