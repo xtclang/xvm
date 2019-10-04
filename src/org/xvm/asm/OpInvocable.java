@@ -137,7 +137,7 @@ public abstract class OpInvocable extends Op
             {
             // TODO: create an exception throwing chain
             throw new IllegalStateException("No call chain for method \"" + idMethod.getValueString() +
-                "\" on " + hTarget.getType().getValueString());
+                "\" on " + hTarget.getType().getValueString() + frame.getStackTrace());
             }
         return m_chain = chain;
         }
