@@ -26,25 +26,25 @@ import static org.xvm.util.Handy.writePackedLong;
 
 /**
  * A synthetic TypeConstant that represents a custom property; for example:
- * <pre>
+ *
+ * <pre><code>
  * class Outer
  *     {
- *     @Lazy String prop.calc()
+ *     &#64;Lazy String prop.calc()
  *         {
  *         return "hello";
  *         }
  *     static void test()
  *         {
  *         Outer o = new Outer();
- *         Ref<String> ref = o.&p;
+ *         Ref&lt;String> ref = o.&amp;p;
  *         ...
  *         }
  *     }
- * </pre>
+ * </code></pre>
  *
- * The run-time type of the variable ref above is is:
- *    PropertyClassType(T1, "prop"),
- *      where T1 is TerminalTypeConstant(Outer).
+ * The run-time type of the variable ref above is {@code PropertyClassType(T1, "prop")}, where T1
+ * is TerminalTypeConstant(Outer).
  */
 public class PropertyClassTypeConstant
         extends AbstractDependantTypeConstant
