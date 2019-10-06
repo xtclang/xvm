@@ -446,10 +446,22 @@ public class UnionTypeConstant
     @Override
     protected Relation calculateRelationToLeft(TypeConstant typeLeft)
         {
-        // A + B <= A' + B' must be decomposed from the left
-        if (typeLeft instanceof UnionTypeConstant || typeLeft.isAnnotated())
+        // A relationship to a union (this type is a union on the right)
+        //      A + B <= A' + B'
+        // must be decomposed from the left, as well a relation to a complex intersection
+        //      (A + B) | C <= (A' + B')
+        // however, for a complex union relation to an intersection, such as:
+        //      (A | B) <= (A' | B') + A"
+        // it needs to start from decomposing the right.
+        // As a result, for all relational types we'll start with decomposing the left,
+        // and if that doesn't work, decompose the right at last
+        if (typeLeft.isRelationalType() || typeLeft.isAnnotated())
             {
-            return super.calculateRelationToLeft(typeLeft);
+            Relation rel = super.calculateRelationToLeft(typeLeft);
+            if (rel != Relation.INCOMPATIBLE)
+                {
+                return rel;
+                }
             }
         TypeConstant thisRight1 = getUnderlyingType();
         TypeConstant thisRight2 = getUnderlyingType2();
