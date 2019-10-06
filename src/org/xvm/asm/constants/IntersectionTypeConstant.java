@@ -137,7 +137,7 @@ public class IntersectionTypeConstant
     public boolean isNullable()
         {
         return (m_constType1.isOnlyNullable() ^ m_constType2.isOnlyNullable())
-                || m_constType1.isNullable() || m_constType2.isNullable();
+             || m_constType1.isNullable()    || m_constType2.isNullable();
         }
 
     @Override
@@ -160,8 +160,41 @@ public class IntersectionTypeConstant
             return m_constType1.removeNullable(pool);
             }
 
-        return pool.ensureIntersectionTypeConstant(m_constType1.removeNullable(pool),
-                                                   m_constType2.removeNullable(pool));
+        return m_constType1.removeNullable(pool).intersect(pool,
+               m_constType2.removeNullable(pool));
+        }
+
+    @Override
+    public TypeConstant subtract(ConstantPool pool, TypeConstant that)
+        {
+        TypeConstant type1 = getUnderlyingType().resolveTypedefs();
+        TypeConstant type2 = getUnderlyingType2().resolveTypedefs();
+
+        if (type1.equals(that))
+            {
+            // (A | B) - A => B
+            return type2;
+            }
+
+        if (type2.equals(that))
+            {
+            // (A | B) - B => B
+            return type1;
+            }
+
+        // recurse to cover cases like this:
+        // ((A | B) | C) - B => A | C
+        if (type1.isRelationalType() || type2.isRelationalType())
+            {
+            TypeConstant type1R = type1.subtract(pool, that);
+            TypeConstant type2R = type2.subtract(pool, that);
+            if (type1R != type1 || type2R != type2)
+                {
+                return type1R.intersect(pool, type2R);
+                }
+            }
+
+        return super.subtract(pool, that);
         }
 
     @Override

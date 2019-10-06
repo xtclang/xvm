@@ -558,6 +558,96 @@ public abstract class TypeConstant
         }
 
     /**
+     * Produce a minimal representation of a type that is known to be assignable to both this
+     * and the specified type.
+     *
+     * @return a reduction for the union of two types
+     */
+    public TypeConstant combine(ConstantPool pool, TypeConstant that)
+        {
+        TypeConstant thisResolved = this.resolveTypedefs();
+        TypeConstant thatResolved = that.resolveTypedefs();
+        if (thisResolved != this || thatResolved != that)
+            {
+            return thisResolved.combine(pool, thatResolved);
+            }
+
+        if (this.isA(that))
+            {
+            return this;
+            }
+        if (that.isA(this))
+            {
+            return that;
+            }
+
+        // type Type is known to have a distributive property:
+        // Type<X> + Type<Y> == Type<X + Y>
+        return this.isTypeOfType() && this.getParamsCount() > 0 &&
+               that.isTypeOfType() && that.getParamsCount() > 0
+                ? pool.ensureParameterizedTypeConstant(pool.typeType(),
+                    this.getParamType(0).combine(pool, that.getParamType(0)))
+                : pool.ensureUnionTypeConstant(this, that);
+        }
+
+    /**
+     * Produce a minimal representation of a type that both this type and the specified type are
+     * known to be assignable to.
+     *
+     * @return a reduction for the intersection of two types
+     */
+    public TypeConstant intersect(ConstantPool pool, TypeConstant that)
+        {
+        TypeConstant thisResolved = this.resolveTypedefs();
+        TypeConstant thatResolved = that.resolveTypedefs();
+        if (thisResolved != this || thatResolved != that)
+            {
+            return thisResolved.intersect(pool, thatResolved);
+            }
+
+        if (this.isA(that))
+            {
+            return that;
+            }
+        if (that.isA(this))
+            {
+            return this;
+            }
+
+        // type Type is known to have a distributive property:
+        // Type<X> | Type<Y> == Type<X | Y>
+        return this.isTypeOfType() && this.getParamsCount() > 0 &&
+               that.isTypeOfType() && that.getParamsCount() > 0
+                ? pool.ensureParameterizedTypeConstant(pool.typeType(),
+                    this.getParamType(0).intersect(pool, that.getParamType(0)))
+                : pool.ensureIntersectionTypeConstant(this, that);
+        }
+
+    /**
+     * Produce a minimal representation the type that is known to be assignable to this type but
+     * is also known not to be assignable to the specified type.
+     *
+     * @return a reduction for the difference between two types
+     */
+    public TypeConstant subtract(ConstantPool pool, TypeConstant that)
+        {
+        TypeConstant thisResolved = this.resolveTypedefs();
+        TypeConstant thatResolved = that.resolveTypedefs();
+        if (thisResolved != this || thatResolved != that)
+            {
+            return thisResolved.subtract(pool, thatResolved);
+            }
+
+        // type Type is known to have a distributive property:
+        // Type<X> - Type<Y> == Type<X - Y>
+        return this.isTypeOfType() && this.getParamsCount() > 0 &&
+               that.isTypeOfType() && that.getParamsCount() > 0
+                ? pool.ensureParameterizedTypeConstant(pool.typeType(),
+                    this.getParamType(0).subtract(pool, that.getParamType(0)))
+                : this;
+        }
+
+    /**
      * Create a copy of this single defining type that is based on the specified underlying type.
      *
      * @param pool  the ConstantPool to place a potentially created new constant into

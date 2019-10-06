@@ -7,7 +7,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.constants.RelationalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.IsType;
@@ -105,10 +104,8 @@ public class IsExpression
                 {
                 NameExpression exprName = (NameExpression) exprTarget;
 
-                exprName.narrowType(ctx, Branch.WhenTrue,
-                        RelationalTypeConstant.combineWith(pool, typeTarget, typeTest));
-                exprName.narrowType(ctx, Branch.WhenFalse,
-                        RelationalTypeConstant.combineWithout(pool, typeTarget, typeTest));
+                exprName.narrowType(ctx, Branch.WhenTrue,  typeTarget.combine(pool, typeTest));
+                exprName.narrowType(ctx, Branch.WhenFalse, typeTarget.subtract(pool, typeTest));
                 }
             }
 

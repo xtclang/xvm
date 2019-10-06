@@ -28,7 +28,6 @@ import org.xvm.asm.Assignment;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
-import org.xvm.asm.constants.RelationalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.MoveThis;
@@ -1303,7 +1302,7 @@ public class Context
                 TypeConstant typeOld = argOld.getType();
                 TypeConstant typeNew = argNew.getType();
 
-                TypeConstant typeJoin = RelationalTypeConstant.intersect(pool(), typeNew, typeOld);
+                TypeConstant typeJoin = typeNew.intersect(pool(), typeOld);
                 map.put(sName, ((Register) argOld).narrowType(typeJoin));
                 }
             else
@@ -1325,7 +1324,7 @@ public class Context
             {
             TypeConstant typeNew = argNew.getType();
 
-            TypeConstant typeJoin = RelationalTypeConstant.intersect(pool(), typeNew, typeOld);
+            TypeConstant typeJoin = typeNew.intersect(pool(), typeOld);
             map.put(sName, typeJoin);
             }
         else

@@ -39,7 +39,6 @@ import org.xvm.asm.constants.ParentClassConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.PseudoConstant;
-import org.xvm.asm.constants.RelationalTypeConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.ThisClassConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -537,7 +536,7 @@ public class NameExpression
 
         if (!typeOld.equals(typeNew))
             {
-            typeNew = RelationalTypeConstant.combineWith(pool(), typeNew, typeThis);
+            typeNew = typeNew.combine(pool(), typeThis);
 
             narrowType(ctx, Context.Branch.Always, typeNew);
             }

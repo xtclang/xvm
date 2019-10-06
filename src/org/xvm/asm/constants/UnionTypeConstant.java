@@ -105,9 +105,42 @@ public class UnionTypeConstant
     public TypeConstant removeNullable(ConstantPool pool)
         {
         return isNullable()
-                ? combineWith(pool, m_constType1.removeNullable(pool),
-                                    m_constType2.removeNullable(pool))
+                ? m_constType1.removeNullable(pool).combine(pool,
+                  m_constType2.removeNullable(pool))
                 : this;
+        }
+
+    @Override
+    public TypeConstant subtract(ConstantPool pool, TypeConstant that)
+        {
+        TypeConstant type1 = getUnderlyingType().resolveTypedefs();
+        TypeConstant type2 = getUnderlyingType2().resolveTypedefs();
+
+        if (type1.equals(that))
+            {
+            // (A + B) - A => B
+            return type2;
+            }
+
+        if (type2.equals(that))
+            {
+            // (A + B) - B => B
+            return type1;
+            }
+
+        // recurse to cover cases like this:
+        // ((A + B) + C) - B => A + C
+        if (type1.isRelationalType() || type2.isRelationalType())
+            {
+            TypeConstant type1R = type1.subtract(pool, that);
+            TypeConstant type2R = type2.subtract(pool, that);
+            if (type1R != type1 || type2R != type2)
+                {
+                return type1R.combine(pool, type2R);
+                }
+            }
+
+        return super.subtract(pool, that);
         }
 
     @Override
@@ -191,7 +224,7 @@ public class UnionTypeConstant
             return typeActual1;
             }
 
-        return combineWith(getConstantPool(), typeActual1, typeActual2);
+        return typeActual1.combine(getConstantPool(), typeActual2);
         }
 
     @Override
