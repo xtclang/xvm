@@ -131,10 +131,8 @@ const Range<Element extends Orderable>
             }
         else
             {
-// TODO GG : COMPILER-56: Could not find a matching method or function "estimateStringLength" for type "Ecstasy:Range.Element + Ecstasy:Stringable". ("x.estimateStringLength()")
-//            estimate += lowerBound.is(Stringable) ? lowerBound.estimateStringLength() : 4;
-//            estimate += upperBound.is(Stringable) ? upperBound.estimateStringLength() : 4;
-            estimate += 8;
+            estimate += lowerBound.is(Stringable) ? lowerBound.estimateStringLength() : 4;
+            estimate += upperBound.is(Stringable) ? upperBound.estimateStringLength() : 4;
             }
         return estimate;
         }

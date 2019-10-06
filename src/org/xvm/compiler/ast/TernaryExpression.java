@@ -91,7 +91,7 @@ public class TernaryExpression
             return TypeConstant.NO_TYPES;
             }
 
-        return selectCommonTypes(atypeThen, atypeElse, true, ErrorListener.BLACKHOLE);
+        return selectCommonTypes(atypeThen, atypeElse);
         }
 
     @Override
@@ -132,25 +132,118 @@ public class TernaryExpression
             }
 
         TypeConstant[] atypeThen, atypeElse;
-        Plan plan;
+        Usage          use   = Usage.Any;
+        Plan           plan;
         switch (plan = generatePlan(ctx))
             {
             case ThenIsFalse:
                 atypeThen = new TypeConstant[] {pool.typeFalse()};
-                atypeElse = atypeRequired;
+                atypeElse = atypeRequired == null ? TypeConstant.NO_TYPES : atypeRequired;
                 break;
 
             case ElseIsFalse:
-                atypeThen = atypeRequired;
+                atypeThen = atypeRequired == null ? TypeConstant.NO_TYPES : atypeRequired;
                 atypeElse = new TypeConstant[] {pool.typeFalse()};
                 break;
 
             default:
             case Symmetrical:
-                atypeThen = atypeElse = atypeRequired == null
-                        ? getImplicitTypes(ctx)
-                        : atypeRequired;
-                break;
+                {
+                if (atypeRequired != null && atypeRequired.length > 0)
+                    {
+                    atypeThen = atypeElse = atypeRequired;
+                    break;
+                    }
+
+                Context ctxThen = ctx.enterFork(true);
+                Context ctxElse = ctx.enterFork(false);
+
+                try
+                    {
+                    atypeThen = exprThen.getImplicitTypes(ctxThen);
+                    atypeElse = exprElse.getImplicitTypes(ctxElse);
+
+                    int cThen = atypeThen.length;
+                    int cElse = atypeElse.length;
+
+                    // try to figure out which side is more flexible
+                    if (cElse > 0)
+                        {
+                        if (exprThen.testFitMulti(ctxThen, atypeElse, null).isFit())
+                            {
+                            atypeThen = atypeElse;
+                            use       = Usage.Else;
+                            break;
+                            }
+                        }
+
+                    if (cThen > 0)
+                        {
+                        if (exprElse.testFitMulti(ctxElse, atypeThen, null).isFit())
+                            {
+                            atypeElse = atypeThen;
+                            use       = Usage.Then;
+                            break;
+                            }
+                        }
+
+                    // try to resolve formal types
+                    TypeConstant[] atypeThenR = resolveConstraints(atypeThen);
+                    TypeConstant[] atypeElseR = resolveConstraints(atypeElse);
+                    if (atypeElseR != null)
+                        {
+                        if (exprThen.testFitMulti(ctxThen, atypeElseR, null).isFit())
+                            {
+                            atypeThen = atypeElse = atypeElseR;
+                            use       = Usage.Else;
+                            break;
+                            }
+                        }
+
+                    if (atypeThenR != null)
+                        {
+                        if (exprElse.testFitMulti(ctxElse, atypeThenR, null).isFit())
+                            {
+                            atypeElse = atypeThen = atypeThenR;
+                            use       = Usage.Then;
+                            break;
+                            }
+                        }
+
+                    // nothing worked; try an intersection of the resolved types
+                    if (cThen == 0)
+                        {
+                        atypeThen = atypeElse;
+                        use       = Usage.Else;
+                        break;
+                        }
+                    if (cElse == 0)
+                        {
+                        atypeElse = atypeThen;
+                        use       = Usage.Then;
+                        break;
+                        }
+
+                    use = Usage.Intersection;
+
+                    TypeConstant[] atypeCommonR = selectCommonTypes(atypeThenR, atypeElseR);
+                    if (exprThen.testFitMulti(ctxThen, atypeCommonR, null).isFit() &&
+                        exprElse.testFitMulti(ctxElse, atypeCommonR, null).isFit() )
+                        {
+                        atypeThen = atypeElse = atypeCommonR;
+                        break;
+                        }
+
+                    // continue to validation with a regular intersection (which is most likely to fail now)
+                    atypeThen = atypeElse = selectCommonTypes(atypeThen, atypeThen);
+                    break;
+                    }
+                finally
+                    {
+                    ctxThen.discard();
+                    ctxElse.discard();
+                    }
+                }
             }
 
         ctx = ctx.enterFork(true);
@@ -163,13 +256,13 @@ public class TernaryExpression
             }
         else
             {
-            exprThen  = exprNewThen;
-            atypeThen = exprNewThen.getTypes();
+            exprThen = exprNewThen;
+
             // TODO check if it is short circuiting
 
-            if (atypeElse.length == 0)
+            if (atypeThen.length == 0 || use == Usage.Intersection)
                 {
-                atypeElse = selectCommonTypes(atypeThen, TypeConstant.NO_TYPES, false, errs);
+                atypeThen = exprNewThen.getTypes();
                 }
             }
 
@@ -183,77 +276,57 @@ public class TernaryExpression
             }
         else
             {
-            exprElse  = exprNewElse;
-            atypeElse = exprNewElse.getTypes();
+            exprElse = exprNewElse;
+
             // TODO check if it is short circuiting
+
+            if (atypeElse.length == 0 || use == Usage.Intersection)
+                {
+                atypeElse = exprNewElse.getTypes();
+                }
             }
 
         ctx.exit();
 
-        if (fit.isFit() && exprNewCond.isConstant())
+        TypeConstant[] atypeResult = TypeConstant.NO_TYPES;
+        if (fit.isFit())
             {
-            return exprNewCond.toConstant().equals(pool.valTrue())
-                    ? replaceThisWith(exprNewThen)
-                    : replaceThisWith(exprNewElse);
-            }
+            if (exprNewCond.isConstant())
+                {
+                return exprNewCond.toConstant().equals(pool.valTrue())
+                        ? replaceThisWith(exprNewThen)
+                        : replaceThisWith(exprNewElse);
+                }
 
-        TypeConstant[] atypeResult;
-        switch (plan)
-            {
-            case ThenIsFalse:
-                atypeResult = ensureConditionalType(pool, atypeElse);
-                break;
+            switch (plan)
+                {
+                case ThenIsFalse:
+                    atypeResult = ensureConditionalType(pool, atypeElse);
+                    break;
 
-            case ElseIsFalse:
-                atypeResult = ensureConditionalType(pool, atypeThen);
-                break;
+                case ElseIsFalse:
+                    atypeResult = ensureConditionalType(pool, atypeThen);
+                    break;
 
-            default:
-            case Symmetrical:
-                // we know by now that both typeThen and typeElse are assignable to
-                // typeRequired (if not null). Let's try to find a common type for them
-                // that is narrower than the required type
-                atypeResult = selectCommonTypes(atypeThen, atypeElse, false, errs);
-                for (int i = 0, c = atypeResult.length; i < c; i++)
+                default:
+                case Symmetrical:
                     {
-                    TypeConstant typeResult = atypeResult[i];
-
-                    if (typeResult == null)
+                    switch (use)
                         {
-                        TypeConstant typeThen = atypeThen[i];
-                        TypeConstant typeElse = atypeElse[i];
-
-                        // try to resolve formal types
-                        boolean fFormalThen = typeThen.containsFormalType(true);
-                        boolean fFormalElse = typeElse.containsFormalType(true);
-
-                        if (fFormalThen || fFormalElse)
-                            {
-                            if (fFormalThen)
-                                {
-                                typeThen = typeThen.resolveConstraints(pool);
-                                }
-                            if (fFormalElse)
-                                {
-                                typeElse = typeElse.resolveConstraints(pool);
-                                }
-                            // since it's guaranteed that neither type contains formal, we can recurse
-                            typeResult = Op.selectCommonType(typeThen, typeElse, errs);
-                            }
-
-                        if (typeResult == null)
-                            {
-                            typeResult = pool.ensureIntersectionTypeConstant(typeThen, typeElse);
-                            if (atypeRequired.length > i && !typeResult.isA(atypeRequired[i]))
-                                {
-                                // leave as is
-                                typeResult = atypeRequired[i];
-                                }
-                            }
-                        atypeResult[i] = typeResult;
+                        case Any:
+                        case Then:
+                            atypeResult = atypeThen;
+                            break;
+                        case Else:
+                            atypeResult = atypeElse;
+                            break;
+                        case Intersection:
+                            atypeResult = selectCommonTypes(atypeThen, atypeElse);
+                            break;
                         }
+                    break;
                     }
-                break;
+                }
             }
 
         return finishValidations(atypeRequired, atypeResult, fit, null, errs);
@@ -383,14 +456,11 @@ public class TernaryExpression
     /**
      * A helper method to create an array of common types for two arrays.
      *
-     * @param atype1      the first type array
-     * @param atype2      the second type array
-     * @param fIntersect  if true, in an absence of common type generate an intersection type
-     * @param errs        the error listener to log any errors to
-     * @return            an array of common types (of the minimum of the two array sizes)
+     * @param atype1  the first type array
+     * @param atype2  the second type array
+     * @return        an array of common types (of the minimum of the two array sizes)
      */
-    private TypeConstant[] selectCommonTypes(TypeConstant[] atype1, TypeConstant[] atype2,
-                                             boolean fIntersect, ErrorListener errs)
+    private TypeConstant[] selectCommonTypes(TypeConstant[] atype1, TypeConstant[] atype2)
         {
         int            cTypes      = Math.min(atype1.length, atype2.length);
         TypeConstant[] atypeCommon = new TypeConstant[cTypes];
@@ -399,12 +469,35 @@ public class TernaryExpression
             TypeConstant typeThen = atype1[i];
             TypeConstant typeElse = atype2[i];
 
-            TypeConstant typeCommon = Op.selectCommonType(typeThen, typeElse, errs);
-            atypeCommon[i] = typeCommon == null && atype1 != null && typeElse != null && fIntersect
+            TypeConstant typeCommon = Op.selectCommonType(typeThen, typeElse, ErrorListener.BLACKHOLE);
+            atypeCommon[i] = typeCommon == null && atype1 != null && typeElse != null
                     ? pool().ensureIntersectionTypeConstant(typeThen, typeElse)
                     : typeCommon;
             }
         return atypeCommon;
+        }
+
+    private TypeConstant[] resolveConstraints(TypeConstant[] atype)
+        {
+        ConstantPool   pool   = pool();
+        int            cTypes = atype.length;
+        TypeConstant[] atypeR = null;
+
+        for (int i = 0; i < cTypes; i++)
+            {
+            TypeConstant type = atype[i];
+
+            if (type.containsFormalType(true))
+                {
+                if (atypeR == null)
+                    {
+                    atypeR = new TypeConstant[cTypes];
+                    }
+                atypeR[i] = type.resolveConstraints(pool);
+                }
+
+            }
+        return atypeR;
         }
 
     private Plan generatePlan(Context ctx)
@@ -482,8 +575,10 @@ public class TernaryExpression
 
     private transient boolean m_fConditional;
 
-    enum Plan {Symmetrical, ThenIsFalse, ElseIsFalse}
+    private enum Plan {Symmetrical, ThenIsFalse, ElseIsFalse}
     private transient Plan m_plan = Plan.Symmetrical;
+
+    private enum Usage {Any, Then, Else, Intersection};
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TernaryExpression.class, "cond", "exprThen", "exprElse");
     }
