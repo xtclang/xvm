@@ -1243,7 +1243,7 @@ public class TypeCompositionStatement
             {
             for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                 {
-                if (!struct.getContributionsAsList().stream().anyMatch(contribution ->
+                if (struct.getContributionsAsList().stream().noneMatch(contribution ->
                         contribution.getComposition() == Component.Composition.Extends))
                     {
                     struct.addContribution(ClassStructure.Composition.Extends,
@@ -1257,7 +1257,7 @@ public class TypeCompositionStatement
             {
             for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                 {
-                if (!struct.getContributionsAsList().stream().anyMatch(contribution ->
+                if (struct.getContributionsAsList().stream().noneMatch(contribution ->
                         contribution.getComposition() == Component.Composition.Into))
                     {
                     // TODO there is still an issue with this w.r.t. conditionals; verify there is no "into" on this struct
@@ -1449,8 +1449,9 @@ public class TypeCompositionStatement
                         // explicitly
                         for (Composition composition : compositions)
                             {
+                            TypeConstant type = composition.getType().ensureTypeConstant();
                             if (composition.keyword.getId() == Id.EXTENDS && setContrib.stream().anyMatch(
-                                    contrib -> contrib.getTypeConstant().equals(composition.getType())))
+                                    contrib -> contrib.getTypeConstant().equals(type)))
                                 {
                                 composition.log(errs, Severity.ERROR,
                                         Compiler.VIRTUAL_CHILD_EXTENDS_IMPLICIT,
@@ -1657,12 +1658,20 @@ public class TypeCompositionStatement
             TypeConstant[] atypeParams = new TypeConstant[cParams];
             for (int i = 0; i < cParams; ++i)
                 {
-                Parameter         param     = constructorParams.get(i);
-                TypeConstant      typeParam = param.getType().ensureTypeConstant();
-                String            sParam    = param.getName();
-                PropertyStructure prop      = (PropertyStructure) mapChildren.get(sParam);
-                TypeConstant      typeProp  = prop.getType();
-                if (typeParam.containsUnresolved() || typeProp.containsUnresolved())
+                Parameter    param     = constructorParams.get(i);
+                TypeConstant typeParam = param.getType().ensureTypeConstant();
+
+                if (typeParam.containsUnresolved())
+                    {
+                    mgr.requestRevisit();
+                    return;
+                    }
+
+                String            sParam = param.getName();
+                PropertyStructure prop   = (PropertyStructure) mapChildren.get(sParam);
+
+                // the property could be defined by the super class
+                if (prop != null && prop.getType().containsUnresolved())
                     {
                     mgr.requestRevisit();
                     return;
