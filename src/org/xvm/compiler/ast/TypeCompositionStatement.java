@@ -1295,8 +1295,8 @@ public class TypeCompositionStatement
                 {
                 // the name should either not exist already, or if it does, it needs to be a
                 // property and the type will have to match the parameter
-                String sParam = param.getName();
-                Component child = mapChildren.get(sParam);
+                String    sParam = param.getName();
+                Component child  = mapChildren.get(sParam);
                 if (child == null)
                     {
                     // create the property and get it caught up to where we are
@@ -1670,8 +1670,11 @@ public class TypeCompositionStatement
                 String            sParam = param.getName();
                 PropertyStructure prop   = (PropertyStructure) mapChildren.get(sParam);
 
-                // the property could be defined by the super class
-                if (prop != null && prop.getType().containsUnresolved())
+                assert prop != null;
+
+                // whether or not the property is defined by the super class, we must've created
+                // a synthetic structure for it during registerStructures() phase
+                if (prop.getType().containsUnresolved())
                     {
                     mgr.requestRevisit();
                     return;
@@ -1833,6 +1836,63 @@ public class TypeCompositionStatement
         }
 
     @Override
+    public void validateContent(StageMgr mgr, ErrorListener errs)
+        {
+        if (!mgr.processChildren())
+            {
+            mgr.requestRevisit();
+            return;
+            }
+
+        // adjust synthetic properties created during registerStructures() phase if necessary
+        ClassStructure component = (ClassStructure) getComponent();
+        ClassStructure clzSuper  = component.getSuper();
+        if (component.getFormat() != Format.INTERFACE && constructorParams != null && clzSuper != null)
+            {
+            ConstantPool   pool      = pool();
+            TypeConstant   typeSuper = pool.ensureAccessTypeConstant(
+                                        clzSuper.getFormalType(), Access.PROTECTED);
+            TypeInfo       infoSuper = typeSuper.ensureTypeInfo(errs);
+
+            Map<String, Component> mapChildren = component.ensureChildByNameMap();
+            boolean                fInvalidate = false;
+            for (int i = 0, cParams = constructorParams.size(); i < cParams; ++i)
+                {
+                Parameter param = constructorParams.get(i);
+                String    sProp = param.getName();
+
+                PropertyStructure prop = (PropertyStructure) mapChildren.get(sProp);
+                if (!prop.isSynthetic())
+                    {
+                    // the property has been explicitly modified
+                    continue;
+                    }
+
+                PropertyInfo infoProp = infoSuper.findProperty(sProp);
+                if (infoProp == null)
+                    {
+                    // the "super" property doesn't not exist or not accessible
+                    continue;
+                    }
+
+                if (!infoProp.isVar())
+                    {
+                    // the setter for the super's property is not reachable, mark the synthetic one
+                    // as "@Override @RO"
+                    prop.addAnnotation(pool.clzOverride());
+                    prop.addAnnotation(pool.clzRO());
+                    fInvalidate = true;
+                    }
+                }
+
+            if (fInvalidate)
+                {
+                pool.invalidateTypeInfos(component.getIdentityConstant());
+                }
+            }
+        }
+
+    @Override
     public void generateCode(StageMgr mgr, ErrorListener errs)
         {
         if (!mgr.processChildren())
@@ -1964,7 +2024,9 @@ public class TypeCompositionStatement
             }
 
         ClassStructure clzSuper  = component.getSuper();
-        TypeInfo       infoSuper = clzSuper == null ? null : clzSuper.getFormalType().ensureTypeInfo(errs);
+        TypeInfo       infoSuper = clzSuper == null
+                ? null
+                : pool().ensureAccessTypeConstant(clzSuper.getFormalType(), Access.PROTECTED).ensureTypeInfo(errs);
         MethodConstant idSuper; // super constructor
 
         List<Expression> listArgs;

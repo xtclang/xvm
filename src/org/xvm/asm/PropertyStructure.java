@@ -125,7 +125,8 @@ public class PropertyStructure
      */
     public boolean isVarAccessible(Access access)
         {
-        return getVarAccess().ordinal() <= access.ordinal();
+        Access accessVar = getVarAccess();
+        return accessVar != null && accessVar.ordinal() <= access.ordinal();
         }
 
     /**
