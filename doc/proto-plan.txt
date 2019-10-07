@@ -45,6 +45,30 @@
 
 - compiler to verify "all or nothing" implementation for funky interfaces
 
+- use unique name for private properties
+    {
+    const Point(Int x, Int y)
+        protected/private Int x;
+        private Int y;
+
+        void report()
+            {
+            console.println($"x={x}; y={y}");
+            }
+        }
+
+    const NamedPoint(String name, Int x, Int y)
+            extends Point(2*y, x + 1)
+        {
+        @Override
+        void report()
+            {
+            console.println($"x={x}; y={y}"); // not the same y
+            super();
+            }
+        }
+    }
+
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
