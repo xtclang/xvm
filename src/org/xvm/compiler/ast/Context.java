@@ -591,14 +591,13 @@ public class Context
      */
     public void registerVar(Token tokName, Register reg, ErrorListener errs)
         {
-        Map<String, Argument> map   = ensureNameMap();
-        String                sName = tokName.getValueText();
-        if (map.get(sName) instanceof Register && !isVarHideable(sName))
+        String sName = tokName.getValueText();
+        if (isVarDeclaredInThisScope(sName) || !isVarHideable(sName))
             {
             tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_DEFINED, sName);
             }
 
-        map.put(sName, reg);
+        ensureNameMap().put(sName, reg);
         ensureDefiniteAssignments().put(sName, reg.isPredefined() ? Assignment.AssignedOnce
                                                                   : Assignment.Unassigned);
         }
@@ -979,10 +978,7 @@ public class Context
             return true;
             }
 
-        Context ctxOuter = getOuterContext();
-        return ctxOuter == null
-                ? getVar(sName) == null
-                : ctxOuter.isVarHideable(sName);
+        return !(getVar(sName) instanceof Register);
         }
 
     /**

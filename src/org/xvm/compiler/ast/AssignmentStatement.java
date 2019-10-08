@@ -10,6 +10,7 @@ import java.util.Map;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
@@ -396,17 +397,26 @@ public class AssignmentStatement
             {
             assert nodeLeft instanceof VariableDeclarationStatement ||
                    nodeLeft instanceof MultipleLValueStatement;
+
             ctxLValue = new LValueContext(ctx);
 
+            ErrorList errsTemp  = new ErrorList(1);
             Statement lvalueOld = (Statement) nodeLeft;
-            Statement lvalueNew = lvalueOld.validate(ctxLValue, errs);
-            if (lvalueNew != lvalueOld)
+            Statement lvalueNew = lvalueOld.validate(ctxLValue, errsTemp);
+
+            if (lvalueNew == null)
                 {
-                fValid &= lvalueNew != null;
-                if (lvalueNew != null)
-                    {
-                    lvalue = nodeLeft = lvalueNew;
-                    }
+                fValid = false;
+                }
+            else
+                {
+                lvalue = nodeLeft = lvalueNew;
+                }
+
+            if (errsTemp.isAbortDesired())
+                {
+                errsTemp.logTo(errs);
+                fValid = false;
                 }
             }
 
@@ -507,7 +517,10 @@ public class AssignmentStatement
                     exprRightNew = exprRight.validateMulti(ctx, exprLeft.getTypes(), errs);
                     }
 
-                merge(ctx, ctxLValue);
+                if (fValid)
+                    {
+                    merge(ctx, ctxLValue);
+                    }
 
                 if (exprRightNew != null)
                     {
@@ -536,7 +549,10 @@ public class AssignmentStatement
 
                     exprRightNew = exprRight.validate(ctx, typeReq, errs);
 
-                    merge(ctx, ctxLValue);
+                    if (fValid)
+                        {
+                        merge(ctx, ctxLValue);
+                        }
 
                     if (exprRightNew != null)
                         {
@@ -563,7 +579,10 @@ public class AssignmentStatement
 
                     exprRightNew = exprRight.validateMulti(ctx, atypeReq, errs);
 
-                    merge(ctx, ctxLValue);
+                    if (fValid)
+                        {
+                        merge(ctx, ctxLValue);
+                        }
 
                     // conditional expressions can update the LVal type from the RVal type, but the
                     // initial boolean is discarded
@@ -619,7 +638,10 @@ public class AssignmentStatement
                     ctx = ctx.exit();
                     }
 
-                merge(ctx, ctxLValue);
+                if (fValid)
+                    {
+                    merge(ctx, ctxLValue);
+                    }
 
                 exprLeft.markAssignment(ctx, false, errs);
                 break;

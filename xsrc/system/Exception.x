@@ -57,7 +57,7 @@ const Exception
         TODO
         }
 
-    (String, StackFrame /* firstFrame */) formatStackTrace(Iterable<StackFrame> frames, StackFrame? lastFrame)
+    (String, StackFrame /* firstFrame */) formatStackTrace(StackFrame? lastFrame)
         {
         // stack trace
         StackFrame? firstFrame = null;
