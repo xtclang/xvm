@@ -35,6 +35,7 @@ module TestMisc.xqiz.it
         testConditional();
         testConstants();
         testImport();
+        testRecursiveType();
         testChild();
 
         countdown();
@@ -579,6 +580,36 @@ module TestMisc.xqiz.it
         import Int as Q;
         Q x = 42;
         console.println("x=" + x);
+        }
+
+    void testRecursiveType()
+        {
+        console.println("\n** testRecursiveType()");
+
+        typedef (Nullable | Int | List<Manifold>) Manifold;
+
+        Manifold m1 = 9;
+        Manifold m2 = [m1];
+        Manifold m3 = [m2];
+
+        console.println(m1);
+        console.println(m2);
+        console.println(m3);
+
+        console.println(report(m3));
+
+        static String report(Manifold m)
+            {
+            if (m == Null)
+                {
+                return "Null";
+                }
+            if (m.is(Int))
+                {
+                return "Integer";
+                }
+            return $"array of {report(m[0])}";
+            }
         }
 
     void testChild()

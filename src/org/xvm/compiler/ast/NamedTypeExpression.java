@@ -23,6 +23,7 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
 
@@ -782,14 +783,14 @@ public class NamedTypeExpression
                 return idProp.getFormalType();
                 }
 
-            case TypeParameter:
-                idTarget = null;
-                break;
+            case Typedef:
+                return ((TypedefConstant) constTarget).getReferredToType();
 
             case UnresolvedName:
                 return m_typeUnresolved =
                         new UnresolvedTypeConstant(pool, (UnresolvedNameConstant) constTarget);
 
+            case TypeParameter:
             default:
                 idTarget = null;
                 break;

@@ -2617,6 +2617,10 @@ public class ConstantPool
                     constant = new DifferenceTypeConstant(this, format, in);
                     break;
 
+                case RecursiveType:
+                    constant = new RecursiveTypeConstant(this, format, in);
+                    break;
+
                 /*
                  * Conditions.
                  */

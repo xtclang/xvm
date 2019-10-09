@@ -56,7 +56,18 @@ public class UnresolvedTypeConstant
         return m_type != null;
         }
 
-    public TypeConstant getResolvedType()
+    /**
+     * Mark this unresolved type as recursive.
+     */
+    public void markRecursive()
+        {
+        m_fRecursive = true;
+        }
+
+    /**
+     * @return resolved underlying type
+     */
+    protected TypeConstant getResolvedType()
         {
         TypeConstant type = m_type;
         if (type != null)
@@ -81,11 +92,13 @@ public class UnresolvedTypeConstant
     @Override
     public void resolve(Constant constant)
         {
-        assert m_type == null || m_type == constant;
-        assert constant instanceof TypeConstant;
-        m_type = (TypeConstant) constant;
+        if (!m_fRecursive)
+            {
+            assert m_type == null || m_type == constant;
+            assert constant instanceof TypeConstant;
+            m_type = (TypeConstant) constant;
+            }
         }
-
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
@@ -209,7 +222,9 @@ public class UnresolvedTypeConstant
         {
         return m_type == null
                 ? this
-                : m_type.resolveTypedefs();
+                : m_fRecursive
+                    ? m_type
+                    : m_type.resolveTypedefs();
         }
 
     @Override
@@ -331,7 +346,7 @@ public class UnresolvedTypeConstant
     @Override
     public boolean containsUnresolved()
         {
-        return m_type == null || m_type.containsUnresolved();
+        return !m_fRecursive && (m_type == null || m_type.containsUnresolved());
         }
 
     @Override
@@ -438,4 +453,9 @@ public class UnresolvedTypeConstant
      * The resolved type constant.
      */
     private TypeConstant m_type;
+
+    /**
+     * Recursive type indicator.
+     */
+    private boolean m_fRecursive;
     }

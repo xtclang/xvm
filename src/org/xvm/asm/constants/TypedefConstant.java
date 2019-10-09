@@ -4,8 +4,11 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.util.function.Consumer;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.TypedefStructure;
 
@@ -17,21 +20,6 @@ public class TypedefConstant
         extends NamedConstant
     {
     // ----- constructors --------------------------------------------------------------------------
-
-    /**
-     * Constructor used for deserialization.
-     *
-     * @param pool    the ConstantPool that will contain this Constant
-     * @param format  the format of the Constant in the stream
-     * @param in      the DataInput stream to read the Constant value from
-     *
-     * @throws IOException  if an issue occurs reading the Constant value
-     */
-    public TypedefConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException
-        {
-        super(pool, format, in);
-        }
 
     /**
      * Construct a constant whose value is a typedef identifier.
@@ -53,6 +41,21 @@ public class TypedefConstant
             }
         }
 
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool    the ConstantPool that will contain this Constant
+     * @param format  the format of the Constant in the stream
+     * @param in      the DataInput stream to read the Constant value from
+     *
+     * @throws IOException  if an issue occurs reading the Constant value
+     */
+    public TypedefConstant(ConstantPool pool, Format format, DataInput in)
+            throws IOException
+        {
+        super(pool, format, in);
+        }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -62,7 +65,45 @@ public class TypedefConstant
      */
     public TypeConstant getReferredToType()
         {
-        return ((TypedefStructure) getComponent()).getType();
+        TypeConstant typeReferred = ((TypedefStructure) getComponent()).getType();
+        if (!m_fInitialized)
+            {
+            ConstantPool    pool      = getConstantPool();
+            TypedefConstant constSelf = this;
+
+            Consumer<Constant> visitor = new Consumer<>()
+                {
+                public void accept(Constant constant)
+                    {
+                    if (constant instanceof UnresolvedTypeConstant)
+                        {
+                        UnresolvedTypeConstant typeU = (UnresolvedTypeConstant) constant;
+                        if (typeU.isSingleDefiningConstant())
+                            {
+                            constant = typeU.getDefiningConstant();
+                            if (constant == constSelf)
+                                {
+                                TypeConstant typeRecursive = new RecursiveTypeConstant(pool, constSelf);
+
+                                typeU.resolve(typeRecursive);
+                                typeU.markRecursive();
+                                return;
+                                }
+                            }
+                        }
+
+                    if (constant instanceof TypeConstant)
+                        {
+                        constant.forEachUnderlying(this);
+                        }
+                    };
+                };
+
+            typeReferred.forEachUnderlying(visitor);
+
+            m_fInitialized = !typeReferred.containsUnresolved();
+            }
+        return typeReferred.resolveTypedefs();
         }
 
 
@@ -78,7 +119,7 @@ public class TypedefConstant
     public boolean containsUnresolved()
         {
         TypedefStructure typedef = (TypedefStructure) getComponent();
-        return super.containsUnresolved() || typedef == null || typedef.getType().containsUnresolved();
+        return super.containsUnresolved() || typedef == null;
         }
 
     @Override
@@ -117,4 +158,9 @@ public class TypedefConstant
         {
         return "typedef name=" + getValueString();
         }
+
+    /**
+     * Indicates whether or not this typedef has been initialized.
+     */
+    private boolean m_fInitialized;
     }

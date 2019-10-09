@@ -4413,7 +4413,9 @@ public abstract class TypeConstant
             // interface type on a different pool and called isInterfaceAssignableFrom again,
             // checking all the methods and circled back for a non-interface comparison.
             // Leaving the logging in for now, but no matter what, the answer should be negative.
-            if (!typeLeft.isInterfaceType())
+            if (!typeLeft.isInterfaceType() &&
+                    !(typeLeft  instanceof RecursiveTypeConstant ||
+                      typeRight instanceof RecursiveTypeConstant))
                 {
                 System.err.println("rejecting isA() due to a recursion:" +
                     " left=" + typeLeft.getValueString() + "; right=" + typeRight.getValueString());

@@ -860,6 +860,7 @@ public abstract class Constant
         UnionType,
         IntersectionType,
         DifferenceType,
+        RecursiveType,
 
         /*
          * Conditions.
