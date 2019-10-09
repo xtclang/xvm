@@ -339,6 +339,7 @@ public class IntersectionTypeConstant
 
     protected Map<Object, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
+        ConstantPool           pool = getConstantPool();
         Map<Object, ParamInfo> map1 = info1.getTypeParams();
         Map<Object, ParamInfo> map2 = info2.getTypeParams();
         Map<Object, ParamInfo> map  = new HashMap<>(map1);
@@ -354,27 +355,29 @@ public class IntersectionTypeConstant
                 {
                 // the type param exists in both maps; ensure the types are compatible
                 // and choose the wider one
-                ParamInfo    param1 = entry.getValue();
-                TypeConstant type1  = param1.getActualType();
-                TypeConstant type2  = param2.getActualType();
+                ParamInfo param1 = entry.getValue();
 
-                if (type2.isAssignableTo(type1))
+                assert param1.getName().equals(param2.getName());
+
+                TypeConstant type1 = param1.getActualType();
+                TypeConstant type2 = param2.getActualType();
+
+                if (type2.isA(type1))
                     {
                     // param1 is good
                     // REVIEW should we compare the constraint types as well?
                     continue;
                     }
 
-                if (type1.isAssignableTo(type2))
+                if (type1.isA(type2))
                     {
                     // param2 is good; replace
                     entry.setValue(param2);
                     continue;
                     }
 
-                log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_CONTRIB,
-                    info1.getType().getValueString(), nid, type1.getValueString(),
-                    info2.getType().getValueString(), type2.getValueString());
+                TypeConstant typeParam = type1.intersect(pool, type2);
+                entry.setValue(new ParamInfo(param1.getName(), pool.typeObject(), typeParam));
                 }
 
             // the type param is missing in the second map or incompatible; remove it

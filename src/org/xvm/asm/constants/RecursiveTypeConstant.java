@@ -56,6 +56,11 @@ public class RecursiveTypeConstant
         return null;
         }
 
+    public boolean containsRecursiveType()
+        {
+        return true;
+        }
+
     @Override
     public boolean isSingleDefiningConstant()
         {

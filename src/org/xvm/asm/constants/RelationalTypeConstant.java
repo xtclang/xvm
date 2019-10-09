@@ -250,6 +250,13 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
+    public boolean containsRecursiveType()
+        {
+        return m_constType1.containsRecursiveType()
+            || m_constType2.containsRecursiveType();
+        }
+
+    @Override
     public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
         {
         TypeConstant constOriginal1 = m_constType1;

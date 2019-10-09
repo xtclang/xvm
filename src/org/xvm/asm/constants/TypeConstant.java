@@ -4413,9 +4413,10 @@ public abstract class TypeConstant
             // interface type on a different pool and called isInterfaceAssignableFrom again,
             // checking all the methods and circled back for a non-interface comparison.
             // Leaving the logging in for now, but no matter what, the answer should be negative.
+            //
+            // Quite naturally, a similar recursion may occur with recursive types.
             if (!typeLeft.isInterfaceType() &&
-                    !(typeLeft  instanceof RecursiveTypeConstant ||
-                      typeRight instanceof RecursiveTypeConstant))
+                    !typeLeft.containsRecursiveType() && !typeRight.containsRecursiveType())
                 {
                 System.err.println("rejecting isA() due to a recursion:" +
                     " left=" + typeLeft.getValueString() + "; right=" + typeRight.getValueString());
@@ -5069,6 +5070,16 @@ public abstract class TypeConstant
     public boolean containsTypeParameter(boolean fAllowParams)
         {
         return getUnderlyingType().containsTypeParameter(fAllowParams);
+        }
+
+    /**
+     * Check if this TypeConstant contains a recursive type.
+     *
+     * @return true iff the TypeConstant contains a recursive type
+     */
+    public boolean containsRecursiveType()
+        {
+        return getUnderlyingType().containsRecursiveType();
         }
 
     /**

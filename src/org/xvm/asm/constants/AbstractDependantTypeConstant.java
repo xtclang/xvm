@@ -155,6 +155,12 @@ public abstract class AbstractDependantTypeConstant
         }
 
     @Override
+    public boolean containsRecursiveType()
+        {
+        return getParentType().containsRecursiveType();
+        }
+
+    @Override
     public boolean isTuple()
         {
         return false;

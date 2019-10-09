@@ -863,6 +863,17 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public boolean containsRecursiveType()
+        {
+        if (!isSingleDefiningConstant())
+            {
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return constId.getReferredToType().containsRecursiveType();
+            }
+        return false;
+        }
+
+    @Override
     public Category getCategory()
         {
         if (!isSingleDefiningConstant())

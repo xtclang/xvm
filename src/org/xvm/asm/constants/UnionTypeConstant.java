@@ -336,14 +336,14 @@ public class UnionTypeConstant
             TypeConstant type1  = param1.getActualType();
             TypeConstant type2  = param2.getActualType();
 
-            if (type2.isAssignableTo(type1))
+            if (type2.isA(type1))
                 {
                 // param1 is good
                 // REVIEW should we compare the constraint types as well?
                 continue;
                 }
 
-            if (type1.isAssignableTo(type2))
+            if (type1.isA(type2))
                 {
                 // param2 is good; replace
                 entry.setValue(param2);
