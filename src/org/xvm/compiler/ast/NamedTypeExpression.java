@@ -642,6 +642,12 @@ public class NamedTypeExpression
                 {
                 fValid = false;
                 }
+            else if (type.isParamsSpecified())
+                {
+                // this can happen for example, if m_constId is a typedef for a function
+                log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+                fValid = false;
+                }
             else
                 {
                 type = pool.ensureParameterizedTypeConstant(type, atypeParams);

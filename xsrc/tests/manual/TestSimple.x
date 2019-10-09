@@ -6,6 +6,6 @@ module TestSimple.xqiz.it
 
     void run()
         {
-        console.println(foo("hello"));
+        console.println("hello");
         }
     }

@@ -1604,7 +1604,6 @@ public class ConstantPool
                 }
 
             // types do not match
-            // TODO GG this can happen if a parameter is specified for a function type, e.g. "Orderer<Element>" (so it needs to log error)
             throw new IllegalArgumentException("type already has parameters specified");
             }
 
