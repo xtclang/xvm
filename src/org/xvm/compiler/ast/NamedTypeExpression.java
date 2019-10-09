@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.xvm.asm.Argument;
@@ -644,9 +645,13 @@ public class NamedTypeExpression
                 }
             else if (type.isParamsSpecified())
                 {
-                // this can happen for example, if m_constId is a typedef for a function
-                log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
-                fValid = false;
+                TypeConstant[] atypeActual = type.getParamTypesArray();
+                if (!Arrays.equals(atypeActual, atypeParams))
+                    {
+                    // this can happen for example, if m_constId is a typedef for a function
+                    log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+                    fValid = false;
+                    }
                 }
             else
                 {
