@@ -61,9 +61,9 @@ public class InterfaceProxy
         }
 
     @Override
-    protected ExceptionHandle makeImmutable(Frame frame, ObjectHandle hTarget)
+    protected int makeImmutable(Frame frame, ObjectHandle hTarget)
         {
-        return xException.unsupportedOperation(frame, "makeImmutable");
+        return frame.raiseException(xException.unsupportedOperation(frame, "makeImmutable"));
         }
 
     @Override

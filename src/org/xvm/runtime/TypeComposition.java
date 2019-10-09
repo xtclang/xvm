@@ -212,17 +212,17 @@ public interface TypeComposition
         }
 
     /**
-     * @return a list of field names
+     * @return a list of field names (excluding potentially unassigned and lazy)
      */
     List<String> getFieldNames();
 
     /**
-     * @return an array of field name handles
+     * @return an array of field name handles (excluding potentially unassigned and lazy)
      */
     StringHandle[] getFieldNameArray();
 
     /**
-     * @return an array of field value handles
+     * @return an array of field value handles (excluding potentially unassigned and lazy)
      */
     ObjectHandle[] getFieldValueArray(GenericHandle hValue);
     }

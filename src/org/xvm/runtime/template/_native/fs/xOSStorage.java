@@ -23,7 +23,6 @@ import org.xvm.asm.constants.PropertyConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
@@ -71,9 +70,9 @@ public class xOSStorage
         }
 
     @Override
-    protected ExceptionHandle makeImmutable(Frame frame, ObjectHandle hTarget)
+    protected int postValidate(Frame frame, ObjectHandle hStruct)
         {
-        return null;
+        return Op.R_NEXT;
         }
 
     @Override

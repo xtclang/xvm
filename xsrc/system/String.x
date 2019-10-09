@@ -23,7 +23,7 @@ const String
     /**
      * The array of characters that form the content of the String.
      */
-    private immutable Char[] chars; // TODO GG - should not need to specify immutable here
+    private Char[] chars;
 
 
     // ----- operators -----------------------------------------------------------------------------

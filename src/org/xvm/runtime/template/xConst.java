@@ -2,6 +2,7 @@ package org.xvm.runtime.template;
 
 
 import java.util.Iterator;
+import java.util.List;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
@@ -28,6 +29,8 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
+import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xBitArray;
 
 import org.xvm.runtime.template.xEnum.EnumHandle;
@@ -70,6 +73,7 @@ public class xConst
 
             FN_ESTIMATE_LENGTH = clzHelper.findMethod("estimateStringLength", 2);
             FN_APPEND_TO       = clzHelper.findMethod("appendTo", 3);
+            FN_FREEZE          = clzHelper.findMethod("freeze", 1);
 
             // Range support
             RANGE_CONSTRUCT = f_templates.getClassStructure("Range").
@@ -99,12 +103,6 @@ public class xConst
             HASH_SIG = f_templates.getClassStructure("collections.Hashable").
                 findMethod("hashCode", 2).getIdentityConstant().getSignature();
             }
-        }
-
-    @Override
-    protected boolean isConstructImmutable()
-        {
-        return true;
         }
 
     @Override
@@ -188,12 +186,66 @@ public class xConst
             byte[] abValue = new byte[] {((UInt8Constant) constant).getValue().byteValue()};
 
             ObjectHandle[] ahArg = new ObjectHandle[NIBBLE_CONSTRUCT.getMaxVars()];
-            ahArg[0] = xBitArray.makeHandle(abValue, 4, xArray.Mutability.Constant);
+            ahArg[0] = xBitArray.makeHandle(abValue, 4, Mutability.Constant);
 
             return construct(frame, NIBBLE_CONSTRUCT, ensureClass(constant.getType()), null, ahArg, Op.A_STACK);
             }
 
         return super.createConstHandle(frame, constant);
+        }
+
+    @Override
+    protected int postValidate(Frame frame, ObjectHandle hStruct)
+        {
+        if (hStruct.isMutable())
+            {
+            GenericHandle    hConst = (GenericHandle) hStruct;
+            ClassComposition clz    = (ClassComposition) hStruct.getComposition();
+
+            ObjectHandle[] ahFields = clz.getFieldValueArray(hConst);
+            if (ahFields.length > 0)
+                {
+                GenericArrayHandle hValues = (GenericArrayHandle) xArray.makeObjectArrayHandle(ahFields, Mutability.FixedSize);
+
+                ObjectHandle[] ahVars = new ObjectHandle[FN_FREEZE.getMaxVars()];
+                ahVars[0] = hValues;
+
+                Frame frameFreeze = frame.createFrame1(FN_FREEZE, null, ahVars, Op.A_STACK);
+
+                frameFreeze.addContinuation(frameCaller ->
+                    {
+                    int iResult = (int) ((JavaLong) frameCaller.popStack()).getValue();
+                    switch (iResult)
+                        {
+                        case -1: // all objects were immutable
+                            break;
+
+                        case -2: // a copy needs to be made
+                            {
+                            List<String> listNames = clz.getFieldNames();
+                            for (int i = 0, c = listNames.size(); i < c; i++)
+                                {
+                                hConst.setField(listNames.get(i), hValues.m_ahValue[i]);
+                                }
+                            break;
+                            }
+
+                        default: // iResult is an index for a not freezable field
+                            {
+                            String sField = clz.getFieldNames().get(iResult);
+                            return frame.raiseException("field \"" + sField + "\" is not freezable");
+                            }
+                        }
+
+                    hConst.makeImmutable();
+                    return Op.R_NEXT;
+                    });
+
+                return frame.callInitialized(frameFreeze);
+                }
+            hConst.makeImmutable();
+            }
+        return Op.R_NEXT;
         }
 
     @Override
@@ -290,7 +342,7 @@ public class xConst
         if (ahNames.length > 0)
             {
             ArrayHandle hNames  = xArray.makeStringArrayHandle(ahNames);
-            ArrayHandle hValues = xArray.makeObjectArrayHandle(ahFields);
+            ArrayHandle hValues = xArray.makeObjectArrayHandle(ahFields, Mutability.Constant);
 
             // estimateStringLength(String[] names, Object[] fields)
             ObjectHandle[] ahVars = new ObjectHandle[FN_ESTIMATE_LENGTH.getMaxVars()];
@@ -324,7 +376,7 @@ public class xConst
         ObjectHandle[] ahFields = clz.getFieldValueArray(hConst);
 
         ArrayHandle hNames  = xArray.makeStringArrayHandle(ahNames);
-        ArrayHandle hValues = xArray.makeObjectArrayHandle(ahFields);
+        ArrayHandle hValues = xArray.makeObjectArrayHandle(ahFields, Mutability.Constant);
 
         // appendTo(Appender<Char> appender, String[] names, Object[] fields)
         ObjectHandle[] ahVars = new ObjectHandle[FN_APPEND_TO.getMaxVars()];
@@ -613,6 +665,7 @@ public class xConst
 
     private static MethodStructure FN_ESTIMATE_LENGTH;
     private static MethodStructure FN_APPEND_TO;
+    private static MethodStructure FN_FREEZE;
     private static MethodStructure RANGE_CONSTRUCT;
     private static MethodStructure NIBBLE_CONSTRUCT;
     private static MethodStructure DATETIME_CONSTRUCT;

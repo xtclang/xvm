@@ -426,7 +426,6 @@ public class xString
             super(clazz);
 
             m_achValue = achValue;
-            m_fMutable = false;
             }
 
         public char[] getValue()

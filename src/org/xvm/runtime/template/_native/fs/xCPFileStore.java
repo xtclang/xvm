@@ -132,7 +132,7 @@ public class xCPFileStore
 
                 return frame.assignValues(aiReturn,
                         xArray.makeStringArrayHandle(ahNames),
-                        xArray.makeObjectArrayHandle(ahCookies));
+                        xArray.makeObjectArrayHandle(ahCookies, Mutability.Constant));
                 }
             }
 

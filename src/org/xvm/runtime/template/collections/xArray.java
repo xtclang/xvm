@@ -221,9 +221,7 @@ public class xArray
      */
     public ArrayHandle createArrayHandle(ClassComposition clzArray, ObjectHandle[] ahArg)
         {
-        GenericArrayHandle hArray = new GenericArrayHandle(clzArray, ahArg, Mutability.Constant);
-        hArray.makeImmutable();
-        return hArray;
+        return new GenericArrayHandle(clzArray, ahArg, Mutability.Constant);
         }
 
     /**
@@ -896,13 +894,13 @@ public class xArray
             s_clzStringArray = INSTANCE.f_templates.resolveClass(typeArray);
             }
 
-        return xArray.INSTANCE.createArrayHandle(s_clzStringArray, ahValue);
+        return new GenericArrayHandle(s_clzStringArray, ahValue, Mutability.Constant);
         }
 
     /**
-     * @return an immutable Object array handle
+     * @return an Object array handle with the specified mutability
      */
-    public static ArrayHandle makeObjectArrayHandle(ObjectHandle[] ahValue)
+    public static ArrayHandle makeObjectArrayHandle(ObjectHandle[] ahValue, Mutability mutability)
         {
         if (s_clzObjectArray == null)
             {
@@ -912,7 +910,7 @@ public class xArray
             s_clzObjectArray = INSTANCE.f_templates.resolveClass(typeArray);
             }
 
-        return xArray.INSTANCE.createArrayHandle(s_clzObjectArray, ahValue);
+        return new GenericArrayHandle(s_clzObjectArray, ahValue, mutability);
         }
 
     // generic array handle

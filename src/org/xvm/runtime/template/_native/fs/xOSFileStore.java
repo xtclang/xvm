@@ -43,6 +43,12 @@ public class xOSFileStore
         }
 
     @Override
+    protected int postValidate(Frame frame, ObjectHandle hStruct)
+        {
+        return makeImmutable(frame, hStruct);
+        }
+
+    @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         switch (sPropName)
@@ -88,11 +94,6 @@ public class xOSFileStore
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
-    @Override
-    protected boolean isConstructImmutable()
-        {
-        return true;
-        }
 
     // ----- constants -----------------------------------------------------------------------------
 

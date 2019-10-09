@@ -52,7 +52,6 @@ import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xRef;
 import org.xvm.runtime.template.xRef.RefHandle;
-import org.xvm.runtime.template.xService.ServiceHandle;
 import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xVar;
 
@@ -245,14 +244,6 @@ public abstract class ClassTemplate
         return typeMask.equals(typeInception) ? clz : clz.maskAs(typeMask);
         }
 
-    /**
-     * @return true iff a newly constructed object should be marked as "immutable"
-     */
-    protected boolean isConstructImmutable()
-        {
-        return false;
-        }
-
     protected ClassTemplate getChildTemplate(String sName)
         {
         return f_templates.getTemplate(f_sName + '.' + sName);
@@ -371,7 +362,29 @@ public abstract class ClassTemplate
         }
 
     /**
+     * Create an ObjectHandle of the "struct" access for the specified natural class.
+     *
+     * @param frame  the current frame
+     * @param clazz  the ClassComposition for the newly created handle
+     *
+     * @return the newly allocated handle
+     */
+    protected ObjectHandle createStruct(Frame frame, ClassComposition clazz)
+        {
+        assert clazz.getTemplate() == this &&
+            (f_struct.getFormat() == Format.CLASS ||
+                f_struct.getFormat() == Format.CONST ||
+                f_struct.getFormat() == Format.ENUMVALUE);
+
+        clazz = clazz.ensureAccess(Access.STRUCT);
+
+        return new GenericHandle(clazz);
+        }
+
+    /**
      * Continuation of the {@link #construct} sequence.
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int callConstructor(Frame frame, MethodStructure constructor, MethodStructure methodAI,
                                ObjectHandle hStruct, ObjectHandle[] ahVar, int iReturn)
@@ -402,13 +415,21 @@ public abstract class ClassTemplate
                     xException.unassignedFields(frameCaller, listUnassigned));
                 }
 
-            if (isConstructImmutable())
+            switch (postValidate(frameCaller, hStruct))
                 {
-                ExceptionHandle hEx = makeImmutable(frameCaller, hStruct);
-                if (hEx != null)
-                    {
-                    return frame.raiseException(hEx);
-                    }
+                case Op.R_NEXT:
+                    break;
+
+                case Op.R_CALL:
+                    frameCaller.m_frameNext.addContinuation(frame0 ->
+                        {
+                        ObjectHandle hPublic = hStruct.ensureAccess(Access.PUBLIC);
+
+                        return hFD.callChain(frameCaller, hPublic, frame1 ->
+                            frame1.assignValue(iReturn, hPublic));
+
+                        });
+                    return Op.R_CALL;
                 }
 
             ObjectHandle hPublic = hStruct.ensureAccess(Access.PUBLIC);
@@ -430,23 +451,16 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Create an ObjectHandle of the "struct" access for the specified natural class.
+     * Perform any necessary action on validated structure before it turns into the "public" type.
      *
-     * @param frame  the current frame
-     * @param clazz  the ClassComposition for the newly created handle
+     * @param frame    the current frame
+     * @param hStruct  the struct handle
      *
-     * @return the newly allocated handle
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    protected ObjectHandle createStruct(Frame frame, ClassComposition clazz)
+    protected int postValidate(Frame frame, ObjectHandle hStruct)
         {
-        assert clazz.getTemplate() == this &&
-             (f_struct.getFormat() == Format.CLASS ||
-              f_struct.getFormat() == Format.CONST ||
-              f_struct.getFormat() == Format.ENUMVALUE);
-
-        clazz = clazz.ensureAccess(Access.STRUCT);
-
-        return new GenericHandle(clazz);
+        return Op.R_NEXT;
         }
 
 
@@ -458,9 +472,9 @@ public abstract class ClassTemplate
      * @param frame    the current frame
      * @param hTarget  the object handle
      *
-     * @return null if the operation succeeded, an exception to throw otherwise
+     * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */
-    protected ExceptionHandle makeImmutable(Frame frame, ObjectHandle hTarget)
+    protected int makeImmutable(Frame frame, ObjectHandle hTarget)
         {
         if (hTarget.isMutable())
             {
@@ -476,16 +490,22 @@ public abstract class ClassTemplate
                     ObjectHandle hValue = entry.getValue();
                     if (hValue != null && hValue.isMutable() && !clz.isLazy(nid))
                         {
-                        ExceptionHandle hEx = hValue.getTemplate().makeImmutable(frame, hValue);
-                        if (hEx != null)
+                        switch (hValue.getTemplate().makeImmutable(frame, hValue))
                             {
-                            return hEx;
+                            case Op.R_NEXT:
+                                continue;
+
+                            case Op.R_EXCEPTION:
+                                return Op.R_EXCEPTION;
+
+                            default:
+                                throw new IllegalStateException();
                             }
                         }
                     }
                 }
             }
-        return null;
+        return Op.R_NEXT;
         }
 
     /**

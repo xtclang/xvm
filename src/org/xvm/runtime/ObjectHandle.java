@@ -131,7 +131,10 @@ public abstract class ObjectHandle
      */
     public TypeConstant getType()
         {
-        return m_clazz.getType();
+        TypeConstant type = m_clazz.getType();
+        return isMutable()
+                ? type
+                : type.ensureImmutable(type.getConstantPool());
         }
 
     public ObjectHandle ensureAccess(Constants.Access access)

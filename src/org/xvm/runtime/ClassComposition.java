@@ -348,7 +348,7 @@ public class ClassComposition
                     if (nid instanceof String)
                         {
                         String sName = (String) nid;
-                        if (sName.charAt(0) != '$')
+                        if (sName.charAt(0) != '$' && !isAllowedUnassigned(sName) && !isLazy(sName))
                             {
                             listNames.add(sName);
                             }
