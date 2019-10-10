@@ -620,11 +620,11 @@ public class Compiler
      */
     public static final String CLASS_UNEXPECTED                   = "COMPILER-04";
     /**
-     * Another property by the same name exists.
+     * Property {0} is a duplicate.
      */
     public static final String PROP_DUPLICATE                     = "COMPILER-05";
     /**
-     * Cannot nest a property.
+     * Property {0} cannot be nested under {1}.
      */
     public static final String PROP_UNEXPECTED                    = "COMPILER-06";
     /**
