@@ -1399,9 +1399,13 @@ public abstract class Component
      */
     public Component getChild(Constant constId)
         {
-        Component firstSibling = getChildByNameMap().get(((NamedConstant) constId).getName());
+        if (constId instanceof NamedConstant)
+            {
+            Component firstSibling = getChildByNameMap().get(((NamedConstant) constId).getName());
 
-        return findLinkedChild(constId, firstSibling);
+            return findLinkedChild(constId, firstSibling);
+            }
+        return null;
         }
 
     /**
