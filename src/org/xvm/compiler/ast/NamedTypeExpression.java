@@ -581,11 +581,12 @@ public class NamedTypeExpression
             // this can only mean that the name resolution ended in an error
             // and has been deferred (e.g. "that.Element" or "that.Key.Element")
             NameExpression exprOld = new NameExpression(names.get(0));
+            getParent().adopt(exprOld);
 
             for (int i = 1, cNames = names.size(); i < cNames; i++)
                 {
                 NameExpression exprNext = new NameExpression(exprOld, null, names.get(i), null, lEndPos);
-                exprNext.adopt(exprOld);
+                exprOld.adopt(exprNext);
                 exprOld = exprNext;
                 }
 
