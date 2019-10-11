@@ -1,9 +1,13 @@
 package org.xvm.asm;
 
 
+import java.text.MessageFormat;
+import java.util.ResourceBundle;
 import org.xvm.compiler.Source;
 
 import org.xvm.util.Severity;
+
+import static org.xvm.util.Handy.quotedString;
 
 
 /**
@@ -13,6 +17,16 @@ import org.xvm.util.Severity;
 public interface ErrorListener
     {
     // ----- API -----------------------------------------------------------------------------------
+
+    /**
+     * Handles the logging of an error that originates in Ecstasy source code.
+     *
+     * @param err  the error info
+     *
+     * @return true to attempt to abort the process that reported the error, or
+     *         false to attempt continue the process*
+     */
+    boolean log(ErrorInfo err);
 
     /**
      * Handles the logging of an error that originates in Ecstasy source code.
@@ -29,8 +43,11 @@ public interface ErrorListener
      * @return true to attempt to abort the process that reported the error, or
      *         false to attempt continue the process
      */
-    public boolean log(Severity severity, String sCode, Object[] aoParam,
-            Source source, long lPosStart, long lPosEnd);
+    default boolean log(Severity severity, String sCode, Object[] aoParam,
+            Source source, long lPosStart, long lPosEnd)
+        {
+        return log(new ErrorInfo(severity, sCode, aoParam, source, lPosStart, lPosEnd));
+        }
 
     /**
      * Handles the logging of an error that originates in an Ecstasy XVM structure.
@@ -46,15 +63,62 @@ public interface ErrorListener
      * @return true to attempt to abort the process that reported the error, or
      *         false to attempt continue the process
      */
-    public boolean log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs);
+    default boolean log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs)
+        {
+        return log(new ErrorInfo(severity, sCode, aoParam, xs));
+        }
+
+    /**
+     * Branch this ErrorListener by creating a new one that will collect subsequent errors
+     * in the same manner as this one until is's {@link #merge() merged} or discarded.
+     *
+     * @return the branched-out ErrorListener
+     */
+    default ErrorListener branch()
+        {
+        return new ErrorList.BranchedErrorListener(this);
+        }
+
+    /**
+     * Merge all errors collected by this ErrorListener into the one it was branched out of.
+     *
+     * @return the ErrorListener this one was {@link #branch() branched out} of
+     */
+    default ErrorListener merge()
+        {
+        throw new UnsupportedOperationException("nothing to merge");
+        }
 
     /**
      * @return true if the ErrorListener has decided to abort the process that reported the error
      */
-    public default boolean isAbortDesired()
+    default boolean isAbortDesired()
         {
         return false;
         }
+
+    /**
+     * @return true iff an error has been logged with at least the Severity of Error
+     */
+    default boolean hasSeriousErrors()
+        {
+        return false;
+        }
+
+    /**
+     * @return true iff an error has been logged with the specified code
+     */
+    default boolean hasError(String sCode)
+        {
+        return false;
+        }
+
+    /**
+     * Used for debugging only.
+     *
+     * @return true iff this listener sits on top of the BlackHoleListener
+     */
+    boolean isSilent();
 
 
     // ----- inner class: BlackholeErrorListener ---------------------------------------------------
@@ -63,33 +127,19 @@ public interface ErrorListener
      * A simple implementation of the ErrorListener that converts reported errors to ErrorInfo
      * objects and routes them to a single sink method.
      */
-    public class BlackholeErrorListener
+    class BlackholeErrorListener
             implements ErrorListener
         {
         @Override
-        public boolean log(Severity severity, String sCode, Object[] aoParam,
-                Source source, long lPosStart, long lPosEnd)
+        public boolean log(ErrorInfo err)
             {
-            return log(new ErrorList.ErrorInfo(severity, sCode, aoParam, source, lPosStart, lPosEnd));
+            return false;
             }
 
         @Override
-        public boolean log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs)
+        public boolean isSilent()
             {
-            return log(new ErrorList.ErrorInfo(severity, sCode, aoParam, xs));
-            }
-
-        /**
-         * This is the sink method for errors.
-         *
-         * @param err  the error being logged
-         *
-         * @return true if the ErrorListener has decided to abort the process that reported the
-         *         error
-         */
-        protected boolean log(ErrorList.ErrorInfo err)
-            {
-            return isAbortDesired();
+            return true;
             }
 
         @Override
@@ -106,11 +156,11 @@ public interface ErrorListener
      * A simple implementation of the ErrorListener that can be used at runtime. Errors will throw,
      * and non-errors will go to standard out.
      */
-    public class RuntimeErrorListener
-            extends BlackholeErrorListener
+    class RuntimeErrorListener
+            implements ErrorListener
         {
         @Override
-        protected boolean log(ErrorList.ErrorInfo err)
+        public boolean log(ErrorInfo err)
             {
             String s = err.toString();
             if (err.getSeverity().ordinal() >= Severity.ERROR.ordinal())
@@ -125,6 +175,12 @@ public interface ErrorListener
             }
 
         @Override
+        public boolean isSilent()
+            {
+            return false;
+            }
+
+        @Override
         public String toString()
             {
             return "(Runtime error listener)";
@@ -132,130 +188,271 @@ public interface ErrorListener
         };
 
 
-    // ----- inner class: SilentErrorListener ------------------------------------------------------
+    // ----- inner class: ErrorInfo ----------------------------------------------------------------
 
     /**
-     * A simple implementation of the ErrorListener that can be used to capture errors. The first
-     * error gets saved.
+     * Represents the information logged for a single error.
      */
-    public class SilentErrorListener
-            extends BlackholeErrorListener
+    class ErrorInfo
         {
-        @Override
-        public boolean isAbortDesired()
+        /**
+         * Construct an ErrorInfo object.
+         *
+         * @param severity    the severity level of the error; one of
+         *                    {@link Severity#INFO}, {@link Severity#WARNING,
+         *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
+         * @param sCode       the error code that identifies the error message
+         * @param aoParam     the parameters for the error message; may be null
+         * @param source      the source code
+         * @param lPosStart   the starting position in the source code
+         * @param lPosEnd     the ending position in the source code
+         */
+        public ErrorInfo(Severity severity, String sCode, Object[] aoParam,
+                Source source, long lPosStart, long lPosEnd)
             {
-            return m_err != null;
+            m_severity   = severity;
+            m_sCode      = sCode;
+            m_aoParam    = aoParam;
+            m_source     = source;
+            m_lPosStart  = lPosStart;
+            m_lPosEnd    = lPosEnd;
             }
 
-        public ErrorList.ErrorInfo getFirstError()
+        /**
+         * Construct an ErrorInfo object.
+         *
+         * @param severity    the severity level of the error; one of
+         *                    {@link Severity#INFO}, {@link Severity#WARNING,
+         *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
+         * @param sCode       the error code that identifies the error message
+         * @param aoParam     the parameters for the error message; may be null
+         * @param xs
+         */
+        public ErrorInfo(Severity severity, String sCode, Object[] aoParam, XvmStructure xs)
             {
-            return m_err;
+            m_severity = severity;
+            m_sCode    = sCode;
+            m_aoParam  = aoParam;
+            m_xs       = xs;
+            // TODO need to be able to ask the XVM structure for the source & location
             }
 
-        @Override
-        protected boolean log(ErrorList.ErrorInfo err)
+        /**
+         * @return the Severity of the error
+         */
+        public Severity getSeverity()
             {
-            if (m_err == null && err.getSeverity().ordinal() >= Severity.ERROR.ordinal())
+            return m_severity;
+            }
+
+        /**
+         * @return the error code
+         */
+        public String getCode()
+            {
+            return m_sCode;
+            }
+
+        /**
+         * @return the error message parameters
+         */
+        public Object[] getParams()
+            {
+            return m_aoParam;
+            }
+
+        /**
+         * Produce a localized message based on the error code and related
+         * parameters.
+         *
+         * @return a formatted message for display
+         */
+        public String getMessage()
+            {
+            return getCode() + ": " + MessageFormat.format(RESOURCES.getString(getCode()), getParams());
+            }
+
+        /**
+         * @return the source code
+         */
+        public Source getSource()
+            {
+            return m_source;
+            }
+
+        /**
+         * @return the starting position in the source (opaque)
+         */
+        public long getPos()
+            {
+            return m_lPosStart;
+            }
+
+        /**
+         * @return the line number (zero based) at which the error occurred
+         */
+        public int getLine()
+            {
+            return Source.calculateLine(m_lPosStart);
+            }
+
+        /**
+         * @return the offset (zero based) at which the error occurred
+         */
+        public int getOffset()
+            {
+            return Source.calculateOffset(m_lPosStart);
+            }
+
+        /**
+         * @return the ending position in the source (opaque)
+         */
+        public long getEndPos()
+            {
+            return m_lPosEnd;
+            }
+
+        /**
+         * @return the line number (zero based) at which the error concluded
+         */
+        public int getEndLine()
+            {
+            return Source.calculateLine(m_lPosEnd);
+            }
+
+        /**
+         * @return the offset (zero based) at which the error concluded
+         */
+        public int getEndOffset()
+            {
+            return Source.calculateOffset(m_lPosEnd);
+            }
+
+        /**
+         * @return the XvmStructure that this error is related to, or null
+         */
+        public XvmStructure getXvmStructure()
+            {
+            return m_xs;
+            }
+
+        /**
+         * @return an ID that allows redundant errors to be filtered out
+         */
+        public Object genUID()
+            {
+            StringBuilder sb = new StringBuilder();
+            sb.append(m_severity.ordinal())
+                    .append(':')
+                    .append(m_sCode);
+
+            if (m_xs != null && m_xs.getIdentityConstant() != null)
                 {
-                m_err = err;
+                sb.append(':')
+                  .append(m_xs.getIdentityConstant().getPathString());
                 }
 
-            return super.log(err);
+            if (m_source != null)
+                {
+                sb.append(':')
+                  .append(m_source.getFileName())
+                  .append(':')
+                  .append(m_lPosStart)
+                  .append(':')
+                  .append(m_lPosStart);
+                }
+
+            return sb.toString();
             }
 
         @Override
         public String toString()
             {
-            return m_err == null
-                    ? "(no errors)"
-                    : "first error: " + m_err;
-            }
+            StringBuilder sb = new StringBuilder();
 
-        private ErrorList.ErrorInfo m_err;
-        }
-
-
-    // ----- inner class: SpyingErrorListener ------------------------------------------------------
-
-    /**
-     * A simple implementation of the ErrorListener that watches for serious errors.
-     */
-    public class SevTrackingErrorListener
-            implements ErrorListener
-        {
-        /**
-         * Construct an ErrorListener that will abort if there are any serious errors logged.
-         *
-         * @param listener    the underlying error listener
-         */
-        public SevTrackingErrorListener(ErrorListener listener)
-            {
-            f_listener = listener;
-            }
-
-        @Override
-        public boolean log(Severity severity, String sCode, Object[] aoParam, Source source, long lPosStart, long lPosEnd)
-            {
-            log(severity);
-            return f_listener.log(severity, sCode, aoParam, source, lPosStart, lPosEnd);
-            }
-
-        @Override
-        public boolean log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs)
-            {
-            log(severity);
-            return f_listener.log(severity, sCode, aoParam, xs);
-            }
-
-        @Override
-        public boolean isAbortDesired()
-            {
-            return f_listener.isAbortDesired();
-            }
-
-        /**
-         * @return the worst severity encountered thus far, or null if nothing has been logged
-         */
-        public Severity getMaxSeverity()
-            {
-            return m_sevMax;
-            }
-
-        /**
-         * Compare the max encountered severity with the specified severity to see if we have
-         * encountered an error of at least that severity level.
-         *
-         * @param sev  the severity to check for
-         *
-         * @return true iff an error has been logged with at least the specified severity
-         */
-        public boolean hasEncountered(Severity sev)
-            {
-            return m_sevMax != null && m_sevMax.compareTo(sev) >= 0;
-            }
-
-        private void log(Severity severity)
-            {
-            if (m_sevMax == null || severity.compareTo(m_sevMax) > 0)
+            // source code location
+            if (m_source != null)
                 {
-                m_sevMax = severity;
+                String sFile = m_source.getFileName();
+                if (sFile != null)
+                    {
+                    sb.append(sFile)
+                      .append(' ');
+                    }
+
+                sb.append("[")
+                  .append(getLine() + 1)
+                  .append(':')
+                  .append(getOffset() + 1);
+
+                if (getEndLine() != getLine() || getEndOffset() != getOffset())
+                    {
+                    sb.append("..")
+                      .append(getEndLine() + 1)
+                      .append(':')
+                      .append(getEndOffset() + 1);
+                    }
+
+                sb.append("] ");
                 }
+
+            // XVM Structure id
+            XvmStructure xs = getXvmStructure();
+            while (xs != null)
+                {
+                Constant constId = xs.getIdentityConstant();
+                if (constId == null)
+                    {
+                    xs = xs.getContaining();
+                    }
+                else
+                    {
+                    sb.append("[")
+                      .append(constId)
+                      .append("] ");
+                    break;
+                    }
+                }
+
+            // localized message
+            sb.append(getMessage());
+
+            // source code snippet
+            if (m_source != null && m_lPosStart != m_lPosEnd)
+                {
+                String sSource = m_source.toString(m_lPosStart, m_lPosEnd);
+                if (sSource.length() > 80)
+                    {
+                    sSource = sSource.substring(0, 77) + "...";
+                    }
+
+                sb.append(" (")
+                  .append(quotedString(sSource))
+                  .append(')');
+                }
+
+            return sb.toString();
             }
 
-        @Override
-        public String toString()
-            {
-            return (m_sevMax == null ? "(no errors)" : "(max-sev=" + m_sevMax + ')')
-                    + ' ' + f_listener.toString();
-            }
-
-        private final ErrorListener f_listener;
-        private       Severity      m_sevMax;
+        private Severity     m_severity;
+        private String       m_sCode;
+        private Object[]     m_aoParam;
+        private Source       m_source;
+        private long         m_lPosStart;
+        private long         m_lPosEnd;
+        private XvmStructure m_xs;
         }
-
 
     // ----- constants -----------------------------------------------------------------------------
 
-    public static final ErrorListener BLACKHOLE = new BlackholeErrorListener();
-    public static final ErrorListener RUNTIME   = new RuntimeErrorListener();
+    /**
+     * Text of the error messages.
+     */
+    ResourceBundle RESOURCES = ResourceBundle.getBundle("errors");
+
+    /**
+     * Stateless ErrorListeners.
+     */
+    ErrorListener BLACKHOLE = new BlackholeErrorListener();
+    ErrorListener RUNTIME   = new RuntimeErrorListener();
     }

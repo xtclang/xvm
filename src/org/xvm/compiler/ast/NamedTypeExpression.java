@@ -14,7 +14,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -472,8 +471,8 @@ public class NamedTypeExpression
                 }
             }
 
-        ErrorList    errsTemp = new ErrorList(1);
-        NameResolver resolver = getNameResolver();
+        ErrorListener errsTemp = errs.branch();
+        NameResolver  resolver = getNameResolver();
         switch (resolver.resolve(errsTemp))
             {
             case DEFERRED:
@@ -492,7 +491,7 @@ public class NamedTypeExpression
                 boolean fProceed = true;
                 if (!constId.getFormat().isTypable())
                     {
-                    errsTemp.logTo(errs);
+                    errsTemp.merge();
                     log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE, constId.getValueString());
                     fProceed = false;
                     }
@@ -500,13 +499,13 @@ public class NamedTypeExpression
                     {
                     if (paramTypes != null)
                         {
-                        errsTemp.logTo(errs);
+                        errsTemp.merge();
                         log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
                         fProceed = false;
                         }
                     else if (((PropertyConstant) constId).isFormalType() && names.size() > 1)
                         {
-                        errsTemp.logTo(errs);
+                        errsTemp.merge();
                         log(errs, Severity.ERROR, Compiler.INVALID_FORMAL_TYPE_IDENTITY);
                         fProceed = false;
                         }
@@ -522,7 +521,7 @@ public class NamedTypeExpression
                 // the resolved one (just in case anyone is holding the wrong one
                 Constant constIdNew = m_constId = inferAutoNarrowing(constId, errsTemp);
 
-                if (!errsTemp.isAbortDesired())
+                if (!errsTemp.hasSeriousErrors())
                     {
                     if (m_constUnresolved != null)
                         {
@@ -543,10 +542,10 @@ public class NamedTypeExpression
                         }
                     }
 
-                if (errsTemp.isAbortDesired())
+                if (errsTemp.hasSeriousErrors())
                     {
                     // cannot proceed
-                    errsTemp.logTo(errs);
+                    errsTemp.merge();
                     mgr.deferChildren();
                     return;
                     }
@@ -564,7 +563,7 @@ public class NamedTypeExpression
                     }
 
                 // cannot proceed
-                errsTemp.logTo(errs);
+                errsTemp.merge();
                 break;
             }
         }

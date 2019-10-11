@@ -12,7 +12,6 @@ import java.util.Map.Entry;
 
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
@@ -257,7 +256,7 @@ public class WhileStatement
             block = (StatementBlock) blockOrig.clone();
 
             // create a temporary error list
-            errs = new ErrorList(1);
+            errs = errsOrig.branch();
 
             // we use a potentially unnecessary context here as a place to jam in any assumptions
             // that we learned on a previous trial run through the loop
@@ -434,7 +433,7 @@ public class WhileStatement
                     ctx = ctx.exit();
                     }
 
-                ((ErrorList) errs).logTo(errsOrig);
+                errs = errs.merge();
                 return fValid ? this : null;
                 }
             }

@@ -22,7 +22,6 @@ import java.util.Set;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
@@ -1086,7 +1085,7 @@ public abstract class AstNode
         // collect all theoretically matching methods
         Set<MethodConstant> setIs      = new HashSet<>();
         Set<MethodConstant> setConvert = new HashSet<>();
-        ErrorList           errsTemp   = new ErrorList(1);
+        ErrorListener       errsTemp   = errs.branch();
 
         collectMatchingMethods(ctx, infoTarget, setMethods, listExprArgs,
                 atypeArgs, mapNamedExpr, atypeReturn, setIs, setConvert, errsTemp);
@@ -1107,7 +1106,7 @@ public abstract class AstNode
             atypeArgs  = typeTupleArg.getParamTypesArray();
             setMethods = infoTarget.findMethods(sMethodName, atypeArgs.length, methodType);
 
-            ErrorList errsTempT = new ErrorList(1);
+            ErrorListener errsTempT = errs.branch();
             collectMatchingMethods(ctx, infoTarget, setMethods, null,
                     atypeArgs, mapNamedExpr, atypeReturn, setIs, setConvert, errsTempT);
 
@@ -1121,15 +1120,15 @@ public abstract class AstNode
                 return chooseBest(setConvert, typeTarget, errs);
                 }
 
-            if (errsTempT.hasErrors() && !errsTemp.hasErrors())
+            if (!errsTemp.hasSeriousErrors())
                 {
-                errsTempT.logTo(errsTemp);
+                errsTempT.merge();
                 }
             }
 
-        if (errsTemp.isAbortDesired())
+        if (errsTemp.hasSeriousErrors())
             {
-            errsTemp.logTo(errs);
+            errsTemp.merge();
             }
         else
             {
@@ -1164,13 +1163,13 @@ public abstract class AstNode
             Set<MethodConstant>     setConvert,
             ErrorListener           errs)
         {
-        ConstantPool pool     = pool();
-        int          cArgs    = atypeArgs.length;
-        int          cReturns = atypeReturn == null ? 0 : atypeReturn.length;
-        int          cNamed   = mapNamedExpr == null ? 0 : mapNamedExpr.size();
-        int          cUnnamed = cArgs - cNamed;
-        ErrorList    errsTemp = errs == ErrorListener.BLACKHOLE ? null : new ErrorList(1);
-        ErrorList    errsBest = null;
+        ConstantPool  pool     = pool();
+        int           cArgs    = atypeArgs.length;
+        int           cReturns = atypeReturn == null ? 0 : atypeReturn.length;
+        int           cNamed   = mapNamedExpr == null ? 0 : mapNamedExpr.size();
+        int           cUnnamed = cArgs - cNamed;
+        ErrorListener errsTemp = errs.branch();
+        ErrorListener errsKeep = null;
 
         NextMethod: for (MethodConstant idMethod : setMethods)
             {
@@ -1323,22 +1322,19 @@ public abstract class AstNode
 
             if (!fit.isFit())
                 {
-                if (errsTemp != null && errsTemp.hasErrors())
+                if (errsTemp.hasSeriousErrors())
                     {
-                    // if (and as long as) we are looking for errors, then keep the worst one
-                    // that we have found thus far (we call it the "best" one because it is the
-                    // "worst" result), but once we find something bad enough to stop
-                    // compilation, that becomes our permanently-best choice (so we stop looking
-                    // for more errors, but we keep looking for a method that fits)
-                    if (errsBest == null ||
-                            errsTemp.getSeverity().compareTo(errsBest.getSeverity()) > 0)
+                    // once we find something bad enough to stop compilation, that becomes our
+                    // "errors to report in case there is no match", but we keep looking for a
+                    // method that fits
+                    if (errsKeep == null)
                         {
-                        errsBest = errsTemp;
-                        errsTemp = errsTemp.isAbortDesired() ? null : new ErrorList(1);
+                        errsKeep = errsTemp;
                         }
                     else
                         {
-                        errsTemp.clear();
+                        // discard the errors
+                        errsTemp = errs.branch();
                         }
                     }
                 continue; // NextMethod
@@ -1391,9 +1387,11 @@ public abstract class AstNode
                 }
             }
 
-        if (errsBest != null)
+        if (errsKeep != null)
             {
-            errsBest.logTo(errs);
+            // copy the most serious errors even if we found some matching methods; there is a
+            // chance that none of them fit, in which case the caller would report those errors
+            errsKeep.merge();
             }
         }
 

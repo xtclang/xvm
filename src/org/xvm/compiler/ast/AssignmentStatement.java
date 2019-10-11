@@ -10,7 +10,6 @@ import java.util.Map;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
@@ -399,10 +398,10 @@ public class AssignmentStatement
                    nodeLeft instanceof MultipleLValueStatement;
 
             ctxLValue = new LValueContext(ctx);
+            errs      = errs.branch();
 
-            ErrorList errsTemp  = new ErrorList(1);
             Statement lvalueOld = (Statement) nodeLeft;
-            Statement lvalueNew = lvalueOld.validate(ctxLValue, errsTemp);
+            Statement lvalueNew = lvalueOld.validate(ctxLValue, errs);
 
             if (lvalueNew == null)
                 {
@@ -413,11 +412,11 @@ public class AssignmentStatement
                 lvalue = nodeLeft = lvalueNew;
                 }
 
-            if (errsTemp.isAbortDesired())
+            if (errs.hasSeriousErrors())
                 {
-                errsTemp.logTo(errs);
                 fValid = false;
                 }
+            errs = errs.merge();
             }
 
         // regardless of whether the LValue is a statement or expression, all L-Values must be able

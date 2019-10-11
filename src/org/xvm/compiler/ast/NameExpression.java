@@ -16,7 +16,6 @@ import org.xvm.asm.Component.SimpleCollector;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
@@ -1412,14 +1411,14 @@ public class NameExpression
         if (left == null)
             {
             // resolve the initial name; try to avoid double-reporting
-            ErrorList errsTemp = new ErrorList(1);
+            ErrorListener errsTemp = errs.branch();
 
             Argument arg = ctx.resolveName(name, errsTemp);
             if (arg == null)
                 {
-                if (errsTemp.isAbortDesired())
+                if (errsTemp.hasSeriousErrors())
                     {
-                    errsTemp.logTo(errs);
+                    errsTemp.merge();
                     }
                 else
                     {

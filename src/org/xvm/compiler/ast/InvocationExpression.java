@@ -13,7 +13,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
@@ -1802,7 +1801,8 @@ public class InvocationExpression
                             // idProp.getFormalType() is NaturalHasher.Value
 
                             TypeInfo  infoType = nameLeft.getImplicitType(ctx).getParamType(0).ensureTypeInfo(errs);
-                            ErrorList errsTemp = new ErrorList(1);
+
+                            ErrorListener errsTemp = errs.branch();
 
                             Argument arg = findCallable(ctx, infoType, sName, MethodType.Function, false,
                                                 atypeReturn, errsTemp);
@@ -1812,7 +1812,7 @@ public class InvocationExpression
                                 m_method      = getMethod(infoType, arg);
                                 m_fBindTarget = false;
                                 m_idFormal    = idProp;
-                                errsTemp.logTo(errs);
+                                errsTemp.merge();
                                 return arg;
                                 }
                             }
@@ -1834,8 +1834,8 @@ public class InvocationExpression
                         // "this" is "CompileType.Element.hashCode(el)"
                         //  typeLeft is a type of "CompileType.Element" formal type child
 
-                        TypeInfo  infoLeft = typeLeft.ensureTypeInfo(errs);
-                        ErrorList errsTemp = new ErrorList(1);
+                        TypeInfo      infoLeft = typeLeft.ensureTypeInfo(errs);
+                        ErrorListener errsTemp = errs.branch();
 
                         Argument arg = findCallable(ctx, infoLeft, sName, MethodType.Function, false,
                                             atypeReturn, errsTemp);
@@ -1845,7 +1845,7 @@ public class InvocationExpression
                             m_method      = getMethod(infoLeft, arg);
                             m_fBindTarget = false;
                             m_idFormal    = (FormalTypeChildConstant) nameLeft.getIdentity(ctx);
-                            errsTemp.logTo(errs);
+                            errsTemp.merge();
                             return arg;
                             }
                         break;
@@ -1860,9 +1860,10 @@ public class InvocationExpression
                             MethodStructure method = ctx.getMethod();
                             if (method.isTypeParameter(iReg))
                                 {
-                                TypeInfo  infoLeft = reg.getType().getParamType(0).ensureTypeInfo(errs);
-                                ErrorList errsTemp = new ErrorList(1);
-                                Argument  arg      = findCallable(ctx, infoLeft, sName, MethodType.Function, false,
+                                TypeInfo      infoLeft = reg.getType().getParamType(0).ensureTypeInfo(errs);
+                                ErrorListener errsTemp = errs.branch();
+
+                                Argument  arg = findCallable(ctx, infoLeft, sName, MethodType.Function, false,
                                                         atypeReturn, errsTemp);
                                 if (arg != null)
                                     {
@@ -1871,7 +1872,7 @@ public class InvocationExpression
                                     m_fBindTarget = false;
                                     m_idFormal    = method.getParam(iReg).
                                             asTypeParameterConstant(method.getIdentityConstant());
-                                    errsTemp.logTo(errs);
+                                    errsTemp.merge();
                                     return arg;
                                     }
                                 }
@@ -1884,8 +1885,8 @@ public class InvocationExpression
             // method/function to call
             // - methods are included because there is a left and it is NOT identity-mode
             // - functions are NOT included because the left is NOT identity-mode
-            TypeInfo  infoLeft = typeLeft.ensureTypeInfo(errs);
-            ErrorList errsTemp = new ErrorList(1);
+            TypeInfo      infoLeft = typeLeft.ensureTypeInfo(errs);
+            ErrorListener errsTemp = errs.branch();
 
             Argument arg = findCallable(ctx, infoLeft, sName, MethodType.Method, false,
                                 atypeReturn, errsTemp);
@@ -1894,7 +1895,7 @@ public class InvocationExpression
                 m_argMethod   = arg;
                 m_method      = getMethod(infoLeft, arg);
                 m_fBindTarget = m_method != null;
-                errsTemp.logTo(errs);
+                errsTemp.merge();
                 return arg;
                 }
 
@@ -1905,7 +1906,8 @@ public class InvocationExpression
                 List<Expression> listArgs = new ArrayList<>(args);
                 listArgs.add(0, exprLeft);
 
-                ErrorList errsTempB = new ErrorList(1);
+                ErrorListener errsTempB = errs.branch();
+
                 arg = findMethod(ctx, infoLeft, sName, listArgs, MethodType.Function, false,
                             atypeReturn, errsTempB);
                 if (arg != null)
@@ -1914,7 +1916,7 @@ public class InvocationExpression
                     m_method      = getMethod(infoLeft, arg);
                     m_fBindTarget = false;
                     m_fBjarne     = true;
-                    errsTempB.logTo(errs);
+                    errsTempB.merge();
                     return arg;
                     }
                 }
@@ -1922,15 +1924,14 @@ public class InvocationExpression
             if (exprLeft instanceof NameExpression && typeLeft.isA(pool.typeFunction()))
                 {
                 // it appears that they try to use a variable or property, but have a function instead
-                List<ErrorList.ErrorInfo> errors = errsTemp.getErrors();
-                if (errors.size() == 1 && errors.get(0).getCode().equals(Compiler.MISSING_METHOD))
+                if (errsTemp.hasError(Compiler.MISSING_METHOD))
                     {
                     NameExpression exprFn = (NameExpression) exprLeft;
                     log(errsTemp, Severity.ERROR, Compiler.SUSPICIOUS_FUNCTION_USE,
                             exprFn.getName(), exprFn.getIdentity(ctx).getNamespace().getValueString());
                     }
                 }
-            errsTemp.logTo(errs);
+            errsTemp.merge();
             }
 
         return null;

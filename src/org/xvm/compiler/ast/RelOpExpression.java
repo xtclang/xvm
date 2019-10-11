@@ -9,7 +9,6 @@ import java.util.Set;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
@@ -430,7 +429,7 @@ public class RelOpExpression
         int            cExpected    = fMulti ? 2 : 1;
         int            cResults     = cExpected;
         TypeConstant[] atypeResults = null;
-        ErrorList      errsTemp     = new ErrorList(1);
+        ErrorListener  errsTemp     = errs.branch();
         MethodConstant idOp         = findOpMethod(type1Act, type2Act, typeRequired, errsTemp);
 
         if (idOp == null)
@@ -448,7 +447,7 @@ public class RelOpExpression
 
             if (idOp == null)
                 {
-                errsTemp.logTo(errs);
+                errsTemp.merge();
                 }
             }
 

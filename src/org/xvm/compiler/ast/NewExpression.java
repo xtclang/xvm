@@ -13,7 +13,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
@@ -513,9 +512,9 @@ public class NewExpression
                 // that we need on the anonymous inner class, then we will simply use that one (and
                 // any required dependency that it has one a super class constructor will be handled
                 // as if this were any other normal class)
-                ErrorList errsTarget = new ErrorList(10);
+                ErrorListener errsTemp = errs.branch();
                 idMethod = findMethod(ctx, infoTarget, "construct", listArgs, MethodType.Constructor,
-                                false, null, errsTarget);
+                                false, null, errsTemp);
                 if (idMethod == null && !listArgs.isEmpty())
                     {
                     // the constructor that we're looking for is not on the anonymous inner class,
@@ -550,7 +549,7 @@ public class NewExpression
                     {
                     // we did find a constructor; there were probably no errors, but just in case
                     // something got logged, transfer it to the real error list
-                    errsTarget.logTo(errs);
+                    errsTemp.merge();
                     }
                 }
             else

@@ -29,7 +29,6 @@ import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
@@ -1133,10 +1132,7 @@ public abstract class TypeConstant
                     + this + "; deferred types=" + takeDeferredTypeInfo());
             }
 
-        if (errs == ErrorListener.BLACKHOLE)
-            {
-            errs = new ErrorList(1);
-            }
+        errs = errs.branch();
 
         try
             {
@@ -1197,11 +1193,12 @@ public abstract class TypeConstant
             setTypeInfo(info);
             }
 
-        if (errs.isAbortDesired())
+        if (errs.hasSeriousErrors())
             {
             // we need to return what we've got, but don't cache it
             invalidateTypeInfo();
             }
+        errs.merge();
         return info;
         }
 

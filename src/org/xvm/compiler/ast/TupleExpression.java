@@ -9,7 +9,6 @@ import java.util.List;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
@@ -46,7 +45,7 @@ public class TupleExpression
      *
      * @param aExprs  an array of at least one expression to turn into a tuple
      */
-    TupleExpression(Expression[] aExprs, ErrorList errs)
+    TupleExpression(Expression[] aExprs, ErrorListener errs)
         {
         int cExprs = aExprs.length;
         assert cExprs > 0;

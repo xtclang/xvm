@@ -16,7 +16,6 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.SimpleCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
@@ -1020,7 +1019,7 @@ public class Context
      */
     public final Argument resolveName(String sName)
         {
-        return resolveName(sName, null, null);
+        return resolveName(sName, null, ErrorListener.BLACKHOLE);
         }
 
     /**
@@ -2200,9 +2199,9 @@ public class Context
         protected Argument resolveRegularName(Context ctxFrom, String sName, Token name, ErrorListener errs)
             {
             // hold off on logging the errors from the first attempt until the second attempt fails
-            ErrorList errsTemp = new ErrorList(1);
+            errs = errs.branch();
 
-            Argument arg = super.resolveRegularName(ctxFrom, sName, name, errsTemp);
+            Argument arg = super.resolveRegularName(ctxFrom, sName, name, errs);
             if (arg != null)
                 {
                 // first attempt succeeded
@@ -2216,10 +2215,7 @@ public class Context
                 return collector.getResolvedConstant();
                 }
 
-            if (errsTemp != errs)
-                {
-                errsTemp.logTo(errs);
-                }
+            errs.merge();
             return null;
             }
 
@@ -2291,7 +2287,7 @@ public class Context
             {
             super.useGenericType(sName, errs);
 
-            TargetInfo info = (TargetInfo) resolveName(sName);
+            TargetInfo info = (TargetInfo) resolveName(sName, null, errs);
             assert info != null;
             ensureGenericMap().putIfAbsent(sName, info);
             }
