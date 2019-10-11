@@ -1004,7 +1004,7 @@ public abstract class AstNode
 
                 if (mapNamedExpr == null)
                     {
-                    mapNamedExpr = new HashMap<>(cArgs - i);
+                    mapNamedExpr = new HashMap<>(cArgs);
                     }
                 else
                     {
@@ -1197,30 +1197,44 @@ public abstract class AstNode
             // add the named expressions to the list of expressions in the correct order
             if (cNamed > 0)
                 {
-                if (listExprArgs == null)
+                atypeAllArgs = new TypeConstant[cVisible];
+
+                Expression[] aexprArgs = new Expression[cVisible];
+                if (listExprArgs != null && cUnnamed > 0)
                     {
-                    listExprArgs = new ArrayList<>(cNamed);
+                    // keep the unnamed arguments at the head of the arrays
+                    System.arraycopy(atypeArgs, 0, atypeAllArgs, 0, cUnnamed);
+
+                    listExprArgs.toArray(aexprArgs);
+                    for (int i = cUnnamed; i < cArgs; i++)
+                        {
+                        aexprArgs[i] = null;
+                        }
                     }
-                assert listExprArgs.size() == cUnnamed;
 
-                for (int i = cUnnamed; i < cArgs; ++i)
+                for (String sName : mapNamedExpr.keySet())
                     {
-                    Expression exprArg = mapNamedExpr.get(method.getParam(i).getName());
+                    Expression exprArg = mapNamedExpr.get(sName);
+                    int        iParam  = method.getParam(sName).getIndex();
 
-                    listExprArgs.set(i, exprArg);
+                    assert iParam >= cUnnamed;
+
+                    aexprArgs[iParam] = exprArg;
 
                     TypeConstant typeArg = exprArg.isValidated()
                             ? exprArg.getType()
                             : exprArg.getImplicitType(ctx);
-                    if (typeArg != null && !typeArg.equals(atypeAllArgs[i]))
+                    if (typeArg != null && !typeArg.equals(atypeAllArgs[iParam]))
                         {
                         if (atypeAllArgs == atypeArgs)
                             {
                             atypeAllArgs = atypeAllArgs.clone();
                             }
-                        atypeAllArgs[i] = typeArg;
+                        atypeAllArgs[iParam] = typeArg;
                         }
                     }
+                listExprArgs = Arrays.asList(aexprArgs);
+                cArgs        = cVisible;
                 }
 
             // now let's assume that the method fits and based on that resolve the type parameters
@@ -1249,9 +1263,9 @@ public abstract class AstNode
 
                 if (exprArg == null)
                     {
-                    if (typeArg.isAssignableTo(typeParam))
+                    if (typeArg == null || typeArg.isAssignableTo(typeParam))
                         {
-                        if (!typeArg.isA(typeParam))
+                        if (typeArg != null && !typeArg.isA(typeParam))
                             {
                             fConvert = true;
                             }
