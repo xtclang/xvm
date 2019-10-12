@@ -37,6 +37,8 @@ public class xOSFile
         super.initDeclared();
 
         markNativeProperty("contents");
+
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override

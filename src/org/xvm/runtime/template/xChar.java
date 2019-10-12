@@ -41,6 +41,8 @@ public class xChar
 
         markNativeProperty("codepoint");
 
+        getCanonicalType().invalidateTypeInfo();
+
         ClassComposition clz = getCanonicalClass();
         for (int i = 0; i < cache.length; ++i)
             {

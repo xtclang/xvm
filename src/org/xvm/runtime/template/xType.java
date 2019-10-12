@@ -51,6 +51,8 @@ public class xType
         {
         markNativeProperty("allMethods");
         markNativeProperty("explicitlyImmutable");
+
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override
