@@ -1557,6 +1557,11 @@ public class MethodStructure
             m_aAnnotations[i] = (Annotation) pool.register(m_aAnnotations[i]);
             }
 
+        if (m_idFinally != null)
+            {
+            m_idFinally = (MethodConstant) pool.register(m_idFinally);
+            }
+
         for (Parameter param : m_aReturns)
             {
             param.registerConstants(pool);
