@@ -298,7 +298,12 @@ class ListMap<Key, Value>
     @Override
     immutable ListMap ensureImmutable(Boolean inPlace = False)
         {
-        TODO
+        immutable Key[]   keys = listKeys.ensureImmutable(inPlace);
+        immutable Value[] vals = listVals.ensureImmutable(inPlace);
+
+        return inPlace
+                ? makeImmutable()
+                : new ListMap(keys, vals).as(immutable ListMap);
         }
 
     // ----- Keys Set ------------------------------------------------------------------------------
