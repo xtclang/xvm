@@ -3937,7 +3937,7 @@ public abstract class TypeConstant
                 // natural getter;
                 fGetSupers      = false;
                 fGetBlocksSuper = true;
-                fField          = methodGet == null && !fHasRO;
+                fField          = false;
                 fRO             = fHasRO;
                 fRW             = !fHasRO;
                 }
