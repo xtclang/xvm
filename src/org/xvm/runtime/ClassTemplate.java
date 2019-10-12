@@ -34,7 +34,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
 import org.xvm.runtime.Utils.BinaryAction;
@@ -372,7 +371,7 @@ public abstract class ClassTemplate
     protected ObjectHandle createStruct(Frame frame, ClassComposition clazz)
         {
         assert clazz.getTemplate() == this &&
-            (f_struct.getFormat() == Format.CLASS ||
+               (f_struct.getFormat() == Format.CLASS ||
                 f_struct.getFormat() == Format.CONST ||
                 f_struct.getFormat() == Format.ENUMVALUE);
 

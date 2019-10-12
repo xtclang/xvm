@@ -7,6 +7,7 @@ import java.util.List;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -33,9 +34,6 @@ public class xEnum
     {
     public static xEnum INSTANCE;
 
-    protected List<String> m_listNames;
-    protected List<EnumHandle> m_listHandles;
-
     public xEnum(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
@@ -59,20 +57,20 @@ public class xEnum
             {
             // all the methods are marked as native due to a "rebase"
             }
-        else if (f_struct.getFormat() == Component.Format.ENUM)
+        else if (f_struct.getFormat() == Format.ENUM)
             {
             Collection<? extends Component> listAll = f_struct.children();
-            List<String> listNames = new ArrayList<>(listAll.size());
+            List<String>     listNames = new ArrayList<>(listAll.size());
             List<EnumHandle> listHandles = new ArrayList<>(listAll.size());
 
-            ConstantPool pool    = pool();
-            int          cValues = 0;
+            ConstantPool pool     = pool();
+            int          iOrdinal = 0;
             for (Component child : listAll)
                 {
-                if (child.getFormat() == Component.Format.ENUMVALUE)
+                if (child.getFormat() == Format.ENUMVALUE)
                     {
                     TypeConstant type   = ((ClassStructure) child).getCanonicalType();
-                    EnumHandle   hValue = makeEnumHandle(ensureClass(type, type), cValues++);
+                    EnumHandle   hValue = makeEnumHandle(ensureClass(type, type), iOrdinal++);
 
                     listNames.add(child.getName());
                     listHandles.add(hValue);
@@ -90,22 +88,6 @@ public class xEnum
             }
         }
 
-    /**
-     * Create an EnumHandle for the specified ordinal value.
-     *
-     *
-     * @param clz       the enum's class
-     * @param iOrdinal  the ordinal value
-     *
-     * @return the corresponding EnumHandle
-     */
-    protected EnumHandle makeEnumHandle(ClassComposition clz, int iOrdinal)
-        {
-        // create an un-initialized struct, which will be properly initialized
-        // by createConstHandle() below; overridden by native enums
-        return new EnumHandle(clz.ensureAccess(Access.STRUCT), iOrdinal);
-        }
-
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
@@ -116,12 +98,11 @@ public class xEnum
 
             if (hValue == null)
                 {
-                int iOrdinal = constValue.getIntValue().getInt();
-                xEnum templateEnum = f_struct.getFormat() == Component.Format.ENUMVALUE
-                        ? (xEnum) getSuper()
-                        : this;
+                assert f_struct.getFormat() == Format.ENUMVALUE;
 
-                hValue = templateEnum.m_listHandles.get(iOrdinal);
+                xEnum templateEnum = (xEnum) getSuper();
+
+                hValue = templateEnum.getEnumByConstant(constValue);
                 constValue.setHandle(hValue);
 
                 if (hValue.isStruct())
@@ -202,6 +183,23 @@ public class xEnum
 
     // ----- helper method -----
 
+    /**
+     * Create an EnumHandle for the specified ordinal value.
+     *
+     * Note: this method is overridden by native enums.
+     *
+     * @param clz       the enum's class
+     * @param iOrdinal  the ordinal value
+     *
+     * @return the corresponding EnumHandle
+     */
+    protected EnumHandle makeEnumHandle(ClassComposition clz, int iOrdinal)
+        {
+        // create an un-initialized struct, which will be properly initialized
+        // by createConstHandle() below; overridden by native enums
+        return new EnumHandle(clz.ensureAccess(Access.STRUCT), iOrdinal);
+        }
+
     public EnumHandle getEnumByName(String sName)
         {
         int ix = m_listNames.indexOf(sName);
@@ -212,6 +210,37 @@ public class xEnum
         {
         return ix >= 0 ? m_listHandles.get(ix) : null;
         }
+
+    /**
+     * @return an EnumHandle for the specified constant
+     */
+    public EnumHandle getEnumByConstant(SingletonConstant constant)
+        {
+        ClassStructure clzThis = f_struct;
+
+        assert clzThis.getFormat() == Format.ENUM;
+
+        // need an ordinal value for the enum that this represents
+        int i = 0;
+        for (Component child : clzThis.children())
+            {
+            if (child.getIdentityConstant().equals(constant.getValue()))
+                {
+                return getEnumByOrdinal(i);
+                }
+            ++i;
+            }
+        return null;
+        }
+
+    /**
+     * @return an Enum value name for the specified ordinal
+     */
+    public String getNameByOrdinal(int ix)
+        {
+        return m_listNames.get(ix);
+        }
+
 
     // ----- ObjectHandle -----
 
@@ -263,10 +292,15 @@ public class xEnum
         @Override
         public String toString()
             {
-            xEnum template = (xEnum) getTemplate();
-            return template.m_listNames.get(m_index);
+            return ((xEnum) getTemplate()).getNameByOrdinal(m_index);
             }
 
         protected int m_index;
         }
+
+
+    // ----- fields -----
+
+    protected List<String>     m_listNames;
+    protected List<EnumHandle> m_listHandles;
     }

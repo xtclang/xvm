@@ -2,14 +2,14 @@ package org.xvm.runtime.template;
 
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
+import org.xvm.asm.Component.Format;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.TemplateRegistry;
 
 
 /**
- * TODO:
+ * Native Ordered.
  */
 public class xOrdered
         extends xEnum
@@ -26,13 +26,13 @@ public class xOrdered
     @Override
     public void initDeclared()
         {
-        if (f_struct.getFormat() == Component.Format.ENUM)
+        if (f_struct.getFormat() == Format.ENUM)
             {
             super.initDeclared();
 
-            LESSER = m_listHandles.get(0);
-            EQUAL = m_listHandles.get(1);
-            GREATER = m_listHandles.get(2);
+            LESSER  = getEnumByOrdinal(0);
+            EQUAL   = getEnumByOrdinal(1);
+            GREATER = getEnumByOrdinal(2);
             }
         }
 

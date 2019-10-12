@@ -2,8 +2,7 @@ package org.xvm.runtime.template;
 
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
-import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Component.Format;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
@@ -28,21 +27,12 @@ public class xBoolean
     @Override
     public void initDeclared()
         {
-        if (f_struct.getFormat() == Component.Format.ENUM)
+        if (f_struct.getFormat() == Format.ENUM)
             {
-            ConstantPool pool = pool();
-
-            f_templates.registerNativeTemplate(pool.typeTrue(), this);
-            f_templates.registerNativeTemplate(pool.typeFalse(), this);
-
             super.initDeclared();
 
-            FALSE = (BooleanHandle) m_listHandles.get(0);
-            TRUE = (BooleanHandle) m_listHandles.get(1);
-            }
-        else
-            {
-            getSuper(); // this will initialize all the handles
+            FALSE = (BooleanHandle) getEnumByOrdinal(0);
+            TRUE  = (BooleanHandle) getEnumByOrdinal(1);
             }
         }
 

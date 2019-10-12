@@ -2,15 +2,14 @@ package org.xvm.runtime.template;
 
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
-import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Component.Format;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.TemplateRegistry;
 
 
 /**
- * TODO:
+ * Native Nullable.
  */
 public class xNullable
         extends xEnum
@@ -25,19 +24,11 @@ public class xNullable
     @Override
     public void initDeclared()
         {
-        if (f_struct.getFormat() == Component.Format.ENUM)
+        if (f_struct.getFormat() == Format.ENUM)
             {
-            ConstantPool pool = pool();
-
-            f_templates.registerNativeTemplate(pool.typeNull(), this);
-
             super.initDeclared();
 
-            NULL = m_listHandles.get(0);
-            }
-        else
-            {
-            getSuper(); // this will initialize all the handles
+            NULL = getEnumByOrdinal(0);
             }
         }
 

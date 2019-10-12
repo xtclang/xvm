@@ -1148,7 +1148,7 @@ public class MethodStructure
                         ClassTemplate template = heap.f_templates.getTemplate(idClz);
 
                         Format format = template.f_struct.getFormat();
-                        if (format == Format.ENUMVALUE || format == Format.ENUM)
+                        if (format == Format.ENUMVALUE)
                             {
                             // this can happen if the constant's handle was not initialized or
                             // assigned on a different constant pool

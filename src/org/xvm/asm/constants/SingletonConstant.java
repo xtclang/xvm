@@ -151,28 +151,6 @@ public class SingletonConstant
         }
 
     @Override
-    public PackedInteger getIntValue()
-        {
-        // (note: this enum-to-int conversion is no longer used for compiling to JumpInt)
-        ClassStructure clzThis = (ClassStructure) m_constClass.getComponent();
-        if (clzThis.getFormat() == Component.Format.ENUMVALUE)
-            {
-            // need an ordinal value for the enum that this represents
-            ClassStructure clzParent = (ClassStructure) clzThis.getParent();
-            int i = 0;
-            for (Component child : clzParent.children())
-                {
-                if (child == clzThis)
-                    {
-                    return PackedInteger.valueOf(i);
-                    }
-                ++i;
-                }
-            }
-        return super.getIntValue();
-        }
-
-    @Override
     public boolean containsUnresolved()
         {
         return m_constClass.containsUnresolved();
