@@ -1102,7 +1102,7 @@ public class InvocationExpression
                                 chArgs = '1';
                                 if (cArgs == 1)
                                     {
-                                    arg = args.get(0).generateArgument(ctx, code, false, true, errs);
+                                    arg = args.get(0).generateArgument(ctx, code, true, true, errs);
                                     }
                                 else if (cTypeParams == 1)
                                     {
@@ -1125,7 +1125,7 @@ public class InvocationExpression
 
                                 for (int i = 0, of = cTypeParams; i < cArgs; ++i)
                                     {
-                                    aArgs[of + i] = args.get(i).generateArgument(ctx, code, false, true, errs);
+                                    aArgs[of + i] = args.get(i).generateArgument(ctx, code, true, true, errs);
                                     }
 
                                 for (int i = 0, of = cTypeParams + cArgs; i < cDefaults; ++i)
@@ -1296,7 +1296,7 @@ public class InvocationExpression
                 chArgs = '1';
                 if (cArgs == 1)
                     {
-                    arg = args.get(0).generateArgument(ctx, code, false, true, errs);
+                    arg = args.get(0).generateArgument(ctx, code, true, true, errs);
                     }
                 else if (cTypeParams == 1)
                     {
@@ -1319,7 +1319,7 @@ public class InvocationExpression
 
                 for (int i = 0, of = cTypeParams; i < cArgs; ++i)
                     {
-                    aArgs[of + i] = args.get(i).generateArgument(ctx, code, false, true, errs);
+                    aArgs[of + i] = args.get(i).generateArgument(ctx, code, true, true, errs);
                     }
 
                 for (int i = 0, of = cTypeParams + cArgs; i < cDefaults; ++i)
@@ -1440,7 +1440,7 @@ public class InvocationExpression
             else if (!args.get(i).isNonBinding())
                 {
                 aiArg[iNext] = i;
-                aArg [iNext] = args.get(i).generateArgument(ctx, code, false, true, errs);
+                aArg [iNext] = args.get(i).generateArgument(ctx, code, true, true, errs);
                 iNext++;
                 }
             }
