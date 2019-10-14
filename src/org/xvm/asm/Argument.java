@@ -48,6 +48,16 @@ public interface Argument
             return ((Register) arg).getIdString();
             }
 
+        try
+            {
+            if (nArg <= Op.CONSTANT_OFFSET)
+                {
+                ConstantPool pool = ConstantPool.getCurrentPool();
+                return pool.getConstant(Op.CONSTANT_OFFSET - nArg).getValueString();
+                }
+            }
+        catch (RuntimeException e) {}
+
         return Register.getIdString(nArg);
         }
     }

@@ -4,8 +4,10 @@ package org.xvm.runtime;
 import org.xvm.api.Connector;
 
 import org.xvm.asm.Component;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
+import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.MethodConstant;
 
@@ -52,7 +54,10 @@ public class TestConnector
         if (System.getProperties().containsKey("DEBUG"))
             {
             out("Code dump:");
-            dump(repository.loadModule(asModule[0]));
+            ModuleStructure module = repository.loadModule(asModule[0]);
+            ConstantPool.setCurrentPool(module.getConstantPool());
+            dump(module);
+            ConstantPool.setCurrentPool(null);
             }
 
         Connector connector = new Connector(repository);
