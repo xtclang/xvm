@@ -75,3 +75,6 @@ $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 - TemplateRegistry and TypeComposition could be mutated by different threads
     (hence the use of ConcurrentHashMap in TemplateRegistry and synchronization in TypeComposition)
 
+- DelegatingIterator could use delegation, but how to describe the delegating type?
+
+

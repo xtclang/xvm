@@ -1,5 +1,3 @@
-// TODO GG use delegation
-
 /**
  * An iterator that delegates to another iterator.
  */
