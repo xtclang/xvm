@@ -194,8 +194,7 @@ const Version
         if (fAnyChars)
             {
             String name = version[start..end];
-            // TODO GG? if (Form form := Form.byName.get(name))
-            if (Form form := Form_byName_get(name))
+            if (Form form := Form.byName.get(name))
                 {
                 construct Version(parent, form, build);
                 }
@@ -213,20 +212,6 @@ const Version
             {
             throw new IllegalArgument("Invalid version string: \"" + version + "\"");
             }
-        }
-
-    static conditional Form Form_byName_get(String name)
-        {
-        return switch (name)
-            {
-            case "CI"   : (true, CI);
-            case "Dev"  : (true, Dev);
-            case "QC"   : (true, QC);
-            case "alpha": (true, Alpha);
-            case "beta" : (true, Beta);
-            case "rc"   : (true, RC);
-            default     : false;
-            };
         }
 
     /**

@@ -35,6 +35,7 @@ public class xObject
             {
             markNativeMethod("toString", VOID, STRING);
             markNativeMethod("equals", null, BOOLEAN);
+            markNativeMethod("makeImmutable", VOID, null);
 
             getCanonicalType().invalidateTypeInfo();
             }

@@ -115,8 +115,7 @@ service OSStorage
     // called natively
     private void onEvent(String pathStringDir, String pathStringNode, Boolean isFile, Int eventId)
         {
-        // TODO GG when Enumeration is implemented: event = FileWatcher.Event.values[eventId];
-        FileWatcher.Event event = EVENTS[eventId];
+        FileWatcher.Event event = FileWatcher.Event.values[eventId];
 
         if (FileWatcher?[] watchers := allWatchers.get(pathStringDir))
             {
@@ -150,7 +149,6 @@ service OSStorage
 
     private Map<String, FileWatcher?[]> allWatchers = new HashMap();
 
-    private static FileWatcher.Event[] EVENTS = [Created, Modified, Deleted];
 
     // ----- native --------------------------------------------------------------------------------
 

@@ -667,9 +667,13 @@ public abstract class ClassTemplate
         switch (ahArg.length)
             {
             case 0:
-                if (method.getName().equals("toString"))
+                switch (method.getName())
                     {
-                    return buildStringValue(frame, hTarget, iReturn);
+                    case "toString":
+                        return buildStringValue(frame, hTarget, iReturn);
+
+                    case "makeImmutable":
+                        return makeImmutable(frame, hTarget);
                     }
                 break;
 

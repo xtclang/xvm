@@ -733,6 +733,18 @@ public abstract class ObjectHandle
             }
 
         @Override
+        public TypeConstant getType()
+            {
+            return f_clzArray.getType();
+            }
+
+        @Override
+        public ObjectHandle revealOrigin()
+            {
+            return this;
+            }
+
+        @Override
         public void addContinuation(Frame.Continuation continuation)
             {
             throw new UnsupportedOperationException();

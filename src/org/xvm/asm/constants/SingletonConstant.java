@@ -7,14 +7,10 @@ import java.io.IOException;
 
 import java.util.function.Consumer;
 
-import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.runtime.ObjectHandle;
-
-import org.xvm.util.PackedInteger;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;

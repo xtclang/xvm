@@ -138,6 +138,7 @@ public class xArray
         markNativeMethod("addAll", new String[] {"Iterable<Element>"}, ARRAY);
         markNativeMethod("slice", new String[] {"Interval<Int64>"}, ARRAY);
         markNativeMethod("ensureImmutable", BOOLEAN, null);
+        markNativeMethod("ensurePersistent", BOOLEAN, null);
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -464,6 +465,23 @@ public class xArray
                 else
                     {
                     hArray = createCopy(hArray, Mutability.Constant);
+                    }
+                return frame.assignValue(iReturn, hArray);
+                }
+
+            case "ensurePersistent": // Array ensurePersistent(Boolean inPlace = False)
+                {
+                ArrayHandle   hArray   = (ArrayHandle) hTarget;
+                BooleanHandle hInPlace = hArg == ObjectHandle.DEFAULT
+                        ? xBoolean.FALSE
+                        : (BooleanHandle) hArg;
+                if (hInPlace.get())
+                    {
+                    hArray.m_mutability = Mutability.Persistent;
+                    }
+                else
+                    {
+                    hArray = createCopy(hArray, Mutability.Persistent);
                     }
                 return frame.assignValue(iReturn, hArray);
                 }

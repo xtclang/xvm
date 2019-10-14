@@ -14,6 +14,7 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -102,7 +103,7 @@ public class xEnum
 
                 xEnum templateEnum = (xEnum) getSuper();
 
-                hValue = templateEnum.getEnumByConstant(constValue);
+                hValue = templateEnum.getEnumByConstant(constValue.getValue());
                 constValue.setHandle(hValue);
 
                 if (hValue.isStruct())
@@ -212,9 +213,9 @@ public class xEnum
         }
 
     /**
-     * @return an EnumHandle for the specified constant
+     * @return an EnumHandle for the specified id
      */
-    public EnumHandle getEnumByConstant(SingletonConstant constant)
+    public EnumHandle getEnumByConstant(IdentityConstant id)
         {
         ClassStructure clzThis = f_struct;
 
@@ -224,7 +225,7 @@ public class xEnum
         int i = 0;
         for (Component child : clzThis.children())
             {
-            if (child.getIdentityConstant().equals(constant.getValue()))
+            if (child.getIdentityConstant().equals(id))
                 {
                 return getEnumByOrdinal(i);
                 }
