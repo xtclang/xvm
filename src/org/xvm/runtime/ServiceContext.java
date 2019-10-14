@@ -1,6 +1,7 @@
 package org.xvm.runtime;
 
 
+import java.util.List;
 import java.util.Queue;
 
 import java.util.concurrent.CompletableFuture;
@@ -12,8 +13,9 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IdentityConstant;
-
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.SingletonConstant;
+
 import org.xvm.asm.op.Return_0;
 
 import org.xvm.runtime.Fiber.FiberStatus;
@@ -23,6 +25,7 @@ import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xFunction.NativeFunctionHandle;
+import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xService.PropertyOperation;
 import org.xvm.runtime.template.xService.PropertyOperation10;
@@ -515,11 +518,11 @@ public class ServiceContext
 
     // send and asynchronous "constant initialization" message
     public CompletableFuture<ObjectHandle> sendConstantRequest(Frame frameCaller,
-                                                               MethodStructure method)
+                                                               List<SingletonConstant> listConstants)
         {
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
-        addRequest(new ConstantInitializationRequest(frameCaller, method, future));
+        addRequest(new ConstantInitializationRequest(frameCaller, listConstants, future));
 
         return future;
         }
@@ -940,15 +943,15 @@ public class ServiceContext
     public static class ConstantInitializationRequest
             extends Message
         {
-        private final MethodStructure                 f_method;
+        private final List<SingletonConstant>         f_list;
         private final CompletableFuture<ObjectHandle> f_future;
 
-        public ConstantInitializationRequest(Frame frameCaller, MethodStructure method,
+        public ConstantInitializationRequest(Frame frameCaller, List<SingletonConstant> listConstants,
                                              CompletableFuture<ObjectHandle> future)
             {
             super(frameCaller);
 
-            f_method = method;
+            f_list   = listConstants;
             f_future = future;
             }
 
@@ -959,7 +962,8 @@ public class ServiceContext
                 {
                 public int process(Frame frame, int iPC)
                     {
-                    return f_method.ensureInitialized(frame, null);
+                    return Utils.initConstants(frame, f_list,
+                        frameCaller -> frameCaller.assignValue(0, xNullable.NULL));
                     }
 
                 public String toString()

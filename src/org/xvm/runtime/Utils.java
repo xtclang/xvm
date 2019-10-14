@@ -8,11 +8,18 @@ import java.util.List;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
+import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.PropertyStructure;
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
@@ -20,6 +27,7 @@ import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xFunction.FullyBoundHandle;
+import org.xvm.runtime.template.xModule;
 import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xRef.RefHandle;
 import org.xvm.runtime.template.xString.StringHandle;
@@ -600,6 +608,167 @@ public abstract class Utils
         }
 
     // ----- various run-time support -----
+
+    /**
+     * Ensure that all SingletonConstants in the specified list are initialized and proceed
+     * with the specified continuation.
+     *
+     * @param frame           the caller's frame
+     * @param listSingletons  the list of singleton constants
+     * @param continuation    the continuation to proceed with after initialization completes
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
+     */
+    public static int initConstants(Frame frame, List<SingletonConstant> listSingletons,
+                                    Frame.Continuation continuation)
+        {
+        boolean fMainContext = false;
+
+        for (SingletonConstant constSingleton : listSingletons)
+            {
+            ObjectHandle hValue = constSingleton.getHandle();
+            if (hValue != null)
+                {
+                continue;
+                }
+
+            ServiceContext ctxCurr = frame.f_context;
+            if (!fMainContext)
+                {
+                ServiceContext ctxMain = ctxCurr.getMainContext();
+
+                if (ctxCurr == ctxMain)
+                    {
+                    fMainContext = true;
+                    }
+                else
+                    {
+                    assert continuation != null;
+
+                    // we have at least one non-initialized singleton;
+                    // call the main service to initialize them all
+                    CompletableFuture<ObjectHandle> cfResult =
+                        ctxMain.sendConstantRequest(frame, listSingletons);
+
+                    // create a pseudo frame to deal with the wait
+                    Frame frameWait = Utils.createWaitFrame(frame, cfResult, Op.A_IGNORE);
+                    frameWait.addContinuation(continuation);
+
+                    return frame.call(frameWait);
+                    }
+                }
+
+            // we are on the main context and can actually perform the initialization
+            if (!constSingleton.markInitializing())
+                {
+                // this can only happen if we are called recursively
+                return frame.raiseException("Circular initialization");
+                }
+
+            IdentityConstant constValue = constSingleton.getValue();
+
+            ObjectHeap heap = ctxCurr.f_heapGlobal;
+            int        iResult;
+            switch (constValue.getFormat())
+                {
+                case Module:
+                    iResult = xModule.INSTANCE.createConstHandle(frame, constValue);
+                    break;
+
+                case Package:
+                    throw new UnsupportedOperationException("not implemented"); // TODO
+
+                case Property:
+                    iResult = callPropertyInitializer(frame, (PropertyConstant) constValue);
+                    break;
+
+                case Class:
+                    {
+                    ClassConstant idClz = (ClassConstant) constValue;
+                    ClassStructure clz   = (ClassStructure) idClz.getComponent();
+
+                    assert clz.isSingleton();
+
+                    ClassTemplate template = heap.f_templates.getTemplate(idClz);
+
+                    Component.Format format = template.f_struct.getFormat();
+                    if (format == Component.Format.ENUMVALUE)
+                        {
+                        // this can happen if the constant's handle was not initialized or
+                        // assigned on a different constant pool
+                        iResult = template.createConstHandle(frame, constSingleton);
+                        }
+                    else
+                        {
+                        // the class must have a no-params constructor to call
+                        MethodStructure constructor = clz.findMethod(frame.poolCode().sigConstruct());
+                        iResult = constructor == null
+                            ? frame.raiseException(
+                                "Missing default constructor at " + clz.getSimpleName())
+                            : template.construct(frame, constructor,
+                                template.getCanonicalClass(), null, Utils.OBJECTS_NONE, Op.A_STACK);
+                        }
+                    break;
+                    }
+
+                default:
+                    throw new IllegalStateException("unexpected defining constant: " + constValue);
+                }
+
+            switch (iResult)
+                {
+                case Op.R_NEXT:
+                    constSingleton.setHandle(frame.popStack());
+                    break; // next constant
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                case Op.R_CALL:
+                    frame.m_frameNext.addContinuation(frameCaller ->
+                        {
+                        constSingleton.setHandle(frameCaller.popStack());
+                        return initConstants(frameCaller, listSingletons, continuation);
+                        });
+                    return Op.R_CALL;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+
+        return continuation.proceed(frame);
+        }
+
+    /**
+     * Call the static property initializer.
+     *
+     * @param frame   the caller's frame
+     * @param idProp  the property id
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
+     */
+    private static int callPropertyInitializer(Frame frame, PropertyConstant idProp)
+        {
+        PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
+        ObjectHandle      hValue;
+
+        assert prop.isStatic();
+
+        Constant constVal = prop.getInitialValue();
+        if (constVal == null)
+            {
+            // there must be an initializer
+            MethodStructure methodInit = prop.getInitializer();
+            ObjectHandle[]  ahVar      =
+                Utils.ensureSize(Utils.OBJECTS_NONE, methodInit.getMaxVars());
+
+            return frame.call1(methodInit, null, ahVar, Op.A_STACK);
+            }
+        hValue = frame.getConstHandle(constVal);
+        frame.pushStack(hValue);
+        return Op.R_NEXT;
+        }
 
     /**
      * Create a pseudo frame that will wait on the specified future.

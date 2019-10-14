@@ -16,14 +16,11 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
-import java.util.concurrent.CompletableFuture;
-
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -32,15 +29,8 @@ import org.xvm.asm.Op.Prefix;
 
 import org.xvm.asm.op.Nop;
 
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHeap;
-import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.Utils;
-
-import org.xvm.runtime.template.xModule;
-import org.xvm.runtime.template.xNullable;
 
 import org.xvm.util.ListMap;
 
@@ -1052,12 +1042,11 @@ public class MethodStructure
         }
 
     /**
-     * Ensure that all SingletonConstants used by this method are initialized and the next frame is
-     * ready to be called.
+     * Ensure that all SingletonConstants used by this method are initialized before the next
+     * frame is called.
      *
      * @param frame      the caller's frame
-     * @param frameNext  the frame that is about to execute this method; could be null
-     *                   if the initialization is performed on the "main" container service
+     * @param frameNext  the frame that is about to execute this method
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1078,120 +1067,11 @@ public class MethodStructure
 
         if (listSingletons != null)
             {
-            boolean fMainContext = false;
-
-            for (SingletonConstant constSingleton : listSingletons)
-                {
-                ObjectHandle hValue = constSingleton.getHandle();
-                if (hValue != null)
+            return Utils.initConstants(frame, listSingletons, frameCaller ->
                     {
-                    continue;
-                    }
-
-                ServiceContext ctxCurr = frame.f_context;
-                if (!fMainContext)
-                    {
-                    ServiceContext ctxMain = ctxCurr.getMainContext();
-
-                    if (ctxCurr == ctxMain)
-                        {
-                        fMainContext = true;
-                        }
-                    else
-                        {
-                        assert frameNext != null;
-
-                        // we have at least one non-initialized singleton;
-                        // call the main service to initialize them all
-                        CompletableFuture<ObjectHandle> cfResult =
-                            ctxMain.sendConstantRequest(frame, this);
-
-                        // create a pseudo frame to deal with the wait
-                        Frame frameWait = Utils.createWaitFrame(frame, cfResult, Op.A_IGNORE);
-                        frameWait.addContinuation(frameCaller -> frameCaller.call(frameNext));
-
-                        return frame.call(frameWait);
-                        }
-                    }
-
-                // we are on the main context and can actually perform the initialization
-                if (!constSingleton.markInitializing())
-                    {
-                    // this can only happen if we are called recursively
-                    return frame.raiseException("Circular initialization");
-                    }
-
-                IdentityConstant constValue = constSingleton.getValue();
-
-                ObjectHeap heap = ctxCurr.f_heapGlobal;
-                int        iResult;
-                switch (constValue.getFormat())
-                    {
-                    case Module:
-                        iResult = xModule.INSTANCE.createConstHandle(frame, constValue);
-                        break;
-
-                    case Package:
-                        throw new UnsupportedOperationException("not implemented"); // TODO
-
-                    case Property:
-                        iResult = callPropertyInitializer(frame, (PropertyConstant) constValue);
-                        break;
-
-                    case Class:
-                        {
-                        ClassConstant  idClz = (ClassConstant) constValue;
-                        ClassStructure clz   = (ClassStructure) idClz.getComponent();
-
-                        assert clz.isSingleton();
-
-                        ClassTemplate template = heap.f_templates.getTemplate(idClz);
-
-                        Format format = template.f_struct.getFormat();
-                        if (format == Format.ENUMVALUE)
-                            {
-                            // this can happen if the constant's handle was not initialized or
-                            // assigned on a different constant pool
-                            iResult = template.createConstHandle(frame, constSingleton);
-                            }
-                        else
-                            {
-                            // the class must have a no-params constructor to call
-                            MethodStructure constructor = clz.findMethod(getConstantPool().sigConstruct());
-                            iResult = constructor == null
-                                ? frame.raiseException(
-                                    "Missing default constructor at " + clz.getSimpleName())
-                                : template.construct(frame, constructor,
-                                    template.getCanonicalClass(), null, Utils.OBJECTS_NONE, Op.A_STACK);
-                            }
-                        break;
-                        }
-
-                    default:
-                        throw new IllegalStateException("unexpected defining constant: " + constValue);
-                    }
-
-                switch (iResult)
-                    {
-                    case Op.R_NEXT:
-                        constSingleton.setHandle(frame.popStack());
-                        break; // next constant
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    case Op.R_CALL:
-                        frame.m_frameNext.addContinuation(frameCaller ->
-                            {
-                            constSingleton.setHandle(frameCaller.popStack());
-                            return ensureInitialized(frameCaller, frameNext);
-                            });
-                        return Op.R_CALL;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-                }
+                    m_fInitialized = true;
+                    return frameCaller.call(frameNext);
+                    });
             }
 
         // all is done;
@@ -1199,9 +1079,7 @@ public class MethodStructure
         // otherwise, we didn't do anything, so even if other threads don't immediately see the flag
         // (since it's not volatile) they will simply repeat the "do nothing" loop
         m_fInitialized = true;
-        return frameNext == null
-            ? frame.assignValue(0, xNullable.NULL) // the result is ignored, but has to be assigned
-            : frame.call(frameNext);
+        return frame.call(frameNext);
         }
 
     /**
@@ -1230,36 +1108,6 @@ public class MethodStructure
                 }
             }
         return list;
-        }
-
-    /**
-     * Call the static property initializer.
-     *
-     * @param frame   the caller's frame
-     * @param idProp  the property id
-     *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
-     */
-    private int callPropertyInitializer(Frame frame, PropertyConstant idProp)
-        {
-        PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
-        ObjectHandle      hValue;
-
-        assert prop.isStatic();
-
-        Constant constVal = prop.getInitialValue();
-        if (constVal == null)
-            {
-            // there must be an initializer
-            MethodStructure methodInit = prop.getInitializer();
-            ObjectHandle[]  ahVar      =
-                Utils.ensureSize(Utils.OBJECTS_NONE, methodInit.getMaxVars());
-
-            return frame.call1(methodInit, null, ahVar, Op.A_STACK);
-            }
-        hValue = frame.getConstHandle(constVal);
-        frame.pushStack(hValue);
-        return Op.R_NEXT;
         }
 
     /**
