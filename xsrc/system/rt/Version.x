@@ -194,7 +194,7 @@ const Version
         if (fAnyChars)
             {
             String name = version[start..end];
-            if (Form form := Form.byName.get(name))
+            if (Form form := byText(name))
                 {
                 construct Version(parent, form, build);
                 }
@@ -212,6 +212,30 @@ const Version
             {
             throw new IllegalArgument("Invalid version string: \"" + version + "\"");
             }
+        }
+
+    /**
+     * Return the Form for a specified name.
+     *
+     * Note: this implementation is purposefully permissive, allowing "1.2-a" instead of "1.2-alpha".
+     */
+    static conditional Form byText(String name)
+        {
+        if (name.size == 0)
+            {
+            return False;
+            }
+
+        return switch (name[0])
+            {
+            case 'c', 'C': (true, CI);
+            case 'd', 'D': (true, Dev);
+            case 'q', 'Q': (true, QC);
+            case 'a', 'A': (true, Alpha);
+            case 'b', 'B': (true, Beta);
+            case 'r', 'R': (true, RC);
+            default      : false;
+            };
         }
 
     /**
