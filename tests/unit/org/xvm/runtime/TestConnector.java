@@ -53,11 +53,14 @@ public class TestConnector
 
         if (System.getProperties().containsKey("DEBUG"))
             {
-            out("Code dump:");
             ModuleStructure module = repository.loadModule(asModule[0]);
-            ConstantPool.setCurrentPool(module.getConstantPool());
-            dump(module);
-            ConstantPool.setCurrentPool(null);
+            if (module != null)
+                {
+                out("Code dump:");
+                ConstantPool.setCurrentPool(module.getConstantPool());
+                dump(module);
+                ConstantPool.setCurrentPool(null);
+                }
             }
 
         Connector connector = new Connector(repository);
