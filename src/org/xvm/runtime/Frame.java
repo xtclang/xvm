@@ -1854,9 +1854,9 @@ public class Frame
          */
         public VarInfo(TypeConstant type, int nStyle)
             {
-            m_type = type;
+            m_type    = type;
             m_nTypeId = type.getPosition();
-            m_nStyle = nStyle;
+            m_nStyle  = nStyle;
             }
 
         /**
@@ -1866,7 +1866,7 @@ public class Frame
             {
             m_nTypeId = nTypeId;
             m_nNameId = nNameId;
-            m_nStyle = nStyle;
+            m_nStyle  = nStyle;
 
             assert getType() != null; // side effect or realizing the type
             }
@@ -1877,9 +1877,9 @@ public class Frame
         public VarInfo(int nTargetId, int nAuxId, VarTypeResolver resolver)
             {
             m_nTargetId = nTargetId;
-            m_nTypeId = nAuxId;
-            m_nStyle = VAR_STANDARD;
-            m_resolver = resolver;
+            m_nTypeId   = nAuxId;
+            m_nStyle    = VAR_STANDARD;
+            m_resolver  = resolver;
 
             assert getType() != null; // side effect or realizing the type
             }
@@ -1913,7 +1913,8 @@ public class Frame
                     type = m_resolver.resolve(Frame.this, m_nTargetId, m_nTypeId);
                     }
 
-                m_type = type = type.resolveGenerics(poolContext(), getGenericsResolver());
+                m_type    = type = type.resolveGenerics(poolContext(), getGenericsResolver());
+                m_nTypeId = type.getPosition();
                 }
             return type;
             }
