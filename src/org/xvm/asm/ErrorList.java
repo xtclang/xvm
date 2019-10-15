@@ -29,7 +29,7 @@ public class ErrorList
     @Override
     public ErrorListener branch()
         {
-        return new BranchedErrorListener(this);
+        return new BranchedErrorListener(this, m_cMaxErrors);
         }
 
     @Override
@@ -187,9 +187,9 @@ public class ErrorList
     public static class BranchedErrorListener
             extends ErrorList
         {
-        public BranchedErrorListener(ErrorListener listener)
+        public BranchedErrorListener(ErrorListener listener, int cMaxErrors)
             {
-            super(1);
+            super(cMaxErrors);
 
             f_listener = listener;
             }
@@ -197,7 +197,7 @@ public class ErrorList
         @Override
         public ErrorListener branch()
             {
-            return new BranchedErrorListener(this);
+            return new BranchedErrorListener(this, getSeriousErrorMax());
             }
 
         @Override

@@ -271,11 +271,16 @@ public class NewExpression
         boolean fAnon = body != null;
         if (fAnon)
             {
-            ensureInnerClass(ctx, AnonPurpose.RoughDraft, errs);
-            if (errs.isAbortDesired())
+            ErrorListener errsTemp = errs.branch();
+
+            ensureInnerClass(ctx, AnonPurpose.RoughDraft, errsTemp);
+
+            if (errsTemp.hasSeriousErrors())
                 {
+                errsTemp.merge();
                 return null;
                 }
+            // don't merge any warnings since we will call "ensureInnerClass" again
             }
 
         if (left == null)
@@ -359,11 +364,12 @@ public class NewExpression
                 // now we should have enough type information to create the real anon inner class
                 if (fAnon)
                     {
-                    ensureInnerClass(ctx, AnonPurpose.Actual, errs);
-                    if (errs.isAbortDesired())
-                        {
-                        return null;
-                        }
+                    ErrorListener errsTemp = errs.branch();
+
+                    ensureInnerClass(ctx, AnonPurpose.Actual, errsTemp);
+
+                    fValid &= !errsTemp.hasSeriousErrors();
+                    errsTemp.merge();
                     }
 
                 boolean fNestMate = isNestMate(ctx, typeTarget);

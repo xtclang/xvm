@@ -76,7 +76,7 @@ public interface ErrorListener
      */
     default ErrorListener branch()
         {
-        return new ErrorList.BranchedErrorListener(this);
+        return new ErrorList.BranchedErrorListener(this, 1);
         }
 
     /**
