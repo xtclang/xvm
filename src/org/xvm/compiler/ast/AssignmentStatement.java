@@ -521,10 +521,10 @@ public class AssignmentStatement
                     merge(ctx, ctxLValue);
                     }
 
+                // prevent unnecessary errors and mark an unconditional assignment even if the validation failed
+                exprLeft.markAssignment(ctx, exprRightNew != null && exprRightNew.isConditionalResult(), errs);
                 if (exprRightNew != null)
                     {
-                    exprLeft.markAssignment(ctx, exprRightNew.isConditionalResult(), errs);
-
                     atypeRight = exprRightNew.getTypes();
                     }
                 break;
@@ -553,11 +553,10 @@ public class AssignmentStatement
                         merge(ctx, ctxLValue);
                         }
 
+                    exprLeft.markAssignment(ctx,
+                            !fConditional && exprRight != null && exprRight.isConditionalResult(), errs);
                     if (exprRightNew != null)
                         {
-                        exprLeft.markAssignment(ctx,
-                                !fConditional && exprRight.isConditionalResult(), errs);
-
                         atypeRight = exprRightNew.getTypes();
                         if (atypeRight.length == 1)
                             {
@@ -588,7 +587,7 @@ public class AssignmentStatement
                     if (exprRightNew != null)
                         {
                         exprLeft.markAssignment(ctx,
-                            !fConditional && exprRight.isConditionalResult(), errs);
+                            !fConditional && exprRight != null && exprRight.isConditionalResult(), errs);
 
                         if (fConditional)
                             {
