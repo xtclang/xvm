@@ -65,8 +65,14 @@ public class PropertyBody
                 || impl == Implementation.SansCode
                 || impl == Implementation.Explicit;
         assert (impl == Implementation.Delegating) ^ (constDelegate == null);
-        assert constInitVal == null || constInitFunc == null;
-        if (fConstant && constInitVal == null && constInitFunc == null)
+        if (constInitVal != null && constInitFunc != null)
+            {
+            // this can happen when the initial value is a constant function (lambda)
+            assert constInitVal instanceof  MethodConstant &&
+                ((MethodConstant) constInitVal).getNamespace().equals(constInitFunc);
+            constInitFunc = null;
+            }
+        else if (fConstant && constInitVal == null && constInitFunc == null)
             {
             // this can only happen when we're building the TypeInfo for a partially compiled class,
             // so we will need to invalidate the TypeInfo afterwards;

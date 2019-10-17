@@ -19,6 +19,7 @@ import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -416,9 +417,23 @@ public class PropertyDeclarationStatement
                         assert !constValue.containsUnresolved() && !constValue.getType().containsUnresolved();
                         prop.setInitialValue(valueNew.validateAndConvertConstant(constValue, type, errs));
 
-                        // discard the initializer by removing the entire MultiMethodStructure
-                        MultiMethodStructure mms = (MultiMethodStructure) methodInit.getParent();
-                        mms.getParent().removeChild(mms);
+                        boolean fDiscard = true;
+                        if (constValue instanceof IdentityConstant)
+                            {
+                            // if the constant points to the initializer's content - keep it
+                            IdentityConstant idValue = (IdentityConstant) constValue;
+                            if (idValue.getNamespace().equals(methodInit.getIdentityConstant()))
+                                {
+                                fDiscard = false;
+                                }
+                            }
+
+                        if (fDiscard)
+                            {
+                            // discard the initializer by removing the entire MultiMethodStructure
+                            MultiMethodStructure mms = (MultiMethodStructure) methodInit.getParent();
+                            mms.getParent().removeChild(mms);
+                            }
                         }
                     else
                         {

@@ -98,20 +98,12 @@ public class MethodDeclarationStatement
         // store off the method structure that we will generate code into
         setComponent(struct);
 
-        // grab a body from the expression, if it has one, otherwise make one
-        if (expr instanceof LambdaExpression && ((LambdaExpression) expr).params.isEmpty())
-            {
-            body = ((LambdaExpression) expr).body;
-            }
-        else
-            {
-            // turn "<expr>" into the statement block "{ return <expr>; }"
-            Token fakeReturn = new Token(expr.getStartPosition(), expr.getStartPosition(), Id.RETURN);
-            ReturnStatement stmt = new ReturnStatement(fakeReturn, expr);
-            stmt.adopt(expr);
-            body = new StatementBlock(Collections.singletonList(stmt), expr.getStartPosition(), expr.getEndPosition());
-            body.adopt(stmt);
-            }
+        // turn "<expr>" into the statement block "{ return <expr>; }"
+        Token fakeReturn = new Token(expr.getStartPosition(), expr.getStartPosition(), Id.RETURN);
+        ReturnStatement stmt = new ReturnStatement(fakeReturn, expr);
+        stmt.adopt(expr);
+        body = new StatementBlock(Collections.singletonList(stmt), expr.getStartPosition(), expr.getEndPosition());
+        body.adopt(stmt);
 
         adopt(body);
         }

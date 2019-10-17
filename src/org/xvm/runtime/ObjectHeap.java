@@ -163,14 +163,12 @@ public class ObjectHeap
             case Duration:
             case Range:
             case Version:
+            case Module:
                 return constValue.getType();
 
             case Set:
             case MapEntry:
                 throw new UnsupportedOperationException("TODO: " + constValue);
-
-            case Module:
-                return f_poolRoot.typeModule();
 
             case Package:
                 throw new UnsupportedOperationException("TODO: " + constValue);
