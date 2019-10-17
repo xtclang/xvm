@@ -4676,6 +4676,16 @@ public abstract class TypeConstant
         IdentityConstant idLeft  = typeLeft.getSingleUnderlyingClass(true);
         IdentityConstant idRight = typeRight.getSingleUnderlyingClass(true);
 
+        if (idLeft.getFormat() == Format.NativeClass)
+            {
+            idLeft = ((NativeRebaseConstant) idLeft).getClassConstant();
+            }
+
+        if (idRight.getFormat() == Format.NativeClass)
+            {
+            idRight = ((NativeRebaseConstant) idRight).getClassConstant();
+            }
+
         if (idLeft.equals(pool.clzTuple()))
             {
             if (!typeRight.isTuple())

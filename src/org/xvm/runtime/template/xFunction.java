@@ -11,29 +11,31 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ServiceContext;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xService.ServiceHandle;
+import org.xvm.runtime.template.xType.TypeHandle;
 
 
 /**
- * TODO:
+ * Native Function implementation.
  */
 public class xFunction
         extends ClassTemplate
     {
     public static xFunction INSTANCE;
+    public static ClassConstant INCEPTION_CLASS;
 
     public xFunction(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -42,12 +44,20 @@ public class xFunction
         if (fInstance)
             {
             INSTANCE = this;
+            INCEPTION_CLASS = new NativeRebaseConstant(
+                (ClassConstant) structure.getIdentityConstant());
             }
         }
 
     @Override
     public void initDeclared()
         {
+        }
+
+    @Override
+    protected ClassConstant getInceptionClassConstant()
+        {
+        return this == INSTANCE ? INCEPTION_CLASS : getClassConstant();
         }
 
     @Override
@@ -75,9 +85,7 @@ public class xFunction
 
             assert function.isFunction();
 
-            TypeConstant typeFunction = function.getIdentityConstant().getType();
-
-            frame.pushStack(new FunctionHandle(ensureClass(typeFunction), function));
+            frame.pushStack(new FunctionHandle(function));
             return Op.R_NEXT;
             }
 
@@ -98,32 +106,69 @@ public class xFunction
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
+    @Override
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        FunctionHandle hFunction = (FunctionHandle) hTarget;
+
+        return frame.assignValue(iReturn, xString.makeHandle(hFunction.getType().getValueString()));
+        }
+
+
+    // ----- Object handle -------------------------------------------------------------------------
+
+    /**
+     * Function handle.
+     *
+     * Note that while for any other type it holds true that a canonical type is assignable from
+     * any parameterized type based on the same defining constant, it's not so for functions.
+     * For example, Function<<><>> is not assignable from Function<<Int><>>.
+     *
+     * As a result, all Function handles are based on the same canonical ClassComposition, but
+     * carry the actual type as a part of their state,
+     */
     public static class FunctionHandle
             extends ObjectHandle
         {
-        // a function to call
+        // the underlying function
         protected final MethodStructure f_function;
+
+        // the function's type
+        protected final TypeConstant f_type;
 
         // a method call chain (not null only if function is null)
         protected final CallChain f_chain;
         protected final int f_nDepth;
 
-        protected FunctionHandle(TypeComposition clazz, MethodStructure function)
+        protected FunctionHandle(MethodStructure function)
             {
-            super(clazz);
-
-            f_function = function;
-            f_chain = null;
-            f_nDepth = 0;
+            this(function.getIdentityConstant().getType(), function);
             }
 
-        protected FunctionHandle(TypeComposition clazz, CallChain chain, int nDepth)
+        protected FunctionHandle(TypeConstant type, MethodStructure function)
             {
-            super(clazz);
+            super(INSTANCE.getCanonicalClass());
 
+            f_type     = type;
+            f_function = function;
+            f_chain    = null;
+            f_nDepth   = 0;
+            }
+
+        protected FunctionHandle(CallChain chain, int nDepth)
+            {
+            super(INSTANCE.getCanonicalClass());
+
+            f_type     = chain.getMethod(nDepth).getIdentityConstant().getType();
             f_function = null;
-            f_chain = chain;
-            f_nDepth = nDepth;
+            f_chain    = chain;
+            f_nDepth   = nDepth;
+            }
+
+        @Override
+        public TypeConstant getType()
+            {
+            return f_type;
             }
 
         public MethodStructure getMethod()
@@ -183,20 +228,54 @@ public class xFunction
          */
         public FunctionHandle bindTarget(ObjectHandle hArg)
             {
-            return new SingleBoundHandle(m_clazz, this, -1, hArg);
+            return new SingleBoundHandle(f_type, this, -1, hArg);
             }
 
         /**
          * Bind the specified argument.
          *
-         * @param iArg  teh argument's index
+         *
+         * @param pool  the constant pool to use for creation a new function type
+         * @param iArg  the argument's index
          * @param hArg  the argument to bind the argument to
          *
          * @return a bound FunctionHandle
          */
-        public FunctionHandle bind(int iArg, ObjectHandle hArg)
+        public FunctionHandle bind(ConstantPool pool, int iArg, ObjectHandle hArg)
             {
-            return new SingleBoundHandle(m_clazz, this, iArg, hArg);
+            assert iArg >= 0;
+
+            GenericTypeResolver resolver = null;
+            MethodStructure     method   = getMethod();
+            if (method != null)
+                {
+                Parameter parameter = method.getParam(iArg + calculateShift(iArg));
+                if (parameter.isTypeParameter())
+                    {
+                    TypeHandle hType = (TypeHandle) hArg;
+                    resolver = sName ->
+                        sName.equals(parameter.getName())
+                        ? hType.getDataType()
+                        : null;
+                    }
+                }
+
+            return new SingleBoundHandle(
+                pool.bindFunctionParam(f_type, iArg, resolver), this, iArg, hArg);
+            }
+
+        /**
+         * Calculate a shift for a given argument index indicating the difference between
+         * the specified argument index and the actual index of the function parameter that
+         * corresponds to this argument.
+         *
+         * @param iArg the argument to calculate the shift of
+         *
+         * @return the shift
+         */
+        protected int calculateShift(int iArg)
+            {
+            return 0;
             }
 
         /**
@@ -208,7 +287,7 @@ public class xFunction
          */
         public FullyBoundHandle bindArguments(ObjectHandle[] ahArg)
             {
-            return new FullyBoundHandle(m_clazz, this, ahArg);
+            return new FullyBoundHandle(this, ahArg);
             }
 
         // ----- internal implementation -----
@@ -302,9 +381,9 @@ public class xFunction
         {
         protected FunctionHandle m_hDelegate;
 
-        protected DelegatingHandle(TypeComposition clazz, FunctionHandle hDelegate)
+        protected DelegatingHandle(TypeConstant type, FunctionHandle hDelegate)
             {
-            super(clazz, hDelegate == null ? null : hDelegate.f_function);
+            super(type, hDelegate == null ? null : hDelegate.f_function);
 
             m_hDelegate = hDelegate;
             }
@@ -378,7 +457,7 @@ public class xFunction
 
         public NativeFunctionHandle(xService.NativeOperation op)
             {
-            super(INSTANCE.getCanonicalClass(), null);
+            super(INSTANCE.getCanonicalType(), null);
 
             f_op = op;
             }
@@ -418,48 +497,13 @@ public class xFunction
     public static class SingleBoundHandle
             extends DelegatingHandle
         {
-        protected SingleBoundHandle(TypeComposition clazz, FunctionHandle hDelegate,
+        protected SingleBoundHandle(TypeConstant type, FunctionHandle hDelegate,
                                     int iArg, ObjectHandle hArg)
             {
-            super(clazz, hDelegate);
+            super(type, hDelegate);
 
             m_iArg = iArg;
             m_hArg = hArg;
-            }
-
-        /**
-         * Calculate a real (against the underlying function) index for a parameter that this
-         * handle binds.
-         *
-         * @return the parameter index at the underlying function
-         */
-        protected int calculateParameterIndex()
-            {
-            int ix = m_iArg;
-            if (m_hDelegate instanceof SingleBoundHandle)
-                {
-                ix += ((SingleBoundHandle) m_hDelegate).calculateShift(ix);
-                }
-            return ix;
-            }
-
-        /**
-         * Calculate a shift for a given argument index indicating the difference between
-         * the specified argument index and the actual index of the function parameter that
-         * corresponds to this argument.
-         *
-         * @param iArg the argument to calculate the shift of
-         *
-         * @return the shift
-         */
-        protected int calculateShift(int iArg)
-            {
-            int nShift = m_iArg == -1 || iArg < m_iArg ? 0 : 1;
-            if (m_hDelegate instanceof SingleBoundHandle)
-                {
-                nShift += ((SingleBoundHandle) m_hDelegate).calculateShift(iArg);
-                }
-            return nShift;
             }
 
         @Override
@@ -469,36 +513,11 @@ public class xFunction
             }
 
         @Override
-        public TypeConstant getType()
+        protected int calculateShift(int iArg)
             {
-            TypeConstant type = m_type;
-            if (type == null)
-                {
-                type = m_hDelegate.getType(); // Function<Tuple<Params>, Tuple<Returns>>
+            int nShift = m_iArg == -1 || iArg < m_iArg ? 0 : 1;
 
-                int iArg = m_iArg;
-                if (iArg >= 0)
-                    {
-                    GenericTypeResolver resolver = null;
-                    MethodStructure     method   = getMethod();
-                    if (method != null)
-                        {
-                        Parameter parameter = method.getParam(calculateParameterIndex());
-                        if (parameter.isTypeParameter())
-                            {
-                            xType.TypeHandle hType = (xType.TypeHandle) m_hArg;
-                            resolver = sName ->
-                                sName.equals(parameter.getName())
-                                ? hType.getDataType()
-                                : null;
-                            }
-                        }
-
-                    type = ConstantPool.getCurrentPool().bindFunctionParam(type, iArg, resolver);
-                    }
-                m_type = type;
-                }
-            return type;
+            return nShift + m_hDelegate.calculateShift(iArg);
             }
 
         @Override
@@ -595,9 +614,9 @@ public class xFunction
         protected final ObjectHandle[] f_ahArg;
         protected FullyBoundHandle m_next;
 
-        protected FullyBoundHandle(TypeComposition clazz, FunctionHandle hDelegate, ObjectHandle[] ahArg)
+        protected FullyBoundHandle(FunctionHandle hDelegate, ObjectHandle[] ahArg)
             {
-            super(clazz, hDelegate);
+            super(INSTANCE.getCanonicalType(), hDelegate);
 
             f_ahArg = ahArg;
             }
@@ -613,12 +632,6 @@ public class xFunction
                     }
                 }
             return super.isMutable();
-            }
-
-        @Override
-        public TypeConstant getType()
-            {
-            return INSTANCE.getCanonicalType();
             }
 
         @Override
@@ -670,8 +683,7 @@ public class xFunction
             return frameThis;
             }
 
-        public static FullyBoundHandle NO_OP = new FullyBoundHandle(
-                INSTANCE.getCanonicalClass(), null, null)
+        public static FullyBoundHandle NO_OP = new FullyBoundHandle(null, null)
             {
             @Override
             public int callChain(Frame frame, ObjectHandle hTarget, Frame.Continuation continuation)
@@ -699,23 +711,21 @@ public class xFunction
         /**
          * Create an asynchronous method handle.
          *
-         * @param clazz   the class composition for this handle
          * @param chain   the call chain
          */
-        protected AsyncHandle(ClassComposition clazz, CallChain chain)
+        protected AsyncHandle(CallChain chain)
             {
-            super(clazz, chain, 0);
+            super(chain, 0);
             }
 
         /**
          * Create an asynchronous native method handle.
          *
-         * @param clazz   the class composition for this handle
          * @param method  the native method
          */
-        protected AsyncHandle(ClassComposition clazz, MethodStructure method)
+        protected AsyncHandle(MethodStructure method)
             {
-            super(clazz, method);
+            super(method);
 
             assert method.isNative();
             }
@@ -819,15 +829,9 @@ public class xFunction
 
         protected FunctionProxyHandle(FunctionHandle fn, ServiceContext ctx)
             {
-            super(fn.getComposition(), fn);
+            super(fn.getType(), fn);
 
             f_ctx = ctx;
-            }
-
-        @Override
-        public TypeConstant getType()
-            {
-            return m_hDelegate.getType();
             }
 
         // ----- FunctionHandle interface ----------------------------------------------------------
@@ -962,9 +966,7 @@ public class xFunction
      */
     public static AsyncHandle makeAsyncHandle(CallChain chain)
         {
-        TypeConstant typeFunction = chain.getMethod(0).getIdentityConstant().getType();
-
-        return new AsyncHandle(INSTANCE.ensureClass(typeFunction), chain);
+        return new AsyncHandle(chain);
         }
 
     /**
@@ -978,22 +980,16 @@ public class xFunction
         {
         assert method.isNative();
 
-        TypeConstant typeFunction = method.getIdentityConstant().getType();
-
-        return new AsyncHandle(INSTANCE.ensureClass(typeFunction), method);
+        return new AsyncHandle(method);
         }
 
     public static FunctionHandle makeHandle(CallChain chain, int nDepth)
         {
-        TypeConstant typeFunction = chain.getMethod(nDepth).getIdentityConstant().getType();
-
-        return new FunctionHandle(INSTANCE.ensureClass(typeFunction), chain, nDepth);
+        return new FunctionHandle(chain, nDepth);
         }
 
     public static FunctionHandle makeHandle(MethodStructure function)
         {
-        TypeConstant typeFunction = function.getIdentityConstant().getType();
-
-        return new FunctionHandle(INSTANCE.ensureClass(typeFunction), function);
+        return new FunctionHandle(function);
         }
     }

@@ -365,7 +365,7 @@ public class Frame
             case Op.A_SUPER:
                 return f_hThis == null
                     ? makeDeferredException("Run-time error: no target")
-                    : xFunction.makeHandle(m_chain, m_nDepth).bind(0, f_hThis);
+                    : xFunction.makeHandle(m_chain, m_nDepth).bind(poolContext(), 0, f_hThis);
 
             case Op.A_TARGET:
                 return f_hTarget == null

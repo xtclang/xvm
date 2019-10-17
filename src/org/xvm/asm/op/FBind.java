@@ -173,7 +173,7 @@ public class FBind
             {
             // after every step, the resulting function accepts one less
             // parameter, so it needs to compensate the absolute position
-            hFunction = hFunction.bind(m_anParamIx[i] - i, ahParam[i]);
+            hFunction = hFunction.bind(frame.poolContext(), m_anParamIx[i] - i, ahParam[i]);
             }
 
         if (frame.isNextRegister(m_nRetValue))
