@@ -2,6 +2,8 @@ package org.xvm.asm;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ServiceContext;
+
 /**
  * Represents any argument for an op, including constants, registers, and pre-defined
  * references like "this".
@@ -52,7 +54,7 @@ public interface Argument
             {
             if (nArg <= Op.CONSTANT_OFFSET)
                 {
-                ConstantPool pool = ConstantPool.getCurrentPool();
+                ConstantPool pool = ServiceContext.getCurrentContext().getCurrentFrame().poolCode();
                 return pool.getConstant(Op.CONSTANT_OFFSET - nArg).getValueString();
                 }
             }
