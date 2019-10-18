@@ -30,9 +30,8 @@ module TestMisc.xqiz.it
 
         testInterval();
         testException();
-        // testTupleConv();
-        // testMap();
         testConditional();
+        testBind();
         testConstants();
         testImport();
         testRecursiveType();
@@ -411,22 +410,6 @@ module TestMisc.xqiz.it
         console.println("e=" + e);
         }
 
-    void testTupleConv()
-        {
-        console.println("\n** testTupleConv()");
-
-        Tuple<String, IntLiteral> t1 = getTupleSI();
-        console.println("t1 = " + t1);
-
-        // TODO: should the following compile?
-        // Tuple<String, Int> t2 = getTupleSI();
-        }
-
-    Tuple<String, IntLiteral> getTupleSI()
-        {
-        return ("Hello", 4);
-        }
-
     void testConditional()
         {
         console.println("\n** testConditional()");
@@ -478,13 +461,6 @@ module TestMisc.xqiz.it
         return i < 0 ? false : (true, "positive");
         }
 
-    void testMap()
-        {
-        console.println("\n** testMap()");
-
-        console.println("Map:[1=one, 2=two]=" + Map:[1="one", 2="two"]);
-        }
-
     void testAssignOps()
         {
         console.println("\n** testAssignOps()");
@@ -518,6 +494,40 @@ module TestMisc.xqiz.it
         Boolean f6 = false;
         f6 ||= false;
         console.println("f6=" + f6 + " (should be false)");
+        }
+
+    void testBind()
+        {
+        console.println("\n** testBind()");
+
+        foo(y="a", x=3);
+
+        function void (Int) fn1 = &foo(y="a");
+        fn1(3);
+
+        function void () fn1b = &fn1(3);
+        fn1b();
+
+        function void () fn2 = &foo(y="a", x=3);
+        fn2();
+
+        bar(3, z=4, y=2);
+
+        function void (Int, Int) fn3 = &bar(y=2);
+        fn3(3, 4);
+
+        function void (Int, Int) fn4 = &bar(3);
+        fn4(2, 4);
+
+        private void foo(Int x = 0, String y = "")
+            {
+            console.println($"foo: x={x}, y={y}");
+            }
+
+        private void bar(Int x, Int y, Int z = 1)
+            {
+            console.println($"bar: x={x}, y={y}, z={z}");
+            }
         }
 
     void testConstants()

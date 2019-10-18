@@ -8,6 +8,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -120,8 +121,10 @@ public class NonBindingExpression
     public Argument generateArgument(
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        throw new IllegalStateException("NonBindingExpression cannot generate an argument;"
-                + ": that's why they're called non-binding! (" + this + ')');
+        // we use synthetic NonBindingExpressions to mark non-specified default arguments in a
+        // presence of other named arguments (see AstNode.rearrangeNamedArgs);
+        // note that "generateArgument" is never called when a method binding is performed
+        return Register.DEFAULT;
         }
 
 

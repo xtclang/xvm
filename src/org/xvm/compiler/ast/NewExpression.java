@@ -425,7 +425,7 @@ public class NewExpression
                         {
                         case 0:
                             // dynamically growing array; go the normal route
-                            assert args == null || args.isEmpty();
+                            assert args.isEmpty();
                             break;
 
                         case 1:
@@ -507,8 +507,7 @@ public class NewExpression
         if (fValid)
             {
             List<Expression> listArgs = this.args;
-            int              cArgs    = listArgs == null ? 0 : listArgs.size();
-            MethodConstant   idMethod = null;
+            MethodConstant   idMethod;
             if (fAnon)
                 {
                 // first, see if the constructor that we're looking for is on the anonymous
@@ -520,7 +519,7 @@ public class NewExpression
                 // as if this were any other normal class)
                 ErrorListener errsTemp = errs.branch();
                 idMethod = findMethod(ctx, infoTarget, "construct", listArgs, MethodType.Constructor,
-                                false, null, errsTemp);
+                                true, false, null, errsTemp);
                 if (idMethod == null && !listArgs.isEmpty())
                     {
                     // the constructor that we're looking for is not on the anonymous inner class,
@@ -531,7 +530,7 @@ public class NewExpression
                     // (note: the automatic creation of the synthetic no-arg constructor in the
                     // absence of any explicit constructor must do this same check)
                     MethodConstant idSuper = findMethod(ctx, typeSuper.ensureTypeInfo(errs),
-                            "construct", listArgs, MethodType.Constructor, false, null, errs);
+                            "construct", listArgs, MethodType.Constructor, true, false, null, errs);
                     if (idSuper == null)
                         {
                         fValid = false;
@@ -561,7 +560,7 @@ public class NewExpression
             else
                 {
                 idMethod = findMethod(ctx, infoTarget, "construct", listArgs, MethodType.Constructor,
-                                false, null, errs);
+                                true, false, null, errs);
                 }
 
             if (idMethod == null)
@@ -570,11 +569,11 @@ public class NewExpression
                 }
             else if (fValid)
                 {
-                m_constructor = (MethodStructure) idMethod.getComponent();
-                if (m_constructor == null)
+                MethodStructure constructor = (MethodStructure) idMethod.getComponent();
+                if (constructor == null)
                     {
-                    m_constructor = infoTarget.getMethodById(idMethod).getTopmostMethodStructure(infoTarget);
-                    assert m_constructor != null;
+                    constructor = infoTarget.getMethodById(idMethod).getTopmostMethodStructure(infoTarget);
+                    assert constructor != null;
                     }
 
                 TypeConstant[] atypeArgs = idMethod.getRawParams();
@@ -584,7 +583,7 @@ public class NewExpression
                 if (!testExpressions(ctx, listArgs, atypeArgs).isFit())
                     {
                     // otherwise, check the tuple based invoke (see Expression.findMethod)
-                    if (cArgs == 1)
+                    if (listArgs.size() == 1)
                         {
                         typeTuple = pool.ensureParameterizedTypeConstant(
                                 pool.typeTuple(), atypeArgs);
@@ -598,7 +597,21 @@ public class NewExpression
 
                 if (typeTuple == null)
                     {
-                    fValid = validateExpressions(ctx, listArgs, atypeArgs, errs) != null;
+                    if (containsNamedArgs(listArgs))
+                        {
+                        Map<String, Expression> mapNamedExpr = extractNamedArgs(listArgs, errs);
+                        if (mapNamedExpr == null)
+                            {
+                            fValid = false;
+                            }
+                        else
+                            {
+                            args = listArgs =
+                                    rearrangeNamedArgs(m_constructor, listArgs, mapNamedExpr);
+                            }
+                        }
+
+                    fValid &= validateExpressions(ctx, listArgs, atypeArgs, errs) != null;
                     }
                 else
                     {
@@ -606,7 +619,7 @@ public class NewExpression
                     m_fTupleArg = true;
                     }
 
-                m_cDefaults = m_constructor.getParamCount() - cArgs;
+                m_constructor = constructor;
                 }
             }
 
@@ -691,8 +704,6 @@ public class NewExpression
         //    them up in the inverse order; however, the parent (for the NEWC_* ops should not be
         //    put on the stack unless there are no arguments
 
-        assert m_constructor != null;
-
         if (LVal.isLocalArgument())
             {
             List<Expression> listArgs = args;
@@ -725,11 +736,13 @@ public class NewExpression
     private void generateNew(Context ctx, Code code, Argument[] aArgs, Argument argResult,
                              ErrorListener errs)
         {
+        assert m_constructor.getTypeParamCount() == 0;
+
         MethodConstant idConstruct = m_constructor.getIdentityConstant();
         TypeConstant   typeTarget  = getType();
-        int            cAll        = idConstruct.getRawParams().length;
+        int            cParams     = m_constructor.getParamCount();
         int            cArgs       = aArgs.length;
-        int            cDefaults   = m_cDefaults;
+        int            cDefaults   = cParams - cArgs;
 
         if (m_fTupleArg)
             {
@@ -737,10 +750,9 @@ public class NewExpression
             }
         else
             {
-            assert cArgs + cDefaults == cAll;
             if (cDefaults > 0)
                 {
-                Argument[] aArgAll = new Argument[cAll];
+                Argument[] aArgAll = new Argument[cParams];
                 System.arraycopy(aArgs, 0, aArgAll, 0, cArgs);
                 aArgs = aArgAll;
 
@@ -775,7 +787,7 @@ public class NewExpression
                 {
                 if (argOuter == null)
                     {
-                    switch (cAll)
+                    switch (cParams)
                         {
                         case 0:
                             code.add(new NewG_0(idConstruct, typeTarget, argResult));
@@ -803,7 +815,7 @@ public class NewExpression
                     }
                 else
                     {
-                    switch (cAll)
+                    switch (cParams)
                         {
                         case 0:
                             code.add(new NewCG_0(idConstruct, argOuter, typeTarget, argResult));
@@ -823,7 +835,7 @@ public class NewExpression
                 {
                 if (argOuter == null)
                     {
-                    switch (cAll)
+                    switch (cParams)
                         {
                         case 0:
                             code.add(new New_0(idConstruct, argResult));
@@ -840,7 +852,7 @@ public class NewExpression
                     }
                 else
                     {
-                    switch (cAll)
+                    switch (cParams)
                         {
                         case 0:
                             code.add(new NewC_0(idConstruct, argOuter, argResult));
@@ -1396,7 +1408,6 @@ public class NewExpression
 
     private transient MethodStructure m_constructor;
     private transient boolean         m_fTupleArg;  // indicates that arguments come from a tuple
-    private transient int             m_cDefaults;  // number of default arguments
 
     private transient AnonPurpose              m_purposeCurrent = AnonPurpose.None;
     private transient TypeCompositionStatement m_anonActualBackup;

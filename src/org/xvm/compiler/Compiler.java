@@ -1174,6 +1174,10 @@ public class Compiler
      */
     public static final String ANNOTATION_NOT_APPLICABLE           = "COMPILER-140";
     /**
+     * The argument name is not allowed.
+     */
+    public static final String ILLEGAL_ARG_NAME                    = "COMPILER-141";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

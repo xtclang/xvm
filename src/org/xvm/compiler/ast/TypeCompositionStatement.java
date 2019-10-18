@@ -2070,7 +2070,7 @@ public class TypeCompositionStatement
         else
             {
             idSuper = findMethod(ctxValidate, infoSuper, "construct", listArgs, MethodType.Constructor,
-                            false, null, errs);
+                            true, false, null, errs);
             if (idSuper == null)
                 {
                 // if an error have already been logged, this is additional information
@@ -2083,6 +2083,21 @@ public class TypeCompositionStatement
         // validate
         if (idSuper != null && listArgs != null)
             {
+            if (containsNamedArgs(listArgs))
+                {
+                Map<String, Expression> mapNamedExpr = extractNamedArgs(listArgs, errs);
+                if (mapNamedExpr == null)
+                    {
+                    fValid = false;
+                    }
+                else
+                    {
+                    MethodStructure constructorSuper = (MethodStructure) idSuper.getComponent();
+
+                    listArgs = rearrangeNamedArgs(constructorSuper, listArgs, mapNamedExpr);
+                    }
+                }
+
             TypeConstant[] atypeArgs = idSuper.getRawParams();
             for (int i = 0, c = listArgs.size(); i < c; i++)
                 {

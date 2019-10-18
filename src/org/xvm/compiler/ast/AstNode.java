@@ -845,17 +845,17 @@ public abstract class AstNode
         TypeFit fit    = TypeFit.Fit;
         for (int i = 0, c = Math.min(listExpr.size(), cTypes); i < c ; ++i)
             {
-            TypeConstant typeTest = atypeTest[i];
-            if (typeTest != null)
-                {
-                ctx = ctx.enterInferring(typeTest);
-                }
+                TypeConstant typeTest = atypeTest[i];
+                if (typeTest != null)
+                    {
+                    ctx = ctx.enterInferring(typeTest);
+                    }
 
             fit = fit.combineWith(listExpr.get(i).testFit(ctx, typeTest, null));
 
-            if (typeTest != null)
-                {
-                ctx = ctx.exit();
+                if (typeTest != null)
+                    {
+                    ctx = ctx.exit();
                 }
             }
         return fit;
@@ -964,11 +964,23 @@ public abstract class AstNode
      * Given an array of expressions representing actual parameters and the TypeInfo of the target,
      * find the best matching method.
      *
+     * There is a difference in the way the default method parameters are handled depending on the
+     * value of the "fCall" argument. In the case of a call, all the default method parameters that
+     * are not explicitly specified are considered to be assigned to their default values. In the
+     * case of a non-call, the default method parameters are treated in the same manner as others,
+     * and any parameter that is not explicitly specified remains un-bound.
+     * For example, having a function
+     *      void foo(Int a, Int b = 0, Boolean c = False, Int d = 1)
+     * a [call] expression "foo(1, c=True)" will result into a function call "foo(1, 0, True, 1)",
+     * while the equivalent [bind] expression "&foo(1, c=True)" will result into a function of
+     * type "function void (Int, Int)", where parameters "b" and "d" remain unbound.
+     *
      * @param ctx           the compilation context
      * @param infoTarget    the type info on which to search for the method
      * @param sMethodName   the method name
      * @param listExprArgs  the expressions for arguments (which may not yet be validated)
      * @param methodType    the MethodType to search for
+     * @param fCall         if true, the method will be called; otherwise it will be bound
      * @param fAllowNested  if true, nested methods can be used at the target
      * @param atypeReturn   (optional) the array of return types from the method
      * @param errs          listener to log any errors to
@@ -982,63 +994,43 @@ public abstract class AstNode
             String           sMethodName,
             List<Expression> listExprArgs,
             MethodType       methodType,
+            boolean          fCall,
             boolean          fAllowNested,
             TypeConstant[]   atypeReturn,
             ErrorListener    errs)
         {
         assert sMethodName != null && sMethodName.length() > 0;
 
-        int cArgs = listExprArgs == null ? 0 : listExprArgs.size();
+        int cExpr = listExprArgs == null ? 0 : listExprArgs.size();
 
         // collect available types for unnamed arguments and a map of named expressions
-        TypeConstant[]          atypeArgs    = new TypeConstant[cArgs];
-        Map<String, Expression> mapNamedExpr = null;
-        TypeConstant            typeTupleArg = null; // potential tuple argument
-        for (int i = 0; i < cArgs; ++i)
+        Map<String, Expression> mapNamedExpr = cExpr > 0
+                ? extractNamedArgs(listExprArgs, errs)
+                : Collections.EMPTY_MAP;
+
+        if (mapNamedExpr == null)
             {
-            Expression exprArg = listExprArgs.get(i);
+            // an error has been reported
+            return null;
+            }
 
-            if (exprArg instanceof LabeledExpression)
+        // allow for a Tuple based invocation; for example a method f(String s, Int i)
+        // is invocable via f(t), where "t" is an argument of type Tuple<String, Int>
+        TypeConstant typeTupleArg = null;
+        if (fCall && cExpr == 1 && mapNamedExpr.isEmpty())
+            {
+            Expression   exprTuple = listExprArgs.get(0);
+            TypeConstant typeTuple = exprTuple.isValidated()
+                    ? exprTuple.getType()
+                    : exprTuple.getImplicitType(ctx);
+
+            if (typeTuple != null && typeTuple.isTuple())
                 {
-                String sName = ((LabeledExpression) exprArg).getName();
-
-                if (mapNamedExpr == null)
-                    {
-                    mapNamedExpr = new HashMap<>(cArgs);
-                    }
-                else
-                    {
-                    if (mapNamedExpr.containsKey(sName))
-                        {
-                        exprArg.log(errs, Severity.ERROR, Compiler.NAME_COLLISION, sName);
-                        return null;
-                        }
-                    }
-                mapNamedExpr.put(sName, exprArg);
-                }
-            else
-                {
-                if (mapNamedExpr != null)
-                    {
-                    exprArg.log(errs, Severity.ERROR, Compiler.ARG_NAME_REQUIRED, i);
-                    return null;
-                    }
-
-                TypeConstant typeArg = exprArg.isValidated()
-                        ? exprArg.getType()
-                        : exprArg.getImplicitType(ctx);
-
-                // allow for a Tuple based invocation; for example a method f(String s, Int i)
-                // is invocable via f(t), where t is an argument of type Tuple<String, Int>
-                if (cArgs == 1 && typeArg != null && typeArg.isTuple())
-                    {
-                    typeTupleArg = typeArg;
-                    }
-
-                atypeArgs[i] = typeArg;
+                typeTupleArg = typeTuple;
                 }
             }
 
+        int                 cArgs      = fCall ? cExpr : -1;
         TypeConstant        typeTarget = infoTarget.getType();
         Set<MethodConstant> setMethods = infoTarget.findMethods(sMethodName, cArgs, methodType);
 
@@ -1087,8 +1079,8 @@ public abstract class AstNode
         Set<MethodConstant> setConvert = new HashSet<>();
         ErrorListener       errsTemp   = errs.branch();
 
-        collectMatchingMethods(ctx, infoTarget, setMethods, listExprArgs,
-                atypeArgs, mapNamedExpr, atypeReturn, setIs, setConvert, errsTemp);
+        collectMatchingMethods(ctx, infoTarget, setMethods, listExprArgs, fCall,
+                mapNamedExpr, atypeReturn, setIs, setConvert, errsTemp);
 
         // now choose the best match
         if (!setIs.isEmpty())
@@ -1103,12 +1095,11 @@ public abstract class AstNode
 
         if (typeTupleArg != null)
             {
-            atypeArgs  = typeTupleArg.getParamTypesArray();
-            setMethods = infoTarget.findMethods(sMethodName, atypeArgs.length, methodType);
+            setMethods = infoTarget.findMethods(sMethodName, typeTupleArg.getParamsCount(), methodType);
 
             ErrorListener errsTempT = errs.branch();
-            collectMatchingMethods(ctx, infoTarget, setMethods, null,
-                    atypeArgs, mapNamedExpr, atypeReturn, setIs, setConvert, errsTempT);
+            collectMatchingMethods(ctx, infoTarget, setMethods, null, fCall,
+                    mapNamedExpr, atypeReturn, setIs, setConvert, errsTempT);
 
             if (!setIs.isEmpty())
                 {
@@ -1149,6 +1140,68 @@ public abstract class AstNode
         }
 
     /**
+     * @return true iff the specified list contains a named argument
+     */
+    protected boolean containsNamedArgs(List<Expression> listExprArgs)
+        {
+        for (int i = 0, cExpr = listExprArgs.size(); i < cExpr; ++i)
+            {
+            Expression exprArg = listExprArgs.get(i);
+
+            if (exprArg instanceof LabeledExpression)
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    /**
+     * Extract all named expression from the specified list into a map. Fill the implicit types
+     * for all not-named arguments into the head of the type array.
+     *
+     * @return a map of named expressions; null if an error was reported
+     */
+    protected Map<String, Expression> extractNamedArgs(List<Expression> listExprArgs,
+                                                       ErrorListener errs)
+        {
+        Map<String, Expression> mapNamed = null;
+
+        for (int i = 0, cExpr = listExprArgs.size(); i < cExpr; ++i)
+            {
+            Expression exprArg = listExprArgs.get(i);
+
+            if (exprArg instanceof LabeledExpression)
+                {
+                String sName = ((LabeledExpression) exprArg).getName();
+
+                if (mapNamed == null)
+                    {
+                    mapNamed = new HashMap<>(cExpr);
+                    }
+                else
+                    {
+                    if (mapNamed.containsKey(sName))
+                        {
+                        exprArg.log(errs, Severity.ERROR, Compiler.NAME_COLLISION, sName);
+                        return null;
+                        }
+                    }
+                mapNamed.put(sName, exprArg);
+                }
+            else
+                {
+                if (mapNamed != null)
+                    {
+                    exprArg.log(errs, Severity.ERROR, Compiler.ARG_NAME_REQUIRED, i);
+                    return null;
+                    }
+                }
+            }
+        return mapNamed == null ? Collections.EMPTY_MAP : mapNamed;
+        }
+
+    /**
      * Helper method to collect matching methods.
      */
     private void collectMatchingMethods(
@@ -1156,7 +1209,7 @@ public abstract class AstNode
             TypeInfo                infoTarget,
             Set<MethodConstant>     setMethods,
             List<Expression>        listExprArgs,
-            TypeConstant[]          atypeArgs,
+            boolean                 fCall,
             Map<String, Expression> mapNamedExpr,
             TypeConstant[]          atypeReturn,
             Set<MethodConstant>     setIs,
@@ -1164,10 +1217,9 @@ public abstract class AstNode
             ErrorListener           errs)
         {
         ConstantPool  pool     = pool();
-        int           cArgs    = atypeArgs.length;
-        int           cReturns = atypeReturn == null ? 0 : atypeReturn.length;
-        int           cNamed   = mapNamedExpr == null ? 0 : mapNamedExpr.size();
-        int           cUnnamed = cArgs - cNamed;
+        int           cArgs    = listExprArgs == null ? 0 : listExprArgs.size();
+        int           cReturns = atypeReturn  == null ? 0 : atypeReturn.length;
+        int           cNamed   = mapNamedExpr.size();
         ErrorListener errsTemp = errs.branch();
         ErrorListener errsKeep = null;
 
@@ -1177,64 +1229,45 @@ public abstract class AstNode
             MethodStructure   method     = infoMethod.getTopmostMethodStructure(infoTarget);
             SignatureConstant sigMethod  = idMethod.getSignature();
 
-            int cAllParams  = method.getParamCount();
             int cTypeParams = method.getTypeParamCount();
+            int cParams     = method.getVisibleParamCount();
             int cDefaults   = method.getDefaultParamCount();
-            int cVisible    = cAllParams - cTypeParams;
-            int cRequired   = cAllParams - cTypeParams - cDefaults;
+            int cRequired   = cParams - cDefaults;
 
-            if (cArgs < cRequired || cArgs > cVisible
-                    || sigMethod.getReturnCount() < cReturns)
+            if (cArgs > cParams || sigMethod.getReturnCount() < cReturns ||
+                    fCall && cArgs < cRequired)
                 {
                 // invalid number of arguments or return values
                 continue;
                 }
 
-            // named args could change method to method; we may need to clone the
-            // array of args to prevent its contamination
-            TypeConstant[] atypeAllArgs = atypeArgs;
-
-            // add the named expressions to the list of expressions in the correct order
             if (cNamed > 0)
                 {
-                atypeAllArgs = new TypeConstant[cVisible];
+                // insert the named expressions to the list of expressions in the correct position
+                listExprArgs = rearrangeNamedArgs(method, listExprArgs, mapNamedExpr);
+                cArgs        = listExprArgs.size();
 
-                Expression[] aexprArgs = new Expression[cVisible];
-                if (listExprArgs != null && cUnnamed > 0)
+                if (fCall)
                     {
-                    // keep the unnamed arguments at the head of the arrays
-                    System.arraycopy(atypeArgs, 0, atypeAllArgs, 0, cUnnamed);
-
-                    listExprArgs.toArray(aexprArgs);
-                    for (int i = cUnnamed; i < cArgs; i++)
+                    // make sure all the required args are present
+                    for (int i = 0; i < cRequired; i++)
                         {
-                        aexprArgs[i] = null;
-                        }
-                    }
-
-                for (String sName : mapNamedExpr.keySet())
-                    {
-                    Expression exprArg = mapNamedExpr.get(sName);
-                    int        iParam  = method.getParam(sName).getIndex();
-
-                    assert iParam >= cUnnamed;
-
-                    aexprArgs[iParam] = exprArg;
-
-                    TypeConstant typeArg = exprArg.isValidated()
-                            ? exprArg.getType()
-                            : exprArg.getImplicitType(ctx);
-                    if (typeArg != null && !typeArg.equals(atypeAllArgs[iParam]))
-                        {
-                        if (atypeAllArgs == atypeArgs)
+                        if (listExprArgs.get(i) instanceof NonBindingExpression)
                             {
-                            atypeAllArgs = atypeAllArgs.clone();
+                            continue NextMethod;
                             }
-                        atypeAllArgs[iParam] = typeArg;
                         }
                     }
-                listExprArgs = Arrays.asList(aexprArgs);
-                cArgs        = cVisible;
+                }
+
+            TypeConstant[] atypeArgs = new TypeConstant[cArgs];
+            for (int i = 0; i < cArgs; i++)
+                {
+                Expression exprArg = listExprArgs.get(i);
+
+                atypeArgs[i] = exprArg.isValidated()
+                                ? exprArg.getType()
+                                : exprArg.getImplicitType(ctx);
                 }
 
             // now let's assume that the method fits and based on that resolve the type parameters
@@ -1242,7 +1275,7 @@ public abstract class AstNode
             if (cTypeParams > 0)
                 {
                 ListMap<String, TypeConstant> mapTypeParams =
-                        method.resolveTypeParameters(atypeAllArgs, atypeReturn);
+                        method.resolveTypeParameters(atypeArgs, atypeReturn);
                 if (mapTypeParams.size() < cTypeParams)
                     {
                     // different arguments/returns cause the formal type to resolve into
@@ -1257,80 +1290,54 @@ public abstract class AstNode
             TypeFit        fit        = TypeFit.Fit;
             for (int i = 0; i < cArgs; ++i)
                 {
+                Expression   exprArg   = listExprArgs.get(i);
                 TypeConstant typeParam = atypeParam[cTypeParams + i];
-                TypeConstant typeArg   = atypeAllArgs[i];
-                Expression   exprArg   = listExprArgs == null ? null : listExprArgs.get(i);
+                TypeConstant typeArg   = atypeArgs[i];
 
-                if (exprArg == null)
+                // check if the method's parameter type fits the argument expression
+                if (typeParam != null)
                     {
-                    if (typeArg == null || typeArg.isAssignableTo(typeParam))
-                        {
-                        if (typeArg != null && !typeArg.isA(typeParam))
-                            {
-                            fConvert = true;
-                            }
-                        }
-                    else
-                        {
-                        fit = TypeFit.NoFit;
-                        break;
-                        }
+                    ctx = ctx.enterInferring(typeParam);
                     }
-                else
+
+                // if *all* tests fail, report the errors from the first unsuccessful attempt
+                fit = exprArg.testFit(ctx, typeParam, errsTemp);
+                if (fit.isFit())
                     {
-                    // check if the method's parameter type fits the argument expression
-                    if (typeParam != null)
+                    if (fit.isConverting())
                         {
-                        ctx = ctx.enterInferring(typeParam);
+                        fConvert = true;
                         }
 
-                    // if *all* tests fail, report the errors from the first unsuccessful attempt
-                    fit = exprArg.testFit(ctx, typeParam, errsTemp);
-                    if (fit.isFit())
+                    // While typeArg represents the expression's implicit type; obtain the
+                    // implicit type again now using the inferring context;
+                    // the challenge is that the inferred expression could be more forgiving
+                    // than its original implicit type would suggest (e.g. NewExpression);
+                    // for the type parameter resolution below, lets pick the narrowest type
+                    TypeConstant typeExpr = exprArg.isValidated()
+                            ? exprArg.getType()
+                            : exprArg.getImplicitType(ctx);
+                    if (typeArg == null)
                         {
-                        if (fit.isConverting())
-                            {
-                            fConvert = true;
-                            }
-
-                        // the challenge is that the expression could be more forgiving
-                        // than its implicit type would suggest (e.g. NewExpression);
-                        // for the type parameter resolution below, lets pick the narrowest type
-                        TypeConstant typeExpr = exprArg.isValidated()
-                                ? exprArg.getType()
-                                : exprArg.getImplicitType(ctx);
-                        if (typeArg == null || !typeArg.equals(typeExpr))
-                            {
-                            if (atypeAllArgs == atypeArgs)
-                                {
-                                atypeAllArgs = atypeAllArgs.clone();
-                                }
-
-                            if (typeArg == null)
-                                {
-                                typeArg = typeExpr;
-                                }
-                            else if (typeExpr != null)
-                                {
-                                typeArg = typeArg.isA(typeExpr)
-                                        ? typeArg
-                                        : typeExpr.isA(typeArg)
-                                        ? typeExpr
-                                        : null;
-                                }
-                            atypeAllArgs[i] = typeArg;
-                            }
+                        typeArg = typeExpr;
                         }
-
-                    if (typeParam != null)
+                    else if (typeExpr != null && !typeArg.equals(typeExpr))
                         {
-                        ctx = ctx.exit();
+                        typeArg = typeArg .isA(typeExpr) ? typeArg
+                                : typeExpr.isA(typeArg)  ? typeExpr
+                                :                          null;
                         }
+                    atypeArgs[i] = typeArg;
+                    }
 
-                    if (!fit.isFit())
-                        {
-                        break;
-                        }
+                if (typeParam != null)
+                    {
+                    ctx = ctx.exit();
+                    }
+
+                if (!fit.isFit())
+                    {
+                    break;
                     }
                 }
 
@@ -1358,7 +1365,7 @@ public abstract class AstNode
                 {
                 // re-resolve the type parameters since we could have narrowed some
                 ListMap<String, TypeConstant> mapTypeParams =
-                        method.resolveTypeParameters(atypeAllArgs, atypeReturn);
+                        method.resolveTypeParameters(atypeArgs, atypeReturn);
                 if (mapTypeParams.size() < cTypeParams)
                     {
                     // different arguments/returns cause the formal type to resolve into
@@ -1407,6 +1414,57 @@ public abstract class AstNode
             // chance that none of them fit, in which case the caller would report those errors
             errsKeep.merge();
             }
+        }
+
+    /**
+     * Rearrange the list of argument expressions for the specified method by taking into
+     * consideration the map of named expressions. All the missing arguments are filled with
+     * a {@link NonBindingExpression}s.
+     *
+     * @return a rearranged list of expression that matches the method's parameters
+     */
+    protected List<Expression> rearrangeNamedArgs(
+            MethodStructure         method,
+            List<Expression>        listExprArgs,
+            Map<String, Expression> mapNamedExpr)
+        {
+        int cParams  = method.getVisibleParamCount();
+        int cArgs    = listExprArgs.size();
+        int cNamed   = mapNamedExpr.size();
+        int cUnnamed = cArgs - cNamed;
+
+        Expression[] aexpr = new Expression[cParams];
+
+        // fill the head of the array with unnamed expressions
+        for (int i = 0; i < cUnnamed; i++)
+            {
+            aexpr[i] = listExprArgs.get(i);
+            }
+
+        for (String sName : mapNamedExpr.keySet())
+            {
+            Expression exprArg = mapNamedExpr.get(sName);
+            int        iParam  = method.getParam(sName).getIndex();
+
+            // if a named arg overrides an unnamed (required), we'll null it out to generate
+            // an error later
+            aexpr[iParam] = iParam >= cUnnamed ? exprArg : null;
+            }
+
+        // replace non-specified "holes" with NonBindingExpressions
+        long lPos = getStartPosition();
+        for (int i = cUnnamed; i < cParams; i++)
+            {
+            if (aexpr[i] == null)
+                {
+                NonBindingExpression exprNB = new NonBindingExpression(lPos, lPos, null);
+                adopt(exprNB);
+                exprNB.setStage(Stage.Validated);
+                aexpr[i] = exprNB;
+                }
+            }
+
+        return Arrays.asList(aexpr);
         }
 
     /**

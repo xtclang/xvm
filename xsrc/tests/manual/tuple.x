@@ -7,6 +7,7 @@ module TestTuples.xqiz.it
         console.println("Tuple tests:");
 
         testSimple();
+        testConv();
         testConstElement();
         testConstSlice();
         testMultiAssign();
@@ -27,6 +28,22 @@ module TestTuples.xqiz.it
         String s1 = t[1];
         Int    i2 = t[2];
         console.println("fields: " + s0 + ", " + s1 + ", " + i2);
+        }
+
+    void testConv()
+        {
+        console.println("\n** testConv()");
+
+        Tuple<String, IntLiteral> t1 = getTupleSI();
+        console.println("t1 = " + t1);
+
+        // TODO: should the following compile?
+        // Tuple<String, Int> t2 = getTupleSI();
+
+        private static Tuple<String, IntLiteral> getTupleSI()
+            {
+            return ("Hello", 4);
+            }
         }
 
     void testConstElement()

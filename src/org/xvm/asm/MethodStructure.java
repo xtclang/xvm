@@ -389,6 +389,14 @@ public class MethodStructure
         }
 
     /**
+     * @return the number of method parameters excluding the type parameters
+     */
+    public int getVisibleParamCount()
+        {
+        return getParamCount() - getTypeParamCount();
+        }
+
+    /**
      * @return the number of parameters with default values
      */
     public int getDefaultParamCount()

@@ -35,7 +35,6 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodType;
-import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.asm.op.*;
 
@@ -494,13 +493,17 @@ public class InvocationExpression
     @Override
     protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
-        // validate the invocation arguments, some of which may be left unbound (e.g. "?")
+        // the reason for tracking success (fValid) is that we want to get as many things
+        // validated as possible, but if some of the expressions didn't validate, we can't
+        // predictably find the desired method or function (e.g. without a left expression
+        // providing validated type information)
         boolean      fValid = true;
         ConstantPool pool   = pool();
 
         // when we have a name expression on our immediate left, we do NOT (!!!) validate it,
         // because the name resolution is the responsibility of this InvocationExpression, and
         // the NameExpression itself will error on resolving a method/function name
+        Validate:
         if (expr instanceof NameExpression)
             {
             // if the name expression has an expression on _its_ left, then we are now responsible
@@ -597,308 +600,329 @@ public class InvocationExpression
                     }
                 }
 
-            // the reason for tracking success (fValid) is that we want to get as many things
-            // validated as possible, but if some of the expressions didn't validate, we can't
-            // predictably find the desired method or function (e.g. without a left expression
-            // providing validated type information)
-            if (fValid)
+            if (!fValid)
                 {
-                // resolving the name will yield a method, a function, or something else that needs
-                // to yield a function, such as a property or variable that holds a function or
-                // something that can be converted to a function
-                Argument argMethod = resolveName(ctx, true, typeLeft, atypeReturn, errs);
-                if (argMethod != null)
+                break Validate;
+                }
+
+            // resolving the name will yield a method, a function, or something else that needs
+            // to yield a function, such as a property or variable that holds a function or
+            // something that can be converted to a function
+            Argument argMethod = resolveName(ctx, true, typeLeft, atypeReturn, errs);
+            if (argMethod == null)
+                {
+                break Validate;
+                }
+
+            if (m_fNamedArgs)
+                {
+                Map<String, Expression> mapNamedExpr = extractNamedArgs(args, errs);
+                if (mapNamedExpr == null)
                     {
-                    // when the expression is a name, and it is NOT a ".name", then we have to
-                    // record the dependency on the name, whether it's a variable (or an instance
-                    // property on the implicit "this") that contains a function reference, or (most
-                    // commonly) an implicit "this" for a method call
-                    if (exprLeft == null)
-                        {
-                        if (argMethod instanceof Register)
-                            {
-                            ctx.markVarRead(exprName.getNameToken(), errs);
-                            }
-                        else if (argMethod instanceof MethodConstant ||
-                                 argMethod instanceof PropertyConstant)
-                            {
-                            Component component = ((IdentityConstant) argMethod).getComponent();
-                            boolean   fStatic;
-                            if (component == null)
-                                {
-                                TypeInfo info = m_targetinfo.getTargetType().ensureTypeInfo(errs);
-                                fStatic = argMethod instanceof MethodConstant
-                                        ? info.getMethodById((MethodConstant) argMethod).isFunction()
-                                        : info.findProperty((PropertyConstant) argMethod).isConstant();
-                                }
-                            else
-                                {
-                                fStatic = component.isStatic();
-                                }
+                    break Validate;
+                    }
 
-                            if (!fStatic)
+                assert argMethod instanceof MethodConstant;
+                args = rearrangeNamedArgs(m_method, args, mapNamedExpr);
+                }
+
+            // when the expression is a name, and it is NOT a ".name", then we have to
+            // record the dependency on the name, whether it's a variable (or an instance
+            // property on the implicit "this") that contains a function reference, or (most
+            // commonly) an implicit "this" for a method call
+            if (exprLeft == null)
+                {
+                if (argMethod instanceof Register)
+                    {
+                    ctx.markVarRead(exprName.getNameToken(), errs);
+                    }
+                else if (argMethod instanceof MethodConstant ||
+                         argMethod instanceof PropertyConstant)
+                    {
+                    Component component = ((IdentityConstant) argMethod).getComponent();
+                    boolean   fStatic;
+                    if (component == null)
+                        {
+                        TypeInfo info = m_targetinfo.getTargetType().ensureTypeInfo(errs);
+                        fStatic = argMethod instanceof MethodConstant
+                                ? info.getMethodById((MethodConstant) argMethod).isFunction()
+                                : info.findProperty((PropertyConstant) argMethod).isConstant();
+                        }
+                    else
+                        {
+                        fStatic = component.isStatic();
+                        }
+
+                    if (!fStatic)
+                        {
+                        // there is a read of the implicit "this" variable TODO use TargetInfo to figure out how many "this" steps there are
+                        Token tokName = exprName.getNameToken();
+                        long  lPos    = tokName.getStartPosition();
+                        Token tokThis = new Token(lPos, lPos, Id.THIS);
+                        ctx.markVarRead(tokThis, errs);
+                        }
+                    }
+                }
+            else if (m_fBjarne)
+                {
+                args.add(0, exprLeft);
+                }
+
+            // handle conversion to function
+            if (m_idConvert != null)
+                {
+                // the first return type of the idConvert method must be a function, which in turn
+                // has two sub-types, the first of which is its "params" and the second of which is
+                // its "returns", and the returns is a tuple type parameterized by the types of the
+                // return values from the function
+                TypeConstant[] atypeConvRets = m_idConvert.getRawReturns();
+                TypeConstant   typeFn        = atypeConvRets[0];
+
+                assert typeFn.isA(pool.typeFunction());
+
+                TypeConstant[] atypeResult;
+                if (m_fCall)
+                    {
+                    atypeResult = typeFn.getParamTypesArray()[F_RETS].getParamTypesArray();
+                    }
+                else
+                    {
+                    if (m_fBindParams)
+                        {
+                        typeFn = bindFunctionParameters(typeFn);
+                        }
+                    atypeResult = new TypeConstant[]{typeFn};
+                    }
+                return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);
+                }
+
+            // handle method or function
+            if (argMethod instanceof MethodConstant)
+                {
+                MethodConstant  idMethod    = (MethodConstant) argMethod;
+                MethodStructure method      = m_method;
+                boolean         fCondReturn = method.isConditionalReturn();
+
+                if (typeLeft != null && !typeLeft.isFormalType() && typeLeft.getParamsCount() == 0 &&
+                        !method.isFunction() && !method.isConstructor())
+                    {
+                    // prevent a naked type to be used for consuming methods
+                    ClassStructure clz = (ClassStructure) idMethod.getNamespace().getComponent();
+                    if (clz.getTypeParamCount() > 0)
+                        {
+                        for (StringConstant constName : clz.getTypeParams().keySet())
+                            {
+                            if (method.consumesFormalType(constName.getValue()))
                                 {
-                                // there is a read of the implicit "this" variable TODO use TargetInfo to figure out how many "this" steps there are
-                                Token tokName = exprName.getNameToken();
-                                long  lPos    = tokName.getStartPosition();
-                                Token tokThis = new Token(lPos, lPos, Id.THIS);
-                                ctx.markVarRead(tokThis, errs);
+                                log(errs, Severity.ERROR, Compiler.ILLEGAL_NAKED_TYPE_INVOCATION,
+                                    typeLeft.getValueString(),
+                                    method.getIdentityConstant().getValueString());
+                                break Validate;
                                 }
                             }
                         }
-                    else if (m_fBjarne)
+                    }
+
+                TypeConstant[] atypeParams = idMethod.getRawParams();
+                int            cTypeParams = method.getTypeParamCount();
+                int            cParams     = method.getVisibleParamCount();
+                int            cArgs       = args.size();
+
+                if (cTypeParams > 0)
+                    {
+                    // purge the type parameters and resolve the method signature
+                    // against all the types we know by now
+                    if (cParams > 0)
                         {
-                        args.add(0, exprLeft);
+                        TypeConstant[] atype = new TypeConstant[cParams];
+
+                        System.arraycopy(atypeParams, cTypeParams, atype, 0, cParams);
+
+                        GenericTypeResolver resolver = makeTypeParameterResolver(ctx, method,
+                                m_fCall ? atypeReturn : TypeConstant.NO_TYPES);
+                        atypeParams = resolveTypes(resolver, atype);
+                        }
+                    else
+                        {
+                        atypeParams = TypeConstant.NO_TYPES;
+                        }
+                    }
+
+                // test the "regular fit" first and Tuple afterwards
+                TypeConstant typeTuple = null;
+                if (!testExpressions(ctx, args, atypeParams).isFit())
+                    {
+                    // otherwise, check the tuple based invoke (see AstNode.findMethod)
+                    if (cArgs == 1)
+                        {
+                        typeTuple = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeParams);
+                        if (!args.get(0).testFit(ctx, typeTuple, null).isFit())
+                            {
+                            // the regular "validateExpressions" call will report an error
+                            typeTuple = null;
+                            }
+                        }
+                    }
+
+                TypeConstant[] atypeArgs;
+                if (typeTuple == null)
+                    {
+                    atypeArgs = validateExpressions(ctx, args, atypeParams, errs);
+                    }
+                else
+                    {
+                    atypeArgs = validateExpressionsFromTuple(ctx, args, typeTuple, errs);
+                    m_fTupleArg = true;
+                    }
+
+                if (typeLeft == null && !m_method.isFunction())
+                    {
+                    typeLeft = m_targetinfo == null
+                            ? ctx.getVar("this").getType() // "this" could be narrowed
+                            : m_targetinfo.getTargetType();
+                    }
+
+                if (atypeArgs != null)
+                    {
+                    Map<String, TypeConstant> mapTypeParams = Collections.EMPTY_MAP;
+                    if (cTypeParams > 0)
+                        {
+                        // re-resolve against the validated types
+                        mapTypeParams = method.resolveTypeParameters(atypeArgs,
+                                m_fCall ? atypeReturn : TypeConstant.NO_TYPES);
+                        if (mapTypeParams.size() < cTypeParams)
+                            {
+                            // TODO: need a better error
+                            log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+                            break Validate;
+                            }
+
+                        Argument[] aargTypeParam = new Argument[mapTypeParams.size()];
+                        int ix = 0;
+                        for (TypeConstant type : mapTypeParams.values())
+                            {
+                            TypeConstant typeArgType    = type.getType();
+                            TypeConstant typeMethodType = idMethod.getRawParams()[ix];
+                            if (!typeArgType.isA(typeMethodType))
+                                {
+                                log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                                        typeMethodType.getValueString(),
+                                        typeArgType.getValueString());
+                                break Validate;
+                                }
+                            aargTypeParam[ix++] = typeArgType;
+                            }
+                        m_aargTypeParams = aargTypeParam;
                         }
 
-                    // handle conversion to function
-                    if (m_idConvert != null)
+                    TypeConstant[] atypeResult;
+                    if (m_fCall)
                         {
-                        // the first return type of the idConvert method must be a function, which in turn
-                        // has two sub-types, the first of which is its "params" and the second of which is
-                        // its "returns", and the returns is a tuple type parameterized by the types of the
-                        // return values from the function
-                        TypeConstant[] atypeConvRets = m_idConvert.getRawReturns();
-                        TypeConstant   typeFn        = atypeConvRets[0];
-
-                        assert typeFn.isA(pool.typeFunction());
-
-                        TypeConstant[] atypeResult;
-                        if (m_fCall)
+                        SignatureConstant sigRet = method.isFunction() || method.isConstructor()
+                                ? idMethod.getSignature()
+                                : idMethod.resolveAutoNarrowing(pool, typeLeft);
+                        if (!mapTypeParams.isEmpty())
                             {
-                            atypeResult = typeFn.getParamTypesArray()[F_RETS].getParamTypesArray();
+                            sigRet = sigRet.resolveGenericTypes(pool, mapTypeParams::get);
                             }
-                        else
+                        atypeResult = sigRet.getRawReturns();
+
+                        if (fCondReturn)
                             {
-                            if (m_fBindParams)
+                            if (getParent().allowsConditional(this))
                                 {
-                                typeFn = bindFunctionParameters(typeFn);
-                                }
-                            atypeResult = new TypeConstant[]{typeFn};
-                            }
-                        return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);
-                        }
-
-                    // handle method or function
-                    ValidateMethod:
-                    if (argMethod instanceof MethodConstant)
-                        {
-                        MethodConstant  idMethod    = (MethodConstant) argMethod;
-                        MethodStructure method      = m_method;
-                        boolean         fCondReturn = method.isConditionalReturn();
-
-                        if (typeLeft != null && !typeLeft.isFormalType() && typeLeft.getParamsCount() == 0 &&
-                                !method.isFunction() && !method.isConstructor())
-                            {
-                            // prevent a naked type to be used for consuming methods
-                            ClassStructure clz = (ClassStructure) idMethod.getNamespace().getComponent();
-                            if (clz.getTypeParamCount() > 0)
-                                {
-                                for (StringConstant constName : clz.getTypeParams().keySet())
-                                    {
-                                    if (method.consumesFormalType(constName.getValue()))
-                                        {
-                                        log(errs, Severity.ERROR, Compiler.ILLEGAL_NAKED_TYPE_INVOCATION,
-                                            typeLeft.getValueString(),
-                                            method.getIdentityConstant().getValueString());
-                                        break ValidateMethod;
-                                        }
-                                    }
-                                }
-                            }
-
-                        TypeConstant[] atypeArgs   = idMethod.getRawParams();
-                        int            cTypeParams = method.getTypeParamCount();
-                        int            cArgs       = args.size();
-
-                        if (cTypeParams > 0)
-                            {
-                            // purge the type parameters and resolve the method signature
-                            // against all the types we know by now
-                            int cParams = method.getParamCount() - cTypeParams;
-                            if (cParams > 0)
-                                {
-                                TypeConstant[] atype   = new TypeConstant[cParams];
-
-                                System.arraycopy(atypeArgs, cTypeParams, atype, 0, cParams);
-
-                                GenericTypeResolver resolver = makeTypeParameterResolver(ctx, method,
-                                        m_fCall ? atypeReturn : TypeConstant.NO_TYPES);
-                                atypeArgs = resolveTypes(resolver, atype);
+                                m_fCondResult = true;
                                 }
                             else
                                 {
-                                atypeArgs = TypeConstant.NO_TYPES;
+                                log(errs, Severity.ERROR, Compiler.CONDITIONAL_RETURN_NOT_ALLOWED,
+                                    method.getIdentityConstant().getValueString());
+                                break Validate;
                                 }
-                            }
-
-                        // test the "regular fit" first and Tuple afterwards
-                        TypeConstant typeTuple = null;
-                        if (!testExpressions(ctx, args, atypeArgs).isFit())
-                            {
-                            // otherwise, check the tuple based invoke (see Expression.findMethod)
-                            if (cArgs == 1)
-                                {
-                                typeTuple = pool.ensureParameterizedTypeConstant(
-                                        pool.typeTuple(), atypeArgs);
-                                if (!args.get(0).testFit(ctx, typeTuple, null).isFit())
-                                    {
-                                    // the regular "validateExpressions" call will report an error
-                                    typeTuple = null;
-                                    }
-                                }
-                            }
-
-                        if (typeTuple == null)
-                            {
-                            atypeArgs = validateExpressions(ctx, args, atypeArgs, errs);
-                            }
-                        else
-                            {
-                            atypeArgs = validateExpressionsFromTuple(ctx, args, typeTuple, errs);
-                            m_fTupleArg = true;
-                            }
-
-                        if (typeLeft == null && !m_method.isFunction())
-                            {
-                            typeLeft = m_targetinfo == null
-                                    ? ctx.getVar("this").getType() // "this" could be narrowed
-                                    : m_targetinfo.getTargetType();
-                            }
-
-                        if (atypeArgs != null)
-                            {
-                            Map<String, TypeConstant> mapTypeParams = Collections.EMPTY_MAP;
-                            if (cTypeParams > 0)
-                                {
-                                // re-resolve against the validated types
-                                mapTypeParams = method.resolveTypeParameters(atypeArgs,
-                                        m_fCall ? atypeReturn : TypeConstant.NO_TYPES);
-                                if (mapTypeParams.size() < cTypeParams)
-                                    {
-                                    // TODO: need a better error
-                                    log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
-                                    break ValidateMethod;
-                                    }
-
-                                Argument[] aargTypeParam = new Argument[mapTypeParams.size()];
-                                int ix = 0;
-                                for (TypeConstant type : mapTypeParams.values())
-                                    {
-                                    TypeConstant typeArgType    = type.getType();
-                                    TypeConstant typeMethodType = idMethod.getRawParams()[ix];
-                                    if (!typeArgType.isA(typeMethodType))
-                                        {
-                                        log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                                                typeMethodType.getValueString(),
-                                                typeArgType.getValueString());
-                                        break ValidateMethod;
-                                        }
-                                    aargTypeParam[ix++] = typeArgType;
-                                    }
-                                m_aargTypeParams = aargTypeParam;
-                                }
-
-                            m_cDefaults = method.getParamCount() - cTypeParams - cArgs;
-
-                            TypeConstant[] atypeResult;
-                            if (m_fCall)
-                                {
-                                SignatureConstant sigRet = method.isFunction() || method.isConstructor()
-                                        ? idMethod.getSignature()
-                                        : idMethod.resolveAutoNarrowing(pool, typeLeft);
-                                if (!mapTypeParams.isEmpty())
-                                    {
-                                    sigRet = sigRet.resolveGenericTypes(pool, mapTypeParams::get);
-                                    }
-                                atypeResult = sigRet.getRawReturns();
-
-                                if (fCondReturn)
-                                    {
-                                    if (getParent().allowsConditional(this))
-                                        {
-                                        m_fCondResult = true;
-                                        }
-                                    else
-                                        {
-                                        log(errs, Severity.ERROR, Compiler.CONDITIONAL_RETURN_NOT_ALLOWED,
-                                            method.getIdentityConstant().getValueString());
-                                        break ValidateMethod;
-                                        }
-                                    }
-                                }
-                            else
-                                {
-                                if (fCondReturn)
-                                    {
-                                    log(errs, Severity.ERROR, Compiler.CONDITIONAL_RETURN_NOT_ALLOWED,
-                                        method.getIdentityConstant().getValueString());
-                                    break ValidateMethod;
-                                    }
-
-                                TypeConstant typeFn = m_fBindTarget
-                                    ? idMethod.getType()
-                                    : idMethod.getRefType(typeLeft);
-
-                                if (!mapTypeParams.isEmpty())
-                                    {
-                                    typeFn = typeFn.resolveGenerics(pool, mapTypeParams::get);
-                                    }
-
-                                if (m_fBindParams)
-                                    {
-                                    typeFn = bindFunctionParameters(typeFn);
-                                    }
-                                atypeResult = new TypeConstant[] {typeFn};
-                                }
-
-                            return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);
                             }
                         }
                     else
                         {
-                        // must be a property or a variable of type function (@Auto conversion possibility
-                        // already handled above); the function has two tuple sub-types, the second of which is
-                        // the "return types" of the function
-                        TypeConstant typeFn;
-                        if (argMethod instanceof PropertyConstant)
+                        if (fCondReturn)
                             {
-                            if (typeLeft == null  || isNestMate(ctx, typeLeft))
-                                {
-                                typeLeft = pool.ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE);
-                                }
-                            PropertyConstant idProp   = (PropertyConstant) argMethod;
-                            PropertyInfo     infoProp = typeLeft.ensureTypeInfo(errs).findProperty(idProp);
-
-                            typeFn = infoProp == null ? pool.typeObject() : infoProp.getType();
-                            }
-                        else
-                            {
-                            assert argMethod instanceof Register;
-                            typeFn = argMethod.getType().resolveTypedefs();
+                            log(errs, Severity.ERROR, Compiler.CONDITIONAL_RETURN_NOT_ALLOWED,
+                                method.getIdentityConstant().getValueString());
+                            break Validate;
                             }
 
-                        if (typeFn.isA(pool.typeFunction()))
-                            {
-                            Expression exprNew = expr.validate(ctx, typeFn, errs);
-                            if (exprNew != null)
-                                {
-                                expr = exprNew;
+                        TypeConstant typeFn = m_fBindTarget
+                            ? idMethod.getType()
+                            : idMethod.getRefType(typeLeft);
 
-                                TypeConstant[] atypeResult = validateFunction(ctx, typeFn, errs);
-                                if (atypeResult != null)
-                                    {
-                                    return finishValidations(atypeRequired, atypeResult,
-                                            TypeFit.Fit, null, errs);
-                                    }
-                                }
-                            }
-                        else
+                        if (!mapTypeParams.isEmpty())
                             {
-                            log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                                    "Function", typeFn.getValueString());
+                            typeFn = typeFn.resolveGenerics(pool, mapTypeParams::get);
                             }
+
+                        if (m_fBindParams)
+                            {
+                            typeFn = bindFunctionParameters(typeFn);
+                            }
+                        atypeResult = new TypeConstant[] {typeFn};
                         }
+
+                    return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);
+                    }
+                }
+            else
+                {
+                // must be a property or a variable of type function (@Auto conversion possibility
+                // already handled above); the function has two tuple sub-types, the second of which is
+                // the "return types" of the function
+                TypeConstant typeFn;
+                if (argMethod instanceof PropertyConstant)
+                    {
+                    if (typeLeft == null  || isNestMate(ctx, typeLeft))
+                        {
+                        typeLeft = pool.ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE);
+                        }
+                    PropertyConstant idProp   = (PropertyConstant) argMethod;
+                    PropertyInfo     infoProp = typeLeft.ensureTypeInfo(errs).findProperty(idProp);
+
+                    typeFn = infoProp == null ? pool.typeObject() : infoProp.getType();
+                    }
+                else
+                    {
+                    assert argMethod instanceof Register;
+                    typeFn = argMethod.getType().resolveTypedefs();
+                    }
+
+                if (!typeFn.isA(pool.typeFunction()))
+                    {
+                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                            "Function", typeFn.getValueString());
+                    break Validate;
+                    }
+
+                if (exprName.isSuppressDeref())
+                    {
+                    assert m_fBindParams;
+                    assert argMethod instanceof Register;
+                    // this must be a scenario of binding a function at a register, e.g.:
+                    //      function void (Int) fn1 = ...
+                    //      function void ()    fn0 = &fn1(42);
+                    // so we will skip the exprName validation
+                    }
+                else
+                    {
+                    Expression exprNew = exprName.validate(ctx, typeFn, errs);
+                    if (exprNew == null)
+                        {
+                        break Validate;
+                        }
+
+                    expr = exprNew;
+                    }
+
+                TypeConstant[] atypeResult = validateFunction(ctx, typeFn, errs);
+                if (atypeResult != null)
+                    {
+                    return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);
                     }
                 }
             }
@@ -1016,7 +1040,6 @@ public class InvocationExpression
 
         Argument[] aargTypeParams = m_aargTypeParams;
         int        cTypeParams    = aargTypeParams == null ? 0 : aargTypeParams.length;
-        int        cDefaults      = m_cDefaults;
         boolean    fTargetOnStack = cArgs == 0 || args.stream().allMatch(Expression::isConstant);
 
         if (expr instanceof NameExpression)
@@ -1085,9 +1108,10 @@ public class InvocationExpression
                             {
                             // it's a method, and we need to generate the necessary code that calls it;
                             // generate the arguments
-                            int        cAll  = idMethod.getRawParams().length;
-                            Argument   arg   = null;
-                            Argument[] aArgs = null;
+                            int        cAll      = idMethod.getRawParams().length;
+                            int        cDefaults = cAll - cTypeParams - cArgs;
+                            Argument   arg       = null;
+                            Argument[] aArgs     = null;
                             char       chArgs;
 
                             assert cTypeParams + cArgs + cDefaults == cAll;
@@ -1233,15 +1257,22 @@ public class InvocationExpression
                 {
                 assert !m_fBindTarget;
 
-                // evaluate to find the argument (e.g. "var.prop", where prop holds a function)
-                argFn = expr.generateArgument(ctx, code, fLocalPropOk, fTargetOnStack, errs);
+                if (m_argMethod instanceof Register)
+                    {
+                    argFn = m_argMethod;
+                    }
+                else
+                    {
+                    // evaluate to find the argument (e.g. "var.prop", where prop holds a function)
+                    argFn = exprName.generateArgument(ctx, code, false, fTargetOnStack, errs);
+                    }
                 }
             }
         else // _NOT_ an InvocationExpression of a NameExpression (i.e. it's just a function)
             {
             // obtain the function that will be bound and/or called
             assert !m_fBindTarget;
-            argFn = expr.generateArgument(ctx, code, fLocalPropOk, fTargetOnStack, errs);
+            argFn = expr.generateArgument(ctx, code, false, fTargetOnStack, errs);
             }
 
         // bind arguments and/or generate a call to the function specified by argFn; first, convert
@@ -1254,12 +1285,6 @@ public class InvocationExpression
             Register regFn = createRegister(typeFn, true);
             code.add(new Invoke_01(argFn, m_idConvert, regFn));
             argFn = regFn;
-            }
-
-        if (argFn instanceof PropertyConstant)
-            {
-            // the function is a property value
-            Register regFn = createRegister(typeFn, true);
             }
 
         if (!m_fCall && !m_fBindParams)
@@ -1276,12 +1301,11 @@ public class InvocationExpression
         TypeConstant[] atypeParams = atypeSub[F_ARGS].getParamTypesArray();
         int            cAll        = atypeParams.length;
 
-        assert cTypeParams + cArgs + cDefaults == cAll;
-
         if (m_fCall)
             {
-            Argument   arg   = null;
-            Argument[] aArgs = null;
+            int        cDefaults = cAll - cTypeParams - cArgs;
+            Argument   arg       = null;
+            Argument[] aArgs     = null;
             char       chArgs;
 
             assert !m_fBindParams || cArgs > 0;
@@ -1410,9 +1434,14 @@ public class InvocationExpression
         // bind (or partially bind) the function
         assert m_fBindParams;
 
-        // count the number of parameters to bind
-        int cBind     = cTypeParams + cDefaults;
-        int ofDefault = cAll - cDefaults;
+        // count the number of parameters to bind, which includes all type parameters and all
+        // default values, so for a function:
+        //      void foo(Boolean a = false, Int b = 0, String c = "")
+        // an expression "&foo(b=5)" will result into a function of the type
+        // "function void (Boolean, String)", that leaves arguments "a" and "c" unbound,
+        // and an expression "&foo(true)" will result into a function of the type
+        // "function void (Int, String)", that leaves arguments "b" and "c" unbound
+        int cBind = cTypeParams;
         for (int i = 0; i < cArgs; ++i)
             {
             if (!args.get(i).isNonBinding())
@@ -1423,25 +1452,20 @@ public class InvocationExpression
 
         int[]      aiArg = new int[cBind];
         Argument[] aArg  = new Argument[cBind];
-        for (int i = 0, iNext = 0; i < cArgs; ++i)
+        for (int i = 0; i < cTypeParams; ++i)
             {
-            if (i < cTypeParams)
+            aiArg[i] = i;
+            aArg [i] = aargTypeParams[i];
+            }
+
+        for (int i = 0, iBind = cTypeParams; i < cArgs; ++i)
+            {
+            Expression exprArg = args.get(i);
+            if (!exprArg.isNonBinding())
                 {
-                aiArg[iNext] = i;
-                aArg [iNext] = aargTypeParams[i];
-                iNext++;
-                }
-            else if (i >= ofDefault)
-                {
-                aiArg[iNext] = i;
-                aArg [iNext] = Register.DEFAULT;
-                iNext++;
-                }
-            else if (!args.get(i).isNonBinding())
-                {
-                aiArg[iNext] = i;
-                aArg [iNext] = args.get(i).generateArgument(ctx, code, true, true, errs);
-                iNext++;
+                aiArg[iBind] = cTypeParams + i;
+                aArg [iBind] = exprArg.generateArgument(ctx, code, true, true, errs);
+                iBind++;
                 }
             }
 
@@ -1453,7 +1477,6 @@ public class InvocationExpression
             aLVal[0].assign(regFn, code, errs);
             }
         }
-
 
 
     // ----- method resolution helpers -------------------------------------------------------------
@@ -1544,8 +1567,9 @@ public class InvocationExpression
             return m_argMethod;
             }
 
-        boolean fNoFBind = !isAnyArgBound();
-        boolean fNoCall  = isSuppressCall();
+        boolean fNoFBind   = !isAnyArgBound();
+        boolean fNoCall    = isSuppressCall();
+        boolean fNamedArgs = containsNamedArgs(args);
 
         m_targetinfo  = null;
         m_argMethod   = null;
@@ -1553,6 +1577,7 @@ public class InvocationExpression
         m_fBindTarget = false;
         m_fBindParams = !fNoFBind;
         m_fCall       = !fNoCall;
+        m_fNamedArgs  = fNamedArgs;
 
         ConstantPool pool = pool();
         if (atypeReturn != null && fNoCall)
@@ -1597,7 +1622,7 @@ public class InvocationExpression
 
                 arg = findCallable(ctx, infoLeft, sName, MethodType.Either, true,
                         atypeReturn, ErrorListener.BLACKHOLE);
-                if (arg != null)
+                if (arg instanceof MethodConstant)
                     {
                     MethodStructure method = getMethod(infoLeft, arg);
                     assert method != null;
@@ -1616,7 +1641,6 @@ public class InvocationExpression
                     {
                     return null;
                     }
-
                 m_argMethod = arg;
                 return arg;
                 }
@@ -1669,7 +1693,8 @@ public class InvocationExpression
                         {
                         return null;
                         }
-                    else if (prop.isConstant() || target.hasThis())
+
+                    if (prop.isConstant() || target.hasThis())
                         {
                         m_targetinfo = target; // (only used for non-constants)
                         m_argMethod  = id;
@@ -1765,7 +1790,7 @@ public class InvocationExpression
                             : fNoFBind && fNoCall ? MethodType.Either : MethodType.Function;
 
                     Argument arg = findCallable(ctx, infoLeft, sName, methodType, false, atypeReturn, errs);
-                    if (arg != null)
+                    if (arg instanceof MethodConstant)
                         {
                         MethodConstant idMethod   = (MethodConstant) arg;
                         MethodInfo     infoMethod = infoLeft.getMethodById(idMethod);
@@ -1800,13 +1825,13 @@ public class InvocationExpression
                             // "this" is "Value.hashCode(value)"
                             // idProp.getFormalType() is NaturalHasher.Value
 
-                            TypeInfo  infoType = nameLeft.getImplicitType(ctx).getParamType(0).ensureTypeInfo(errs);
+                            TypeInfo infoType = nameLeft.getImplicitType(ctx).getParamType(0).ensureTypeInfo(errs);
 
                             ErrorListener errsTemp = errs.branch();
 
                             Argument arg = findCallable(ctx, infoType, sName, MethodType.Function, false,
                                                 atypeReturn, errsTemp);
-                            if (arg != null)
+                            if (arg instanceof MethodConstant)
                                 {
                                 m_argMethod   = arg;
                                 m_method      = getMethod(infoType, arg);
@@ -1839,7 +1864,7 @@ public class InvocationExpression
 
                         Argument arg = findCallable(ctx, infoLeft, sName, MethodType.Function, false,
                                             atypeReturn, errsTemp);
-                        if (arg != null)
+                        if (arg instanceof MethodConstant)
                             {
                             m_argMethod   = arg;
                             m_method      = getMethod(infoLeft, arg);
@@ -1865,7 +1890,7 @@ public class InvocationExpression
 
                                 Argument  arg = findCallable(ctx, infoLeft, sName, MethodType.Function, false,
                                                         atypeReturn, errsTemp);
-                                if (arg != null)
+                                if (arg instanceof MethodConstant)
                                     {
                                     m_argMethod   = arg;
                                     m_method      = getMethod(infoLeft, arg);
@@ -1890,7 +1915,7 @@ public class InvocationExpression
 
             Argument arg = findCallable(ctx, infoLeft, sName, MethodType.Method, false,
                                 atypeReturn, errsTemp);
-            if (arg != null)
+            if (arg instanceof MethodConstant)
                 {
                 m_argMethod   = arg;
                 m_method      = getMethod(infoLeft, arg);
@@ -1908,7 +1933,7 @@ public class InvocationExpression
 
                 ErrorListener errsTempB = errs.branch();
 
-                arg = findMethod(ctx, infoLeft, sName, listArgs, MethodType.Function, false,
+                arg = findMethod(ctx, infoLeft, sName, listArgs, MethodType.Function, m_fCall, false,
                             atypeReturn, errsTempB);
                 if (arg != null)
                     {
@@ -1984,7 +2009,7 @@ public class InvocationExpression
             return prop.getIdentity();
             }
 
-        return findMethod(ctx, infoParent, sName, args, methodType, fAllowNested, aRedundant, errs);
+        return findMethod(ctx, infoParent, sName, args, methodType, m_fCall, fAllowNested, aRedundant, errs);
         }
 
     /**
@@ -2037,6 +2062,12 @@ public class InvocationExpression
         if (atypeParams == null)
             {
             log(errs, Severity.ERROR, Compiler.MISSING_PARAM_INFORMATION);
+            return null;
+            }
+
+        if (m_fNamedArgs)
+            {
+            log(errs, Severity.ERROR, Compiler.ILLEGAL_ARG_NAME);
             return null;
             }
 
@@ -2313,6 +2344,7 @@ public class InvocationExpression
     private transient boolean         m_fBindParams;     // do we need to bind any parameters
     private transient boolean         m_fCall;           // do we need to call/invoke
     private transient boolean         m_fTupleArg;       // indicates that arguments come from a tuple
+    private transient boolean         m_fNamedArgs;      // are there named arguments
     private transient TargetInfo      m_targetinfo;      // for left==null with prop or method name
     private transient Argument        m_argMethod;
     private transient MethodStructure m_method;          // if m_argMethod is a MethodConstant,
@@ -2325,7 +2357,6 @@ public class InvocationExpression
                                                          // expression applies to a function on a formal
                                                          // type (e.g. Value.hashCode(value))
     private transient Argument[]      m_aargTypeParams;  // "hidden" type parameters
-    private transient int             m_cDefaults;       // number of default arguments
     private transient MethodConstant  m_idConvert;       // conversion method
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(InvocationExpression.class, "expr", "args");
