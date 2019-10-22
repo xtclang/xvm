@@ -147,7 +147,7 @@ const Char
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char!> appender)
         {
         appender.add(this);
         }
