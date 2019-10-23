@@ -60,6 +60,10 @@ import org.xvm.runtime.template.xRef.RefHandle;
 
 import org.xvm.util.ListMap;
 
+import static org.xvm.util.Handy.readIndex;
+import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * An XVM Structure that represents an entire Class. This is also the base class for module and
@@ -3129,6 +3133,119 @@ public class ClassStructure
 
 
     // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Helper method to read a collection of type parameters.
+     *
+     * @param in  the DataInput containing the type parameters
+     *
+     * @return null if there are no type parameters, otherwise a map from CharStringConstant to the
+     *         type constraint for each parameter
+     *
+     * @throws IOException  if an I/O exception occurs during disassembly from the provided
+     *                      DataInput stream, or if there is invalid data in the stream
+     */
+    protected ListMap<StringConstant, TypeConstant> disassembleTypeParams(DataInput in)
+        throws IOException
+        {
+        int c = readMagnitude(in);
+        if (c <= 0)
+            {
+            assert c == 0;
+            return null;
+            }
+
+        ListMap<StringConstant, TypeConstant> map = new ListMap<>();
+        ConstantPool pool = getConstantPool();
+        for (int i = 0; i < c; ++i)
+            {
+            StringConstant constName = (StringConstant) pool.getConstant(readIndex(in));
+            TypeConstant   constType = (TypeConstant)   pool.getConstant(readIndex(in));
+            assert !map.containsKey(constName);
+            map.put(constName, constType);
+            }
+        return map;
+        }
+
+    /**
+     * Register all of the constants associated with a list of type parameters.
+     *
+     * @param mapOld  the map containing the type parameters
+     *
+     * @return the map of registered type parameters (might be different from the map passed in)
+     */
+    protected ListMap<StringConstant, TypeConstant> registerTypeParams(ListMap<StringConstant, TypeConstant> mapOld)
+        {
+        if (mapOld == null || mapOld.isEmpty())
+            {
+            return mapOld;
+            }
+
+        ConstantPool                          pool   = getConstantPool();
+        ListMap<StringConstant, TypeConstant> mapNew = mapOld;
+        for (Map.Entry<StringConstant, TypeConstant> entry : mapOld.entrySet())
+            {
+            StringConstant constOldKey = entry.getKey();
+            StringConstant constNewKey = (StringConstant) pool.register(constOldKey);
+
+            TypeConstant   constOldVal = entry.getValue();
+            TypeConstant   constNewVal = (TypeConstant) pool.register(constOldVal);
+
+            if (mapNew != mapOld || constOldKey != constNewKey)
+                {
+                if (mapNew == mapOld)
+                    {
+                    // up to this point, we've been using the old map, but now we need to change a
+                    // key (which map does not support), so create a new map, and copy the old map
+                    // to the new map, but only up to (but not including!) the current entry
+                    mapNew = new ListMap<>();
+                    for (Map.Entry<StringConstant, TypeConstant> entryCopy : mapOld.entrySet())
+                        {
+                        if (entryCopy.getKey() == constOldKey)
+                            {
+                            break;
+                            }
+
+                        mapNew.put(entryCopy.getKey(), entryCopy.getValue());
+                        }
+                    }
+
+                mapNew.put(constNewKey, constNewVal);
+                }
+            else if (constOldVal != constNewVal)
+                {
+                entry.setValue(constNewVal);
+                }
+            }
+        return mapNew;
+        }
+
+    /**
+     * Helper method to write type parameters to the DataOutput stream.
+     *
+     * @param map  the type parameters
+     * @param out  the DataOutput to write the XVM structure to
+     *
+     * @throws IOException  if an I/O exception occurs during assembly to the provided DataOutput
+     *                      stream
+     */
+    protected void assembleTypeParams(ListMap<StringConstant, TypeConstant> map, DataOutput out)
+        throws IOException
+        {
+        int c = map == null ? 0 : map.size();
+        writePackedLong(out, c);
+
+        if (c == 0)
+            {
+            return;
+            }
+
+        for (Map.Entry<StringConstant, TypeConstant> entry : map.entrySet())
+            {
+            writePackedLong(out, entry.getKey().getPosition());
+            writePackedLong(out, entry.getValue().getPosition());
+            }
+        }
 
     /**
      * Assuming that this component is a class containing nested members, and using a value
