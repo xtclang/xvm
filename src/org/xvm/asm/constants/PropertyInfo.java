@@ -190,6 +190,7 @@ public class PropertyInfo
 
         // check the property type and determine the type of the resulting property
         TypeConstant typeResult = this.getType();
+        Existence    exResult   = this.getExistence();
         for (int iAdd = cAdd - 1; iAdd >= 0; --iAdd)
             {
             PropertyBody bodyAdd = aAdd[iAdd];
@@ -197,11 +198,12 @@ public class PropertyInfo
             Existence    exAdd   = bodyAdd.getExistence();
             if (!typeAdd.equals(typeResult))
                 {
-                // the property type can narrowed by a class implementation
-                if (exAdd == Existence.Class && typeAdd.isA(typeResult))
+                // the property type can be narrowed by a class implementation
+                if (exAdd != Existence.Implied && exAdd.compareTo(exResult) >= 0 && typeAdd.isA(typeResult))
                     {
                     // type has been narrowed
                     typeResult = typeAdd;
+                    exResult   = exAdd;
                     }
                 // the property type can only be wider if it is a read-only interface/into method
                 // or the layer-on is an annotation; otherwise it is an error
