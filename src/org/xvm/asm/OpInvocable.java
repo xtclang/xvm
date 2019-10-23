@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constants.Access;
+
 import org.xvm.asm.constants.MethodConstant;
 
 import org.xvm.runtime.CallChain;
@@ -124,13 +126,13 @@ public abstract class OpInvocable extends Op
 
         TypeComposition clazz    = m_clazz = hTarget.getComposition();
         MethodConstant  idMethod = m_constMethod = (MethodConstant) frame.getConstant(m_nMethodId);
-        if (idMethod.isLambda())
+        MethodStructure method   = (MethodStructure) idMethod.getComponent();
+        if (method != null && method.getAccess() == Access.PRIVATE)
             {
-            return m_chain = new CallChain(idMethod);
+            return m_chain = new CallChain(method);
             }
 
-        Object nid = idMethod.resolveNestedIdentity(
-            frame.poolContext(), frame.getGenericsResolver());
+        Object nid = idMethod.resolveNestedIdentity(frame.poolContext(), frame.getGenericsResolver());
 
         CallChain chain = clazz.getMethodCallChain(nid);
         if (chain.getDepth() == 0)

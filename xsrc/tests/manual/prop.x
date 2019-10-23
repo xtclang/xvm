@@ -1,6 +1,6 @@
 module TestProps.xqiz.it
     {
-    @Inject X.io.Console console;
+    @Inject Ecstasy.io.Console console;
 
     void run()
         {
@@ -9,6 +9,7 @@ module TestProps.xqiz.it
         testMethodProperty();
         testLazyProperty();
         testDelegation();
+        testAccess();
         }
 
     void testMethodProperty()
@@ -78,5 +79,55 @@ module TestProps.xqiz.it
         NamedNumber2 nn2 = new NamedNumber2("answer", 42);
         console.println($"nn2.estimateStringLength()={nn2.estimateStringLength()}");
         console.println($"nn2.toString()={nn2.toString()}");
+        }
+
+    void testAccess()
+        {
+        Derived d = new Derived();
+        d.report();
+
+        class Base
+            {
+            private Int p1 = 1;
+
+            private Int p2()
+                {
+                return 2;
+                }
+
+            private Int p3()
+                {
+                return 3;
+                }
+
+            void report()
+                {
+                console.println($"Base   : p1={p1},    p2()={p2()}, p3()={p3()}");
+                }
+            }
+
+        class Derived
+                extends Base
+            {
+            Int p1()
+                {
+                return 11;
+                }
+
+            Int p2 = 22;
+
+            Int p3()
+                {
+                return 33;
+                }
+
+            @Override
+            void report()
+                {
+                super();
+
+                console.println($"Derived: p1()={p1()}, p2={p2},  p3()={p3()}");
+                }
+            }
         }
     }

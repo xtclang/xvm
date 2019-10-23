@@ -25,7 +25,9 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
@@ -582,6 +584,19 @@ public class MethodDeclarationStatement
             // we are in an error state; we choose not to proceed with compilation
             mgr.deferChildren();
             return;
+            }
+
+        if (!errs.isSilent())
+            {
+            ClassStructure clz  = method.getContainingClass();
+            TypeConstant   type = pool().ensureAccessTypeConstant(clz.getCanonicalType(), Access.PRIVATE);
+            TypeInfo       info = type.ensureTypeInfo(errs);
+            PropertyInfo   prop = info.findProperty(method.getName());
+            if (prop != null)
+                {
+                log(errs, Severity.ERROR, Compiler.METHOD_NAME_COLLISION,
+                        method.getName(), prop.getIdentity().getNamespace().getPathString());
+                }
             }
 
         int cDefaults = method.getDefaultParamCount();

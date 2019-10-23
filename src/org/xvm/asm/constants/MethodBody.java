@@ -4,6 +4,7 @@ package org.xvm.asm.constants;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 
@@ -16,12 +17,15 @@ import org.xvm.util.Handy;
 public class MethodBody
     {
     /**
-     * Construct a MethodBody for a lambda.
+     * Construct a MethodBody for a lambda or a private method.
      */
-    public MethodBody(MethodConstant id)
+    public MethodBody(MethodStructure method)
         {
-        this(id, id.getSignature(), Implementation.Explicit, null);
-        assert id.isLambda();
+        this(method.getIdentityConstant(), method.getIdentityConstant().getSignature(),
+                Implementation.Explicit, null);
+
+        assert method.getAccess() == Access.PRIVATE;
+        m_structMethod = method;
         }
 
     /**

@@ -2,7 +2,7 @@ module TestSimple.xqiz.it
     {
     import Ecstasy.collections.HashMap;
 
-    @Inject X.io.Console console;
+    @Inject Ecstasy.io.Console console;
 
     void run()
         {

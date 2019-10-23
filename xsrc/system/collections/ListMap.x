@@ -332,7 +332,7 @@ class ListMap<Key, Value>
             return new Iterator()
                 {
                 Int index       = 0;
-                Int limit       = size;
+                Int stop        = size;
                 Int prevDeletes = deletes;
                 @Unassigned Key key;
 
@@ -342,9 +342,9 @@ class ListMap<Key, Value>
                     // the immediately previously iterated key is allowed to be deleted
                     if (deletes != prevDeletes)
                         {
-                        if (deletes - prevDeletes == 1 && index > 0 && index < limit && listKeys[index-1] != key)
+                        if (deletes - prevDeletes == 1 && index > 0 && index < stop && listKeys[index-1] != key)
                             {
-                            --limit;
+                            --stop;
                             --index;
                             ++prevDeletes;
                             }
@@ -354,7 +354,7 @@ class ListMap<Key, Value>
                             }
                         }
 
-                    if (index < limit)
+                    if (index < stop)
                         {
                         key = listKeys[index++];
                         return True, key;
@@ -593,7 +593,7 @@ class ListMap<Key, Value>
             return new Iterator()
                 {
                 Int         index       = 0;
-                Int         limit       = size;
+                Int         stop        = size;
                 Int         prevDeletes = deletes;
                 CursorEntry entry       = new CursorEntry();
 
@@ -603,9 +603,9 @@ class ListMap<Key, Value>
                     // the immediately previously iterated key is allowed to be deleted
                     if (deletes != prevDeletes)
                         {
-                        if (deletes - prevDeletes == 1 && index > 0 && !entry.exists)
+                        if (deletes - prevDeletes == 1 && index > 0 && index < stop && !entry.exists)
                             {
-                            --limit;
+                            --stop;
                             --index;
                             ++prevDeletes;
                             }
@@ -615,7 +615,7 @@ class ListMap<Key, Value>
                             }
                         }
 
-                    if (index < limit)
+                    if (index < stop)
                         {
                         entry.advance(index++);
                         return True, entry;
@@ -730,7 +730,7 @@ class ListMap<Key, Value>
             return new Iterator()
                 {
                 Int index       = 0;
-                Int limit       = size;
+                Int stop        = size;
                 Int prevDeletes = deletes;
                 @Unassigned Key key;
 
@@ -740,9 +740,9 @@ class ListMap<Key, Value>
                     // the immediately previously iterated key is allowed to be deleted
                     if (deletes != prevDeletes)
                         {
-                        if (deletes - prevDeletes == 1 && index > 0 && index < limit && listKeys[index-1] != key)
+                        if (deletes - prevDeletes == 1 && index > 0 && index < stop && listKeys[index-1] != key)
                             {
-                            --limit;
+                            --stop;
                             --index;
                             ++prevDeletes;
                             }
@@ -752,7 +752,7 @@ class ListMap<Key, Value>
                             }
                         }
 
-                    if (index < limit)
+                    if (index < stop)
                         {
                         key = listKeys[index];
                         return True, listVals[index++];

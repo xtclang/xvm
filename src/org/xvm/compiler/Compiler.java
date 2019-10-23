@@ -1178,6 +1178,14 @@ public class Compiler
      */
     public static final String ILLEGAL_ARG_NAME                    = "COMPILER-141";
     /**
+     * Method name {0} collides with a property of the same name on class {1}.
+     */
+    public static final String METHOD_NAME_COLLISION               = "COMPILER-142";
+    /**
+     * Property name {0} collides with a method of the same name on class {1}.
+     */
+    public static final String PROPERTY_NAME_COLLISION             = "COMPILER-143";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

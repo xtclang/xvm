@@ -5,7 +5,9 @@ import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
@@ -20,8 +22,11 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.TypeInfo.MethodType;
 
 import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Label;
@@ -467,6 +472,25 @@ public class PropertyDeclarationStatement
             }
 
         return this;
+        }
+
+    @Override
+    public void generateCode(StageMgr mgr, ErrorListener errs)
+        {
+        if (!errs.isSilent())
+            {
+            PropertyStructure   prop = (PropertyStructure) getComponent();
+            ClassStructure      clz  = prop.getContainingClass();
+            TypeConstant        type = pool().ensureAccessTypeConstant(clz.getCanonicalType(), Access.PRIVATE);
+            TypeInfo            info = type.ensureTypeInfo(errs);
+            Set<MethodConstant> set  = info.findMethods(prop.getName(), -1, MethodType.Either);
+            if (!set.isEmpty())
+                {
+                MethodConstant idMethod = set.iterator().next();
+                log(errs, Severity.ERROR, Compiler.PROPERTY_NAME_COLLISION,
+                        prop.getName(), idMethod.getNamespace().getPathString());
+                }
+            }
         }
 
     @Override
