@@ -597,45 +597,6 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public boolean isNarrowedFrom(TypeConstant typeSuper, TypeConstant typeCtx)
-        {
-        assert typeSuper.isAutoNarrowing();
-
-        if (!(typeSuper instanceof TerminalTypeConstant))
-            {
-            return false;
-            }
-
-        if (!isSingleDefiningConstant())
-            {
-            // this can only happen if this type is a Typedef referring to a relational type
-            return false;
-            }
-
-        Constant constSuper = typeSuper.getDefiningConstant();
-        if (constSuper instanceof PseudoConstant)
-            {
-            // this type represents a type in the D rows below, the super type represents the B rows
-            // and the context type has the identity of D;
-            // E extends D extends C extends B; X may extend B, but is not "related" to D
-            //
-            // valid scenarios
-            // -----------  -------  --------  --------  ---------  -------  --------
-            // Derived (D)  D        this:D     D        this:D     C        E
-            // Base (B)     B        this:B     this:B   B          this:B   this:B
-
-            // invalid scenarios
-            // ---------    --------  --------
-            // Derived (D)  X          X
-            // Base (B)     this:B     B
-
-            TypeConstant typeSuperR = ((PseudoConstant) constSuper).resolveClass(null).getType();
-            return this.isA(typeSuperR) && (this.isA(typeCtx) || typeCtx.isA(this));
-            }
-        return false;
-        }
-
-    @Override
     public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName)
         {
         Constant constant = getDefiningConstant();
@@ -1237,6 +1198,81 @@ public class TerminalTypeConstant
 
 
     // ----- type comparison support ---------------------------------------------------------------
+
+    @Override
+    public boolean isCovariantReturn(TypeConstant typeBase, TypeConstant typeCtx)
+        {
+        return super.isCovariantReturn(typeBase, typeCtx);
+        }
+
+    @Override
+    public boolean isContravariantParameter(TypeConstant typeBase, TypeConstant typeCtx)
+        {
+        if (super.isContravariantParameter(typeBase, typeCtx))
+            {
+            return true;
+            }
+
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return constId.getReferredToType().isContravariantParameter(typeBase, typeCtx);
+            }
+
+        if (!typeBase.isSingleDefiningConstant() || typeBase.isParamsSpecified())
+            {
+            return false;
+            }
+
+        Constant constIdThis = this.getDefiningConstant();
+        Constant constIdBase = typeBase.getDefiningConstant();
+
+        if (constIdThis.getFormat() != constIdBase.getFormat())
+            {
+            return false;
+            }
+
+        switch (constIdBase.getFormat())
+            {
+            case Module:
+            case Package:
+                return false;
+
+            case Class:
+            case NativeClass:
+                return constIdThis.getType().equals(constIdBase.getType());
+
+            case Property:
+                {
+                PropertyConstant idRight = (PropertyConstant) constIdBase;
+                return ((PropertyConstant) constIdThis).getName().equals(idRight.getName());
+                }
+
+            case TypeParameter:
+                {
+                TypeParameterConstant idRight = (TypeParameterConstant) constIdBase;
+                return ((TypeParameterConstant) constIdThis).getRegister() == idRight.getRegister();
+                }
+
+            case FormalTypeChild:
+                {
+                FormalTypeChildConstant idRight = (FormalTypeChildConstant) constIdBase;
+                return ((FormalTypeChildConstant) constIdThis).getName().equals(idRight.getName());
+                }
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                {
+                PseudoConstant idRight = (PseudoConstant) constIdBase;
+                return idRight.isCongruentWith((PseudoConstant) constIdThis);
+                }
+
+            default:
+                throw new IllegalStateException("unexpected constant: " + constIdBase);
+            }
+        }
 
     @Override
     protected Set<SignatureConstant> isInterfaceAssignableFrom(

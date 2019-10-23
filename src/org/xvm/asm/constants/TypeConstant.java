@@ -855,29 +855,6 @@ public abstract class TypeConstant
         }
 
     /**
-     * Check if this type is a valid extension ("sub") of the specified auto-narrowing "super" type
-     * in the context of the specified type.
-     *
-     * @param typeSuper  the auto-narrowing type to extend
-     * @param typeCtx    the context in which the auto-narrowing occurs
-     *
-     * @return true iff this type is narrowed from the super type
-     */
-    public boolean isNarrowedFrom(TypeConstant typeSuper, TypeConstant typeCtx)
-        {
-        assert typeSuper.isAutoNarrowing();
-
-        // for now, the types must have the identical topology
-        // (the only exception is ParameterizedTypeConstant, that allows some flexibility)
-        if (getClass() != typeSuper.getClass())
-            {
-            return false;
-            }
-
-        return getUnderlyingType().isNarrowedFrom(typeSuper.getUnderlyingType(), typeCtx);
-        }
-
-    /**
      * Create a new type by replacing the underlying type for this one according to the specified
      * function.
      *
@@ -4609,6 +4586,79 @@ public abstract class TypeConstant
         }
 
     /**
+     * Let's assume the following:
+     *
+     * <ul><li>
+     *   there is a method M2 on a class C2 represented by type "typeCtx" that has a return value
+     *   of *this* type;
+     * </li><li>
+     *   there is another method M1 from a class C1 that is present as a contribution to C2, that
+     *   has the same name, same number of return values and parameters as M2 and a corresponding
+     *   return value of the "typeBase" (C1).
+     * </li></ul>
+     *
+     * Determine whether M2 could be invoked via a signature of M1, and M2 could then "super" to M1.
+     *
+     * @param typeBase  the type to determine the covariance with
+     * @param typeCtx   the type within which context the covariance is to be determined
+     */
+    public boolean isCovariantReturn(TypeConstant typeBase, TypeConstant typeCtx)
+        {
+        if (this.isA(typeBase))
+            {
+            return true;
+            }
+
+        if (typeBase.isAutoNarrowing())
+            {
+            ConstantPool pool = ConstantPool.getCurrentPool();
+
+            TypeConstant typeThisR = this    .resolveAutoNarrowing(pool, false, typeCtx);
+            TypeConstant typeBaseR = typeBase.resolveAutoNarrowing(pool, false, typeCtx);
+            return typeThisR.isA(typeBaseR);
+            }
+
+        return false;
+        }
+
+    /**
+     * Let's assume the following:
+     *
+     * <ul><li>
+     *   there is a method M2 on a class C2 represented by type "typeCtx" that has a parameter
+     *   of *this* type;
+     * </li><li>
+     *   there is another method M1 from a class C1 that is present as a contribution to C2, that
+     *   has the same name, same number of return values and parameters as M2 and a corresponding
+     *   parameter of the "typeBase" (C1).
+     * </li></ul>
+     *
+     * Determine whether M2 could be invoked via a signature of M1, and M2 could then "super" to M1.
+     * <p/>
+     * Note: despite the name this method also handling the auto-narrowing covariance.
+     *
+     * @param typeBase  the type to determine the contravariance with
+     * @param typeCtx   the type within which context the covariance is to be determined
+     */
+    public boolean isContravariantParameter(TypeConstant typeBase, TypeConstant typeCtx)
+        {
+        if (typeBase.equals(this))
+            {
+            return true;
+            }
+
+        if (typeBase.isAutoNarrowing() || this.isAutoNarrowing())
+            {
+            ConstantPool pool = ConstantPool.getCurrentPool();
+
+            TypeConstant typeThisR = this    .resolveAutoNarrowing(pool, false, typeCtx);
+            TypeConstant typeBaseR = typeBase.resolveAutoNarrowing(pool, false, typeCtx);
+            return typeBaseR.equals(typeThisR);
+            }
+        return false;
+        }
+
+    /**
      * Find any contribution for this (R-Value) type that is assignable to the specified (L-Value)
      * intersection type. This type must not be an intersection type.
      *
@@ -4730,10 +4780,10 @@ public abstract class TypeConstant
             // (RP/RR - right parameters/return, LP/LR - left parameter/return)
             // 1) TupleLP has the same arity as TupleRP
             // 2) every parameter type on the right should be assignable to a corresponding parameter
-            //    on the left (e.g. "function void (Number)" is assignable to "function void (Int)"
+            //    on the left (e.g. "function void (Number)" is assignable to "function void (Int)")
             // 3) TupleLR has less or equal arity than TupleRR
             // 4) every return type on the left should be assignable to a corresponding return
-            //    on the right (e.g. "function Int ()" is assignable to "function Number ()"
+            //    on the right (e.g. "function Int ()" is assignable to "function Number ()")
             int cL = typeLeft.getParamsCount();
             int cR = typeRight.getParamsCount();
             if (cL == 0)

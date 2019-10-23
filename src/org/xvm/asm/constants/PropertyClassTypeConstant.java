@@ -187,18 +187,6 @@ public class PropertyClassTypeConstant
         }
 
     @Override
-    public boolean isNarrowedFrom(TypeConstant typeSuper, TypeConstant typeCtx)
-        {
-        if (typeSuper instanceof PropertyClassTypeConstant)
-            {
-            PropertyClassTypeConstant that = (PropertyClassTypeConstant) typeSuper;
-            return this.m_idProp.equals(that.m_idProp) &&
-                   this.m_typeParent.isNarrowedFrom(that.m_typeParent, typeCtx);
-            }
-        return false;
-        }
-
-    @Override
     public boolean extendsClass(IdentityConstant constClass)
         {
         PropertyConstant idProp = (PropertyConstant) getDefiningConstant();

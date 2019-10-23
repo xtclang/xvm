@@ -224,12 +224,6 @@ public class AnonymousClassTypeConstant
         }
 
     @Override
-    public boolean isNarrowedFrom(TypeConstant typeSuper, TypeConstant typeCtx)
-        {
-        return false;
-        }
-
-    @Override
     public boolean extendsClass(IdentityConstant constClass)
         {
         return getChildStructure().extendsClass(constClass);

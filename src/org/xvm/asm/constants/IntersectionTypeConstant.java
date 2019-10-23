@@ -305,6 +305,79 @@ public class IntersectionTypeConstant
         }
 
     @Override
+    public boolean isIntoClassType()
+        {
+        return getUnderlyingType().isIntoClassType()
+            || getUnderlyingType2().isIntoClassType();
+        }
+
+    @Override
+    public boolean isIntoPropertyType()
+        {
+        return getUnderlyingType().isIntoPropertyType()
+            || getUnderlyingType2().isIntoPropertyType();
+        }
+
+    @Override
+    public TypeConstant getIntoPropertyType()
+        {
+        TypeConstant typeInto1 = getUnderlyingType().getIntoPropertyType();
+        TypeConstant typeInto2 = getUnderlyingType2().getIntoPropertyType();
+
+        TypeConstant typeProperty = getConstantPool().typeProperty();
+        if (typeInto1 != null && typeInto1.equals(typeProperty))
+            {
+            return typeInto1;
+            }
+        if (typeInto2 != null && typeInto2.equals(typeProperty))
+            {
+            return typeInto2;
+            }
+
+        return Objects.equals(typeInto1, typeInto2) ? typeInto1 : null;
+        }
+
+    @Override
+    public boolean isIntoMethodType()
+        {
+        return getUnderlyingType().isIntoMethodType()
+            || getUnderlyingType2().isIntoMethodType();
+        }
+
+    @Override
+    public boolean isIntoVariableType()
+        {
+        return getUnderlyingType().isIntoVariableType()
+            || getUnderlyingType2().isIntoVariableType();
+        }
+
+    @Override
+    public TypeConstant getIntoVariableType()
+        {
+        TypeConstant typeInto1 = getUnderlyingType().getIntoVariableType();
+        TypeConstant typeInto2 = getUnderlyingType2().getIntoVariableType();
+
+        if (typeInto1 == null)
+            {
+            return typeInto2;
+            }
+
+        if (typeInto2 == null)
+            {
+            return typeInto1;
+            }
+
+        ConstantPool pool    = getConstantPool();
+        TypeConstant typeVar = pool.typeVar();
+        if (typeInto1.equals(typeVar) || typeInto2.equals(typeVar))
+            {
+            return typeVar;
+            }
+
+        return pool.typeRef();
+        }
+
+    @Override
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
         // we've been asked to resolve some type defined as "T1 | T2";  first, resolve T1 and T2
@@ -521,6 +594,23 @@ public class IntersectionTypeConstant
         }
 
     @Override
+    public boolean isContravariantParameter(TypeConstant typeBase, TypeConstant typeCtx)
+        {
+        if (super.isContravariantParameter(typeBase, typeCtx))
+            {
+            return true;
+            }
+
+        // allow widening a parameter type from T to Nullable | T
+        if (isNullable())
+            {
+            ConstantPool pool = ConstantPool.getCurrentPool();
+            return removeNullable(pool).isContravariantParameter(typeBase, typeCtx);
+            }
+        return false;
+        }
+
+    @Override
     protected Relation findIntersectionContribution(IntersectionTypeConstant typeLeft)
         {
         TypeConstant thisRight1 = getUnderlyingType();
@@ -568,78 +658,6 @@ public class IntersectionTypeConstant
             && getUnderlyingType2().containsSubstitutableMethod(signature, access, fFunction, listParams);
         }
 
-    @Override
-    public boolean isIntoClassType()
-        {
-        return getUnderlyingType().isIntoClassType()
-            || getUnderlyingType2().isIntoClassType();
-        }
-
-    @Override
-    public boolean isIntoPropertyType()
-        {
-        return getUnderlyingType().isIntoPropertyType()
-            || getUnderlyingType2().isIntoPropertyType();
-        }
-
-    @Override
-    public TypeConstant getIntoPropertyType()
-        {
-        TypeConstant typeInto1 = getUnderlyingType().getIntoPropertyType();
-        TypeConstant typeInto2 = getUnderlyingType2().getIntoPropertyType();
-
-        TypeConstant typeProperty = getConstantPool().typeProperty();
-        if (typeInto1 != null && typeInto1.equals(typeProperty))
-            {
-            return typeInto1;
-            }
-        if (typeInto2 != null && typeInto2.equals(typeProperty))
-            {
-            return typeInto2;
-            }
-
-        return Objects.equals(typeInto1, typeInto2) ? typeInto1 : null;
-        }
-
-    @Override
-    public boolean isIntoMethodType()
-        {
-        return getUnderlyingType().isIntoMethodType()
-            || getUnderlyingType2().isIntoMethodType();
-        }
-
-    @Override
-    public boolean isIntoVariableType()
-        {
-        return getUnderlyingType().isIntoVariableType()
-            || getUnderlyingType2().isIntoVariableType();
-        }
-
-    @Override
-    public TypeConstant getIntoVariableType()
-        {
-        TypeConstant typeInto1 = getUnderlyingType().getIntoVariableType();
-        TypeConstant typeInto2 = getUnderlyingType2().getIntoVariableType();
-
-        if (typeInto1 == null)
-            {
-            return typeInto2;
-            }
-
-        if (typeInto2 == null)
-            {
-            return typeInto1;
-            }
-
-        ConstantPool pool    = getConstantPool();
-        TypeConstant typeVar = pool.typeVar();
-        if (typeInto1.equals(typeVar) || typeInto2.equals(typeVar))
-            {
-            return typeVar;
-            }
-
-        return pool.typeRef();
-        }
 
     // ----- run-time support ----------------------------------------------------------------------
 

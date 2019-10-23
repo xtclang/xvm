@@ -510,60 +510,6 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public boolean isNarrowedFrom(TypeConstant typeSuper, TypeConstant typeCtx)
-        {
-        assert typeSuper.isAutoNarrowing();
-
-        // there is one exception from the "congruent topology" requirement:
-        //  this  = immutable Tuple<ElementTypes>
-        //  super = this:FixedSizeAble
-        if (typeSuper instanceof TerminalTypeConstant)
-            {
-            return m_constType.isNarrowedFrom(typeSuper, typeCtx);
-            }
-
-        if (!(typeSuper instanceof ParameterizedTypeConstant))
-            {
-            return false;
-            }
-
-        ParameterizedTypeConstant that = (ParameterizedTypeConstant) typeSuper;
-
-        TypeConstant constThis = this.m_constType;
-        TypeConstant constThat = that.m_constType;
-
-        if (constThat.isAutoNarrowing())
-            {
-            // the base is auto-narrowing; don't need to check the type parameters
-            return constThis.isNarrowedFrom(constThat, typeCtx);
-            }
-
-        if (!constThis.isA(constThat))
-            {
-            return false;
-            }
-
-        TypeConstant[] aconstThis = this.m_atypeParams;
-        TypeConstant[] aconstThat = that.m_atypeParams;
-        for (int i = 0, c = aconstThis.length; i < c; ++i)
-            {
-            constThis = aconstThis[i];
-            constThat = aconstThat[i];
-
-            if (constThat.isAutoNarrowing() && !constThis.isNarrowedFrom(constThat, typeCtx))
-                {
-                return false;
-                }
-            else if (!constThis.isA(constThat))
-                {
-                return false;
-                }
-            }
-
-        return true;
-        }
-
-    @Override
     public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName)
         {
         typeActual = typeActual.resolveTypedefs();
@@ -629,6 +575,20 @@ public class ParameterizedTypeConstant
 
 
     // ----- type comparison support --------------------------------------------------------------
+
+    @Override
+    public boolean isContravariantParameter(TypeConstant typeBase, TypeConstant typeCtx)
+        {
+        if (super.isContravariantParameter(typeBase, typeCtx))
+            {
+            return true;
+            }
+
+        // we allow widening a parameter type from B<T> to D<T> or from C<D> to C<B>
+        // (assuming D "isA" B and C is a consumer)
+        // TODO GG: is the implementation below is too lax
+        return typeBase.isParamsSpecified() && typeBase.isA(this);
+        }
 
     @Override
     protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessLeft,

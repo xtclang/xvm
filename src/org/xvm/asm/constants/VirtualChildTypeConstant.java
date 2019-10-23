@@ -251,19 +251,6 @@ public class VirtualChildTypeConstant
         }
 
     @Override
-    public boolean isNarrowedFrom(TypeConstant typeSuper, TypeConstant typeCtx)
-        {
-        if (typeSuper instanceof VirtualChildTypeConstant)
-            {
-            VirtualChildTypeConstant that = (VirtualChildTypeConstant) typeSuper;
-            return this.m_constName.equals(that.m_constName) &&
-                   that.m_typeParent.isAutoNarrowing() &&
-                   this.m_typeParent.isNarrowedFrom(that.m_typeParent, typeCtx);
-            }
-        return false;
-        }
-
-    @Override
     public boolean extendsClass(IdentityConstant constClass)
         {
         return getChildStructure().extendsClass(constClass);

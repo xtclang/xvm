@@ -357,7 +357,7 @@ public class SignatureConstant
 
         // Note, that rule 1.2.2 does not apply in our case (duck typing)
 
-        // number of param types and return values must match
+        // number of parameters and return values must match
         // REVIEW consider relaxing this later, i.e. allow sub-classes to add return values
         if (!this.getName().equals(that.getName())
                 || this.getParamCount()  != that.getParamCount()
@@ -366,45 +366,21 @@ public class SignatureConstant
             return false;
             }
 
-        ConstantPool      pool  = ConstantPool.getCurrentPool();
-        SignatureConstant sigM1 = that;
-        SignatureConstant sigM2 = this;
-        boolean           fAuto = sigM1.isAutoNarrowing();
-
-        if (fAuto)
-            {
-            sigM1 = sigM1.resolveAutoNarrowing(pool, typeCtx);
-            sigM2 = sigM2.resolveAutoNarrowing(pool, typeCtx);
-            }
-
-        TypeConstant[] aR1 = sigM1.getRawReturns();
-        TypeConstant[] aR2 = sigM2.getRawReturns();
+        TypeConstant[] aR1 = that.getRawReturns();
+        TypeConstant[] aR2 = this.getRawReturns();
         for (int i = 0, c = aR1.length; i < c; i++)
             {
-            TypeConstant type1 = aR1[i];
-            TypeConstant type2 = aR2[i];
-            if (!type2.isA(type1))
+            if (!aR2[i].isCovariantReturn(aR1[i], typeCtx))
                 {
-                if (fAuto)
-                    {
-                    // check the auto-narrowing sub for the non-resolved type
-                    TypeConstant typeOrg = that.getRawReturns()[i];
-                    if (typeOrg.isAutoNarrowing() && type2.isNarrowedFrom(typeOrg, typeCtx))
-                        {
-                        continue;
-                        }
-                    }
                 return false;
                 }
             }
 
-        TypeConstant[] aP1 = sigM1.getRawParams();
-        TypeConstant[] aP2 = sigM2.getRawParams();
+        TypeConstant[] aP1 = that.getRawParams();
+        TypeConstant[] aP2 = this.getRawParams();
         for (int i = 0, c = aP1.length; i < c; i++)
             {
-            TypeConstant type1 = aP1[i];
-            TypeConstant type2 = aP2[i];
-            if (!type1.isA(type2))
+            if (!aP2[i].isContravariantParameter(aP1[i], typeCtx))
                 {
                 return false;
                 }
@@ -430,12 +406,10 @@ public class SignatureConstant
      */
     public TypeConstant asMethodType(TypeConstant typeTarget)
         {
-        ConstantPool pool    = getConstantPool();
-        TypeConstant params  = pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_aconstParams);
-        TypeConstant returns = pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_aconstReturns);
-
-        // Method<TargetType, Tuple<ParamTypes...>, Tuple<ReturnTypes...>>
-        return pool.ensureParameterizedTypeConstant(pool.typeMethod(), typeTarget, params, returns);
+        ConstantPool pool = getConstantPool();
+        return pool.ensureParameterizedTypeConstant(pool.typeMap(), typeTarget,
+                pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_aconstParams),
+                pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_aconstReturns));
         }
 
     /**
@@ -455,6 +429,7 @@ public class SignatureConstant
         return getConstantPool().ensureSignatureConstant(getName(),
                 Arrays.copyOfRange(m_aconstParams, ofStart, ofStart + cParams), m_aconstReturns);
         }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 
