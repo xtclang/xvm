@@ -1305,19 +1305,9 @@ public abstract class TypeConstant
      */
     private static int rankTypeInfo(TypeInfo info)
         {
-        if (info == null)
-            {
-            return 0;
-            }
-
-        if (info.isPlaceHolder())
-            {
-            return 1;
-            }
-
-        return info.isIncomplete()
-                ? 2
-                : 3;
+        return info == null
+                ? 0
+                : info.getProgress().ordinal();
         }
 
     /**

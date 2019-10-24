@@ -943,24 +943,6 @@ public class TypeInfo
         }
 
     /**
-     * Given an identity (or nested identity) of a property, obtain a TypeInfo that represents the
-     * entirety of the information about that property, including what properties and methods it
-     * contains, what their call chains are, etc. The reason that this method combines the "id" and
-     * the "nid" lookups is because a nested identity is not particularly type-safe, thus making it
-     * relatively simple to combine the two requests into one (albeit untyped).
-     *
-     * @param idOrNid  either the PropertyConstant for the property, or the nested identity of the
-     *                 property
-     *
-     * @return a TypeInfo for the property, or null if the property does not exist
-     */
-    public TypeInfo getPropertyAsTypeInfo(Object idOrNid)
-        {
-        // TODO
-        throw new UnsupportedOperationException();
-        }
-
-    /**
      * Obtain all of the properties declared within the specified method.
      *
      * @param idMethod  the identity of the method that may contain properties
@@ -1887,7 +1869,7 @@ public class TypeInfo
         MethodConstant methodMatch = null;
 
         // check the cached result
-        if (m_typeAuto != null && typeDesired.equals(m_typeAuto))
+        if (typeDesired.equals(m_typeAuto))
             {
             methodMatch = m_methodAuto;
             }
@@ -1935,22 +1917,6 @@ public class TypeInfo
             }
 
         return methodMatch;
-        }
-
-    /**
-     * Helper method that return all methods with a given name. Used for debugging.
-     */
-    public Map<MethodConstant, MethodInfo> filterMethods(String sName)
-        {
-        Map<MethodConstant, MethodInfo> map = new HashMap<>();
-        for (Map.Entry<MethodConstant, MethodInfo> entry : getMethods().entrySet())
-            {
-            if (entry.getValue().getIdentity().getSignature().getName().equals(sName))
-                {
-                map.put(entry.getKey(), entry.getValue());
-                }
-            }
-        return map;
         }
 
     private ConstantPool pool()
@@ -2116,16 +2082,6 @@ public class TypeInfo
         return f_progress == Progress.Building;
         }
 
-    boolean isIncomplete()
-        {
-        return f_progress == Progress.Incomplete;
-        }
-
-    boolean isComplete()
-        {
-        return f_progress == Progress.Complete;
-        }
-
 
     // ----- internal helpers ----------------------------------------------------------------------
 
@@ -2201,6 +2157,7 @@ public class TypeInfo
 
     public enum Progress
         {
+        // the ordinal values are significant: place-holder=1, incomplete=2, complete=3
         Absent, Building, Incomplete, Complete;
 
         public Progress worstOf(Progress that)
