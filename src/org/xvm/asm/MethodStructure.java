@@ -133,9 +133,8 @@ public class MethodStructure
      */
     public boolean isConstructor()
         {
-        String  sName        = getName();
-        boolean fConstructor = sName.equals("construct") || sName.equals("=");
-        return fConstructor;
+        String sName = getName();
+        return sName.equals("construct") || sName.equals("=");
         }
 
     /**

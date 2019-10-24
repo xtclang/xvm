@@ -26,7 +26,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
-import org.xvm.asm.constants.TypeInfo.MethodType;
+import org.xvm.asm.constants.TypeInfo.MethodKind;
 
 import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Label;
@@ -483,7 +483,7 @@ public class PropertyDeclarationStatement
             ClassStructure      clz  = prop.getContainingClass();
             TypeConstant        type = pool().ensureAccessTypeConstant(clz.getCanonicalType(), Access.PRIVATE);
             TypeInfo            info = type.ensureTypeInfo(errs);
-            Set<MethodConstant> set  = info.findMethods(prop.getName(), -1, MethodType.Either);
+            Set<MethodConstant> set  = info.findMethods(prop.getName(), -1, MethodKind.Any);
             if (!set.isEmpty())
                 {
                 MethodConstant idMethod = set.iterator().next();

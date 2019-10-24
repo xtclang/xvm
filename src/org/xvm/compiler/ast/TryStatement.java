@@ -17,7 +17,7 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo.MethodType;
+import org.xvm.asm.constants.TypeInfo.MethodKind;
 
 import org.xvm.asm.op.CatchEnd;
 import org.xvm.asm.op.CatchStart;
@@ -360,7 +360,7 @@ public class TryStatement
             // EXIT
             TypeConstant   typeCloseable = pool.typeCloseable();
             MethodConstant methodClose   = typeCloseable.ensureTypeInfo(errs)
-                    .findMethods("close", 0, MethodType.Method).iterator().next();
+                    .findMethods("close", 0, MethodKind.Method).iterator().next();
             for (int i = 0, c = resources.size(); i < c; ++i)
                 {
                 code.add(aFinallyClose[i]);

@@ -34,7 +34,7 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
-import org.xvm.asm.constants.TypeInfo.MethodType;
+import org.xvm.asm.constants.TypeInfo.MethodKind;
 
 import org.xvm.asm.op.*;
 
@@ -1620,7 +1620,7 @@ public class InvocationExpression
 
                 TypeInfo infoLeft = typeLeft.ensureTypeInfo(errs);
 
-                arg = findCallable(ctx, infoLeft, sName, MethodType.Either, true,
+                arg = findCallable(ctx, infoLeft, sName, MethodKind.Any, true,
                         atypeReturn, ErrorListener.BLACKHOLE);
                 if (arg instanceof MethodConstant)
                     {
@@ -1654,19 +1654,19 @@ public class InvocationExpression
                     {
                     // find the method based on the signature
                     // TODO this only finds methods immediately contained within the class; does not find nested methods!!!
-                    MethodType methodType = fConstruct
-                            ? MethodType.Constructor
-                            : (fNoCall && fNoFBind) || target.hasThis()
-                                    ? MethodType.Either
-                                    : MethodType.Function;
-                    IdentityConstant idCallable = findCallable(ctx, info, sName, methodType,
+                    MethodKind kind =
+                            fConstruct                                ? MethodKind.Constructor :
+                            (fNoCall && fNoFBind) || target.hasThis() ? MethodKind.Any :
+                                                                        MethodKind.Function;
+                    IdentityConstant idCallable = findCallable(ctx, info, sName, kind,
                                                     id.isNested(), atypeReturn, errs);
                     if (idCallable == null)
                         {
                         // check to see if we would have found something had we included methods in
                         // the search
-                        if (methodType == MethodType.Function && findCallable(ctx, info, sName,
-                                MethodType.Method, id.isNested(), atypeReturn, ErrorListener.BLACKHOLE) != null)
+                        if (kind == MethodKind.Function &&
+                                findCallable(ctx, info, sName, MethodKind.Method, id.isNested(),
+                                    atypeReturn, ErrorListener.BLACKHOLE) != null)
                             {
                             exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_METHOD, sName, target.getTargetType());
                             }
@@ -1786,10 +1786,11 @@ public class InvocationExpression
                         infoLeft = idLeft.ensureTypeInfo(access, errs);
                         }
 
-                    MethodType methodType = fConstruct ? MethodType.Constructor
-                            : fNoFBind && fNoCall ? MethodType.Either : MethodType.Function;
+                    MethodKind kind = fConstruct          ? MethodKind.Constructor :
+                                      fNoFBind && fNoCall ? MethodKind.Any :
+                                                            MethodKind.Function;
 
-                    Argument arg = findCallable(ctx, infoLeft, sName, methodType, false, atypeReturn, errs);
+                    Argument arg = findCallable(ctx, infoLeft, sName, kind, false, atypeReturn, errs);
                     if (arg instanceof MethodConstant)
                         {
                         MethodConstant idMethod   = (MethodConstant) arg;
@@ -1829,7 +1830,7 @@ public class InvocationExpression
 
                             ErrorListener errsTemp = errs.branch();
 
-                            Argument arg = findCallable(ctx, infoType, sName, MethodType.Function, false,
+                            Argument arg = findCallable(ctx, infoType, sName, MethodKind.Function, false,
                                                 atypeReturn, errsTemp);
                             if (arg instanceof MethodConstant)
                                 {
@@ -1862,7 +1863,7 @@ public class InvocationExpression
                         TypeInfo      infoLeft = typeLeft.ensureTypeInfo(errs);
                         ErrorListener errsTemp = errs.branch();
 
-                        Argument arg = findCallable(ctx, infoLeft, sName, MethodType.Function, false,
+                        Argument arg = findCallable(ctx, infoLeft, sName, MethodKind.Function, false,
                                             atypeReturn, errsTemp);
                         if (arg instanceof MethodConstant)
                             {
@@ -1888,7 +1889,7 @@ public class InvocationExpression
                                 TypeInfo      infoLeft = reg.getType().getParamType(0).ensureTypeInfo(errs);
                                 ErrorListener errsTemp = errs.branch();
 
-                                Argument  arg = findCallable(ctx, infoLeft, sName, MethodType.Function, false,
+                                Argument  arg = findCallable(ctx, infoLeft, sName, MethodKind.Function, false,
                                                         atypeReturn, errsTemp);
                                 if (arg instanceof MethodConstant)
                                     {
@@ -1913,7 +1914,7 @@ public class InvocationExpression
             TypeInfo      infoLeft = typeLeft.ensureTypeInfo(errs);
             ErrorListener errsTemp = errs.branch();
 
-            Argument arg = findCallable(ctx, infoLeft, sName, MethodType.Method, false,
+            Argument arg = findCallable(ctx, infoLeft, sName, MethodKind.Method, false,
                                 atypeReturn, errsTemp);
             if (arg instanceof MethodConstant)
                 {
@@ -1933,7 +1934,7 @@ public class InvocationExpression
 
                 ErrorListener errsTempB = errs.branch();
 
-                arg = findMethod(ctx, infoLeft, sName, listArgs, MethodType.Function, m_fCall, false,
+                arg = findMethod(ctx, infoLeft, sName, listArgs, MethodKind.Function, m_fCall, false,
                             atypeReturn, errsTempB);
                 if (arg != null)
                     {
@@ -1984,7 +1985,7 @@ public class InvocationExpression
      * @param ctx           the context
      * @param infoParent    the TypeInfo to search for the method or function on
      * @param sName         the name of the method or function
-     * @param methodType    the categories of methods to include in the search
+     * @param kind          the kind of methods to include in the search
      * @param fAllowNested  if true, nested methods can be used at the target
      * @param aRedundant    the redundant return type information (helps to clarify which method or
      *                      function to select)
@@ -1996,7 +1997,7 @@ public class InvocationExpression
             Context        ctx,
             TypeInfo       infoParent,
             String         sName,
-            MethodType     methodType,
+            MethodKind     kind,
             boolean        fAllowNested,
             TypeConstant[] aRedundant,
             ErrorListener  errs)
@@ -2009,7 +2010,7 @@ public class InvocationExpression
             return prop.getIdentity();
             }
 
-        return findMethod(ctx, infoParent, sName, args, methodType, m_fCall, fAllowNested, aRedundant, errs);
+        return findMethod(ctx, infoParent, sName, args, kind, m_fCall, fAllowNested, aRedundant, errs);
         }
 
     /**

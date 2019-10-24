@@ -32,7 +32,7 @@ import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
-import org.xvm.asm.constants.TypeInfo.MethodType;
+import org.xvm.asm.constants.TypeInfo.MethodKind;
 
 import org.xvm.asm.op.Label;
 
@@ -979,7 +979,7 @@ public abstract class AstNode
      * @param infoTarget    the type info on which to search for the method
      * @param sMethodName   the method name
      * @param listExprArgs  the expressions for arguments (which may not yet be validated)
-     * @param methodType    the MethodType to search for
+     * @param kind          the kind of method to search for
      * @param fCall         if true, the method will be called; otherwise it will be bound
      * @param fAllowNested  if true, nested methods can be used at the target
      * @param atypeReturn   (optional) the array of return types from the method
@@ -993,7 +993,7 @@ public abstract class AstNode
             TypeInfo         infoTarget,
             String           sMethodName,
             List<Expression> listExprArgs,
-            MethodType       methodType,
+            MethodKind       kind,
             boolean          fCall,
             boolean          fAllowNested,
             TypeConstant[]   atypeReturn,
@@ -1032,7 +1032,7 @@ public abstract class AstNode
 
         int                 cArgs      = fCall ? cExpr : -1;
         TypeConstant        typeTarget = infoTarget.getType();
-        Set<MethodConstant> setMethods = infoTarget.findMethods(sMethodName, cArgs, methodType);
+        Set<MethodConstant> setMethods = infoTarget.findMethods(sMethodName, cArgs, kind);
 
         if (fAllowNested)
             {
@@ -1063,7 +1063,7 @@ public abstract class AstNode
 
         if (setMethods.isEmpty())
             {
-            if (methodType == MethodType.Constructor)
+            if (kind == MethodKind.Constructor)
                 {
                 log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, typeTarget.getValueString());
                 }
@@ -1095,7 +1095,7 @@ public abstract class AstNode
 
         if (typeTupleArg != null)
             {
-            setMethods = infoTarget.findMethods(sMethodName, typeTupleArg.getParamsCount(), methodType);
+            setMethods = infoTarget.findMethods(sMethodName, typeTupleArg.getParamsCount(), kind);
 
             ErrorListener errsTempT = errs.branch();
             collectMatchingMethods(ctx, infoTarget, setMethods, null, fCall,
@@ -1124,7 +1124,7 @@ public abstract class AstNode
         else
             {
             // there are no fatal errors so far; report a miss
-            if (methodType == MethodType.Constructor)
+            if (kind == MethodKind.Constructor)
                 {
                 log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, typeTarget.getValueString());
                 }

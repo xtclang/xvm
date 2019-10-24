@@ -1692,13 +1692,13 @@ public class TypeInfo
     /**
      * Obtain all of the matching methods for the specified name and the number of parameters.
      *
-     * @param sName       the method name
-     * @param cParams     the number of parameters (-1 for any)
-     * @param methodType  the category of methods to consider
+     * @param sName    the method name
+     * @param cParams  the number of parameters (-1 for any)
+     * @param kind     the kind of methods to consider
      *
      * @return a set of zero or more method constants
      */
-    public Set<MethodConstant> findMethods(String sName, int cParams, MethodType methodType)
+    public Set<MethodConstant> findMethods(String sName, int cParams, MethodKind kind)
         {
         Map<String, Set<MethodConstant>> mapMethods = m_mapMethodsByName;
         if (mapMethods == null)
@@ -1706,10 +1706,11 @@ public class TypeInfo
             m_mapMethodsByName = mapMethods = new HashMap<>();
             }
 
-        String sKey = cParams == 0 ? sName : sName + ';' + cParams;
-        if (methodType != MethodType.Method)
+        // a naked name is a key for "any method of that name"
+        String sKey = cParams == -1 ? sName : sName + ';' + cParams;
+        if (kind != MethodKind.Any)
             {
-            sKey += methodType.key;
+            sKey += kind.key;
             }
 
         Set<MethodConstant> setMethods = mapMethods.get(sKey);
@@ -1729,7 +1730,7 @@ public class TypeInfo
                     MethodInfo      info   = entry.getValue();
                     MethodStructure method = info.getTopmostMethodStructure(this);
 
-                    if (!methodType.matches(method))
+                    if (!kind.matches(method))
                         {
                         continue;
                         }
@@ -1749,7 +1750,7 @@ public class TypeInfo
                         {
                         if (setMethods == null)
                             {
-                            setMethods = new HashSet<>(7);
+                            setMethods = new HashSet<>(1);
                             }
 
                         MethodConstant idMethod = method.isFunction()
@@ -1792,7 +1793,7 @@ public class TypeInfo
         String sPath = (nid instanceof SignatureConstant
                 ? ((SignatureConstant) nid).getValueString()
                 : nid.toString()) + '#' + sName;
-        String sKey  = cParams == 0 ? sPath : sPath + ';' + cParams;
+        String sKey  = cParams == -1 ? sPath : sPath + ';' + cParams;
 
         Set<MethodConstant> setMethods = mapMethods.get(sKey);
         if (setMethods == null)
@@ -1825,7 +1826,7 @@ public class TypeInfo
                         {
                         if (setMethods == null)
                             {
-                            setMethods = new HashSet<>(7);
+                            setMethods = new HashSet<>(1);
                             }
                         setMethods.add(resolveMethodConstant(info));
                         }
@@ -2162,7 +2163,7 @@ public class TypeInfo
         Set<Constant> setPresent = new HashSet<>();
         appendAnnotations(list, anno1, setPresent);
         appendAnnotations(list, anno2, setPresent);
-        return list.toArray(new Annotation[list.size()]);
+        return list.toArray(Annotation.NO_ANNOTATIONS);
         }
 
     public static void appendAnnotations(ArrayList<Annotation> list, Annotation[] aAnno, Set<Constant> setPresent)
@@ -2208,11 +2209,11 @@ public class TypeInfo
             }
         }
 
-    public enum MethodType
+    public enum MethodKind
         {
-        Constructor("c"), Method("m"), Function("f"), Either("mf");
+        Constructor("c"), Method("m"), Function("f"), Any("a");
 
-        MethodType(String key)
+        MethodKind(String key)
             {
             this.key = key;
             }
@@ -2221,17 +2222,23 @@ public class TypeInfo
 
         public boolean matches(MethodStructure method)
             {
-            if (method.isConstructor())
+            switch (this)
                 {
-                return this == Constructor;
-                }
+                case Constructor:
+                    return method.isConstructor();
 
-            if (this == Either)
-                {
-                return true;
-                }
+                case Method:
+                    return !method.isFunction() && !method.isConstructor();
 
-            return method.isFunction() == (this == Function);
+                case Function:
+                    return method.isFunction();
+
+                case Any:
+                    return true;
+
+                default:
+                    throw new IllegalStateException();
+                }
             }
         }
 

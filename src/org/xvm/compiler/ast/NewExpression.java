@@ -26,7 +26,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
-import org.xvm.asm.constants.TypeInfo.MethodType;
+import org.xvm.asm.constants.TypeInfo.MethodKind;
 
 import org.xvm.asm.op.*;
 
@@ -518,7 +518,7 @@ public class NewExpression
                 // any required dependency that it has one a super class constructor will be handled
                 // as if this were any other normal class)
                 ErrorListener errsTemp = errs.branch();
-                idMethod = findMethod(ctx, infoTarget, "construct", listArgs, MethodType.Constructor,
+                idMethod = findMethod(ctx, infoTarget, "construct", listArgs, MethodKind.Constructor,
                                 true, false, null, errsTemp);
                 if (idMethod == null && !listArgs.isEmpty())
                     {
@@ -530,7 +530,7 @@ public class NewExpression
                     // (note: the automatic creation of the synthetic no-arg constructor in the
                     // absence of any explicit constructor must do this same check)
                     MethodConstant idSuper = findMethod(ctx, typeSuper.ensureTypeInfo(errs),
-                            "construct", listArgs, MethodType.Constructor, true, false, null, errs);
+                            "construct", listArgs, MethodKind.Constructor, true, false, null, errs);
                     if (idSuper == null)
                         {
                         fValid = false;
@@ -559,7 +559,7 @@ public class NewExpression
                 }
             else
                 {
-                idMethod = findMethod(ctx, infoTarget, "construct", listArgs, MethodType.Constructor,
+                idMethod = findMethod(ctx, infoTarget, "construct", listArgs, MethodKind.Constructor,
                                 true, false, null, errs);
                 }
 

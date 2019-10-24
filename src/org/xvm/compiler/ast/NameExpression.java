@@ -42,7 +42,7 @@ import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.ThisClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
-import org.xvm.asm.constants.TypeInfo.MethodType;
+import org.xvm.asm.constants.TypeInfo.MethodKind;
 import org.xvm.asm.constants.TypeParameterConstant;
 import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
@@ -1689,7 +1689,7 @@ public class NameExpression
                 PropertyInfo infoProp = infoType.findProperty(sName);
                 if (infoProp == null)
                     {
-                    Set<MethodConstant> setMethods = infoType.findMethods(sName, -1, MethodType.Either);
+                    Set<MethodConstant> setMethods = infoType.findMethods(sName, -1, MethodKind.Any);
                     switch (setMethods.size())
                         {
                         case 0:
