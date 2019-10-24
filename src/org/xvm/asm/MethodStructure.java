@@ -1185,7 +1185,7 @@ public class MethodStructure
                 TypeConstant typeType = param.getType();
 
                 // type parameter's type must be of Type<DataType>
-                assert typeType.isTypeOfType() && typeType.getParamsCount() == 1;
+                assert typeType.isTypeOfType() && typeType.getParamsCount() >= 1;
                 return typeType.getParamTypesArray()[0];
                 }
             }

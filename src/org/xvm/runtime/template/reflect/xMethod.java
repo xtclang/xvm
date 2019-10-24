@@ -1,4 +1,4 @@
-package org.xvm.runtime.template.types;
+package org.xvm.runtime.template.reflect;
 
 
 import org.xvm.asm.ClassStructure;
@@ -53,7 +53,6 @@ public class xMethod
         markNativeProperty("name");
         markNativeProperty("conditionalReturn");
         markNativeProperty("access");
-        markNativeProperty("property");
 
         getCanonicalType().invalidateTypeInfo();
         }

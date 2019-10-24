@@ -519,7 +519,7 @@ public class ClassStructure
         ConstantPool pool = getConstantPool();
 
         // check for turtles, for example: "ElementTypes extends Tuple<ElementTypes>"
-        if (typeConstraint.getParamsCount() == 1 &&
+        if (typeConstraint.getParamsCount() >= 1 &&
                 typeConstraint.isTuple() &&
                 typeConstraint.getParamTypesArray()[0].getValueString().equals(sName))
             {

@@ -29,33 +29,33 @@ const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
     Access access;
 
     // -----
-
-    /**
-     * If this method represents a property, return that information, otherwise `Null`.
-     *
-     * TODO note about compile time types
-     */
-    @Lazy Property? property.calc()
-        {
-        if (ReturnTypes.size == 1 && ReturnTypes[0].isA(Ref) && ParamTypes.size == 0)
-            {
-            if (MultiMethod getters := ReturnTypes[0].methodsByName.get("get"))
-                {
-                for (Method<> getter : getters.methods)
-                    {
-                    if (getter.ReturnTypes.size == 1 && getter.ParamTypes.size == 0)
-                        {
-                        return new Property /* TODO <ReturnTypes[0]> */ (
-                            getter.as(Method<Object, Tuple<>, Tuple<Ref>>));
-                        }
-                    }
-                }
-
-            assert false;
-            }
-
-        return null;
-        }
+//
+//    /**
+//     * If this method represents a property, return that information, otherwise `Null`.
+//     *
+//     * TODO note about compile time types
+//     */
+//    @Lazy Property? property.calc()
+//        {
+//        if (ReturnTypes.size == 1 && ReturnTypes[0].isA(Ref) && ParamTypes.size == 0)
+//            {
+//            if (MultiMethod getters := ReturnTypes[0].multimethods.get("get"))
+//                {
+//                for (Method<> getter : getters.methods)
+//                    {
+//                    if (getter.ReturnTypes.size == 1 && getter.ParamTypes.size == 0)
+//                        {
+//                        return new Property /* TODO <ReturnTypes[0]> */ (
+//                            getter.as(Method<Object, Tuple<>, Tuple<Ref>>));
+//                        }
+//                    }
+//                }
+//
+//            assert false;
+//            }
+//
+//        return null;
+//        }
 
     /**
      * Determine if this method _consumes_ a formal type with the specified name.
@@ -64,20 +64,14 @@ const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
      * 1. _m_ has a parameter type declared as _T_;
      * 2. _m_ has a parameter type that _"produces T"_.
      * 3. _m_ has a return type that _"consumes T"_;
-     *
-     * There is a notable exception to the above rule #3 for a method on a type corresponding to a
-     * property, which returns a `Ref`) to represent the property type, and thus (due to the
-     * the methods on `Ref<T>`}) appears to _"consume T"_; however, if the type containing
-     * the property is explicitly immutable, or the method returning the `Ref<T>`}) is
-     * annotated with `@RO`, then _m_ is assumed to not _"consume T"_.
      */
-    Boolean consumesFormalType(String typeName, Boolean ignoreImmediateProduction = false)
+    Boolean consumesFormalType(String typeName)
         {
         paramLoop: for (Type paramType : ParamTypes)
             {
             if (String[] names := formalParamNames(paramLoop.count))
                 {
-                if (!ignoreImmediateProduction && names.contains(typeName))
+                if (names.contains(typeName))
                     {
                     return true;
                     }
@@ -99,10 +93,7 @@ const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
                 }
             else
                 {
-                // see the exception of the rule 3 above
-                ignoreImmediateProduction = property?.readOnly : false;
-
-                if (returnType.consumesFormalType(typeName, ignoreImmediateProduction))
+                if (returnType.consumesFormalType(typeName))
                     {
                     return true;
                     }

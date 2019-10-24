@@ -1,4 +1,4 @@
-package org.xvm.runtime.template.types;
+package org.xvm.runtime.template.reflect;
 
 
 import org.xvm.asm.ClassStructure;

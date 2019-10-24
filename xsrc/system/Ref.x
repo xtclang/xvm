@@ -43,6 +43,11 @@
 interface Ref<Referent>
     {
     /**
+     * De-reference the reference to obtain the referent.
+     */
+    Referent get();
+
+    /**
      * Determine if there is a referent. In most cases, it is impossible for a Ref to not be
      * assigned, but there are specific cases in which a reference may not have a referent,
      * including:
@@ -81,11 +86,6 @@ interface Ref<Referent>
         }
 
     /**
-     * De-reference the reference to obtain the referent.
-     */
-    Referent get();
-
-    /**
      * Obtain the actual runtime type of the reference that this Ref currently holds. The actualType
      * represents the full set of methods that can be invoked against the referent, and is always a
      * super-set of the Referent:
@@ -97,29 +97,6 @@ interface Ref<Referent>
      * often the _compile-time type_ of the reference.)
      */
     @RO Type actualType;
-
-    /**
-     * The optional name of the reference. References are used for arguments, local variables,
-     * object properties, constant pool values, array elements, fields of structures, elements of
-     * tuples, and many other purposes; in some of these uses, it is common for a reference to be
-     * named. For example, arguments, local variables, struct fields, and properties are almost
-     * always named, but tuple elements are often not named, and array elements are never named.
-     */
-    @RO String? refName;
-
-    /**
-     * The reference uses a number of bytes for its own storage; while the size of the reference is
-     * not expected to dynamically change, reference sizes may vary from one reference to another.
-     * References may be larger than expected, because references may include additional information
-     * -- and potentially even the entire referent -- within the reference itself.
-     */
-    @RO Int byteLength;
-
-    /**
-     * Determine if the reference is completely self-contained, in that the referent is actually
-     * embedded within the reference itself.
-     */
-    @RO Boolean selfContained;
 
     /**
      * Obtain a new reference to the referent such that the reference contains only the methods and
@@ -149,44 +126,66 @@ interface Ref<Referent>
      * Determine if the referent is an instance of the specified type.
      */
     Boolean instanceOf(Type type);
-
-    /**
-     * Determine if the class of the referent implements the specified interface.
-     *
-     * Note: unlike the {@link instanceOf}, this method doesn't simply check if the referent's class
-     * has all methods that the specified interface has. Instead, it returns true iff any of the
-     * following conditions holds true:
-     *  - the referent's class explicitly declares that it implements the specified interface, or
-     *  - the referent's super class implements the specified interface (recursively), or
-     *  - any of the interfaces that the referent's class declares to implement extends the
-     *    specified interface (recursively)
-     */
-    Boolean implements_(Class interface_);
-
-    /**
-     * Determine if the class of the referent extends (or is) the specified class.
-     */
-    Boolean extends_(Class class_);
-
-    /**
-     * Determine if the class of the referent incorporates the specified mixin.
-     */
-    Boolean incorporates_(Class mixin_);
+// TODO GG
+//    Boolean instanceOf(Type type)
+//        {
+//        if (Referent ref := peek())
+//            {
+//            return ref.is(type);
+//            }
+//
+//        return False;
+//        }
 
     /**
      * Determine if the referent is a service.
      */
     @RO Boolean isService;
+//    @RO Boolean isService.get()
+//        {
+//        return actualType.is(Type<Service>);
+//        }
 
     /**
      * Determine if the referent is an immutable const.
      */
     @RO Boolean isConst;
+//    @RO Boolean isConst.get()
+//        {
+//        return actualType.is(Type<immutable Const>);
+//        }
 
     /**
      * Determine if the referent is immutable.
      */
     @RO Boolean isImmutable;
+//    @RO Boolean isImmutable.get()
+//        {
+//        return actualType.is(Type<immutable Object>);
+//        }
+
+    /**
+     * The optional name of the reference. References are used for arguments, local variables,
+     * object properties, constant pool values, array elements, fields of structures, elements of
+     * tuples, and many other purposes; in some of these uses, it is common for a reference to be
+     * named. For example, arguments, local variables, struct fields, and properties are almost
+     * always named, but tuple elements are often not named, and array elements are never named.
+     */
+    @RO String? refName; // REVIEW why not just "name"? or "conditional String hasName()"?
+
+    /**
+     * The reference uses a number of bytes for its own storage; while the size of the reference is
+     * not expected to dynamically change, reference sizes may vary from one reference to another.
+     * References may be larger than expected, because references may include additional information
+     * -- and potentially even the entire referent -- within the reference itself.
+     */
+    @RO Int byteLength;
+
+    /**
+     * Determine if the reference is completely self-contained, in that the referent is actually
+     * embedded within the reference itself.
+     */
+    @RO Boolean selfContained;
 
     /**
      * Reference equality is used to determine if two references are referring to the same referent

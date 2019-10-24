@@ -131,7 +131,7 @@ public class LabeledStatement
         {
         public LabelVar()
             {
-            super(pool().ensureEcstasyTypeConstant("types.Label"), Op.A_LABEL);
+            super(pool().ensureEcstasyTypeConstant("reflect.Label"), Op.A_LABEL);
             }
 
         /**

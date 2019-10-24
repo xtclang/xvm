@@ -315,3 +315,8 @@ Type
 String?         <-- this has two (!!!) origin classes, but it should still be deserializable,
                     so there must be something in addition to originClass(), e.g. "@RO Boolean classy;"
                     (GG calls it "class composable")
+
+// ---functions
+
+static (Int, String) foo();         // Function<<>, <Int, String>>
+static Tuple<Int, String> foo();    // Function<<>, <Tuple<Int, String>>>

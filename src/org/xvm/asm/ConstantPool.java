@@ -1083,7 +1083,6 @@ public class ConstantPool
             case "Bit":
             case "Boolean":
             case "Char":
-            case "Class":
             case "Clock":
             case "Closeable":
             case "ConcurrentModification":
@@ -1186,9 +1185,10 @@ public class ConstantPool
                 sClz = sName;
                 break;
 
+            case "Class":
             case "Property":
             case "Method":
-                sPkg = "types";
+                sPkg = "reflect";
                 sClz = sName;
                 break;
 

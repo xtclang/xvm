@@ -10,7 +10,7 @@ package io
      * A IllegalUTF is raised when an illegal character is encountered in a byte stream.
      */
     const IllegalUTF(String? text = null, Exception? cause = null)
-            extends Exception(text, cause);
+            extends IOException(text, cause);
 
     /**
      * Indicates that an end of file or stream has been reached unexpectedly.

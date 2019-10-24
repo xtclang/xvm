@@ -58,11 +58,10 @@ mixin Enumeration<EnumType extends Enum>
      * * "Boolean" for {@link Boolean}
      * * "Ordered" for {@link Ordered}
      */
-    @Override
     String name.get()
         {
         // the name of the class is same as the name of the Enumeration
-        return super();
+        TODO return super();
         }
 
     /**
@@ -115,24 +114,23 @@ mixin Enumeration<EnumType extends Enum>
      */
     @Lazy Map<String, EnumType> byName.calc()
         {
-        assert !(parent.is(Class+Enumeration) && this.extends_(parent.as(Class+Enumeration)));
-
         // the Enumeration class contains singleton Enum class/values; collect those values into a
         // Map keyed by name
         ListMap<String, EnumType> map = new ListMap();
-        for (Class<> clz : classesByName.values)
-            {
-            if (clz.extends_(this) && clz.category == CONST && clz.is(Class<EnumType>))
-                {
-                assert clz.isSingleton;
-
-                EnumType instance = clz.singleton;
-
-                assert instance.ordinal == map.size;
-                assert !map.contains(clz.name);
-                map.put(clz.name, instance);
-                }
-            }
+// TODO
+//        for (Class<> clz : classesByName.values)
+//            {
+//            if (clz.extends_(this) && clz.category == CONST && clz.is(Class<EnumType>))
+//                {
+//                assert clz.isSingleton;
+//
+//                EnumType instance = clz.singleton;
+//
+//                assert instance.ordinal == map.size;
+//                assert !map.contains(clz.name);
+//                map.put(clz.name, instance);
+//                }
+//            }
 
         return map.ensureImmutable();
         }

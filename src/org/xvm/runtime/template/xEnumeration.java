@@ -4,6 +4,7 @@ package org.xvm.runtime.template;
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.template.reflect.xClass;
 
 /**
  * Native Enumeration implementation.

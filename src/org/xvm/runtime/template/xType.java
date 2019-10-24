@@ -19,7 +19,7 @@ import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.collections.xArray;
 
-import org.xvm.runtime.template.types.xMethod;
+import org.xvm.runtime.template.reflect.xMethod;
 
 
 /**
@@ -49,7 +49,7 @@ public class xType
     @Override
     public void initDeclared()
         {
-        markNativeProperty("allMethods");
+        markNativeProperty("methods");
         markNativeProperty("explicitlyImmutable");
 
         getCanonicalType().invalidateTypeInfo();
@@ -81,7 +81,7 @@ public class xType
 
         switch (sPropName)
             {
-            case "allMethods":
+            case "methods":
                 return frame.assignValue(iReturn, getAllMethods(hThis));
             }
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
