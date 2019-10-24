@@ -821,5 +821,20 @@ interface Type<DataType, OuterType>
 
         TODO <=>
         }
+
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        return 0;
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        appender.add("Methods: not implemented");
+        }
     }
 

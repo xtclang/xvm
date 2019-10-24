@@ -72,8 +72,8 @@ public abstract class TypeExpression
                 {
                 // once the expression has validated, we know the type
                 TypeConstant type = getType();
-                assert type.getParamsCount() >= 1; // Type<DataType>
-                constType = type.getParamTypesArray()[0];
+                assert type.getParamsCount() >= 1; // Type<DataType, OuterType>
+                constType = type.getParamType(0);
                 }
             else
                 {

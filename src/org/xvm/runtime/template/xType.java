@@ -23,7 +23,7 @@ import org.xvm.runtime.template.reflect.xMethod;
 
 
 /**
- * TODO:
+ * Native Type implementation.
  */
 public class xType
         extends ClassTemplate
@@ -125,7 +125,7 @@ public class xType
         return new TypeHandle(INSTANCE.ensureParameterizedClass(pool, type));
         }
 
-    // most of the time the TypeHandle is based on the underlying DataType (Type);
+    // most of the time the TypeHandle is based on the underlying DataType;
     // however, it if created dynamically, it could be based on a set of methods and properties
     public static class TypeHandle
             extends ObjectHandle

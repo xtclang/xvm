@@ -627,7 +627,7 @@ public class NamedTypeExpression
                 }
             else
                 {
-                type = left.getType().getParamTypesArray()[0]; // Type<DataType>
+                type = left.getType().getParamType(0); // Type<DataType, OuterType>
 
                 for (Token name : names)
                     {

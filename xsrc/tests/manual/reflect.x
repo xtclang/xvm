@@ -20,16 +20,16 @@ module TestReflection.xqiz.it
         assert &o.instanceOf(Map<Int, String>);
         assert !&o.instanceOf(Map<String, String>);
 
-        Point p = new Point(1, 1);
-        assert &p.implements_(Stringable);
-
-        const Point3(Int x, Int y, Int z) extends Point(x, y);
-
-        Point3 p3 = new Point3(1, 1, 1);
-        assert &p3.extends_(Point);
-
-        Range<Int> interval = 0..5;
-        assert &interval.incorporates_(Interval);
+//        Point p = new Point(1, 1);
+//        assert &p.implements_(Stringable);
+//
+//        const Point3(Int x, Int y, Int z) extends Point(x, y);
+//
+//        Point3 p3 = new Point3(1, 1, 1);
+//        assert &p3.extends_(Point);
+//
+//        Range<Int> interval = 0..5;
+//        assert &interval.incorporates_(Interval);
         }
 
     void testMaskReveal()
@@ -48,7 +48,6 @@ module TestReflection.xqiz.it
 
         assert !tmpDir.is(Stringable);
         assert !&tmpDir.instanceOf(Stringable);
-        assert !&tmpDir.implements_(Stringable);
 
         try
             {
