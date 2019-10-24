@@ -7,7 +7,7 @@
  * the combination of SoftVar and LazyVar) more expensive-to-calculate values.
  *
  * In order to avoid the possibility of an unassigned reference becoming visible, the SoftVar must
- * be of a {@link RefType} that has a default value (such as {@link Nullable}, with its default
+ * be of a {@link Referent} that has a default value (such as {@link Nullable}, with its default
  * value of `Null`), or it must be combined with {@link LazyVar} so that the value is
  * calculable on-demand.
  *
@@ -18,8 +18,8 @@
  *
  * TODO use timer instead of clock
  */
-mixin SoftVar<RefType>(function void ()? notify)
-        into Var<RefType>
+mixin SoftVar<Referent>(function void ()? notify)
+        into Var<Referent>
     {
     /**
      * The runtime's clock that this reference will stamp itself with on every access. The runtime
@@ -62,7 +62,7 @@ mixin SoftVar<RefType>(function void ()? notify)
     public/private Duration? lastCalcDuration;
 
     @Override
-    RefType get()
+    Referent get()
         {
         // soft+lazy references are unassigned after being cleared by the garbage collector
         if (!assigned)
@@ -70,7 +70,7 @@ mixin SoftVar<RefType>(function void ()? notify)
             assert (&this).incorporates_(LazyVar);
 
             DateTime start = clock.now;
-            RefType  value = super();
+            Referent value = super();
             DateTime stop  = clock.now;
 
             ++accessCount;

@@ -5,7 +5,7 @@
  * already declared in an outer scope will generate a compiler error. Failing to use this annotation
  * when there is a same-named local variable in an outer scope will generate a compiler error.
  */
-mixin ObscuringVar<RefType>
-        into Var<RefType>
+mixin ObscuringVar<Referent>
+        into Var<Referent>
     {
     }

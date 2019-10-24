@@ -114,7 +114,7 @@ const Char
     /**
      * A conversion to Byte[] results in a byte array with between 1-6 bytes containing
      * a UTF-8 formatted codepoint.
-     * <p>
+     *
      * Note: The current version 9 of Unicode limits code points to 0x10FFFF, which
      * means that all UTF-8 encoding will use between 1-4 bytes.
      */

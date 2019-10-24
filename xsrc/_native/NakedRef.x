@@ -1,4 +1,4 @@
-class NakedRef<RefType>
+class NakedRef<Referent>
     {
-    RefType get();
+    Referent get();
     }

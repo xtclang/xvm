@@ -107,16 +107,16 @@ mixin SoftRef
         }
     }
 
-mixin LazyRef<RefType>
-        into Ref<RefType>
+mixin LazyRef<Referent>
+        into Ref<Referent>
     {
     private Boolean assignable = false;
 
-    RefType get()
+    Referent get()
         {
         if (!assigned)
             {
-            RefType value = calc();
+            Referent value = calc();
             try
                 {
                 assignable = true;
@@ -133,28 +133,28 @@ mixin LazyRef<RefType>
         return super();                              // _WHICH_ super?
         }
 
-    Void set(RefType value)
+    Void set(Referent value)
         {
         assert !assigned && assignable;
         super(value);                               // _WHICH_ super?
         }
                                                                                        s
-    protected RefType calc();
+    protected Referent calc();
     }
 
 // -- example for splitting out set() into a separate interface
 
-interface Ref<RefType> // basically the old Ref interface, minus set()
+interface Ref<Referent> // basically the old Ref interface, minus set()
     {
-    RefType get();
+    Referent get();
     @RO Boolean assigned;
     @RO Type ActualTypes;
     }
 
-interface Var<RefType>
-        extends Ref<RefType>
+interface Var<Referent>
+        extends Ref<Referent>
     {
-    Void set(RefType value);
+    Void set(Referent value);
     }
 
 class B
@@ -379,9 +379,9 @@ module m1 // v3
 
 // ----- mixins / annotations into Ref/Var
 
-mixin BlackHole<RefType> into Var<RefType> {...}
+mixin BlackHole<Referent> into Var<Referent> {...}
 
-mixin AtomicVar<RefType> into Var<RefType> {...}
+mixin AtomicVar<Referent> into Var<Referent> {...}
 
 // TODO TypeConstant (and AnnotatedTypeConstant) needs
 

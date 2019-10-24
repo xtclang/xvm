@@ -11,7 +11,7 @@ import org.xvm.runtime.ServiceContext;
 public interface Argument
     {
     /**
-     * @return the type of the argument, which is the value of the RefType type parameter from the
+     * @return the type of the argument, which is the value of the Referent type parameter from the
      *         implicit Ref/Var that this argument represents
      */
     TypeConstant getType();

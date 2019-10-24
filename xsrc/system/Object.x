@@ -8,10 +8,10 @@
  *
  * Additional meta-information about the object is available through:
  * * The reference to the object, represented by the {@link Ref} interface;
- * * The {@link Type} of the object reference, which is provided by {@link Ref.RefType} and
+ * * The {@link Type} of the object reference, which is provided by {@link Ref.Referent} and
  *   {@link Ref.actualType}; and
  * * The {@link Class} of the object, which is accessible via the Type, unless the type has been
- *   masked by {@link Referent.maskAs<AsType>()}.
+ *   masked by {@link Ref.maskAs<AsType>()}.
  */
 class Object
     {

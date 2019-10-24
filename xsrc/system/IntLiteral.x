@@ -1,7 +1,7 @@
 /**
  * An IntLiteral is a constant type that is able to convert any text string containing a
  * legal representation of an IntNumber into any of the built-in IntNumber implementations.
- * <p>
+ *
  * There are a number of formats for an IntLiteral:
  * <ul>
  * <li>a binary integer, e.g. 0b1010</li>
@@ -10,7 +10,7 @@
  * <li>a hexadecimal integer, e.g. 0xFE64</li>
  * </ul>
  * Furthermore, any of the above may be signed using the "+" or "-" sign.
- * <p>
+ *
  * The IntLiteral is complicated by its use both for signed and unsigned integer literals;
  * there are some edge cases in which the same literal can represent a different value,
  * depending on what actual type its value is represented by. While most text strings have

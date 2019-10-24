@@ -487,9 +487,9 @@ public class MethodDeclarationStatement
                             {
                             Constant constReturn = type.getDefiningConstant();
                             if (constReturn.getFormat() == Format.Property
-                                    && ((PropertyConstant) constReturn).getName().equals("RefType"))
+                                    && ((PropertyConstant) constReturn).getName().equals("Referent"))
                                 {
-                                // replace the RefType with the actual property type
+                                // replace the Referent with the actual property type
                                 param = new org.xvm.asm.Parameter(pool,
                                         property.getType(), param.getName(), null, true, i, false);
                                 }

@@ -29,18 +29,18 @@
  * implement the hash code calculation for a `const` class, as a default implementation is
  * provided.)
  */
-mixin LazyVar<RefType>(function RefType ()? calculate = null)
-        into Var<RefType>
+mixin LazyVar<Referent>(function Referent ()? calculate = null)
+        into Var<Referent>
     {
-    private function RefType ()? calculate;
+    private function Referent ()? calculate;
     private Boolean assignable = false;
 
     @Override
-    RefType get()
+    Referent get()
         {
         if (!assigned)
             {
-            RefType value = calculate?() : calc();
+            Referent value = calculate?() : calc();
             try
                 {
                 assignable = true;
@@ -58,13 +58,13 @@ mixin LazyVar<RefType>(function RefType ()? calculate = null)
         }
 
     @Override
-    void set(RefType value)
+    void set(Referent value)
         {
         assert !assigned && assignable;
         super(value);
         }
 
-    protected RefType calc()
+    protected Referent calc()
         {
         TODO construct LazyVar with a calculate function, or override the calc() method
         }

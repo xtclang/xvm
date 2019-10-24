@@ -839,7 +839,7 @@ public class MethodStructure
      * Determine if this method is declared in a way that it could act as a property initializer for
      * the specified type.
      *
-     * @param type      the RefType of the reference
+     * @param type      the Referent of the reference
      * @param resolver  an optional GenericTypeResolver that is used to resolve the property type
      *                  and the types in the signature if necessary
      *
@@ -872,7 +872,7 @@ public class MethodStructure
      * Determine if this method is declared in a way that it could act as a {@code Ref.get()} for
      * the specified type.
      *
-     * @param type      the RefType of the reference
+     * @param type      the Referent of the reference
      * @param resolver  an optional GenericTypeResolver that is used to resolve the property type
      *                  and the types in the signature if necessary
      *
@@ -905,7 +905,7 @@ public class MethodStructure
      * Determine if this method is declared in a way that it could act as a {@code Ref.set()} for
      * the specified type.
      *
-     * @param type      the RefType of the reference
+     * @param type      the Referent of the reference
      * @param resolver  an optional GenericTypeResolver that is used to resolve the property type
      *                  and the types in the signature if necessary
      *

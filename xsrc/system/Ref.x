@@ -15,10 +15,10 @@
  * references to be purposefully narrowed; an obvious example is when an object only provides a
  * reference to its _public_ members.
  *
- * The Ref also has a RefType property, which is its _type constraint_. For example, when a Ref
- * represents a compile time concept such as a _variable_ or a _property_, the RefType is the
+ * The Ref also has a Referent property, which is its _type constraint_. For example, when a Ref
+ * represents a compile time concept such as a _variable_ or a _property_, the Referent is the
  * _compile time type_ of the reference. The reference may contain additional operations at runtime;
- * the actualType is always a super-set (⊇) of the RefType.
+ * the actualType is always a super-set (⊇) of the Referent.
  *
  * The identity portion of an Ecstasy reference is itself unrepresentable in Ecstasy. In fact, it is
  * this very unrepresentability that necessitates the Ref abstraction in the first place. For
@@ -40,8 +40,7 @@
  * and so on, are provided by the runtime itself, and exposed to the running code via this
  * interface.
  */
-interface Ref<RefType>
-        extends Referent
+interface Ref<Referent>
     {
     /**
      * Determine if there is a referent. In most cases, it is impossible for a Ref to not be
@@ -71,7 +70,7 @@ interface Ref<RefType>
      *   annotations.WeakRef}) are allowed to be unassigned, because the garbage collector is
      *   allowed under specific conditions to clear the reference.
      */
-    conditional RefType peek()
+    conditional Referent peek()
         {
         if (assigned)
             {
@@ -84,20 +83,19 @@ interface Ref<RefType>
     /**
      * De-reference the reference to obtain the referent.
      */
-    RefType get();
+    Referent get();
 
     /**
      * Obtain the actual runtime type of the reference that this Ref currently holds. The actualType
      * represents the full set of methods that can be invoked against the referent, and is always a
-     * super-set of the RefType:
+     * super-set of the Referent:
      *
-     *   actualType ⊇ RefType
+     *   actualType ⊇ Referent
      *
-     * (The RefType denotes the constraint of the reference, i.e. the reference must "be of" the
-     * RefType, but is not limited to only having the methods of the RefType; the RefType is often
-     * the _compile-time type_ of the reference.)
+     * (The Referent denotes the constraint of the reference, i.e. the reference must "be of" the
+     * Referent, but is not limited to only having the methods of the Referent; the Referent is
+     * often the _compile-time type_ of the reference.)
      */
-    @Override
     @RO Type actualType;
 
     /**
@@ -122,6 +120,73 @@ interface Ref<RefType>
      * embedded within the reference itself.
      */
     @RO Boolean selfContained;
+
+    /**
+     * Obtain a new reference to the referent such that the reference contains only the methods and
+     * properties in the specified {@link Type}. The members of the requested type must be satisfied
+     * by the members defined by the object's class. The requested type must be a subset of the
+     * referent's [actualType].
+     *
+     * This method will result in a reference that only contains the members in the specified type,
+     * stripping the runtime reference of any members that are not present in the specified type.
+     */
+    <Masked> Masked maskAs<Masked>();
+
+    /**
+     * Obtain a new reference to the referent such that the reference contains the methods and
+     * properties in the specified {@link Type}. The members of the requested type must be satisfied
+     * by the members defined by the object's class. The requested type may be a superset of the
+     * referent's {@link actualType}.
+     *
+     * For a reference to an object from the same module as the caller, this method will return a
+     * reference that contains the members in the specified type. For a reference to an object from
+     * a different module, this method cannot produce an original reference, and will result in the
+     * conditional false.
+     */
+    <Unmasked> conditional Unmasked revealAs<Unmasked>();
+
+    /**
+     * Determine if the referent is an instance of the specified type.
+     */
+    Boolean instanceOf(Type type);
+
+    /**
+     * Determine if the class of the referent implements the specified interface.
+     *
+     * Note: unlike the {@link instanceOf}, this method doesn't simply check if the referent's class
+     * has all methods that the specified interface has. Instead, it returns true iff any of the
+     * following conditions holds true:
+     *  - the referent's class explicitly declares that it implements the specified interface, or
+     *  - the referent's super class implements the specified interface (recursively), or
+     *  - any of the interfaces that the referent's class declares to implement extends the
+     *    specified interface (recursively)
+     */
+    Boolean implements_(Class interface_);
+
+    /**
+     * Determine if the class of the referent extends (or is) the specified class.
+     */
+    Boolean extends_(Class class_);
+
+    /**
+     * Determine if the class of the referent incorporates the specified mixin.
+     */
+    Boolean incorporates_(Class mixin_);
+
+    /**
+     * Determine if the referent is a service.
+     */
+    @RO Boolean isService;
+
+    /**
+     * Determine if the referent is an immutable const.
+     */
+    @RO Boolean isConst;
+
+    /**
+     * Determine if the referent is immutable.
+     */
+    @RO Boolean isImmutable;
 
     /**
      * Reference equality is used to determine if two references are referring to the same referent

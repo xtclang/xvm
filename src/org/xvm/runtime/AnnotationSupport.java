@@ -49,7 +49,7 @@ public class AnnotationSupport
             TypeInfo info = typeAnno.ensureTypeInfo();
 
             TypeConstant[] atypeRef =
-                new TypeConstant[]{info.getTypeParams().get("RefType").getActualType()};
+                new TypeConstant[]{info.getTypeParams().get("Referent").getActualType()};
 
             m_sigGet = pool.ensureSignatureConstant("get", ConstantPool.NO_TYPES, atypeRef);
             m_sigSet = pool.ensureSignatureConstant("set", atypeRef, ConstantPool.NO_TYPES);

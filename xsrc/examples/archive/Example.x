@@ -1490,7 +1490,7 @@ Object o = ...
 if (o instanceof String && o.length > 4)
     {
     Ref<Object> oref = &o;  // Schrödinger's cat! opening the box (just getting the handle) ruins the type assumability
-    print oref.RefType;     // prints "Object", not "String", although both compiler and runtime
+    print oref.Referent;    // prints "Object", not "String", although both compiler and runtime
                             // assume that it is (safely) a String (as long as there is no Ref!)
     oref.set(4);
     Char ch = o.charAt(4);  // can't do this now!!!
@@ -1498,7 +1498,7 @@ if (o instanceof String && o.length > 4)
     } // this line "detaches" oref from o (oref gets its own storage, and holds whatever o is
       // at this point
 
-// Ref taking on (mixing in) capabilities of RefType
+// Ref taking on (mixing in) capabilities of Referent
 
 Int c = 0;
 ++c;    // what does this mean? what does it "compile as"
@@ -1736,11 +1736,11 @@ class HandyDBDriver
 
 // mixins for refs
 
-@lazy(function RefType ()?)
+@lazy(function Referent ()?)
 @weak(function Void ()?)
 @soft(function Void ()?)
 @future
-@watch(function Void(RefType))
+@watch(function Void(Referent))
 
 combos that work:
 @lazy @weak
@@ -2484,7 +2484,7 @@ Type t = C.Type;
 // that takes an unresolved "T"!
 
 // Some of the questions that Type answers:
-//  &object.RefType             what is the type constraint of the Ref that holds the reference to "object"?
+//  &object.Referent            what is the type constraint of the Ref that holds the reference to "object"?
 //  &object.ActualType          what is the type of the object, as seen through the Ref?
 //  type.TypeParams             what are the type params for the type?
 

@@ -60,12 +60,12 @@ public class xFutureVar
         Result  = enumCompletion.getEnumByName("Result");
         Error   = enumCompletion.getEnumByName("Error");
 
-        markNativeMethod("whenComplete", new String[] {"Function"}, new String[] {"annotations.FutureVar!<RefType>"});
-        markNativeMethod("thenDo", new String[] {"Function"}, new String[] {"annotations.FutureVar!<RefType>"});
-        markNativeMethod("passTo", new String[] {"Function"}, new String[] {"annotations.FutureVar!<RefType>"});
+        markNativeMethod("whenComplete", new String[] {"Function"}, new String[] {"annotations.FutureVar!<Referent>"});
+        markNativeMethod("thenDo", new String[] {"Function"}, new String[] {"annotations.FutureVar!<Referent>"});
+        markNativeMethod("passTo", new String[] {"Function"}, new String[] {"annotations.FutureVar!<Referent>"});
 
-        markNativeMethod("get", VOID, new String[] {"RefType"});
-        markNativeMethod("set", new String[] {"RefType"}, VOID);
+        markNativeMethod("get", VOID, new String[] {"Referent"});
+        markNativeMethod("set", new String[] {"Referent"}, VOID);
 
         markNativeMethod("completeExceptionally", new String[] {"Exception"}, VOID);
 

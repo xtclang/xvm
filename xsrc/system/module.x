@@ -5,11 +5,11 @@
  * structures and capabilities of the Ecstasy type system and runtime environment.
  * Additionally, a number of useful data structures and algorithms are included to promote
  * the productivity of developers writing Ecstasy code.
- * <p>
+ *
  * All Ecstasy modules import this module automatically, as if they had the following line
  * of code:
  * <code>import ecstasy.xtclang.org as x;</code>
- * <p>
+ *
  * This module is fully and completely self-referential, containing no references to other
  * modules, and no link-time or runtime dependencies.
  *
@@ -123,7 +123,7 @@ module Ecstasy.xtclang.org
     /**
      * Represents an Ecstasy Module, which is the outer-most level organizational unit for
      * source code, and the aggregate unit for compiled code distribution and deployment.
-     * <p>
+     *
      * Because of its name, the Module type must be defined inside (textually included in)
      * the Ecstasy "module.x" file, for two reasons: (1) the Module.x file would conflict
      * with the Ecstasy "module.x" file that is in the same directory, and (2) the file
@@ -140,7 +140,7 @@ module Ecstasy.xtclang.org
 
     /**
      * Represents an Ecstasy Package.
-     * <p>
+     *
      * Because of its name, the Package type must be defined inside (textually included
      * in) the Ecstasy "module.x" file, because the file name "package.x" is reserved for
      * defining the package itself, while in this case we are defining the "Package" type.

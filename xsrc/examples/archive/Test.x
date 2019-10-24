@@ -198,7 +198,7 @@ module Test
 //    Tuple<Int> fnTupleInt();
 //    Tuple<Tuple> fnTupleTuple();
 //
-//    // problem #10 - InjectedRef.RefType resolves in compilation to Ref.RefType (wrong!)
+//    // problem #10 - InjectedRef.Referent resolves in compilation to Ref.Referent (wrong!)
 //    @Inject String option;
 //
 //    // problem #11 - sig is wrong (shows Void, should be String)

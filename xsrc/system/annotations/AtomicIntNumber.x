@@ -4,25 +4,25 @@
  *
  * TODO this is AtomicIntNumber, but sub-pieces are needed, like AtomicSequential
  */
-mixin AtomicIntNumber<RefType extends IntNumber>
-        into AtomicVar<RefType>
+mixin AtomicIntNumber<Referent extends IntNumber>
+        into AtomicVar<Referent>
     {
     @Op void increment()
         {
-        RefType oldValue = get();
+        Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue.nextValue())) {}
         }
 
     @Op void decrement()
         {
-        RefType oldValue = get();
+        Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue.prevValue())) {}
         }
 
-    @Op RefType preIncrement()
+    @Op Referent preIncrement()
         {
-        RefType oldValue = get();
-        RefType newValue;
+        Referent oldValue = get();
+        Referent newValue;
         do
             {
             newValue = oldValue.nextValue();
@@ -31,10 +31,10 @@ mixin AtomicIntNumber<RefType extends IntNumber>
         return newValue;
         }
 
-    @Op RefType preDecrement()
+    @Op Referent preDecrement()
         {
-        RefType oldValue = get();
-        RefType newValue;
+        Referent oldValue = get();
+        Referent newValue;
         do
             {
             newValue = oldValue.prevValue();
@@ -43,83 +43,83 @@ mixin AtomicIntNumber<RefType extends IntNumber>
         return newValue;
         }
 
-    @Op RefType postIncrement()
+    @Op Referent postIncrement()
         {
-        RefType oldValue = get();
+        Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue.nextValue())) {}
         return oldValue;
         }
 
-    @Op RefType postDecrement()
+    @Op Referent postDecrement()
         {
-        RefType oldValue = get();
+        Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue.prevValue())) {}
         return oldValue;
         }
 
-    @Op void addAssign(RefType n)
+    @Op void addAssign(Referent n)
         {
-        RefType oldValue = get();
+        Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue + n)) {}
         }
 
-    @Op void subAssign(RefType n)
+    @Op void subAssign(Referent n)
         {
-        RefType oldValue = get();
+        Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue - n)) {}
         }
 
-    @Op void mulAssign(RefType n)
+    @Op void mulAssign(Referent n)
         {
-        RefType oldValue = get();
+        Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue * n)) {}
         }
 
-    @Op void divAssign(RefType n)
+    @Op void divAssign(Referent n)
         {
-        RefType oldValue = get();
+        Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue / n)) {}
         }
 
-    @Op void modAssign(RefType n)
+    @Op void modAssign(Referent n)
         {
-        RefType oldValue = get();
+        Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue % n)) {}
         }
 
-    @Op void andAssign(RefType n)
+    @Op void andAssign(Referent n)
         {
-        RefType oldValue = get();
+        Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue & n)) {}
         }
 
-    @Op void orAssign(RefType n)
+    @Op void orAssign(Referent n)
         {
-        RefType oldValue = get();
+        Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue | n)) {}
         }
 
-    @Op void xorAssign(RefType n)
+    @Op void xorAssign(Referent n)
         {
-        RefType oldValue = get();
+        Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue ^ n)) {}
         }
 
     @Op void shiftLeftAssign(Int count)
         {
-        RefType oldValue = get();
+        Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue << count)) {}
         }
 
     @Op void shiftRightAssign(Int count)
         {
-        RefType oldValue = get();
+        Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue >> count)) {}
         }
 
     @Op void shiftAllRightAssign(Int count)
         {
-        RefType oldValue = get();
+        Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue >>> count)) {}
         }
     }

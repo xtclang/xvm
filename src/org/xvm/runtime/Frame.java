@@ -1103,7 +1103,7 @@ public class Frame
             return info.getType(); // always resolved
             }
 
-        // Ref<RefType> -> RefType
+        // Ref<Referent> -> Referent
         assert !info.isWaiting();
         return info.getType().getParamTypesArray()[0];
         }
@@ -1451,7 +1451,7 @@ public class Frame
         }
 
     /**
-     * Introduce a new standard variable of the "RefType" type for the specified dynamic var.
+     * Introduce a new standard variable of the "Referent" type for the specified dynamic var.
      *
      * Note: this method increments the "nextVar" index.
      *
@@ -2105,7 +2105,7 @@ public class Frame
         public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
             {
             TypeConstant typeRef = frame.getVarInfo(nTargetReg).getType();
-            return typeRef.resolveGenericType("RefType");
+            return typeRef.resolveGenericType("Referent");
             }
         };
 

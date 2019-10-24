@@ -59,18 +59,18 @@
  *       ++Statistics.misses;
  *       }
  */
-mixin AtomicVar<RefType>
-        into Var<RefType>
-        incorporates conditional AtomicIntNumber<RefType extends IntNumber>  // see TODO
+mixin AtomicVar<Referent>
+        into Var<Referent>
+        incorporates conditional AtomicIntNumber<Referent extends IntNumber>  // see TODO
     {
-    Boolean replace(RefType oldValue, RefType newValue)
+    Boolean replace(Referent oldValue, Referent newValue)
         {
         return !replaceFailed(oldValue, newValue);
         }
 
-    conditional RefType replaceFailed(RefType oldValue, RefType newValue)
+    conditional Referent replaceFailed(Referent oldValue, Referent newValue)
         {
-        RefType curValue = get();
+        Referent curValue = get();
         if (curValue == oldValue)
             {
             set(newValue);

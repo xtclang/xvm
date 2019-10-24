@@ -6,12 +6,12 @@
  * * The Var implementation only allows a single assignment, and it has already been assigned;
  * * The Var only allows assignment under specific conditions.
  */
-interface Var<RefType>
-        extends Ref<RefType>
+interface Var<Referent>
+        extends Ref<Referent>
     {
     /**
      * Specify the referent for this variable reference. The Var may reject the mutation by throwing
      * an exception.
      */
-    void set(RefType value);
+    void set(Referent value);
     }

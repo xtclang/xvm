@@ -41,8 +41,8 @@ public class xAtomicVar
     @Override
     public void initDeclared()
         {
-        markNativeMethod("replace", new String[]{"RefType", "RefType"}, BOOLEAN);
-        markNativeMethod("replaceFailed", new String[]{"RefType", "RefType"}, new String[] {"Boolean", "RefType"});
+        markNativeMethod("replace", new String[]{"Referent", "Referent"}, BOOLEAN);
+        markNativeMethod("replaceFailed", new String[]{"Referent", "Referent"}, new String[] {"Boolean", "Referent"});
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -50,7 +50,7 @@ public class xAtomicVar
     @Override
     public ClassTemplate getTemplate(TypeConstant type)
         {
-        // if RefType is Int64, then the template should be AtomicIntNumber
+        // if Referent is Int64, then the template should be AtomicIntNumber
         return type.getParamTypesArray()[0] == pool().typeInt()
             ? xAtomicIntNumber.INSTANCE
             : this;
@@ -79,7 +79,7 @@ public class xAtomicVar
                         //       {
                         //       return true;
                         //       }
-                        //    TypeConstant type = hThis.f_clazz.getActualType("RefType");
+                        //    TypeConstant type = hThis.f_clazz.getActualType("Referent");
                         //
                         //    ObjectHandle hCurrent;
                         //    while (type.callEquals(hCurrent = atomic.get(), hExpect))
@@ -97,7 +97,7 @@ public class xAtomicVar
                             return frame.assignValue(iReturn, xBoolean.TRUE);
                             }
 
-                        TypeConstant type = hThis.getType().resolveGenericType("RefType");
+                        TypeConstant type = hThis.getType().resolveGenericType("Referent");
 
                         return new Replace(type, atomic, hExpect, hNew, iReturn).doNext(frame);
                         }
@@ -129,7 +129,7 @@ public class xAtomicVar
                         //       {
                         //       return false;
                         //       }
-                        //    TypeConstant type = hThis.f_clazz.getActualType("RefType");
+                        //    TypeConstant type = hThis.f_clazz.getActualType("Referent");
                         //
                         //    ObjectHandle hCurrent;
                         //    while (type.callEquals(hCurrent = atomic.get(), hExpect))
@@ -147,7 +147,7 @@ public class xAtomicVar
                             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                             }
 
-                        TypeConstant type = hThis.getType().resolveGenericType("RefType");
+                        TypeConstant type = hThis.getType().resolveGenericType("Referent");
 
                         return new ReplaceFailed(type, atomic, hExpect, hNew, aiReturn).doNext(frame);
                         }

@@ -2725,7 +2725,7 @@ public abstract class TypeConstant
             Annotation     anno     = aAnnos[i];
             TypeConstant   typeAnno = anno.getAnnotationType();
             ClassStructure clzAnno  = (ClassStructure) ((IdentityConstant) anno.getAnnotationClass()).getComponent();
-            if (clzAnno.indexOfGenericParameter("RefType") == 0)
+            if (clzAnno.indexOfGenericParameter("Referent") == 0)
                 {
                 typeAnno = pool.ensureParameterizedTypeConstant(typeAnno, typeProp);
                 }
@@ -3494,7 +3494,7 @@ public abstract class TypeConstant
                 // this property needs to be "exploded"
                 listExplode.add(id);
 
-                // create a ParamInfo and a type-param PropertyInfo for the RefType type parameter
+                // create a ParamInfo and a type-param PropertyInfo for the Referent type parameter
                 // note: while this is very hard-coded and dense and inelegant, it basically is
                 //       compensating for the fact that we're about to treat the property (id/info)
                 //       as it's own ***class***, just like the type for which we are currently
@@ -3503,9 +3503,9 @@ public abstract class TypeConstant
                 //       method, so lacking that, this "jams in" the additional type parameters that
                 //       the property relies on (as if they had been correctly populated by going
                 //       through collectTypeParameters)
-                PropertyConstant idParam   = pool.ensurePropertyConstant(id, "RefType");
+                PropertyConstant idParam   = pool.ensurePropertyConstant(id, "Referent");
                 Object           nidParam  = idParam.resolveNestedIdentity(pool, this);
-                ParamInfo        param     = new ParamInfo(nidParam, "RefType", pool.typeObject(), info.getType());
+                ParamInfo        param     = new ParamInfo(nidParam, "Referent", pool.typeObject(), info.getType());
                 PropertyInfo     propParam = new PropertyInfo(new PropertyBody(pool, null, param), nRank + 1);
                 mapTypeParams.put(nidParam, param);
                 mapProps.put(idParam, propParam);
@@ -3614,8 +3614,8 @@ public abstract class TypeConstant
             // "into Ref" (or some sub-class of Ref, e.g. Var) annotation
             assert typeInto.isA(pool.typeRef());
 
-// TODO verify that the mixin has one and only one type parameter, and it is named RefType, i.e. "mixin M<RefType> into Var<RefType>"
-// TODO does the annotation class provide a hard-coded value for RefType? because if it does, we need to "isA()" test it against the type of the property
+// TODO verify that the mixin has one and only one type parameter, and it is named Referent, i.e. "mixin M<Referent> into Var<Referent>"
+// TODO does the annotation class provide a hard-coded value for Referent? because if it does, we need to "isA()" test it against the type of the property
 
             if (scanForDups(aRefAnno, i, constMixin))
                 {
