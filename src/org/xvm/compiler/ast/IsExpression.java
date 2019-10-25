@@ -29,7 +29,7 @@ public class IsExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public IsExpression(Expression expr1, Token operator, TypeExpression expr2)
+    public IsExpression(Expression expr1, Token operator, Expression expr2)
         {
         super(expr1, operator, expr2);
         }
@@ -58,8 +58,8 @@ public class IsExpression
             expr1 = exprTarget;
             }
 
-        ConstantPool   pool     = pool();
-        TypeExpression exprTest = (TypeExpression) expr2.validate(ctx, pool.typeType(), errs);
+        ConstantPool pool     = pool();
+        Expression   exprTest = expr2.validate(ctx, pool.typeType(), errs);
         if (exprTest == null)
             {
             fit = TypeFit.NoFit;
@@ -73,10 +73,9 @@ public class IsExpression
         if (fit.isFit())
             {
             TypeConstant typeTarget = exprTarget.getType();
-            TypeConstant typeTest   = exprTest.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool);
-            boolean      fFormal    = typeTest.containsFormalType(true);
+            TypeConstant typeTest   = exprTest.getType().getParamType(0).resolveAutoNarrowingBase(pool);
 
-            if (typeTarget.isTypeOfType() && !typeTest.isFormalType())
+            if (typeTarget.isTypeOfType() && !typeTest.isFormalType() && exprTest.isConstant())
                 {
                 // the test must be a type unless it's something that any Type is (e.g. Const),
                 // in which case just issue a warning
@@ -95,7 +94,8 @@ public class IsExpression
                         }
                     }
                 }
-            if (exprTarget.isConstant() && !fFormal)
+
+            if (exprTarget.isConstant() && !typeTest.containsFormalType(true))
                 {
                 constVal = pool.valOf(typeTarget.isA(typeTest));
                 }
@@ -126,14 +126,14 @@ public class IsExpression
             Argument argTarget = expr1.generateArgument(ctx, code, true, true, errs);
             Argument argType;
 
-            TypeExpression exprTest = (TypeExpression) expr2;
-            if (exprTest.isDynamic())
+            Expression exprTest = expr2;
+            if (exprTest.isConstant())
                 {
-                argType = exprTest.generateArgument(ctx, code, false, false, errs);
+                argType = exprTest.getType().getParamType(0).resolveAutoNarrowingBase(pool());
                 }
             else
                 {
-                argType = exprTest.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool());
+                argType = exprTest.generateArgument(ctx, code, false, false, errs);
                 }
             code.add(new IsType(argTarget, argType, LVal.getLocalArgument()));
             }
@@ -148,13 +148,9 @@ public class IsExpression
             Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs)
         {
         Argument argTarget = expr1.generateArgument(ctx, code, true, true, errs);
-        Argument argType   = ((TypeExpression) expr2).ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool());
+        Argument argType   = expr2.getType().getParamType(0).resolveAutoNarrowingBase(pool());
         code.add(fWhenTrue
                 ? new JumpType(argTarget, argType, label)
                 : new JumpNType(argTarget, argType, label));
         }
-
-
-    // ----- fields --------------------------------------------------------------------------------
-
     }

@@ -3026,7 +3026,7 @@ public class Parser
                             expect(Id.L_PAREN);
                             expr = keyword.getId() == Id.AS
                                     ? new AsExpression(expr, keyword, parseTypeExpression())
-                                    : new IsExpression(expr, keyword, parseTypeExpression());
+                                    : new IsExpression(expr, keyword, parseExpression());
                             expect(Id.R_PAREN);
                             break;
                             }

@@ -228,20 +228,11 @@ public class NamedTypeExpression
                 }
             else if (constId instanceof ClassConstant) // isAutoNarrowingAllowed()
                 {
-                ClassConstant  idThatClass     = (ClassConstant) constId;
-                ClassStructure structThisClass = getComponent().getContainingClass();
-                ClassStructure structThatClass = (ClassStructure) idThatClass.getComponent();
-
-                if (structThisClass != null
-                        && structThisClass.getFormat().isAutoNarrowingAllowed()
-                        && structThatClass.getFormat().isAutoNarrowingAllowed())
+                ClassStructure clzThis = getComponent().getContainingClass();
+                if (clzThis != null && clzThis.getIdentityConstant().getFormat() == Format.Class)
                     {
-                    IdentityConstant idClz = structThisClass.getIdentityConstant();
-                    if (idClz.getFormat() == Format.Class)
-                        {
-                        ClassConstant constThisClass = (ClassConstant) structThisClass.getIdentityConstant();
-                        return constThisClass.calculateAutoNarrowingConstant(idThatClass);
-                        }
+                    return ((ClassConstant) clzThis.getIdentityConstant()).
+                            calculateAutoNarrowingConstant((ClassConstant) constId);
                     }
                 }
             }
@@ -489,7 +480,7 @@ public class NamedTypeExpression
 
                 Constant constId = resolver.getConstant();
                 boolean fProceed = true;
-                if (!constId.getFormat().isTypable())
+                if (!constId.getFormat().isTypeable())
                     {
                     errsTemp.merge();
                     log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE, constId.getValueString());
@@ -556,7 +547,8 @@ public class NamedTypeExpression
                 }
 
             case ERROR:
-                if (left == null && names.size() > 1 && access == null && immutable == null && paramTypes == null)
+                if (left == null && access == null && immutable == null && paramTypes == null &&
+                        getCodeContainer() != null)
                     {
                     // assume that the type is "dynamic", for example: "that.Element"
                     return;

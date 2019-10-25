@@ -592,7 +592,7 @@ public class PropertyInfo
                     return true;
                     }
                 }
-            // there is a possibility that the property has been "duck-typable", which is only
+            // there is a possibility that the property has been "duck-typeable", which is only
             // allowable for interfaces
             Component parent = constId.getNamespace().getComponent();
             if (parent != null && parent.getFormat() == Format.INTERFACE)

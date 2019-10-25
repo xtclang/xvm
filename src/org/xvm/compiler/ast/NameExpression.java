@@ -25,6 +25,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
@@ -47,16 +48,7 @@ import org.xvm.asm.constants.TypeParameterConstant;
 import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
-import org.xvm.asm.op.FBind;
-import org.xvm.asm.op.L_Get;
-import org.xvm.asm.op.MBind;
-import org.xvm.asm.op.MoveRef;
-import org.xvm.asm.op.MoveThis;
-import org.xvm.asm.op.MoveVar;
-import org.xvm.asm.op.P_Get;
-import org.xvm.asm.op.P_Ref;
-import org.xvm.asm.op.P_Var;
-import org.xvm.asm.op.Var_I;
+import org.xvm.asm.op.*;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
@@ -1892,10 +1884,23 @@ public class NameExpression
                 // determine the type of the class
                 if (aTypeParams != null || (typeDesired != null && typeDesired.isA(pool.typeType())))
                     {
-                    TypeConstant type = pool.ensureTerminalTypeConstant(constant);
-                    if (aTypeParams != null)
+                    TypeConstant type;
+                    if (aTypeParams == null)
                         {
-                        type = pool.ensureParameterizedTypeConstant(type, aTypeParams);
+                        ClassConstant  idClass = (ClassConstant) constant;
+                        ClassStructure clzThis = getComponent().getContainingClass();
+                        if (clzThis != null && clzThis.getIdentityConstant().equals(idClass))
+                            {
+                            type = clzThis.getFormalType();
+                            }
+                        else
+                            {
+                            type = pool.ensureTerminalTypeConstant(constant);
+                            }
+                        }
+                    else
+                        {
+                        type = pool.ensureClassTypeConstant(constant, null, aTypeParams);
                         }
 
                     m_plan = Plan.TypeOfClass;
@@ -2035,8 +2040,7 @@ public class NameExpression
 
                 m_plan = Plan.TypeOfTypedef;
                 TypeConstant typeRef = ((TypedefConstant) constant).getReferredToType();
-                return pool.ensureParameterizedTypeConstant(
-                        pool.typeType(), typeRef.adoptParameters(pool, ctx.getThisType()));
+                return pool.ensureParameterizedTypeConstant(pool.typeType(), typeRef);
                 }
 
             case Method:

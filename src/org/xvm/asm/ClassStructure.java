@@ -798,6 +798,11 @@ public class ClassStructure
     @Override
     public boolean isAutoNarrowingAllowed()
         {
+        if (!getFormat().isAutoNarrowingAllowed())
+            {
+            return false;
+            }
+
         // a class must not be a singleton
         if (isSingleton())
             {
@@ -967,9 +972,6 @@ public class ClassStructure
 
         return that;
         }
-
-
-    // ----- type comparison support ---------------------------------------------------------------
 
     /**
      * Check if this class extends the specified class.

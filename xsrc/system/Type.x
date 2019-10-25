@@ -435,7 +435,7 @@ interface Type<DataType, OuterType>
      */
     Boolean isA(Type!<> that)
         {
-        TODO GG return this.is(Type<that.DataType>);
+        return this.is(&that.actualType);
         }
 
     /**
@@ -531,8 +531,7 @@ interface Type<DataType, OuterType>
      */
     Boolean isInstance(Object o)
         {
-        // TODO GG - NPE (NameExpression has no parent): return &o.actualType.DataType.is(this.DataType);
-        return &o.actualType.is(DataType);
+        return o.is(this);
         }
 
     /**

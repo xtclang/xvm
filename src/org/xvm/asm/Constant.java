@@ -883,7 +883,7 @@ public abstract class Constant
         /**
          * @return true if a corresponding Constant could be used as a terminal type
          */
-        public boolean isTypable()
+        public boolean isTypeable()
             {
             switch (this)
                 {

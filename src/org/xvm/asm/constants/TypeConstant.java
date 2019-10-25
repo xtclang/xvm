@@ -4341,7 +4341,7 @@ public abstract class TypeConstant
                         // Object requires special treatment here for a number of reasons;
                         // let's disallow it to be assigned to anything for now
                         // TODO: allow an "empty" interface to be duck-typed to Object
-                        // the "turtle" type also is not duck-typable to anything
+                        // the "turtle" type also is not duck-typeable to anything
                         relation = Relation.INCOMPATIBLE;
                         }
                     else

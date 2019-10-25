@@ -70,10 +70,8 @@ public abstract class TypeExpression
             {
             if (isValidated())
                 {
-                // once the expression has validated, we know the type
-                TypeConstant type = getType();
-                assert type.getParamsCount() >= 1; // Type<DataType, OuterType>
-                constType = type.getParamType(0);
+                // once the expression has validated, we know the type (can be Object for dynamic types)
+                constType = getType().getParamType(0);
                 }
             else
                 {

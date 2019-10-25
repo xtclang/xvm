@@ -66,7 +66,7 @@ public class TerminalTypeConstant
         {
         super(pool);
 
-        if (!constId.getFormat().isTypable())
+        if (!constId.getFormat().isTypeable())
             {
             throw new IllegalArgumentException("constant " + constId.getFormat()
                 + " is not a Module, Package, Class, Typedef, or formal type parameter");
