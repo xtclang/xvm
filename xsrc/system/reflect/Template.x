@@ -13,7 +13,7 @@ interface Template
     /**
      * The Template Format enumerates the various forms of
      *
-     * Those beginning with "RSVD_" are reserved, and must not be used.
+     * Those beginning with "Reserved_" are reserved, and must not be used.
      */
     enum Format<TemplateType extends Template>(Boolean implicitlyStatic, Boolean autoNarrowingAllowed)
         {
@@ -32,7 +32,7 @@ interface Template
         Reserved_C <Template           >(False, False),
         Reserved_D <Template           >(False, False),
         MultiMethod<MultiMethodTemplate>(False, False),
-        File       <FileTemplate       >(False, False);
+        File       <FileTemplate       >(False, False)
         }
 
     /**

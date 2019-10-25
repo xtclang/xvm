@@ -2,7 +2,9 @@ import collections.Collection;
 import collections.ListMap;
 import collections.Set;
 
+import reflect.Annotation;
 import reflect.Class;
+import reflect.InvalidType;
 import reflect.Method;
 import reflect.MultiMethod;
 import reflect.Property;
@@ -52,13 +54,6 @@ interface Type<DataType, OuterType>
     typedef Function<NoParams, ConstructorReturn> Constructor;
 
     /**
-     * An InvalidType exception is raised to indicate that the production of a requested type would
-     * violate the rules of the type system.
-     */
-    static const InvalidType(String? text = null, Exception? cause = null)
-            extends Exception(text, cause);
-
-    /**
      * There are a number of different forms that a type can take. Each form has a different
      * meaning, and exposes type information that is specific to that form.
      */
@@ -100,31 +95,31 @@ interface Type<DataType, OuterType>
         /**
          * A union of two types, such as `(Hashable + Orderable)`.
          */
-        Union        (False, True) /* (relational = True) */,
+        Union        (relational = True),
         /**
          * The _relative complement_ of two types, such as `(DataInput - BinaryInput)`
          */
-        Difference   (False, True) /* (relational = True) */,
+        Difference   (relational = True),
         /**
          * A type that adds immutability _to another type_
          */
-        Immutable    (True, False) /* (delegating = True) */,
+        Immutable    (delegating = True),
         /**
          * A type that adds an access modifier _to another type_.
          */
-        Access       (True, False) /* (delegating = True) */,
+        Access       (delegating = True),
         /**
          * A type that adds an annotation _to another type_.
          */
-        Annotated    (True, False) /* (delegating = True) */,
+        Annotated    (delegating = True),
         /**
          * A type that specifies the formal types _of another type_.
          */
-        Parameterized(True, False) /* (delegating = True) */,
+        Parameterized(delegating = True),
         /**
          * A type that acts as a name _of another type_.
          */
-        Typedef      (True, False) /* (delegating = True) */
+        Typedef      (delegating = True);
         }
 
     /**
@@ -132,12 +127,6 @@ interface Type<DataType, OuterType>
      * a different view of the underlying type.
      */
     enum Access {Public, Protected, Private, Struct}
-
-    /**
-     * An `Annotation` is a representation of a mixin that can be used on top of a type to create
-     * a new _annotated_ type.
-     */
-    static const Annotation { /* TODO */ }
 
 
     // ----- state representation ------------------------------------------------------------------
@@ -560,22 +549,6 @@ interface Type<DataType, OuterType>
     Type!<> add(Type!<> that);
 
     /**
-     * Create a type that is the result of adding a method to this type.
-     *
-     * @param method  the method to add to this type
-     *
-     * @return a type that contains the contents of this type and the specified method
-     *
-     * @throws InvalidType  if adding the method to this type would violate the rules of the
-     *                      type system
-     */
-    @Op("+")
-    Type!<> add(Method method)
-        {
-        return this + [method];
-        }
-
-    /**
      * Create a type that is the result of adding methods to this type.
      *
      * @param method  the methods to add to this type
@@ -586,23 +559,7 @@ interface Type<DataType, OuterType>
      *                      type system
      */
     @Op("+")
-    Type!<> add(Iterable<Method> methods);
-
-    /**
-     * Create a type that is the result of adding a property to this type.
-     *
-     * @param property  the property to add to this type
-     *
-     * @return a type that contains the contents of this type and the specified property
-     *
-     * @throws InvalidType  if adding the method to this type would violate the rules of the
-     *                      type system
-     */
-    @Op("+")
-    Type!<> add(Property property)
-        {
-        return this + [property];
-        }
+    Type!<> add(Method... methods);
 
     /**
      * Create a type that is the result of adding properties to this type.
@@ -615,7 +572,7 @@ interface Type<DataType, OuterType>
      *                      type system
      */
     @Op("+")
-    Type!<> add(Iterable<Property> properties);
+    Type!<> add(Property... properties);
 
     /**
      * Create a type that is the intersection of this type and another type. Note that the bitwise
@@ -662,22 +619,6 @@ interface Type<DataType, OuterType>
     /**
      * Create a type that is the result of removing a method from this type.
      *
-     * @param method  the method to remove from this type
-     *
-     * @return a type that contains the contents of this type minus the specified method
-     *
-     * @throws InvalidType  if removing the method from this type would violate the rules of the
-     *                      type system
-     */
-    @Op("-")
-    Type!<> sub(Method method)
-        {
-        return this - [method];
-        }
-
-    /**
-     * Create a type that is the result of removing a method from this type.
-     *
      * @param methods  the methods to remove from this type
      *
      * @return a type that contains the contents of this type minus the specified methods
@@ -686,23 +627,7 @@ interface Type<DataType, OuterType>
      *                      type system
      */
     @Op("-")
-    Type!<> sub(Iterable<Method> methods);
-
-    /**
-     * Create a type that is the result of removing a property from this type.
-     *
-     * @param property  the property to remove from this type
-     *
-     * @return a type that contains the contents of this type minus the specified property
-     *
-     * @throws InvalidType  if removing the property from this type would violate the rules of the
-     *                      type system
-     */
-    @Op("-")
-    Type!<> sub(Property property)
-        {
-        return this - [property];
-        }
+    Type!<> sub(Method... methods);
 
     /**
      * Create a type that is the result of removing a property from this type.
@@ -715,7 +640,7 @@ interface Type<DataType, OuterType>
      *                      type system
      */
     @Op("-")
-    Type!<> sub(Iterable<Property> properties);
+    Type!<> sub(Property... properties);
 
 
     // ----- constructor helpers -------------------------------------------------------------------
@@ -836,4 +761,5 @@ interface Type<DataType, OuterType>
         appender.add("Methods: not implemented");
         }
     }
+
 
