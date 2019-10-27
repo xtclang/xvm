@@ -125,44 +125,39 @@ interface Ref<Referent>
     /**
      * Determine if the referent is an instance of the specified type.
      */
-    Boolean instanceOf(Type type);
-// TODO GG
-//    Boolean instanceOf(Type type)
-//        {
-//        if (Referent ref := peek())
-//            {
-//            return ref.is(type);
-//            }
-//
-//        return False;
-//        }
+    Boolean instanceOf(Type type)
+        {
+        if (Referent ref := peek())
+            {
+            return ref.is(type);
+            }
+
+        return False;
+        }
 
     /**
      * Determine if the referent is a service.
      */
-    @RO Boolean isService;
-//    @RO Boolean isService.get()
-//        {
-//        return actualType.is(Type<Service>);
-//        }
+    @RO Boolean isService.get()
+        {
+        return actualType.is(Type<Service>);
+        }
 
     /**
      * Determine if the referent is an immutable const.
      */
-    @RO Boolean isConst;
-//    @RO Boolean isConst.get()
-//        {
-//        return actualType.is(Type<immutable Const>);
-//        }
+    @RO Boolean isConst.get()
+        {
+        return actualType.is(Type<immutable Const>);
+        }
 
     /**
      * Determine if the referent is immutable.
      */
-    @RO Boolean isImmutable;
-//    @RO Boolean isImmutable.get()
-//        {
-//        return actualType.is(Type<immutable Object>);
-//        }
+    @RO Boolean isImmutable.get()
+        {
+        return actualType.is(Type<immutable Object>);
+        }
 
     /**
      * The optional name of the reference. References are used for arguments, local variables,

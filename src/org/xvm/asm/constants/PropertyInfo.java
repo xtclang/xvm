@@ -908,10 +908,21 @@ public class PropertyInfo
         for (int i = 1, c = id.getNestedDepth(); i < c; ++i)
             {
             id = id.getParentConstant();
-            if ((id instanceof PropertyConstant && id.getComponent().getAccess() == Access.PRIVATE)
-                    || id instanceof MethodConstant)
+            if (id instanceof MethodConstant)
                 {
                 return false;
+                }
+
+            if (id instanceof PropertyConstant)
+                {
+                PropertyStructure prop = (PropertyStructure) id.getComponent();
+
+                // absence of the component indicates that the property was created as "synthetic"
+                // via "PropertyConstant.appendNestedIdentity", which means it's not private
+                if (prop != null && prop.getAccess() == Access.PRIVATE)
+                    {
+                    return false;
+                    }
                 }
             }
 

@@ -403,7 +403,11 @@ public class TypeInfo
                     {
                     Object       idResolved = idParent.resolveNestedIdentity(pool, f_type);
                     PropertyInfo info       = f_mapVirtProps.get(idResolved);
-
+                    if (info == null)
+                        {
+                        // the parent property is not visible, therefore the child is not reachable
+                        return false;
+                        }
                     idParent = info.getIdentity();
                     }
                 else if (idParent instanceof MethodConstant)
