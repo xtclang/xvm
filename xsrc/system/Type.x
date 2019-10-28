@@ -728,9 +728,8 @@ interface Type<DataType, OuterType>
 
     static <CompileType extends Type> Int hashCode(CompileType value)
         {
-        // REVIEW GG - do Collection and Set need conditional hashCode?
-        return value.methods   .toArray().hashCode()
-             ^ value.properties.toArray().hashCode();
+        return value.methods   .hashCode()
+             ^ value.properties.hashCode();
         }
 
     static <CompileType extends Type> Boolean equals(CompileType value1, CompileType value2)
