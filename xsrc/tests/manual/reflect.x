@@ -6,6 +6,7 @@ module TestReflection.xqiz.it
         {
         testInstanceOf();
         testMaskReveal();
+        testForm();
         }
 
     const Point(Int x, Int y);
@@ -78,5 +79,13 @@ module TestReflection.xqiz.it
 
         assert p := &str.revealAs<Point>();
         console.println($"p={p}");
+        }
+
+    void testForm()
+        {
+        console.println("\n** testForm");
+        Type t = String;
+        // TODO GG console.println($"t={t}, form={t.form}");
+        console.println($"String form={t.form.name}");
         }
     }

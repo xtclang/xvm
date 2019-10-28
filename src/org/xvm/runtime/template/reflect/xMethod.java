@@ -5,13 +5,14 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
-import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.constants.TypeInfo;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
@@ -21,6 +22,7 @@ import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xString;
+import org.xvm.runtime.template.xType;
 
 
 /**
@@ -68,11 +70,7 @@ public class xMethod
         {
         if (constant instanceof MethodConstant)
             {
-            MethodStructure method = (MethodStructure) ((MethodConstant) constant).getComponent();
-
-            // TODO: assert if a function
-
-            frame.pushStack(makeHandle(method, frame.getThis().getType()));
+            frame.pushStack(makeHandle(frame.getThis().getType(), (MethodConstant) constant));
             return Op.R_NEXT;
             }
 
@@ -87,59 +85,59 @@ public class xMethod
         switch (sPropName)
             {
             case "name":
-                return frame.assignValue(iReturn, xString.makeHandle(hMethod.f_method.getName()));
+                return frame.assignValue(iReturn, xString.makeHandle(hMethod.f_idMethod.getName()));
 
             case "access":
-                Constants.Access access = hMethod.f_method.getAccess();
-                // Constant.Access starts with "Struct"
-                return frame.assignValue(iReturn, ACCESS.getEnumByOrdinal(access.ordinal() + 1));
+                Constants.Access access  = hMethod.getMethodInfo().getAccess();
+                ObjectHandle     hAccess = xType.INSTANCE.makeAccessHandle(access);
+                return frame.assignValue(iReturn, hAccess);
             }
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
-    public static MethodHandle makeHandle(MethodStructure method, TypeConstant typeTarget)
+    public static MethodHandle makeHandle(TypeConstant typeTarget, MethodConstant idMethod)
         {
         ConstantPool pool = ConstantPool.getCurrentPool();
 
-        TypeConstant typeRet = pool.ensureParameterizedTypeConstant(pool.typeTuple(), method.getReturnTypes());
-        TypeConstant typeArg = pool.ensureParameterizedTypeConstant(pool.typeTuple(), method.getParamTypes());
+        SignatureConstant sig       = idMethod.getSignature();
+        TypeConstant      typeRet   = pool.ensureParameterizedTypeConstant(pool.typeTuple(), sig.getRawReturns());
+        TypeConstant      typeArg   = pool.ensureParameterizedTypeConstant(pool.typeTuple(), sig.getRawParams());
+        ClassComposition  clzMethod = INSTANCE.ensureParameterizedClass(pool, typeTarget, typeArg, typeRet);
 
-        ClassComposition clzMethod = INSTANCE.ensureParameterizedClass(pool, typeTarget, typeRet, typeArg);
-
-        return new MethodHandle(clzMethod, method);
+        return new MethodHandle(clzMethod, idMethod);
         }
 
     public static class MethodHandle
             extends ObjectHandle
         {
-        public final MethodStructure f_method;
-        public final PropertyStructure f_property;
+        public final MethodConstant f_idMethod;
 
-        protected MethodHandle(TypeComposition clazz, MethodStructure method)
+        protected MethodHandle(TypeComposition clazz, MethodConstant idMethod)
             {
             super(clazz);
 
-            f_method = method;
-            f_property = null;
+            f_idMethod = idMethod;
             }
 
-        protected MethodHandle(TypeComposition clazz, PropertyStructure property)
-            {
-            super(clazz);
-
-            f_method = null;
-            f_property = property;
-            }
-
-        public TypeConstant getTarget()
+        public TypeConstant getTargetType()
             {
             return getType().resolveGenericType("TargetType");
+            }
+
+        public TypeInfo getTargetInfo()
+            {
+            return getTargetType().ensureTypeInfo();
+            }
+
+        public MethodInfo getMethodInfo()
+            {
+            return getTargetInfo().getMethodById(f_idMethod);
             }
 
         @Override
         public String toString()
             {
-            return super.toString() + f_method;
+            return super.toString() + f_idMethod;
             }
         }
     }

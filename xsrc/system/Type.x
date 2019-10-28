@@ -57,7 +57,7 @@ interface Type<DataType, OuterType>
      * There are a number of different forms that a type can take. Each form has a different
      * meaning, and exposes type information that is specific to that form.
      */
-    enum Form(Boolean delegating = False, Boolean relational = False)
+    enum Form(Boolean modifying = False, Boolean relational = False)
         {
         /**
          * A pure interface type that only contains methods, properties, and abstract functions.
@@ -103,23 +103,30 @@ interface Type<DataType, OuterType>
         /**
          * A type that adds immutability _to another type_
          */
-        Immutable    (delegating = True),
+        Immutable    (modifying = True),
         /**
          * A type that adds an access modifier _to another type_.
          */
-        Access       (delegating = True),
+        Access       (modifying = True),
         /**
          * A type that adds an annotation _to another type_.
          */
-        Annotated    (delegating = True),
+        Annotated    (modifying = True),
         /**
          * A type that specifies the formal types _of another type_.
          */
-        Parameterized(delegating = True),
+        Parameterized(modifying = True),
         /**
          * A type that acts as a name _of another type_.
          */
-        Typedef      (delegating = True);
+        Typedef      (modifying = True),
+        /**
+         * A type that acts as a sequence _of other types_. It is primarily used by the [Tuple] and
+         * [Function] interfaces.
+         *
+         * Note that this term "Sequence" is **not** related to the Ecstasy [Sequence] interface.
+         */
+        Sequence
         }
 
     /**
@@ -130,6 +137,18 @@ interface Type<DataType, OuterType>
 
 
     // ----- state representation ------------------------------------------------------------------
+
+    /**
+     * The form of the type.
+     */
+    @RO Form form;
+
+    /**
+     * The type or types that are under this type. A modifying type will have a single underlying
+     * type; a relational type will have two underlying types; and a Sequence type will have zero
+     * or more underlying types.
+     */
+    @RO Type[] underlyingTypes;
 
     /**
      * Obtain the raw set of all properties on the type.
@@ -277,11 +296,6 @@ interface Type<DataType, OuterType>
 //        }
 
     /**
-     * The form of the type.
-     */
-    @RO Form form;
-
-    /**
      * Determine if the type non-ambiguously represents a class, and if so, obtain the class. The
      * class can be ambiguous, for example, if the type is a intersection type and the two
      * intersected types do not each represent the same class.
@@ -291,7 +305,7 @@ interface Type<DataType, OuterType>
      * @return True iff this type represents a class
      * @return (conditional) the class
      */
-    conditional Class isClass();
+    conditional Class fromClass();
 
     /**
      * Determine if the type non-ambiguously represents a property. The property can be ambiguous,
@@ -303,18 +317,19 @@ interface Type<DataType, OuterType>
      * @return True iff this type represents a property
      * @return (conditional) the property
      */
-    conditional Property isProperty();
+    conditional Property fromProperty();
 
     /**
-     * Determine if this type represents an underlying type, and if it does, obtain that underlying
+     * Determine if this type modifies an underlying type, and if it does, obtain that underlying
      * type.
      *
-     * A type whose form has `delegating==True` always represents an underlying type.
+     * A type whose form has `modifying==True` always represents a modification to an underlying
+     * type.
      *
      * @return True iff this type delegates in some manner to an underlying type
      * @return (conditional) the underlying type
      */
-    conditional Type!<> delegates();
+    conditional Type!<> modifying();
 
     /**
      * Determine if this type is a relational type, and if it is, obtain the two types that it is
@@ -396,11 +411,6 @@ interface Type<DataType, OuterType>
     @RO Boolean recursive;
 
     /**
-     * Determine if the type is an auto-narrowing type.
-     */
-    @RO Boolean autoNarrowing;
-
-    /**
      * A type can be explicitly immutable. An object can only be assigned to an explicitly immutable
      * type if the object is immutable.
      */
@@ -471,7 +481,7 @@ interface Type<DataType, OuterType>
             return false;
             }
 
-        if (that.DataType == Object)
+        if (this.isA(that))
             {
             return true;
             }
@@ -659,7 +669,7 @@ interface Type<DataType, OuterType>
             return False;
             }
 
-        if (Class clz := isClass(), clz.virtualChild)
+        if (Class clz := fromClass(), clz.virtualChild)
             {
             assert:arg outer != Null;
             for (val fn : constructors)
@@ -695,7 +705,7 @@ interface Type<DataType, OuterType>
      */
     conditional function DataType(Struct) structConstructor(OuterType? outer = Null)
         {
-        if (Class clz := isClass(), clz.virtualChild)
+        if (Class clz := fromClass(), clz.virtualChild)
             {
             assert:arg outer != Null;
             for (val fn : constructors)
