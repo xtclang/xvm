@@ -1952,9 +1952,36 @@ public class InvocationExpression
                 // it appears that they try to use a variable or property, but have a function instead
                 if (errsTemp.hasError(Compiler.MISSING_METHOD))
                     {
-                    NameExpression exprFn = (NameExpression) exprLeft;
-                    log(errsTemp, Severity.ERROR, Compiler.SUSPICIOUS_FUNCTION_USE,
-                            exprFn.getName(), exprFn.getIdentity(ctx).getNamespace().getValueString());
+                    NameExpression   exprFn   = (NameExpression) exprLeft;
+                    IdentityConstant idParent;
+                    if (exprFn.isIdentityMode(ctx, false))
+                        {
+                        idParent = exprFn.getIdentity(ctx).getNamespace();
+                        }
+                    else
+                        {
+                        NameExpression nameLeft = (NameExpression) exprLeft;
+                        switch (nameLeft.getMeaning())
+                            {
+                            case Property:
+                                idParent = ((PropertyConstant) nameLeft.
+                                    resolveRawArgument(ctx, false, errs)).getNamespace();
+                                break;
+
+                            case Variable:
+                                idParent = ctx.getMethod().getIdentityConstant();
+                                break;
+
+                            default:
+                                idParent = null;
+                            }
+                        }
+
+                    if (idParent != null)
+                        {
+                        log(errsTemp, Severity.ERROR, Compiler.SUSPICIOUS_FUNCTION_USE,
+                                exprFn.getName(), idParent.getValueString());
+                        }
                     }
                 }
             errsTemp.merge();

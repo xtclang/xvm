@@ -666,8 +666,10 @@ interface Type<DataType, OuterType>
                 {
                 if (fn.ParamTypes.size == 1)
                     {
-//                    assert fn.ParamTypes[0].as(Type) == OuterType.as(Type); // TODO GG why is 2nd ".as(Type)" required?
-//                    return True, fn.as(function DataType(OuterType)).bind(fn.params[0].as(Function.Parameter<OuterType>), outer);
+                    assert fn.ParamTypes[0].as(Type) == OuterType;
+                    return True, fn.as(function DataType(OuterType)).
+                        bind(fn.params[0].as(Function.Parameter<OuterType>), outer)
+                            .as(function DataType());
                     }
                 }
             }
@@ -685,39 +687,41 @@ interface Type<DataType, OuterType>
         return False;
         }
 
-//    /**
-//     * Helper method to locate the structure-based constructor.
-//     *
-//     * @return True iff the Class has a default constructor
-//     * @return (conditional) the default constructor
-//     */
-//    conditional function DataType(StructType) structConstructor(OuterType? outer = Null)
-//        {
-//        if (Class clz := isClass(), clz.virtualChild)
-//            {
-//            assert:arg outer != Null;
-//            for (val fn : constructors)
-//                {
-//                if (fn.ParamTypes.size == 2 && fn.ParamTypes[1].as(Type) == StructType.as(Type)) // TODO GG
-//                    {
-////                    assert fn.ParamTypes[0].as(Type) == OuterType.as(Type); // TODO GG why is 2nd ".as(Type)" required?
-////                    return True, fn.as(function DataType(OuterType)).bind(fn.params[0], outer);
-//                    }
-//                }
-//            }
-//        else
-//            {
-//            for (val fn : constructors)
-//                {
-//                if (fn.ParamTypes.size == 1 && fn.ParamTypes[0].as(Type) == StructType.as(Type)) // TODO GG
-//                    {
-//                    return True, fn.as(function DataType(StructType));
-//                    }
-//                }
-//            }
-//
-//        return False;
-//        }
+    /**
+     * Helper method to locate the structure-based constructor.
+     *
+     * @return True iff the Class has a default constructor
+     * @return (conditional) the default constructor
+     */
+    conditional function DataType(Struct) structConstructor(OuterType? outer = Null)
+        {
+        if (Class clz := isClass(), clz.virtualChild)
+            {
+            assert:arg outer != Null;
+            for (val fn : constructors)
+                {
+                if (fn.ParamTypes.size == 2 && fn.ParamTypes[1].is(Type<Struct>))
+                    {
+                    assert fn.ParamTypes[0].as(Type) == OuterType;
+                    return True, fn.as(function DataType(OuterType, Struct)).
+                        bind(fn.params[0].as(Function.Parameter<OuterType>), outer)
+                            .as(function DataType(Struct));
+                    }
+                }
+            }
+        else
+            {
+            for (val fn : constructors)
+                {
+                if (fn.ParamTypes.size == 1 && fn.ParamTypes[0].as(Type).is(Type<Struct>))
+                    {
+                    return True, fn.as(function DataType(Struct));
+                    }
+                }
+            }
+
+        return False;
+        }
 
 
     // ----- Comparable, Hashable, and Orderable ---------------------------------------------------

@@ -954,6 +954,12 @@ public abstract class TypeConstant
         TypeConstant typeThis = this.resolveAutoNarrowing(pool, false, null);
         TypeConstant typeThat = that.resolveAutoNarrowing(pool, false, null);
 
+        if (typeThis.getParamsCount() != typeThat.getParamsCount())
+            {
+            typeThis = typeThis.normalizeParameters(pool);
+            typeThat = typeThat.normalizeParameters(pool);
+            }
+
         // when the types are the same, then the values are comparable; in the case that the value
         // is a constant, it's allowed to be of a wider type; for example:
         //   Constant c = ...
