@@ -201,7 +201,7 @@ public class xType
                     }
 
                 case "annotated":
-                    return calcAnnotation(frame, hType, aiReturn);
+                    return calcAnnotated(frame, hType, aiReturn);
 
                 case "contained":
                     return calcContained(frame, hType, aiReturn);
@@ -409,7 +409,10 @@ public class xType
 
     // ----- method implementations ----------------------------------------------------------------
 
-    public int calcAnnotation(Frame frame, TypeHandle hType, int[] aiReturn)
+    /**
+     * Implementation for: {@code conditional Annotation annotated()}.
+     */
+    public int calcAnnotated(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         ObjectHandle hAnnotation = null; // TODO
         return hAnnotation == null
@@ -417,14 +420,26 @@ public class xType
                 : frame.assignValues(aiReturn, xBoolean.TRUE, hAnnotation);
         }
 
+    /**
+     * Implementation for: {@code conditional Type!<> contained()}.
+     */
     public int calcContained(Frame frame, TypeHandle hType, int[] aiReturn)
         {
-        ObjectHandle hParent = null; // TODO
-        return hParent == null
-            ? frame.assignValues(aiReturn, xBoolean.FALSE, null)
-            : frame.assignValues(aiReturn, xBoolean.TRUE, hParent);
+        TypeConstant typeTarget = hType.getDataType();
+        if (typeTarget.isVirtualChild() || typeTarget.isAnonymousClass()) // REVIEW GG
+            {
+            TypeHandle hParent = makeHandle(typeTarget.getParentType());
+            return frame.assignValues(aiReturn, xBoolean.TRUE, hParent);
+            }
+        else
+            {
+            return frame.assignValues(aiReturn, xBoolean.FALSE, null);
+            }
         }
 
+    /**
+     * Implementation for: {@code conditional Class fromClass()}.
+     */
     public int calcFromClass(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         ObjectHandle hClass = null; // TODO
@@ -433,6 +448,9 @@ public class xType
             : frame.assignValues(aiReturn, xBoolean.TRUE, hClass);
         }
 
+    /**
+     * Implementation for: {@code conditional Property fromProperty()}.
+     */
     public int calcFromProperty(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         ObjectHandle hProp = null; // TODO
@@ -441,6 +459,9 @@ public class xType
             : frame.assignValues(aiReturn, xBoolean.TRUE, hProp);
         }
 
+    /**
+     * Implementation for: {@code conditional String named()}.
+     */
     public int calcNamed(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         ObjectHandle hName = null; // TODO
@@ -449,6 +470,9 @@ public class xType
             : frame.assignValues(aiReturn, xBoolean.TRUE, hName);
         }
 
+    /**
+     * Implementation for: {@code conditional Type!<>[] parameterized()}.
+     */
     public int calcParameterized(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         // type.isParamsSpecified() frame.assignValues(aiReturn, xBoolean.TRUE, null) // TODO type.getParamTypesArray())
@@ -533,6 +557,13 @@ public class xType
 
     // ----- helpers -------------------------------------------------------------------------------
 
+    /**
+     * Given an Access value, determine the corresponding Ecstasy "Access" value.
+     *
+     * @param access  an Access value
+     *
+     * @return the handle to the appropriate Ecstasy {@code Type.Access} enum value
+     */
     public xEnum.EnumHandle makeAccessHandle(Constants.Access access)
         {
         xEnum enumAccess = (xEnum) getChildTemplate("Access");
@@ -555,6 +586,13 @@ public class xType
             }
         }
 
+    /**
+     * Given a TypeConstant, determine the Ecstasy "Form" value for the type.
+     *
+     * @param type  a TypeConstant used at runtime
+     *
+     * @return the handle to the appropriate Ecstasy {@code Type.Form} enum value
+     */
     public xEnum.EnumHandle makeFormHandle(TypeConstant type)
         {
         xEnum enumForm = (xEnum) getChildTemplate("Form");
