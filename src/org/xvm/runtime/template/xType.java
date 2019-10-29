@@ -10,12 +10,12 @@ import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
@@ -130,34 +130,36 @@ public class xType
         switch (sPropName)
             {
             case "childTypes":
-                break; // TODO
+                return getChildTypesProperty(frame, hThis, iReturn);
 
             case "constants":
-                break; // TODO
+                return getConstantsProperty(frame, hThis, iReturn);
 
             case "constructors":
-                break; // TODO
+                return getConstructorsProperty(frame, hThis, iReturn);
 
             case "explicitlyImmutable":
-                break; // TODO
+                return frame.assignValue(iReturn, xBoolean.makeHandle(
+                        hThis.getDataType().isImmutabilitySpecified()));
 
             case "form":
                 return getFormProperty(frame, hThis, iReturn);
 
             case "functions":
-                break; // TODO
+                return getFunctionsProperty(frame, hThis, iReturn);
 
             case "methods":
                 return getMethodsProperty(frame, hThis, iReturn);
 
             case "multimethods":
-                break; // TODO
+                return getMultimethodsProperty(frame, hThis, iReturn);
 
             case "properties":
-                break; // TODO
+                return getPropertiesProperty(frame, hThis, iReturn);
 
             case "recursive":
-                break; // TODO
+                return frame.assignValue(iReturn, xBoolean.makeHandle(
+                        hThis.getDataType().containsRecursiveType()));
 
             case "underlyingTypes":
                 return getUnderlyingTypesProperty(frame, hThis, iReturn);
@@ -193,50 +195,44 @@ public class xType
                 case "accessSpecified":
                     {
                     return type.isAccessSpecified()
-                        ? frame.assignValues(aiReturn, xBoolean.TRUE, makeAccessHandle(type.getAccess()))
-                        : frame.assignValues(aiReturn, xBoolean.FALSE, null);
+                                ? frame.assignValues(aiReturn, xBoolean.TRUE,
+                                        makeAccessHandle(type.getAccess()))
+                                : frame.assignValues(aiReturn, xBoolean.FALSE, null);
                     }
 
                 case "annotated":
-                    {
-                    return type instanceof AnnotatedTypeConstant
-                        ? frame.assignValues(aiReturn, xBoolean.TRUE, null) // TODO reflect.Annotation requires xClassTemplate
-                        : frame.assignValues(aiReturn, xBoolean.FALSE, null);
-                    }
+                    return calcAnnotation(frame, hType, aiReturn);
 
                 case "contained":
-                    {
-                    break; // TODO
-                    }
+                    return calcContained(frame, hType, aiReturn);
 
                 case "fromClass":
-                    {
-                    break; // TODO
-                    }
+                    return calcFromClass(frame, hType, aiReturn);
 
                 case "fromProperty":
-                    {
-                    break; // TODO
-                    }
+                    return calcFromProperty(frame, hType, aiReturn);
 
                 case "modifying":
                     {
-                    break; // TODO
+                    return type.isModifyingType()
+                            ? frame.assignValues(aiReturn, xBoolean.TRUE,
+                                    makeHandle(type.getUnderlyingType()))
+                            : frame.assignValues(aiReturn, xBoolean.FALSE, null);
                     }
 
                 case "named":
-                    {
-                    break; // TODO
-                    }
+                    return calcNamed(frame, hType, aiReturn);
 
                 case "parameterized":
-                    {
-                    break; // TODO
-                    }
+                    return calcParameterized(frame, hType, aiReturn);
 
                 case "relational":
                     {
-                    break; // TODO
+                    return type.isModifyingType()
+                            ? frame.assignValues(aiReturn, xBoolean.TRUE,
+                                    makeHandle(type.getUnderlyingType()),
+                                    makeHandle(type.getUnderlyingType2()))
+                            : frame.assignValues(aiReturn, xBoolean.FALSE, null, null);
                     }
                 }
             }
@@ -281,12 +277,60 @@ public class xType
     // ----- property implementations --------------------------------------------------------------
 
     /**
+     * Implements property: childTypes.get()
+     */
+    public int getChildTypesProperty(Frame frame, TypeHandle hType, int iReturn)
+        {
+        TypeConstant typeTarget = hType.getDataType();
+        TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
+
+        ObjectHandle.ArrayHandle hArray = null; // TODO
+        return frame.assignValue(iReturn, hArray);
+        }
+
+    /**
+     * Implements property: constants.get()
+     */
+    public int getConstantsProperty(Frame frame, TypeHandle hType, int iReturn)
+        {
+        TypeConstant typeTarget = hType.getDataType();
+        TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
+
+        ObjectHandle.ArrayHandle hArray = null; // TODO
+        return frame.assignValue(iReturn, hArray);
+        }
+
+    /**
+     * Implements property: constructors.get()
+     */
+    public int getConstructorsProperty(Frame frame, TypeHandle hType, int iReturn)
+        {
+        TypeConstant typeTarget = hType.getDataType();
+        TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
+
+        ObjectHandle.ArrayHandle hArray = null; // TODO
+        return frame.assignValue(iReturn, hArray);
+        }
+
+    /**
      * Implements property: form.get()
      */
     public int getFormProperty(Frame frame, TypeHandle hType, int iReturn)
         {
         ObjectHandle hForm = makeFormHandle(hType.getDataType());
         return frame.assignValue(iReturn, hForm);
+        }
+
+    /**
+     * Implements property: functions.get()
+     */
+    public int getFunctionsProperty(Frame frame, TypeHandle hType, int iReturn)
+        {
+        TypeConstant typeTarget = hType.getDataType();
+        TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
+
+        ObjectHandle.ArrayHandle hArray = null; // TODO
+        return frame.assignValue(iReturn, hArray);
         }
 
     /**
@@ -305,6 +349,30 @@ public class xType
             }
 
         ObjectHandle.ArrayHandle hArray = ensureMethodArrayTemplate().createArrayHandle(ensureMethodArray(), ahMethods);
+        return frame.assignValue(iReturn, hArray);
+        }
+
+    /**
+     * Implements property: multimethods.get()
+     */
+    public int getMultimethodsProperty(Frame frame, TypeHandle hType, int iReturn)
+        {
+        TypeConstant typeTarget = hType.getDataType();
+        TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
+
+        ObjectHandle.ArrayHandle hArray = null; // TODO
+        return frame.assignValue(iReturn, hArray);
+        }
+
+    /**
+     * Implements property: properties.get()
+     */
+    public int getPropertiesProperty(Frame frame, TypeHandle hType, int iReturn)
+        {
+        TypeConstant typeTarget = hType.getDataType();
+        TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
+
+        ObjectHandle.ArrayHandle hArray = null; // TODO
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -336,6 +404,58 @@ public class xType
 
         ObjectHandle.ArrayHandle hArray = ensureTypeArrayTemplate().createArrayHandle(ensureTypeArray(), ahTypes);
         return frame.assignValue(iReturn, hArray);
+        }
+
+
+    // ----- method implementations ----------------------------------------------------------------
+
+    public int calcAnnotation(Frame frame, TypeHandle hType, int[] aiReturn)
+        {
+        ObjectHandle hAnnotation = null; // TODO
+        return hAnnotation == null
+                ? frame.assignValues(aiReturn, xBoolean.FALSE, null)
+                : frame.assignValues(aiReturn, xBoolean.TRUE, hAnnotation);
+        }
+
+    public int calcContained(Frame frame, TypeHandle hType, int[] aiReturn)
+        {
+        ObjectHandle hParent = null; // TODO
+        return hParent == null
+            ? frame.assignValues(aiReturn, xBoolean.FALSE, null)
+            : frame.assignValues(aiReturn, xBoolean.TRUE, hParent);
+        }
+
+    public int calcFromClass(Frame frame, TypeHandle hType, int[] aiReturn)
+        {
+        ObjectHandle hClass = null; // TODO
+        return hClass == null
+            ? frame.assignValues(aiReturn, xBoolean.FALSE, null)
+            : frame.assignValues(aiReturn, xBoolean.TRUE, hClass);
+        }
+
+    public int calcFromProperty(Frame frame, TypeHandle hType, int[] aiReturn)
+        {
+        ObjectHandle hProp = null; // TODO
+        return hProp == null
+            ? frame.assignValues(aiReturn, xBoolean.FALSE, null)
+            : frame.assignValues(aiReturn, xBoolean.TRUE, hProp);
+        }
+
+    public int calcNamed(Frame frame, TypeHandle hType, int[] aiReturn)
+        {
+        ObjectHandle hName = null; // TODO
+        return hName == null
+            ? frame.assignValues(aiReturn, xBoolean.FALSE, null)
+            : frame.assignValues(aiReturn, xBoolean.TRUE, hName);
+        }
+
+    public int calcParameterized(Frame frame, TypeHandle hType, int[] aiReturn)
+        {
+        // type.isParamsSpecified() frame.assignValues(aiReturn, xBoolean.TRUE, null) // TODO type.getParamTypesArray())
+        ObjectHandle hParams = null; // TODO
+        return hParams == null
+            ? frame.assignValues(aiReturn, xBoolean.FALSE, null)
+            : frame.assignValues(aiReturn, xBoolean.TRUE, hParams);
         }
 
 

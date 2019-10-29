@@ -668,44 +668,65 @@ public class Frame
         }
 
     /**
-     * Specialization of assignValue() that takes two return values.
+     * Specialization of assignValue() that takes any number of return values.
      *
      * @param anVar     the array of two register ids
-     * @param hValue1   the first value to assign
-     * @param hValue2   the second value to assign
+     * @param ahValue   the values to assign
      *
      * @return R_NEXT, R_CALL, R_EXCEPTION
      *
      * @see {@link Utils.AssignValues}
      */
-    public int assignValues(int[] anVar, ObjectHandle hValue1, ObjectHandle hValue2)
+    public int assignValues(int[] anVar, ObjectHandle... ahValue)
         {
-        int c = anVar.length;
-        if (c == 0)
+        int c = Math.min(anVar.length, ahValue.length);
+        return assignValues(anVar, ahValue, 0, c);
+        }
+
+    /**
+     * Specialization of assignValue() that takes any number of return values.
+     *
+     * @param anVar     the array of two register ids
+     * @param ahValue   the values to assign
+     * @param i         specifies the next value to return
+     * @param c         specifies the total number of values to return
+     *
+     * @return R_NEXT, R_CALL, R_EXCEPTION
+     *
+     * @see {@link Utils.AssignValues}
+     */
+    private int assignValues(int[] anVar, ObjectHandle[] ahValue, int i, int c)
+        {
+        while (true)
             {
-            return Op.R_NEXT;
-            }
+            switch (c - i)
+                {
+                default:
+                    switch (assignValue(anVar[i], ahValue[i]))
+                        {
+                        case Op.R_NEXT:
+                            ++i;
+                            break;
 
-        if (c == 1 || hValue2 == null)
-            {
-            return assignValue(anVar[0], hValue1);
-            }
+                        case Op.R_CALL:
+                            int iNext = i+1;
+                            m_frameNext.addContinuation(
+                                frameCaller -> assignValues(anVar, ahValue, iNext, c));
+                            return Op.R_CALL;
 
-        switch (assignValue(anVar[0], hValue1))
-            {
-            case Op.R_NEXT:
-                return assignValue(anVar[1], hValue2);
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
 
-            case Op.R_CALL:
-                m_frameNext.addContinuation(
-                    frameCaller -> assignValue(anVar[1], hValue2));
-                return Op.R_CALL;
+                        default:
+                            throw new IllegalStateException();
+                        }
 
-            case Op.R_EXCEPTION:
-                return Op.R_EXCEPTION;
+                case 1:
+                    return assignValue(anVar[i], ahValue[i]);
 
-            default:
-                throw new IllegalStateException();
+                case 0:
+                    return Op.R_NEXT;
+                }
             }
         }
 
