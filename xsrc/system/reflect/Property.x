@@ -110,7 +110,7 @@ const Property<Target, Referent, Implementation extends Ref<Referent>>
      */
     Implementation of(Target target)
         {
-         for (Property!<> property : Target.properties)
+        for (Property!<> property : Target.properties)
             {
             if (property == this)
                 {

@@ -1499,7 +1499,11 @@ public class StatementBlock
             this.hasThis    = hasThis;
             this.typeTarget = typeTarget;
             this.stepsOut   = stepsOut;
-            this.type       = id instanceof PropertyConstant ? id.getType() : null;
+            this.type       = id instanceof PropertyConstant
+                                    ? ((PropertyConstant) id).isFormalType()
+                                        ? id.getFormalType()
+                                        : id.getType()
+                                    : null;
             }
 
         /**

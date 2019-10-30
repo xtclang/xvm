@@ -1628,8 +1628,8 @@ public class ClassStructure
 
             TypeConstant typeLeft = listLeft.get(i);
             TypeConstant typeRight;
-            boolean fProduce;
-            boolean fLeftIsRight = false;
+            boolean      fProduces;
+            boolean      fLeftIsRight;
 
             if (i < cParamsRight)
                 {
@@ -1640,10 +1640,10 @@ public class ClassStructure
                     continue;
                     }
 
-                fProduce = fTuple || producesFormalType(sName, accessLeft, listLeft);
+                fProduces    = fTuple || producesFormalType(sName, accessLeft, listLeft);
                 fLeftIsRight = typeLeft.isA(typeRight);
 
-                if (fLeftIsRight && !fProduce)
+                if (fLeftIsRight && !fProduces)
                     {
                     // consumer only methods; rule 1.2.1
                     continue;
@@ -1656,8 +1656,9 @@ public class ClassStructure
                 //             C<L1, L2> = C<R1, [canonical type for R2]>;
                 // the former is only allowed if class C produces L2
                 // and then all L2 consuming methods (if any) must be "wrapped"
-                typeRight = typeCanonical;
-                fProduce  = fTuple || producesFormalType(sName, accessLeft, listLeft);
+                typeRight    = typeCanonical;
+                fProduces    = fTuple || producesFormalType(sName, accessLeft, listLeft);
+                fLeftIsRight = false;
                 }
 
             if (typeRight.isA(typeLeft))
@@ -1672,11 +1673,13 @@ public class ClassStructure
                     continue;
                     }
 
-                if (fProduce)
+                boolean fConsumes = fTuple || consumesFormalType(sName, accessLeft, listLeft);
+                if (fProduces || !fConsumes)
                     {
                     // there are some producing methods; rule 1.2.2.2
+                    // or the formal type is completely unused
                     // consuming methods may need to be "wrapped"
-                    if (fTuple || consumesFormalType(sName, accessLeft, listLeft))
+                    if (fConsumes)
                         {
                         fWeak = true;
                         }

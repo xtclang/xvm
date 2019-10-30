@@ -172,8 +172,6 @@ interface Type<DataType, OuterType>
         for (Method<DataType> m : methods)
             {
             String name = m.name;
-            // TODO sucky error message: COMPILER-56: Could not find a matching method or function "getOrCompute" for type "Ecstasy:collections.ListMap<Ecstasy:String, Ecstasy:reflect.MultiMethod<Ecstasy:Type.DataType>>". ("map.getOrCompute(name, new MultiMethod<DataType>(name, []))")
-            // MultiMethod<DataType> mm = map.getOrCompute(name, new MultiMethod<DataType>(name, []));
             MultiMethod<DataType> mm = map.getOrCompute(name, () -> new MultiMethod<DataType>(name, []));
             map.put(name, mm + m);
             }

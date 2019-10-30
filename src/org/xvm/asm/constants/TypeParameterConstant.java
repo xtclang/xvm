@@ -103,22 +103,29 @@ public class TypeParameterConstant
     public TypeConstant getConstraintType()
         {
         // the type points to a register, which means that the type is a parameterized type;
-        // the type of the register will be "Type<X>", so return X
+        // the type of the register will be "Type<X>" or a formal type
         MethodConstant   constMethod = getMethod();
         int              nReg        = getRegister();
         TypeConstant[]   atypeParams = constMethod.getRawParams();
-        assert atypeParams.length > nReg;
-        TypeConstant typeConstraint  = atypeParams[nReg];
-        assert typeConstraint.isEcstasy("Type") && typeConstraint.isParamsSpecified();
 
-        typeConstraint = typeConstraint.getParamTypesArray()[0];
+        assert atypeParams.length > nReg;
+
+        TypeConstant typeConstraint = atypeParams[nReg];
+        if (typeConstraint.isFormalType())
+            {
+            return typeConstraint;
+            }
+
+        assert typeConstraint.isTypeOfType();
+
+        typeConstraint = typeConstraint.getParamType(0);
         if (!typeConstraint.isParamsSpecified() && typeConstraint.isSingleUnderlyingClass(true))
             {
             // create a normalized formal type
-            ConstantPool   pool = getConstantPool();
-            ClassStructure clz  = (ClassStructure) typeConstraint.getSingleUnderlyingClass(true).getComponent();
+            ClassStructure clz = (ClassStructure) typeConstraint.getSingleUnderlyingClass(true).getComponent();
             if (clz.isParameterized())
                 {
+                ConstantPool        pool           = getConstantPool();
                 Set<StringConstant> setFormalNames = clz.getTypeParams().keySet();
                 TypeConstant[]      atypeFormal    = new TypeConstant[setFormalNames.size()];
                 int ix = 0;
