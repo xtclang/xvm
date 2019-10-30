@@ -75,12 +75,9 @@ interface Function<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tup
             extends IllegalState(text, cause);
 
     /**
-     * Determine the function's name, if it has one.
-     *
-     * @return True iff the function has a name
-     * @return (conditional) the function name
+     * The function's name.
      */
-    conditional String hasName();
+    @RO String name;
 
     /**
      * The parameters, by ordinal.
