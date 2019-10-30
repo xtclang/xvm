@@ -166,7 +166,25 @@ interface Type<DataType, OuterType>
      * Obtain the methods and functions of the type, collected by name, and represented by
      * multimethods.
      */
-    @RO Map<String, MultiMethod> multimethods;
+    @RO Map<String, MultiMethod<DataType>> multimethods.get()
+        {
+        ListMap<String, MultiMethod<DataType>> map = new ListMap();
+        for (Method<DataType> m : methods)
+            {
+            String name = m.name;
+            // TODO sucky error message: COMPILER-56: Could not find a matching method or function "getOrCompute" for type "Ecstasy:collections.ListMap<Ecstasy:String, Ecstasy:reflect.MultiMethod<Ecstasy:Type.DataType>>". ("map.getOrCompute(name, new MultiMethod<DataType>(name, []))")
+            // MultiMethod<DataType> mm = map.getOrCompute(name, new MultiMethod<DataType>(name, []));
+            MultiMethod<DataType> mm = map.getOrCompute(name, () -> new MultiMethod<DataType>(name, []));
+            map.put(name, mm + m);
+            }
+        for (Function f : functions)
+            {
+            String name = f.name;
+            MultiMethod<DataType> mm = map.getOrCompute(name, () -> new MultiMethod<DataType>(name, []));
+            map.put(name, mm + f);
+            }
+        return map;
+        }
 
     /**
      * Obtain the raw set of all methods on the type.
@@ -490,7 +508,7 @@ interface Type<DataType, OuterType>
         nextMethod: for (Method m1 : that.methods)
             {
             // find the corresponding method on this type
-            for (Method m2 : this.multimethods[m1.name]?.methods)
+            for (val m2 : this.multimethods[m1.name]?.methods)
                 {
                 if (m2.isSubstitutableFor(m1))
                     {
