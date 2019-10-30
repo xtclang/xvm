@@ -25,6 +25,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.reflect.xMethod;
@@ -32,6 +33,7 @@ import org.xvm.runtime.template.reflect.xMethod;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
+import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xString;
 
@@ -202,7 +204,7 @@ public class xRTType
             case "accessSpecified":
                 return type.isAccessSpecified()
                             ? frame.assignValues(aiReturn, xBoolean.TRUE,
-                                    makeAccessHandle(type.getAccess()))
+                                    makeAccessHandle(frame, type.getAccess()))
                             : frame.assignValues(aiReturn, xBoolean.FALSE, null);
 
             case "annotated":
@@ -332,7 +334,7 @@ public class xRTType
      */
     public int getFormProperty(Frame frame, TypeHandle hType, int iReturn)
         {
-        ObjectHandle hForm = makeFormHandle(hType.getDataType());
+        ObjectHandle hForm = makeFormHandle(frame, hType.getDataType());
         return frame.assignValue(iReturn, hForm);
         }
 
@@ -707,42 +709,52 @@ public class xRTType
     /**
      * Given an Access value, determine the corresponding Ecstasy "Access" value.
      *
+     * @param frame   the current frame
      * @param access  an Access value
      *
      * @return the handle to the appropriate Ecstasy {@code Type.Access} enum value
      */
-    public xEnum.EnumHandle makeAccessHandle(Constants.Access access)
+    public ObjectHandle makeAccessHandle(Frame frame, Constants.Access access)
         {
-        xEnum enumAccess = (xEnum) f_templates.getTemplate("Type.Access");
+        xEnum      enumAccess = (xEnum) f_templates.getTemplate("Type.Access");
+        EnumHandle hEnum;
         switch (access)
             {
             case PUBLIC:
-                return enumAccess.getEnumByName("Public");
+                hEnum = enumAccess.getEnumByName("Public");
+                break;
 
             case PROTECTED:
-                return enumAccess.getEnumByName("Protected");
+                hEnum = enumAccess.getEnumByName("Protected");
+                break;
 
             case PRIVATE:
-                return enumAccess.getEnumByName("Private");
+                hEnum = enumAccess.getEnumByName("Private");
+                break;
 
             case STRUCT:
-                return enumAccess.getEnumByName("Struct");
+                hEnum = enumAccess.getEnumByName("Struct");
+                break;
 
             default:
                 throw new IllegalStateException("unknown access value: " + access);
             }
+
+        return Utils.ensureInitializedEnum(frame, hEnum);
         }
 
     /**
      * Given a TypeConstant, determine the Ecstasy "Form" value for the type.
      *
-     * @param type  a TypeConstant used at runtime
+     * @param frame  the current frame
+     * @param type   a TypeConstant used at runtime
      *
      * @return the handle to the appropriate Ecstasy {@code Type.Form} enum value
      */
-    public xEnum.EnumHandle makeFormHandle(TypeConstant type)
+    public ObjectHandle makeFormHandle(Frame frame, TypeConstant type)
         {
-        xEnum enumForm = (xEnum) f_templates.getTemplate("Type.Form");
+        xEnum      enumForm = (xEnum) f_templates.getTemplate("Type.Form");
+        EnumHandle hEnum;
 
         switch (type.getFormat())
             {
@@ -752,61 +764,77 @@ public class xRTType
                     switch (type.getDefiningConstant().getFormat())
                         {
                         case NativeClass:
-                            return enumForm.getEnumByName("Pure");
-
+                            hEnum = enumForm.getEnumByName("Pure");
+                            break;
                         case Module:
                         case Package:
                         case Class:
                         case ThisClass:
                         case ParentClass:
                         case ChildClass:
-                            return enumForm.getEnumByName("Class");
-
+                            hEnum = enumForm.getEnumByName("Class");
+                            break;
                         case Property:
-                            return enumForm.getEnumByName("FormalProperty");
-
+                            hEnum = enumForm.getEnumByName("FormalProperty");
+                            break;
                         case TypeParameter:
-                            return enumForm.getEnumByName("FormalParameter");
-
+                            hEnum = enumForm.getEnumByName("FormalParameter");
+                            break;
                         case FormalTypeChild:
-                            return enumForm.getEnumByName("FormalChild");
+                            hEnum = enumForm.getEnumByName("FormalChild");
+                            break;
+                        default:
+                            throw new IllegalStateException("unsupported format: " +
+                                    type.getDefiningConstant().getFormat());
                         }
                     }
                 else
                     {
-                    return enumForm.getEnumByName("Typedef");
+                    hEnum = enumForm.getEnumByName("Typedef");
                     }
                 break;
 
             case ImmutableType:
-                return enumForm.getEnumByName("Immutable");
+                hEnum = enumForm.getEnumByName("Immutable");
+                break;
             case AccessType:
-                return enumForm.getEnumByName("Access");
+                hEnum = enumForm.getEnumByName("Access");
+                break;
             case AnnotatedType:
-                return enumForm.getEnumByName("Annotated");
+                hEnum = enumForm.getEnumByName("Annotated");
+                break;
             case ParameterizedType:
-                return enumForm.getEnumByName("Parameterized");
+                hEnum = enumForm.getEnumByName("Parameterized");
+                break;
             case TurtleType:
-                return enumForm.getEnumByName("Sequence");
+                hEnum = enumForm.getEnumByName("Sequence");
+                break;
             case VirtualChildType:
-                return enumForm.getEnumByName("Child");
+                hEnum = enumForm.getEnumByName("Child");
+                break;
             case AnonymousClassType:
-                return enumForm.getEnumByName("Class");
+                hEnum = enumForm.getEnumByName("Class");
+                break;
             case PropertyClassType:
-                return enumForm.getEnumByName("Property");
+                hEnum = enumForm.getEnumByName("Property");
+                break;
             case UnionType:
-                return enumForm.getEnumByName("Union");
+                hEnum = enumForm.getEnumByName("Union");
+                break;
             case IntersectionType:
-                return enumForm.getEnumByName("Intersection");
+                hEnum = enumForm.getEnumByName("Intersection");
+                break;
             case DifferenceType:
-                return enumForm.getEnumByName("Difference");
+                hEnum = enumForm.getEnumByName("Difference");
+                break;
             case RecursiveType:
-                return enumForm.getEnumByName("Typedef");
+                hEnum = enumForm.getEnumByName("Typedef");
+                break;
 
             case UnresolvedType:
             default:
+                throw new IllegalStateException("unsupported type: " + type);
             }
-
-        throw new IllegalStateException("unsupported type: " + type);
+        return Utils.ensureInitializedEnum(frame, hEnum);
         }
     }

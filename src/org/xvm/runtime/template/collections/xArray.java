@@ -27,6 +27,7 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.IndexSupport;
 import org.xvm.runtime.template.xBoolean;
@@ -395,13 +396,7 @@ public class xArray
             case "mutability":
                 {
                 EnumHandle hEnum = MUTABILITY.getEnumByOrdinal(hArray.m_mutability.ordinal());
-                if (hEnum.isStruct())
-                    {
-                    // turn the struct into the "public" value
-                    IdentityConstant idValue = (IdentityConstant) hEnum.getType().getDefiningConstant();
-                    hEnum = (EnumHandle) frame.getConstHandle(pool().ensureSingletonConstConstant(idValue));
-                    }
-                return frame.assignValue(iReturn, hEnum);
+                return frame.assignValue(iReturn, Utils.ensureInitializedEnum(frame, hEnum));
                 }
             case "size":
                 return frame.assignValue(iReturn, xInt64.makeHandle(hArray.m_cSize));

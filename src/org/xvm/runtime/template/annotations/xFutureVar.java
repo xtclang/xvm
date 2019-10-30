@@ -29,17 +29,14 @@ import org.xvm.runtime.template.xVar;
 
 
 /**
- * TODO:
+ * FutureVar native implementation.
  */
 public class xFutureVar
         extends xVar
     {
     public static xFutureVar INSTANCE;
     public static TypeConstant TYPE;
-
-    public static EnumHandle Pending;
-    public static EnumHandle Result;
-    public static EnumHandle Error;
+    public static xEnum COMPLETION;
 
     public xFutureVar(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -55,10 +52,7 @@ public class xFutureVar
     @Override
     public void initDeclared()
         {
-        xEnum enumCompletion = (xEnum) getChildTemplate("Completion");
-        Pending = enumCompletion.getEnumByName("Pending");
-        Result  = enumCompletion.getEnumByName("Result");
-        Error   = enumCompletion.getEnumByName("Error");
+        COMPLETION = (xEnum) getChildTemplate("Completion");
 
         markNativeMethod("whenComplete", new String[] {"Function"}, new String[] {"annotations.FutureVar!<Referent>"});
         markNativeMethod("thenDo", new String[] {"Function"}, new String[] {"annotations.FutureVar!<Referent>"});
@@ -114,11 +108,11 @@ public class xFutureVar
                 {
                 EnumHandle hValue =
                     cf == null || !cf.isDone() ?
-                        Pending :
+                        COMPLETION.getEnumByName("Pending") :
                     cf.isCompletedExceptionally() ?
-                        Error :
-                        Result;
-                return frame.assignValue(iReturn, hValue);
+                        COMPLETION.getEnumByName("Error") :
+                        COMPLETION.getEnumByName("Result");
+                return frame.assignValue(iReturn, Utils.ensureInitializedEnum(frame, hValue));
                 }
 
             case "notify":

@@ -16,8 +16,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.DeferredPropertyHandle;
-
-import org.xvm.runtime.template.xException;
+import org.xvm.runtime.ObjectHandle.DeferredSingletonHandle;
 
 
 /**
@@ -56,10 +55,11 @@ public class ObjectHeap
 
         if (constValue instanceof SingletonConstant)
             {
-            hValue = ((SingletonConstant) constValue).getHandle();
+            SingletonConstant constSingleton = (SingletonConstant) constValue;
+
+            hValue = constSingleton.getHandle();
             return hValue == null
-                ? new DeferredCallHandle(
-                    xException.illegalState(frame, "Uninitialized singleton: " + constValue))
+                ? new DeferredSingletonHandle(constSingleton)
                 : saveConstHandle(constValue, hValue);
             }
 

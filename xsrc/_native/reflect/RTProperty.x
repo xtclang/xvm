@@ -53,4 +53,19 @@ const RTProperty<Target, Referent, Implementation extends Ref<Referent>>
 
     @Override
     void set(Target target, Referent value);
+
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        return name.size;
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        appender.add(name);
+        }
     }

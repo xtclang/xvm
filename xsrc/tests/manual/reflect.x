@@ -86,8 +86,7 @@ module TestReflection.xqiz.it
         {
         console.println("\n** testForm");
         Type t = String;
-        // TODO GG console.println($"t={t}, form={t.form}");
-        console.println($"String form={t.form.name}");
+        console.println($"t={t}, form={t.form}");
         }
 
     void testProps()
@@ -96,11 +95,10 @@ module TestReflection.xqiz.it
         const Point(Int x, Int y);
 
         Type t = Point;
-        // TODO BUGBUG console.println($"Point type={t}");
+        console.println($"Point type={t}");
         for (Property prop : t.properties)
             {
-            // TODO BUGBUG console.println($"prop={prop}");
-            console.println($"prop={prop.name}");
+            console.println($"prop={prop}");
             }
         }
     }

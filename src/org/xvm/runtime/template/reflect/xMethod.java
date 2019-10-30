@@ -90,7 +90,7 @@ public class xMethod
 
             case "access":
                 Constants.Access access  = hMethod.getMethodInfo().getAccess();
-                ObjectHandle     hAccess = xRTType.INSTANCE.makeAccessHandle(access);
+                ObjectHandle     hAccess = xRTType.INSTANCE.makeAccessHandle(frame, access);
                 return frame.assignValue(iReturn, hAccess);
             }
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);

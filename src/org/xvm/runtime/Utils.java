@@ -25,6 +25,8 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xEnum;
+import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xFunction.FullyBoundHandle;
 import org.xvm.runtime.template.xModule;
@@ -210,6 +212,28 @@ public abstract class Utils
                 throw new IllegalStateException();
             }
         }
+
+    /**
+     * A helper method for native code that needs to assign EnumHandle values retrieved
+     * via {@link xEnum#getEnumByName} or {@link xEnum#getEnumByOrdinal}.
+     *
+     * @param frame  the current frame
+     * @param hEnum  the Enum handle
+     *
+     * @return the initialized (public) enum handle or a deferred handle
+     */
+    public static ObjectHandle ensureInitializedEnum(Frame frame, EnumHandle hEnum)
+        {
+        if (hEnum.isStruct())
+            {
+            // turn the Enum struct into a "public" value
+            IdentityConstant idValue = (IdentityConstant) hEnum.getType().getDefiningConstant();
+            return frame.getConstHandle(
+                idValue.getConstantPool().ensureSingletonConstConstant(idValue));
+            }
+        return hEnum;
+        }
+
 
     // ----- "local property or DeferredCallHandle as an argument" support -----
 

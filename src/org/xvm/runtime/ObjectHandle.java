@@ -11,6 +11,7 @@ import org.xvm.asm.Constants;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -709,6 +710,53 @@ public abstract class ObjectHandle
         public String toString()
             {
             return "Deferred property access: " + f_idProp.getName();
+            }
+        }
+
+    /**
+     * DeferredSingletonHandle represents a deferred singleton calculation, which would place the
+     * result of that action on the corresponding frame's stack.
+     *
+     * Note: this handle cannot be allocated naturally and must be processed in a special way.
+     */
+    public static class DeferredSingletonHandle
+            extends DeferredCallHandle
+        {
+        private final SingletonConstant f_constSingleton;
+
+        public DeferredSingletonHandle(SingletonConstant constSingleton)
+            {
+            super((ExceptionHandle) null);
+
+            f_constSingleton = constSingleton;
+            }
+
+        @Override
+        public void addContinuation(Frame.Continuation continuation)
+            {
+            throw new UnsupportedOperationException();
+            }
+
+        public SingletonConstant getConstant()
+            {
+            return f_constSingleton;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller, Frame.Continuation continuation)
+            {
+            return Utils.initConstants(frameCaller, Collections.singletonList(f_constSingleton),
+                frame ->
+                    {
+                    frame.pushStack(f_constSingleton.getHandle());
+                    return continuation.proceed(frame);
+                    });
+            }
+
+        @Override
+        public String toString()
+            {
+            return "Deferred initialization for " + f_constSingleton;
             }
         }
 
