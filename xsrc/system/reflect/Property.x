@@ -1,32 +1,19 @@
 /**
- * A Property represents a property of a particular class or type. A property has a type, a name,
+ * A Property represents a property of a particular implementation or type. A property has a type, a name,
  * and a value. At runtime, a property is itself of type `Ref`.
  */
-const Property<TargetType, Referent, PropertyType extends Ref<Referent>>
+const Property<Target, Referent, Implementation extends Ref<Referent>>
+            (String    name,
+             Boolean   constant,
+             Referent? value,
+             Boolean   suppressVar,
+             Boolean   formal,
+             Boolean   hasField,
+             Boolean   injected,
+             Boolean   lazy,
+             Boolean   atomic,
+             Boolean   abstract)
     {
-    construct(String   name,
-              Boolean  constant,
-              Referent? value,
-              Boolean  suppressVar,
-              Boolean  formal,
-              Boolean  hasField,
-              Boolean  injected,
-              Boolean  lazy,
-              Boolean  atomic,
-              Boolean  abstract)
-        {
-        this.name        = name;
-        this.constant    = constant;
-        this.value       = value;
-        this.suppressVar = suppressVar;
-        this.formal      = formal;
-        this.hasField    = hasField;
-        this.injected    = injected;
-        this.lazy        = lazy;
-        this.atomic      = atomic;
-        this.abstract    = abstract;
-        }
-
     /**
      * The name of the property.
      */
@@ -64,7 +51,7 @@ const Property<TargetType, Referent, PropertyType extends Ref<Referent>>
     */
     Boolean readOnly.get()
         {
-        return constant || !PropertyType.is(Type<Var<Referent>>);
+        return constant || !Implementation.is(Type<Var<Referent>>);
         }
 
     /**
@@ -121,16 +108,26 @@ const Property<TargetType, Referent, PropertyType extends Ref<Referent>>
      * Given an object reference of a type that contains this method, obtain the invocable function
      * that corresponds to this method on that object.
      */
-    PropertyType of(TargetType target)
+    Implementation of(Target target)
         {
-        TODO need a "bind" implementation: return method.invoke(target, Tuple:());
+//         for (Property!<> property : Target.properties)           // TODO GG - why doesn't this compile?
+//         for (Property!<> property : Target.toType().properties)  // TODO GG - why doesn't this compile?
+        Type t = Target;                                            // TODO GG - but this does?!? :D
+        for (Property!<> property : t.properties)
+            {
+            if (property == this)
+                {
+                return property.as(Property!<Target, Referent, Implementation>).of(target);
+                }
+            }
+        assert;
         }
 
     /**
      * Given an object reference of a type that contains this property, obtain the value of the
      * property.
      */
-    Referent get(TargetType target)
+    Referent get(Target target)
         {
         return this.of(target).get();
         }
@@ -139,7 +136,7 @@ const Property<TargetType, Referent, PropertyType extends Ref<Referent>>
      * Given an object reference of a type that contains this property, modify the value of the
      * property.
      */
-    void set(TargetType target, Referent value)
+    void set(Target target, Referent value)
         {
         if (readOnly)
             {

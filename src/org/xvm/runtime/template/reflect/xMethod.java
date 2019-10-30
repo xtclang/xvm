@@ -22,7 +22,8 @@ import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xString;
-import org.xvm.runtime.template.xType;
+
+import org.xvm.runtime.template._native.reflect.xRTType;
 
 
 /**
@@ -89,7 +90,7 @@ public class xMethod
 
             case "access":
                 Constants.Access access  = hMethod.getMethodInfo().getAccess();
-                ObjectHandle     hAccess = xType.INSTANCE.makeAccessHandle(access);
+                ObjectHandle     hAccess = xRTType.INSTANCE.makeAccessHandle(access);
                 return frame.assignValue(iReturn, hAccess);
             }
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);

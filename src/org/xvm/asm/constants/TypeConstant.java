@@ -50,8 +50,8 @@ import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xOrdered;
-import org.xvm.runtime.template.xType;
-import org.xvm.runtime.template.xType.TypeHandle;
+import org.xvm.runtime.template._native.reflect.xRTType;
+import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
@@ -5400,7 +5400,7 @@ public abstract class TypeConstant
         TypeHandle hType = m_handle;
         if (hType == null)
             {
-            hType = m_handle = xType.makeHandle(this);
+            hType = m_handle = xRTType.makeHandle(this);
             }
         return hType;
         }
@@ -5773,5 +5773,5 @@ public abstract class TypeConstant
     /**
      * Cached TypeHandle.
      */
-    private transient xType.TypeHandle m_handle;
+    private transient xRTType.TypeHandle m_handle;
     }

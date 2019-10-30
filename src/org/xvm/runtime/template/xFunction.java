@@ -25,7 +25,8 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xService.ServiceHandle;
-import org.xvm.runtime.template.xType.TypeHandle;
+
+import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 
 /**

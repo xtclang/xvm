@@ -1,6 +1,7 @@
-package org.xvm.runtime.template;
+package org.xvm.runtime.template._native.reflect;
 
 
+import java.util.ArrayList;
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
@@ -14,11 +15,11 @@ import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ClassComposition;
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
@@ -27,19 +28,23 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.reflect.xMethod;
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xConst;
+import org.xvm.runtime.template.xEnum;
+import org.xvm.runtime.template.xFunction;
 
 
 /**
  * Native Type implementation.
  */
-public class xType
-        extends ClassTemplate
+public class xRTType
+        extends xConst
     {
-    public static xType INSTANCE;
+    public static xRTType INSTANCE;
 
-    public xType(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTType(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(templates, structure, false);
 
         if (fInstance)
             {
@@ -296,7 +301,7 @@ public class xType
         TypeConstant typeTarget = hType.getDataType();
         TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
 
-        ObjectHandle.ArrayHandle hArray = null; // TODO
+        ObjectHandle.ArrayHandle hArray = null; // TODO - ask GG if these are in TypeInfo.getProperties()
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -305,10 +310,21 @@ public class xType
      */
     public int getConstructorsProperty(Frame frame, TypeHandle hType, int iReturn)
         {
-        TypeConstant typeTarget = hType.getDataType();
-        TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
-
-        ObjectHandle.ArrayHandle hArray = null; // TODO
+        TypeConstant                        typeTarget  = hType.getDataType();
+        Map<MethodConstant, MethodInfo>     mapMethods  = typeTarget.ensureTypeInfo().getMethods();
+        ArrayList<xFunction.FunctionHandle> listHandles = new ArrayList<>();
+        for (Map.Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
+            {
+            MethodInfo info = entry.getValue();
+            if (info.isConstructor())
+                {
+                // TODO we need to create a factory "T function(a,b,c,...)" that does a "return new T(a,b,c,...)"
+                // listHandles.add(xFunction.makeHandle(info.getHead().getMethodStructure()));
+                }
+            }
+        xFunction.FunctionHandle[] ahFunctions = listHandles.toArray(new xFunction.FunctionHandle[0]);
+        ObjectHandle.ArrayHandle   hArray      = ensureMethodArrayTemplate().createArrayHandle(
+                ensureMethodArray(typeTarget), ahFunctions);
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -326,10 +342,20 @@ public class xType
      */
     public int getFunctionsProperty(Frame frame, TypeHandle hType, int iReturn)
         {
-        TypeConstant typeTarget = hType.getDataType();
-        TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
-
-        ObjectHandle.ArrayHandle hArray = null; // TODO
+        TypeConstant                        typeTarget  = hType.getDataType();
+        Map<MethodConstant, MethodInfo>     mapMethods  = typeTarget.ensureTypeInfo().getMethods();
+        ArrayList<xFunction.FunctionHandle> listHandles = new ArrayList<>(mapMethods.size());
+        for (Map.Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
+            {
+            MethodInfo info = entry.getValue();
+            if (info.isFunction())
+                {
+                listHandles.add(xFunction.makeHandle(info.getHead().getMethodStructure()));
+                }
+            }
+        xFunction.FunctionHandle[] ahFunctions = listHandles.toArray(new xFunction.FunctionHandle[0]);
+        ObjectHandle.ArrayHandle   hArray      = ensureMethodArrayTemplate().createArrayHandle(
+                ensureMethodArray(typeTarget), ahFunctions);
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -338,17 +364,20 @@ public class xType
      */
     public int getMethodsProperty(Frame frame, TypeHandle hType, int iReturn)
         {
-        TypeConstant                    typeTarget = hType.getDataType();
-        Map<MethodConstant, MethodInfo> mapMethods = typeTarget.ensureTypeInfo().getMethods();
-        xMethod.MethodHandle[]          ahMethods  = new xMethod.MethodHandle[mapMethods.size()];
-
-        int iMethod = 0;
-        for (MethodConstant idMethod : mapMethods.keySet())
+        TypeConstant                    typeTarget  = hType.getDataType();
+        Map<MethodConstant, MethodInfo> mapMethods  = typeTarget.ensureTypeInfo().getMethods();
+        ArrayList<xMethod.MethodHandle> listHandles = new ArrayList<>(mapMethods.size());
+        for (Map.Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
             {
-            ahMethods[iMethod++] = xMethod.makeHandle(typeTarget, idMethod);
+            MethodInfo info = entry.getValue();
+            if (!info.isFunction() && !info.isConstructor())
+                {
+                listHandles.add(xMethod.makeHandle(typeTarget, entry.getKey()));
+                }
             }
-
-        ObjectHandle.ArrayHandle hArray = ensureMethodArrayTemplate().createArrayHandle(ensureMethodArray(), ahMethods);
+        xMethod.MethodHandle[]   ahMethods = listHandles.toArray(new xMethod.MethodHandle[0]);
+        ObjectHandle.ArrayHandle hArray    = ensureMethodArrayTemplate().createArrayHandle(
+                ensureMethodArray(typeTarget), ahMethods);
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -369,10 +398,26 @@ public class xType
      */
     public int getPropertiesProperty(Frame frame, TypeHandle hType, int iReturn)
         {
-        TypeConstant typeTarget = hType.getDataType();
-        TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
+        TypeConstant                        typeTarget = hType.getDataType();
+        TypeInfo                            infoTarget = typeTarget.ensureTypeInfo();
+        Map<PropertyConstant, PropertyInfo> mapProps   = infoTarget.getProperties();
+        ObjectHandle[]                      ahProps    = new ObjectHandle[mapProps.size()];
+        ConstantPool                        pool       = frame.poolContext();
+        int                                 cProps     = 0;
+        for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
+            {
+            PropertyInfo     propinfo     = entry.getValue();
+            TypeConstant     typeReferent = propinfo.getType();
+            TypeConstant     typeImpl     = pool.ensurePropertyClassTypeConstant(typeTarget, entry.getKey());
+            TypeConstant     typeProperty = pool.ensureParameterizedTypeConstant(pool.typeProperty(),
+                                                    typeTarget, typeReferent, typeImpl);
+            ClassComposition clzProperty = f_templates.resolveClass(typeProperty);
+            ObjectHandle     hProperty   = xRTProperty.INSTANCE.makeHandle(clzProperty);
 
-        ObjectHandle.ArrayHandle hArray = null; // TODO
+            ahProps[cProps++] = hProperty;
+            }
+        ObjectHandle.ArrayHandle hArray = ensurePropertyArrayTemplate().createArrayHandle(
+                ensurePropertyArray(typeTarget), ahProps);
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -483,7 +528,79 @@ public class xType
         }
 
 
-    // ----- type caching --------------------------------------------------------------------------
+    // ----- Template caching -----------------------------------------------------------------------
+
+    /**
+     * @return the ClassTemplate for an Array of Type
+     */
+    public xArray ensureTypeArrayTemplate()
+        {
+        xArray template = TYPE_ARRAY_TEMPLATE;
+        if (template == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeTypeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeType());
+            TYPE_ARRAY_TEMPLATE = template = ((xArray) f_templates.getTemplate(typeTypeArray));
+            assert template != null;
+            }
+        return template;
+        }
+
+    /**
+     * @return the ClassTemplate for an Array of Property
+     */
+    public xArray ensurePropertyArrayTemplate()
+        {
+        xArray template = PROPERTY_ARRAY_TEMPLATE;
+        if (template == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typePropertyArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeProperty());
+            PROPERTY_ARRAY_TEMPLATE = template = ((xArray) f_templates.getTemplate(typePropertyArray));
+            assert template != null;
+            }
+        return template;
+        }
+
+    /**
+     * @return the ClassTemplate for an Array of Method
+     */
+    public xArray ensureMethodArrayTemplate()
+        {
+        xArray template = METHOD_ARRAY_TEMPLATE;
+        if (template == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeMethodArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeMethod());
+            METHOD_ARRAY_TEMPLATE = template = ((xArray) f_templates.getTemplate(typeMethodArray));
+            assert template != null;
+            }
+        return template;
+        }
+
+    /**
+     * @return the ClassTemplate for an Array of Function
+     */
+    public xArray ensureFunctionArrayTemplate()
+        {
+        xArray template = FUNCTION_ARRAY_TEMPLATE;
+        if (template == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeFunctionArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeFunction());
+            FUNCTION_ARRAY_TEMPLATE = template = ((xArray) f_templates.getTemplate(typeFunctionArray));
+            assert template != null;
+            }
+        return template;
+        }
+
+    private xArray TYPE_ARRAY_TEMPLATE;
+    private xArray PROPERTY_ARRAY_TEMPLATE;
+    private xArray METHOD_ARRAY_TEMPLATE;
+    private xArray FUNCTION_ARRAY_TEMPLATE;
+
+
+    // ----- ClassComposition caching and helpers --------------------------------------------------
 
     /**
      * @return the ClassComposition for an Array of Type
@@ -496,63 +613,86 @@ public class xType
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeTypeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeType());
             TYPE_ARRAY = clz = f_templates.resolveClass(typeTypeArray);
-            TYPE_ARRAY_TEMPLATE = ((xArray) f_templates.getTemplate(typeTypeArray));
             assert clz != null;
             }
         return clz;
         }
 
     /**
-     * @return the ClassTemplate for an Array of Type
+     * @return the ClassComposition for an Array of Property
      */
-    public xArray ensureTypeArrayTemplate()
+    public ClassComposition ensurePropertyArray(TypeConstant typeTarget)
         {
-        xArray template = TYPE_ARRAY_TEMPLATE;
-        if (template == null)
+        assert typeTarget != null;
+        ConstantPool pool = INSTANCE.pool();
+        TypeConstant typePropertyArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
+                pool.ensureParameterizedTypeConstant(pool.typeProperty(), typeTarget));
+        ClassComposition clz = f_templates.resolveClass(typePropertyArray);
+        return clz;
+        }
+
+    /**
+     * @return the ClassComposition for an Array of Property constants
+     */
+    public ClassComposition ensureConstantArray()
+        {
+        ClassComposition clz = CONSTANT_ARRAY;
+        if (clz == null)
             {
-            ensureTypeArray();
-            template = TYPE_ARRAY_TEMPLATE;
-            assert template != null;
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeConstantArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeProperty());
+            CONSTANT_ARRAY = clz = f_templates.resolveClass(typeConstantArray);
+            assert clz != null;
             }
-        return template;
+        return clz;
         }
 
     /**
      * @return the ClassComposition for an Array of Method
      */
-    public ClassComposition ensureMethodArray()
+    public ClassComposition ensureMethodArray(TypeConstant typeTarget)
         {
-        ClassComposition clz = METHOD_ARRAY;
+        assert typeTarget != null;
+        ConstantPool pool = INSTANCE.pool();
+        TypeConstant typeMethodArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
+                pool.ensureParameterizedTypeConstant(pool.typeMethod(), typeTarget));
+        ClassComposition clz = f_templates.resolveClass(typeMethodArray);
+        return clz;
+        }
+
+    /**
+     * @return the ClassComposition for an Array of Function
+     */
+    public ClassComposition ensureFunctionArray()
+        {
+        ClassComposition clz = FUNCTION_ARRAY;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeMethodArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeMethod());
-            METHOD_ARRAY = clz = f_templates.resolveClass(typeMethodArray);
-            METHOD_ARRAY_TEMPLATE = ((xArray) f_templates.getTemplate(typeMethodArray));
+            TypeConstant typeFunctionArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeFunction());
+            FUNCTION_ARRAY = clz = f_templates.resolveClass(typeFunctionArray);
             assert clz != null;
             }
         return clz;
         }
 
     /**
-     * @return the ClassTemplate for an Array of Method
+     * @return the ClassComposition for an Array of Constructor
      */
-    public xArray ensureMethodArrayTemplate()
+    public ClassComposition ensureConstructorArray(TypeConstant typeTarget)
         {
-        xArray template = METHOD_ARRAY_TEMPLATE;
-        if (template == null)
-            {
-            ensureMethodArray();
-            template = METHOD_ARRAY_TEMPLATE;
-            assert template != null;
-            }
-        return template;
+        assert typeTarget != null;
+        ConstantPool pool = INSTANCE.pool();
+        TypeConstant typeConstructorArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
+                pool.ensureParameterizedTypeConstant(pool.typeFunction(), pool.typeTuple(),
+                pool.ensureParameterizedTypeConstant(pool.typeTuple(), typeTarget)));
+        ClassComposition clz = f_templates.resolveClass(typeConstructorArray);
+        return clz;
         }
 
     private ClassComposition TYPE_ARRAY;
-    private xArray           TYPE_ARRAY_TEMPLATE;
-    private ClassComposition METHOD_ARRAY;
-    private xArray           METHOD_ARRAY_TEMPLATE;
+    private ClassComposition CONSTANT_ARRAY;
+    private ClassComposition FUNCTION_ARRAY;
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -566,7 +706,7 @@ public class xType
      */
     public xEnum.EnumHandle makeAccessHandle(Constants.Access access)
         {
-        xEnum enumAccess = (xEnum) getChildTemplate("Access");
+        xEnum enumAccess = (xEnum) f_templates.getTemplate("Type.Access");
         switch (access)
             {
             case PUBLIC:
@@ -595,7 +735,7 @@ public class xType
      */
     public xEnum.EnumHandle makeFormHandle(TypeConstant type)
         {
-        xEnum enumForm = (xEnum) getChildTemplate("Form");
+        xEnum enumForm = (xEnum) f_templates.getTemplate("Type.Form");
 
         switch (type.getFormat())
             {

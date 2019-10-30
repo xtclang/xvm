@@ -5,7 +5,7 @@ import collections.HashSet;
  * parameter types, and a number of return types. A method can be bound to a particular target (of
  * a type containing the method) in order to obtain an invocable function.
  */
-const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple<ReturnTypes>>
+const Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple<ReturnTypes>>
     {
     /**
      * The method's name.
@@ -224,7 +224,7 @@ const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
                     setThat = setThat.retainAll(setThis);
                     for (String name : setThat)
                         {
-                        if (that.TargetType.producesFormalType(name))
+                        if (that.Target.producesFormalType(name))
                             {
                             return true;
                             }
@@ -261,7 +261,7 @@ const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
      * Given an object reference of a type that contains this method, obtain the invocable function
      * that corresponds to this method on that object.
      */
-    Function<ParamTypes, ReturnTypes> bindTarget(TargetType target)
+    Function<ParamTypes, ReturnTypes> bindTarget(Target target)
         {
         // this can not be abstract .. maybe "&target.getFunction(this)" or something like that?
         TODO;
@@ -271,7 +271,7 @@ const Method<TargetType, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
      * Given an object reference of a type that contains this method, invoke that method passing
      * the specified arguments, and returning the results.
      */
-    ReturnTypes invoke(TargetType target, ParamTypes args)
+    ReturnTypes invoke(Target target, ParamTypes args)
         {
         return bindTarget(target).invoke(args);
         }

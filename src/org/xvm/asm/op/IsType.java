@@ -14,7 +14,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xType.TypeHandle;
+import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 
 /**

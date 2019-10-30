@@ -7,6 +7,7 @@ module TestReflection.xqiz.it
         testInstanceOf();
         testMaskReveal();
         testForm();
+        testProps();
         }
 
     const Point(Int x, Int y);
@@ -87,5 +88,19 @@ module TestReflection.xqiz.it
         Type t = String;
         // TODO GG console.println($"t={t}, form={t.form}");
         console.println($"String form={t.form.name}");
+        }
+
+    void testProps()
+        {
+        console.println("\n** testProps");
+        const Point(Int x, Int y);
+
+        Type t = Point;
+        // TODO BUGBUG console.println($"Point type={t}");
+        for (Property prop : t.properties)
+            {
+            // TODO BUGBUG console.println($"prop={prop}");
+            console.println($"prop={prop.name}");
+            }
         }
     }

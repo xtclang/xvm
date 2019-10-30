@@ -177,27 +177,26 @@ public class ObjectHeap
                 return f_poolRoot.typeClass();
 
             case Property:
-                return f_poolRoot.typeProperty();
+                // TODO GG this is currently unreachable
+                return f_poolRoot.ensureEcstasyTypeConstant("_native.reflect.RTProperty");
 
             case Method:
-                return f_poolRoot.typeFunction();
+                return f_poolRoot.typeFunction(); // TODO RTFunction
 
             case AnnotatedType:
             case ParameterizedType:
             case TerminalType:
-                return f_poolRoot.typeType();
-
             case ImmutableType:
             case AccessType:
             case UnionType:
             case IntersectionType:
             case DifferenceType:
-                return f_poolRoot.typeType();
+                return f_poolRoot.ensureEcstasyTypeConstant("_native.reflect.RTType");
 
-            case MultiMethod:
+            case MultiMethod:   // REVIEW does the compiler ever generate this?
+            case Typedef:       // REVIEW does the compiler ever generate this?
+            case TypeParameter: // REVIEW does the compiler ever generate this?
             case Signature:
-            case Typedef:
-            case TypeParameter:
             case ThisClass:
             case ParentClass:
             case ChildClass:

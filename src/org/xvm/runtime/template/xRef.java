@@ -28,8 +28,10 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.VarSupport;
 
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
+
 import org.xvm.runtime.template.reflect.xClass.ClassHandle;
-import org.xvm.runtime.template.xType.TypeHandle;
+
+import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 
 /**
