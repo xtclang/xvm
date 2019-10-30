@@ -11,6 +11,7 @@ import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -26,12 +27,13 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.collections.xArray;
-
 import org.xvm.runtime.template.reflect.xMethod;
+
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xFunction;
+import org.xvm.runtime.template.xString;
 
 
 /**
@@ -174,7 +176,8 @@ public class xRTType
         }
 
     @Override
-    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
         {
         switch (method.getName())
             {
@@ -189,56 +192,52 @@ public class xRTType
         }
 
     @Override
-    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
+    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                              ObjectHandle[] ahArg, int[] aiReturn)
         {
-        if (ahArg[0] instanceof TypeHandle)
+        TypeHandle   hType = (TypeHandle) hTarget;
+        TypeConstant type  = hType.getDataType();
+        switch (method.getName())
             {
-            TypeHandle   hType = (TypeHandle) ahArg[0];
-            TypeConstant type  = hType.getDataType();
-            switch (method.getName())
-                {
-                case "accessSpecified":
-                    {
-                    return type.isAccessSpecified()
-                                ? frame.assignValues(aiReturn, xBoolean.TRUE,
-                                        makeAccessHandle(type.getAccess()))
-                                : frame.assignValues(aiReturn, xBoolean.FALSE, null);
-                    }
-
-                case "annotated":
-                    return calcAnnotated(frame, hType, aiReturn);
-
-                case "contained":
-                    return calcContained(frame, hType, aiReturn);
-
-                case "fromClass":
-                    return calcFromClass(frame, hType, aiReturn);
-
-                case "fromProperty":
-                    return calcFromProperty(frame, hType, aiReturn);
-
-                case "modifying":
-                    {
-                    return type.isModifyingType()
+            case "accessSpecified":
+                return type.isAccessSpecified()
                             ? frame.assignValues(aiReturn, xBoolean.TRUE,
-                                    makeHandle(type.getUnderlyingType()))
+                                    makeAccessHandle(type.getAccess()))
                             : frame.assignValues(aiReturn, xBoolean.FALSE, null);
-                    }
 
-                case "named":
-                    return calcNamed(frame, hType, aiReturn);
+            case "annotated":
+                return calcAnnotated(frame, hType, aiReturn);
 
-                case "parameterized":
-                    return calcParameterized(frame, hType, aiReturn);
+            case "contained":
+                return calcContained(frame, hType, aiReturn);
 
-                case "relational":
-                    {
-                    return type.isModifyingType()
-                            ? frame.assignValues(aiReturn, xBoolean.TRUE,
-                                    makeHandle(type.getUnderlyingType()),
-                                    makeHandle(type.getUnderlyingType2()))
-                            : frame.assignValues(aiReturn, xBoolean.FALSE, null, null);
-                    }
+            case "fromClass":
+                return calcFromClass(frame, hType, aiReturn);
+
+            case "fromProperty":
+                return calcFromProperty(frame, hType, aiReturn);
+
+            case "modifying":
+                {
+                return type.isModifyingType()
+                        ? frame.assignValues(aiReturn, xBoolean.TRUE,
+                                makeHandle(type.getUnderlyingType()))
+                        : frame.assignValues(aiReturn, xBoolean.FALSE, null);
+                }
+
+            case "named":
+                return calcNamed(frame, type, aiReturn);
+
+            case "parameterized":
+                return calcParameterized(frame, hType, aiReturn);
+
+            case "relational":
+                {
+                return type.isModifyingType()
+                        ? frame.assignValues(aiReturn, xBoolean.TRUE,
+                                makeHandle(type.getUnderlyingType()),
+                                makeHandle(type.getUnderlyingType2()))
+                        : frame.assignValues(aiReturn, xBoolean.FALSE, null, null);
                 }
             }
 
@@ -411,8 +410,7 @@ public class xRTType
             TypeConstant     typeImpl     = pool.ensurePropertyClassTypeConstant(typeTarget, entry.getKey());
             TypeConstant     typeProperty = pool.ensureParameterizedTypeConstant(pool.typeProperty(),
                                                     typeTarget, typeReferent, typeImpl);
-            ClassComposition clzProperty = f_templates.resolveClass(typeProperty);
-            ObjectHandle     hProperty   = xRTProperty.INSTANCE.makeHandle(clzProperty);
+            ObjectHandle     hProperty   = xRTProperty.INSTANCE.makeHandle(typeProperty);
 
             ahProps[cProps++] = hProperty;
             }
@@ -507,12 +505,21 @@ public class xRTType
     /**
      * Implementation for: {@code conditional String named()}.
      */
-    public int calcNamed(Frame frame, TypeHandle hType, int[] aiReturn)
+    public int calcNamed(Frame frame, TypeConstant type, int[] aiReturn)
         {
-        ObjectHandle hName = null; // TODO
-        return hName == null
+        String sName = null;
+        if (type.isSingleDefiningConstant())
+            {
+            Constant id = type.getDefiningConstant();
+            if (id.getFormat() == Constant.Format.Class)
+                {
+                sName = ((ClassConstant) id).getPathString();
+                }
+            }
+
+        return sName == null
             ? frame.assignValues(aiReturn, xBoolean.FALSE, null)
-            : frame.assignValues(aiReturn, xBoolean.TRUE, hName);
+            : frame.assignValues(aiReturn, xBoolean.TRUE, xString.makeHandle(sName));
         }
 
     /**

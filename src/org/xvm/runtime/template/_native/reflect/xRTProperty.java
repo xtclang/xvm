@@ -12,10 +12,11 @@ import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
+
+import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xString;
 
 
@@ -23,13 +24,13 @@ import org.xvm.runtime.template.xString;
  * Native Property implementation.
  */
 public class xRTProperty
-        extends ClassTemplate
+        extends xConst
     {
     public static xRTProperty INSTANCE;
 
     public xRTProperty(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(templates, structure, false);
 
         if (fInstance)
             {
@@ -119,44 +120,39 @@ public class xRTProperty
     /**
      * Obtain a {@link PropertyHandle} for the specified property.
      *
-     * @param clzProp  the {@link ClassComposition} to obtain a {@link PropertyHandle} for
+     * @param typeProp  the type of the property to obtain a {@link PropertyHandle} for
      *
      * @return the resulting {@link PropertyHandle}
      */
-    public static PropertyHandle makeHandle(ClassComposition clzProp)
+    public PropertyHandle makeHandle(TypeConstant typeProp)
         {
-        return new PropertyHandle(clzProp);
+        return new PropertyHandle(ensureClass(typeProp));
         }
 
     /**
      * Inner class: PropertyHandle. This is a handle to a native property.
      */
     public static class PropertyHandle
-        extends ObjectHandle
+            extends ObjectHandle
         {
         protected PropertyHandle(ClassComposition clzProp)
             {
             super(clzProp);
             }
 
-        public TypeConstant getDataType()
+        public TypeConstant getTargetType()
             {
             return getType().getParamType(0);
             }
 
-        public TypeConstant getTargetType()
-            {
-            return getDataType().getParamType(0);
-            }
-
         public TypeConstant getReferentType()
             {
-            return getDataType().getParamType(1);
+            return getType().getParamType(1);
             }
 
         public TypeConstant getImplementationType()
             {
-            return getDataType().getParamType(2);
+            return getType().getParamType(2);
             }
 
         public PropertyConstant getPropertyConstant()

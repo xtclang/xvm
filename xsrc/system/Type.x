@@ -758,67 +758,6 @@ interface Type<DataType, OuterType>
 
         TODO <=>
         }
-
-
-    // ----- Stringable methods --------------------------------------------------------------------
-
-    @Override
-    Int estimateStringLength()
-        {
-        if (String name := named())
-            {
-            return name.size;
-            }
-
-        function Int sum(Int, Int) = (n1, n2) -> n1 + n2 + 2;
-        // TODO GG - I shouldn't need to tell it that it is mapping to Int
-        // return 6 + properties.iterator().map(p -> p.estimateStringLength()).reduce(0, sum)
-        //          + methods   .iterator().map(m -> m.estimateStringLength()).reduce(0, sum);
-        return 6 + properties.iterator().map<Iterator<Int>>(p -> p.estimateStringLength()).reduce(0, sum)
-                 + methods   .iterator().map<Iterator<Int>>(m -> m.estimateStringLength()).reduce(0, sum);
-        }
-
-    @Override
-    void appendTo(Appender<Char> appender)
-        {
-        if (String name := named())
-            {
-            appender.add(name);
-            }
-        else
-            {
-            appender.add("Type[");
-
-            Boolean first = True;
-            for (Property property : properties)
-                {
-                if (first)
-                    {
-                    first = False;
-                    }
-                else
-                    {
-                    appender.add(", ");
-                    }
-                property.appendTo(appender);
-                }
-
-            for (Method method : methods)
-                {
-                if (first)
-                    {
-                    first = False;
-                    }
-                else
-                    {
-                    appender.add(", ");
-                    }
-                method.appendTo(appender);
-                }
-
-            appender.add(']');
-            }
-        }
     }
 
 
